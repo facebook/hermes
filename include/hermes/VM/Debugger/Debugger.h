@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -69,7 +69,7 @@ class Debugger {
   using ScriptID = ::facebook::hermes::debugger::ScriptID;
   using AsyncPauseKind = ::facebook::hermes::debugger::AsyncPauseKind;
 
-  Runtime *const runtime_;
+  Runtime &runtime_;
 
   /// Function handling pauses.
   DidPauseCallback didPauseCallback_;
@@ -187,7 +187,7 @@ class Debugger {
   bool isDebuggerAttached_{false};
 
  public:
-  explicit Debugger(Runtime *runtime) : runtime_(runtime) {}
+  explicit Debugger(Runtime &runtime) : runtime_(runtime) {}
 
   /// Reasons why the interpreter may invoke the debugger. Note this is a more
   /// limited set than PauseReason, because the Interpreter cannot distinguish

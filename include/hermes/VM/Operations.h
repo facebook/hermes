@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -32,25 +32,25 @@ enum class PreferredType {
 
 /// ES6.0 7.1.1
 CallResult<HermesValue>
-toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint);
+toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint);
 
 /// ES6.0 7.1.1
 /// The OrdinaryToPrimitive operation does not attempt to use the exotic
 /// @@toPrimitive property on \p selfHandle.
 CallResult<HermesValue> ordinaryToPrimitive(
     Handle<JSObject> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     PreferredType preferredType);
 
 /// ES5.1 9.2
 bool toBoolean(HermesValue value);
 
 /// ES5.1 9.3
-CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle);
 
 /// ES 2020 7.1.3
 inline CallResult<HermesValue> toNumeric_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   // The difference between this and toNumber is that it can return a
   // BigInt.  But Hermes doesn't support BigInt yet, so for now, this
@@ -59,42 +59,44 @@ inline CallResult<HermesValue> toNumeric_RJS(
 }
 
 /// ES6 7.1.15
-CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle);
 
 // a variant of toLength which returns a uint64_t
-CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle);
+CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle);
 
 /// ES 2018 7.1.17
-CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle);
 
-/// ES5.1 9.4
-CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle);
+/// ES 2022 7.1.5
+CallResult<HermesValue> toIntegerOrInfinity(
+    Runtime &runtime,
+    Handle<> valueHandle);
 
 /// ES6 7.1.9
-CallResult<HermesValue> toInt8(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toInt8(Runtime &runtime, Handle<> valueHandle);
 
 /// ES6 7.1.7
-CallResult<HermesValue> toInt16(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toInt16(Runtime &runtime, Handle<> valueHandle);
 
 /// ES5.1 9.5
-CallResult<HermesValue> toInt32_RJS(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toInt32_RJS(Runtime &runtime, Handle<> valueHandle);
 
 /// ES6 7.1.10
-CallResult<HermesValue> toUInt8(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toUInt8(Runtime &runtime, Handle<> valueHandle);
 
 /// ES6 7.1.11
 uint8_t toUInt8Clamp(double number);
-CallResult<HermesValue> toUInt8Clamp(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toUInt8Clamp(Runtime &runtime, Handle<> valueHandle);
 
 /// ES5.1 9.7
-CallResult<HermesValue> toUInt16(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toUInt16(Runtime &runtime, Handle<> valueHandle);
 
 /// ES5.1 9.6
-CallResult<HermesValue> toUInt32_RJS(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toUInt32_RJS(Runtime &runtime, Handle<> valueHandle);
 
 /// ES5.1 9.8
 CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle);
 
 /// ES9 7.2.7
@@ -104,14 +106,14 @@ inline bool isPropertyKey(Handle<> valueHandle) {
 
 /// ES9 7.1.14
 inline CallResult<Handle<>> toPropertyKey(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   CallResult<HermesValue> primRes =
       toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
   if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> prim = runtime->makeHandle(*primRes);
+  Handle<> prim = runtime.makeHandle(*primRes);
   if (prim->isSymbol()) {
     return prim;
   }
@@ -120,7 +122,7 @@ inline CallResult<Handle<>> toPropertyKey(
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<>::vmcast(runtime->makeHandle(std::move(*strRes)));
+  return Handle<>::vmcast(runtime.makeHandle(std::move(*strRes)));
 }
 
 /// This function is used to convert a property to property key if it's an
@@ -130,7 +132,7 @@ inline CallResult<Handle<>> toPropertyKey(
 /// ES6.0 7.1.14, but only for objects. Primitives are left unaltered.
 /// Note: this can return a Symbol or a String if \p valueHandle is an object.
 inline CallResult<Handle<>> toPropertyKeyIfObject(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   if (LLVM_UNLIKELY(valueHandle->isObject())) {
     return toPropertyKey(runtime, valueHandle);
@@ -140,11 +142,11 @@ inline CallResult<Handle<>> toPropertyKeyIfObject(
 
 /// \return prototype for primitive \p base.
 CallResult<Handle<JSObject>> getPrimitivePrototype(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> base);
 
 /// ES5.1 9.9
-CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle);
 
 /// Helper function. When accessing a property on an undefined/null object,
 /// we can re-throw the exception with an improved error message that
@@ -154,7 +156,7 @@ CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle);
 /// New error message would be:
 /// Cannot \operationStr property [propName] of undefined.
 ExecutionStatus amendPropAccessErrorMsgWithPropName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle,
     llvh::StringRef operationStr,
     SymbolID id);
@@ -162,10 +164,10 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
 /// ES5 9.10 CheckObjectCoercible
 /// ES6+ 7.2.1 RequireObjectCoercible ( argument )
 inline ExecutionStatus checkObjectCoercible(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   if (LLVM_UNLIKELY(valueHandle->isUndefined() || valueHandle->isNull())) {
-    return runtime->raiseTypeError("Value not coercible to object");
+    return runtime.raiseTypeError("Value not coercible to object");
   }
   return ExecutionStatus::RETURNED;
 }
@@ -179,44 +181,44 @@ bool isSameValueZero(HermesValue x, HermesValue y);
 
 /// ES5.1 11.8.1.
 CallResult<bool>
-lessOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+lessOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.2.
 CallResult<bool>
-greaterOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+greaterOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.3.
 CallResult<bool>
-lessEqualOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+lessEqualOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.4.
 CallResult<bool>
-greaterEqualOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+greaterEqualOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 
 /// ES5.1 11.9.3
 CallResult<HermesValue>
-abstractEqualityTest_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
+abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle);
 
 /// ES5.1 11.9.6
 bool strictEqualityTest(HermesValue x, HermesValue y);
 
 /// Convert a string to a uniqued property name.
 CallResult<Handle<SymbolID>> stringToSymbolID(
-    Runtime *runtime,
+    Runtime &runtime,
     PseudoHandle<StringPrimitive> strPrim);
 
 /// Convert a value to a uniqued property name.
 CallResult<Handle<SymbolID>> valueToSymbolID(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> nameValHnd);
 
 /// \return a string indicating the type of the operand corresponding to the
 /// `typeof` operator.
-HermesValue typeOf(Runtime *runtime, Handle<> valueHandle);
+HermesValue typeOf(Runtime &runtime, Handle<> valueHandle);
 
 /// Convert a string to an array index following ES5.1 15.4.
 /// A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to
 /// 2**32−1.
 OptValue<uint32_t> toArrayIndex(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strPrim);
 
 /// Fast path for toArrayIndex where we already have the view of the string.
@@ -240,7 +242,7 @@ bool isPrimitive(HermesValue val);
 
 /// ES5.1 11.6.1
 CallResult<HermesValue>
-addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
+addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle);
 
 /// ES9.0 12.6.4
 inline double expOp(double x, double y) {
@@ -290,11 +292,11 @@ double parseIntWithRadix(const StringView str, int radix);
 /// in the double value given by number.
 /// \returns the string that results.
 Handle<StringPrimitive>
-numberToStringWithRadix(Runtime *runtime, double number, unsigned radix);
+numberToStringWithRadix(Runtime &runtime, double number, unsigned radix);
 
 /// ES6.0 7.3.9
 CallResult<PseudoHandle<>>
-getMethod(Runtime *runtime, Handle<> O, Handle<> key);
+getMethod(Runtime &runtime, Handle<> O, Handle<> key);
 
 /// ES9.0 Record type for iterator records.
 /// Used for caching the "next" method to avoid repeated property lookups.
@@ -314,27 +316,27 @@ struct IteratorRecord {
 /// \param method an optional method to call instead of retrieving @@iterator.
 /// \return the iterator object
 CallResult<IteratorRecord> getIterator(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> obj,
     llvh::Optional<Handle<Callable>> method = llvh::None);
 
 /// ES6.0 7.4.2
 CallResult<PseudoHandle<JSObject>> iteratorNext(
-    Runtime *runtime,
+    Runtime &runtime,
     const IteratorRecord &iteratorRecord,
     llvh::Optional<Handle<>> value = llvh::None);
 
 /// ES6.0 7.4.5
 /// \return a null pointer instead of the boolean false.
 CallResult<Handle<JSObject>> iteratorStep(
-    Runtime *runtime,
+    Runtime &runtime,
     const IteratorRecord &iteratorRecord);
 
 /// ES sec-iteratorclose
 /// \param completion the thrown value to complete this operation with, empty if
 /// not thrown.
 ExecutionStatus
-iteratorClose(Runtime *runtime, Handle<JSObject> iterator, Handle<> completion);
+iteratorClose(Runtime &runtime, Handle<JSObject> iterator, Handle<> completion);
 
 /// Some types of errors are considered "uncatchable" by the VM.
 /// If any native code wants to catch an error, it needs to check that the value
@@ -345,32 +347,32 @@ bool isUncatchableError(HermesValue value);
 
 /// ES6.0 7.4.7
 Handle<JSObject>
-createIterResultObject(Runtime *runtime, Handle<> value, bool done);
+createIterResultObject(Runtime &runtime, Handle<> value, bool done);
 
 /// ES7 7.3.20
 CallResult<Handle<Callable>> speciesConstructor(
     Handle<JSObject> O,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Callable> defaultConstructor);
 
 /// ES7 7.2.4
 /// Returns true if the \c value is a constructor.  The value can be
 /// Anything.
-CallResult<bool> isConstructor(Runtime *runtime, HermesValue value);
+CallResult<bool> isConstructor(Runtime &runtime, HermesValue value);
 
 /// ES7 7.2.4
 /// Returns true if \c callable is a constructor.  Passing \c nullptr
 /// is allowed, and returns false.
-CallResult<bool> isConstructor(Runtime *runtime, Callable *callable);
+CallResult<bool> isConstructor(Runtime &runtime, Callable *callable);
 
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that
 /// evaluates to true.
-CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg);
+CallResult<bool> isRegExp(Runtime &runtime, Handle<> arg);
 
 /// ES6.0 7.3.19
 CallResult<bool>
-ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object);
+ordinaryHasInstance(Runtime &runtime, Handle<> constructor, Handle<> object);
 
 /// ES6.0 10.1.1
 /// \param cp the codepoint to convert to UTF-16.
@@ -412,19 +414,19 @@ inline uint32_t utf16Decode(char16_t lead, char16_t trail) {
 
 /// ES6.0 12.9.4
 CallResult<bool>
-instanceOfOperator_RJS(Runtime *runtime, Handle<> object, Handle<> constructor);
+instanceOfOperator_RJS(Runtime &runtime, Handle<> object, Handle<> constructor);
 
 /// ES6.0 19.4.3.2.1 Runtime Semantics: SymbolDescriptiveString ( sym )
 /// Returns "Symbol([description])" given a symbol.
 CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<SymbolID> sym);
 
 /// ES9 7.2.2
-CallResult<bool> isArray(Runtime *runtime, JSObject *obj);
+CallResult<bool> isArray(Runtime &runtime, JSObject *obj);
 
 /// ES6.0 22.1.3.1.1
-CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value);
+CallResult<bool> isConcatSpreadable(Runtime &runtime, Handle<> value);
 
 /// \return true if and only if \p id is a primitive SymbolID backing a JS
 /// Symbol instance.
@@ -442,13 +444,13 @@ constexpr bool isPropertyNamePrimitive(SymbolID id) {
 /// \p flags and \p valueOrAccessor together to represent a descriptor.
 ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
-    Runtime *runtime,
+    Runtime &runtime,
     DefinePropertyFlags &flags,
     MutableHandle<> &valueOrAccessor);
 
 /// ES9 6.2.5.4 FromPropertyDescriptor
 CallResult<HermesValue> objectFromPropertyDescriptor(
-    Runtime *runtime,
+    Runtime &runtime,
     ComputedPropertyDescriptor desc,
     Handle<> valueOrAccessor);
 

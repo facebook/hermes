@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -33,10 +33,10 @@ inline PseudoHandle<T> PseudoHandle<T>::dyn_vmcast(PseudoHandle<U> &&other) {
 }
 
 /// Allocate a new handle in the current GCScope
-inline HandleBase::HandleBase(HandleRootOwner *runtime, HermesValue value)
-    : handle_(runtime->newPinnedHermesValue(value)) {
+inline HandleBase::HandleBase(HandleRootOwner &runtime, HermesValue value)
+    : handle_(runtime.newPinnedHermesValue(value)) {
 #ifndef NDEBUG
-  gcScope_ = runtime->getTopGCScope();
+  gcScope_ = runtime.getTopGCScope();
   ++gcScope_->numActiveHandles_;
 #endif
 }

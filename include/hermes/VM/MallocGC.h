@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -120,6 +120,8 @@ class MallocGC final : public GCBase {
   gcheapsize_t sizeLimit_;
   /// allocatedBytes_ is the current amount of memory stored in the heap.
   gcheapsize_t allocatedBytes_{0};
+  /// externalBytes_ is the external memory retained by cells on the heap.
+  uint64_t externalBytes_{0};
 
  public:
   /// See comment in GCBase.
@@ -146,8 +148,8 @@ class MallocGC final : public GCBase {
   };
 
   MallocGC(
-      GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,
@@ -212,13 +214,13 @@ class MallocGC final : public GCBase {
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
-
-  /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
 #endif
 
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
+
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
@@ -367,7 +369,7 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   void *mem = alloc<fixedSize, hasFinalizer>(size);
-  return new (mem) T(std::forward<Args>(args)...);
+  return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,48 +22,47 @@ function *loop(x) {
 // CHECK-NEXT:     CreateGenerator   r2, r0, 2
 // CHECK-NEXT:     Ret               r2
 
-// CHECK-LABEL: Function<?anon_0_loop>(2 params, 15 registers, 2 symbols):
+// CHECK-LABEL: Function<?anon_0_loop>(2 params, 14 registers, 2 symbols):
 // CHECK-NEXT: Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
 // CHECK-NEXT:     LoadConstUndefined r2
 // CHECK-NEXT:     LoadConstZero     r3
-// CHECK-NEXT:     LoadConstUInt8    r4, 1
-// CHECK-NEXT:     LoadConstString   r5, "DONE LOOPING"
-// CHECK-NEXT:     GetGlobalObject   r6
-// CHECK-NEXT:     ResumeGenerator   r8, r7
-// CHECK-NEXT:     Mov               r9, r7
-// CHECK-NEXT:     JmpTrue           L1, r9
+// CHECK-NEXT:     LoadConstString   r4, "DONE LOOPING"
+// CHECK-NEXT:     GetGlobalObject   r5
+// CHECK-NEXT:     ResumeGenerator   r7, r6
+// CHECK-NEXT:     Mov               r8, r6
+// CHECK-NEXT:     JmpTrue           L1, r8
 // CHECK-NEXT:     StoreNPToEnvironment r0, 0, r2
 // CHECK-NEXT:     StoreToEnvironment r0, 1, r1
 // CHECK-NEXT:     StoreNPToEnvironment r0, 0, r3
-// CHECK-NEXT:     TryGetById        r7, r6, 1, "y"
-// CHECK-NEXT:     JmpFalse          L2, r7
+// CHECK-NEXT:     TryGetById        r6, r5, 1, "y"
+// CHECK-NEXT:     JmpFalse          L2, r6
 // CHECK-NEXT: L5:
-// CHECK-NEXT:     LoadFromEnvironment r7, r0, 1
-// CHECK-NEXT:     LoadFromEnvironment r9, r0, 0
-// CHECK-NEXT:     ToNumber          r10, r9
-// CHECK-NEXT:     AddN              r11, r10, r4
-// CHECK-NEXT:     StoreToEnvironment r0, 0, r11
-// CHECK-NEXT:     GetByVal          r12, r7, r10
+// CHECK-NEXT:     LoadFromEnvironment r6, r0, 1
+// CHECK-NEXT:     LoadFromEnvironment r8, r0, 0
+// CHECK-NEXT:     ToNumber          r9, r8
+// CHECK-NEXT:     Inc              r10, r9
+// CHECK-NEXT:     StoreToEnvironment r0, 0, r10
+// CHECK-NEXT:     GetByVal          r11, r6, r9
 // CHECK-NEXT:     SaveGenerator     L3
-// CHECK-NEXT:     Ret               r12
+// CHECK-NEXT:     Ret               r11
 // CHECK-NEXT: L3:
-// CHECK-NEXT:     ResumeGenerator   r7, r13
-// CHECK-NEXT:     Mov               r9, r13
-// CHECK-NEXT:     JmpTrue           L4, r9
-// CHECK-NEXT:     TryGetById        r9, r6, 1, "y"
-// CHECK-NEXT:     JmpTrue           L5, r9
+// CHECK-NEXT:     ResumeGenerator   r6, r12
+// CHECK-NEXT:     Mov               r8, r12
+// CHECK-NEXT:     JmpTrue           L4, r8
+// CHECK-NEXT:     TryGetById        r8, r5, 1, "y"
+// CHECK-NEXT:     JmpTrue           L5, r8
 // CHECK-NEXT: L2:
 // CHECK-NEXT:     CompleteGenerator
-// CHECK-NEXT:     Ret               r5
+// CHECK-NEXT:     Ret               r4
 // CHECK-NEXT: L4:
 // CHECK-NEXT:     CompleteGenerator
-// CHECK-NEXT:     Ret               r7
+// CHECK-NEXT:     Ret               r6
 // CHECK-NEXT: L1:
 // CHECK-NEXT:     CompleteGenerator
-// CHECK-NEXT:     Ret               r8
+// CHECK-NEXT:     Ret               r7
 
 function *args() {
   yield arguments[0];

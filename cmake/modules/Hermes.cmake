@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -255,6 +255,12 @@ if (MSVC)
     -D_SCL_SECURE_NO_WARNINGS
   )
 
+  add_definitions(
+    # Suppress 'The std::iterator class template (used as a base class to provide typedefs)
+    # is deprecated in C++17.'.
+    -D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
+  )
+
   # Tell MSVC to use the Unicode version of the Win32 APIs instead of ANSI.
   #    add_definitions(
   #      -DUNICODE
@@ -406,7 +412,7 @@ if (GCC_COMPATIBLE)
   # Release() (PR32286).
   if (NOT CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++14 -Werror=non-virtual-dtor")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++17 -Werror=non-virtual-dtor")
     CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
                              class derived final : public base { public: ~derived();};
                              int main() { return 0; }"
@@ -420,7 +426,9 @@ if (GCC_COMPATIBLE)
   add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
 
   # Avoid triggering arbitrary UB when converting doubles to ints.
-  add_flag_if_supported("-fno-strict-float-cast-overflow" NO_STRICT_FLOAT_CAST_OVERFLOW_FLAG)
+  # TODO(T108716033) Evaluate adding this flag back in once a new clang is
+  # released or XCode is fixed.
+  # add_flag_if_supported("-fno-strict-float-cast-overflow" NO_STRICT_FLOAT_CAST_OVERFLOW_FLAG)
 
   # Disable range loop analysis warnings.
   check_cxx_compiler_flag("-Wrange-loop-analysis" RANGE_ANALYSIS_FLAG)

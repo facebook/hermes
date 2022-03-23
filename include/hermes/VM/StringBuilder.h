@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -40,11 +40,11 @@ class StringBuilder {
 
  public:
   static CallResult<StringBuilder> createStringBuilder(
-      Runtime *runtime,
+      Runtime &runtime,
       SafeUInt32 length,
       bool isASCII = false) {
     if (length.isOverflowed()) {
-      return runtime->raiseRangeError("String length exceeds limit");
+      return runtime.raiseRangeError("String length exceeds limit");
     }
     auto crtRes = StringPrimitive::create(runtime, *length, isASCII);
     if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
@@ -65,7 +65,7 @@ class StringBuilder {
       // The allocation can fail in theory, but in practice, since we are
       // dropping one string and replace it with another, this should be safe.
       auto strRes = runtime_->ignoreAllocationFailure(StringPrimitive::create(
-          runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
+          *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
       auto currentPartialString =
           ASCIIRef(strPrim_->castToASCIIPointer(), index_);
       strPrim_ = strRes.getString();
@@ -127,7 +127,7 @@ class StringBuilder {
     } else {
       // strPrim_ is ASCII, while other is UTF16. We have to recreate string.
       auto strRes = runtime_->ignoreAllocationFailure(StringPrimitive::create(
-          runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
+          *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
       auto currentPartialString =
           ASCIIRef(strPrim_->castToASCIIPointer(), index_);
       // Set strPrim_ to the newly created string.
@@ -153,8 +153,8 @@ class StringBuilder {
   }
 
  private:
-  StringBuilder(Runtime *runtime, StringPrimitive *strPrim)
-      : strPrim_(runtime, strPrim), index_(0), runtime_(runtime) {}
+  StringBuilder(Runtime &runtime, StringPrimitive *strPrim)
+      : strPrim_(runtime, strPrim), index_(0), runtime_(&runtime) {}
 };
 
 } // namespace vm

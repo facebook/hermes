@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -329,10 +329,12 @@ Optional<ESTree::Node *> JSParserImpl::parseJSXAttribute() {
   //   ^
   ESTree::Node *value = nullptr;
   if (check(TokenKind::string_literal)) {
+    UniqueString *raw = lexer_.getStringLiteral(tok_->inputStr());
     value = setLocation(
         tok_,
         tok_,
-        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+        new (context_)
+            ESTree::JSXStringLiteralNode(tok_->getStringLiteral(), raw));
     advance(JSLexer::GrammarContext::AllowJSXIdentifier);
   } else {
     // { AssignmentExpression }

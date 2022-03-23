@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -31,6 +31,7 @@ add_subdirectory(Parser)
 add_subdirectory(VMRuntime)
 add_subdirectory(Support)
 add_subdirectory(dtoa)
+add_subdirectory(PlatformIntl)
 add_subdirectory(PlatformUnicode)
 add_subdirectory(API)
 add_subdirectory(ADT)

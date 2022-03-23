@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -23,7 +23,7 @@ class Interpreter {
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
   static CallResult<PseudoHandle<JSGenerator>> createGenerator_RJS(
-      Runtime *runtime,
+      Runtime &runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,
       Handle<Environment> envHandle,
@@ -33,7 +33,7 @@ class Interpreter {
   /// \param resumeIP Is the IP where the generator should resume from when it
   ///   is resumed.
   static void saveGenerator(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const Inst *resumeIP);
 
@@ -42,7 +42,7 @@ class Interpreter {
   /// already initialized. It creates a new 'arguments' object and populates it
   /// with the argument values.
   static CallResult<Handle<Arguments>> reifyArgumentsSlowPath(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Callable> curFunction,
       bool strictMode);
 
@@ -68,7 +68,7 @@ class Interpreter {
   /// \p lazyReg and \p valueReg are passed directly to make this function
   /// easier to use outside the interpeter.
   static CallResult<PseudoHandle<>> getArgumentsPropByValSlowPath_RJS(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *lazyReg,
       PinnedHermesValue *valueReg,
       Handle<Callable> curFunction,
@@ -82,7 +82,7 @@ class Interpreter {
   /// \param callTarget the register containing the function object
   /// \return ExecutionStatus::EXCEPTION if the call threw.
   static CallResult<PseudoHandle<>> handleCallSlowPath(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *callTarget);
 
   /// Fast path to get primitive value \p base's own properties by name \p id
@@ -92,25 +92,25 @@ class Interpreter {
   /// Currently the only primitive own property is String.prototype.length.
   /// If the fast path property does not exist, return Empty.
   static PseudoHandle<>
-  tryGetPrimitiveOwnPropertyById(Runtime *runtime, Handle<> base, SymbolID id);
+  tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id);
 
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
   static CallResult<PseudoHandle<>>
-  getByIdTransient_RJS(Runtime *runtime, Handle<> base, SymbolID id);
+  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id);
 
   /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
   /// string primitive and \p nameHandle is an array index.
   /// If the property does not exist, return Empty.
   static PseudoHandle<>
-  getByValTransientFast(Runtime *runtime, Handle<> base, Handle<> nameHandle);
+  getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle);
 
   /// Implement OpCode::GetByVal when the base is not an object.
   static CallResult<PseudoHandle<>>
-  getByValTransient_RJS(Runtime *runtime, Handle<> base, Handle<> name);
+  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name);
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
   static ExecutionStatus putByIdTransient_RJS(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> base,
       SymbolID id,
       Handle<> value,
@@ -118,7 +118,7 @@ class Interpreter {
 
   /// Implement OpCode::PutByVal when the base is not an object.
   static ExecutionStatus putByValTransient_RJS(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> base,
       Handle<> name,
       Handle<> value,
@@ -129,7 +129,7 @@ class Interpreter {
   /// anyway, so explicitly mark it as noinline.
   template <bool SingleStep, bool EnableCrashTrace>
   LLVM_ATTRIBUTE_NOINLINE static CallResult<HermesValue> interpretFunction(
-      Runtime *runtime,
+      Runtime &runtime,
       InterpreterState &state);
 
   /// Populates an object with literal values from the object buffer.
@@ -138,7 +138,7 @@ class Interpreter {
   /// \param valBufferIndex the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       CodeBlock *curCodeBlock,
       unsigned numLiterals,
       unsigned keyBufferIndex,
@@ -149,7 +149,7 @@ class Interpreter {
   /// \param bufferIndex the first element of the buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createArrayFromBuffer(
-      Runtime *runtime,
+      Runtime &runtime,
       CodeBlock *curCodeBlock,
       unsigned numElements,
       unsigned numLiterals,
@@ -165,21 +165,21 @@ class Interpreter {
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   static inline ExecutionStatus runDebuggerUpdatingState(
       Debugger::RunReason reason,
-      Runtime *runtime,
+      Runtime &runtime,
       CodeBlock *&codeBlock,
       const Inst *&ip,
       PinnedHermesValue *&frameRegs) {
     // Hack: if we are already debugging, do nothing. TODO: in the event that we
     // are already debugging and we get an async debugger request, abort the
     // current debugging command (e.g. eval something infinite).
-    if (runtime->debugger_.isDebugging())
+    if (runtime.debugger_.isDebugging())
       return ExecutionStatus::RETURNED;
     uint32_t offset = codeBlock->getOffsetOf(ip);
     InterpreterState state(codeBlock, offset);
-    ExecutionStatus status = runtime->debugger_.runDebugger(reason, state);
+    ExecutionStatus status = runtime.debugger_.runDebugger(reason, state);
     codeBlock = state.codeBlock;
     ip = state.codeBlock->getOffsetPtr(state.offset);
-    frameRegs = &runtime->currentFrame_.getFirstLocalRef();
+    frameRegs = &runtime.currentFrame_.getFirstLocalRef();
     return status;
   }
 #endif
@@ -191,31 +191,31 @@ class Interpreter {
   /// `PerformEval(x, evalRealm, strictCaller=true, direct=true)`.
   /// The difference is that we don't support actual lexical scope, of course.
   static ExecutionStatus caseDirectEval(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
   static ExecutionStatus casePutOwnByVal(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
   static ExecutionStatus casePutOwnGetterSetterByVal(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
   static ExecutionStatus caseIteratorBegin(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
   static ExecutionStatus caseIteratorNext(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
   static ExecutionStatus caseGetPNameList(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const Inst *ip);
 
@@ -224,7 +224,7 @@ class Interpreter {
   /// value of operand3, which is the only difference in encoding between the
   /// two.
   static ExecutionStatus implCallBuiltin(
-      Runtime *runtime,
+      Runtime &runtime,
       PinnedHermesValue *frameRegs,
       CodeBlock *curCodeBlock,
       uint32_t op3);
@@ -243,7 +243,7 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, DumpHermesValue dhv);
 /// Dump the arguments from a callee frame.
 void dumpCallArguments(
     llvh::raw_ostream &OS,
-    Runtime *runtime,
+    Runtime &runtime,
     StackFramePtr calleeFrame);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -58,14 +58,14 @@ static JSONObject *parseProfile(
 }
 
 static JSONObject *takeProfile(
-    Runtime *runtime,
+    Runtime &runtime,
     JSONFactory &factory,
     const char *file,
     int line) {
   std::string result("");
   llvh::raw_string_ostream str(result);
-  runtime->collect("test");
-  runtime->disableSamplingHeapProfiler(str);
+  runtime.collect("test");
+  runtime.disableSamplingHeapProfiler(str);
   str.flush();
   return parseProfile(result, factory, file, line);
 }
@@ -144,7 +144,7 @@ TEST_F(SamplingHeapProfilerTest, Basic) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
   // Use a fixed seed so the samples are deterministic.
-  runtime->enableSamplingHeapProfiler(1 << 10, /*seed*/ 10);
+  runtime.enableSamplingHeapProfiler(1 << 10, /*seed*/ 10);
 
   std::string source = R"(
 // Use a separate function to make the test easier to write.
@@ -162,15 +162,15 @@ function foo() {
 foo();
   )";
   hbc::CompileFlags flags;
-  CallResult<HermesValue> res = runtime->run(source, "file:///fake.js", flags);
+  CallResult<HermesValue> res = runtime.run(source, "file:///fake.js", flags);
   ASSERT_FALSE(isException(res));
   // Hold onto this array so it isn't collected when the profile is finished.
-  auto arrayToHold = runtime->makeHandle<JSArray>(*res);
+  auto arrayToHold = runtime.makeHandle<JSArray>(*res);
   // Make sure it's the correct array.
   ASSERT_EQ(JSArray::getLength(*arrayToHold, runtime), 500);
 
   JSONObject *root = TAKE_PROFILE(runtime, jsonFactory);
-  ASSERT_NE(root, nullptr);
+  ASSERT_TRUE(root != nullptr);
   const JSONObject &jsonTree = *llvh::cast<JSONObject>(root->at("head"));
   const JSONArray &samples = *llvh::cast<JSONArray>(root->at("samples"));
   EXPECT_NE(jsonTree.size(), 0ul);
@@ -179,7 +179,7 @@ foo();
   // objects were sampled, or what size they'll be. So we'll just test that the
   // correct keys exist, and reference existing nodes in the tree.
   SamplingProfileTree tree{jsonTree};
-  EXPECT_NE(tree.getRoot(), nullptr);
+  EXPECT_TRUE(tree.getRoot() != nullptr);
 
   EXPECT_NE(samples.size(), 0ul) << "Should be at least one sample";
   for (auto it = samples.begin(), end = samples.end(); it != end; ++it) {

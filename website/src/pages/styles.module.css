@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -41,28 +41,4 @@
 .featureImage {
   height: 180px;
   width: 180px;
-}
-
-.videoSection {
-  padding: 4rem 0;
-  padding-top: 1rem;
-}
-
-.videoContainer {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.videoWrapper {
-  position: relative;
-  padding-bottom: 56.25%; /* 16:9 */
-  height: 0;
-}
-
-.videoWrapper iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
 }

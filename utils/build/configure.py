@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -81,7 +81,9 @@ def parse_args():
         "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
     )
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
+    parser.add_argument("--unicode-lite", dest="unicode_lite", action="store_true")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
+    parser.add_argument("--jsidir", type=str, dest="jsi_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
     parser.add_argument(
         "--basic-block-profiler", dest="basic_block_profiler", action="store_true"
@@ -114,6 +116,8 @@ def parse_args():
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
         args.fbsource_dir = os.path.realpath(args.fbsource_dir)
+    if args.jsi_dir:
+        args.jsi_dir = os.path.realpath(args.jsi_dir)
     if args.emscripten_root:
         args.emscripten_root = os.path.realpath(args.emscripten_root)
     if args.wasm:
@@ -250,6 +254,8 @@ def main():
         cmake_flags += ["-DHERMES_ENABLE_TRACE_PC_GUARD=ON"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
+    if args.jsi_dir:
+        cmake_flags += ["-DJSI_DIR=" + args.jsi_dir]
     if args.wasm:
         cmake_flags += [
             "-DCMAKE_TOOLCHAIN_FILE={}".format(
@@ -265,6 +271,8 @@ def main():
             "-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1",
             "-DEMSCRIPTEN_FASTCOMP=" + str(int(args.emscripten_platform == "fastcomp")),
         ]
+    if args.unicode_lite:
+        cmake_flags += ["-DHERMES_UNICODE_LITE=ON"]
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]

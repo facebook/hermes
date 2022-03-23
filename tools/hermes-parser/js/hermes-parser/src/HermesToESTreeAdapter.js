@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -21,6 +21,8 @@ import type {HermesNode} from './HermesAST';
 import type {ParserOptions} from './ParserOptions';
 
 import HermesASTAdapter from './HermesASTAdapter';
+
+declare var BigInt: ?(value: $FlowFixMe) => mixed;
 
 export default class HermesToESTreeAdapter extends HermesASTAdapter {
   +code: string;
@@ -55,13 +57,18 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'BooleanLiteral':
       case 'StringLiteral':
       case 'NumericLiteral':
+      case 'JSXStringLiteral':
         return this.mapSimpleLiteral(node);
+      case 'BigIntLiteral':
+        return this.mapBigIntLiteral(node);
       case 'RegExpLiteral':
         return this.mapRegExpLiteral(node);
       case 'Empty':
         return this.mapEmpty(node);
       case 'TemplateElement':
         return this.mapTemplateElement(node);
+      case 'BigIntLiteralTypeAnnotation':
+        return this.mapBigIntLiteralTypeAnnotation(node);
       case 'GenericTypeAnnotation':
         return this.mapGenericTypeAnnotation(node);
       case 'ImportDeclaration':
@@ -90,18 +97,59 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   }
 
   mapSimpleLiteral(node: HermesNode): HermesNode {
-    node.type = 'Literal';
-    node.raw = this.code.slice(node.range[0], node.range[1]);
+    return {
+      type: 'Literal',
+      loc: node.loc,
+      range: node.range,
+      value: node.value,
+      raw: this.code.slice(node.range[0], node.range[1]),
+      literalType: (() => {
+        switch (node.type) {
+          case 'NullLiteral':
+            return 'null';
 
-    return node;
+          case 'BooleanLiteral':
+            return 'boolean';
+
+          case 'StringLiteral':
+          case 'JSXStringLiteral':
+            return 'string';
+
+          case 'NumericLiteral':
+            return 'numeric';
+
+          case 'BigIntLiteral':
+            return 'bigint';
+
+          case 'RegExpLiteral':
+            return 'regexp';
+        }
+        return null;
+      })(),
+    };
+  }
+
+  mapBigIntLiteral(node: HermesNode): HermesNode {
+    const newNode = this.mapSimpleLiteral(node);
+    const bigint = node.bigint
+      // estree spec is to not have a trailing `n` on this property
+      // https://github.com/estree/estree/blob/db962bb417a97effcfe9892f87fbb93c81a68584/es2020.md#bigintliteral
+      .replace(/n$/, '')
+      // `BigInt` doesn't accept numeric separator and `bigint` property should not include numeric separator
+      .replace(/_/, '');
+    return {
+      ...newNode,
+      // coerce the string to a bigint value if supported by the environment
+      value: typeof BigInt === 'function' ? BigInt(bigint) : null,
+      bigint,
+    };
   }
 
   mapNullLiteral(node: HermesNode): HermesNode {
-    node.type = 'Literal';
-    node.value = null;
-    node.raw = this.code.slice(node.range[0], node.range[1]);
-
-    return node;
+    return {
+      ...this.mapSimpleLiteral(node),
+      value: null,
+    };
   }
 
   mapRegExpLiteral(node: HermesNode): HermesNode {
@@ -116,16 +164,18 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     }
 
     return {
-      type: 'Literal',
-      loc: node.loc,
-      range: node.range,
+      ...this.mapSimpleLiteral(node),
       value,
-      raw: this.code.slice(node.range[0], node.range[1]),
       regex: {
         pattern,
         flags,
       },
     };
+  }
+
+  mapBigIntLiteralTypeAnnotation(node: HermesNode): HermesNode {
+    node.value = null;
+    return node;
   }
 
   mapTemplateElement(node: HermesNode): HermesNode {
@@ -144,7 +194,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   mapGenericTypeAnnotation(node: HermesNode): HermesNode {
     // Convert simple `this` generic type to ThisTypeAnnotation
     if (
-      node.typeParameters === null &&
+      node.typeParameters == null &&
       node.id.type === 'Identifier' &&
       node.id.name === 'this'
     ) {

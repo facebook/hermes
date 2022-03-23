@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -49,6 +49,13 @@ jsi::Value TracingRuntime::evaluateJavaScript(
       getTimeSinceStart(), toTraceValue(res));
   return res;
 }
+
+bool TracingRuntime::drainMicrotasks(int maxMicrotasksHint) {
+  auto res = RD::drainMicrotasks(maxMicrotasksHint);
+  trace_.emplace_back<SynthTrace::DrainMicrotasksRecord>(
+      getTimeSinceStart(), maxMicrotasksHint);
+  return res;
+};
 
 jsi::Object TracingRuntime::createObject() {
   auto obj = RD::createObject();
@@ -124,7 +131,7 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
       try {
         // Note that this ignores the "rt" argument, passing the
         // DHO's cached decoratedRuntime() to the underlying HostObject's
-        // getProprtyNames.  In this case, that will be a TracingRuntime.
+        // getPropertyNames.  In this case, that will be a TracingRuntime.
         props = DecoratedHostObject::getPropertyNames(rt);
       } catch (...) {
         // TODO(T28293178): The trace currently has no way to model
@@ -212,10 +219,21 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
 
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
-  std::string s = str.utf8(*this);
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
   trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-      getTimeSinceStart(), getUniqueID(res), std::move(s), /* isAscii */ false);
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::encodeString(getUniqueID(str)));
+  return res;
+}
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
+    const jsi::Symbol &sym) {
+  jsi::PropNameID res = RD::createPropNameIDFromSymbol(sym);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::encodeSymbol(getUniqueID(sym)));
   return res;
 }
 
@@ -512,6 +530,8 @@ SynthTrace::TraceValue TracingRuntime::toTraceValue(const jsi::Value &value) {
     // Get a unique identifier from the object, and use that instead. This is
     // so that object identity is tracked.
     return SynthTrace::encodeObject(getUniqueID(value.getObject(*this)));
+  } else if (value.isSymbol()) {
+    return SynthTrace::encodeSymbol(getUniqueID(value.getSymbol(*this)));
   } else {
     throw std::logic_error("Unsupported value reached");
   }
@@ -540,7 +560,7 @@ TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
     conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
   }
-  if (flushedAndDisabled_) {
+  if (!flushedAndDisabled_) {
     // If the trace is not flushed and disabled, flush the trace and
     // run rollback action (e.g. delete the in-progress trace)
     flushAndDisableTrace();
@@ -691,7 +711,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
         traceScratchPath.c_str(),
         ec.message().c_str());
     return makeTracingHermesRuntime(
-        std::move(hermesRuntime), runtimeConfig, nullptr, "");
+        std::move(hermesRuntime), runtimeConfig, nullptr, true);
   }
 
   return makeTracingHermesRuntimeImpl(

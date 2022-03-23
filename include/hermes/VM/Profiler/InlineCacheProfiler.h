@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -108,7 +108,7 @@ class InlineCacheProfiler {
   /// the information to ostream. Inline caching miss records are
   /// ranked in descending order based on the miss count.
   void dumpRankedInlineCachingMisses(
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::raw_ostream &ostream);
 
  private:
@@ -136,7 +136,7 @@ class InlineCacheProfiler {
   void dumpInfoOfSourceLocation(
       ICSrcKey &srcLoc,
       ICMiss &icMiss,
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::raw_ostream &ostream);
 
   /// Dump a inline caching miss record, which
@@ -144,14 +144,14 @@ class InlineCacheProfiler {
   void dumpInlineCachingMissRecord(
       ICMissKey &icInfo,
       uint64_t icMiss,
-      Runtime *runtime,
+      Runtime &runtime,
       llvh::raw_ostream &ostream);
 
   /// Dump properties of a hidden class to ostream.
   void dumpHiddenClassProperties(
       llvh::raw_ostream &ostream,
       HiddenClass *hc,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Total number of inline caching misses during the program execution.
   uint64_t totalMisses_{0};

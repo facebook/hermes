@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -52,9 +52,8 @@ function foo() {
 // CHECK: Function<bar>(1 params, 13 registers, 0 symbols):
 // CHECK-NEXT: Offset in debug table: {{.*}}
 // CHECK-NEXT:     GetEnvironment    r1, 0
-// CHECK-NEXT:     LoadFromEnvironment r2, r1, 0
-// CHECK-NEXT:     LoadConstUInt8    r0, 1
-// CHECK-NEXT:     Add               r0, r2, r0
+// CHECK-NEXT:     LoadFromEnvironment r0, r1, 0
+// CHECK-NEXT:     Inc               r0, r0
 // CHECK-NEXT:     StoreNPToEnvironment r1, 0, r0
 // CHECK-NEXT:     LoadConstFalse    r0
 // CHECK-NEXT:     StoreNPToEnvironment r1, 1, r0
@@ -70,4 +69,3 @@ function foo() {
 // CHECK-NEXT:     Call2             r2, r3, r0, r2
 // CHECK-NEXT:     StoreNPToEnvironment r1, 5, r0
 // CHECK-NEXT:     Ret               r0
-

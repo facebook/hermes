@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,27 +18,26 @@
 //CHECK-NEXT:    AsyncBreakCheck
 //CHECK-NEXT:    Ret               r0
 
-//CHECK-LABEL:Function<test1>(1 params, 17 registers, 0 symbols):
+//CHECK-LABEL:Function<test1>(1 params, 16 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    LoadConstUInt8    r5, 3
-//CHECK-NEXT:    LoadConstUInt8    r4, 1
+//CHECK-NEXT:    LoadConstUInt8    r4, 3
 //CHECK-NEXT:    LoadConstUInt8    r1, 5
 //CHECK-NEXT:    LoadConstUInt8    r3, 10
-//CHECK-NEXT:    LoadConstZero     r6
+//CHECK-NEXT:    LoadConstZero     r5
 //CHECK-NEXT:    AsyncBreakCheck
 //CHECK-NEXT:L3:
-//CHECK-NEXT:    TryGetById        r7, r0, 1, "Math"
-//CHECK-NEXT:    GetByIdShort      r2, r7, 2, "random"
-//CHECK-NEXT:    Call1             r7, r2, r7
-//CHECK-NEXT:    Mov               r2, r6
+//CHECK-NEXT:    TryGetById        r6, r0, 1, "Math"
+//CHECK-NEXT:    GetByIdShort      r2, r6, 2, "random"
+//CHECK-NEXT:    Call1             r6, r2, r6
+//CHECK-NEXT:    Mov               r2, r5
 //CHECK-NEXT:    AsyncBreakCheck
-//CHECK-NEXT:    JStrictEqual      L1, r7, r5
-//CHECK-NEXT:    TryGetById        r8, r0, 1, "Math"
-//CHECK-NEXT:    GetByIdShort      r7, r8, 2, "random"
-//CHECK-NEXT:    Call1             r7, r7, r8
-//CHECK-NEXT:    JStrictEqual      L2, r7, r1
-//CHECK-NEXT:    AddN              r6, r2, r4
+//CHECK-NEXT:    JStrictEqual      L1, r6, r4
+//CHECK-NEXT:    TryGetById        r7, r0, 1, "Math"
+//CHECK-NEXT:    GetByIdShort      r6, r7, 2, "random"
+//CHECK-NEXT:    Call1             r6, r6, r7
+//CHECK-NEXT:    JStrictEqual      L2, r6, r1
+//CHECK-NEXT:    Inc               r5, r2
 //CHECK-NEXT:    Jmp               L3
 //CHECK-NEXT:L2:
 //CHECK-NEXT:    AsyncBreakCheck
@@ -48,7 +47,7 @@
 //CHECK-NEXT:    Mov               r2, r1
 //CHECK-NEXT:    JNotGreaterN      L4, r2, r3
 //CHECK-NEXT:L5:
-//CHECK-NEXT:    SubN              r1, r1, r4
+//CHECK-NEXT:    Dec              r1, r1
 //CHECK-NEXT:    Mov               r2, r1
 //CHECK-NEXT:    AsyncBreakCheck
 //CHECK-NEXT:    JGreaterN         L5, r2, r3

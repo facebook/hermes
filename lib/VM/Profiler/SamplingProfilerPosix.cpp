@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -37,13 +37,20 @@ const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
 std::atomic<SamplingProfiler::GlobalProfiler *>
     SamplingProfiler::GlobalProfiler::instance_{nullptr};
 
-std::atomic<bool> SamplingProfiler::GlobalProfiler::handlerSyncFlag_{false};
+std::atomic<SamplingProfiler *>
+    SamplingProfiler::GlobalProfiler::profilerForSig_{nullptr};
 
 void SamplingProfiler::GlobalProfiler::registerRuntime(
     SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
-  threadLocalProfiler_.set(profiler);
+
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  assert(
+      threadLocalProfilerForLoom_.get() == nullptr &&
+      "multiple hermes runtime in the same thread");
+  threadLocalProfilerForLoom_.set(profiler);
+#endif
 }
 
 void SamplingProfiler::GlobalProfiler::unregisterRuntime(
@@ -55,7 +62,12 @@ void SamplingProfiler::GlobalProfiler::unregisterRuntime(
   assert(succeed && "How can runtime not registered yet?");
   (void)succeed;
 
-  threadLocalProfiler_.set(nullptr);
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  assert(
+      threadLocalProfilerForLoom_.get() == profiler &&
+      "invalid hermes runtime for this thread");
+  threadLocalProfilerForLoom_.set(nullptr);
+#endif
 }
 
 void SamplingProfiler::registerDomain(Domain *domain) {
@@ -76,7 +88,8 @@ int SamplingProfiler::GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
   struct sigaction actions;
   memset(&actions, 0, sizeof(actions));
   sigemptyset(&actions.sa_mask);
-  actions.sa_flags = 0;
+  // Allows interrupted IO primitives to restart.
+  actions.sa_flags = SA_RESTART;
   actions.sa_handler = handler;
   return sigaction(SIGPROF, &actions, nullptr);
 }
@@ -107,26 +120,21 @@ bool SamplingProfiler::GlobalProfiler::unregisterSignalHandler() {
 }
 
 void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
-  // Ensure that writes made on the timer thread before setting this flag are
-  // correctly acquired.
-  while (!handlerSyncFlag_.load(std::memory_order_acquire)) {
+  // Ensure that writes made on the timer thread before setting the current
+  // profiler are correctly acquired.
+  SamplingProfiler *localProfiler;
+  while (!(localProfiler = profilerForSig_.load(std::memory_order_acquire))) {
   }
 
   // Avoid spoiling errno in a signal handler by storing the old version and
   // re-assigning it.
   auto oldErrno = errno;
-  // Fetch runtime used by this sampling thread.
+  auto &curThreadRuntime = localProfiler->runtime_;
+
   auto profilerInstance = instance_.load();
-  auto *localProfiler = profilerInstance->threadLocalProfiler_.get();
-  auto *curThreadRuntime = localProfiler->runtime_;
-  if (curThreadRuntime == nullptr) {
-    // Runtime may have unregistered itself before signal.
-    errno = oldErrno;
-    return;
-  }
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (LLVM_LIKELY(!curThreadRuntime->getHeap().inGC())) {
+  if (LLVM_LIKELY(!curThreadRuntime.getHeap().inGC())) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
@@ -145,7 +153,7 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
     }
   }
   // Ensure that writes made in the handler are visible to the timer thread.
-  handlerSyncFlag_.store(false);
+  profilerForSig_.store(nullptr);
 
   if (!instance_.load()->samplingDoneSem_.notifyOne()) {
     errno = oldErrno;
@@ -167,7 +175,7 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
 
     // Guarantee that the runtime thread will not proceed until it has acquired
     // the updates to domains_.
-    handlerSyncFlag_.store(true, std::memory_order_release);
+    profilerForSig_.store(localProfiler, std::memory_order_release);
 
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
@@ -180,7 +188,7 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
 
     // Guarantee that this thread will observe all changes made to data
     // structures in the signal handler.
-    while (handlerSyncFlag_.load(std::memory_order_acquire)) {
+    while (profilerForSig_.load(std::memory_order_acquire) != nullptr) {
     }
 
     assert(
@@ -235,7 +243,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
-  for (ConstStackFramePtr frame : runtime_->getStackFrames()) {
+  for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
     auto &frameStorage = sampleStorage.stack[count];
@@ -308,16 +316,17 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     uint16_t max_depth) {
   auto profilerInstance = GlobalProfiler::instance_.load();
   SamplingProfiler *localProfiler =
-      profilerInstance->threadLocalProfiler_.get();
-  Runtime *curThreadRuntime = localProfiler->runtime_;
-  if (curThreadRuntime == nullptr) {
+      profilerInstance->threadLocalProfilerForLoom_.get();
+  if (localProfiler == nullptr) {
     // No runtime in this thread.
     return StackCollectionRetcode::NO_STACK_FOR_THREAD;
   }
+
+  Runtime &curThreadRuntime = localProfiler->runtime_;
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
   uint32_t sampledStackDepth = 0;
-  if (!curThreadRuntime->getHeap().inGC()) {
+  if (!curThreadRuntime.getHeap().inGC()) {
     assert(
         profilerInstance != nullptr &&
         "Why is GlobalProfiler::instance_ not initialized yet?");
@@ -377,13 +386,18 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
 }
 #endif
 
-SamplingProfiler::SamplingProfiler(Runtime *runtime)
+SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : currentThread_{pthread_self()}, runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
   GlobalProfiler::get()->registerRuntime(this);
 }
 
 SamplingProfiler::~SamplingProfiler() {
+  if (pthread_self() != currentThread_) {
+    ::hermes::hermes_fatal(
+        "SamplingProfiler should be destroyed on the same thread it is "
+        "created");
+  }
   GlobalProfiler::get()->unregisterRuntime(this);
 }
 
@@ -451,6 +465,13 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   clear();
 }
 
+void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
+  hermes::vm::serializeAsProfilerProfile(
+      OS, ChromeTraceFormat::create(getpid(), threadNames_, sampledStacks_));
+  clear();
+}
+
 bool SamplingProfiler::enable() {
   return GlobalProfiler::get()->enable();
 }
@@ -514,7 +535,7 @@ void SamplingProfiler::onGCEvent(
     GCEventKind kind,
     const std::string &extraInfo) {
   assert(
-      !runtime_->getHeap().inGC() &&
+      !runtime_.getHeap().inGC() &&
       "Cannot be in a GC when setting a GC event");
   switch (kind) {
     case GCEventKind::CollectionStart: {

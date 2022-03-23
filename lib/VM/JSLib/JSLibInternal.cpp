@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -20,7 +20,7 @@ namespace hermes {
 namespace vm {
 
 Handle<NativeConstructor> defineSystemConstructor(
-    Runtime *runtime,
+    Runtime &runtime,
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
@@ -28,7 +28,7 @@ Handle<NativeConstructor> defineSystemConstructor(
     unsigned paramCount,
     NativeConstructor::CreatorFunction *creator,
     CellKind targetKind) {
-  auto constructor = runtime->makeHandle(NativeConstructor::create(
+  auto constructor = runtime.makeHandle(NativeConstructor::create(
       runtime,
       constructorProtoObjectHandle,
       nullptr,
@@ -53,7 +53,7 @@ Handle<NativeConstructor> defineSystemConstructor(
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   auto res = JSObject::defineOwnProperty(
-      runtime->getGlobal(), runtime, name, dpf, constructor);
+      runtime.getGlobal(), runtime, name, dpf, constructor);
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
@@ -63,7 +63,7 @@ Handle<NativeConstructor> defineSystemConstructor(
 }
 
 CallResult<HermesValue> defineMethod(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
     SymbolID methodName,
@@ -75,7 +75,7 @@ CallResult<HermesValue> defineMethod(
 
   auto method = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
       context,
       nativeFunctionPtr,
       methodName,
@@ -93,7 +93,7 @@ CallResult<HermesValue> defineMethod(
 }
 
 Handle<NativeConstructor> defineSystemConstructor(
-    Runtime *runtime,
+    Runtime &runtime,
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
@@ -105,14 +105,14 @@ Handle<NativeConstructor> defineSystemConstructor(
       name,
       nativeFunctionPtr,
       prototypeObjectHandle,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
       paramCount,
       creator,
       targetKind);
 }
 
 void defineMethod(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
     void *context,
@@ -124,7 +124,7 @@ void defineMethod(
 }
 
 void defineAccessor(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
     SymbolID methodName,
@@ -142,7 +142,7 @@ void defineAccessor(
   GCScope gcScope{runtime};
 
   StringView nameView =
-      runtime->getIdentifierTable().getStringView(runtime, methodName);
+      runtime.getIdentifierTable().getStringView(runtime, methodName);
   assert(nameView.isASCII() && "Only ASCII accessors are supported");
 
   MutableHandle<NativeFunction> getter{runtime};
@@ -152,19 +152,19 @@ void defineAccessor(
     llvh::raw_svector_ostream os{getterName};
     os << nameView;
 
-    auto strRes = runtime->ignoreAllocationFailure(
+    auto strRes = runtime.ignoreAllocationFailure(
         StringPrimitive::create(runtime, getterName));
     SymbolID getterFuncName =
         runtime
-            ->ignoreAllocationFailure(
-                runtime->getIdentifierTable().getSymbolHandleFromPrimitive(
+            .ignoreAllocationFailure(
+                runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
                     runtime,
                     createPseudoHandle(vmcast<StringPrimitive>(strRes))))
             .get();
 
     auto funcRes = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
         context,
         getterFunc,
         getterFuncName,
@@ -180,19 +180,19 @@ void defineAccessor(
     llvh::raw_svector_ostream os{setterName};
     os << nameView;
 
-    auto strRes = runtime->ignoreAllocationFailure(
+    auto strRes = runtime.ignoreAllocationFailure(
         StringPrimitive::create(runtime, setterName));
     SymbolID setterFuncName =
         runtime
-            ->ignoreAllocationFailure(
-                runtime->getIdentifierTable().getSymbolHandleFromPrimitive(
+            .ignoreAllocationFailure(
+                runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
                     runtime,
                     createPseudoHandle(vmcast<StringPrimitive>(strRes))))
             .get();
 
     auto funcRes = NativeFunction::create(
         runtime,
-        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
         context,
         setterFunc,
         setterFuncName,
@@ -203,7 +203,7 @@ void defineAccessor(
 
   auto crtRes = PropertyAccessor::create(runtime, getter, setter);
   assert(crtRes != ExecutionStatus::EXCEPTION && "unable to define accessor");
-  auto accessor = runtime->makeHandle<PropertyAccessor>(*crtRes);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(*crtRes);
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
@@ -222,7 +222,7 @@ void defineAccessor(
 }
 
 void defineProperty(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
     Handle<> value,
@@ -236,7 +236,7 @@ void defineProperty(
 }
 
 void defineProperty(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
     Handle<> value) {
@@ -246,15 +246,15 @@ void defineProperty(
 }
 
 ExecutionStatus iteratorCloseAndRethrow(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> iterator) {
-  auto completion = runtime->makeHandle(runtime->getThrownValue());
+  auto completion = runtime.makeHandle(runtime.getThrownValue());
   if (isUncatchableError(completion.getHermesValue())) {
     // If an uncatchable exception was raised, do not swallow it, but instead
     // propagate it.
     return ExecutionStatus::EXCEPTION;
   }
-  runtime->clearThrownValue();
+  runtime.clearThrownValue();
   auto status = iteratorClose(runtime, iterator, completion);
   (void)status;
   assert(
@@ -267,10 +267,10 @@ static std::vector<uint8_t> getReturnThisRegexBytecode() {
   return regex::Regex<regex::UTF16RegexTraits>(returnThisRE).compile();
 }
 
-static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
+static bool isReturnThis(Handle<StringPrimitive> str, Runtime &runtime) {
   // Fast check for minimal version.
   {
-    auto minimal = runtime->getPredefinedString(Predefined::returnThis);
+    auto minimal = runtime.getPredefinedString(Predefined::returnThis);
     if (str->equals(minimal)) {
       return true;
     }
@@ -302,7 +302,7 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
 }
 
 CallResult<HermesValue> createDynamicFunction(
-    Runtime *runtime,
+    Runtime &runtime,
     NativeArgs args,
     DynamicFunctionKind kind) {
   GCScope gcScope(runtime);
@@ -337,28 +337,27 @@ CallResult<HermesValue> createDynamicFunction(
   MutableHandle<JSObject> fallbackProto{runtime};
   switch (kind) {
     case DynamicFunctionKind::Normal:
-      fallbackProto = Handle<JSObject>::vmcast(&runtime->functionPrototype);
+      fallbackProto = Handle<JSObject>::vmcast(&runtime.functionPrototype);
       break;
     case DynamicFunctionKind::Generator:
       fallbackProto =
-          Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
+          Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
       break;
     case DynamicFunctionKind::Async:
-      fallbackProto =
-          Handle<JSObject>::vmcast(&runtime->asyncFunctionPrototype);
+      fallbackProto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
       break;
     default:
       llvm_unreachable("unknown kind for CreateDynamicFunction.");
   }
 
   Handle<JSObject> parent = !args.getNewTarget().isUndefined()
-      ? runtime->makeHandle(
+      ? runtime.makeHandle(
             vmcast<JSObject>(args.getThisArg())->getParent(runtime))
       : fallbackProto;
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
-    body = runtime->getPredefinedString(Predefined::emptyString);
+    body = runtime.getPredefinedString(Predefined::emptyString);
   } else {
     // If there's arguments, store the parameters and the provided body.
     auto marker = gcScope.createMarker();
@@ -368,7 +367,7 @@ CallResult<HermesValue> createDynamicFunction(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto param = runtime->makeHandle(std::move(*strRes));
+      auto param = runtime.makeHandle(std::move(*strRes));
       JSArray::setElementAt(params, runtime, i, param);
       size.add(param->getStringLength());
     }
@@ -386,10 +385,10 @@ CallResult<HermesValue> createDynamicFunction(
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
                  runtime,
-                 runtime->makeHandle(Domain::create(runtime)),
+                 runtime.makeHandle(Domain::create(runtime)),
                  parent,
                  Handle<Environment>(runtime, nullptr),
-                 runtime->getReturnThisCodeBlock())
+                 runtime.getReturnThisCodeBlock())
           .getHermesValue();
     }
   }
@@ -448,7 +447,7 @@ CallResult<HermesValue> createDynamicFunction(
   }
 
   Handle<JSFunction> function =
-      runtime->makeHandle(vmcast<JSFunction>(evalRes.getValue()));
+      runtime.makeHandle(vmcast<JSFunction>(evalRes.getValue()));
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -460,7 +459,7 @@ CallResult<HermesValue> createDynamicFunction(
           runtime,
           Predefined::getSymbolID(Predefined::name),
           dpf,
-          runtime->makeHandle(runtime->getStringPrimFromSymbolID(
+          runtime.makeHandle(runtime.getStringPrimFromSymbolID(
               Predefined::getSymbolID(Predefined::anonymous)))) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,7 +22,7 @@ namespace hermes {
 namespace vm {
 
 void Interpreter::saveGenerator(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *resumeIP) {
   auto *innerFn =
@@ -33,7 +33,7 @@ void Interpreter::saveGenerator(
 }
 
 ExecutionStatus Interpreter::caseDirectEval(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
   auto *result = &O1REG(DirectEval);
@@ -43,7 +43,7 @@ ExecutionStatus Interpreter::caseDirectEval(
 
   // Check to see if global eval() has been overriden, in which case call it as
   // as normal function.
-  auto global = runtime->getGlobal();
+  auto global = runtime.getGlobal();
   auto existingEval = global->getNamed_RJS(
       global, runtime, Predefined::getSymbolID(Predefined::eval));
   if (LLVM_UNLIKELY(existingEval == ExecutionStatus::EXCEPTION)) {
@@ -56,7 +56,7 @@ ExecutionStatus Interpreter::caseDirectEval(
     if (auto *existingEvalCallable =
             dyn_vmcast<Callable>(existingEval->get())) {
       auto evalRes = existingEvalCallable->executeCall1(
-          runtime->makeHandle<Callable>(existingEvalCallable),
+          runtime.makeHandle<Callable>(existingEvalCallable),
           runtime,
           Runtime::getUndefinedValue(),
           *input);
@@ -67,8 +67,8 @@ ExecutionStatus Interpreter::caseDirectEval(
       evalRes->invalidate();
       return ExecutionStatus::RETURNED;
     }
-    return runtime->raiseTypeErrorForValue(
-        runtime->makeHandle(std::move(*existingEval)), " is not a function");
+    return runtime.raiseTypeErrorForValue(
+        runtime.makeHandle(std::move(*existingEval)), " is not a function");
   }
 
   if (!input->isString()) {
@@ -92,7 +92,7 @@ ExecutionStatus Interpreter::caseDirectEval(
 }
 
 ExecutionStatus Interpreter::casePutOwnByVal(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
   return JSObject::defineOwnComputed(
@@ -107,7 +107,7 @@ ExecutionStatus Interpreter::casePutOwnByVal(
 }
 
 ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
   DefinePropertyFlags dpFlags{};
@@ -134,7 +134,7 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  auto accessor = runtime->makeHandle<PropertyAccessor>(*res);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(*res);
 
   return JSObject::defineOwnComputed(
              Handle<JSObject>::vmcast(&O1REG(PutOwnGetterSetterByVal)),
@@ -146,7 +146,7 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
 }
 
 ExecutionStatus Interpreter::caseIteratorBegin(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
   if (LLVM_LIKELY(vmisa<JSArray>(O2REG(IteratorBegin)))) {
@@ -165,7 +165,7 @@ ExecutionStatus Interpreter::caseIteratorBegin(
       }
       PseudoHandle<> slotValue = std::move(*slotValueRes);
       if (LLVM_LIKELY(
-              slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
+              slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeNumberValue(0);
         return ExecutionStatus::RETURNED;
       }
@@ -183,7 +183,7 @@ ExecutionStatus Interpreter::caseIteratorBegin(
 }
 
 ExecutionStatus Interpreter::caseIteratorNext(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
   if (LLVM_LIKELY(O2REG(IteratorNext).isNumber())) {
@@ -248,7 +248,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
   if (LLVM_UNLIKELY(resultObjRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> resultObj = runtime->makeHandle(std::move(*resultObjRes));
+  Handle<JSObject> resultObj = runtime.makeHandle(std::move(*resultObjRes));
   CallResult<PseudoHandle<>> doneRes = JSObject::getNamed_RJS(
       resultObj, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION)) {
@@ -274,7 +274,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
 }
 
 ExecutionStatus Interpreter::caseGetPNameList(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
   if (O2REG(GetPNameList).isUndefined() || O2REG(GetPNameList).isNull()) {
@@ -290,7 +290,7 @@ ExecutionStatus Interpreter::caseGetPNameList(
   }
   O2REG(GetPNameList) = res.getValue();
 
-  auto obj = runtime->makeMutableHandle(vmcast<JSObject>(res.getValue()));
+  auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
   uint32_t beginIndex;
   uint32_t endIndex;
   auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
@@ -305,20 +305,20 @@ ExecutionStatus Interpreter::caseGetPNameList(
 }
 
 ExecutionStatus Interpreter::implCallBuiltin(
-    Runtime *runtime,
+    Runtime &runtime,
     PinnedHermesValue *frameRegs,
     CodeBlock *curCodeBlock,
     uint32_t op3) {
-  const Inst *ip = runtime->getCurrentIP();
+  const Inst *ip = runtime.getCurrentIP();
   uint8_t methodIndex = ip->iCallBuiltin.op2;
-  Callable *callable = runtime->getBuiltinCallable(methodIndex);
+  Callable *callable = runtime.getBuiltinCallable(methodIndex);
   assert(
       isNativeBuiltin(methodIndex) &&
       "CallBuiltin must take a native builtin.");
   NativeFunction *nf = vmcast<NativeFunction>(callable);
 
   auto newFrame = StackFramePtr::initFrame(
-      runtime->stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
+      runtime.stackPointer_, FRAME, ip, curCodeBlock, op3 - 1, nf, false);
   // "thisArg" is implicitly assumed to "undefined".
   newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 

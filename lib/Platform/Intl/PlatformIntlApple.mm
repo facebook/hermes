@@ -1,13 +1,15 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Platform/Intl/BCP47Parser.h"
+#include "hermes/Platform/Intl/PlatformIntl.h"
+
 #import <Foundation/Foundation.h>
 #include <unordered_set>
-#include "hermes/Platform/Intl/PlatformIntl.h"
 
 namespace hermes {
 namespace platform_intl {
@@ -48,24 +50,41 @@ const std::vector<std::u16string> &getAvailableLocales() {
         [NSLocale availableLocaleIdentifiers];
     // Intentionally leaked to avoid destruction order problems.
     auto *vec = new std::vector<std::u16string>();
-    for (id str in availableLocales)
-      vec->push_back(nsStringToU16String(str));
+    for (id str in availableLocales) {
+      auto u16str = nsStringToU16String(str);
+      // NSLocale sometimes gives locale identifiers with an underscore instead
+      // of a dash. We only consider dashes valid, so fix up any identifiers we
+      // get from NSLocale.
+      std::replace(u16str.begin(), u16str.end(), u'_', u'-');
+      // Some locales may still not be properly canonicalized (e.g. en_US_POSIX
+      // should be en-US-posix).
+      if (auto parsed = ParsedLocaleIdentifier::parse(u16str))
+        vec->push_back(parsed->canonicalize());
+    }
     return vec;
   }();
   return *availableLocales;
 }
-std::u16string getDefaultLocale() {
-  // Environment variable used for testing only
-  const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
-  if (testLocale) {
-    NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
-    return nsStringToU16String(nsTestLocale);
-  }
-  NSString *defLocale = [[NSLocale currentLocale] localeIdentifier];
-  return nsStringToU16String(defLocale);
+const std::u16string &getDefaultLocale() {
+  static const std::u16string *defLocale = new std::u16string([] {
+    // Environment variable used for testing only
+    const char *testLocale = std::getenv("_HERMES_TEST_LOCALE");
+    if (testLocale) {
+      NSString *nsTestLocale = [NSString stringWithUTF8String:testLocale];
+      return nsStringToU16String(nsTestLocale);
+    }
+    NSString *nsDefLocale = [[NSLocale currentLocale] localeIdentifier];
+    auto defLocale = nsStringToU16String(nsDefLocale);
+    // See the comment in getAvailableLocales.
+    std::replace(defLocale.begin(), defLocale.end(), u'_', u'-');
+    if (auto parsed = ParsedLocaleIdentifier::parse(defLocale))
+      return parsed->canonicalize();
+    return std::u16string(u"und");
+  }());
+  return *defLocale;
 }
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sec-bestavailablelocale
+
+/// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
 llvh::Optional<std::u16string> bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::u16string &locale) {
@@ -98,52 +117,18 @@ llvh::Optional<std::u16string> bestAvailableLocale(
   }
 }
 
-// Implementer note: For more information review
-// https://402.ecma-international.org/7.0/#sec-unicode-locale-extension-sequences
-std::u16string toNoUnicodeExtensionsLocale(const std::u16string &locale) {
-  std::vector<std::u16string> subtags;
-  auto s = locale.begin();
-  const auto e = locale.end();
-  while (true) {
-    auto tagEnd = std::find(s, e, u'-');
-    subtags.emplace_back(s, tagEnd);
-    if (tagEnd == e)
-      break;
-    s = tagEnd + 1;
-  }
-  std::u16string result;
-  size_t size = subtags.size();
-  for (size_t i = 0; i < size;) {
-    if (i > 0) {
-      result.append(u"-");
-    }
-    result.append(subtags[i]);
-    i++;
-    // If next tag is a private marker and there are remaining tags
-    if ((subtags[i] == u"u" || subtags[i] == u"U") && i < size - 1) {
-      // Skip those tags until you reach end or another singleton subtag
-      while (i < size && subtags[i+1].size() > 1) {
-        i++;
-      }
-      if (i == size || i == size - 1) {
-        break;
-      }
-    }
-  }
-  // Remove once BCP 47 parser is in place
-  std::replace(result.begin(), result.end(), u'-', u'_');
-  return result;
-}
 // Implementer note: This method corresponds roughly to
 // https://tc39.es/ecma402/#sec-lookupmatcher
 struct LocaleMatch {
   std::u16string locale;
-  std::u16string extension;
   std::u16string matchedLocale;
+  std::map<std::u16string, std::u16string> extensions;
 };
+ 
+/// https://402.ecma-international.org/8.0/#sec-lookupmatcher
 LocaleMatch lookupMatcher(
-    const std::vector<std::u16string> &requestedLocales,
-    const std::vector<std::u16string> &availableLocales) {
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
   // 1. Let result be a new Record.
   LocaleMatch result;
   // 2. For each element locale of requestedLocales, do
@@ -152,11 +137,13 @@ LocaleMatch lookupMatcher(
     std::replace(locale.begin(), locale.end(), u'_', u'-');
     // a. Let noExtensionsLsocale be the String value that is locale with
     // any Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // In practice, we can skip this step because availableLocales never
+    // contains any extensions, so bestAvailableLocale will trim away any
+    // unicode extensions.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, noExtensionsLocale);
+        bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, then
     if (availableLocale) {
       // i. Set result.[[locale]] to availableLocale.
@@ -167,7 +154,8 @@ LocaleMatch lookupMatcher(
       // the Unicode locale extension sequence within locale, starting -u.
       // 2. Set result.[[extension]] to extension.
       if (locale != noExtensionsLocale) {
-        result.extension = locale.substr(noExtensionsLocale.length(), locale.length());
+        auto parsed = ParsedLocaleIdentifier::parse(locale);
+        result.extensions = std::move(parsed->unicodeExtensionKeywords);
       }
       // iii. Return result.
       return result;
@@ -178,8 +166,122 @@ LocaleMatch lookupMatcher(
   // 5. Return result.
   return result;
 }
-// Implementer note: This method corresponds roughly to
-// https://402.ecma-international.org/7.0/#sec-lookupsupportedlocales
+
+struct ResolvedLocale {
+  std::u16string locale;
+  std::u16string dataLocale;
+  std::unordered_map<std::u16string, std::u16string> extensions;
+};
+/// https://402.ecma-international.org/8.0/#sec-resolvelocale
+ResolvedLocale resolveLocale(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
+    const std::unordered_map<std::u16string, std::u16string> &options,
+    llvh::ArrayRef<std::u16string> relevantExtensionKeys) {
+  // 1. Let matcher be options.[[localeMatcher]].
+  // 2. If matcher is "lookup", then
+  // a. Let r be LookupMatcher(availableLocales, requestedLocales).
+  // 3. Else,
+  // a. Let r be BestFitMatcher(availableLocales, requestedLocales).
+  auto r = lookupMatcher(availableLocales, requestedLocales);
+  // 4. Let foundLocale be r.[[locale]].
+  auto foundLocale = r.locale;
+  // 5. Let result be a new Record.
+  ResolvedLocale result;
+  // 6. Set result.[[dataLocale]] to foundLocale.
+  result.dataLocale = foundLocale;
+  // 7. If r has an [[extension]] field, then
+  // a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
+  // b. Let keywords be components.[[Keywords]].
+  // 8. Let supportedExtension be "-u".
+  std::u16string supportedExtension = u"-u";
+  // 9. For each element key of relevantExtensionKeys, do
+  for (const auto &key : relevantExtensionKeys) {
+    // a. Let foundLocaleData be localeData.[[<foundLocale>]].
+    // NOTE: We don't actually have access to the underlying locale data, so we
+    // accept everything and defer to NSLocale.
+    // b. Assert: Type(foundLocaleData) is Record.
+    // c. Let keyLocaleData be foundLocaleData.[[<key>]].
+    // d. Assert: Type(keyLocaleData) is List.
+    // e. Let value be keyLocaleData[0].
+    // f. Assert: Type(value) is either String or Null.
+    // g. Let supportedExtensionAddition be "".
+    // h. If r has an [[extension]] field, then
+    auto extIt = r.extensions.find(key);
+    llvh::Optional<std::u16string> value;
+    std::u16string supportedExtensionAddition;
+    // i. If keywords contains an element whose [[Key]] is the same as key, then
+    if (extIt != r.extensions.end()) {
+      // 1. Let entry be the element of keywords whose [[Key]] is the same as
+      // key.
+      // 2. Let requestedValue be entry.[[Value]].
+      // 3. If requestedValue is not the empty String, then
+      // a. If keyLocaleData contains requestedValue, then
+      // i. Let value be requestedValue.
+      // ii. Let supportedExtensionAddition be the string-concatenation of "-",
+      // key, "-", and value.
+      // 4. Else if keyLocaleData contains "true", then
+      // a. Let value be "true".
+      // b. Let supportedExtensionAddition be the string-concatenation of "-"
+      // and key.
+      supportedExtensionAddition.append(u"-").append(key);
+      if (extIt->second.empty())
+        value = u"true";
+      else {
+        value = extIt->second;
+        supportedExtensionAddition.append(u"-").append(*value);
+      }
+    }
+    // i. If options has a field [[<key>]], then
+    auto optIt = options.find(key);
+    if (optIt != options.end()) {
+      // i. Let optionsValue be options.[[<key>]].
+      std::u16string optionsValue = optIt->second;
+      // ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
+      // iii. If Type(optionsValue) is String, then
+      // 1. Let optionsValue be the string optionsValue after performing the
+      // algorithm steps to transform Unicode extension values to canonical
+      // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
+      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
+      // uvalue productions.
+      // 2. Let optionsValue be the string optionsValue after performing the
+      // algorithm steps to replace Unicode extension values with their
+      // canonical form per Technical Standard #35 LDML § 3.2.1 Canonical
+      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
+      // uvalue productions
+      // 3. If optionsValue is the empty String, then
+      if (optionsValue.empty()) {
+        // a. Let optionsValue be "true".
+        optionsValue = u"true";
+      }
+      // iv. If keyLocaleData contains optionsValue, then
+      // 1. If SameValue(optionsValue, value) is false, then
+      if (optionsValue != value) {
+        // a. Let value be optionsValue.
+        value = optionsValue;
+        // b. Let supportedExtensionAddition be "".
+        supportedExtensionAddition = u"";
+      }
+    }
+    // j. Set result.[[<key>]] to value.
+    if (value)
+      result.extensions.emplace(key, std::move(*value));
+    // k. Append supportedExtensionAddition to supportedExtension.
+    supportedExtension.append(supportedExtensionAddition);
+  }
+  // 10. If the number of elements in supportedExtension is greater than 2, then
+  if (supportedExtension.size() > 2) {
+    // a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale,
+    // supportedExtension).
+    foundLocale.append(supportedExtension);
+  }
+  // 11. Set result.[[locale]] to foundLocale.
+  result.locale = std::move(foundLocale);
+  // 12. Return result.
+  return result;
+}
+
+/// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
 std::vector<std::u16string> lookupSupportedLocales(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales) {
@@ -189,11 +291,11 @@ std::vector<std::u16string> lookupSupportedLocales(
   for (const std::u16string &locale : requestedLocales) {
     // a. Let noExtensionsLocale be the String value that is locale with all
     // Unicode locale extension sequences removed.
-    std::u16string noExtensionsLocale = toNoUnicodeExtensionsLocale(locale);
+    // We can skip this step, see the comment in lookupMatcher.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
     llvh::Optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, noExtensionsLocale);
+        bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
     if (availableLocale) {
@@ -203,11 +305,30 @@ std::vector<std::u16string> lookupSupportedLocales(
   // 3. Return subset.
   return subset;
 }
+
+/// https://402.ecma-international.org/8.0/#sec-supportedlocales
+std::vector<std::u16string> supportedLocales(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
+  // 1. Set options to ? CoerceOptionsToObject(options).
+  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //    "lookup", "best fit" », "best fit").
+  // 3. If matcher is "best fit", then
+  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 4. Else,
+  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 5. Return CreateArrayFromList(supportedLocales).
+
+  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
+  return lookupSupportedLocales(availableLocales, requestedLocales);
+}
 }
 
-// Implementation of https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   // 1. If locales is undefined, then
   //   a. Return a new empty List
@@ -224,14 +345,14 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   // 5. Let len be ? ToLength(? Get(O, "length")).
   // 6. Let k be 0.
   // 7. Repeat, while k < len
-  for (std::u16string locale : locales) {
-    // TODO - BCP 47 tag validation
+  for (const auto &locale : locales) {
     // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
-//    auto *localeNSString = u16StringToNSString(locale);
-//    NSString *canonicalizedTagNSString =
-//        [NSLocale canonicalLocaleIdentifierFromString:localeNSString];
-//    auto canonicalizedTag = nsStringToU16String(canonicalizedTagNSString);
-    auto canonicalizedTag = locale;
+    auto parsedOpt = ParsedLocaleIdentifier::parse(locale);
+    if (!parsedOpt)
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid language tag: ") +
+          vm::TwineChar16(locale.c_str()));
+    auto canonicalizedTag = parsedOpt->canonicalize();
     // 7.c.vii. If canonicalizedTag is not an element of seen, append
     // canonicalizedTag as the last element of seen.
     if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
@@ -241,15 +362,17 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
-// https://tc39.es/ecma402/#sec-canonicalizelocalelist
+/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
+  // 1. Let ll be ? CanonicalizeLocaleList(locales).
+  // 2. Return CreateArrayFromList(ll).
   return canonicalizeLocaleList(runtime, locales);
 }
 
 vm::CallResult<std::u16string> localeListToLocaleString(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
   // 3. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   vm::CallResult<std::vector<std::u16string>> requestedLocales =
@@ -267,9 +390,7 @@ vm::CallResult<std::u16string> localeListToLocaleString(
       : std::move(requestedLocales->front());
   // 6. Let noExtensionsLocale be the String value that is requestedLocale with
   // any Unicode locale extension sequences (6.2.1) removed.
-  std::u16string noExtensionsLocale =
-      toNoUnicodeExtensionsLocale(requestedLocale);
-
+  // We can skip this step, see the comment in lookupMatcher.
   // 7. Let availableLocales be a List with language tags that includes the
   // languages for which the Unicode Character Database contains language
   // sensitive case mappings. Implementations may add additional language tags
@@ -278,14 +399,13 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   // Convert to C++ array for bestAvailableLocale function
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
   llvh::Optional<std::u16string> locale =
-      bestAvailableLocale(availableLocales, noExtensionsLocale);
+      bestAvailableLocale(availableLocales, requestedLocale);
   // 9. If locale is undefined, let locale be "und".
   return locale.getValueOr(u"und");
 }
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sup-string.prototype.tolocalelowercase
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
@@ -308,10 +428,9 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
       lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
-// Implementer note: This method corresponds roughly to
-// https://tc39.es/ecma402/#sup-string.prototype.tolocaleuppercase
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocaleuppercase
 vm::CallResult<std::u16string> toLocaleUpperCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str) {
   NSString *nsStr = u16StringToNSString(str);
@@ -479,15 +598,23 @@ struct Collator::Impl {
 Collator::Collator() : impl_(std::make_unique<Impl>()) {}
 Collator::~Collator() {}
 
+/// https://402.ecma-international.org/8.0/#sec-intl.collator.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+  // 1. Let availableLocales be %Collator%.[[AvailableLocales]].
+  const auto &availableLocales = getAvailableLocales();
+  // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
+  if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options)
+  return supportedLocales(availableLocales, *requestedLocalesRes);
 }
 
 vm::ExecutionStatus Collator::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";
@@ -903,7 +1030,7 @@ const std::unordered_map<std::u16string, std::u16string> resolveLocale(
 // Implementation of
 // https://tc39.es/ecma402/#sec-intl.datetimeformat.supportedlocalesof
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
@@ -1056,7 +1183,7 @@ std::u16string getDefaultHourCycle(NSLocale *locale) {
 // Implementation of
 // https://tc39.es/ecma402/#sec-initializedatetimeformat
 vm::ExecutionStatus DateTimeFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
@@ -1974,14 +2101,14 @@ NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
 NumberFormat::~NumberFormat() {}
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
 vm::ExecutionStatus NumberFormat::initialize(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   impl_->locale = u"en-US";

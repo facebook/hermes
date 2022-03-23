@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -88,7 +88,7 @@ llvh::DenseMap<InlineCacheProfiler::ClassId, int32_t>
 void InlineCacheProfiler::dumpHiddenClassProperties(
     llvh::raw_ostream &ostream,
     HiddenClass *hc,
-    Runtime *runtime) {
+    Runtime &runtime) {
   ostream << "\t\t";
   if (hc == nullptr) {
     ostream << "[none]\n";
@@ -109,7 +109,7 @@ void InlineCacheProfiler::dumpHiddenClassProperties(
         } else {
           ostream << ", ";
         }
-        ostream << runtime->convertSymbolToUTF8(symId);
+        ostream << runtime.convertSymbolToUTF8(symId);
       });
   ostream << ">\n";
 }
@@ -134,20 +134,20 @@ InlineCacheProfiler::getRankedInlineCachingMisses() {
 void InlineCacheProfiler::dumpInlineCachingMissRecord(
     ICMissKey &icInfo,
     uint64_t icMiss,
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::raw_ostream &ostream) {
   GCScope gcscope(runtime);
 
   // dump get property name and frequency
   auto propSymbolID = SymbolID::unsafeCreate(icInfo.first);
-  auto propName = runtime->convertSymbolToUTF8(propSymbolID);
+  auto propName = runtime.convertSymbolToUTF8(propSymbolID);
   ostream << "\tproperty: " << propName << ", inline cache misses: " << icMiss
           << "\n";
 
   // dump the information of hidden class layout to ostream
   HiddenClassPair hcPair = icInfo.second;
-  HiddenClass *objectHiddenClass = runtime->resolveHiddenClassId(hcPair.first);
-  HiddenClass *cachedHiddenClass = runtime->resolveHiddenClassId(hcPair.second);
+  HiddenClass *objectHiddenClass = runtime.resolveHiddenClassId(hcPair.first);
+  HiddenClass *cachedHiddenClass = runtime.resolveHiddenClassId(hcPair.second);
   dumpHiddenClassProperties(ostream, objectHiddenClass, runtime);
   dumpHiddenClassProperties(ostream, cachedHiddenClass, runtime);
   ostream << "\n";
@@ -157,10 +157,10 @@ void InlineCacheProfiler::dumpInlineCachingMissRecord(
 void InlineCacheProfiler::dumpInfoOfSourceLocation(
     ICSrcKey &srcLoc,
     ICMiss &icMiss,
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::raw_ostream &ostream) {
   // get filename, line number, and column number
-  auto locOrNull = runtime->getIPSourceLocation(
+  auto locOrNull = runtime.getIPSourceLocation(
       srcLoc.second, srcLoc.second->getOffsetPtr(srcLoc.first));
 
   // output information at the source location
@@ -198,7 +198,7 @@ void InlineCacheProfiler::dumpInfoOfSourceLocation(
 ///    <type, domNamespace, children, childIndex, context, footer>
 ///  ...
 void InlineCacheProfiler::dumpRankedInlineCachingMisses(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::raw_ostream &ostream) {
   // rank the inline caching misses
   std::shared_ptr<InlineCacheProfiler::ICMissList> icInfoList =

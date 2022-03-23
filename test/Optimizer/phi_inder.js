@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,7 +27,7 @@ function sink() {}
 //CHECK-NEXT:%BB2:
 //CHECK-NEXT:  %8 = PhiInst %2 : string|number, %BB3, %1 : string|number, %BB1
 //CHECK-NEXT:  %9 = PhiInst %1 : string|number, %BB3, %2 : string|number, %BB1
-//CHECK-NEXT:  %10 = BinaryOperatorInst '+', %3 : number, 1 : number
+//CHECK-NEXT:  %10 = UnaryOperatorInst '++', %3 : number
 //CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10 : number, 10 : number
 //CHECK-NEXT:  %12 = CondBranchInst %11 : boolean, %BB1, %BB4
 //CHECK-NEXT:%BB3:
@@ -48,4 +48,3 @@ function recursive_phi(x) {
 
   return k + j;
 }
-

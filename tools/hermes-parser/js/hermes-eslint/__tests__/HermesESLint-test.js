@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -10,7 +10,7 @@
 
 'use strict';
 
-const {parseForESLint} = require('hermes-eslint');
+const {parseForESLint} = require('../src');
 
 test('Parser produces ESTree AST', () => {
   expect(parseForESLint('const x = 1').ast).toMatchObject({

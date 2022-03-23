@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,8 +31,9 @@
 // CHECK-NEXT:                 "name": "foo"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
-// CHECK-NEXT:                 "type": "StringLiteral",
-// CHECK-NEXT:                 "value": "A & B"
+// CHECK-NEXT:                 "type": "JSXStringLiteral",
+// CHECK-NEXT:                 "value": "A & B",
+// CHECK-NEXT:                 "raw": "\"A &amp; B\""
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ],

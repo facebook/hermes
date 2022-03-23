@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -351,7 +351,7 @@ impl<T: 'static + Clone> CLOption for OptHolder<T> {
 
         match (
             self.expected_value,
-            enum_opt_value.as_ref().or_else(|| self.def_value.as_ref()),
+            enum_opt_value.as_ref().or(self.def_value.as_ref()),
             s,
         ) {
             (ExpectedValue::Disallowed, _, Some(s)) => {

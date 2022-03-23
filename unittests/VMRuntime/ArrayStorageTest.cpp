@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -24,7 +24,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(1u, st->size());
   ASSERT_EQ(4u, st->capacity());
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  st->setNonPtr(0, 1.0_hd, &runtime->getHeap());
+  st->setNonPtr(0, 1.0_hd, &runtime.getHeap());
   // "1"
   ASSERT_EQ(1.0_hd, st->at(0));
 
@@ -35,7 +35,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(1.0_hd, st->at(0));
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
   // "12"
-  st->setNonPtr(1, 2.0_hd, &runtime->getHeap());
+  st->setNonPtr(1, 2.0_hd, &runtime.getHeap());
 
   // Resize "12" to ".12."
   (void)ArrayStorage::shift(st, runtime, 0, 1, 4);
@@ -74,7 +74,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(2));
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(3));
   // "12.."
-  st->setNonPtr(1, 2.0_hd, &runtime->getHeap());
+  st->setNonPtr(1, 2.0_hd, &runtime.getHeap());
 
   // Now let's do a reallocation. Resize to 6. "12.." -> "...12."
   (void)ArrayStorage::shift(st, runtime, 0, 3, 6);
@@ -92,11 +92,11 @@ TEST_F(ArrayStorageTest, PushBackTest) {
   MutableHandle<ArrayStorage> st(runtime);
   st = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 4));
 
-  (void)ArrayStorage::push_back(st, runtime, runtime->makeHandle(1.0_hd));
-  (void)ArrayStorage::push_back(st, runtime, runtime->makeHandle(2.0_hd));
-  (void)ArrayStorage::push_back(st, runtime, runtime->makeHandle(3.0_hd));
-  (void)ArrayStorage::push_back(st, runtime, runtime->makeHandle(4.0_hd));
-  (void)ArrayStorage::push_back(st, runtime, runtime->makeHandle(5.0_hd));
+  (void)ArrayStorage::push_back(st, runtime, runtime.makeHandle(1.0_hd));
+  (void)ArrayStorage::push_back(st, runtime, runtime.makeHandle(2.0_hd));
+  (void)ArrayStorage::push_back(st, runtime, runtime.makeHandle(3.0_hd));
+  (void)ArrayStorage::push_back(st, runtime, runtime.makeHandle(4.0_hd));
+  (void)ArrayStorage::push_back(st, runtime, runtime.makeHandle(5.0_hd));
 
   ASSERT_EQ(5u, st->size());
   ASSERT_EQ(8u, st->capacity());
@@ -115,12 +115,12 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
   st = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, originalCapacity));
   EXPECT_LE(st->capacity(), originalCapacity);
   ASSERT_RETURNED(
-      ArrayStorage::push_back(st, runtime, runtime->makeHandle(0.0_hd)));
+      ArrayStorage::push_back(st, runtime, runtime.makeHandle(0.0_hd)));
   EXPECT_EQ(1, st->size());
 
   // Now force some GCs to happen.
   for (auto i = 0; i < 2; i++) {
-    runtime->collect("test");
+    runtime.collect("test");
   }
 
   // The array should be trimmed.
@@ -144,10 +144,10 @@ TEST_F(ArrayStorageBigHeapTest, AllocLargeArrayThrowsRangeError) {
   auto res = ArrayStorage::create(runtime, ArrayStorage::maxElements() + 1);
   EXPECT_EQ(res, ExecutionStatus::EXCEPTION)
       << "Allocating an array slightly larger than its max size should throw";
-  HermesValue hv = runtime->getThrownValue();
+  HermesValue hv = runtime.getThrownValue();
   EXPECT_EQ(
       vmcast<JSObject>(hv)->getParent(runtime),
-      vmcast<JSObject>(runtime->RangeErrorPrototype))
+      vmcast<JSObject>(runtime.RangeErrorPrototype))
       << "Exception thrown was not a RangeError";
 }
 

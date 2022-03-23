@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -54,13 +54,13 @@ TEST(GCMarkWeakTest, MarkWeak) {
   // Probably zero, but we only care about the increase/decrease.
   const int initUsedWeak = gc.countUsedWeakRefs();
   {
-    GCScope scope{&rt};
+    GCScope scope{rt};
     auto t = rt.makeHandle(createWithMarkWeakCount(&gc, &numMarkWeakCalls));
     rt.collect();
 
     WeakRefLock lk{gc.weakRefMutex()};
-    ASSERT_TRUE(t->weak.isValid());
-    EXPECT_EQ(*t, getNoHandle(t->weak, &gc));
+    ASSERT_TRUE(t->weak->isValid());
+    EXPECT_EQ(*t, getNoHandle(*t->weak, &gc));
     // Exactly one call to _markWeakImpl
     EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
     EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -78,6 +78,8 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
       return true;
     case OpKind::PlusKind: // +
     case OpKind::MinusKind: // -
+    case OpKind::IncKind: // ++
+    case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());
       return true;
     case OpKind::TildeKind: // ~

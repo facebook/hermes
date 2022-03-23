@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,8 +18,8 @@
 namespace hermes {
 namespace vm {
 
-void populateArrayIteratorPrototype(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
+void populateArrayIteratorPrototype(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.arrayIteratorPrototype);
 
   defineMethod(
       runtime,
@@ -36,15 +36,15 @@ void populateArrayIteratorPrototype(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::ArrayIterator),
+      runtime.getPredefinedStringHandle(Predefined::ArrayIterator),
       dpf);
 }
 
 CallResult<HermesValue>
-arrayIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
+arrayIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
   auto O = args.dyncastThis<JSArrayIterator>();
   if (LLVM_UNLIKELY(!O)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "ArrayIteratorPrototype.next requires that 'this' be an Array Iterator");
   }
   return JSArrayIterator::nextElement(O, runtime);

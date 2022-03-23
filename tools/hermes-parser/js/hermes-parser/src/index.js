@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -26,7 +26,7 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
   // of an @flow pragma.
   if (options.flow == null) {
     options.flow = DEFAULTS.flow;
-  } else if (options.flow != 'all' && options.flow != 'detect') {
+  } else if (options.flow !== 'all' && options.flow !== 'detect') {
     throw new Error('flow option must be "all" or "detect"');
   }
 

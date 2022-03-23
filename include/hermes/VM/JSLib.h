@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -36,12 +36,12 @@ class JSLibFlags {
   bool enableHermesInternalTestMethods = false;
 };
 
-void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags);
+void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags);
 
 /// Populate the builtin function entries in \b builtins using the corresponding
 /// \c BuiltinMethod::xxx index.
 void createHermesBuiltins(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::MutableArrayRef<Callable *> builtins);
 
 std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
@@ -53,7 +53,7 @@ std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
 /// If \p singleFunction is set, require that the output be only a single
 /// function. \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::StringRef utf8code,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
@@ -65,14 +65,14 @@ CallResult<HermesValue> evalInEnvironment(
 ///        If null, use a fast require instead of the slow path.
 /// \return the resultant module.exports object.
 CallResult<HermesValue> runRequireCall(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<RequireContext> context,
     Handle<Domain> domain,
     uint32_t cjsModuleOffset);
 
 /// The [[ThrowTypeError]] internal function.
 CallResult<HermesValue>
-throwTypeError(void *, Runtime *runtime, NativeArgs args);
+throwTypeError(void *, Runtime &runtime, NativeArgs args);
 
 enum class TypeErrorKind {
   NonStrictOnly,

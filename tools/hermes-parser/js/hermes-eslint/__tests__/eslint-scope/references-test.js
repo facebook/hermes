@@ -1,5 +1,5 @@
 /**
- * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ * Portions Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -201,7 +201,7 @@ describe('References:', () => {
   });
 
   describe('When there is a `function` declaration on global,', () => {
-    it('the reference on global should NOT be resolved.', () => {
+    it('the reference on global should be resolved.', () => {
       const {scopeManager} = parseForESLint(`
                 function a() {}
                 a();
@@ -218,13 +218,13 @@ describe('References:', () => {
 
       expect(reference.from).toEqual(scope);
       expect(reference.identifier.name).toEqual('a');
-      expect(reference.resolved).toBeNull();
+      expect(reference.resolved).not.toBeNull();
       expect(reference.writeExpr).toBeUndefined();
       expect(reference.isWrite()).toBe(false);
       expect(reference.isRead()).toBe(true);
     });
 
-    it('the reference in functions should NOT be resolved.', () => {
+    it('the reference in functions should be resolved.', () => {
       const {scopeManager} = parseForESLint(`
                 function a() {}
                 function foo() {
@@ -243,7 +243,7 @@ describe('References:', () => {
 
       expect(reference.from).toEqual(scope);
       expect(reference.identifier.name).toEqual('a');
-      expect(reference.resolved).toBeNull();
+      expect(reference.resolved).not.toBeNull();
       expect(reference.writeExpr).toBeUndefined();
       expect(reference.isWrite()).toBe(false);
       expect(reference.isRead()).toBe(true);

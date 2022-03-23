@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -20,13 +20,13 @@ namespace vm {
 /// Returns the length of the List
 inline CallResult<uint64_t> getArrayLikeLength(
     Handle<JSObject> arrayLikeHandle,
-    Runtime *runtime) {
+    Runtime &runtime) {
   auto propRes = JSObject::getNamed_RJS(
       arrayLikeHandle, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return toLengthU64(runtime, runtime->makeHandle(std::move(*propRes)));
+  return toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
 }
 
 /// ES9 7.3.17 CreateListFromArrayLike
@@ -38,7 +38,7 @@ inline CallResult<uint64_t> getArrayLikeLength(
 template <typename ElementCB>
 ExecutionStatus createListFromArrayLike(
     Handle<JSObject> arrayLikeHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     uint64_t length,
     const ElementCB &elementCB) {
   GCScope gcScope(runtime);

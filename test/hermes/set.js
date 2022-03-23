@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -39,6 +39,9 @@ try {
   print(e);
 }
 //CHECK-NEXT: TypeError: Constructor Set requires 'new'
+
+try{ Set.prototype.clear(); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Non-Set object called on Set.prototype.clear
 
 var s = new Set([1, 2, 3, 4, 5]);
 s.forEach(Error);

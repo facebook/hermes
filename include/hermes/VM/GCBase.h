@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -32,6 +32,7 @@
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/WeakRefSlot.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/BitVector.h"
@@ -57,118 +58,13 @@ struct WeakRefKey;
 }
 template <CellKind C>
 class JSWeakMapImpl;
-using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
+using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;
 
 class GCCell;
 
 #ifdef HERMESVM_GC_RUNTIME
 #define RUNTIME_GC_KINDS GC_KIND(HadesGC)
 #endif
-
-/// This is a single slot in the weak reference table. It contains a pointer to
-/// a GC managed object. The GC will make sure it is updated when the object is
-/// moved; if the object is garbage-collected, the pointer will be cleared.
-class WeakRefSlot {
- public:
-  /// State of this slot for the purpose of reusing slots.
-  enum State {
-    Unmarked = 0, /// Unknown whether this slot is in use by the mutator.
-    Marked, /// Proven to be in use by the mutator.
-    Free /// Proven to NOT be in use by the mutator.
-  };
-
-  // Mutator methods.
-
-  WeakRefSlot(HermesValue v) {
-    reset(v);
-  }
-
-  bool hasValue() const {
-    // An empty value means the pointer has been cleared, and a native value
-    // means it is free.
-    // Don't use state_ here since that can be modified concurrently by the GC.
-    assert(!value_.isNativeValue() && "Should never query a free WeakRef");
-    return !value_.isEmpty();
-  }
-
-  /// Return the object as a HermesValue.
-  const HermesValue value() const {
-    // Cannot check state() here because it can race with marking code.
-    assert(hasValue() && "tried to access collected referent");
-    return value_;
-  }
-
-  // GC methods to update slot when referent moves/dies.
-
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    return value_.isPointer();
-  }
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  GCCell *getPointer() const {
-    // Cannot check state() here because it can race with marking code.
-    return static_cast<GCCell *>(value_.getPointer());
-  }
-
-  /// Update the stored pointer (because the object moved).
-  void setPointer(void *newPtr) {
-    // Cannot check state() here because it can race with marking code.
-    value_ = value_.updatePointer(newPtr);
-  }
-
-  /// Clear the pointer (because the object died).
-  void clearPointer() {
-    value_ = HermesValue::encodeEmptyValue();
-  }
-
-  // GC methods to recycle slots.
-
-  State state() const {
-    return state_;
-  }
-
-  void mark() {
-    assert(state() == Unmarked && "already marked");
-    state_ = Marked;
-  }
-
-  void unmark() {
-    assert(state() == Marked && "not yet marked");
-    state_ = Unmarked;
-  }
-
-  void free(WeakRefSlot *nextFree) {
-    assert(state() == Unmarked && "cannot free a reachable slot");
-    state_ = Free;
-    value_ = HermesValue::encodeNativePointer(nextFree);
-    assert(state() == Free);
-  }
-
-  WeakRefSlot *nextFree() const {
-    // nextFree is only called during a STW pause, so it's fine to access both
-    // state and value here.
-    assert(state() == Free);
-    return value_.getNativePointer<WeakRefSlot>();
-  }
-
-  /// Re-initialize a freed slot.
-  void reset(HermesValue v) {
-    static_assert(Unmarked == 0, "unmarked state should not need tagging");
-    state_ = Unmarked;
-    value_ = v;
-    assert(state() == Unmarked && "initial state should be unmarked");
-  }
-
- private:
-  // value_ and state_ are read and written by different threads. We rely on
-  // them being independent words so that they can be used without
-  // synchronization.
-  PinnedHermesValue value_;
-  State state_;
-};
-using WeakSlotState = WeakRefSlot::State;
 
 // A specific GC class extend GCBase, and override its virtual functions.
 // In addition, it must implement the following methods:
@@ -215,9 +111,6 @@ using WeakSlotState = WeakRefSlot::State;
 /// Returns true if \p p points into the heap.
 ///   bool contains(const void *p) const;
 ///
-/// Returns true iff \p cell is the most-recently allocated finalizable object.
-///   bool isMostRecentFinalizableObj(const GCCell* cell) const;
-///
 /// Return the lower bound of the heap's virtual address range (inclusive).
 ///   char *lowLim() const;
 ///
@@ -259,7 +152,7 @@ using WeakSlotState = WeakRefSlot::State;
 ///   be in the heap).  The value is may be null.  Execute a write barrier.
 ///     void writeBarrier(const GCPointerBase *loc, const GCCell *value);
 ///
-///   The given value/pointer is being written at a previously uninitialised loc
+///   The given value/pointer is being written at a previously uninitialized loc
 ///   (required to be in the heap).
 ///     void constructorWriteBarrier(
 ///         const GCHermesValue *loc,
@@ -473,15 +366,20 @@ class GCBase {
     uint64_t totalAllocatedBytes{0};
     /// Number of currently allocated bytes within the JS heap. Some may be
     /// in unreachable objects (unless a full collection just occurred).
-    gcheapsize_t allocatedBytes{0};
+    uint64_t allocatedBytes{0};
     /// Current capacity of the JS heap, in bytes.
-    gcheapsize_t heapSize{0};
+    uint64_t heapSize{0};
     /// Estimate of amount of current malloc space used by the runtime and any
     /// auxiliary allocations owned by heap objects. (Calculated by querying
     /// each finalizable object to report its malloc usage.)
     unsigned mallocSizeEstimate{0};
     /// The total amount of Virtual Address space (VA) that the GC is using.
     uint64_t va{0};
+    /// Number of bytes retained by objects as external memory on the C++ heap.
+    /// This is typically associated with allocations that are modified
+    /// infrequently, and can therefore be stored in a counter in the GC, making
+    /// them cheaper to query. This is a subset of mallocSizeEstimate.
+    uint64_t externalBytes{0};
     /// Cumulative number of mark stack overflows in full collections
     /// (zero if non-generational GC).
     unsigned numMarkStackOverflows{0};
@@ -733,7 +631,7 @@ class GCBase {
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
-    bool isTrackingIDs() const;
+    bool isTrackingIDs();
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
@@ -875,8 +773,8 @@ class GCBase {
   enum class HeapKind { HadesGC, MallocGC };
 
   GCBase(
-      GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       HeapKind kind);
@@ -915,17 +813,6 @@ class GCBase {
     return randomizeAllocSpace_;
   }
 
-#ifndef NDEBUG
-  /// Returns whether the most-recently allocated object was specified as
-  /// fixed-size in the the allocation.  (FixedSizeValue is a trinary type,
-  /// defined above: Yes, No, or Unknown.)
-  virtual FixedSizeValue lastAllocationWasFixedSize() const {
-    // The default implementation returns Unknown.  This makes sense for GC
-    // implementations that don't care about FixedSize.
-    return FixedSizeValue::Unknown;
-  }
-#endif
-
   /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;
@@ -935,18 +822,18 @@ class GCBase {
   /// NOTE: This normally should not be needed, Runtime provides it.
   /// However in some scenarios there is only a GC available, not a
   /// Runtime. In those cases use this function.
-  PointerBase *getPointerBase() const {
+  PointerBase &getPointerBase() const {
     return pointerBase_;
   }
 
-  GCCallbacks *getCallbacks() const {
+  GCCallbacks &getCallbacks() const {
     return gcCallbacks_;
   }
 
   /// Forwards to the GC callback \p convertSymbolToUTF8, see documentation
   /// for that function.
   std::string convertSymbolToUTF8(SymbolID id) {
-    return gcCallbacks_->convertSymbolToUTF8(id);
+    return gcCallbacks_.convertSymbolToUTF8(id);
   }
 
   /// Called by the Runtime to inform the GC that it is about to execute JS for
@@ -980,7 +867,7 @@ class GCBase {
     return cumStats_.gcCPUTime.sum();
   }
 
-  GCCallbacks *getGCCallbacks() const {
+  GCCallbacks &getGCCallbacks() const {
     return gcCallbacks_;
   }
 
@@ -1069,7 +956,6 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool isMostRecentFinalizableObj(const GCCell *cell) const = 0;
   /// \}
 #endif
 
@@ -1122,10 +1008,9 @@ class GCBase {
   /// will be gone.
   virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
 
-  /// Default implementations for the external memory credit/debit APIs: do
-  /// nothing.
-  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) {}
-  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) {}
+  /// Inform the GC about external memory retained by objects.
+  virtual void creditExternalMemory(GCCell *alloc, uint32_t size) = 0;
+  virtual void debitExternalMemory(GCCell *alloc, uint32_t size) = 0;
 
 #ifdef HERMESVM_GC_RUNTIME
   /// Default implementations for read and write barriers: do nothing.
@@ -1225,8 +1110,8 @@ class GCBase {
   /// pointer slot during a collection.  "Mark-in-place" acceptors
   /// will generally have this property.  Uses \p objIsMarked to
   /// determine whether an object is marked, and, for entries whose
-  /// keys are marked, invokes \p checkValIsMarked on the
-  /// corresponding value.  These have the following specs:
+  /// keys are marked, invokes \p markFromVal on the corresponding value.
+  /// These have the following specs:
   ///
   ///  * objIsMarked: (GCCell*) ==> bool
   ///    Returns whether a GCCell is marked.
@@ -1450,13 +1335,13 @@ class GCBase {
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
   void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
-    gcCallbacks_->markRoots(acceptor, markLongLived);
+    gcCallbacks_.markRoots(acceptor, markLongLived);
   }
 
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
   void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
-    gcCallbacks_->markWeakRoots(acceptor, markLongLived);
+    gcCallbacks_.markWeakRoots(acceptor, markLongLived);
   }
 
   /// Print the cumulative statistics.
@@ -1478,17 +1363,10 @@ class GCBase {
   void sizeDiagnosticCensus(size_t allocatedBytes);
 
   /// Do any additional GC-specific logging that is useful before dying with
-  /// out-of-memory.
-  virtual void oomDetail(std::error_code reason);
-
-#ifndef NDEBUG
-  // Returns true iff \p finalizables is non-empty, and \p cell is the
-  // last element in the vector.  Useful in code checking that
-  // objects with finalizers are allocated correctly.
-  static bool isMostRecentCellInFinalizerVector(
-      const std::vector<GCCell *> &finalizables,
-      const GCCell *cell);
-#endif
+  /// out-of-memory. Takes a char buffer to avoid dynamic allocations.
+  virtual void oomDetail(
+      llvh::MutableArrayRef<char> detailBuffer,
+      std::error_code reason);
 
   /// If a cell has any weak references to mark, and the acceptor supports
   /// marking them, mark those weak references.
@@ -1507,8 +1385,7 @@ class GCBase {
     // In C++17, we could implement this via "constexpr if" rather than
     // overloads with std::true_type.
     // Once C++17 is available, switch to using that.
-    if (auto *cb = VTable::vtableArray[static_cast<size_t>(kind)]
-                       ->getMarkWeakCallback()) {
+    if (auto *cb = VTable::getVTable(kind)->getMarkWeakCallback()) {
       std::lock_guard<Mutex> wrLk{weakRefMutex()};
       cb(cell, acceptor);
     }
@@ -1523,6 +1400,14 @@ class GCBase {
       CellKind kind,
       Acceptor &,
       std::false_type) {}
+
+  template <typename T, class... Args>
+  static T *constructCell(void *ptr, uint32_t size, Args &&...args) {
+    auto *cell = new (ptr) T(std::forward<Args>(args)...);
+    constexpr auto kind = T::getCellKind();
+    cell->setKindAndSize({kind, size});
+    return cell;
+  }
 
   /// Number of finalized objects in the last collection.
   unsigned numFinalizedObjects_{0};
@@ -1562,10 +1447,10 @@ class GCBase {
 
   /// User-supplied callbacks invoked by the GC to query information or perform
   /// tasks.
-  GCCallbacks *const gcCallbacks_;
+  GCCallbacks &gcCallbacks_;
 
   /// Base of all pointers in compressed pointers implementation.
-  PointerBase *const pointerBase_;
+  PointerBase &pointerBase_;
 
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;
@@ -1603,7 +1488,7 @@ class GCBase {
   // The cumulative GC stats.
   CumulativeHeapStats cumStats_;
 
-  /// Name to indentify this heap in logs.
+  /// Name to identify this heap in logs.
   std::string name_;
 
   /// weakSlots_ is a list of all the weak pointers in the system. They are
@@ -1725,35 +1610,6 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const SizeFormatObj &sfo);
 inline SizeFormatObj formatSize(uint64_t size) {
   return {size};
 }
-
-/// This is a concrete base of \c WeakRef<T> that can be passed to concrete
-/// functions in GC.
-class WeakRefBase {
- protected:
-  WeakRefSlot *slot_;
-  WeakRefBase(WeakRefSlot *slot) : slot_(slot) {}
-
- public:
-  /// \return true if the referenced object hasn't been freed.
-  bool isValid() const {
-    return isSlotValid(slot_);
-  }
-
-  /// \return true if the given slot stores a non-empty value.
-  static bool isSlotValid(const WeakRefSlot *slot) {
-    assert(slot && "slot must not be null");
-    return slot->hasValue();
-  }
-
-  /// \return a pointer to the slot used by this WeakRef.
-  /// Used primarily when populating a DenseMap with WeakRef keys.
-  WeakRefSlot *unsafeGetSlot() {
-    return slot_;
-  }
-  const WeakRefSlot *unsafeGetSlot() const {
-    return slot_;
-  }
-};
 
 } // namespace vm
 } // namespace hermes

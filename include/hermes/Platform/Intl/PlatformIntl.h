@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -82,14 +82,14 @@ using Part = std::unordered_map<std::u16string, std::u16string>;
 /// as anybody depending on it is trying too hard.
 
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales);
 vm::CallResult<std::u16string> toLocaleLowerCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str);
 vm::CallResult<std::u16string> toLocaleUpperCase(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const std::u16string &str);
 
@@ -99,12 +99,12 @@ class Collator : public vm::DecoratedObject::Decoration {
   ~Collator();
 
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
   vm::ExecutionStatus initialize(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
   Options resolvedOptions() noexcept;
@@ -122,12 +122,12 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
   ~DateTimeFormat();
 
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
   vm::ExecutionStatus initialize(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
   Options resolvedOptions() noexcept;
@@ -147,12 +147,12 @@ class NumberFormat : public vm::DecoratedObject::Decoration {
   ~NumberFormat();
 
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
   vm::ExecutionStatus initialize(
-      vm::Runtime *runtime,
+      vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
   Options resolvedOptions() noexcept;

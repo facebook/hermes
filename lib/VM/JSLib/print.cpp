@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,7 +16,7 @@ namespace hermes {
 namespace vm {
 
 /// Convert all arguments to string and print them followed by new line.
-CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> print(void *, Runtime &runtime, NativeArgs args) {
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   bool first = true;
@@ -31,7 +31,7 @@ CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
       llvh::outs() << " ";
     SmallU16String<32> tmp;
     llvh::outs() << StringPrimitive::createStringView(
-                        runtime, runtime->makeHandle(std::move(*res)))
+                        runtime, runtime.makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }

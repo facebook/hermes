@@ -1,0 +1,25 @@
+[package]
+name = "juno_cli"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"
+
+[[bin]]
+name = "juno"
+path = "src/main.rs"
+
+[dependencies]
+juno = { path = "../juno" }
+juno_support = { path = "../juno_support" }
+juno_pass = { path = "../juno_pass" }
+juno_eval = { path = "../juno_eval" }
+command_line = { path = "../command_line" }
+anyhow = "1.0"
+url = "2.2.2"
+sourcemap = "6.0"
+
+[dev-dependencies]
+assert_cmd = "0.12"
+toml = "=0.5.7"
+lit = { path = "../lit" }

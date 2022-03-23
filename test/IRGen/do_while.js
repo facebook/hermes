@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -102,7 +102,7 @@ function do_while_continue_test(cond) {
 //CHECK-NEXT:  %BB6:
 //CHECK-NEXT:    %12 = LoadFrameInst [i]
 //CHECK-NEXT:    %13 = AsNumberInst %12
-//CHECK-NEXT:    %14 = BinaryOperatorInst '+', %13 : number, 1 : number
+//CHECK-NEXT:    %14 = UnaryOperatorInst '++', %13 : number
 //CHECK-NEXT:    %15 = StoreFrameInst %14, [i]
 //CHECK-NEXT:    %16 = BranchInst %BB5
 //CHECK-NEXT:  %BB7:
@@ -143,7 +143,3 @@ function for_while_do_mixed_test(cond) {
     }
   }
 }
-
-
-
-

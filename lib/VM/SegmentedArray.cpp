@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -20,7 +20,6 @@ const VTable SegmentedArray::Segment::vt(
     nullptr,
     nullptr,
     nullptr,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
         nullptr,
@@ -35,14 +34,14 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
-    Runtime *runtime) {
+    Runtime &runtime) {
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
-  return createPseudoHandle(runtime->makeAFixed<Segment>(runtime));
+  return createPseudoHandle(runtime.makeAFixed<Segment>());
 }
 
-void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
+void SegmentedArray::Segment::setLength(Runtime &runtime, uint32_t newLength) {
   const auto len = length();
   if (newLength > len) {
     // Length is increasing, fill with emptys.
@@ -50,12 +49,12 @@ void SegmentedArray::Segment::setLength(Runtime *runtime, uint32_t newLength) {
         data_ + len,
         data_ + newLength,
         HermesValue::encodeEmptyValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
     length_.store(newLength, std::memory_order_release);
   } else if (newLength < len) {
     // If length is decreasing a write barrier needs to be done.
     GCHermesValue::rangeUnreachableWriteBarrier(
-        data_ + newLength, data_ + len, &runtime->getHeap());
+        data_ + newLength, data_ + len, &runtime.getHeap());
     length_.store(newLength, std::memory_order_release);
   }
 }
@@ -67,7 +66,6 @@ const VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Array,
         nullptr,
@@ -86,7 +84,7 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
-    Runtime *runtime,
+    Runtime &runtime,
     size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
     return throwExcessiveCapacityError(runtime, capacity);
@@ -98,12 +96,11 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
   const auto allocSize = allocationSizeForCapacity(capacity);
-  return createPseudoHandle(
-      runtime->makeAVariable<SegmentedArray>(allocSize, runtime, allocSize));
+  return createPseudoHandle(runtime.makeAVariable<SegmentedArray>(allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
-    Runtime *runtime,
+    Runtime &runtime,
     size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
     return throwExcessiveCapacityError(runtime, capacity);
@@ -112,12 +109,12 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
   // be allocated.
   const auto allocSize = allocationSizeForCapacity(capacity);
   return createPseudoHandle(
-      runtime->makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
-          allocSize, runtime, allocSize));
+      runtime.makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
+          allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>>
-SegmentedArray::create(Runtime *runtime, size_type capacity, size_type size) {
+SegmentedArray::create(Runtime &runtime, size_type capacity, size_type size) {
   auto arrRes = create(runtime, capacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -155,20 +152,20 @@ SegmentedArray::size_type SegmentedArray::totalCapacityOfSpine() const {
 
 ExecutionStatus SegmentedArray::push_back(
     MutableHandle<SegmentedArray> &self,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> value) {
   auto oldSize = self->size();
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto &elm = self->atRef(oldSize);
-  new (&elm) GCHermesValue(*value, &runtime->getHeap());
+  new (&elm) GCHermesValue(*value, &runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
 ExecutionStatus SegmentedArray::resize(
     MutableHandle<SegmentedArray> &self,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type newSize) {
   if (newSize > self->size()) {
     return growRight(self, runtime, newSize - self->size());
@@ -180,7 +177,7 @@ ExecutionStatus SegmentedArray::resize(
 
 ExecutionStatus SegmentedArray::resizeLeft(
     MutableHandle<SegmentedArray> &self,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type newSize) {
   if (newSize == self->size()) {
     return ExecutionStatus::RETURNED;
@@ -194,7 +191,7 @@ ExecutionStatus SegmentedArray::resizeLeft(
 
 void SegmentedArray::resizeWithinCapacity(
     SegmentedArray *self,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type newSize) {
   const size_type currSize = self->size();
   assert(
@@ -208,19 +205,19 @@ void SegmentedArray::resizeWithinCapacity(
 }
 
 ExecutionStatus SegmentedArray::throwExcessiveCapacityError(
-    Runtime *runtime,
+    Runtime &runtime,
     size_type capacity) {
   assert(
       capacity > maxElements() &&
       "Shouldn't call this without first checking that capacity is big");
-  return runtime->raiseRangeError(
+  return runtime.raiseRangeError(
       TwineChar16(
           "Requested an array size larger than the max allowable: Requested elements = ") +
       capacity + ", max elements = " + maxElements());
 }
 
 void SegmentedArray::allocateSegment(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<SegmentedArray> self,
     SegmentNumber segment) {
   assert(
@@ -228,12 +225,12 @@ void SegmentedArray::allocateSegment(
       "Allocating into a non-empty segment");
   PseudoHandle<Segment> c = Segment::create(runtime);
   self->segmentAtPossiblyUnallocated(segment)->set(
-      c.getHermesValue(), &runtime->getHeap());
+      c.getHermesValue(), &runtime.getHeap());
 }
 
 ExecutionStatus SegmentedArray::growRight(
     MutableHandle<SegmentedArray> &self,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type amount) {
   if (self->size() + amount <= self->totalCapacityOfSpine()) {
     increaseSize(runtime, self, amount);
@@ -253,7 +250,7 @@ ExecutionStatus SegmentedArray::growRight(
       self->inlineStorage(),
       self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
-      &runtime->getHeap());
+      &runtime.getHeap());
   // Set the size of the new array to be the same as the old array's size.
   newSegmentedArray->numSlotsUsed_.store(
       numSlotsUsed, std::memory_order_release);
@@ -266,7 +263,7 @@ ExecutionStatus SegmentedArray::growRight(
 
 ExecutionStatus SegmentedArray::growLeft(
     MutableHandle<SegmentedArray> &self,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type amount) {
   if (self->size() + amount <= self->totalCapacityOfSpine()) {
     growLeftWithinCapacity(runtime, self, amount);
@@ -286,14 +283,14 @@ ExecutionStatus SegmentedArray::growLeft(
       self->begin(),
       self->end(),
       newSegmentedArray->begin() + amount,
-      &runtime->getHeap());
+      &runtime.getHeap());
   // Assign back to self.
   self = newSegmentedArray.get();
   return ExecutionStatus::RETURNED;
 }
 
 void SegmentedArray::growLeftWithinCapacity(
-    Runtime *runtime,
+    Runtime &runtime,
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
   assert(
@@ -303,28 +300,28 @@ void SegmentedArray::growLeftWithinCapacity(
   self = increaseSize(runtime, std::move(self), amount);
   // Copy the range from the beginning to the end.
   GCHermesValue::copy_backward(
-      self->begin(), self->end() - amount, self->end(), &runtime->getHeap());
+      self->begin(), self->end() - amount, self->end(), &runtime.getHeap());
   // Fill the beginning with empty values.
   GCHermesValue::fill(
       self->begin(),
       self->begin() + amount,
       HermesValue::encodeEmptyValue(),
-      &runtime->getHeap());
+      &runtime.getHeap());
 }
 
-void SegmentedArray::shrinkRight(Runtime *runtime, size_type amount) {
+void SegmentedArray::shrinkRight(Runtime &runtime, size_type amount) {
   decreaseSize(runtime, amount);
 }
 
-void SegmentedArray::shrinkLeft(Runtime *runtime, size_type amount) {
+void SegmentedArray::shrinkLeft(Runtime &runtime, size_type amount) {
   // Copy the end values leftwards to the beginning.
-  GCHermesValue::copy(begin() + amount, end(), begin(), &runtime->getHeap());
+  GCHermesValue::copy(begin() + amount, end(), begin(), &runtime.getHeap());
   // Now that all the values are moved down, fill the end with empty values.
   decreaseSize(runtime, amount);
 }
 
 void SegmentedArray::increaseSizeWithinCapacity(
-    Runtime *runtime,
+    Runtime &runtime,
     size_type amount) {
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
@@ -341,7 +338,7 @@ void SegmentedArray::increaseSizeWithinCapacity(
         inlineStorage() + currSize,
         inlineStorage() + finalSize,
         empty,
-        &runtime->getHeap());
+        &runtime.getHeap());
     // Set the final size.
     numSlotsUsed_.store(finalSize, std::memory_order_release);
     return;
@@ -356,13 +353,13 @@ void SegmentedArray::increaseSizeWithinCapacity(
         inlineStorage() + currSize,
         inlineStorage() + kValueToSegmentThreshold,
         empty,
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
   segmentAt(segment)->setLength(runtime, segmentLength);
 }
 
 PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
-    Runtime *runtime,
+    Runtime &runtime,
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
   const auto empty = HermesValue::encodeEmptyValue();
@@ -388,7 +385,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
         self->inlineStorage() + currSize,
         self->inlineStorage() + kValueToSegmentThreshold,
         empty,
-        &runtime->getHeap());
+        &runtime.getHeap());
     // Set the size to the inline storage threshold.
     self->numSlotsUsed_.store(
         kValueToSegmentThreshold, std::memory_order_release);
@@ -414,11 +411,11 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
           self->numSlotsUsed_.load(std::memory_order_relaxed),
       self->inlineStorage() + newNumSlotsUsed,
       empty,
-      &runtime->getHeap());
+      &runtime.getHeap());
   self->numSlotsUsed_.store(newNumSlotsUsed, std::memory_order_release);
 
   // Allocate a handle to track the current array.
-  auto selfHandle = runtime->makeHandle(std::move(self));
+  auto selfHandle = runtime.makeHandle(std::move(self));
   // Allocate each segment.
   if (startSegment <= lastSegment &&
       selfHandle->segmentAtPossiblyUnallocated(startSegment)->isEmpty()) {
@@ -444,7 +441,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   return self;
 }
 
-void SegmentedArray::decreaseSize(Runtime *runtime, size_type amount) {
+void SegmentedArray::decreaseSize(Runtime &runtime, size_type amount) {
   const auto initialSize = size();
   const auto initialNumSlots = numSlotsUsed_.load(std::memory_order_relaxed);
   assert(amount <= initialSize && "Cannot decrease size past zero");
@@ -463,7 +460,7 @@ void SegmentedArray::decreaseSize(Runtime *runtime, size_type amount) {
   GCHermesValue::rangeUnreachableWriteBarrier(
       inlineStorage() + finalNumSlots,
       inlineStorage() + initialNumSlots,
-      &runtime->getHeap());
+      &runtime.getHeap());
   numSlotsUsed_.store(finalNumSlots, std::memory_order_release);
 }
 

@@ -1,9 +1,10 @@
 /**
- * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ * Portions Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -32,7 +33,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('./eslint-scope-test-utils');
+import {parseForESLint} from './eslint-scope-test-utils';
 
 describe('implicit global reference', () => {
   it('assignments global scope', () => {
@@ -49,9 +50,11 @@ describe('implicit global reference', () => {
       ),
     ).toEqual([[['Variable']]]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      [],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual([]);
   });
 
   it('assignments global scope without definition', () => {
@@ -68,9 +71,11 @@ describe('implicit global reference', () => {
       ),
     ).toEqual([[]]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      ['x'],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual(['x']);
   });
 
   it('assignment leaks', () => {
@@ -86,9 +91,11 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments']]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      ['x'],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual(['x']);
   });
 
   it("assignment doesn't leak", () => {
@@ -107,9 +114,11 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments', 'inner', 'x'], ['arguments']]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      [],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual([]);
   });
 
   it('for-in-statement leaks', () => {
@@ -124,9 +133,11 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments'], []]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      ['x'],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual(['x']);
   });
 
   it("for-in-statement doesn't leaks", () => {
@@ -145,8 +156,10 @@ describe('implicit global reference', () => {
       scopes.map(scope => scope.variables.map(variable => variable.name)),
     ).toEqual([['outer'], ['arguments', 'inner', 'x'], ['arguments'], []]);
 
-    expect(scopes[0].implicit.variables.map(variable => variable.name)).toEqual(
-      [],
-    );
+    expect(
+      scopeManager.globalScope.__implicit.variables.map(
+        variable => variable.name,
+      ),
+    ).toEqual([]);
   });
 });

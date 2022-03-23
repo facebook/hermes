@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -228,6 +228,10 @@ SynthTrace::TraceValue SynthTrace::encodePropNameID(ObjectID objID) {
   return TraceValue::encodePropNameIDValue(objID);
 }
 
+SynthTrace::TraceValue SynthTrace::encodeSymbol(ObjectID objID) {
+  return TraceValue::encodeSymbolValue(objID);
+}
+
 /*static*/
 std::string SynthTrace::encode(TraceValue value) {
   if (value.isUndefined()) {
@@ -240,6 +244,8 @@ std::string SynthTrace::encode(TraceValue value) {
     return std::string("string:") + std::to_string(value.getUID());
   } else if (value.isPropNameID()) {
     return std::string("propNameID:") + std::to_string(value.getUID());
+  } else if (value.isSymbol()) {
+    return std::string("symbol:") + std::to_string(value.getUID());
   } else if (value.isNumber()) {
     return std::string("number:") + doublePrinter(value.getNumber());
   } else if (value.isBool()) {
@@ -273,6 +279,8 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
     return encodeString(decodeID(rest));
   } else if (tag == "propNameID") {
     return encodePropNameID(decodeID(rest));
+  } else if (tag == "symbol") {
+    return encodeSymbol(decodeID(rest));
   } else {
     llvm_unreachable("Illegal object encountered");
   }
@@ -320,6 +328,14 @@ bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
   return objID_ == thatCasted.objID_;
 }
 
+bool SynthTrace::DrainMicrotasksRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  const auto &thatCasted = dynamic_cast<const DrainMicrotasksRecord &>(that);
+  return maxMicrotasksHint_ == thatCasted.maxMicrotasksHint_;
+}
+
 bool SynthTrace::CreateStringRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -334,8 +350,9 @@ bool SynthTrace::CreatePropNameIDRecord::operator==(const Record &that) const {
     return false;
   }
   auto &thatCasted = dynamic_cast<const CreatePropNameIDRecord &>(that);
-  return propNameID_ == thatCasted.propNameID_ && ascii_ == thatCasted.ascii_ &&
-      chars_ == thatCasted.chars_;
+  return propNameID_ == thatCasted.propNameID_ &&
+      valueType_ == thatCasted.valueType_ &&
+      traceValue_ == thatCasted.traceValue_ && chars_ == thatCasted.chars_;
 }
 
 bool SynthTrace::CreateHostFunctionRecord::operator==(
@@ -513,8 +530,12 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", propNameID_);
-  json.emitKeyValue("encoding", encodingName(ascii_));
-  json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+  if (valueType_ == TRACEVALUE)
+    json.emitKeyValue("value", encode(traceValue_));
+  else {
+    json.emitKeyValue("encoding", encodingName(valueType_ == ASCII));
+    json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+  }
 }
 
 void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
@@ -545,6 +566,12 @@ void SynthTrace::HasPropertyRecord::toJSONInternal(JSONEmitter &json) const {
 #ifdef HERMESVM_API_TRACE_DEBUG
   json.emitKeyValue("propName", propNameDbg_);
 #endif
+}
+
+void SynthTrace::DrainMicrotasksRecord::toJSONInternal(
+    JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("maxMicrotasksHint", maxMicrotasksHint_);
 }
 
 void SynthTrace::GetPropertyNamesRecord::toJSONInternal(
@@ -677,7 +704,7 @@ const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   if (name == "youngAlways") {
     return ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways;
   }
-  throw std::invalid_argument("Name for RelaseUnused not recognized");
+  throw std::invalid_argument("Name for ReleaseUnused not recognized");
 }
 
 void SynthTrace::flushRecordsIfNecessary() {
@@ -777,6 +804,7 @@ llvh::raw_ostream &operator<<(
     CASE(CreatePropNameID);
     CASE(CreateHostObject);
     CASE(CreateHostFunction);
+    CASE(DrainMicrotasks);
     CASE(GetProperty);
     CASE(SetProperty);
     CASE(HasProperty);
@@ -819,6 +847,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(CreatePropNameID)
   CASE(CreateHostObject)
   CASE(CreateHostFunction)
+  CASE(DrainMicrotasks)
   CASE(GetProperty)
   CASE(SetProperty)
   CASE(HasProperty)

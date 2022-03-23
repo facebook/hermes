@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -48,18 +48,22 @@ const features = [
   },
 ];
 
-function ELIVideo() {
+function VideoContainer() {
   return (
-    <div className={styles.videoContainer}>
-      <div className={styles.videoWrapper}>
-        <iframe
-          width="560"
-          height="315"
-          src="https://www.youtube.com/embed/JsppO1HUYx4"
-          title="Explained Like I'm 5: Hermes"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen="true"></iframe>
+    <div className="container text--center margin-bottom--xl margin-top--lg">
+      <div className="row">
+        <div className="col">
+          <h2>Check it out in the intro video</h2>
+            <iframe
+              width="560"
+              height="315"
+              src="https://www.youtube.com/embed/JsppO1HUYx4"
+              title="Explain Like I'm 5: Hermes"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+        </div>
       </div>
     </div>
   );
@@ -89,6 +93,7 @@ function Home() {
         </div>
       </header>
       <main>
+        <VideoContainer />
         {features && features.length && (
           <section className={styles.features}>
             <div className="container">
@@ -114,11 +119,6 @@ function Home() {
             </div>
           </section>
         )}
-        <div className={classnames(styles.videoSection)}>
-          <div className="container">
-            <ELIVideo />
-          </div>
-        </div>
       </main>
     </Layout>
   );

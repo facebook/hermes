@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -156,13 +156,17 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame{
-        runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
-    status = runtime->interpretFunction(codeBlock);
+        runtime,
+        0,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue()};
+    status = runtime.interpretFunction(codeBlock);
   }
-  auto frames = runtime->getStackFrames();
+  auto frames = runtime.getStackFrames();
   ASSERT_TRUE(frames.begin() == frames.end());
   ASSERT_EQ(
-      StackFrameLayout::CalleeExtraRegistersAtStart, runtime->getStackLevel());
+      StackFrameLayout::CalleeExtraRegistersAtStart, runtime.getStackLevel());
   ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
   ASSERT_EQ(1, status.getValue().getDouble());
 }

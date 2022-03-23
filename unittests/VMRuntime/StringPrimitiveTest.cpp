@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -128,7 +128,7 @@ TEST_F(StringPrimTest, ConcatTest) {
     auto strRes = StringPrimitive::concat(runtime, a, b);
     ASSERT_NE(ExecutionStatus::EXCEPTION, strRes.getStatus());
     EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime->makeHandle<StringPrimitive>(*strRes))
+                    runtime, runtime.makeHandle<StringPrimitive>(*strRes))
                     .equals(createUTF16Ref(u"abcdef")));
   }
 
@@ -138,7 +138,7 @@ TEST_F(StringPrimTest, ConcatTest) {
     auto strRes = StringPrimitive::concat(runtime, a, b);
     ASSERT_NE(ExecutionStatus::EXCEPTION, strRes.getStatus());
     EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime->makeHandle<StringPrimitive>(*strRes))
+                    runtime, runtime.makeHandle<StringPrimitive>(*strRes))
                     .equals(createUTF16Ref(u"abc")));
   }
 }
@@ -245,7 +245,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
   auto b = StringPrimitive::createNoThrow(runtime, strB);
   cr = StringPrimitive::concat(runtime, a, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resASCII_1 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+  auto resASCII_1 = runtime.makeHandle<BufferedASCIIStringPrimitive>(*cr);
 
   std::string asciiStr1 = bigStrA + strB;
   auto asciiRef = resASCII_1->getStringRef<char>();
@@ -256,7 +256,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
   // Add more ASCII
   cr = StringPrimitive::concat(runtime, resASCII_1, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resASCII_2 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+  auto resASCII_2 = runtime.makeHandle<BufferedASCIIStringPrimitive>(*cr);
 
   // The same buffer must have been reused.
   EXPECT_TRUE(
@@ -271,7 +271,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
   // Append some the first result again.
   cr = StringPrimitive::concat(runtime, resASCII_1, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resASCII_3 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+  auto resASCII_3 = runtime.makeHandle<BufferedASCIIStringPrimitive>(*cr);
 
   // The buffer cannot be reused.
   EXPECT_TRUE(
@@ -289,7 +289,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
       runtime, UTF16Ref(strC.data(), strC.size()));
   cr = StringPrimitive::concat(runtime, resASCII_2, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resUTF_1 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+  auto resUTF_1 = runtime.makeHandle<BufferedUTF16StringPrimitive>(*cr);
 
   std::u16string utfStr1;
   utfStr1.append(asciiStr2.begin(), asciiStr2.end());
@@ -302,7 +302,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
   // UTF16 + ASCII
   cr = StringPrimitive::concat(runtime, resUTF_1, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resUTF_2 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+  auto resUTF_2 = runtime.makeHandle<BufferedUTF16StringPrimitive>(*cr);
 
   // The same buffer must have been reused.
   EXPECT_TRUE(
@@ -317,7 +317,7 @@ TEST_F(StringPrimTest, FastConcatTest) {
   // Add some more UTF16 to resUTF_1
   cr = StringPrimitive::concat(runtime, resUTF_1, b);
   ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
-  auto resUTF_3 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+  auto resUTF_3 = runtime.makeHandle<BufferedUTF16StringPrimitive>(*cr);
 
   // The buffer cannot be reused.
   EXPECT_TRUE(

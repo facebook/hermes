@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -39,7 +39,7 @@ class ArrayImpl : public JSObject {
   /// does \b NOT check for read-only properties.
   static ExecutionStatus setStorageEndIndex(
       Handle<ArrayImpl> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t newLength);
 
   /// Update the element at index \p index. If necessary, the array will be
@@ -49,7 +49,7 @@ class ArrayImpl : public JSObject {
   /// failure modes, our concrete implementation can never fail.
   static void setElementAt(
       Handle<ArrayImpl> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type index,
       Handle<> value) {
     auto result = _setOwnIndexedImpl(selfHandle, runtime, index, value);
@@ -65,7 +65,7 @@ class ArrayImpl : public JSObject {
   /// extended, are not sealed or frozen, and were never passed to user JS code.
   static void unsafeSetExistingElementAt(
       ArrayImpl *self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type index,
       HermesValue value) {
     // The array must be extendable (and by implication is not frozen or sealed)
@@ -76,7 +76,7 @@ class ArrayImpl : public JSObject {
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
     self->getIndexedStorage(runtime)->set(
-        index - self->beginIndex_, value, &runtime->getHeap());
+        index - self->beginIndex_, value, &runtime.getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -84,7 +84,7 @@ class ArrayImpl : public JSObject {
   /// \return true if the operation succeeded (which is always in this class).
   static bool deleteElementAt(
       Handle<ArrayImpl> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type index) {
     return _deleteOwnIndexedImpl(selfHandle, runtime, index);
   }
@@ -101,26 +101,26 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, or \c empty if the index is not
   /// contained in the storage.
-  const HermesValue at(Runtime *runtime, size_type index) const {
+  const HermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
         ? getIndexedStorage(runtime)->at(index - beginIndex_)
         : HermesValue::encodeEmptyValue();
   }
 
   /// Return the value at index \p index.
-  Handle<> handleAt(Runtime *runtime, size_type index) const {
-    return runtime->makeHandle(at(runtime, index));
+  Handle<> handleAt(Runtime &runtime, size_type index) const {
+    return runtime.makeHandle(at(runtime, index));
   }
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase *base) const {
+  StorageType *getIndexedStorage(PointerBase &base) const {
     return indexedStorage_.get(base);
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
-  void setIndexedStorage(PointerBase *base, StorageType *p, GC *gc) {
+  void setIndexedStorage(PointerBase &base, StorageType *p, GC *gc) {
     indexedStorage_.set(base, p, gc);
   }
 
@@ -133,28 +133,23 @@ class ArrayImpl : public JSObject {
   ///   constructing array objects using the JavaScript Array() constructor,
   ///   since we don't know the length in advance.
   /// \tparam NeedsBarriers indicates whether write barriers are needed
-  ///   for initializating writes in the constructor.  (In debug builds,
+  ///   for initializing writes in the constructor.  (In debug builds,
   ///   a claim that they are not necessary is checked dynamically,
   ///   which should find any incorrect specifications.)
   template <typename NeedsBarriers>
   ArrayImpl(
-      Runtime *runtime,
-      const VTable *vt,
+      Runtime &runtime,
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, parent, clazz, needsBarriers) {
+      : JSObject(runtime, parent, clazz, needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
 
   /// Default needsBarriers to Yes.
-  ArrayImpl(
-      Runtime *runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : ArrayImpl(runtime, vt, parent, clazz, GCPointerBase::YesBarriers()) {}
+  ArrayImpl(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
+      : ArrayImpl(runtime, parent, clazz, GCPointerBase::YesBarriers()) {}
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
@@ -163,7 +158,7 @@ class ArrayImpl : public JSObject {
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
   static bool
-  _haveOwnIndexedImpl(JSObject *selfObj, Runtime *runtime, uint32_t index);
+  _haveOwnIndexedImpl(JSObject *selfObj, Runtime &runtime, uint32_t index);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// extract its \c PropertyFlags (if necessary checking whether the object is
@@ -171,28 +166,28 @@ class ArrayImpl : public JSObject {
   /// \return PropertyFlags if the property exists.
   static OptValue<PropertyFlags> _getOwnIndexedPropertyFlagsImpl(
       JSObject *selfObj,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
 
   /// \return the range of indexes (end-exclusive) in the array.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
   /// \return the value of the element or "empty" if there is no such element.
   static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime *runtime, uint32_t index);
+  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
 
   /// Set an element in the "indexed storage" of this object. Depending on the
   /// semantics of the "indexed storage" the storage capacity may need to be
   /// expanded (e.g. affecting Array.length), or the write may simply be ignored
   /// (in the case of typed arrays).
-  /// \return true if the write succeeded, or fals if it was ignored.
+  /// \return true if the write succeeded, or false if it was ignored.
   static CallResult<bool> _setOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index,
       Handle<> value);
 
@@ -202,7 +197,7 @@ class ArrayImpl : public JSObject {
   ///     "holes"/deletion (e.g. typed arrays).
   static bool _deleteOwnIndexedImpl(
       Handle<JSObject> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t index);
 
   /// Check whether all indexed properties satisfy the requirement specified by
@@ -210,11 +205,11 @@ class ArrayImpl : public JSObject {
   /// all both non-configurable and non-writable.
   static bool _checkAllOwnIndexedImpl(
       JSObject *selfObj,
-      Runtime *runtime,
+      Runtime &runtime,
       ObjectVTable::CheckAllOwnIndexedMode mode);
 
   /// Return the value at index \p index, which must be valid.
-  const HermesValue unsafeAt(Runtime *runtime, size_type index) const {
+  const HermesValue unsafeAt(Runtime &runtime, size_type index) const {
     return getIndexedStorage(runtime)->at(index - beginIndex_);
   }
 
@@ -237,6 +232,9 @@ class Arguments final : public ArrayImpl {
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 1;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::ArgumentsKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArgumentsKind;
   }
@@ -244,16 +242,16 @@ class Arguments final : public ArrayImpl {
   /// Create an instance of Arguments, with size and capacity equal to \p length
   /// and a property "length" initialized to that value.
   static CallResult<Handle<Arguments>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type length,
       Handle<Callable> curFunction,
       bool strictMode);
 
   Arguments(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz) {}
+      : ArrayImpl(runtime, *parent, *clazz) {}
 };
 
 class JSArray final : public ArrayImpl {
@@ -280,14 +278,17 @@ class JSArray final : public ArrayImpl {
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
   static Handle<HiddenClass> createClass(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototypeHandle);
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSArrayKind;
+  }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayKind;
+    return cell->getKind() == CellKind::JSArrayKind;
   }
 
-  static uint32_t getLength(const JSArray *self, PointerBase *pb) {
+  static uint32_t getLength(const JSArray *self, PointerBase &pb) {
     return getDirectSlotValue<lengthPropIndex()>(self).getNumber(pb);
   }
 
@@ -295,28 +296,28 @@ class JSArray final : public ArrayImpl {
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length.
   static CallResult<Handle<JSArray>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
   static CallResult<Handle<JSArray>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
       size_type length) {
     return create(
         runtime,
         prototypeHandle,
-        *prototypeHandle == runtime->arrayPrototype.getObject()
-            ? Handle<HiddenClass>::vmcast(&runtime->arrayClass)
+        *prototypeHandle == runtime.arrayPrototype.getObject()
+            ? Handle<HiddenClass>::vmcast(&runtime.arrayClass)
             : createClass(runtime, prototypeHandle),
         capacity,
         length);
   }
   static CallResult<Handle<JSArray>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
   }
@@ -324,7 +325,7 @@ class JSArray final : public ArrayImpl {
   /// Create an instance of Array, using the standard array prototype, with
   /// capacity for \p capacity elements and actual size \p length.
   static CallResult<Handle<JSArray>>
-  create(Runtime *runtime, size_type capacity, size_type length);
+  create(Runtime &runtime, size_type capacity, size_type length);
 
   /// A convenience method for setting the \c .length property of the array.
   /// It performs the necessary checks and updates the property. It could fail
@@ -332,7 +333,7 @@ class JSArray final : public ArrayImpl {
   /// properties which cannot be deleted (see the spec for details).
   static CallResult<bool> setLengthProperty(
       Handle<JSArray> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t newValue,
       PropOpFlags opFlags = PropOpFlags{}) {
     // TODO: optimize this now that we know the index of the property slot.
@@ -340,22 +341,22 @@ class JSArray final : public ArrayImpl {
         selfHandle,
         runtime,
         Predefined::getSymbolID(Predefined::length),
-        runtime->makeHandle(HermesValue::encodeNumberValue(newValue)));
+        runtime.makeHandle(HermesValue::encodeNumberValue(newValue)));
   }
 
   template <typename NeedsBarrier>
   JSArray(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarrier needsBarrier)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz, needsBarrier) {}
+      : ArrayImpl(runtime, *parent, *clazz, needsBarrier) {}
 
  private:
   /// A helper to update the named '.length' property.
   static void
-  putLength(JSArray *self, Runtime *runtime, SmallHermesValue newLength) {
-    setDirectSlotValue<lengthPropIndex()>(self, newLength, &runtime->getHeap());
+  putLength(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
+    setDirectSlotValue<lengthPropIndex()>(self, newLength, &runtime.getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.
@@ -363,7 +364,7 @@ class JSArray final : public ArrayImpl {
   /// If not sure, use \c putNamed().
   static CallResult<bool> setLength(
       Handle<JSArray> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> newLength,
       PropOpFlags opFlags) LLVM_NO_SANITIZE("float-cast-overflow");
 
@@ -372,7 +373,7 @@ class JSArray final : public ArrayImpl {
   /// If not sure, use \c putNamed().
   static CallResult<bool> setLength(
       Handle<JSArray> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       uint32_t newLength,
       PropOpFlags opFlags);
 };
@@ -383,32 +384,37 @@ class JSArray final : public ArrayImpl {
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
 
-  friend void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSArrayIteratorBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
 
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSArrayIteratorKind;
+  }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::ArrayIteratorKind;
+    return cell->getKind() == CellKind::JSArrayIteratorKind;
   }
 
   static PseudoHandle<JSArrayIterator>
-  create(Runtime *runtime, Handle<JSObject> array, IterationKind iterationKind);
+  create(Runtime &runtime, Handle<JSObject> array, IterationKind iterationKind);
 
   /// Iterate to the next element and return.
   static CallResult<HermesValue> nextElement(
       Handle<JSArrayIterator> self,
-      Runtime *runtime);
+      Runtime &runtime);
 
  public:
   JSArrayIterator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
-        iteratedObject_(runtime, *iteratedObject, &runtime->getHeap()),
+      : JSObject(runtime, *parent, *clazz),
+        iteratedObject_(runtime, *iteratedObject, &runtime.getHeap()),
         iterationKind_(iterationKind) {}
 
  private:

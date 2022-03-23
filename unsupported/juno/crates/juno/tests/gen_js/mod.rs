@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -13,7 +13,7 @@ use juno::sourcemap::merge_sourcemaps;
 fn do_gen<'ast>(ctx: &mut Context<'ast>, node: &NodeRc, pretty: gen_js::Pretty) -> String {
     use juno::gen_js::*;
     let mut out: Vec<u8> = vec![];
-    generate(&mut out, ctx, node, pretty).unwrap();
+    generate(&mut out, ctx, node, pretty, Annotation::No).unwrap();
     String::from_utf8(out).expect("Invalid UTF-8 output in test")
 }
 
@@ -162,7 +162,7 @@ fn test_functions() {
     test_roundtrip("function foo(x, y) {}");
     test_roundtrip("function foo(x, y=3) {}");
     test_roundtrip("function foo([x, y], {z}) {}");
-    test_roundtrip("function foo([x, y] = [1,2], {z:q}) {}");
+    test_roundtrip("function foo([x, y] = [1,2], {z:q}, {w = 1}) {}");
     test_roundtrip("function foo() { return this; }");
     test_roundtrip("function *foo() {}");
     test_roundtrip("function *foo() { yield 1; }");
@@ -180,6 +180,8 @@ fn test_functions() {
     test_roundtrip("(x => 1) + (y => 1)");
     test_roundtrip("x = y => 1");
     test_roundtrip("x = (y => 1)");
+    test_roundtrip("x = (({a, b}) => 1)");
+    test_roundtrip_flow("var x = (): (number=>string) => 1");
     test_roundtrip(
         "function foo() {
         return (y => 1);
@@ -197,8 +199,10 @@ fn test_calls() {
     test_roundtrip("f();");
     test_roundtrip("f(1);");
     test_roundtrip("f(1, 2);");
+    test_roundtrip("f(1, (2,3), 4);");
     test_roundtrip("(f?.(1, 2))(3);");
     test_roundtrip("f?.(1, 2)?.(3)(5);");
+    test_roundtrip("f(...x)");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
     test_roundtrip("new(a.b);");
@@ -309,7 +313,13 @@ fn test_objects() {
             a: 1,
             [x]: 1,
             fn() {},
+            b,
             ...from,
+        })",
+    );
+    test_roundtrip_flow(
+        "({
+            foo<T>() {},
         })",
     );
 }
@@ -340,6 +350,7 @@ fn test_assignment() {
     test_roundtrip("(a = b) && c");
     test_roundtrip("a && b = c");
     test_roundtrip("a && (b = c)");
+    test_roundtrip("var {x: {y: [{z}]}} = foo;");
 }
 
 #[test]
@@ -408,6 +419,17 @@ fn test_classes() {
             static d() {}
         }",
     );
+    test_roundtrip_flow(
+        "class C<T> extends D<T> {
+            prop1: ?number = null;
+            +prop2: number;
+            -prop3;
+            declare prop4;
+            #prop5;
+            #prop5: ?number = null;
+            foo<T>() {}
+        }",
+    );
     test_roundtrip(
         "var cls = (class C extends D {
             prop1;
@@ -448,6 +470,8 @@ fn test_export() {
     test_roundtrip("export default function foo() {}");
     test_roundtrip("export {x as y};");
     test_roundtrip("export * from 'foo';");
+    test_roundtrip_flow("export type Foo = number;");
+    test_roundtrip_flow("export type { x as y } from 'foo';");
 }
 
 #[test]
@@ -455,7 +479,9 @@ fn test_types() {
     test_roundtrip_flow("number | boolean & string");
     test_roundtrip_flow("type A = number");
     test_roundtrip_flow("type A = ?number");
+    test_roundtrip_flow("type A = ?(number | string)");
     test_roundtrip_flow("type A = string");
+    test_roundtrip_flow("type A = \"foo\"");
     test_roundtrip_flow("type A = 'foo'");
     test_roundtrip_flow("type A = 3");
     test_roundtrip_flow("type A = boolean");
@@ -465,7 +491,16 @@ fn test_types() {
     test_roundtrip_flow("type A = any");
     test_roundtrip_flow("type A = void");
     test_roundtrip_flow("type A = number => number");
+    test_roundtrip_flow("type A = (foo: number) => number");
     test_roundtrip_flow("type A = (number, string) => number");
+    test_roundtrip_flow("type A = (?number) => number");
+    test_roundtrip_flow("type A = ?(number, string) => number");
+}
+
+#[test]
+fn test_enum() {
+    test_roundtrip_flow("enum Foo {}");
+    test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B'}");
 }
 
 #[test]
@@ -479,6 +514,15 @@ fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");
     test_roundtrip_jsx("<foo>abc</foo>");
+    test_roundtrip_jsx(
+        r#"
+        <asdf desc="foo
+            bar"
+            prop2='foo """ bar'>
+            body
+        </asdf>
+        "#,
+    );
     test_roundtrip_jsx("<></>");
     test_roundtrip_jsx(
         "
@@ -500,7 +544,7 @@ fn test_sourcemap() {
     let mut ctx = Context::new();
     let ast1: NodeRc = hparser::parse(&mut ctx, "function foo() { return 1 }").unwrap();
     let mut out: Vec<u8> = vec![];
-    let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes).unwrap();
+    let sourcemap = generate(&mut out, &mut ctx, &ast1, Pretty::Yes, Annotation::No).unwrap();
     let string = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(
         string,
@@ -582,7 +626,7 @@ fn test_sourcemap_merged() {
     .unwrap();
     let mut out: Vec<u8> = vec![];
     let node = hparser::parse_with_flags(Default::default(), input_src, ctx).unwrap();
-    let output_map = generate(&mut out, ctx, &node, Pretty::Yes).unwrap();
+    let output_map = generate(&mut out, ctx, &node, Pretty::Yes, Annotation::No).unwrap();
     let output = String::from_utf8(out).expect("Invalid UTF-8 output in test");
     assert_eq!(output, "function foo() {\n  1;\n}\n",);
 

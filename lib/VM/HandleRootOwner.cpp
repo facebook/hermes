@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,7 +18,7 @@ namespace vm {
 // class HandleRootOwner
 
 const PinnedHermesValue HandleRootOwner::nullPointer_{
-    HermesValue::encodeNullptrObjectValue()};
+    HermesValue::encodeNullptrObjectValueUnsafe()};
 const PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
 const PinnedHermesValue HandleRootOwner::nullValue_{
@@ -43,7 +43,7 @@ void HandleRootOwner::markGCScopes(RootAcceptor &acceptor) {
 
 GCScope::~GCScope() {
   // Pop ourselves from the scope list.
-  runtime_->topGCScope_ = prevScope_;
+  runtime_.topGCScope_ = prevScope_;
 
   // Free the dynamically allocated chunks, which are all chunks except the
   // first one.
@@ -63,7 +63,7 @@ GCScope::~GCScope() {
 }
 
 PinnedHermesValue *GCScope::_newChunkAndPHV(HermesValue value) {
-  assert(next_ == curChunkEnd_ && "current chunk is not exhaused");
+  assert(next_ == curChunkEnd_ && "current chunk is not exhausted");
 
   // Move to the next chunk.
   ++curChunkIndex_;
@@ -98,7 +98,7 @@ void GCScope::mark(RootAcceptor &acceptor) {
 
     // Mark the handles.
     for (; first != last; ++first)
-      acceptor.accept(*first);
+      acceptor.acceptNullable(*first);
   }
 }
 

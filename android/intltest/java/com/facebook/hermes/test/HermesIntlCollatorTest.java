@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -102,5 +102,10 @@ public class HermesIntlCollatorTest extends HermesIntlTest262Base {
     skipList.addAll(pre24Issues);
 
     runTests(basePath, skipList);
+  }
+
+  public void testIntlCollator_prototype_toStringTag() throws IOException {
+    String basePath = "test262/test/intl402/Collator/prototype/toStringTag";
+    runTests(basePath);
   }
 }

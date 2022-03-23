@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -26,7 +26,7 @@ void assertFirstExpressionType(
     std::function<bool(const hermes::ESTree::NodePtr &)> isType) {
   ASSERT_TRUE(parsed.hasValue());
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   ASSERT_TRUE(
       llvh::isa<ESTree::ExpressionStatementNode>(programNode->_body.front()));
@@ -67,7 +67,7 @@ TEST(JSParserTest, TestWith) {
   ASSERT_TRUE(parsed.hasValue());
 
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   ASSERT_TRUE(llvh::isa<ESTree::WithStatementNode>(programNode->_body.front()));
 }
@@ -79,11 +79,11 @@ TEST(JSParserTest, TestSwitch) {
   ASSERT_TRUE(parsed.hasValue());
 
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   auto *switchNode =
       llvh::dyn_cast<ESTree::SwitchStatementNode>(&programNode->_body.front());
-  ASSERT_NE(nullptr, switchNode);
+  ASSERT_TRUE(nullptr != switchNode);
   ASSERT_EQ(2u, switchNode->_cases.size());
 }
 
@@ -103,7 +103,7 @@ TEST(JSParserTest, TestThrow) {
   ASSERT_TRUE(parsed.hasValue());
 
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   ASSERT_TRUE(
       llvh::isa<ESTree::ThrowStatementNode>(programNode->_body.front()));
@@ -124,7 +124,7 @@ TEST(JSParserTest, TestTry) {
   ASSERT_TRUE(parsed.hasValue());
 
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   ASSERT_TRUE(llvh::isa<ESTree::TryStatementNode>(programNode->_body.front()));
 }
@@ -144,7 +144,7 @@ TEST(JSParserTest, TestDebugger) {
   ASSERT_TRUE(parsed.hasValue());
 
   auto *programNode = llvh::dyn_cast<ESTree::ProgramNode>(parsed.getValue());
-  ASSERT_NE(nullptr, programNode);
+  ASSERT_TRUE(nullptr != programNode);
 
   ASSERT_TRUE(
       llvh::isa<ESTree::DebuggerStatementNode>(programNode->_body.front()));

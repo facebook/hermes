@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -78,7 +78,7 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
       kTestGCConfigSmall.rebuild()
           .withTripwireConfig(
               GCTripwireConfig::Builder()
-                  .withLimit(32)
+                  .withLimit(256)
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
@@ -87,8 +87,9 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCScope scope{&runtime};
-  runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  GCScope scope{runtime};
+  auto h = runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  h->acquireExtMem(&runtime.getHeap(), 200);
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
@@ -108,7 +109,7 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCScope scope{&runtime};
+  GCScope scope{runtime};
   runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);

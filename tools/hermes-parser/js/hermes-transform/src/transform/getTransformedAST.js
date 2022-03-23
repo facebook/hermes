@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -11,8 +11,7 @@
 'use strict';
 
 import type {ESNode, Program} from 'hermes-estree';
-import type {Visitor} from '../traverse/traverse';
-import type {TransformContext} from './TransformContext';
+import type {TransformVisitor} from './transform';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
 
 import {parseForESLint} from 'hermes-eslint';
@@ -26,13 +25,14 @@ import {performAddTrailingCommentsMutation} from './mutations/AddTrailingComment
 import {performCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveCommentMutations} from './mutations/RemoveComment';
+import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 
 export function getTransformedAST(
   code: string,
-  visitors: Visitor<TransformContext>,
+  visitors: TransformVisitor,
 ): {
   ast: Program,
   astWasMutated: boolean,
@@ -48,7 +48,13 @@ export function getTransformedAST(
 
   // traverse the AST and colllect the mutations
   const transformContext = getTransformContext();
-  traverseWithContext(ast, scopeManager, () => transformContext, visitors);
+  traverseWithContext(
+    code,
+    ast,
+    scopeManager,
+    () => transformContext,
+    visitors,
+  );
 
   // apply the mutations to the AST
   const mutationContext = new MutationContext(code);
@@ -71,6 +77,10 @@ export function getTransformedAST(
             mutationContext,
             mutation,
           );
+        }
+
+        case 'removeNode': {
+          return performRemoveNodeMutation(mutationContext, mutation);
         }
 
         case 'removeStatement': {

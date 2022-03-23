@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,15 +17,17 @@ namespace vm {
 class PropertyAccessor final : public GCCell {
  public:
   PropertyAccessor(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Callable> getter,
       Handle<Callable> setter)
-      : GCCell(&runtime->getHeap(), &vt),
-        getter(runtime, *getter, &runtime->getHeap()),
-        setter(runtime, *setter, &runtime->getHeap()) {}
+      : getter(runtime, *getter, &runtime.getHeap()),
+        setter(runtime, *setter, &runtime.getHeap()) {}
 
   static const VTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::PropertyAccessorKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::PropertyAccessorKind;
   }
@@ -34,7 +36,7 @@ class PropertyAccessor final : public GCCell {
   GCPointer<Callable> setter{};
 
   static CallResult<HermesValue>
-  create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
+  create(Runtime &runtime, Handle<Callable> getter, Handle<Callable> setter);
 };
 
 } // namespace vm

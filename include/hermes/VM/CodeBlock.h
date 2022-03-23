@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,7 +31,7 @@ class RuntimeModule;
 class CodeBlock;
 
 /// A pointer to JIT-compiled function.
-typedef CallResult<HermesValue> (*JITCompiledFunctionPtr)(Runtime *runtime);
+typedef CallResult<HermesValue> (*JITCompiledFunctionPtr)(Runtime &runtime);
 
 /// A sequence of instructions representing the body of a function.
 class CodeBlock final
@@ -59,7 +59,7 @@ class CodeBlock final
 
 #ifndef HERMESVM_LEAN
   /// Compiles a lazy CodeBlock. Intended to be called from lazyCompile.
-  void lazyCompileImpl(Runtime *runtime);
+  void lazyCompileImpl(Runtime &runtime);
 #endif
 
   /// Helper function for getting start and end locations.
@@ -180,7 +180,7 @@ class CodeBlock final
 
   /// \return The name of this code block, as a UTF-8 encoded string.
   /// Does no JS heap allocation.
-  std::string getNameString(GCBase::GCCallbacks *runtime) const;
+  std::string getNameString(GCBase::GCCallbacks &runtime) const;
 
   const_iterator begin() const {
     return bytecode_;
@@ -233,7 +233,7 @@ class CodeBlock final
   }
 
   /// Compiles this CodeBlock, if it's lazy and not already compiled.
-  void lazyCompile(Runtime *runtime) {
+  void lazyCompile(Runtime &runtime) {
     if (LLVM_UNLIKELY(isLazy())) {
       lazyCompileImpl(runtime);
     }
@@ -243,7 +243,7 @@ class CodeBlock final
   bool isLazy() const {
     return false;
   }
-  void lazyCompile(Runtime *) {}
+  void lazyCompile(Runtime &) {}
 #endif
 
   /// Get the start location of this function, if it's lazy.
@@ -269,7 +269,7 @@ class CodeBlock final
   }
 
   // Mark all hidden classes in the property cache as roots.
-  void markCachedHiddenClasses(Runtime *runtime, WeakRootAcceptor &acceptor);
+  void markCachedHiddenClasses(Runtime &runtime, WeakRootAcceptor &acceptor);
 
   static CodeBlock *createCodeBlock(
       RuntimeModule *runtimeModule,

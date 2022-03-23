@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -14,36 +14,36 @@ namespace vm {
 
 /// Simply return undefined. This is used by default pre-hooks that return a
 /// dummy cookie.
-CallResult<HermesValue> instrumentDoNothing(void *, Runtime *, NativeArgs) {
+CallResult<HermesValue> instrumentDoNothing(void *, Runtime &, NativeArgs) {
   return HermesValue::encodeUndefinedValue();
 }
 
 /// Simply return the Nth argument. This is used by default post-hooks that
 /// return their result argument.
 CallResult<HermesValue>
-instrumentReturnNth(void *context, Runtime *runtime, NativeArgs args) {
+instrumentReturnNth(void *context, Runtime &runtime, NativeArgs args) {
   unsigned argument = (unsigned)(uintptr_t)context;
   return *args.getArgHandle(argument);
 }
 
 static void definePre(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> object,
     const char *const name,
     int params) {
-  auto symbol = runtime->getIdentifierTable().getSymbolHandle(
+  auto symbol = runtime.getIdentifierTable().getSymbolHandle(
       runtime, ASCIIRef{name, strlen(name)});
   defineMethod(runtime, object, **symbol, nullptr, instrumentDoNothing, params);
 }
 
 static void definePost(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> object,
     const char *const name,
     int toReturn,
     int params) {
   assert(toReturn < params);
-  auto symbol = runtime->getIdentifierTable().getSymbolHandle(
+  auto symbol = runtime.getIdentifierTable().getSymbolHandle(
       runtime, ASCIIRef{name, strlen(name)});
   defineMethod(
       runtime,
@@ -54,8 +54,8 @@ static void definePost(
       params);
 }
 
-Handle<JSObject> createInstrumentObject(Runtime *runtime) {
-  auto obj = runtime->makeHandle(JSObject::create(runtime));
+Handle<JSObject> createInstrumentObject(Runtime &runtime) {
+  auto obj = runtime.makeHandle(JSObject::create(runtime));
   // iid, operator, left, right
   definePre(runtime, obj, "preBinary", 4);
   // iid, cookie, operator, result, left, right

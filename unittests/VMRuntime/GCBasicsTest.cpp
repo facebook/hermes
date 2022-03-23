@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -38,7 +38,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   // Verify the initial state.
   gc.getHeapInfo(info);
@@ -111,7 +111,7 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   // Initialize three arrays, one with a GC handle.
   gcheapsize_t totalAlloc = 0;
@@ -205,7 +205,7 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 TEST_F(GCBasicsTest, WeakRefTest) {
   auto &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
@@ -276,20 +276,20 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 #endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
 
 TEST_F(GCBasicsTest, WeakRootTest) {
-  GCScope scope{&rt};
+  GCScope scope{rt};
   GC &gc = rt.getHeap();
 
   WeakRoot<GCCell> wr;
   rt.weakRoots.push_back(&wr);
   {
-    GCScopeMarkerRAII marker{&rt};
+    GCScopeMarkerRAII marker{rt};
     auto obj = rt.makeHandle(DummyObject::create(&gc));
-    wr.set(&rt, *obj);
+    wr.set(rt, *obj);
     rt.collect();
-    ASSERT_EQ(wr.get(&rt, &gc), *obj);
+    ASSERT_EQ(wr.get(rt, &gc), *obj);
   }
   rt.collect();
-  ASSERT_EQ(wr.get(&rt, &gc), nullptr);
+  ASSERT_TRUE(wr.get(rt, &gc) == nullptr);
 }
 
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
@@ -310,8 +310,10 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   {
     GCBase::HeapInfo info;
     auto *obj = DummyObject::create(&rt.getHeap());
+    obj->acquireExtMem(&gc, 256);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 256);
     // Since there is one dummy in the heap, the malloc size is the size of its
     // corresponding WeakRefSlot and one extra byte.
     EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) + 1);
@@ -320,9 +322,20 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   {
     GCBase::HeapInfo info;
     auto *obj = DummyObject::create(&rt.getHeap());
+    obj->acquireExtMem(&gc, 1024);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 256 + 1024);
     EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
+  }
+
+  rt.collect();
+
+  {
+    GCBase::HeapInfo info;
+    gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.externalBytes, 0);
+    EXPECT_EQ(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2);
   }
 }
 
@@ -336,7 +349,7 @@ TEST_F(GCBasicsTest, TestIDIsUnique) {
 }
 
 TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
-  GCScope scope{&rt};
+  GCScope scope{rt};
   auto handle = rt.makeHandle(DummyObject::create(&rt.getHeap()));
   const auto idBefore = rt.getHeap().getObjectID(*handle);
   rt.collect();
@@ -346,7 +359,7 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
 
 /// Test that objects that die during (YG) GC are untracked.
 TEST_F(GCBasicsTest, TestIDDeathInYoung) {
-  GCScope scope{&rt};
+  GCScope scope{rt};
   rt.getHeap().getObjectID(DummyObject::create(&rt.getHeap()));
   rt.collect();
   // ~DummyRuntime will verify all pointers in ID map.
@@ -387,7 +400,7 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{&rt};
+  GCScope scope{rt};
   auto handle = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
   const auto originalID = rt.getHeap().getObjectID(*handle);
   GC::HeapInfo oldHeapInfo;
@@ -405,7 +418,7 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   // Fill the old gen to force a collection.
   auto N = kHeapSizeHint / SegmentCell::size() - 1;
   {
-    GCScopeMarkerRAII marker{&rt};
+    GCScopeMarkerRAII marker{rt};
     for (size_t i = 0; i < N - 1; ++i) {
       rt.makeHandle(SegmentCell::create(rt));
     }

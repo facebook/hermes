@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -29,6 +29,13 @@ try { Error.prototype.toString.call(11); } catch (e) { print(e.name); }
 //CHECK-NEXT: TypeError
 try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e.name); }
 //CHECK-NEXT: TypeError
+
+print(Error.prototype.toString())
+// CHECK-NEXT: Error
+print(Object.prototype.toString.call(Error.prototype))
+// CHECK-NEXT: [object Object]
+print(Object.prototype.toString.call(new Error()))
+// CHECK-NEXT: [object Error]
 
 e.name = 'RandomError';
 print(e);

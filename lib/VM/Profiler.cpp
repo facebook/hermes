@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,11 +22,11 @@
 namespace hermes {
 namespace vm {
 
-void dumpProfilerSymbolMap(Runtime *runtime, const std::string &fileOut) {
+void dumpProfilerSymbolMap(Runtime &runtime, const std::string &fileOut) {
   auto fp = fopen(fileOut.c_str(), "w");
 
   GCScope gcScope{runtime};
-  for (auto &funcInfo : runtime->functionInfo) {
+  for (auto &funcInfo : runtime.functionInfo) {
     gcScope.clearAllHandles();
     fprintf(fp, "JS_%0*d_", NUM_PROFILER_SYMBOLS_DIGITS, funcInfo.profilerId);
     for (int j = 0; j < PROFILER_SYMBOL_SUFFIX_LENGTH; ++j)
@@ -53,7 +53,7 @@ void dumpProfilerSymbolMap(Runtime *runtime, const std::string &fileOut) {
   fclose(fp);
 }
 
-void patchProfilerSymbols(Runtime *runtime) {
+void patchProfilerSymbols(Runtime &runtime) {
   // Not allowed to write self while running, so replace self with copy.
   char selfName[PATH_MAX];
   memset(selfName, 0, sizeof(selfName));
@@ -107,7 +107,7 @@ void patchProfilerSymbols(Runtime *runtime) {
       continue; // Malformed.
     if (n == NUM_PROFILER_SYMBOLS - 1)
       continue;
-    auto *profilerFunctionInfo = runtime->getProfilerInfo(n);
+    auto *profilerFunctionInfo = runtime.getProfilerInfo(n);
     if (!profilerFunctionInfo)
       continue;
 

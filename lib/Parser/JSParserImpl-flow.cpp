@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -1179,10 +1179,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
 
     case TokenKind::string_literal: {
       UniqueString *str = tok_->getStringLiteral();
+      UniqueString *raw = lexer_.getStringLiteral(tok_->inputStr());
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Type).End,
-          new (context_) ESTree::StringLiteralTypeAnnotationNode(str));
+          new (context_) ESTree::StringLiteralTypeAnnotationNode(str, raw));
     }
 
     case TokenKind::numeric_literal: {
@@ -1194,23 +1195,42 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
     }
 
-    case TokenKind::minus: {
-      advance(JSLexer::GrammarContext::Type);
-      if (!need(
-              TokenKind::numeric_literal,
-              "in type annotation",
-              "start of annotation",
-              start))
-        return None;
-      // Negate the literal.
-      double value = -tok_->getNumericLiteral();
-      UniqueString *raw = lexer_.getStringLiteral(StringRef(
-          start.getPointer(),
-          tok_->getEndLoc().getPointer() - start.getPointer()));
+    case TokenKind::bigint_literal: {
+      UniqueString *raw = tok_->getBigIntLiteral();
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Type).End,
-          new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
+          new (context_) ESTree::BigIntLiteralTypeAnnotationNode(raw));
+    }
+
+    case TokenKind::minus: {
+      advance(JSLexer::GrammarContext::Type);
+      if (check(TokenKind::numeric_literal)) {
+        // Negate the literal.
+        double value = -tok_->getNumericLiteral();
+        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+            start.getPointer(),
+            tok_->getEndLoc().getPointer() - start.getPointer()));
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
+      } else if (check(TokenKind::bigint_literal)) {
+        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+            start.getPointer(),
+            tok_->getEndLoc().getPointer() - start.getPointer()));
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::BigIntLiteralTypeAnnotationNode(raw));
+      } else {
+        errorExpected(
+            TokenKind::numeric_literal,
+            "in type annotation",
+            "start of annotation",
+            start);
+        return None;
+      }
     }
 
     case TokenKind::rw_true:
@@ -1340,9 +1360,10 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
   ESTree::Node *thisConstraint = nullptr;
 
   if (check(TokenKind::rw_this)) {
-    isFunction = true;
-    SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() && *optNext == TokenKind::colon) {
+      SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
+      advance(JSLexer::GrammarContext::Type);
       auto optType = parseTypeAnnotationFlow();
       if (!optType)
         return None;
@@ -1353,25 +1374,10 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
           getPrevTokenEndLoc(),
           new (context_) ESTree::FunctionTypeParamNode(
               /* name */ nullptr, typeAnnotation, /* optional */ false));
-    } else {
-      params.push_back(*setLocation(
-          thisStart,
-          getPrevTokenEndLoc(),
-          new (context_) ESTree::FunctionTypeParamNode(
-              nullptr,
-              setLocation(
-                  thisStart,
-                  getPrevTokenEndLoc(),
-                  new (context_) ESTree::GenericTypeAnnotationNode(
-                      setLocation(
-                          thisStart,
-                          getPrevTokenEndLoc(),
-                          new (context_) ESTree::IdentifierNode(
-                              thisIdent_, nullptr, false)),
-                      {})),
-              false)));
+      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
+    } else if (optNext.hasValue() && *optNext == TokenKind::question) {
+      error(tok_->getSourceRange(), "'this' constraint may not be optional");
     }
-    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
   }
 
   if (allowAnonFunctionType_ &&
@@ -2185,8 +2191,10 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
   thisConstraint = nullptr;
 
   if (check(TokenKind::rw_this)) {
-    SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
-    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() && *optNext == TokenKind::colon) {
+      SMLoc thisStart = advance(JSLexer::GrammarContext::Type).Start;
+      advance(JSLexer::GrammarContext::Type);
       auto optType = parseTypeAnnotationFlow();
       if (!optType)
         return None;
@@ -2197,25 +2205,10 @@ JSParserImpl::parseFunctionTypeAnnotationParamsFlow(
           getPrevTokenEndLoc(),
           new (context_) ESTree::FunctionTypeParamNode(
               /* name */ nullptr, typeAnnotation, /* optional */ false));
-    } else {
-      params.push_back(*setLocation(
-          thisStart,
-          getPrevTokenEndLoc(),
-          new (context_) ESTree::FunctionTypeParamNode(
-              nullptr,
-              setLocation(
-                  thisStart,
-                  getPrevTokenEndLoc(),
-                  new (context_) ESTree::GenericTypeAnnotationNode(
-                      setLocation(
-                          thisStart,
-                          getPrevTokenEndLoc(),
-                          new (context_) ESTree::IdentifierNode(
-                              thisIdent_, nullptr, false)),
-                      {})),
-              false)));
+      checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
+    } else if (optNext.hasValue() && *optNext == TokenKind::question) {
+      error(tok_->getSourceRange(), "'this' constraint may not be optional");
     }
-    checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
   }
 
   while (!check(TokenKind::r_paren)) {
@@ -2255,9 +2248,12 @@ JSParserImpl::parseFunctionTypeAnnotationParamFlow() {
   SMLoc start = tok_->getStartLoc();
 
   if (check(TokenKind::rw_this)) {
-    error(
-        tok_->getSourceRange(),
-        "'this' constraint must be the first parameter");
+    OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+    if (optNext.hasValue() && *optNext == TokenKind::colon) {
+      error(
+          tok_->getSourceRange(),
+          "'this' constraint must be the first parameter");
+    }
   }
 
   auto optLeft = parseTypeAnnotationFlow();

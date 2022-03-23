@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -73,8 +73,12 @@ class SynthTrace {
       return tag_ == Tag::PropNameID;
     }
 
+    bool isSymbol() const {
+      return tag_ == Tag::Symbol;
+    }
+
     bool isUID() const {
-      return isObject() || isString() || isPropNameID();
+      return isObject() || isString() || isPropNameID() || isSymbol();
     }
 
     static TraceValue encodeUndefinedValue() {
@@ -105,6 +109,10 @@ class SynthTrace {
       return TraceValue(Tag::PropNameID, uid);
     }
 
+    static TraceValue encodeSymbolValue(uint64_t uid) {
+      return TraceValue(Tag::Symbol, uid);
+    }
+
     bool operator==(const TraceValue &that) const;
 
     ObjectID getUID() const {
@@ -130,7 +138,8 @@ class SynthTrace {
       Number,
       Object,
       String,
-      PropNameID
+      PropNameID,
+      Symbol
     };
 
     explicit TraceValue(Tag tag) : tag_(tag) {}
@@ -169,6 +178,7 @@ class SynthTrace {
     CreatePropNameID,
     CreateHostObject,
     CreateHostFunction,
+    DrainMicrotasks,
     GetProperty,
     SetProperty,
     HasProperty,
@@ -284,6 +294,8 @@ class SynthTrace {
   static TraceValue encodeString(ObjectID objID);
   /// Encodes a PropNameID for the trace as a unique id.
   static TraceValue encodePropNameID(ObjectID objID);
+  /// Encodes a Symbol for the trace as a unique id.
+  static TraceValue encodeSymbol(ObjectID objID);
 
   /// Decodes a string into a trace value.
   static TraceValue decode(const std::string &);
@@ -497,7 +509,8 @@ class SynthTrace {
     static constexpr RecordType type{RecordType::CreatePropNameID};
     const ObjectID propNameID_;
     std::string chars_;
-    bool ascii_;
+    const TraceValue traceValue_{TraceValue::encodeUndefinedValue()};
+    enum ValueType { ASCII, UTF8, TRACEVALUE } valueType_;
 
     // General UTF-8.
     CreatePropNameIDRecord(
@@ -508,7 +521,7 @@ class SynthTrace {
         : Record(time),
           propNameID_(propNameID),
           chars_(reinterpret_cast<const char *>(chars), length),
-          ascii_(false) {}
+          valueType_(UTF8) {}
     // Ascii.
     CreatePropNameIDRecord(
         TimeSinceStart time,
@@ -518,17 +531,16 @@ class SynthTrace {
         : Record(time),
           propNameID_(propNameID),
           chars_(chars, length),
-          ascii_(true) {}
-    // std::string
+          valueType_(ASCII) {}
+    // jsi::String or jsi::Symbol.
     CreatePropNameIDRecord(
         TimeSinceStart time,
         ObjectID propNameID,
-        std::string &&chars,
-        bool isAscii)
+        TraceValue traceValue)
         : Record(time),
           propNameID_(propNameID),
-          chars_(std::move(chars)),
-          ascii_(isAscii) {}
+          traceValue_(traceValue),
+          valueType_(TRACEVALUE) {}
 
     bool operator==(const Record &that) const override;
 
@@ -542,7 +554,9 @@ class SynthTrace {
     }
 
     std::vector<ObjectID> uses() const override {
-      return {};
+      std::vector<ObjectID> vec;
+      pushIfTrackedValue(traceValue_, vec);
+      return vec;
     }
   };
 
@@ -621,6 +635,22 @@ class SynthTrace {
 
     std::vector<ObjectID> uses() const override {
       return {objID_, propID_};
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct DrainMicrotasksRecord : public Record {
+    static constexpr RecordType type{RecordType::DrainMicrotasks};
+    int maxMicrotasksHint_;
+
+    DrainMicrotasksRecord(TimeSinceStart time, int tasksHint = -1)
+        : Record(time), maxMicrotasksHint_(tasksHint) {}
+
+    bool operator==(const Record &that) const final;
+
+    RecordType getType() const override {
+      return type;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;

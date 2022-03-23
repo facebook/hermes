@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,5 +18,8 @@ NAMED_PROP(InternalProperty4)
 NAMED_PROP(InternalProperty5)
 NAMED_PROP(InternalProperty6)
 NAMED_PROP(InternalPropertyNamedPropForUnitTestOnly)
+NAMED_PROP(InternalPropertyCapturedError)
+NAMED_PROP(InternalPropertyCallSiteError)
+NAMED_PROP(InternalPropertyCallSiteStackFrameIndex)
 
 #undef NAMED_PROP

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,10 +31,10 @@ class TimeLimitMonitor {
   ~TimeLimitMonitor();
 
   /// Watch \p runtime for timeout after \p timeoutInMs.
-  void watchRuntime(Runtime *runtime, int timeoutInMs);
+  void watchRuntime(Runtime &runtime, int timeoutInMs);
 
   /// Unwatch \p runtime.
-  void unwatchRuntime(Runtime *runtime);
+  void unwatchRuntime(Runtime &runtime);
 
  private:
   TimeLimitMonitor() = default;

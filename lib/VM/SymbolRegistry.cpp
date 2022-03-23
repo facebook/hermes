@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,7 +17,7 @@
 namespace hermes {
 namespace vm {
 
-void SymbolRegistry::init(Runtime *runtime) {
+void SymbolRegistry::init(Runtime &runtime) {
   stringMap_ = OrderedHashMap::create(runtime)->getHermesValue();
 }
 
@@ -29,7 +29,7 @@ void SymbolRegistry::markRoots(RootAcceptor &acceptor) {
 }
 
 CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> key) {
   HashMapEntry *it = OrderedHashMap::find(
       Handle<OrderedHashMap>::vmcast(&stringMap_), runtime, key);
@@ -38,11 +38,11 @@ CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
   }
 
   auto symbolRes =
-      runtime->getIdentifierTable().createNotUniquedSymbol(runtime, key);
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, key);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<SymbolID> symbol = runtime->makeHandle(*symbolRes);
+  Handle<SymbolID> symbol = runtime.makeHandle(*symbolRes);
 
   if (LLVM_UNLIKELY(
           OrderedHashMap::insert(

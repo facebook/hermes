@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -245,6 +245,51 @@ TEST(JSLexerTest, NumericSeparatorTest) {
 
     ASSERT_EQ(withSep, noSep);
     tok = lex.advance();
+  }
+}
+
+#define LEX_EXPECT_BIGINT(s, lex)                                 \
+  ASSERT_EQ(TokenKind::bigint_literal, lex.advance()->getKind()); \
+  EXPECT_STREQ(s, lex.getCurToken()->getBigIntLiteral()->c_str())
+
+TEST(JSLexerTest, BigIntTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  {
+    JSLexer lex(
+        " 0n"
+        " 1n"
+        " 1000n"
+        " 1928371289378129381212398n"
+        " 0xdeadbeefn"
+        " 0b10101100101n",
+        sm,
+        alloc);
+
+    LEX_EXPECT_BIGINT("0n", lex);
+    LEX_EXPECT_BIGINT("1n", lex);
+    LEX_EXPECT_BIGINT("1000n", lex);
+    LEX_EXPECT_BIGINT("1928371289378129381212398n", lex);
+    LEX_EXPECT_BIGINT("0xdeadbeefn", lex);
+    LEX_EXPECT_BIGINT("0b10101100101n", lex);
+  }
+
+  {
+    JSLexer lex("09n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+  {
+    JSLexer lex("1.1n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+  {
+    JSLexer lex("1e2n", sm, alloc);
+    lex.advance();
+    ASSERT_EQ(1, diag.getErrCountClear());
   }
 }
 

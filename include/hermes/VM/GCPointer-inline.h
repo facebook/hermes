@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,10 +16,13 @@
 namespace hermes {
 namespace vm {
 
-template <typename T>
 template <typename NeedsBarriers>
-GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
-    : GCPointerBase(base, ptr) {
+GCPointerBase::GCPointerBase(
+    PointerBase &base,
+    GCCell *ptr,
+    GC *gc,
+    NeedsBarriers)
+    : CompressedPointer(CompressedPointer::encode(ptr, base)) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
@@ -30,13 +33,31 @@ GCPointer<T>::GCPointer(PointerBase *base, T *ptr, GC *gc, NeedsBarriers)
   }
 }
 
-inline void GCPointerBase::set(PointerBase *base, GCCell *ptr, GC *gc) {
+inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC *gc) {
   assert(
       (!ptr || gc->validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
   gc->writeBarrier(this, ptr);
-  setNoBarrier(CompressedPointer(base, ptr));
+  setNoBarrier(CompressedPointer::encode(ptr, base));
+}
+
+inline void GCPointerBase::setNonNull(PointerBase &base, GCCell *ptr, GC *gc) {
+  assert(
+      gc->validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc->writeBarrier(this, ptr);
+  setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
+}
+
+inline void
+GCPointerBase::set(PointerBase &base, CompressedPointer ptr, GC *gc) {
+  assert(
+      (!ptr || gc->validPointer(ptr.get(base))) &&
+      "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc->writeBarrier(this, ptr.get(base));
+  setNoBarrier(ptr);
 }
 
 inline void GCPointerBase::setNull(GC *gc) {

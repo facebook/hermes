@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,7 +22,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
   auto runtime = DummyRuntime::create(kTestGCConfigLarge);
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
-  GCScope scope{&rt};
+  GCScope scope{rt};
   // For Hades, ensure that we iterate across multiple segments.
   constexpr size_t kLargeSize =
 #ifdef HERMESVM_GC_MALLOC
@@ -33,14 +33,14 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
       ;
   using LargeCell = EmptyCell<kLargeSize>;
   // Divide by 8 bytes per HermesValue to get elements.
-  runtime->makeHandle(LargeCell::create(rt));
-  runtime->makeHandle(LargeCell::create(rt));
+  rt.makeHandle(LargeCell::create(rt));
+  rt.makeHandle(LargeCell::create(rt));
   // Should move both to the old gen, in separate segments.
   rt.collect();
   // A smaller size, in the young generation.
   constexpr size_t kSmallSize = 80;
   using SmallCell = EmptyCell<kSmallSize>;
-  runtime->makeHandle(SmallCell::create(rt));
+  rt.makeHandle(SmallCell::create(rt));
 
   size_t num = 0;
   size_t sizeSum = 0;

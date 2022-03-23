@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -104,8 +104,8 @@ TEST(JSONEmitterTest, NonAsciiEscapes) {
   llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
   json.openDict();
-  json.emitKeyValue("ha", u8"\u54C8");
-  json.emitKeyValue("gClef", u8"\U0001D11E");
+  json.emitKeyValue("ha", reinterpret_cast<const char *>(u8"\u54C8"));
+  json.emitKeyValue("gClef", reinterpret_cast<const char *>(u8"\U0001D11E"));
   json.closeDict();
   const char *expected = R"#({"ha":"\u54c8","gClef":"\ud834\udd1e"})#";
   EXPECT_EQ(OS.str(), expected);

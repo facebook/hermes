@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -73,6 +73,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapRestElement(node);
       case 'ImportExpression':
         return this.mapImportExpression(node);
+      case 'JSXStringLiteral':
+        return this.mapJSXStringLiteral(node);
       case 'PrivateName':
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
@@ -198,7 +200,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   mapGenericTypeAnnotation(node: HermesNode): HermesNode {
     // Convert simple `this` generic type to ThisTypeAnnotation
     if (
-      node.typeParameters === null &&
+      node.typeParameters == null &&
       node.id.type === 'Identifier' &&
       node.id.name === 'this'
     ) {
@@ -340,6 +342,19 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         end: node.end,
       },
       arguments: [this.mapNode(node.source)],
+    };
+  }
+
+  mapJSXStringLiteral(node: HermesNode): HermesNode {
+    // Babel expects StringLiterals in JSX,
+    // but Hermes uses JSXStringLiteral to attach the raw value without
+    // having to internally attach it to every single string literal.
+    return {
+      type: 'StringLiteral',
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+      value: node.value,
     };
   }
 

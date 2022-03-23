@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -12,50 +12,49 @@
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  {{.*}}  %0 = HBCGetGlobalObjectInst
 //CHECK-NEXT:  {{.*}}  %1 = HBCLoadConstInst undefined : undefined
-//CHECK-NEXT:  {{.*}}  %2 = HBCLoadConstInst 1 : number
-//CHECK-NEXT:  {{.*}}  %3 = HBCLoadConstInst 3 : number
-//CHECK-NEXT:  {{.*}}  %4 = HBCLoadConstInst 2 : number
-//CHECK-NEXT:  {{.*}}  %5 = AllocArrayInst 0 : number
-//CHECK-NEXT:  {{.*}}  %6 = StorePropertyInst %5 : object, %0 : object, "a" : string
-//CHECK-NEXT:  {{.*}}  %7 = AllocObjectInst 0 : number, empty
-//CHECK-NEXT:  {{.*}}  %8 = StorePropertyInst %7 : object, %0 : object, "x" : string
-//CHECK-NEXT:  {{.*}}  %9 = AllocObjectInst 0 : number, empty
-//CHECK-NEXT:  {{.*}}  %10 = StorePropertyInst %9 : object, %0 : object, "y" : string
-//CHECK-NEXT:  {{.*}}  %11 = HBCLoadConstInst 0 : number
-//CHECK-NEXT:  {{.*}}  %12 = StorePropertyInst %11 : number, %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %13 = LoadPropertyInst %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %14 = MovInst %1 : undefined
-//CHECK-NEXT:  {{.*}}  %15 = CompareBranchInst '<', %13, %3 : number, %BB1, %BB2
+//CHECK-NEXT:  {{.*}}  %2 = HBCLoadConstInst 3 : number
+//CHECK-NEXT:  {{.*}}  %3 = HBCLoadConstInst 2 : number
+//CHECK-NEXT:  {{.*}}  %4 = AllocArrayInst 0 : number
+//CHECK-NEXT:  {{.*}}  %5 = StorePropertyInst %4 : object, %0 : object, "a" : string
+//CHECK-NEXT:  {{.*}}  %6 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:  {{.*}}  %7 = StorePropertyInst %6 : object, %0 : object, "x" : string
+//CHECK-NEXT:  {{.*}}  %8 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:  {{.*}}  %9 = StorePropertyInst %8 : object, %0 : object, "y" : string
+//CHECK-NEXT:  {{.*}}  %10 = HBCLoadConstInst 0 : number
+//CHECK-NEXT:  {{.*}}  %11 = StorePropertyInst %10 : number, %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %12 = LoadPropertyInst %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %13 = MovInst %1 : undefined
+//CHECK-NEXT:  {{.*}}  %14 = CompareBranchInst '<', %12, %2 : number, %BB1, %BB2
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  {{.*}}  %16 = AllocObjectInst 0 : number, empty
-//CHECK-NEXT:  {{.*}}  %17 = StorePropertyInst %16 : object, %0 : object, "y" : string
-//CHECK-NEXT:  {{.*}}  %18 = AllocStackInst $?anon_1_iter
-//CHECK-NEXT:  {{.*}}  %19 = AllocStackInst $?anon_2_base
-//CHECK-NEXT:  {{.*}}  %20 = AllocStackInst $?anon_3_idx
-//CHECK-NEXT:  {{.*}}  %21 = AllocStackInst $?anon_4_size
-//CHECK-NEXT:  {{.*}}  %22 = LoadPropertyInst %0 : object, "x" : string
-//CHECK-NEXT:  {{.*}}  %23 = StoreStackInst %22, %19
-//CHECK-NEXT:  {{.*}}  %24 = AllocStackInst $?anon_5_prop
-//CHECK-NEXT:  {{.*}}  %25 = GetPNamesInst %18, %19, %20, %21, %BB3, %BB4
+//CHECK-NEXT:  {{.*}}  %15 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:  {{.*}}  %16 = StorePropertyInst %15 : object, %0 : object, "y" : string
+//CHECK-NEXT:  {{.*}}  %17 = AllocStackInst $?anon_1_iter
+//CHECK-NEXT:  {{.*}}  %18 = AllocStackInst $?anon_2_base
+//CHECK-NEXT:  {{.*}}  %19 = AllocStackInst $?anon_3_idx
+//CHECK-NEXT:  {{.*}}  %20 = AllocStackInst $?anon_4_size
+//CHECK-NEXT:  {{.*}}  %21 = LoadPropertyInst %0 : object, "x" : string
+//CHECK-NEXT:  {{.*}}  %22 = StoreStackInst %21, %18
+//CHECK-NEXT:  {{.*}}  %23 = AllocStackInst $?anon_5_prop
+//CHECK-NEXT:  {{.*}}  %24 = GetPNamesInst %17, %18, %19, %20, %BB3, %BB4
 //CHECK-NEXT:%BB2:
-//CHECK-NEXT:  {{.*}}  %26 = PhiInst %14 : undefined, %BB0, %34 : object, %BB3
-//CHECK-NEXT:  {{.*}}  %27 = MovInst %26 : undefined|object
-//CHECK-NEXT:  {{.*}}  %28 = ReturnInst %27 : undefined|object
+//CHECK-NEXT:  {{.*}}  %25 = PhiInst %13 : undefined, %BB0, %33 : object, %BB3
+//CHECK-NEXT:  {{.*}}  %26 = MovInst %25 : undefined|object
+//CHECK-NEXT:  {{.*}}  %27 = ReturnInst %26 : undefined|object
 //CHECK-NEXT:%BB3:
-//CHECK-NEXT:  {{.*}}  %29 = LoadPropertyInst %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %30 = AsNumberInst %29
-//CHECK-NEXT:  {{.*}}  %31 = BinaryOperatorInst '+', %30 : number, %2 : number
-//CHECK-NEXT:  {{.*}}  %32 = StorePropertyInst %31 : number, %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %33 = LoadPropertyInst %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %34 = MovInst %16 : object
-//CHECK-NEXT:  {{.*}}  %35 = CompareBranchInst '<', %33, %3 : number, %BB1, %BB2
+//CHECK-NEXT:  {{.*}}  %28 = LoadPropertyInst %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %29 = AsNumberInst %28
+//CHECK-NEXT:  {{.*}}  %30 = UnaryOperatorInst '++', %29 : number
+//CHECK-NEXT:  {{.*}}  %31 = StorePropertyInst %30 : number, %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %32 = LoadPropertyInst %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %33 = MovInst %15 : object
+//CHECK-NEXT:  {{.*}}  %34 = CompareBranchInst '<', %32, %2 : number, %BB1, %BB2
 //CHECK-NEXT:%BB4:
-//CHECK-NEXT:  {{.*}}  %36 = GetNextPNameInst %24, %19, %20, %21, %18, %BB3, %BB5
+//CHECK-NEXT:  {{.*}}  %35 = GetNextPNameInst %23, %18, %19, %20, %17, %BB3, %BB5
 //CHECK-NEXT:%BB5:
-//CHECK-NEXT:  {{.*}}  %37 = LoadStackInst %24
-//CHECK-NEXT:  {{.*}}  %38 = LoadPropertyInst %0 : object, "a" : string
-//CHECK-NEXT:  {{.*}}  %39 = StorePropertyInst %37, %38, %4 : number
-//CHECK-NEXT:  {{.*}}  %40 = BranchInst %BB4
+//CHECK-NEXT:  {{.*}}  %36 = LoadStackInst %23
+//CHECK-NEXT:  {{.*}}  %37 = LoadPropertyInst %0 : object, "a" : string
+//CHECK-NEXT:  {{.*}}  %38 = StorePropertyInst %36, %37, %3 : number
+//CHECK-NEXT:  {{.*}}  %39 = BranchInst %BB4
 //CHECK-NEXT:function_end
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -26,6 +26,7 @@ HERMES_LITERAL_NODE_TYPES = {
     "StringLiteral",
     "NumericLiteral",
     "RegExpLiteral",
+    "JSXStringLiteral",
 }
 
 # These are the keys in the JSON ASTs that should be omitted during diffing.
@@ -50,12 +51,12 @@ HERMES_OMITTED_KEYS = {
     # Some literals support "raw" and others don't.
     # ESPrima doesn't distinguish.
     "Literal": {"raw"},
-    "StringLiteralTypeAnnotation": {"raw"},
 }
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
     "Literal": {"raw"},
-    "StringLiteralTypeAnnotation": {"raw"},
+    "BigIntLiteral": {"value"},
+    "BigIntLiteralTypeAnnotation": {"value"},
     "ImportDeclaration": {"importKind", "attributes"},
     "ImportSpecifier": {"importKind"},
     "ExportNamedDeclaration": {"exportKind"},

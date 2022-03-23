@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -59,11 +59,11 @@ void CheckHeapWellFormedAcceptor::acceptSym(SymbolID sym) {
     return;
   }
   assert(
-      gc.getCallbacks()->isSymbolLive(sym) &&
+      gc.getCallbacks().isSymbolLive(sym) &&
       "Symbol is marked but is not live");
   // Check that the string used by this symbol is valid.
   accept(
-      static_cast<const GCCell *>(gc.getCallbacks()->getStringForSymbol(sym)));
+      static_cast<const GCCell *>(gc.getCallbacks().getStringForSymbol(sym)));
 }
 
 void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {

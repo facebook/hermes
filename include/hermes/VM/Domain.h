@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -67,7 +67,7 @@ class Domain final : public GCCell {
     CJSModuleSize,
   };
 
-  // TODO(T83098051): Consider optimising cjsModules_ for non-contiguous IDs.
+  // TODO(T83098051): Consider optimizing cjsModules_ for non-contiguous IDs.
   /// CJS Modules used when modules have been resolved ahead of time.
   /// Used during requireFast modules by index.
   /// Stores information on module i at entries (i * CJSModuleSize) through
@@ -105,26 +105,29 @@ class Domain final : public GCCell {
   OptValue<uint32_t> cjsEntryModuleID_;
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::DomainKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DomainKind;
   }
 
   /// Create a Domain with no associated RuntimeModules.
-  static PseudoHandle<Domain> create(Runtime *runtime);
+  static PseudoHandle<Domain> create(Runtime &runtime);
 
   /// Add \p runtimeModule to the list of RuntimeModules owned by this domain.
   static void addRuntimeModule(
       Handle<Domain> self,
-      Runtime *runtime,
+      Runtime &runtime,
       RuntimeModule *runtimeModule) {
-    self->runtimeModules_.push_back(runtimeModule, &runtime->getHeap());
+    self->runtimeModules_.push_back(runtimeModule, &runtime.getHeap());
   }
 
   /// Import the CommonJS module table from the given \p runtimeModule,
   /// ignoring modules with IDs / paths that have already been imported.
   LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
       Handle<Domain> self,
-      Runtime *runtime,
+      Runtime &runtime,
       RuntimeModule *runtimeModule);
 
   /// \return the ID of the entry CJS module.
@@ -145,14 +148,15 @@ class Domain final : public GCCell {
 
   /// \return the offset of the CJS module with ID \p index, None if a CJS
   /// module with the given ID has not been loaded.
-  OptValue<uint32_t> getCJSModuleOffset(Runtime *runtime, uint32_t id) const {
+  OptValue<uint32_t> getCJSModuleOffset(Runtime &runtime, uint32_t id) const {
     assert(cjsModules_ && "CJS Modules not initialized");
-    if (LLVM_UNLIKELY(id >= cjsModules_.get(runtime)->size() / CJSModuleSize)) {
+    if (LLVM_UNLIKELY(
+            id >= cjsModules_.getNonNull(runtime)->size() / CJSModuleSize)) {
       // Out of bounds.
       return llvh::None;
     }
     uint32_t offset = id * CJSModuleSize;
-    if (LLVM_UNLIKELY(cjsModules_.get(runtime)
+    if (LLVM_UNLIKELY(cjsModules_.getNonNull(runtime)
                           ->at(offset + FunctionIndexOffset)
                           .isEmpty())) {
       // The entry has not been populated yet.
@@ -162,28 +166,28 @@ class Domain final : public GCCell {
   }
 
   /// \return the cached exports object for the given cjsModuleOffset.
-  PseudoHandle<> getCachedExports(Runtime *runtime, uint32_t cjsModuleOffset)
+  PseudoHandle<> getCachedExports(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
-    return createPseudoHandle(
-        cjsModules_.get(runtime)->at(cjsModuleOffset + CachedExportsOffset));
+    return createPseudoHandle(cjsModules_.getNonNull(runtime)->at(
+        cjsModuleOffset + CachedExportsOffset));
   }
 
   /// \return the module object for the given cjsModuleOffset.
-  PseudoHandle<JSObject> getModule(Runtime *runtime, uint32_t cjsModuleOffset)
+  PseudoHandle<JSObject> getModule(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
-    return createPseudoHandle(vmcast_or_null<JSObject>(
-        cjsModules_.get(runtime)->at(cjsModuleOffset + ModuleOffset)));
+    return createPseudoHandle(dyn_vmcast<JSObject>(
+        cjsModules_.getNonNull(runtime)->at(cjsModuleOffset + ModuleOffset)));
   }
 
   /// \return the function index for the given cjsModuleOffset.
-  uint32_t getFunctionIndex(Runtime *runtime, uint32_t cjsModuleOffset) const {
-    return cjsModules_.get(runtime)
+  uint32_t getFunctionIndex(Runtime &runtime, uint32_t cjsModuleOffset) const {
+    return cjsModules_.getNonNull(runtime)
         ->at(cjsModuleOffset + FunctionIndexOffset)
         .getNativeUInt32();
   }
 
   /// \return the runtime module for the given cjsModuleOffset.
-  RuntimeModule *getRuntimeModule(Runtime *runtime, uint32_t cjsModuleOffset)
+  RuntimeModule *getRuntimeModule(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
     assert(cjsModuleOffset % CJSModuleSize == 0 && "Invalid cjsModuleOffset");
     return cjsRuntimeModules_[cjsModuleOffset / CJSModuleSize];
@@ -192,31 +196,25 @@ class Domain final : public GCCell {
   /// Set the module object for the given cjsModuleOffset.
   void setCachedExports(
       uint32_t cjsModuleOffset,
-      Runtime *runtime,
+      Runtime &runtime,
       HermesValue cachedExports) {
-    cjsModules_.get(runtime)->set(
+    cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + CachedExportsOffset,
         cachedExports,
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
 
   /// Set the module object for the given cjsModuleOffset.
-  void setModule(
-      uint32_t cjsModuleOffset,
-      Runtime *runtime,
-      Handle<JSObject> module) {
-    cjsModules_.get(runtime)->set(
+  void setModule(uint32_t cjsModuleOffset, Runtime &runtime, Handle<> module) {
+    cjsModules_.getNonNull(runtime)->set(
         cjsModuleOffset + ModuleOffset,
         module.getHermesValue(),
-        &runtime->getHeap());
+        &runtime.getHeap());
   }
 
   /// \return the throwing require function with require.context bound to a
   /// context for this domain.
-  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
-
-  /// Create a domain with no associated RuntimeModules.
-  Domain(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
+  PseudoHandle<NativeFunction> getThrowingRequire(Runtime &runtime) const;
 
  private:
   /// Destroy associated RuntimeModules.
@@ -255,31 +253,34 @@ class RequireContext final : public JSObject {
   friend void RequireContextSerialize(Serializer &, const GCCell *);
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::RequireContextKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }
 
   /// Create a RequireContext with domain \p domain and dirname \p dirname.
   static Handle<RequireContext> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<Domain> domain,
       Handle<StringPrimitive> dirname);
 
   /// \return the domain for this require context.
-  static Domain *getDomain(Runtime *runtime, RequireContext *self) {
+  static Domain *getDomain(Runtime &runtime, RequireContext *self) {
     return self->domain_.get(runtime);
   }
 
   /// \return the current dirname for this require context.
-  static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
+  static StringPrimitive *getDirname(Runtime &runtime, RequireContext *self) {
     return self->dirname_.get(runtime);
   }
 
   RequireContext(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   GCPointer<Domain> domain_;

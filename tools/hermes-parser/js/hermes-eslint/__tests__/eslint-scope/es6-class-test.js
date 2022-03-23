@@ -1,9 +1,10 @@
 /**
- * Portions Copyright (c) Facebook, Inc. and its affiliates.
+ * Portions Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
+ * @flow strict-local
  * @format
  */
 
@@ -32,7 +33,7 @@
 */
 'use strict';
 
-const {parseForESLint} = require('./eslint-scope-test-utils');
+import {parseForESLint} from './eslint-scope-test-utils';
 
 describe('ES6 class', () => {
   it('declaration name creates class scope', () => {
@@ -53,9 +54,8 @@ describe('ES6 class', () => {
     expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('Derived');
-    expect(scope.references).toHaveLength(2);
-    expect(scope.references[0].identifier.name).toEqual('Base');
-    expect(scope.references[1].identifier.name).toEqual('Derived');
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].identifier.name).toEqual('Derived');
 
     scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('class');
@@ -63,7 +63,8 @@ describe('ES6 class', () => {
     expect(scope.isStrict).toBe(true);
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('Derived');
-    expect(scope.references).toHaveLength(0);
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].identifier.name).toEqual('Base');
 
     scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');
@@ -90,8 +91,7 @@ describe('ES6 class', () => {
     expect(scope.block.type).toEqual('Program');
     expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('Base');
+    expect(scope.references).toHaveLength(0);
 
     scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('class');
@@ -99,7 +99,8 @@ describe('ES6 class', () => {
     expect(scope.isStrict).toBe(true);
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('Derived');
-    expect(scope.references).toHaveLength(0);
+    expect(scope.references).toHaveLength(1);
+    expect(scope.references[0].identifier.name).toBe('Base');
 
     scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');
@@ -122,12 +123,12 @@ describe('ES6 class', () => {
     expect(scope.block.type).toEqual('Program');
     expect(scope.isStrict).toBe(false);
     expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('Base');
+    expect(scope.references).toHaveLength(0);
 
     scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('class');
     expect(scope.block.type).toEqual('ClassExpression');
+    expect(scope.references[0].identifier.name).toBe('Base');
 
     scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('function');

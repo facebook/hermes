@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -211,7 +211,7 @@ function modify_prop(obj) {
 //CHECK-NEXT:  %18 = LoadFrameInst [x]
 //CHECK-NEXT:  %19 = LoadPropertyInst %17, %18
 //CHECK-NEXT:  %20 = AsNumberInst %19
-//CHECK-NEXT:  %21 = BinaryOperatorInst '+', %20 : number, 1 : number
+//CHECK-NEXT:  %21 = UnaryOperatorInst '++', %20 : number
 //CHECK-NEXT:  %22 = StorePropertyInst %21, %17, %18
 //CHECK-NEXT:  %23 = LoadFrameInst [ret]
 //CHECK-NEXT:  %24 = LoadFrameInst [obj]
@@ -271,4 +271,3 @@ function expression_prop(obj) {
   }
   return ret;
 }
-

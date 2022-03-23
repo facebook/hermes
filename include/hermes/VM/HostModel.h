@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,6 +27,9 @@ class FinalizableNativeFunction final : public NativeFunction {
  public:
   static const CallableVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::FinalizableNativeFunctionKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::FinalizableNativeFunctionKind;
   }
@@ -36,7 +39,7 @@ class FinalizableNativeFunction final : public NativeFunction {
   /// \param finalizePtr the finalizer function
   /// \param paramCount number of parameters (excluding `this`)
   static CallResult<HermesValue> createWithoutPrototype(
-      Runtime *runtime,
+      Runtime &runtime,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr,
@@ -48,19 +51,13 @@ class FinalizableNativeFunction final : public NativeFunction {
   }
 
   FinalizableNativeFunction(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
-      : NativeFunction(
-            runtime,
-            &vt.base.base,
-            parent,
-            clazz,
-            context,
-            functionPtr),
+      : NativeFunction(runtime, parent, clazz, context, functionPtr),
         finalizePtr_(finalizePtr) {}
 
  protected:
@@ -99,13 +96,16 @@ class HostObject final : public DecoratedObject {
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::HostObjectKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HostObjectKind;
   }
 
   /// Create an instance of HostObject with no prototype.
   static CallResult<HermesValue> createWithoutPrototype(
-      Runtime *runtime,
+      Runtime &runtime,
       std::unique_ptr<HostObjectProxy> proxy);
 
   CallResult<HermesValue> get(SymbolID name) {
@@ -129,11 +129,11 @@ class HostObject final : public DecoratedObject {
   }
 
   HostObject(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       std::unique_ptr<HostObjectProxy> proxy)
-      : DecoratedObject(runtime, &vt, parent, clazz, std::move(proxy)) {}
+      : DecoratedObject(runtime, parent, clazz, std::move(proxy)) {}
 };
 
 } // namespace vm

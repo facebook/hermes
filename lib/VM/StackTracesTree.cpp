@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -90,17 +90,17 @@ StackTracesTree::StackTracesTree()
       anonymousFunctionID_(strings_->insert("(anonymous)")),
       head_(root_.get()) {}
 
-void StackTracesTree::syncWithRuntimeStack(Runtime *runtime) {
+void StackTracesTree::syncWithRuntimeStack(Runtime &runtime) {
   head_ = root_.get();
 
-  const StackFramePtr framesEnd = *runtime->getStackFrames().end();
+  const StackFramePtr framesEnd = *runtime.getStackFrames().end();
   std::vector<std::pair<CodeBlock *, const Inst *>> stack;
 
   // Walk the current stack, and call pushCallStack for each JS frame (not
   // native frames). The current frame is not included, because any allocs after
   // this point will call pushCallStack which will get the most recent IP. Each
   // stack frame tracks information about the caller.
-  for (StackFramePtr cf : runtime->getStackFrames()) {
+  for (StackFramePtr cf : runtime.getStackFrames()) {
     CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
     const Inst *savedIP = cf.getSavedIP();
     // Go up one frame and get the callee code block but use the current
@@ -153,7 +153,7 @@ void StackTracesTree::popCallStack() {
 }
 
 StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
-    Runtime *runtime,
+    Runtime &runtime,
     const CodeBlock *codeBlock,
     uint32_t bytecodeOffset) {
   auto location = codeBlock->getSourceLocation(bytecodeOffset);
@@ -184,7 +184,7 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
 }
 
 void StackTracesTree::pushCallStack(
-    Runtime *runtime,
+    Runtime &runtime,
     const CodeBlock *codeBlock,
     const Inst *ip) {
   assert(codeBlock && ip && "Code block and IP must be known");
@@ -230,7 +230,7 @@ void StackTracesTree::pushCallStack(
   //   }
   //   Object.defineProperty(foo, 'name', {writable:true, value: 'bar'});
   //
-  auto nameStr = codeBlock->getNameString(runtime->getHeap().getCallbacks());
+  auto nameStr = codeBlock->getNameString(runtime.getHeap().getCallbacks());
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 
@@ -243,7 +243,7 @@ void StackTracesTree::pushCallStack(
 }
 
 StackTracesTreeNode *StackTracesTree::getStackTrace(
-    Runtime *runtime,
+    Runtime &runtime,
     const CodeBlock *codeBlock,
     const Inst *ip) {
   if (!codeBlock || !ip) {

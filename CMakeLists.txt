@@ -1,9 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-cmake_minimum_required(VERSION 3.7.0)
+cmake_minimum_required(VERSION 3.8.0)
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -71,7 +71,7 @@ endif()
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.10.0
+        VERSION 0.11.0
         LANGUAGES C CXX)
 # Optional suffix like "-rc3"
 set(VERSION_SUFFIX "")
@@ -207,6 +207,9 @@ set(HERMES_STATIC_LINK OFF CACHE BOOL
 
 set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
   "Force static linking of ICU. May only work on GNU/Linux.")
+
+set(HERMES_UNICODE_LITE OFF CACHE BOOL
+  "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
 set(HERMES_ENABLE_DEBUGGER_DEFAULT OFF)
 if (NOT HERMES_IS_MOBILE_BUILD)
@@ -557,12 +560,21 @@ if (HERMES_ENABLE_DEBUGGER)
   add_definitions(-DHERMES_ENABLE_DEBUGGER)
 endif()
 
-set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++14")
+set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17")
 
 set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
+# JSI_DIR has always priority over other folders like FBSOURCE_DIR.
+# It's used by React Native when building Hermes from source so
+# the copy of JSI inside `react-native/ReactCommon/jsi` can be used.
+if(JSI_DIR)
+  if(EXISTS ${JSI_DIR})
+    set(HERMES_JSI_DIR ${JSI_DIR})
+  else()
+    message(FATAL_ERROR "You specified a JSI directory with -DJSI_DIR but JSI can't be found there.")
+  endif()
+elseif(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
   set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
 elseif(EXISTS ${FBSOURCE_DIR}/xplat/jsi)
   set(HERMES_JSI_DIR ${FBSOURCE_DIR}/xplat/jsi)
@@ -590,7 +602,7 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

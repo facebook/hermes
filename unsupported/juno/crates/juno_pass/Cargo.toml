@@ -1,0 +1,12 @@
+[package]
+name = "juno_pass"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+juno = { path = "../juno" }
+
+[dev-dependencies]
+juno_support = { path = "../juno_support" }

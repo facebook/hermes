@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,7 +27,7 @@ using InternalPropertiesTest = RuntimeTestFixture;
             obj,                                                         \
             runtime,                                                     \
             Predefined::getSymbolID(Predefined::Object),                 \
-            runtime->makeHandle(HermesValue::encodeUndefinedValue())));  \
+            runtime.makeHandle(HermesValue::encodeUndefinedValue())));   \
     EXPECT_CALLRESULT_BOOL_RAW(                                          \
         TRUE,                                                            \
         JSObject::deleteNamed(                                           \
@@ -38,7 +38,7 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
+  auto obj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // A key feature of named internal properties is that they may be added to
   // any object at any point. Let's put the object in dictionary mode to test
@@ -57,7 +57,7 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
           runtime,
           propID,
           dpf,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10.0))));
+          runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
 
   EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed_RJS(obj, runtime, propID));
 

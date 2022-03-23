@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -66,16 +66,16 @@ DictPropertyMap::size_type DictPropertyMap::getMaxCapacity() {
 }
 
 CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
-    Runtime *runtime,
+    Runtime &runtime,
     size_type capacity) {
   if (LLVM_UNLIKELY(capacity > detail::kMaxCapacity)) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         TwineChar16("Property storage exceeds ") + detail::kMaxCapacity +
         " properties");
   }
   size_type hashCapacity = calcHashCapacity(capacity);
-  auto *cell = runtime->makeAVariable<DictPropertyMap>(
-      allocationSize(capacity, hashCapacity), runtime, capacity, hashCapacity);
+  auto *cell = runtime.makeAVariable<DictPropertyMap>(
+      allocationSize(capacity, hashCapacity), capacity, hashCapacity);
   return createPseudoHandle(cell);
 }
 
@@ -123,7 +123,7 @@ std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
 
 ExecutionStatus DictPropertyMap::grow(
     MutableHandle<DictPropertyMap> &selfHandleRef,
-    Runtime *runtime,
+    Runtime &runtime,
     size_type newCapacity) {
   auto res = create(runtime, newCapacity);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -198,7 +198,7 @@ ExecutionStatus DictPropertyMap::grow(
 CallResult<std::pair<NamedPropertyDescriptor *, bool>>
 DictPropertyMap::findOrAdd(
     MutableHandle<DictPropertyMap> &selfHandleRef,
-    Runtime *runtime,
+    Runtime &runtime,
     SymbolID id) {
   auto *self = *selfHandleRef;
   auto numDescriptors = self->numDescriptors_.load(std::memory_order_relaxed);
@@ -227,7 +227,7 @@ DictPropertyMap::findOrAdd(
             std::max(toRValue(detail::kMaxCapacity), self->numProperties_ + 1);
     } else {
       // Calculate the new capacity to be exactly as much as we need to
-      // accomodate the deleted list plus one extra property. It it happens
+      // accommodate the deleted list plus one extra property. It it happens
       // to exceed kMaxCapacity, there is nothing we can do, so grow() will
       // raise an exception.
       newCapacity = self->numProperties_ + 1 + self->deletedListSize_;
@@ -253,7 +253,7 @@ DictPropertyMap::findOrAdd(
 
   auto *descPair = self->getDescriptorPairs() + numDescriptors;
 
-  descPair->first.set(id, &runtime->getHeap());
+  descPair->first.set(id, &runtime.getHeap());
   self->numDescriptors_.fetch_add(1, std::memory_order_acq_rel);
 
   return std::make_pair(&descPair->second, true);
@@ -261,7 +261,7 @@ DictPropertyMap::findOrAdd(
 
 void DictPropertyMap::erase(
     DictPropertyMap *self,
-    Runtime *runtime,
+    Runtime &runtime,
     PropertyPos pos) {
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
   auto descIndex = hashPair->getDescIndex();
@@ -275,7 +275,7 @@ void DictPropertyMap::erase(
       "accessing deleted descriptor pair");
 
   hashPair->setDeleted();
-  descPair->first.set(SymbolID::deleted(), &runtime->getHeap());
+  descPair->first.set(SymbolID::deleted(), &runtime.getHeap());
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
   self->deletedListHead_ = descIndex;
@@ -288,7 +288,7 @@ void DictPropertyMap::erase(
 
 SlotIndex DictPropertyMap::allocatePropertySlot(
     DictPropertyMap *self,
-    Runtime *runtime) {
+    Runtime &runtime) {
   // If there are no deleted properties, the number of properties corresponds
   // exactly to the number of slots.
   if (self->deletedListHead_ == END_OF_LIST)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -97,7 +97,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   // Allocate 25 segments.  By the time we're done, this should fill
   // the YG (which will have grown to a full segment size), and 24 OG
@@ -148,7 +148,7 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   // Fill up YG at least once, to make sure promotion keeps the right name.
   for (size_t i = 0; i < 3; ++i) {

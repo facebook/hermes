@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,7 +18,7 @@ namespace vm {
 
 using SLG = hermes::hbc::SerializedLiteralGenerator;
 
-HermesValue SerializedLiteralParser::get(Runtime *) {
+HermesValue SerializedLiteralParser::get(Runtime &) {
   assert(hasNext() && "Object buffer doesn't have any more values");
 
   if (leftInSeq_ == 0)

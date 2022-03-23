@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,11 +22,9 @@ const VTable DummyObject::vt{
     _finalizeImpl,
     _markWeakImpl,
     _mallocSizeImpl,
-    nullptr,
-    _externalMemorySizeImpl};
+    nullptr};
 
-DummyObject::DummyObject(GC *gc)
-    : GCCell(gc, &vt), other(), x(1), y(2), weak(gc, this) {
+DummyObject::DummyObject(GC *gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
   hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
@@ -49,8 +47,14 @@ void DummyObject::setPointer(GC *gc, DummyObject *obj) {
   other.set(gc->getPointerBase(), obj, gc);
 }
 
+/* static */ constexpr CellKind DummyObject::getCellKind() {
+  return CellKind::DummyObjectKind;
+}
+
 DummyObject *DummyObject::create(GC *gc) {
-  return gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+  auto *cell = gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+  cell->weak.emplace(gc, cell);
+  return cell;
 }
 DummyObject *DummyObject::createLongLived(GC *gc) {
   return gc->makeAFixed<DummyObject, HasFinalizer::Yes, LongLived::Yes>(gc);
@@ -68,10 +72,6 @@ void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
   self->~DummyObject();
 }
 
-gcheapsize_t DummyObject::_externalMemorySizeImpl(const GCCell *cell) {
-  return vmcast<DummyObject>(cell)->externalBytes;
-}
-
 size_t DummyObject::_mallocSizeImpl(GCCell *cell) {
   return vmcast<DummyObject>(cell)->extraBytes;
 }
@@ -80,7 +80,8 @@ void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = reinterpret_cast<DummyObject *>(cell);
   if (self->markWeakCallback)
     (*self->markWeakCallback)(cell, acceptor);
-  acceptor.accept(self->weak);
+  if (self->weak)
+    acceptor.accept(*self->weak);
 }
 
 } // namespace testhelpers

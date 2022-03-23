@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -71,8 +71,8 @@ function cse_this_instr() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = AsNumberInst %a
-//CHECK-NEXT:  %1 = BinaryOperatorInst '+', %0 : number, 1 : number
-//CHECK-NEXT:  %2 = UnaryOperatorInst '-', %1 : number
+//CHECK-NEXT:  %1 = UnaryOperatorInst '++', %0 : number
+//CHECK-NEXT:  %2 = UnaryOperatorInst '-', %1
 //CHECK-NEXT:  %3 = BinaryOperatorInst '*', %2 : number, %2 : number
 //CHECK-NEXT:  %4 = ReturnInst %3 : number
 //CHECK-NEXT:function_end

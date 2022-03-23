@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -9,9 +9,11 @@
  */
 
 import type {
+  ClassMember,
   Comment,
   ESNode,
   Expression,
+  FunctionParameter,
   ModuleDeclaration,
   Statement,
   TypeAnnotationType,
@@ -19,11 +21,13 @@ import type {
 import type {DetachedNode} from '../detachedNode';
 import type {TransformCloneSignatures} from '../generated/TransformCloneSignatures';
 import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
+import type {TraversalContext} from '../traverse/traverse';
 import type {AddLeadingCommentsMutation} from './mutations/AddLeadingComments';
 import type {AddTrailingCommentsMutation} from './mutations/AddTrailingComments';
 import type {CloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
+import type {RemoveNodeMutation} from './mutations/RemoveNode';
 import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
 import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
@@ -39,6 +43,7 @@ import {createAddTrailingCommentsMutation} from './mutations/AddTrailingComments
 import {createCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
 import {createRemoveCommentMutation} from './mutations/RemoveComment';
+import {createRemoveNodeMutation} from './mutations/RemoveNode';
 import {createRemoveStatementMutation} from './mutations/RemoveStatement';
 import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
@@ -49,6 +54,7 @@ type Mutation = $ReadOnly<
   | CloneCommentsToMutation
   | InsertStatementMutation
   | RemoveCommentMutation
+  | RemoveNodeMutation
   | RemoveStatementMutation
   | ReplaceNodeMutation
   | ReplaceStatementWithManyMutation,
@@ -65,12 +71,10 @@ type ReplaceNodeOptions = $ReadOnly<{
   keepComments?: boolean,
 }>;
 
-export type TransformContext = $ReadOnly<{
-  mutations: $ReadOnlyArray<Mutation>,
-  astWasMutated: boolean,
-
+type TransformCloneAPIs = $ReadOnly<{
   /**
-   * Shallowly clones the given node and applies the given overrides.
+   * Shallowly clones the given node.
+   *
    * !!! Be careful about using this !!!
    * This does not clone children nodes. This means that if you keep
    * the original node in the AST then you will have two trees in the
@@ -84,11 +88,16 @@ export type TransformContext = $ReadOnly<{
    * If you want to literally duplicate a node to place somewhere else
    * in the AST, then use `deepCloneNode` instead.
    */
-  shallowCloneNode: TransformCloneSignatures & {
-    // generic passthrough cases with no options
+  shallowCloneNode: {
     <T: ESNode>(node: T): DetachedNode<T>,
     <T: ESNode>(node: ?T): DetachedNode<T> | null,
   },
+
+  /**
+   * Shallowly clones the given node and applies the given overrides.
+   * {@see shallowCloneNode}
+   */
+  shallowCloneNodeWithOverrides: TransformCloneSignatures,
 
   /**
    * {@see shallowCloneNode}
@@ -99,95 +108,26 @@ export type TransformContext = $ReadOnly<{
   },
 
   /**
-   * Deeply clones the node and all its children, then applies the
-   * given overrides.
+   * Deeply clones the node and all its children.
+   *
    * !!! Be careful about using this !!!
    * Because this is a deep clone, using it high up in the AST can
    * result in a lot of work being done.
    */
-  deepCloneNode: TransformCloneSignatures & {
-    // generic passthrough cases with no options
+  deepCloneNode: {
     <T: ESNode>(node: T): DetachedNode<T>,
     <T: ESNode>(node: ?T): DetachedNode<T> | null,
   },
 
   /**
-   * Insert `nodeToInsert` after the `target` statement.
-   * The inserted nodes will be kept in the order given.
+   * Deeply clones the node and all its children, then applies the
+   * given overrides.
+   * {@see deepCloneNode}
    */
-  insertAfterStatement: (
-    target: ModuleDeclaration | Statement,
-    nodeToInsert: SingleOrArray<DetachedNode<ModuleDeclaration | Statement>>,
-  ) => void,
+  deepCloneNodeWithOverrides: TransformCloneSignatures,
+}>;
 
-  /**
-   * Insert `nodeToInsert` before the `target` statement.
-   * The inserted nodes will be kept in the order given.
-   */
-  insertBeforeStatement: (
-    target: ModuleDeclaration | Statement,
-    nodeToInsert: SingleOrArray<DetachedNode<ModuleDeclaration | Statement>>,
-  ) => void,
-
-  /**
-   * Replace the `target` node with the `nodeToReplaceWith` node.
-   * This simply does an in-place replacement in the AST.
-   */
-  replaceNode: {
-    // expressions must be replaced with other expressions
-    (
-      target: Expression,
-      nodeToReplaceWith: DetachedNode<Expression>,
-      options?: ReplaceNodeOptions,
-    ): void,
-    // module declarations must be replaced with statements or other module declarations
-    (
-      target: ModuleDeclaration,
-      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
-      options?: ReplaceNodeOptions,
-    ): void,
-    // Statement must be replaced with statements or module declarations
-    (
-      target: Statement,
-      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
-      options?: ReplaceNodeOptions,
-    ): void,
-    // Types must be replaced with types
-    (
-      target: TypeAnnotationType,
-      nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
-      options?: ReplaceNodeOptions,
-    ): void,
-  } & TransformReplaceSignatures, // allow like-for-like replacements as well
-
-  /**
-   * Replaces the `target` node with all of the `nodesToReplaceWith` nodes.
-   * The nodes will be kept in the order given.
-   */
-  replaceStatementWithMany: (
-    target: ModuleDeclaration | Statement,
-    nodesToReplaceWith: $ReadOnlyArray<
-      DetachedNode<ModuleDeclaration | Statement>,
-    >,
-    options?: {
-      /**
-       * Moves the comments from the target node to the first node in the array.
-       * Note that this does not *clone* comments, it moves them and clears out
-       * the target node's comments afterward.
-       */
-      keepComments?: boolean,
-    },
-  ) => void,
-
-  /**
-   * Removes a given node from the AST.
-   */
-  removeStatement: (node: ModuleDeclaration | Statement) => void,
-
-  //
-  // Comment APIs
-  //
-
+type TransformCommentAPIs = $ReadOnly<{
   /**
    * Gets all of the comments attached to the given node.
    */
@@ -235,7 +175,119 @@ export type TransformContext = $ReadOnly<{
   removeComments: (comments: SingleOrArray<Comment>) => void,
 }>;
 
-export function getTransformContext(): TransformContext {
+type TransformInsertAPIs = $ReadOnly<{
+  /**
+   * Insert `nodeToInsert` after the `target` statement.
+   * The inserted nodes will be kept in the order given.
+   */
+  insertAfterStatement: (
+    target: InsertStatementMutation['target'],
+    nodeToInsert: SingleOrArray<
+      DetachedNode<InsertStatementMutation['target']>,
+    >,
+  ) => void,
+
+  /**
+   * Insert `nodeToInsert` before the `target` statement.
+   * The inserted nodes will be kept in the order given.
+   */
+  insertBeforeStatement: (
+    target: InsertStatementMutation['target'],
+    nodeToInsert: SingleOrArray<
+      DetachedNode<InsertStatementMutation['target']>,
+    >,
+  ) => void,
+}>;
+
+type TransformRemoveAPIs = $ReadOnly<{
+  /**
+   * Removes a given node from the AST.
+   * The set of thigns that can be removed is intentionally restricted by types.
+   * This represents the set of "misc nodes" that are known to be safe to remove without outright breaking the AST.
+   */
+  removeNode: (node: RemoveNodeMutation['node']) => void,
+
+  /**
+   * Removes a given statement from the AST.
+   */
+  removeStatement: (node: RemoveStatementMutation['node']) => void,
+}>;
+
+type TransformReplaceAPIs = $ReadOnly<{
+  /**
+   * Replace the `target` node with the `nodeToReplaceWith` node.
+   * This simply does an in-place replacement in the AST.
+   */
+  replaceNode: {
+    // Expressions may be replaced with other expressions
+    (
+      target: Expression,
+      nodeToReplaceWith: DetachedNode<Expression>,
+      options?: ReplaceNodeOptions,
+    ): void,
+    // Module declarations may be replaced with statements or other module declarations
+    (
+      target: ModuleDeclaration,
+      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      options?: ReplaceNodeOptions,
+    ): void,
+    // Statement maybe be replaced with statements or module declarations
+    (
+      target: Statement,
+      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      options?: ReplaceNodeOptions,
+    ): void,
+    // Types maybe be replaced with other types
+    (
+      target: TypeAnnotationType,
+      nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
+      options?: ReplaceNodeOptions,
+    ): void,
+    // Class members may be replaced with other class members
+    (
+      target: ClassMember,
+      nodeToReplaceWith: DetachedNode<ClassMember>,
+      options?: ReplaceNodeOptions,
+    ): void,
+    // Function params amy be replace with other function params
+    (
+      target: FunctionParameter,
+      nodeToReplaceWith: DetachedNode<FunctionParameter>,
+      options?: ReplaceNodeOptions,
+    ): void,
+  } & TransformReplaceSignatures, // allow like-for-like replacements as well
+
+  /**
+   * Replaces the `target` node with all of the `nodesToReplaceWith` nodes.
+   * The nodes will be kept in the order given.
+   */
+  replaceStatementWithMany: (
+    target: ReplaceStatementWithManyMutation['target'],
+    nodesToReplaceWith: ReplaceStatementWithManyMutation['nodesToReplaceWith'],
+    options?: {
+      /**
+       * Moves the comments from the target node to the first node in the array.
+       * Note that this does not *clone* comments, it moves them and clears out
+       * the target node's comments afterward.
+       */
+      keepComments?: boolean,
+    },
+  ) => void,
+}>;
+
+export type TransformContextAdditions = $ReadOnly<{
+  mutations: $ReadOnlyArray<Mutation>,
+  astWasMutated: boolean,
+
+  ...TransformCommentAPIs,
+  ...TransformCloneAPIs,
+  ...TransformInsertAPIs,
+  ...TransformRemoveAPIs,
+  ...TransformReplaceAPIs,
+}>;
+export type TransformContext = TraversalContext<TransformContextAdditions>;
+
+export function getTransformContext(): TransformContextAdditions {
   /**
    * The mutations in order of collection.
    */
@@ -246,27 +298,29 @@ export function getTransformContext(): TransformContext {
     }
   }
 
-  return {
-    mutations,
-
-    // $FlowExpectedError[unsafe-getters-setters]
-    get astWasMutated(): boolean {
-      return mutations.length > 0;
-    },
-
-    // $FlowExpectedError[incompatible-exact]
+  const cloneAPIs: TransformCloneAPIs = {
     shallowCloneNode: ((
       node: ?ESNode,
-      newProps?: $ReadOnly<{...}>,
     ): // $FlowExpectedError[incompatible-cast]
-    // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
       }
 
+      return shallowCloneNode(node);
+    }: TransformCloneAPIs['shallowCloneNode']),
+
+    // $FlowExpectedError[incompatible-exact]
+    shallowCloneNodeWithOverrides: ((
+      node: ?ESNode,
+      newProps?: $ReadOnly<{...}>,
+    ): ?DetachedNode<ESNode> => {
+      if (node == null) {
+        return null;
+      }
+
       return shallowCloneNode(node, newProps);
-    }: TransformContext['shallowCloneNode']),
+    }: TransformCloneAPIs['shallowCloneNodeWithOverrides']),
 
     shallowCloneArray: (<T: ESNode>(
       nodes: ?$ReadOnlyArray<T>,
@@ -277,48 +331,99 @@ export function getTransformContext(): TransformContext {
       }
 
       return nodes.map(node => shallowCloneNode<T>(node));
-    }: TransformContext['shallowCloneArray']),
+    }: TransformCloneAPIs['shallowCloneArray']),
 
-    // $FlowExpectedError[incompatible-exact]
     deepCloneNode: ((
       node: ?ESNode,
-      newProps?: $ReadOnly<{...}>,
     ): // $FlowExpectedError[incompatible-cast]
-    // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
       }
 
-      return deepCloneNode(node, newProps);
-    }: TransformContext['deepCloneNode']),
+      return deepCloneNode(node);
+    }: TransformCloneAPIs['deepCloneNode']),
 
+    // $FlowExpectedError[incompatible-exact]
+    deepCloneNodeWithOverrides: ((
+      node: ?ESNode,
+      newProps?: $ReadOnly<{...}>,
+    ): ?DetachedNode<ESNode> => {
+      if (node == null) {
+        return null;
+      }
+
+      return deepCloneNode(node, newProps);
+    }: TransformCloneAPIs['deepCloneNodeWithOverrides']),
+  };
+  const commentAPIs: TransformCommentAPIs = {
+    getComments: ((node): Array<Comment> => {
+      return [...getCommentsForNode(node)];
+    }: TransformCommentAPIs['getComments']),
+
+    getLeadingComments: ((node): Array<Comment> => {
+      return getCommentsForNode(node).filter(isLeadingComment);
+    }: TransformCommentAPIs['getLeadingComments']),
+
+    getTrailingComments: ((node): Array<Comment> => {
+      return getCommentsForNode(node).filter(isTrailingComment);
+    }: TransformCommentAPIs['getTrailingComments']),
+
+    cloneCommentsTo: ((target, destination): void => {
+      pushMutation(createCloneCommentsToMutation(target, destination));
+    }: TransformCommentAPIs['cloneCommentsTo']),
+
+    addLeadingComments: ((node, comments): void => {
+      pushMutation(createAddLeadingCommentsMutation(node, toArray(comments)));
+    }: TransformCommentAPIs['addLeadingComments']),
+
+    addTrailingComments: ((node, comments): void => {
+      pushMutation(createAddTrailingCommentsMutation(node, toArray(comments)));
+    }: TransformCommentAPIs['addTrailingComments']),
+
+    removeComments: ((comments): void => {
+      toArray(comments).forEach(comment => {
+        pushMutation(createRemoveCommentMutation(comment));
+      });
+    }: TransformCommentAPIs['removeComments']),
+  };
+  const insertAPIs: TransformInsertAPIs = {
     insertAfterStatement: ((target, nodesToInsert): void => {
       pushMutation(
         createInsertStatementMutation('after', target, toArray(nodesToInsert)),
       );
-    }: TransformContext['insertBeforeStatement']),
+    }: TransformInsertAPIs['insertBeforeStatement']),
 
     insertBeforeStatement: ((target, nodesToInsert): void => {
       pushMutation(
         createInsertStatementMutation('before', target, toArray(nodesToInsert)),
       );
-    }: TransformContext['insertBeforeStatement']),
+    }: TransformInsertAPIs['insertBeforeStatement']),
+  };
+  const removeAPIs: TransformRemoveAPIs = {
+    removeNode: ((node): void => {
+      pushMutation(createRemoveNodeMutation(node));
+    }: TransformRemoveAPIs['removeNode']),
 
+    removeStatement: ((node): void => {
+      pushMutation(createRemoveStatementMutation(node));
+    }: TransformRemoveAPIs['removeStatement']),
+  };
+  const replaceAPIs: TransformReplaceAPIs = {
     replaceNode: ((
       target: ESNode,
       nodeToReplaceWith: DetachedNode<ESNode>,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void => {
       pushMutation(
         createReplaceNodeMutation(target, nodeToReplaceWith, options),
       );
-    }: TransformContext['replaceNode']),
+    }: TransformReplaceAPIs['replaceNode']),
 
     replaceStatementWithMany: ((
       target,
       nodesToReplaceWith,
-      options?: $ReadOnly<{keepComments?: boolean}>,
+      options?: ReplaceNodeOptions,
     ): void => {
       pushMutation(
         createReplaceStatementWithManyMutation(
@@ -327,45 +432,22 @@ export function getTransformContext(): TransformContext {
           options,
         ),
       );
-    }: TransformContext['replaceStatementWithMany']),
+    }: TransformReplaceAPIs['replaceStatementWithMany']),
+  };
 
-    removeStatement: ((node): void => {
-      pushMutation(createRemoveStatementMutation(node));
-    }: TransformContext['removeStatement']),
+  return {
+    mutations,
 
-    //
-    // Comment APIs
-    //
+    // $FlowExpectedError[unsafe-getters-setters]
+    get astWasMutated(): boolean {
+      return mutations.length > 0;
+    },
 
-    getComments: ((node): Array<Comment> => {
-      return [...getCommentsForNode(node)];
-    }: TransformContext['getComments']),
-
-    getLeadingComments: ((node): Array<Comment> => {
-      return getCommentsForNode(node).filter(isLeadingComment);
-    }: TransformContext['getLeadingComments']),
-
-    getTrailingComments: ((node): Array<Comment> => {
-      return getCommentsForNode(node).filter(isTrailingComment);
-    }: TransformContext['getTrailingComments']),
-
-    cloneCommentsTo: ((target, destination): void => {
-      pushMutation(createCloneCommentsToMutation(target, destination));
-    }: TransformContext['cloneCommentsTo']),
-
-    addLeadingComments: ((node, comments): void => {
-      pushMutation(createAddLeadingCommentsMutation(node, toArray(comments)));
-    }: TransformContext['addLeadingComments']),
-
-    addTrailingComments: ((node, comments): void => {
-      pushMutation(createAddTrailingCommentsMutation(node, toArray(comments)));
-    }: TransformContext['addTrailingComments']),
-
-    removeComments: ((comments): void => {
-      toArray(comments).forEach(comment => {
-        pushMutation(createRemoveCommentMutation(comment));
-      });
-    }: TransformContext['removeComments']),
+    ...cloneAPIs,
+    ...commentAPIs,
+    ...insertAPIs,
+    ...removeAPIs,
+    ...replaceAPIs,
   };
 }
 

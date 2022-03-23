@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -58,12 +58,12 @@ static inline int fromHexChar(char16_t c) {
 }
 
 /// Convert the argument to string and escape unicode characters.
-CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> escape(void *, Runtime &runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime->makeHandle(std::move(*res));
+  auto string = runtime.makeHandle(std::move(*res));
   auto len = string->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
@@ -91,12 +91,12 @@ CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// Convert the argument to string and unescape unicode characters.
-CallResult<HermesValue> unescape(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> unescape(void *, Runtime &runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strPrim = runtime->makeHandle(std::move(*res));
+  auto strPrim = runtime.makeHandle(std::move(*res));
   auto len = strPrim->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
@@ -173,7 +173,7 @@ static bool reservedURISet(char16_t c) {
 /// Encode abstract method, takes a string and URI encodes it.
 /// \param unescapedSet a function indicating which characters to not escape.
 static CallResult<Handle<StringPrimitive>> encode(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strHandle,
     CharSetFn unescapedSet) {
   auto str = StringPrimitive::createStringView(runtime, strHandle);
@@ -187,7 +187,7 @@ static CallResult<Handle<StringPrimitive>> encode(
       R.push_back(C);
     } else {
       if (C >= 0xdc00 && C <= 0xdfff) {
-        return runtime->raiseURIError("Malformed encodeURI input");
+        return runtime.raiseURIError("Malformed encodeURI input");
       }
       // Code point to convert to UTF8.
       uint32_t V;
@@ -196,11 +196,11 @@ static CallResult<Handle<StringPrimitive>> encode(
       } else {
         ++itr;
         if (itr == e) {
-          return runtime->raiseURIError("Malformed encodeURI input");
+          return runtime.raiseURIError("Malformed encodeURI input");
         }
         uint32_t kChar = *itr;
         if (kChar < 0xdc00 || kChar > 0xdfff) {
-          return runtime->raiseURIError("Malformed encodeURI input");
+          return runtime.raiseURIError("Malformed encodeURI input");
         }
         V = (C - 0xd800) * 0x400 + (kChar - 0xdc00) + 0x10000;
       }
@@ -223,29 +223,29 @@ static CallResult<Handle<StringPrimitive>> encode(
   if (LLVM_UNLIKELY(finalStr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return runtime->makeHandle<StringPrimitive>(*finalStr);
+  return runtime.makeHandle<StringPrimitive>(*finalStr);
 }
 
-CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> encodeURI(void *, Runtime &runtime, NativeArgs args) {
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      encode(runtime, runtime->makeHandle(std::move(*strRes)), unescapedURISet);
+      encode(runtime, runtime.makeHandle(std::move(*strRes)), unescapedURISet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
 }
 
 CallResult<HermesValue>
-encodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
+encodeURIComponent(void *, Runtime &runtime, NativeArgs args) {
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      encode(runtime, runtime->makeHandle(std::move(*strRes)), uriUnescaped);
+      encode(runtime, runtime.makeHandle(std::move(*strRes)), uriUnescaped);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
@@ -255,7 +255,7 @@ encodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
 /// Decode abstract method, takes a string and URI decodes it.
 /// \param reservedSet a function indicating which characters to not escape.
 static CallResult<Handle<StringPrimitive>> decode(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strHandle,
     CharSetFn reservedSet) {
   auto str = StringPrimitive::createStringView(runtime, strHandle);
@@ -270,7 +270,7 @@ static CallResult<Handle<StringPrimitive>> decode(
     } else {
       auto start = itr;
       if (itr + 2 >= e || !(isHexChar(*(itr + 1)) && isHexChar(*(itr + 2)))) {
-        return runtime->raiseURIError("Malformed decodeURI input");
+        return runtime.raiseURIError("Malformed decodeURI input");
       }
       uint8_t B = (fromHexChar(*(itr + 1)) << 4) | fromHexChar(*(itr + 2));
       itr += 2;
@@ -290,25 +290,25 @@ static CallResult<Handle<StringPrimitive>> decode(
         for (; n <= 8 && (((B << n) & 0x80) != 0); ++n) {
         }
         if (n == 1 || n > 4) {
-          return runtime->raiseURIError("Malformed decodeURI input");
+          return runtime.raiseURIError("Malformed decodeURI input");
         }
         // Safe because we ensure that n <= 4.
         UTF8 octets[4]{B};
         // Not enough bytes to fill all n octets.
         if ((itr + (3 * (n - 1))) >= e) {
-          return runtime->raiseURIError("Malformed decodeURI input");
+          return runtime.raiseURIError("Malformed decodeURI input");
         }
         // Populate octets.
         for (uint32_t j = 1; j < n; ++j) {
           ++itr;
           if (*itr != u'%' ||
               !(isHexChar(*(itr + 1)) && isHexChar(*(itr + 2)))) {
-            return runtime->raiseURIError("Malformed decodeURI input");
+            return runtime.raiseURIError("Malformed decodeURI input");
           }
           B = (fromHexChar(*(itr + 1)) << 4) | fromHexChar(*(itr + 2));
           if (((B >> 6) & 0x3) != 0x2) {
             // The highest two bits aren't 10.
-            return runtime->raiseURIError("Malformed decodeURI input");
+            return runtime.raiseURIError("Malformed decodeURI input");
           }
           itr += 2;
           octets[j] = B;
@@ -326,7 +326,7 @@ static CallResult<Handle<StringPrimitive>> decode(
             targetEnd,
             llvh::strictConversion);
         if (cRes != ConversionResult::conversionOK) {
-          return runtime->raiseURIError("Malformed decodeURI input");
+          return runtime.raiseURIError("Malformed decodeURI input");
         }
         if (V < 0x10000) {
           // Safe to cast.
@@ -350,30 +350,30 @@ static CallResult<Handle<StringPrimitive>> decode(
     ++itr;
   }
 
-  return runtime->makeHandle<StringPrimitive>(
+  return runtime.makeHandle<StringPrimitive>(
       *StringPrimitive::create(runtime, R));
 }
 
-CallResult<HermesValue> decodeURI(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> decodeURI(void *, Runtime &runtime, NativeArgs args) {
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      decode(runtime, runtime->makeHandle(std::move(*strRes)), reservedURISet);
+      decode(runtime, runtime.makeHandle(std::move(*strRes)), reservedURISet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
 }
 
 CallResult<HermesValue>
-decodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
+decodeURIComponent(void *, Runtime &runtime, NativeArgs args) {
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto emptySet = [](char16_t) { return false; };
-  auto res = decode(runtime, runtime->makeHandle(std::move(*strRes)), emptySet);
+  auto res = decode(runtime, runtime.makeHandle(std::move(*strRes)), emptySet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();

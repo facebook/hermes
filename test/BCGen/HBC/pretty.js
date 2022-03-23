@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,16 +16,15 @@ function foo (a) {
 
 //CHECK-LABEL:Function<foo>(2 params, {{[0-9]+}} registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
-//CHECK-NEXT:    LoadConstUInt8    r2, 1
 //CHECK-NEXT:    LoadParam         r0, 1
 //CHECK-NEXT:    ToNumber          r0, r0
-//CHECK-NEXT:    SubN              r1, r0, r2
+//CHECK-NEXT:    Dec               r1, r0
 //CHECK-NEXT:    LoadConstZero     r0
 //CHECK-NEXT:    LoadConstZero     r3
 //CHECK-NEXT:    JmpFalse          L1, r1
 //CHECK-NEXT:L2:
 //CHECK-NEXT:    Add               r0, r0, r1
-//CHECK-NEXT:    SubN              r1, r1, r2
+//CHECK-NEXT:    Dec               r1, r1
 //CHECK-NEXT:    Mov               r3, r0
 //CHECK-NEXT:    JmpTrue           L2, r1
 //CHECK-NEXT:L1:

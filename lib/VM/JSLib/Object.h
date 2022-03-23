@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -21,18 +21,18 @@ namespace vm {
 // Reflect.
 
 CallResult<bool>
-defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags);
+defineProperty(Runtime &runtime, NativeArgs args, PropOpFlags opFlags);
 
 CallResult<HermesValue> getOwnPropertyDescriptor(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> object,
     Handle<> key);
 
-CallResult<HermesValue> getPrototypeOf(Runtime *runtime, Handle<JSObject> obj);
+CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj);
 
 CallResult<HermesValue> getOwnPropertyKeysAsStrings(
     Handle<JSObject> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     OwnKeysFlags okFlags);
 
 /// "Kind" provided to enumerableOwnProperties to request different
@@ -46,7 +46,7 @@ enum class EnumerableOwnPropertiesKind {
 /// ES8.0 7.3.21.
 /// EnumerableOwnProperties gets the requested properties based on \p kind.
 CallResult<HermesValue> enumerableOwnProperties_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> objHandle,
     EnumerableOwnPropertiesKind kind);
 

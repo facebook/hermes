@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -26,7 +26,7 @@ namespace {
 /// @{
 
 /// ES7 22.2.2.1.1 IterableToArrayLike
-CallResult<HermesValue> iterableToArrayLike(Runtime *runtime, Handle<> items) {
+CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
   // NOTE: this is a very basic function for now because iterators do not
   // yet exist in Hermes. When they do, update this function.
   return toObject(runtime, items);
@@ -44,28 +44,28 @@ T convertNegativeBoundsRelativeToLength(T value, T length) {
 
 /// ES7 22.2.4.6
 CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Callable> constructor,
     uint64_t length) {
   auto callRes = Callable::executeConstruct1(
       constructor,
       runtime,
-      runtime->makeHandle(HermesValue::encodeNumberValue(length)));
+      runtime.makeHandle(HermesValue::encodeNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   PseudoHandle<> retval = std::move(*callRes);
   if (!vmisa<JSTypedArrayBase>(retval.get())) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "The constructor needs to construct a TypedArray");
   }
   auto newTypedArray =
-      Handle<JSTypedArrayBase>::vmcast(runtime->makeHandle(std::move(retval)));
+      Handle<JSTypedArrayBase>::vmcast(runtime.makeHandle(std::move(retval)));
   // If `argumentList` is a single number, then
   // If the value of newTypedArray's [[ArrayLength]] internal slot <
   // argumentList[0], throw a TypeError exception.
   if (LLVM_UNLIKELY(newTypedArray->getLength() < length)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "TypedArray constructor created an array that was too small");
   }
   return newTypedArray;
@@ -77,7 +77,7 @@ CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
 // ES 2018 22.2.1.2
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromLength(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArray<T, C>> self,
     Handle<> length) {
   auto resIndex = toIndex(runtime, length);
@@ -95,7 +95,7 @@ CallResult<HermesValue> typedArrayConstructorFromLength(
 // ES6 22.2.1.3
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromTypedArray(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArray<T, C>> self,
     Handle<JSTypedArrayBase> other) {
   if (JSTypedArray<T, C>::createBuffer(runtime, self, other->getLength()) ==
@@ -113,7 +113,7 @@ CallResult<HermesValue> typedArrayConstructorFromTypedArray(
 // ES6 22.2.1.5
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArray<T, C>> self,
     Handle<JSArrayBuffer> buffer,
     Handle<> byteOffset,
@@ -127,7 +127,7 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
   }
   uint64_t offset = res->getNumberAs<uint64_t>();
   if (offset % sizeof(T) != 0) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "new TypedArray(buffer, [byteOffset], "
         "[length]): if byteOffset is specified, it "
         "must be evenly divisible by the element size");
@@ -136,13 +136,13 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
   uint64_t newByteLength = 0;
   if (length->isUndefined()) {
     if (bufferByteLength % sizeof(T) != 0) {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           "new TypedArray(buffer, [byteOffset], "
           "[length]): buffer's size must be evenly "
           "divisible by the element size");
     }
     if (bufferByteLength < offset) {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           "new TypedArray(buffer, [byteOffset], "
           "[length]): byteOffset must be less than "
           "buffer.byteLength");
@@ -156,7 +156,7 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
     uint64_t newLength = res2->getNumberAs<uint64_t>();
     newByteLength = newLength * sizeof(T);
     if (offset + newByteLength > bufferByteLength) {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           "new TypedArray(buffer, [byteOffset], [length]): byteOffset + "
           "length * elementSize must be less than buffer.byteLength");
     }
@@ -169,7 +169,7 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
 // ES7 22.2.4.4
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromObject(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArray<T, C>> self,
     Handle<> obj) {
   // Steps 1 & 2 already covered by caller.
@@ -178,14 +178,14 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   if (objRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
+  auto arrayLike = runtime.makeHandle<JSObject>(objRes.getValue());
   // 6. Let len be ? ToLength(? Get(arrayLike, "length")).
   auto propRes = JSObject::getNamed_RJS(
       arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
+  auto intRes = toLength(runtime, runtime.makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   uint64_t len = intRes->getNumberAs<uint64_t>();
@@ -209,7 +209,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
             ExecutionStatus::EXCEPTION ||
         JSTypedArray<T, C>::putComputed_RJS(
-            self, runtime, i, runtime->makeHandle(std::move(*propRes))) ==
+            self, runtime, i, runtime.makeHandle(std::move(*propRes))) ==
             ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -222,10 +222,10 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
 
 template <typename T, CellKind C>
 CallResult<HermesValue>
-typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
+typedArrayConstructor(void *, Runtime &runtime, NativeArgs args) {
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "JSTypedArray() called in function context instead of constructor");
   }
   auto self = args.vmcastThis<JSTypedArray<T, C>>();
@@ -252,7 +252,7 @@ typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 template <typename T, CellKind C, NativeFunctionPtr Ctor>
-Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
+Handle<JSObject> createTypedArrayConstructor(Runtime &runtime) {
   using TA = JSTypedArray<T, C>;
   auto proto = TA::getPrototype(runtime);
 
@@ -261,7 +261,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
       TA::getName(runtime),
       Ctor,
       proto,
-      Handle<JSObject>::vmcast(&runtime->typedArrayBaseConstructor),
+      Handle<JSObject>::vmcast(&runtime.typedArrayBaseConstructor),
       3,
       NativeConstructor::creatorFunction<TA>,
       C);
@@ -272,7 +272,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
   dpf.writable = 0;
 
   auto bytesPerElement =
-      runtime->makeHandle(HermesValue::encodeNumberValue(sizeof(T)));
+      runtime.makeHandle(HermesValue::encodeNumberValue(sizeof(T)));
   // %TypedArray%.prototype.xxx.
   defineProperty(
       runtime,
@@ -295,7 +295,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
 /// should be true for map, and false for filter.
 template <bool MapOrFilter>
 CallResult<HermesValue> mapFilterLoop(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArrayBase> self,
     Handle<Callable> callbackfn,
     Handle<> thisArg,
@@ -308,7 +308,7 @@ CallResult<HermesValue> mapFilterLoop(
     if (!self->attached(runtime)) {
       // If the callback detached this TypedArray, raise a TypeError and don't
       // continue.
-      return runtime->raiseTypeError("Detached the TypedArray in the callback");
+      return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
     auto val = JSObject::getOwnIndexed(*self, runtime, i);
     auto callRes = Callable::executeCall3(
@@ -341,7 +341,7 @@ template <bool WithCompareFn>
 class TypedArraySortModel : public SortModel {
  protected:
   /// Runtime to sort in.
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// Scope to allocate handles in, gets destroyed with this.
   GCScope gcScope_;
@@ -362,7 +362,7 @@ class TypedArraySortModel : public SortModel {
 
  public:
   TypedArraySortModel(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSTypedArrayBase> obj,
       Handle<Callable> compareFn)
       : runtime_(runtime),
@@ -412,14 +412,14 @@ class TypedArraySortModel : public SortModel {
       return ExecutionStatus::EXCEPTION;
     }
     auto intRes =
-        toNumber_RJS(runtime_, runtime_->makeHandle(std::move(*callRes)));
+        toNumber_RJS(runtime_, runtime_.makeHandle(std::move(*callRes)));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     // ES7 22.2.3.26 2b.
     // If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
     if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
-      return runtime_->raiseTypeError("Callback to sort() detached the array");
+      return runtime_.raiseTypeError("Callback to sort() detached the array");
     }
     // Cannot return intRes's value directly because it can be NaN
     auto res = intRes->getNumber();
@@ -429,7 +429,7 @@ class TypedArraySortModel : public SortModel {
 
 // ES7 22.2.3.23.1
 CallResult<HermesValue> typedArrayPrototypeSetObject(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArrayBase> self,
     Handle<> obj,
     double offset) {
@@ -438,19 +438,19 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   if (objRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto src = runtime->makeHandle<JSObject>(objRes.getValue());
+  auto src = runtime.makeHandle<JSObject>(objRes.getValue());
   auto propRes = JSObject::getNamed_RJS(
       src, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
+  auto intRes = toLength(runtime, runtime.makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   uint64_t srcLength = intRes->getNumberAs<uint64_t>();
   if (srcLength + offset > targetLength) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "The sum of the length of the given object "
         "and the offset cannot be greater than the length "
         "of this TypedArray");
@@ -466,7 +466,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto kValue = runtime->makeHandle(std::move(*propRes));
+    auto kValue = runtime.makeHandle(std::move(*propRes));
     if (JSObject::setOwnIndexed(self, runtime, offset++, kValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -478,17 +478,17 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
 
 // ES7 22.2.3.23.2
 CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSTypedArrayBase> self,
     Handle<JSTypedArrayBase> src,
     double offset) {
   if (!src->attached(runtime)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "The src TypedArray must be attached in order to use set()");
   }
   const JSTypedArrayBase::size_type srcLength = src->getLength();
   if (static_cast<double>(srcLength) + offset > self->getLength()) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "The sum of the length of the given TypedArray "
         "and the offset cannot be greater than the length "
         "of this TypedArray");
@@ -520,7 +520,7 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
           runtime,
           newSrc,
           0,
-          runtime->makeHandle(src->getBuffer(runtime)),
+          runtime.makeHandle(src->getBuffer(runtime)),
           src->getByteOffset(),
           src->getByteLength()) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -544,8 +544,8 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
 /// @{
 
 CallResult<HermesValue>
-typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
-  return runtime->raiseTypeError(
+typedArrayBaseConstructor(void *, Runtime &runtime, NativeArgs) {
+  return runtime.raiseTypeError(
       "TypedArray is abstract, it cannot be constructed");
 }
 
@@ -553,7 +553,7 @@ typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
 
 #define TYPED_ARRAY(name, type)                                    \
   CallResult<HermesValue> name##ArrayConstructor(                  \
-      void *ctx, Runtime *rt, NativeArgs args) {                   \
+      void *ctx, Runtime &rt, NativeArgs args) {                   \
     return typedArrayConstructor<type, CellKind::name##ArrayKind>( \
         ctx, rt, args);                                            \
   }
@@ -562,7 +562,7 @@ typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
 
 /// ES7 22.2.2.1
 CallResult<HermesValue>
-typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
+typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
   auto source = args.getArgHandle(0);
   CallResult<bool> isConstructorRes = isConstructor(runtime, args.getThisArg());
   if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
@@ -571,7 +571,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let C be the this value.
   if (!*isConstructorRes) {
     // 2. If IsConstructor(C) is false, throw a TypeError exception.
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Cannot invoke when the this is not a constructor");
   }
   auto C = Handle<Callable>::vmcast(runtime, args.getThisArg());
@@ -580,7 +580,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (!mapfn) {
     // a. If IsCallable(mapfn) is false, throw a TypeError exception.
     if (args.getArgCount() >= 2 && !vmisa<Callable>(args.getArg(1))) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Second argument to TypedArray.from must be callable");
     }
     // b. Let mapping be true
@@ -594,14 +594,14 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   if (objRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
+  auto arrayLike = runtime.makeHandle<JSObject>(objRes.getValue());
   // 7. Let len be ? ToLength(? Get(arrayLike, "length")).
   auto propRes = JSObject::getNamed_RJS(
       arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(std::move(*propRes)));
+  auto intRes = toLength(runtime, runtime.makeHandle(std::move(*propRes)));
   if (intRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -635,7 +635,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
     // NOTE: The returned value is either the same as the getComputed call, or
     // the call to the mapfn, so either way it is the correct value.
     // d. Else, let mappedValue be kValue (already done by initializer).
-    auto mappedValue = runtime->makeHandle(std::move(*propRes));
+    auto mappedValue = runtime.makeHandle(std::move(*propRes));
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
     if (JSObject::putComputed_RJS(*targetObj, runtime, k, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
@@ -649,7 +649,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES7 22.2.2.2
 CallResult<HermesValue>
-typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
+typedArrayOf(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let len be the actual number of arguments passed to this function.
   uint64_t len = args.getArgCount();
   // 2. Let items be the List of arguments passed to this function. (args is
@@ -661,7 +661,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
   }
   if (!*isConstructorRes) {
     // 4. If IsConstructor(C) is false, throw a TypeError exception.
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Cannot invoke %TypedArray%.of when %TypedArray% is not a constructor "
         "function");
   }
@@ -683,7 +683,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
     // b. Let Pk be ! ToString(k).
     // c. Perform ? Set(newObj, Pk, kValue, true).
     if (JSObject::putComputed_RJS(
-            *newObj, runtime, k, runtime->makeHandle(kValue)) ==
+            *newObj, runtime, k, runtime.makeHandle(kValue)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -700,7 +700,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES6 22.2.3.1
 CallResult<HermesValue>
-typedArrayPrototypeBuffer(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -710,7 +710,7 @@ typedArrayPrototypeBuffer(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -721,7 +721,7 @@ typedArrayPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES6 22.2.3.3
 CallResult<HermesValue>
-typedArrayPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -734,7 +734,7 @@ typedArrayPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES6 22.2.3.5
 CallResult<HermesValue>
-typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), true) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -748,9 +748,9 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   // performing a [[Get]] of "length".
   double len = O->getLength();
 
-  // 5. Let relativeTarget be ToInteger(target).
+  // 5. Let relativeTarget be ToIntegerOrInfinity(target).
   // 6. ReturnIfAbrupt(relativeTarget).
-  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(0));
+  auto relativeTargetRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(relativeTargetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -758,12 +758,11 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
   // 7. If relativeTarget < 0, let to be max((len + relativeTarget),0); else let
   // to be min(relativeTarget, len).
-  double to = relativeTarget < 0 ? std::max((len + relativeTarget), (double)0)
-                                 : std::min(relativeTarget, len);
+  double to = convertNegativeBoundsRelativeToLength(relativeTarget, len);
 
-  // 8. Let relativeStart be ToInteger(start).
+  // 8. Let relativeStart be ToIntegerOrInfinity(start).
   // 9. ReturnIfAbrupt(relativeStart).
-  auto relativeStartRes = toInteger(runtime, args.getArgHandle(1));
+  auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -771,17 +770,16 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
   // 10. If relativeStart < 0, let from be max((len + relativeStart),0); else
   // let from be min(relativeStart, len).
-  double from = relativeStart < 0 ? std::max((len + relativeStart), (double)0)
-                                  : std::min(relativeStart, len);
+  double from = convertNegativeBoundsRelativeToLength(relativeStart, len);
 
   // 11. If end is undefined, let relativeEnd be len; else let relativeEnd be
-  // ToInteger(end).
+  // ToIntegerOrInfinity(end).
   // 12. ReturnIfAbrupt(relativeEnd).
   double relativeEnd;
   if (args.getArg(2).isUndefined()) {
     relativeEnd = len;
   } else {
-    auto relativeEndRes = toInteger(runtime, args.getArgHandle(2));
+    auto relativeEndRes = toIntegerOrInfinity(runtime, args.getArgHandle(2));
     if (LLVM_UNLIKELY(relativeEndRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -790,8 +788,7 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
   // 13. If relativeEnd < 0, let final be max((len + relativeEnd),0); else let
   // final be min(relativeEnd, len).
-  double fin = relativeEnd < 0 ? std::max((len + relativeEnd), (double)0)
-                               : std::min(relativeEnd, len);
+  double fin = convertNegativeBoundsRelativeToLength(relativeEnd, len);
 
   // 14. Let count be min(final-from, len-to).
   double count = std::min(fin - from, len - to);
@@ -818,7 +815,7 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   case CellKind::name##ArrayKind: {                                        \
     auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
     if (!arr->attached(runtime)) {                                         \
-      return runtime->raiseTypeError(                                      \
+      return runtime.raiseTypeError(                                       \
           "Underlying ArrayBuffer detached after calling copyWithin");     \
     }                                                                      \
     while (count > 0) {                                                    \
@@ -841,7 +838,7 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
 // ES6 22.2.3.7 and 22.2.3.25 (also see Array.prototype.every/some)
 CallResult<HermesValue>
-typedArrayPrototypeEverySome(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
   // NOTE: this was implemented as separate from Array.prototype.every to take
   // advantage of the known contiguous memory region.
   GCScope gcScope(runtime);
@@ -853,7 +850,7 @@ typedArrayPrototypeEverySome(void *ctx, Runtime *runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
+    return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
   // Run the callback over every element.
@@ -884,7 +881,7 @@ typedArrayPrototypeEverySome(void *ctx, Runtime *runtime, NativeArgs args) {
 
 // ES6 22.2.3.8
 CallResult<HermesValue>
-typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -895,15 +892,15 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto value = runtime->makeHandle(res.getValue());
-  res = toInteger(runtime, args.getArgHandle(1));
+  auto value = runtime.makeHandle(res.getValue());
+  res = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   const double relativeStart = res->getNumber();
   auto end = args.getArgHandle(2);
   if (!end->isUndefined()) {
-    res = toInteger(runtime, end);
+    res = toIntegerOrInfinity(runtime, end);
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -917,7 +914,7 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   // 9. If IsDetachedBuffer(O.[[ViewedArrayBuffer]]) is true, throw a TypeError
   // exception.
   if (!self->attached(runtime)) {
-    return runtime->raiseTypeError("Cannot fill a detached TypedArray");
+    return runtime.raiseTypeError("Cannot fill a detached TypedArray");
   }
 
   if (k >= last) {
@@ -959,7 +956,7 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
 }
 
 static CallResult<HermesValue>
-typedFindHelper(void *ctx, bool reverse, Runtime *runtime, NativeArgs args) {
+typedFindHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
   bool index = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
@@ -969,7 +966,7 @@ typedFindHelper(void *ctx, bool reverse, Runtime *runtime, NativeArgs args) {
   auto len = self->getLength();
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
+    return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
   GCScope gcScope(runtime);
@@ -994,17 +991,17 @@ typedFindHelper(void *ctx, bool reverse, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeFind(void *ctx, Runtime &runtime, NativeArgs args) {
   return typedFindHelper(ctx, false, runtime, args);
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeFindLast(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeFindLast(void *ctx, Runtime &runtime, NativeArgs args) {
   return typedFindHelper(ctx, true, runtime, args);
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1013,7 +1010,7 @@ typedArrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   auto len = self->getLength();
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
+    return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
   GCScope gcScope(runtime);
@@ -1021,8 +1018,7 @@ typedArrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
     // The callback function can detach the TypedArray.
     if (!self->attached(runtime)) {
-      return runtime->raiseTypeError(
-          "Detached the ArrayBuffer in the callback");
+      return runtime.raiseTypeError("Detached the ArrayBuffer in the callback");
     }
     HermesValue val = JSObject::getOwnIndexed(*self, runtime, i);
     if (Callable::executeCall3(
@@ -1041,7 +1037,7 @@ typedArrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
 enum class IndexOfMode { includes, indexOf, lastIndexOf };
 CallResult<HermesValue>
-typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
   const auto indexOfMode = *reinterpret_cast<const IndexOfMode *>(&ctx);
   // indexOfMode stores Whether this call is "includes", "indexOf", or
   // "lastIndexOf".
@@ -1074,7 +1070,7 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
       fromIndex = len - 1;
     }
   } else {
-    auto res = toInteger(runtime, args.getArgHandle(1));
+    auto res = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1082,7 +1078,7 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(!self->attached(runtime))) {
       // If the ToInteger call detached this TypedArray, raise a TypeError and
       // don't continue.
-      return runtime->raiseTypeError("Detached the TypedArray in the callback");
+      return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
   }
   // Negative zero case.
@@ -1116,7 +1112,7 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
   IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
   assert(
       kind <= IterationKind::NumKinds &&
@@ -1130,7 +1126,7 @@ typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeMapFilter(void *ctx, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // Whether this call is "map" or "filter".
@@ -1143,7 +1139,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   JSTypedArrayBase::size_type len = self->getLength();
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
+    return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
   // Can't use a vector since this could store an unbounded number of handles.
@@ -1189,7 +1185,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// ES6 22.2.3.17
 CallResult<HermesValue>
-typedArrayPrototypeLength(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeLength(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1199,7 +1195,7 @@ typedArrayPrototypeLength(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   // NOTE: there are probably some optimizations that can be made here due to
   // operating on only numbers in typed arrays.
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
@@ -1209,27 +1205,27 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
   auto len = self->getLength();
   auto separator = args.getArg(0).isUndefined()
-      ? runtime->makeHandle(HermesValue::encodeStringValue(
-            runtime->getPredefinedString(Predefined::comma)))
+      ? runtime.makeHandle(HermesValue::encodeStringValue(
+            runtime.getPredefinedString(Predefined::comma)))
       : args.getArgHandle(0);
   auto res = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto sep = runtime->makeHandle(std::move(*res));
+  auto sep = runtime.makeHandle(std::move(*res));
   if (len == 0) {
     // Quick exit for empty arrays to avoid allocations.
     // NOTE: this needs to come after the `toString` call on the separator
     // according to the spec.
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   if (len > std::numeric_limits<uint32_t>::max() ||
       sep->getStringLength() >
           (double)StringPrimitive::MAX_STRING_LENGTH / len) {
     // Check for overflow.
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "String.prototype.repeat result exceeds limit");
   }
 
@@ -1256,7 +1252,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto S = runtime->makeHandle(std::move(*res2));
+      auto S = runtime.makeHandle(std::move(*res2));
       size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i, S);
     }
@@ -1280,7 +1276,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
   // Whether this call is "reduce" or "reduceRight".
   bool right = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
@@ -1291,11 +1287,11 @@ typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
   double len = self->getLength();
   auto callbackfn = args.dyncastArg<Callable>(0);
   if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
+    return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   const bool calledWithInitialValue = args.getArgCount() >= 2;
   if (len == 0 && !calledWithInitialValue) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "reduce needs to provide an initial value for an empty TypedArray");
   }
   // If the intial value is not provided, it must be the first value from the
@@ -1323,7 +1319,7 @@ typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
     if (!self->attached(runtime)) {
       // If the callback detached this TypedArray, raise a TypeError and don't
       // continue.
-      return runtime->raiseTypeError("Detached the TypedArray in the callback");
+      return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
     auto callRes = Callable::executeCall4(
         callbackfn,
@@ -1344,7 +1340,7 @@ typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
 
 // ES7 22.2.3.22
 CallResult<HermesValue>
-typedArrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1372,7 +1368,7 @@ typedArrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES7 22.2.3.26
 CallResult<HermesValue>
-typedArrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1383,7 +1379,7 @@ typedArrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   // Null if not a callable compareFn.
   auto compareFn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
   if (!args.getArg(0).isUndefined() && !compareFn) {
-    return runtime->raiseTypeError("TypedArray sort argument must be callable");
+    return runtime.raiseTypeError("TypedArray sort argument must be callable");
   }
 
   // Use our custom sort routine. We can't use std::sort because it performs
@@ -1403,27 +1399,27 @@ typedArrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
 
 // ES7 22.2.3.23
 CallResult<HermesValue>
-typedArrayPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   // Default to zero if unspecified.
-  auto offset = runtime->makeHandle(
+  auto offset = runtime.makeHandle(
       args.getArgCount() >= 2 ? args.getArg(1)
                               : HermesValue::encodeNumberValue(0));
-  auto res = toInteger(runtime, offset);
+  auto res = toIntegerOrInfinity(runtime, offset);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double targetOffset = res->getNumber();
   // Offset check must come before the attached check.
   if (targetOffset < 0) {
-    return runtime->raiseRangeError("Offset must not be negative if supplied");
+    return runtime.raiseRangeError("Offset must not be negative if supplied");
   }
   if (!self->attached(runtime)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "TypedArray.prototype.set called on a detached TypedArray");
   }
   // Detect the type of the first argument to determine which version to call.
@@ -1438,14 +1434,14 @@ typedArrayPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
 
 // ES7 22.2.3.24
 CallResult<HermesValue>
-typedArrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   double len = self->getLength();
-  auto res = toInteger(runtime, args.getArgHandle(0));
+  auto res = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1454,7 +1450,7 @@ typedArrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(1).isUndefined()) {
     relativeEnd = len;
   } else {
-    res = toInteger(runtime, args.getArgHandle(1));
+    res = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1469,7 +1465,7 @@ typedArrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   }
   if (!self->attached(runtime)) {
     // 15b. If IsDetachedBuffer(srcBuffer) is true, throw a TypeError exception.
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Detached the buffer in the species constructor");
   }
   auto A = status.getValue();
@@ -1481,21 +1477,21 @@ typedArrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
 
 // ES7 22.2.3.27
 CallResult<HermesValue>
-typedArrayPrototypeSubarray(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeSubarray(void *, Runtime &runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   double srcLength = self->getLength();
-  auto res = toInteger(runtime, args.getArgHandle(0));
+  auto res = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double relativeBegin = res->getNumber();
   double relativeEnd = srcLength;
   if (!args.getArg(1).isUndefined()) {
-    res = toInteger(runtime, args.getArgHandle(1));
+    res = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1516,7 +1512,7 @@ typedArrayPrototypeSubarray(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
     void *,
-    Runtime *runtime,
+    Runtime &runtime,
     NativeArgs args) {
   auto O = args.dyncastThis<JSObject>();
   if (!O) {
@@ -1524,10 +1520,10 @@ CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
   }
 
   // 4. Let name be the value of O’s [[TypedArrayName]] internal slot.
-#define TYPED_ARRAY(name, type)                                               \
-  if (vmisa<JSTypedArray<type, CellKind::name##ArrayKind>>(*O)) {             \
-    return HermesValue::encodeStringValue(runtime->getStringPrimFromSymbolID( \
-        JSTypedArray<type, CellKind::name##ArrayKind>::getName(runtime)));    \
+#define TYPED_ARRAY(name, type)                                              \
+  if (vmisa<JSTypedArray<type, CellKind::name##ArrayKind>>(*O)) {            \
+    return HermesValue::encodeStringValue(runtime.getStringPrimFromSymbolID( \
+        JSTypedArray<type, CellKind::name##ArrayKind>::getName(runtime)));   \
   }
 #include "hermes/VM/TypedArrays.def"
 
@@ -1536,7 +1532,7 @@ CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
@@ -1544,8 +1540,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
 
-  auto emptyString =
-      runtime->getPredefinedStringHandle(Predefined::emptyString);
+  auto emptyString = runtime.getPredefinedStringHandle(Predefined::emptyString);
 
   const JSTypedArrayBase::size_type len = self->getLength();
   if (len == 0) {
@@ -1576,7 +1571,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto elementObj = runtime->makeHandle<JSObject>(objRes.getValue());
+    auto elementObj = runtime.makeHandle<JSObject>(objRes.getValue());
 
     // Retrieve the toLocaleString function.
     auto propRes = JSObject::getNamed_RJS(
@@ -1587,21 +1582,21 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     if (auto func = Handle<Callable>::dyn_vmcast(
-            runtime->makeHandle(std::move(*propRes)))) {
+            runtime.makeHandle(std::move(*propRes)))) {
       auto callRes = Callable::executeCall0(func, runtime, elementObj);
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       auto strRes =
-          toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
+          toString_RJS(runtime, runtime.makeHandle(std::move(*callRes)));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto elementStr = runtime->makeHandle(std::move(*strRes));
+      auto elementStr = runtime.makeHandle(std::move(*strRes));
       JSArray::setElementAt(strings, runtime, i, elementStr);
       size.add(elementStr->getStringLength());
     } else {
-      return runtime->raiseTypeError("toLocaleString() not callable");
+      return runtime.raiseTypeError("toLocaleString() not callable");
     }
     gcScope.flushToMarker(marker);
   }
@@ -1623,20 +1618,20 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->typedArrayBasePrototype);
+Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.typedArrayBasePrototype);
 
   // Create NativeConstructor manually to avoid global object assignment.
   // Use NativeConstructor because %TypedArray% is supposed to be
   // a constructor function object, but must not be called directly with "new".
-  auto cons = runtime->makeHandle(NativeConstructor::create(
+  auto cons = runtime.makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
       nullptr,
       typedArrayBaseConstructor,
       0,
       NativeConstructor::creatorFunction<JSObject>,
-      CellKind::ObjectKind));
+      CellKind::JSObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(
@@ -1882,28 +1877,28 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
 
   // Use the same valuesMethod for Symbol.iterator.
   {
-    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
+    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
         proto, runtime, Predefined::getSymbolID(Predefined::values)));
-    runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
         proto,
         runtime,
         Predefined::getSymbolID(Predefined::SymbolIterator),
         dpf,
-        runtime->makeHandle<NativeFunction>(propValue.getHermesValue())));
+        runtime.makeHandle<NativeFunction>(propValue.getHermesValue())));
   }
 
   {
-    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
-        Handle<JSArray>::vmcast(&runtime->arrayPrototype),
+    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+        Handle<JSArray>::vmcast(&runtime.arrayPrototype),
         runtime,
         Predefined::getSymbolID(Predefined::toString)));
-    runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
         proto,
         runtime,
         Predefined::getSymbolID(Predefined::toString),
         dpf,
         Handle<NativeFunction>::vmcast(
-            runtime->makeHandle(std::move(propValue)))));
+            runtime.makeHandle(std::move(propValue)))));
   }
 
   defineMethod(
@@ -1935,7 +1930,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
 }
 
 #define TYPED_ARRAY(name, type)                                       \
-  Handle<JSObject> create##name##ArrayConstructor(Runtime *runtime) { \
+  Handle<JSObject> create##name##ArrayConstructor(Runtime &runtime) { \
     return createTypedArrayConstructor<                               \
         type,                                                         \
         CellKind::name##ArrayKind,                                    \

@@ -1,7 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+
+add_hermes_library(hermesBCP47Parser STATIC BCP47Parser.cpp)
 
 if(HERMES_ENABLE_INTL)
   if(HERMES_IS_ANDROID)
@@ -14,6 +16,7 @@ if(HERMES_ENABLE_INTL)
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlApple.mm
         LINK_LIBS
         ${FOUNDATION}
+        hermesBCP47Parser
     )
     # Work around a bug in unity builds where it tries to build Obj-C as C++.
     set_target_properties(hermesPlatformIntl PROPERTIES UNITY_BUILD false)

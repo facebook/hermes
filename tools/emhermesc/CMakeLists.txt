@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -20,4 +20,6 @@ if (EMSCRIPTEN)
   target_link_options(emhermesc PRIVATE "SHELL: -s EXPORT_NAME=createHermesc")
   target_link_options(emhermesc PRIVATE
     "SHELL: -s BINARYEN_ASYNC_COMPILATION=0 -s SINGLE_FILE=1 -s WASM_ASYNC_COMPILATION=0")
+  target_link_options(emhermesc PRIVATE
+    "SHELL: -s NODEJS_CATCH_EXIT=0 -s NODEJS_CATCH_REJECTION=0")
 endif ()

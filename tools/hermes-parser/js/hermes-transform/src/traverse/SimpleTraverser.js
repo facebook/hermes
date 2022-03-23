@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -38,6 +38,9 @@ export const SimpleTraverserBreak: Error = new Error();
  * A very simple traverser class to traverse AST trees.
  */
 export class SimpleTraverser {
+  static Break: Error = SimpleTraverserBreak;
+  static Skip: Error = SimpleTraverserSkip;
+
   /**
    * Traverse the given AST tree.
    * @param node The root node to traverse.

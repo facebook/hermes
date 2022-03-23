@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -91,9 +91,9 @@ TEST_F(OperationsTest, IsSameValueTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   IsSameValueTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
-  auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
-  auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
+  auto nullObj = runtime.makeNullHandle<JSObject>();
+  auto obj1 = runtime.makeHandle(JSObject::create(runtime, nullObj));
+  auto obj2 = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   v1 = HermesValue::encodeObjectValue(obj1.get());
   v2 = HermesValue::encodeObjectValue(&obj2);
@@ -130,8 +130,8 @@ TEST_F(OperationsTest, IsSameValueTest) {
 
 #define AbstractEqualityTest(result, x, y)                          \
   {                                                                 \
-    auto xHandle = runtime->makeHandle(x);                          \
-    auto yHandle = runtime->makeHandle(y);                          \
+    auto xHandle = runtime.makeHandle(x);                           \
+    auto yHandle = runtime.makeHandle(y);                           \
     auto res = abstractEqualityTest_RJS(runtime, xHandle, yHandle); \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());          \
     EXPECT_##result(res->getBool());                                \
@@ -208,9 +208,9 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   AbstractEqualityTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
-  auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
-  auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
+  auto nullObj = runtime.makeNullHandle<JSObject>();
+  auto obj1 = runtime.makeHandle(JSObject::create(runtime, nullObj));
+  auto obj2 = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   v1 = HermesValue::encodeObjectValue(obj1.get());
   v2 = HermesValue::encodeObjectValue(obj2.get());
@@ -329,9 +329,9 @@ TEST_F(OperationsTest, StrictEquaityTest) {
   v2 = HermesValue::encodeDoubleValue(182.54);
   StrictEqualityTest(FALSE, v1, v2);
 
-  Handle<JSObject> nullObj(runtime);
-  auto obj1 = runtime->makeHandle(JSObject::create(runtime, nullObj));
-  auto obj2 = runtime->makeHandle(JSObject::create(runtime, nullObj));
+  auto nullObj = runtime.makeNullHandle<JSObject>();
+  auto obj1 = runtime.makeHandle(JSObject::create(runtime, nullObj));
+  auto obj2 = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   v1 = HermesValue::encodeObjectValue(obj1.get());
   v2 = HermesValue::encodeObjectValue(&obj2);
@@ -378,7 +378,7 @@ TEST_F(OperationsTest, IsPrimitiveTest) {
   v = HermesValue::encodeStringValue(s.get());
   EXPECT_TRUE(isPrimitive(v));
 
-  Handle<JSObject> nullObj(runtime);
+  auto nullObj = runtime.makeNullHandle<JSObject>();
   auto obj = JSObject::create(runtime, nullObj);
   v = HermesValue::encodeObjectValue(&obj);
   EXPECT_FALSE(isPrimitive(v));
@@ -416,15 +416,14 @@ TEST_F(OperationsTest, ToBooleanTest) {
 }
 
 // Use macros for these tests because they're verbose.
-#define ToStringTest(result, value)                                     \
-  {                                                                     \
-    Handle<> scopedValue = runtime->makeHandle(value);                  \
-    auto strRes = toString_RJS(runtime, scopedValue);                   \
-    EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());           \
-    EXPECT_TRUE(                                                        \
-        StringPrimitive::createStringView(                              \
-            runtime, runtime->makeHandle(std::move(strRes.getValue()))) \
-            .equals(createUTF16Ref(result)));                           \
+#define ToStringTest(result, value)                                            \
+  {                                                                            \
+    Handle<> scopedValue = runtime.makeHandle(value);                          \
+    auto strRes = toString_RJS(runtime, scopedValue);                          \
+    EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());                  \
+    EXPECT_TRUE(StringPrimitive::createStringView(                             \
+                    runtime, runtime.makeHandle(std::move(strRes.getValue()))) \
+                    .equals(createUTF16Ref(result)));                          \
   }
 
 #define DoubleToStringTest(result, value) \
@@ -497,7 +496,7 @@ TEST_F(OperationsTest, ToStringTest) {
 // Use macros for these tests because they're verbose.
 #define ToNumberTest(result, value)                        \
   {                                                        \
-    Handle<> scopedValue = runtime->makeHandle(value);     \
+    Handle<> scopedValue = runtime.makeHandle(value);      \
     res = toNumber_RJS(runtime, scopedValue);              \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ((double)result, res->getDouble());           \
@@ -505,7 +504,7 @@ TEST_F(OperationsTest, ToStringTest) {
 
 #define InvalidToNumberTest(value)                         \
   {                                                        \
-    Handle<> scopedValue = runtime->makeHandle(value);     \
+    Handle<> scopedValue = runtime.makeHandle(value);      \
     res = toNumber_RJS(runtime, scopedValue);              \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_TRUE(std::isnan(res->getDouble()));             \
@@ -622,13 +621,13 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     auto str = StringPrimitive::createNoThrow(
         runtime, createUTF16Ref(u"0xFFFFFFFFFFFFFFFF"));
     auto scopedVal =
-        runtime->makeHandle(HermesValue::encodeStringValue(str.get()));
+        runtime.makeHandle(HermesValue::encodeStringValue(str.get()));
     res = toNumber_RJS(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
-    auto strRes = toString_RJS(runtime, runtime->makeHandle(res.getValue()));
+    auto strRes = toString_RJS(runtime, runtime.makeHandle(res.getValue()));
     EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());
     EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime->makeHandle(std::move(*strRes)))
+                    runtime, runtime.makeHandle(std::move(*strRes)))
                     .equals(createUTF16Ref(u"18446744073709552000")));
   }
 
@@ -657,8 +656,8 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
 
 #define ToIntegerTest(result, value)                       \
   {                                                        \
-    auto scopedValue = runtime->makeHandle(value);         \
-    res = toInteger(runtime, scopedValue);                 \
+    auto scopedValue = runtime.makeHandle(value);          \
+    res = toIntegerOrInfinity(runtime, scopedValue);       \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ(result, res->getNumber());                   \
   }
@@ -686,7 +685,7 @@ TEST_F(OperationsTest, ToIntegerTest) {
 
 #define ToInt32Test(result, value)                         \
   {                                                        \
-    auto scopedValue = runtime->makeHandle(value);         \
+    auto scopedValue = runtime.makeHandle(value);          \
     res = toInt32_RJS(runtime, scopedValue);               \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ(result, res->getNumber());                   \
@@ -720,7 +719,7 @@ TEST_F(OperationsTest, ToInt32Test) {
 
 #define ToUInt32Test(result, value)                        \
   {                                                        \
-    auto scopedValue = runtime->makeHandle(value);         \
+    auto scopedValue = runtime.makeHandle(value);          \
     res = toUInt32_RJS(runtime, scopedValue);              \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ(result, res->getNumber());                   \
@@ -758,7 +757,7 @@ TEST_F(OperationsTest, ToUInt32Test) {
 
 #define ToUInt16Test(result, value)                        \
   {                                                        \
-    auto scopedValue = runtime->makeHandle(value);         \
+    auto scopedValue = runtime.makeHandle(value);          \
     res = toUInt16(runtime, scopedValue);                  \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
     EXPECT_EQ(result, res->getNumber());                   \
@@ -796,21 +795,21 @@ TEST_F(OperationsTest, ToUInt16Test) {
 
 TEST_F(OperationsTest, ToObjectTest) {
   {
-    auto scopedVal = runtime->makeHandle(HermesValue::encodeNullValue());
+    auto scopedVal = runtime.makeHandle(HermesValue::encodeNullValue());
     EXPECT_EQ(
         ExecutionStatus::EXCEPTION, toObject(runtime, scopedVal).getStatus());
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
   }
 
   {
-    auto scopedVal = runtime->makeHandle(HermesValue::encodeUndefinedValue());
+    auto scopedVal = runtime.makeHandle(HermesValue::encodeUndefinedValue());
     EXPECT_EQ(
         ExecutionStatus::EXCEPTION, toObject(runtime, scopedVal).getStatus());
-    runtime->clearThrownValue();
+    runtime.clearThrownValue();
   }
 
   {
-    auto scopedVal = runtime->makeHandle(HermesValue::encodeBoolValue(true));
+    auto scopedVal = runtime.makeHandle(HermesValue::encodeBoolValue(true));
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
@@ -820,7 +819,7 @@ TEST_F(OperationsTest, ToObjectTest) {
 
   {
     auto m = 1529.184;
-    auto scopedVal = runtime->makeHandle(HermesValue::encodeDoubleValue(m));
+    auto scopedVal = runtime.makeHandle(HermesValue::encodeDoubleValue(m));
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
@@ -832,32 +831,32 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto strRef = createUTF16Ref(u"hello");
     auto str = StringPrimitive::createNoThrow(runtime, strRef);
     auto scopedVal =
-        runtime->makeHandle(HermesValue::encodeStringValue(str.get()));
+        runtime.makeHandle(HermesValue::encodeStringValue(str.get()));
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
     auto obj = vmcast<JSString>(static_cast<GCCell *>(res->getObject()));
     auto objStrHandle =
-        runtime->makeHandle(JSString::getPrimitiveString(obj, runtime));
+        runtime.makeHandle(JSString::getPrimitiveString(obj, runtime));
     EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
                     .equals(strRef));
   }
 }
 
-#define NumberAdditionTest(result, x, y)                                      \
-  {                                                                           \
-    res = addOp_RJS(runtime, runtime->makeHandle(x), runtime->makeHandle(y)); \
-    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());                    \
-    EXPECT_TRUE(res.getValue().isNumber());                                   \
-    EXPECT_EQ(result, res->getNumber());                                      \
+#define NumberAdditionTest(result, x, y)                                    \
+  {                                                                         \
+    res = addOp_RJS(runtime, runtime.makeHandle(x), runtime.makeHandle(y)); \
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());                  \
+    EXPECT_TRUE(res.getValue().isNumber());                                 \
+    EXPECT_EQ(result, res->getNumber());                                    \
   }
 
-#define InvalidNumberAdditionTest(x, y)                                       \
-  {                                                                           \
-    res = addOp_RJS(runtime, runtime->makeHandle(x), runtime->makeHandle(y)); \
-    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());                    \
-    EXPECT_TRUE(res.getValue().isNumber());                                   \
-    EXPECT_TRUE(std::isnan(res->getNumber()));                                \
+#define InvalidNumberAdditionTest(x, y)                                     \
+  {                                                                         \
+    res = addOp_RJS(runtime, runtime.makeHandle(x), runtime.makeHandle(y)); \
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());                  \
+    EXPECT_TRUE(res.getValue().isNumber());                                 \
+    EXPECT_TRUE(std::isnan(res->getNumber()));                              \
   }
 
 #define DoubleAdditionTest(result, x, y)    \
@@ -874,31 +873,29 @@ TEST_F(OperationsTest, AdditionTest) {
   {
     auto a = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"abc"));
     auto b = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"def"));
-    auto aHandle = runtime->makeHandle(HermesValue::encodeStringValue(a.get()));
-    auto bHandle = runtime->makeHandle(HermesValue::encodeStringValue(b.get()));
+    auto aHandle = runtime.makeHandle(HermesValue::encodeStringValue(a.get()));
+    auto bHandle = runtime.makeHandle(HermesValue::encodeStringValue(b.get()));
     res = addOp_RJS(runtime, aHandle, bHandle);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res.getValue().isString());
-    EXPECT_TRUE(
-        StringPrimitive::createStringView(
-            runtime,
-            runtime->makeHandle(vmcast<StringPrimitive>(res.getValue())))
-            .equals(createUTF16Ref(u"abcdef")));
+    EXPECT_TRUE(StringPrimitive::createStringView(
+                    runtime,
+                    runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
+                    .equals(createUTF16Ref(u"abcdef")));
   }
 
   {
     auto a =
         StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"number: "));
-    auto aHandle = runtime->makeHandle(HermesValue::encodeStringValue(a.get()));
-    auto bHandle = runtime->makeHandle(HermesValue::encodeDoubleValue(1.4));
+    auto aHandle = runtime.makeHandle(HermesValue::encodeStringValue(a.get()));
+    auto bHandle = runtime.makeHandle(HermesValue::encodeDoubleValue(1.4));
     res = addOp_RJS(runtime, aHandle, bHandle);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res.getValue().isString());
-    EXPECT_TRUE(
-        StringPrimitive::createStringView(
-            runtime,
-            runtime->makeHandle(vmcast<StringPrimitive>(res.getValue())))
-            .equals(createUTF16Ref(u"number: 1.4")));
+    EXPECT_TRUE(StringPrimitive::createStringView(
+                    runtime,
+                    runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
+                    .equals(createUTF16Ref(u"number: 1.4")));
   }
 
   {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -423,6 +423,14 @@ void HBCISel::generateUnaryOperatorInst(
     }
     case OpKind::VoidKind: { // Void operator.
       BCFGen_->emitLoadConstUndefined(resReg);
+      break;
+    }
+    case OpKind::IncKind: { // ++
+      BCFGen_->emitInc(resReg, opReg);
+      break;
+    }
+    case OpKind::DecKind: { // --
+      BCFGen_->emitDec(resReg, opReg);
       break;
     }
     default:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -142,8 +142,28 @@ STR(message, "message")
 STR(cause, "cause")
 STR(stack, "stack")
 STR(stacktraceTooLong, "Stacktrace too long")
+STR(captureStackTrace, "captureStackTrace")
+STR(prepareStackTrace, "prepareStackTrace")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
 #include "hermes/VM/NativeErrorTypes.def"
+
+STR(CallSite, "CallSite")
+STR(getColumnNumber, "getColumnNumber")
+STR(getBytecodeAddress, "getBytecodeAddress")
+STR(getEvalOrigin, "getEvalOrigin")
+STR(getFileName, "getFileName")
+STR(getFunction, "getFunction")
+STR(getFunctionName, "getFunctionName")
+STR(getLineNumber, "getLineNumber")
+STR(getMethodName, "getMethodName")
+STR(getPromiseIndex, "getPromiseIndex")
+STR(getThis, "getThis")
+STR(getTypeName, "getTypeName")
+STR(isAsync, "isAsync")
+STR(isConstructor, "isConstructor")
+STR(isEval, "isEval")
+STR(isPromiseAll, "isPromiseAll")
+STR(isToplevel, "isToplevel")
 
 STR(Array, "Array")
 STR(ArrayIterator, "Array Iterator")
@@ -464,8 +484,11 @@ STR(squareSymbolSplit, "[Symbol.split]")
 // TODO T65916424: Consider how we can move these out of the
 // predefined strings table.
 STR(Collator, "Collator")
+STR(IntlCollator, "Intl.Collator")
 STR(DateTimeFormat, "DateTimeFormat")
+STR(IntlDateTimeFormat, "Intl.DateTimeFormat")
 STR(NumberFormat, "NumberFormat")
+STR(IntlNumberFormat, "Intl.NumberFormat")
 STR(Intl, "Intl")
 STR(compare, "compare")
 STR(format, "format")

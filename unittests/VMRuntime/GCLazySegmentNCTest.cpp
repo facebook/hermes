@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -39,7 +39,7 @@ constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   auto N = kHeapSizeHint / SegmentCell::size();
   for (size_t i = 0; i < N; ++i) {
@@ -54,7 +54,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
-  GCScope scope{&rt};
+  GCScope scope{rt};
 
   auto N = kHeapSizeHint / SegmentCell::size() / 4;
   for (size_t i = 0; i < N; ++i) {

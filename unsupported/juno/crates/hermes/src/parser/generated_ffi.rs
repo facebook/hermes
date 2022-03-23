@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -48,6 +48,7 @@ pub enum NodeKind {
     StringLiteral,
     NumericLiteral,
     RegExpLiteral,
+    BigIntLiteral,
     ThisExpression,
     Super,
     SequenceExpression,
@@ -117,6 +118,7 @@ pub enum NodeKind {
     JSXClosingElement,
     JSXAttribute,
     JSXSpreadAttribute,
+    JSXStringLiteral,
     JSXText,
     JSXElement,
     JSXFragment,
@@ -128,6 +130,7 @@ pub enum NodeKind {
     NumberTypeAnnotation,
     StringLiteralTypeAnnotation,
     NumberLiteralTypeAnnotation,
+    BigIntLiteralTypeAnnotation,
     BooleanTypeAnnotation,
     BooleanLiteralTypeAnnotation,
     NullLiteralTypeAnnotation,
@@ -325,6 +328,8 @@ extern "C" {
     // RegExpLiteral
     pub fn hermes_get_RegExpLiteral_pattern(node: NodePtr) -> NodeLabel;
     pub fn hermes_get_RegExpLiteral_flags(node: NodePtr) -> NodeLabel;
+    // BigIntLiteral
+    pub fn hermes_get_BigIntLiteral_bigint(node: NodePtr) -> NodeLabel;
     // SequenceExpression
     pub fn hermes_get_SequenceExpression_expressions(node: NodePtr) -> NodeListRef;
     // ObjectExpression
@@ -536,6 +541,9 @@ extern "C" {
     pub fn hermes_get_JSXAttribute_value(node: NodePtr) -> NodePtrOpt;
     // JSXSpreadAttribute
     pub fn hermes_get_JSXSpreadAttribute_argument(node: NodePtr) -> NodePtr;
+    // JSXStringLiteral
+    pub fn hermes_get_JSXStringLiteral_value(node: NodePtr) -> NodeString;
+    pub fn hermes_get_JSXStringLiteral_raw(node: NodePtr) -> NodeLabel;
     // JSXText
     pub fn hermes_get_JSXText_value(node: NodePtr) -> NodeString;
     pub fn hermes_get_JSXText_raw(node: NodePtr) -> NodeLabel;
@@ -549,9 +557,12 @@ extern "C" {
     pub fn hermes_get_JSXFragment_closingFragment(node: NodePtr) -> NodePtr;
     // StringLiteralTypeAnnotation
     pub fn hermes_get_StringLiteralTypeAnnotation_value(node: NodePtr) -> NodeString;
+    pub fn hermes_get_StringLiteralTypeAnnotation_raw(node: NodePtr) -> NodeString;
     // NumberLiteralTypeAnnotation
     pub fn hermes_get_NumberLiteralTypeAnnotation_value(node: NodePtr) -> f64;
     pub fn hermes_get_NumberLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;
+    // BigIntLiteralTypeAnnotation
+    pub fn hermes_get_BigIntLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;
     // BooleanLiteralTypeAnnotation
     pub fn hermes_get_BooleanLiteralTypeAnnotation_value(node: NodePtr) -> bool;
     pub fn hermes_get_BooleanLiteralTypeAnnotation_raw(node: NodePtr) -> NodeLabel;

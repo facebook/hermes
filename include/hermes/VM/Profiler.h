@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,13 +15,13 @@
   uint64_t startTime = __rdtsc(); \
   unsigned curOpcode = (unsigned)OpCode::Call;
 
-#define RECORD_OPCODE_START_TIME                \
-  curOpcode = (unsigned)ip->opCode;             \
-  runtime->opcodeExecuteFrequency[curOpcode]++; \
+#define RECORD_OPCODE_START_TIME               \
+  curOpcode = (unsigned)ip->opCode;            \
+  runtime.opcodeExecuteFrequency[curOpcode]++; \
   startTime = __rdtsc();
 
 #define UPDATE_OPCODE_TIME_SPENT \
-  runtime->timeSpent[curOpcode] += __rdtsc() - startTime
+  runtime.timeSpent[curOpcode] += __rdtsc() - startTime
 
 #else
 
@@ -49,11 +49,11 @@ namespace vm {
 class Runtime;
 
 /// Patch the running executable using function metadata from 'runtime'.
-void patchProfilerSymbols(Runtime *runtime);
+void patchProfilerSymbols(Runtime &runtime);
 
 /// Write to \p fileOut mapping between Hermes symbols and JS function names
 /// with "<symbol> <JS function>" on each line.
-void dumpProfilerSymbolMap(Runtime *runtime, const std::string &fileOut);
+void dumpProfilerSymbolMap(Runtime &runtime, const std::string &fileOut);
 
 } // namespace vm
 } // namespace hermes
@@ -110,22 +110,22 @@ struct ProfilerFunctionEvent {
       : functionID(s), timeStamp(t), opcodeStamp(o), isEnter(e) {}
 };
 
-#define INC_OPCODE_COUNT ++runtime->opcodeCount
+#define INC_OPCODE_COUNT ++runtime.opcodeCount
 
-#define PROFILER_ENTER_FUNCTION(block)                              \
-  do {                                                              \
-    runtime->maxStackLevel =                                        \
-        std::max(runtime->maxStackLevel, runtime->getStackLevel()); \
-    auto id = runtime->getProfilerID(block);                        \
-    auto o = runtime->opcodeCount;                                  \
-    runtime->functionEvents.emplace_back(id, __rdtsc(), o, true);   \
+#define PROFILER_ENTER_FUNCTION(block)                            \
+  do {                                                            \
+    runtime.maxStackLevel =                                       \
+        std::max(runtime.maxStackLevel, runtime.getStackLevel()); \
+    auto id = runtime.getProfilerID(block);                       \
+    auto o = runtime.opcodeCount;                                 \
+    runtime.functionEvents.emplace_back(id, __rdtsc(), o, true);  \
   } while (false)
 
-#define PROFILER_EXIT_FUNCTION(block)                              \
-  do {                                                             \
-    auto id = runtime->getProfilerID(block);                       \
-    auto o = runtime->opcodeCount;                                 \
-    runtime->functionEvents.emplace_back(id, __rdtsc(), o, false); \
+#define PROFILER_EXIT_FUNCTION(block)                             \
+  do {                                                            \
+    auto id = runtime.getProfilerID(block);                       \
+    auto o = runtime.opcodeCount;                                 \
+    runtime.functionEvents.emplace_back(id, __rdtsc(), o, false); \
   } while (false)
 
 } // namespace vm

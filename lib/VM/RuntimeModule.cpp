@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -21,17 +21,17 @@ namespace hermes {
 namespace vm {
 
 RuntimeModule::RuntimeModule(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
     llvh::StringRef sourceURL,
     facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
-      domain_(&runtime->getHeap(), domain),
+      domain_(&runtime.getHeap(), domain),
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
-  runtime_->addRuntimeModule(this);
+  runtime_.addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
 #ifndef HERMESVM_LEAN
   lazyRoot_ = this;
@@ -62,19 +62,19 @@ SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
 
 RuntimeModule::~RuntimeModule() {
   if (bcProvider_ && !bcProvider_->getRawBuffer().empty())
-    runtime_->getCrashManager().unregisterMemory(bcProvider_.get());
-  runtime_->getCrashManager().unregisterMemory(this);
-  runtime_->removeRuntimeModule(this);
+    runtime_.getCrashManager().unregisterMemory(bcProvider_.get());
+  runtime_.getCrashManager().unregisterMemory(this);
+  runtime_.removeRuntimeModule(this);
 
   // We may reference other CodeBlocks through lazy compilation, but we only
   // own the ones that reference us.
   for (auto *block : functionMap_) {
     if (block != nullptr && block->getRuntimeModule() == this) {
-      runtime_->getHeap().getIDTracker().untrackNative(block);
+      runtime_.getHeap().getIDTracker().untrackNative(block);
       delete block;
     }
   }
-  runtime_->getHeap().getIDTracker().untrackNative(&functionMap_);
+  runtime_.getHeap().getIDTracker().untrackNative(&functionMap_);
 }
 
 void RuntimeModule::prepareForRuntimeShutdown() {
@@ -87,7 +87,7 @@ void RuntimeModule::prepareForRuntimeShutdown() {
 }
 
 CallResult<RuntimeModule *> RuntimeModule::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Domain> domain,
     facebook::hermes::debugger::ScriptID scriptID,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
@@ -95,10 +95,10 @@ CallResult<RuntimeModule *> RuntimeModule::create(
     llvh::StringRef sourceURL) {
   RuntimeModule *result;
   {
-    WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+    WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     result = new RuntimeModule(runtime, domain, flags, sourceURL, scriptID);
   }
-  runtime->getCrashManager().registerMemory(result, sizeof(*result));
+  runtime.getCrashManager().registerMemory(result, sizeof(*result));
   if (bytecode) {
     if (result->initializeMayAllocate(std::move(bytecode)) ==
         ExecutionStatus::EXCEPTION) {
@@ -107,18 +107,18 @@ CallResult<RuntimeModule *> RuntimeModule::create(
     // If the BC provider is backed by a buffer, register the BC provider struct
     // (but not the buffer contents, since that might be too large).
     if (result->bcProvider_ && !result->bcProvider_->getRawBuffer().empty())
-      runtime->getCrashManager().registerMemory(
+      runtime.getCrashManager().registerMemory(
           result->bcProvider_.get(), sizeof(hbc::BCProviderFromBuffer));
   }
   return result;
 }
 
 RuntimeModule *RuntimeModule::createUninitialized(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
     facebook::hermes::debugger::ScriptID scriptID) {
-  WeakRefLock lk{runtime->getHeap().weakRefMutex()};
+  WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   return new RuntimeModule(runtime, domain, flags, "", scriptID);
 }
 
@@ -158,7 +158,7 @@ CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
 
 #ifndef HERMESVM_LEAN
 RuntimeModule *RuntimeModule::createLazyModule(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Domain> domain,
     RuntimeModule *parent,
     uint32_t functionID) {
@@ -237,12 +237,11 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   // Populate the string ID map with empty identifiers.
   stringIDMap_.resize(strTableSize, RootSymbolID(SymbolID::empty()));
 
-  if (runtime_->getVMExperimentFlags() &
-      experiments::MAdviseStringsSequential) {
+  if (runtime_.getVMExperimentFlags() & experiments::MAdviseStringsSequential) {
     bcProvider_->adviseStringTableSequential();
   }
 
-  if (runtime_->getVMExperimentFlags() & experiments::MAdviseStringsWillNeed) {
+  if (runtime_.getVMExperimentFlags() & experiments::MAdviseStringsWillNeed) {
     bcProvider_->willNeedStringTable();
   }
 
@@ -257,7 +256,7 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   // Preallocate enough space to store all identifiers to prevent
   // unnecessary allocations. NOTE: If this module is not the first module,
   // then this is an underestimate.
-  runtime_->getIdentifierTable().reserve(hashes.size());
+  runtime_.getIdentifierTable().reserve(hashes.size());
   {
     StringID strID = 0;
     uint32_t hashID = 0;
@@ -281,7 +280,7 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     assert(hashID == hashes.size() && "Should hash all identifiers.");
   }
 
-  if (runtime_->getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
+  if (runtime_.getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
     bcProvider_->adviseStringTableRandom();
   }
 
@@ -316,7 +315,7 @@ ExecutionStatus RuntimeModule::importCJSModuleTable() {
 
 StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(
     StringID stringID) {
-  return runtime_->getStringPrimFromSymbolID(
+  return runtime_.getStringPrimFromSymbolID(
       getSymbolIDFromStringIDMayAllocate(stringID));
 }
 
@@ -358,13 +357,13 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   if (flags_.persistent) {
     // Registering a lazy identifier does not allocate, so we do not need a
     // GC scope.
-    id = runtime_->getIdentifierTable().registerLazyIdentifier(str, hash);
+    id = runtime_.getIdentifierTable().registerLazyIdentifier(str, hash);
   } else {
     // Accessing a symbol non-lazily may allocate in the GC heap, so add a scope
     // marker.
     GCScopeMarkerRAII scopeMarker{runtime_};
-    id = *runtime_->ignoreAllocationFailure(
-        runtime_->getIdentifierTable().getSymbolHandle(runtime_, str, hash));
+    id = *runtime_.ignoreAllocationFailure(
+        runtime_.getIdentifierTable().getSymbolHandle(runtime_, str, hash));
   }
   stringIDMap_[stringID] = RootSymbolID(id);
   return id;
@@ -404,7 +403,7 @@ void RuntimeModule::markDomainRef(WeakRefAcceptor &acceptor) {
 }
 
 llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
-    Runtime *runtime,
+    Runtime &runtime,
     unsigned keyBufferIndex,
     unsigned numLiterals) const {
   if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
@@ -412,8 +411,8 @@ llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
         getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
     if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end()) {
       if (HiddenClass *const cachedHiddenClass =
-              cachedHiddenClassIter->second.get(runtime, &runtime->getHeap())) {
-        return runtime_->makeHandle(cachedHiddenClass);
+              cachedHiddenClassIter->second.get(runtime, &runtime.getHeap())) {
+        return runtime_.makeHandle(cachedHiddenClass);
       }
     }
   }
@@ -421,7 +420,7 @@ llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
 }
 
 void RuntimeModule::tryCacheLiteralHiddenClass(
-    Runtime *runtime,
+    Runtime &runtime,
     unsigned keyBufferIndex,
     HiddenClass *clazz) {
   auto numLiterals = clazz->getNumProperties();

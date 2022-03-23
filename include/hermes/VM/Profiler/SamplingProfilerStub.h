@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,7 +16,7 @@ namespace vm {
 /// No-op implementation of wall-time based JS sampling profiler.
 class SamplingProfiler {
  public:
-  explicit SamplingProfiler(Runtime *){};
+  explicit SamplingProfiler(Runtime &){};
 
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor) {}
@@ -27,6 +27,10 @@ class SamplingProfiler {
 
   /// Dump sampled stack to \p OS in chrome trace format.
   static void dumpChromeTraceGlobal(llvh::raw_ostream &OS) {}
+
+  /// Dump the sampled stack to \p OS in the format consumed by the DevTools
+  /// JavaScript profiler.
+  void serializeInDevToolsFormat(llvh::raw_ostream &OS) {}
 
   /// Enable and start profiling.
   static bool enable() {

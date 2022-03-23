@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -23,18 +23,21 @@ TEST(GCGuardPageNCTest, ObjectUnderflow) {
   // Guard page is currently only protected when page size is as expected.
   if (hermes::oscompat::page_size() != pagesize::kExpectedPageSize)
     return;
+  auto fn = [] {
+    // Use an mmap-based storage for this test.
+    std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
+    auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
+    DummyRuntime &rt = *runtime;
 
-  // Use an mmap-based storage for this test.
-  std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
-  auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
-  DummyRuntime &rt = *runtime;
-
-  // Allocate the first cell in the segment and try to write directly before it.
-  auto *cell = EmptyCell<256>::createLongLived(rt);
-  char *raw = reinterpret_cast<char *>(cell);
+    // Allocate the first cell in the segment and try to write directly before
+    // it.
+    auto *cell = EmptyCell<256>::createLongLived(rt);
+    char *raw = reinterpret_cast<char *>(cell);
+    raw[-1] = '\0';
+  };
   // On Windows, this throws an exception instead of dying.
 #ifndef _WINDOWS
-  EXPECT_DEATH_IF_SUPPORTED({ raw[-1] = '\0'; }, "");
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "");
 #endif
 }
 

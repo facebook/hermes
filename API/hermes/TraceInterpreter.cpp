@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,7 +17,9 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <set>
+#include <sstream>
 
 using namespace hermes::parser;
 using namespace facebook::jsi;
@@ -368,7 +370,7 @@ Value traceValueToJSIValue(
   if (value.isBool()) {
     return Value(value.getBool());
   }
-  if (value.isObject() || value.isString()) {
+  if (value.isObject() || value.isString() || value.isSymbol()) {
     return getJSIValueForUse(value.getUID());
   }
   llvm_unreachable("Unrecognized value type encountered");
@@ -510,6 +512,8 @@ void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
     assert(val.isString() && "type mismatch between trace and replay");
   } else if (traceValue.isObject()) {
     assert(val.isObject() && "type mismatch between trace and replay");
+  } else if (traceValue.isSymbol()) {
+    assert(val.isSymbol() && "type mismatch between trace and replay");
   }
 }
 #endif
@@ -961,7 +965,7 @@ std::string TraceInterpreter::execEntryFunction(
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-    hermesRuntime->dumpBasicBlockProfileTrace(llvh::errs());
+    hermesRuntime->dumpBasicBlockProfileTrace(std::cerr);
   }
 #endif
 
@@ -1017,7 +1021,7 @@ Value TraceInterpreter::execFunction(
       if (it != locals.end()) {
         // Satisfiable locally
         Value val{rt_, it->second};
-        assert(val.isObject() || val.isString());
+        assert(val.isObject() || val.isString() || val.isSymbol());
         // If it was the last local use, delete that object id from locals.
         auto defAndUse = call.locals.find(obj);
         if (defAndUse != call.locals.end() &&
@@ -1039,7 +1043,7 @@ Value TraceInterpreter::execFunction(
       it = gom_.find(obj);
       if (it != gom_.end()) {
         Value val{rt_, it->second};
-        assert(val.isObject() || val.isString());
+        assert(val.isObject() || val.isString() || val.isSymbol());
         // If it was the last global use, delete that object id from globals.
         if (defAndUse->second.lastUse == globalRecordNum) {
           gom_.erase(it);
@@ -1190,19 +1194,26 @@ Value TraceInterpreter::execFunction(
             const auto &cpnr =
                 static_cast<const SynthTrace::CreatePropNameIDRecord &>(*rec);
             // We perform the calls below for their side effects (for example,
-            auto propNameID =
-                (cpnr.ascii_ ? PropNameID::forAscii(
-                                   rt_, cpnr.chars_.data(), cpnr.chars_.size())
-                             : PropNameID::forUtf8(
-                                   rt_,
-                                   reinterpret_cast<const uint8_t *>(
-                                       cpnr.chars_.data()),
-                                   cpnr.chars_.size()));
-            assert(
-                propNameID.utf8(rt_) ==
-                std::string(
-                    reinterpret_cast<const char *>(cpnr.chars_.data()),
-                    cpnr.chars_.size()));
+            auto propNameID = [&] {
+              switch (cpnr.valueType_) {
+                case SynthTrace::CreatePropNameIDRecord::ASCII:
+                  return PropNameID::forAscii(
+                      rt_, cpnr.chars_.data(), cpnr.chars_.size());
+                case SynthTrace::CreatePropNameIDRecord::UTF8:
+                  return PropNameID::forUtf8(
+                      rt_,
+                      reinterpret_cast<const uint8_t *>(cpnr.chars_.data()),
+                      cpnr.chars_.size());
+                case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
+                  auto val = traceValueToJSIValue(
+                      rt_, trace_, getJSIValueForUse, cpnr.traceValue_);
+                  if (val.isSymbol())
+                    return PropNameID::forSymbol(rt_, val.getSymbol(rt_));
+                  return PropNameID::forString(rt_, val.getString(rt_));
+                }
+              }
+              llvm_unreachable("No other way to construct PropNameID");
+            }();
             addPropNameIDToDefs(
                 call,
                 cpnr.propNameID_,
@@ -1246,6 +1257,12 @@ Value TraceInterpreter::execFunction(
                 locals);
             break;
           }
+          case RecordType::DrainMicrotasks: {
+            const auto &drainRecord =
+                static_cast<const SynthTrace::DrainMicrotasksRecord &>(*rec);
+            rt_.drainMicrotasks(drainRecord.maxMicrotasksHint_);
+            break;
+          }
           case RecordType::GetProperty: {
             const auto &gpr =
                 static_cast<const SynthTrace::GetPropertyRecord &>(*rec);
@@ -1254,7 +1271,9 @@ Value TraceInterpreter::execFunction(
             jsi::Value value;
             const auto &obj = getObjForUse(gpr.objID_);
             auto propIDValOpt = getJSIValueForUseOpt(gpr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575): We have to check whether the value is a string,
+            // because we cannot disambiguate Symbols from PropNameIDs.
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == gpr.propNameDbg_);
@@ -1277,7 +1296,8 @@ Value TraceInterpreter::execFunction(
             auto obj = getObjForUse(spr.objID_);
             // Call set property on the object specified and give it the value.
             auto propIDValOpt = getJSIValueForUseOpt(spr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575)
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == spr.propNameDbg_);
@@ -1305,7 +1325,8 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::HasPropertyRecord &>(*rec);
             auto obj = getObjForUse(hpr.objID_);
             auto propIDValOpt = getJSIValueForUseOpt(hpr.propID_);
-            if (propIDValOpt) {
+            // TODO(T111638575)
+            if (propIDValOpt && propIDValOpt->isString()) {
               const jsi::String propString = (*propIDValOpt).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == hpr.propNameDbg_);
@@ -1616,7 +1637,7 @@ void TraceInterpreter::ifObjectAddToDefs(
     assertMatch(traceValue, val);
   }
 #endif
-  if (traceValue.isObject() || traceValue.isString()) {
+  if (traceValue.isObject() || traceValue.isString() || traceValue.isSymbol()) {
     addJSIValueToDefs(
         call, traceValue.getUID(), globalRecordNum, std::move(val), locals);
   }
@@ -1691,15 +1712,13 @@ std::string TraceInterpreter::printStats() {
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
-  std::string opcodeOutput;
-  llvh::raw_string_ostream os{opcodeOutput};
+  std::ostringstream os;
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
     hermesRuntime->dumpOpcodeStats(os);
   } else {
     throw std::runtime_error("Unable to cast runtime into HermesRuntime");
   }
-  os.flush();
-  stats += opcodeOutput;
+  stats += os.str();
   stats += "\n";
 #endif
   return stats;

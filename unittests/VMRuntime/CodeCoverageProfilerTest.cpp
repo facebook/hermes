@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -80,7 +80,7 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   hbc::CompileFlags flags;
   flags.lazy = false;
-  CallResult<HermesValue> res = runtime->run(
+  CallResult<HermesValue> res = runtime.run(
       "function used() {}; function unused() {}; used(); [used, unused];",
       "file:///fake.js",
       flags);
@@ -89,13 +89,13 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
   std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
       executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
   std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
-      executedFuncInfos.find(runtime->getHeap().getName())->second;
+      executedFuncInfos.find(runtime.getHeap().getName())->second;
 
-  Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
+  Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
   Handle<JSFunction> funcUnused =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
@@ -110,8 +110,8 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
 // profilers.
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
   auto runtime2 = newRuntime();
-  GCScope scope{runtime2.get()};
-  std::vector<Runtime *> runtimes = {runtime, runtime2.get()};
+  GCScope scope{*runtime2};
+  std::vector<Runtime *> runtimes = {&runtime, runtime2.get()};
 
   std::vector<std::future<PinnedHermesValue>> resFuts;
 
@@ -130,17 +130,17 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
   }
 
   for (size_t i = 0; i < runtimes.size(); i++) {
-    Runtime *rt = runtimes[i];
+    Runtime &rt = *runtimes[i];
     HermesValue res = resFuts[i].get();
 
     std::vector<CodeCoverageProfiler::FuncInfo> executedFuncInfos =
-        rt->getCodeCoverageProfiler().getExecutedFunctionsLocal();
+        rt.getCodeCoverageProfiler().getExecutedFunctionsLocal();
 
-    Handle<JSArray> funcArr = rt->makeHandle(vmcast<JSArray>(res));
+    Handle<JSArray> funcArr = rt.makeHandle(vmcast<JSArray>(res));
     Handle<JSFunction> funcUsed =
-        rt->makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0)));
+        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0)));
     Handle<JSFunction> funcUnused =
-        rt->makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1)));
+        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1)));
 
     // Used and unused functions should have different info.
     EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
@@ -156,11 +156,11 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   hbc::CompileFlags flags;
   flags.lazy = false;
   CallResult<HermesValue> res1 =
-      runtime->run("function foo() {}; foo(); foo;", "file:///fake1.js", flags);
+      runtime.run("function foo() {}; foo(); foo;", "file:///fake1.js", flags);
   EXPECT_FALSE(isException(res1));
-  Handle<JSFunction> funcFoo = runtime->makeHandle(vmcast<JSFunction>(*res1));
+  Handle<JSFunction> funcFoo = runtime.makeHandle(vmcast<JSFunction>(*res1));
 
-  CallResult<HermesValue> res2 = runtime->run(
+  CallResult<HermesValue> res2 = runtime.run(
       "\n  function bar() {}; function bar() {}; function unused() {}; bar(); [bar, unused];",
       "file:///fake2.js",
       flags);
@@ -169,13 +169,13 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
   std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
       executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
   std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
-      executedFuncInfos.find(runtime->getHeap().getName())->second;
+      executedFuncInfos.find(runtime.getHeap().getName())->second;
 
-  Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res2));
+  Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res2));
   Handle<JSFunction> funcBar =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
   Handle<JSFunction> funcUnused =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcFoo, funcUnused));
@@ -190,7 +190,7 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
 TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   hbc::CompileFlags flags;
   flags.lazy = false;
-  CallResult<HermesValue> res = runtime->run(
+  CallResult<HermesValue> res = runtime.run(
       "var eval1 = eval('const a = 1; function used1() {}; used1(); used1; //# sourceURL=foo1.js'); "
       "var eval2 = eval('const b = 1; function unused() {}; function used2() {}; used2(); [used2, unused] //# sourceURL=foo2.js');"
       "[eval1, eval2[0], eval2[1]];",
@@ -201,15 +201,15 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
       executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
   std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
-      executedFuncInfos.find(runtime->getHeap().getName())->second;
+      executedFuncInfos.find(runtime.getHeap().getName())->second;
 
-  Handle<JSArray> funcArr = runtime->makeHandle(vmcast<JSArray>(*res));
+  Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res));
   Handle<JSFunction> funcUsed1 =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
   Handle<JSFunction> funcUsed2 =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
   Handle<JSFunction> funcUnused =
-      runtime->makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 2)));
+      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 2)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcUsed1, funcUnused));

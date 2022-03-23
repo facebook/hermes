@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -8,7 +8,7 @@
  * @format
  */
 
-// @lint-ignore-every LICENSELINT
+// @licenselint-loose-mode
 
 'use strict';
 
@@ -47,31 +47,31 @@ type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
 function HEADER(flow: FlowStyle): string {
   let flowDirective = '';
   if (flow !== false) {
-    flowDirective = ` * ${'@'}flow`;
+    flowDirective = `* ${'@'}flow`;
     if (flow !== 'loose') {
       flowDirective += ` ${flow}`;
     }
     flowDirective += '\n';
   }
 
-  return (
-    `\
+  return `\
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
-` +
-    flowDirective +
-    `\
+${flowDirective}\
  * @format
  */
 
+// lint directives to let us do some basic validation of generated files
+/* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
+/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+
 'use strict';
 
-`
-  );
+`;
 }
 
 type Package =
@@ -113,17 +113,17 @@ export function formatAndWriteDistArtifact({
   );
   mkdirp.sync(folder);
   // write to disk
-  fs.writeFileSync(path.resolve(folder, filename), formattedContents);
+  const artifactPath = path.resolve(folder, filename);
+  fs.writeFileSync(artifactPath, formattedContents);
 }
 
 export const LITERAL_TYPES: $ReadOnlySet<string> = new Set([
+  'BigIntLiteral',
+  'BooleanLiteral',
+  'NullLiteral',
+  'NumericLiteral',
   'RegExpLiteral',
   'StringLiteral',
-  'BooleanLiteral',
-  'NumericLiteral',
-  'NullLiteral',
-  // future-proofing for when this is added
-  'BigIntLiteral',
 ]);
 
 export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
@@ -144,3 +144,11 @@ export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
 
   return flippedAliasKeys;
 })();
+
+export const NODES_WITHOUT_TRANSFORM_NODE_TYPES: $ReadOnlySet<string> = new Set(
+  [
+    // a lot of additional properties are set on this, but nobody should ever "create" one so
+    // we purposely don't define a creation function
+    'Program',
+  ],
+);

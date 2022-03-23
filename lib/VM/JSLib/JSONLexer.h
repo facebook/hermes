@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -54,7 +54,7 @@ class JSONToken {
   const JSONToken &operator=(const JSONToken &) = delete;
 
  public:
-  explicit JSONToken(Runtime *runtime) : stringValue_(runtime) {}
+  explicit JSONToken(Runtime &runtime) : stringValue_(runtime) {}
 
   JSONTokenKind getKind() const {
     return kind_;
@@ -102,12 +102,12 @@ class JSONLexer {
  private:
   UTF16Stream curCharPtr_;
 
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   JSONToken token_;
 
  public:
-  JSONLexer(Runtime *runtime, UTF16Stream &&stream)
+  JSONLexer(Runtime &runtime, UTF16Stream &&stream)
       : curCharPtr_(std::move(stream)), runtime_(runtime), token_(runtime) {}
 
   /// \return the current token.
@@ -127,7 +127,7 @@ class JSONLexer {
   /// token_ will also be invalidated.
   LLVM_NODISCARD ExecutionStatus error(const TwineChar16 &msg) {
     token_.invalidate();
-    return runtime_->raiseSyntaxError(
+    return runtime_.raiseSyntaxError(
         TwineChar16("JSON Parse error: ").concat(msg));
   }
 

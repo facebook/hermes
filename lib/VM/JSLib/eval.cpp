@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -22,25 +22,25 @@ namespace hermes {
 namespace vm {
 
 CallResult<HermesValue> evalInEnvironment(
-    Runtime *runtime,
+    Runtime &runtime,
     llvh::StringRef utf8code,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,
     bool singleFunction) {
 #ifdef HERMESVM_LEAN
-  return runtime->raiseEvalUnsupported(utf8code);
+  return runtime.raiseEvalUnsupported(utf8code);
 #else
-  if (!runtime->enableEval) {
-    return runtime->raiseEvalUnsupported(utf8code);
+  if (!runtime.enableEval) {
+    return runtime.raiseEvalUnsupported(utf8code);
   }
 
   hbc::CompileFlags compileFlags;
   compileFlags.strict = false;
   compileFlags.includeLibHermes = false;
-  compileFlags.optimize = runtime->optimizedEval;
-  compileFlags.verifyIR = runtime->verifyEvalIR;
-  compileFlags.emitAsyncBreakCheck = runtime->asyncBreakCheckInEval;
+  compileFlags.optimize = runtime.optimizedEval;
+  compileFlags.verifyIR = runtime.verifyEvalIR;
+  compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -62,17 +62,17 @@ CallResult<HermesValue> evalInEnvironment(
     auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
         std::move(buffer), "JavaScript", nullptr, compileFlags, scopeChain);
     if (!bytecode_err.first) {
-      return runtime->raiseSyntaxError(TwineChar16(bytecode_err.second));
+      return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
     }
     if (singleFunction && !bytecode_err.first->isSingleFunction()) {
-      return runtime->raiseSyntaxError("Invalid function expression");
+      return runtime.raiseSyntaxError("Invalid function expression");
     }
     bytecode = std::move(bytecode_err.first);
   }
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
   llvh::StringRef sourceURL{};
-  return runtime->runBytecode(
+  return runtime.runBytecode(
       std::move(bytecode),
       RuntimeModuleFlags{},
       sourceURL,
@@ -82,7 +82,7 @@ CallResult<HermesValue> evalInEnvironment(
 }
 
 CallResult<HermesValue> directEval(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> str,
     const ScopeChain &scopeChain,
     bool singleFunction) {
@@ -101,11 +101,11 @@ CallResult<HermesValue> directEval(
       code,
       Runtime::makeNullHandle<Environment>(),
       scopeChain,
-      runtime->getGlobal(),
+      runtime.getGlobal(),
       singleFunction);
 }
 
-CallResult<HermesValue> eval(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   if (!args.getArg(0).isString()) {

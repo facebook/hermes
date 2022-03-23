@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -44,7 +44,7 @@ class RuntimeJSONParser {
 
  private:
   /// The VM runtime.
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// The lexer.
   JSONLexer lexer_;
@@ -65,7 +65,7 @@ class RuntimeJSONParser {
 
  public:
   explicit RuntimeJSONParser(
-      Runtime *runtime,
+      Runtime &runtime,
       UTF16Stream &&jsonString,
       Handle<Callable> reviver)
       : runtime_(runtime),
@@ -111,7 +111,7 @@ class RuntimeJSONParser {
 /// as JSON.
 class JSONStringifyer {
   /// The runtime.
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// The ReplacerFunction, initialized from the "replacer" argument in
   /// stringify.
@@ -168,7 +168,7 @@ class JSONStringifyer {
   llvh::SmallVector<char16_t, 32> output_{};
 
  public:
-  explicit JSONStringifyer(Runtime *runtime)
+  explicit JSONStringifyer(Runtime &runtime)
       : runtime_(runtime),
         replacerFunction_(runtime),
         gap_{runtime, nullptr},
@@ -274,7 +274,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
   }
 
   if (reviver_.get()) {
-    if ((parRes = revive(runtime_->makeHandle(*parRes))) ==
+    if ((parRes = revive(runtime_.makeHandle(*parRes))) ==
         ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
   }
@@ -285,7 +285,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
   llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
       remainingDepth_, remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
-    return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
+    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
   MutableHandle<> returnValue{runtime_};
@@ -370,7 +370,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
           runtime_,
           indexValue,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          runtime_->makeHandle(*parRes));
+          runtime_.makeHandle(*parRes));
 
       if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
         if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -395,7 +395,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::LBrace &&
       "Wrong entrance to parseObject");
-  auto object = runtime_->makeHandle(JSObject::create(runtime_));
+  auto object = runtime_.makeHandle(JSObject::create(runtime_));
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -435,7 +435,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
           runtime_,
           key,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          runtime_->makeHandle(*parRes));
+          runtime_.makeHandle(*parRes));
 
       if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
         if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -457,7 +457,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
-  auto root = runtime_->makeHandle(JSObject::create(runtime_));
+  auto root = runtime_.makeHandle(JSObject::create(runtime_));
   auto status = JSObject::defineOwnProperty(
       root,
       runtime_,
@@ -469,7 +469,7 @@ CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
       status != ExecutionStatus::EXCEPTION && *status &&
       "defineOwnProperty on new object cannot fail");
   return operationWalk(
-      root, runtime_->getPredefinedStringHandle(Predefined::emptyString));
+      root, runtime_.getPredefinedStringHandle(Predefined::emptyString));
 }
 
 CallResult<HermesValue> RuntimeJSONParser::operationWalk(
@@ -481,7 +481,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
       remainingDepth_, remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
-    return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
+    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
   auto propRes = JSObject::getComputed_RJS(holder, runtime_, property);
@@ -494,7 +494,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_->makeHandle(std::move(*propRes));
+  auto valHandle = runtime_.makeHandle(std::move(*propRes));
   if (*isArrayRes) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
     CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
@@ -547,7 +547,7 @@ ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
   if (LLVM_UNLIKELY(jsonRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newElement = runtime_->makeHandle(*jsonRes);
+  auto newElement = runtime_.makeHandle(*jsonRes);
   if (newElement->isUndefined()) {
     if (LLVM_UNLIKELY(
             JSObject::deleteComputed(val, runtime_, key) ==
@@ -569,7 +569,7 @@ ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
 }
 
 CallResult<HermesValue> runtimeJSONParse(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
   // Our parser requires UTF16 data that does not move during GCs, so
@@ -589,7 +589,7 @@ CallResult<HermesValue> runtimeJSONParse(
 }
 
 CallResult<HermesValue> runtimeJSONParseRef(
-    Runtime *runtime,
+    Runtime &runtime,
     UTF16Stream &&stream) {
   RuntimeJSONParser parser{
       runtime, std::move(stream), Runtime::makeNullHandle<Callable>()};
@@ -620,7 +620,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::EXCEPTION;
   }
   if (*lenRes > UINT32_MAX) {
-    return runtime_->raiseRangeError("replacer array is too large");
+    return runtime_.raiseRangeError("replacer array is too large");
   }
   uint32_t len = static_cast<uint32_t>(*lenRes);
   auto arrRes = JSArray::create(runtime_, len, 0);
@@ -695,7 +695,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
     tmpHandle_ = strRes->getHermesValue();
   }
   if (tmpHandle_->isNumber()) {
-    auto intRes = toInteger(runtime_, tmpHandle_);
+    auto intRes = toIntegerOrInfinity(runtime_, tmpHandle_);
     assert(
         intRes != ExecutionStatus::EXCEPTION &&
         "toInteger on a number cannot throw");
@@ -754,7 +754,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     }
     // Str.2.b: check if toJSON is a Callable.
     if (auto toJSON = Handle<Callable>::dyn_vmcast(
-            runtime_->makeHandle(std::move(*propRes)))) {
+            runtime_.makeHandle(std::move(*propRes)))) {
       if (!tmpHandle_->isString()) {
         // Lazily convert key to a string.
         auto status = toString_RJS(runtime_, tmpHandle_);
@@ -870,7 +870,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       return ExecutionStatus::EXCEPTION;
     }
     if (LLVM_UNLIKELY(!*cr)) {
-      return runtime_->raiseTypeError("cyclical structure in JSON object");
+      return runtime_.raiseTypeError("cyclical structure in JSON object");
     }
     // Flush just before the recursive call (pushValueToStack can create
     // handles).
@@ -903,13 +903,13 @@ ExecutionStatus JSONStringifyer::operationJA() {
   auto stepBack = depthCount_;
   // JA.4.
   if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
-    return runtime_->raiseStackOverflow(
+    return runtime_.raiseStackOverflow(
         Runtime::StackOverflowKind::JSONStringify);
   }
   depthCount_++;
   output_.push_back(u'[');
   CallResult<uint64_t> lenRes = getArrayLikeLength(
-      runtime_->makeHandle(vmcast<JSObject>(
+      runtime_.makeHandle(vmcast<JSObject>(
           stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
       runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
@@ -956,7 +956,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
   auto stepBack = depthCount_;
   // JO.4.
   if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
-    return runtime_->raiseStackOverflow(
+    return runtime_.raiseStackOverflow(
         Runtime::StackOverflowKind::JSONStringify);
   }
   depthCount_++;
@@ -1111,7 +1111,7 @@ void JSONStringifyer::popValueFromStack() {
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
-  appendToOutput(runtime_->getStringPrimFromSymbolID(identifierID));
+  appendToOutput(runtime_.getStringPrimFromSymbolID(identifierID));
 }
 
 void JSONStringifyer::appendToOutput(const StringPrimitive *str) {
@@ -1138,7 +1138,7 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
 
   // Step 11 in ES5.1 15.12.3.
   status = operationStr(HermesValue::encodeStringValue(
-      runtime_->getPredefinedString(Predefined::emptyString)));
+      runtime_.getPredefinedString(Predefined::emptyString)));
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1150,7 +1150,7 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
 }
 
 CallResult<HermesValue> runtimeJSONStringify(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> value,
     Handle<> replacer,
     Handle<> space) {

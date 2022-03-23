@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,6 +18,14 @@ module.exports = {
   baseUrl: '/',
   favicon: 'img/favicon.ico',
   themeConfig: {
+    announcementBar: {
+      id: 'support_ukraine',
+      content:
+        'Support Ukraine 🇺🇦 <a target="_blank" rel="noopener noreferrer" href="https://opensource.fb.com/support-ukraine"> Help Provide Humanitarian Aid to Ukraine</a>.',
+      backgroundColor: '#20232a',
+      textColor: '#fff',
+      isCloseable: false,
+    },
     navbar: {
       title: 'Hermes',
       logo: {

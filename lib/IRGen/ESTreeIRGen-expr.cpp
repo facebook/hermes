@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -1444,14 +1444,11 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   LLVM_DEBUG(dbgs() << "IRGen update expression.\n");
   bool isPrefix = updateExpr->_prefix;
 
-  // The operands ++ and -- are equivalent to adding or subtracting the
-  // literal 1.
-  // See section 12.4.4.1.
-  BinaryOperatorInst::OpKind opKind;
+  UnaryOperatorInst::OpKind opKind;
   if (updateExpr->_operator->str() == "++") {
-    opKind = BinaryOperatorInst::OpKind::AddKind;
+    opKind = UnaryOperatorInst::OpKind::IncKind;
   } else if (updateExpr->_operator->str() == "--") {
-    opKind = BinaryOperatorInst::OpKind::SubtractKind;
+    opKind = UnaryOperatorInst::OpKind::DecKind;
   } else {
     llvm_unreachable("Invalid update operator");
   }
@@ -1459,15 +1456,10 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   LReference lref = createLRef(updateExpr->_argument, false);
 
   // Load the original value.
-  Value *original = lref.emitLoad();
+  Value *original = Builder.createAsNumberInst(lref.emitLoad());
 
-  // Convert the original value to number. Even on suffix operators we return
-  // the converted value.
-  original = Builder.createAsNumberInst(original);
-
-  // Create the +1 or -1.
-  Value *result = Builder.createBinaryOperatorInst(
-      original, Builder.getLiteralNumber(1), opKind);
+  // Create the inc or dec.
+  Value *result = Builder.createUnaryOperatorInst(original, opKind);
 
   // Store the result.
   lref.emitStore(result);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -46,7 +46,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       : RootAndSlotAcceptorDefault(gc.getPointerBase()),
         WeakAcceptorDefault(gc.getPointerBase()),
         gc(gc),
-        markedSymbols_(gc.gcCallbacks_->getSymbolsEnd()) {}
+        markedSymbols_(gc.gcCallbacks_.getSymbolsEnd()) {}
 
   using RootAndSlotAcceptorDefault::accept;
 
@@ -87,7 +87,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
       auto *newCell = newLocation->data();
-      if (newCell->getKind() == CellKind::WeakMapKind) {
+      if (vmisa<JSWeakMap>(newCell)) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
       } else {
         worklist_.push_back(newLocation);
@@ -110,7 +110,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       if (newSize != origSize) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
       }
-      if (cell->getKind() == CellKind::WeakMapKind) {
+      if (vmisa<JSWeakMap>(cell)) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
       } else {
         worklist_.push_back(header);
@@ -184,8 +184,8 @@ gcheapsize_t MallocGC::Size::minStorageFootprint() const {
 }
 
 MallocGC::MallocGC(
-    GCCallbacks *gcCallbacks,
-    PointerBase *pointerBase,
+    GCCallbacks &gcCallbacks,
+    PointerBase &pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
     std::shared_ptr<StorageProvider> provider,
@@ -276,13 +276,14 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
   const auto wallStart = steady_clock::now();
   const auto cpuStart = oscompat::thread_cpu_time();
-  auto allocatedBefore = allocatedBytes_;
+  const auto allocatedBefore = allocatedBytes_;
+  const auto externalBefore = externalBytes_;
 
   resetStats();
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this, gcCallbacks_, "Full collection"};
+    GCCycle cycle{this, &gcCallbacks_, "Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
@@ -302,7 +303,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     updateWeakReferences();
     resetWeakReferences();
     // Free the unused symbols.
-    gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
+    gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES
@@ -388,13 +389,13 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
       // TODO: MallocGC doesn't yet support credit/debit external memory, so
       // it has no data for these numbers.
-      /*external*/ BeforeAndAfter{0, 0},
+      /*external*/ BeforeAndAfter{externalBefore, externalBytes_},
       /*survivalRatio*/
       allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
       /*tags*/ {}};
 
   recordGCStats(event, /* onMutator */ true);
-  checkTripwire(allocatedBytes_);
+  checkTripwire(allocatedBytes_ + externalBytes_);
 }
 
 void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
@@ -483,6 +484,7 @@ void MallocGC::getHeapInfo(HeapInfo &info) {
   info.allocatedBytes = allocatedBytes_;
   // MallocGC does not have a heap size.
   info.heapSize = 0;
+  info.externalBytes = externalBytes_;
 }
 void MallocGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   getHeapInfo(info);
@@ -573,19 +575,18 @@ bool MallocGC::dbgContains(const void *p) const {
   isValid = isValid || newPointers_.find(header) != newPointers_.end();
   return isValid;
 }
-
-bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
-  // We don't keep track of the sequence of finalizable objects in
-  // MallocGC; rather, it looks directly at whether a freed cell's vtable has
-  // a finalizer method. So we just return whether \p cell has a finalizer.
-  // This won't detect errors, but it also won't give false positives.
-  return cell->getVT()->finalize_ != nullptr;
-}
 #endif
 
 void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCCycle cycle{this};
   GCBase::createSnapshot(this, os);
+}
+
+void MallocGC::creditExternalMemory(GCCell *, uint32_t size) {
+  externalBytes_ += size;
+}
+void MallocGC::debitExternalMemory(GCCell *, uint32_t size) {
+  externalBytes_ -= size;
 }
 
 /// @name Forward instantiations

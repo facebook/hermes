@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -140,14 +140,13 @@ static constexpr TagKind LastTag = 0xffff;
 
 static constexpr TagKind EmptyInvalidTag = FirstTag;
 static constexpr TagKind UndefinedNullTag = FirstTag + 1;
-static constexpr TagKind BoolTag = FirstTag + 2;
-static constexpr TagKind SymbolTag = FirstTag + 3;
+static constexpr TagKind BoolSymbolTag = FirstTag + 2;
 
 // Tags with 48-bit data start here.
-static constexpr TagKind NativeValueTag = FirstTag + 4;
+static constexpr TagKind NativeValueTag = FirstTag + 3;
 
 // Pointer tags start here.
-static constexpr TagKind StrTag = FirstTag + 5;
+static constexpr TagKind StrTag = FirstTag + 4;
 static constexpr TagKind ObjectTag = FirstTag + 6;
 
 static_assert(ObjectTag == LastTag, "Tags mismatch");
@@ -168,8 +167,8 @@ class HermesValue {
 #endif
     Undefined = UndefinedNullTag * 2,
     Null = UndefinedNullTag * 2 + 1,
-    Bool = BoolTag * 2,
-    Symbol = SymbolTag * 2,
+    Bool = BoolSymbolTag * 2,
+    Symbol = BoolSymbolTag * 2 + 1,
     Native1 = NativeValueTag * 2,
     Native2 = NativeValueTag * 2 + 1,
     Str1 = StrTag * 2,
@@ -226,26 +225,43 @@ class HermesValue {
     return (ETag)(raw_ >> (kNumDataBits - 1));
   }
 
-  /// Combine two tags into an 8-bit value.
-  inline static constexpr unsigned combineTags(TagKind a, TagKind b) {
-    return ((a & kTagMask) << kTagWidth) | (b & kTagMask);
+  /// Combine two tags into an 10-bit value.
+  inline static constexpr unsigned combineETags(ETag a, ETag b) {
+    unsigned au = static_cast<unsigned>(a);
+    unsigned bu = static_cast<unsigned>(b);
+    return ((au & kETagMask) << kETagWidth) | (bu & kETagMask);
   }
 
-  constexpr inline static HermesValue encodeNullptrObjectValue() {
+  /// Special functions that allow nullptr to be stored in a HermesValue.
+  /// WARNING: These should never be used on the JS stack or heap, and are only
+  /// intended for Handles.
+  constexpr inline static HermesValue encodeNullptrObjectValueUnsafe() {
     return HermesValue(0, ObjectTag);
   }
-  inline static HermesValue encodeObjectValue(void *val) {
+
+  inline static HermesValue encodeObjectValueUnsafe(void *val) {
     validatePointer(val);
     HermesValue RV(safeTypeCast<void *, uintptr_t>(val), ObjectTag);
     assert(RV.isObject());
     return RV;
   }
 
-  inline static HermesValue encodeStringValue(const StringPrimitive *val) {
+  inline static HermesValue encodeStringValueUnsafe(
+      const StringPrimitive *val) {
     validatePointer(val);
     HermesValue RV(safeTypeCast<const void *, uintptr_t>(val), StrTag);
     assert(RV.isString());
     return RV;
+  }
+
+  inline static HermesValue encodeObjectValue(void *val) {
+    assert(val && "Null pointers require special handling.");
+    return encodeObjectValueUnsafe(val);
+  }
+
+  inline static HermesValue encodeStringValue(const StringPrimitive *val) {
+    assert(val && "Null pointers require special handling.");
+    return encodeStringValueUnsafe(val);
   }
 
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
@@ -265,13 +281,13 @@ class HermesValue {
   }
 
   inline static HermesValue encodeSymbolValue(SymbolID val) {
-    HermesValue RV(val.unsafeGetRaw(), SymbolTag);
+    HermesValue RV(val.unsafeGetRaw(), ETag::Symbol);
     assert(RV.isSymbol());
     return RV;
   }
 
   constexpr inline static HermesValue encodeBoolValue(bool val) {
-    return HermesValue((uint64_t)(val), BoolTag);
+    return HermesValue((uint64_t)(val), ETag::Bool);
   }
 
   inline static constexpr HermesValue encodeNullValue() {
@@ -358,10 +374,10 @@ class HermesValue {
     return getTag() == NativeValueTag;
   }
   inline bool isSymbol() const {
-    return getTag() == SymbolTag;
+    return getETag() == ETag::Symbol;
   }
   inline bool isBool() const {
-    return getTag() == BoolTag;
+    return getETag() == ETag::Bool;
   }
   inline bool isObject() const {
     return getTag() == ObjectTag;
@@ -469,11 +485,11 @@ class HermesValue {
   /// @name HV32 Compatibility APIs - DO NOT CALL DIRECTLY
   /// @{
 
-  GCCell *getPointer(PointerBase *) const {
+  GCCell *getPointer(PointerBase &) const {
     return static_cast<GCCell *>(getPointer());
   }
 
-  static HermesValue encodeHermesValue(HermesValue hv, Runtime *) {
+  static HermesValue encodeHermesValue(HermesValue hv, Runtime &) {
     return hv;
   }
 
@@ -604,7 +620,7 @@ class GCHermesValueBase final : public HVType {
   uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
 
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Same as \p copy, but specialised for raw pointers.
+  /// Same as \p copy, but specialized for raw pointers.
   static inline GCHermesValueBase<HVType> *copy(
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
@@ -612,7 +628,7 @@ class GCHermesValueBase final : public HVType {
       GC *gc);
 #endif
 
-  /// Same as \p uninitialized_copy, but specialised for raw pointers. This is
+  /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
   /// unsafe to use if the memory region being copied into (pointed to by
   /// \p result) is reachable by the GC (for instance, memory within the
   /// size of an ArrayStorage), since it does not update elements atomically.

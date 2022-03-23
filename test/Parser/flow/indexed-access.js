@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,7 +31,8 @@ type A = Obj['a'];
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "indexType": {
 // CHECK-NEXT:           "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:           "value": "a"
+// CHECK-NEXT:           "value": "a",
+// CHECK-NEXT:           "raw": "'a'"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
@@ -91,7 +92,8 @@ type C = Obj['bar'][foo]['boz'];
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "indexType": {
 // CHECK-NEXT:               "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:               "value": "bar"
+// CHECK-NEXT:               "value": "bar",
+// CHECK-NEXT:               "raw": "'bar'"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "indexType": {
@@ -105,7 +107,8 @@ type C = Obj['bar'][foo]['boz'];
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "indexType": {
 // CHECK-NEXT:           "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:           "value": "boz"
+// CHECK-NEXT:           "value": "boz",
+// CHECK-NEXT:           "raw": "'boz'"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
@@ -132,12 +135,14 @@ type D = (Obj['bar'])['baz'];
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "indexType": {
 // CHECK-NEXT:             "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:             "value": "bar"
+// CHECK-NEXT:             "value": "bar",
+// CHECK-NEXT:             "raw": "'bar'"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "indexType": {
 // CHECK-NEXT:           "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:           "value": "baz"
+// CHECK-NEXT:           "value": "baz",
+// CHECK-NEXT:           "raw": "'baz'"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
@@ -164,7 +169,8 @@ type E = Obj['bar'][];
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "indexType": {
 // CHECK-NEXT:             "type": "StringLiteralTypeAnnotation",
-// CHECK-NEXT:             "value": "bar"
+// CHECK-NEXT:             "value": "bar",
+// CHECK-NEXT:             "raw": "'bar'"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }

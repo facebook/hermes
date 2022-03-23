@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,12 +17,12 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createJSONObject(Runtime *runtime) {
+Handle<JSObject> createJSONObject(Runtime &runtime) {
   auto objRes = JSJSON::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype));
+      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
   assert(
       objRes != ExecutionStatus::EXCEPTION && "unable to define JSON object");
-  auto json = runtime->makeHandle<JSJSON>(*objRes);
+  auto json = runtime.makeHandle<JSJSON>(*objRes);
 
   defineMethod(
       runtime,
@@ -46,25 +46,25 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
       runtime,
       json,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::JSON),
+      runtime.getPredefinedStringHandle(Predefined::JSON),
       dpf);
 
   return json;
 }
 
-CallResult<HermesValue> jsonParse(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> jsonParse(void *, Runtime &runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return runtimeJSONParse(
       runtime,
-      runtime->makeHandle(std::move(*res)),
+      runtime.makeHandle(std::move(*res)),
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 
 CallResult<HermesValue>
-jsonStringify(void *, Runtime *runtime, NativeArgs args) {
+jsonStringify(void *, Runtime &runtime, NativeArgs args) {
   return runtimeJSONStringify(
       runtime,
       args.getArgHandle(0),

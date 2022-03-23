@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -50,8 +50,6 @@ class HermesRuntimeTest : public HermesRuntimeTestBase {
                                   .withES6Promise(true)
                                   .build()) {}
 };
-
-using HermesRuntimeDeathTest = HermesRuntimeTest;
 
 // In JSC there's a bug where host functions are always ran with a this in
 // nonstrict mode so this must be a hermes only test. See
@@ -212,9 +210,19 @@ TEST_F(HermesRuntimeTest, NoCorruptionOnJSError) {
 // use the ASSERT_DEATH macros when testing that implementation.
 // Asserts are compiled out of opt builds
 #if !defined(NDEBUG) && defined(ASSERT_DEATH)
-TEST_F(HermesRuntimeDeathTest, ValueTest) {
-  ASSERT_DEATH(eval("'slay'").getNumber(), "Assertion.*isNumber");
-  ASSERT_DEATH(eval("123").getString(*rt), "Assertion.*isString");
+TEST(HermesRuntimeDeathTest, ValueTest) {
+  auto eval = [](Runtime &rt, const char *code) {
+    return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
+  };
+
+  ASSERT_DEATH(
+      eval(*makeHermesRuntime(), "'slay'").getNumber(), "Assertion.*isNumber");
+  ASSERT_DEATH(
+      {
+        auto rt = makeHermesRuntime();
+        eval(*rt, "123").getString(*rt);
+      },
+      "Assertion.*isString");
 }
 #endif
 
@@ -498,6 +506,21 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {
+  auto strProp = PropNameID::forAscii(*rt, "a");
+  auto secretProp = PropNameID::forSymbol(
+      *rt, eval("var secret = Symbol('a'); secret;").getSymbol(*rt));
+  auto globalProp =
+      PropNameID::forSymbol(*rt, eval("Symbol.for('a');").getSymbol(*rt));
+  auto x =
+      eval("({a : 'str', [secret] : 'secret', [Symbol.for('a')] : 'global'});")
+          .getObject(*rt);
+
+  EXPECT_EQ(x.getProperty(*rt, strProp).getString(*rt).utf8(*rt), "str");
+  EXPECT_EQ(x.getProperty(*rt, secretProp).getString(*rt).utf8(*rt), "secret");
+  EXPECT_EQ(x.getProperty(*rt, globalProp).getString(*rt).utf8(*rt), "global");
+}
+
 TEST_F(HermesRuntimeTest, HasComputedTest) {
   // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
   // so we test its Proxy support here, instead of from JS.
@@ -561,6 +584,55 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
     FAIL() << "Expected JSIException";
   } catch (const facebook::jsi::JSIException &err) {
   }
+}
+
+TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
+  using DiagnosticHandler = hermes::DiagnosticHandler;
+
+  struct BufferingDiagnosticHandler : DiagnosticHandler {
+    void handle(const DiagnosticHandler::Diagnostic &d) {
+      ds.push_back(d);
+    }
+    std::vector<DiagnosticHandler::Diagnostic> ds;
+  } diagHandler;
+  std::string bytecode;
+  ASSERT_FALSE(hermes::compileJS("x++1", "", bytecode, true, &diagHandler));
+  ASSERT_EQ(1, diagHandler.ds.size());
+  EXPECT_EQ(DiagnosticHandler::Error, diagHandler.ds[0].kind);
+  EXPECT_EQ(1, diagHandler.ds[0].line);
+  EXPECT_EQ(4, diagHandler.ds[0].column);
+}
+
+TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
+  using DiagnosticHandler = hermes::DiagnosticHandler;
+
+  struct BufferingDiagnosticHandler : DiagnosticHandler {
+    void handle(const DiagnosticHandler::Diagnostic &d) {
+      ds.push_back(d);
+    }
+    std::vector<DiagnosticHandler::Diagnostic> ds;
+  } diagHandler;
+  std::string bytecode;
+  // Succeeds with a warning + associated note.
+  ASSERT_TRUE(
+      hermes::compileJS("({a:1,a:2})", "", bytecode, true, &diagHandler));
+  ASSERT_EQ(2, diagHandler.ds.size());
+
+  // warning: the property "a" was set multiple times in the object definition.
+  EXPECT_EQ(DiagnosticHandler::Warning, diagHandler.ds[0].kind);
+  EXPECT_EQ(1, diagHandler.ds[0].line);
+  EXPECT_EQ(7, diagHandler.ds[0].column);
+  ASSERT_EQ(1, diagHandler.ds[0].ranges.size());
+  EXPECT_EQ(6, diagHandler.ds[0].ranges[0].first);
+  EXPECT_EQ(9, diagHandler.ds[0].ranges[0].second);
+
+  // The first definition was here.
+  EXPECT_EQ(DiagnosticHandler::Note, diagHandler.ds[1].kind);
+  EXPECT_EQ(1, diagHandler.ds[1].line);
+  EXPECT_EQ(3, diagHandler.ds[1].column);
+  ASSERT_EQ(1, diagHandler.ds[1].ranges.size());
+  EXPECT_EQ(2, diagHandler.ds[1].ranges[0].first);
+  EXPECT_EQ(5, diagHandler.ds[1].ranges[0].second);
 }
 
 } // namespace

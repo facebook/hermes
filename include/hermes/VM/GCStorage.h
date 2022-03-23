@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -18,8 +18,8 @@ namespace vm {
 class GCStorage {
  public:
   GCStorage(
-      GCBase::GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCBase::GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,

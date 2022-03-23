@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -46,7 +46,7 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $Shape<{...}> = {},
+  newProps: $Partial<{...}> = {},
 ): DetachedNode<T> {
   return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe));
 }
@@ -56,7 +56,7 @@ export function shallowCloneNode<T: ESNode>(
  */
 export function deepCloneNode<T: ESNode>(
   node: T,
-  newProps: $Shape<{...}> = {},
+  newProps: $Partial<{...}> = {},
 ): DetachedNode<T> {
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(

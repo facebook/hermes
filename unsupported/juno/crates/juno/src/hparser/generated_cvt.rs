@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -354,6 +354,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::RegExpLiteral::build_template(gc, template)
+        }
+        NodeKind::BigIntLiteral => {
+          let bigint = cvt.cvt_label(gc, hermes_get_BigIntLiteral_bigint(n));
+          let mut template = ast::template::BigIntLiteral {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  bigint,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::BigIntLiteral::build_template(gc, template)
         }
         NodeKind::ThisExpression => {
           let mut template = ast::template::ThisExpression {
@@ -1098,6 +1107,17 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::JSXSpreadAttribute::build_template(gc, template)
         }
+        NodeKind::JSXStringLiteral => {
+          let value = cvt_string(hermes_get_JSXStringLiteral_value(n));
+          let raw = cvt.cvt_label(gc, hermes_get_JSXStringLiteral_raw(n));
+          let mut template = ast::template::JSXStringLiteral {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  value,
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::JSXStringLiteral::build_template(gc, template)
+        }
         NodeKind::JSXText => {
           let value = cvt_string(hermes_get_JSXText_value(n));
           let raw = cvt.cvt_label(gc, hermes_get_JSXText_raw(n));
@@ -1179,9 +1199,11 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::StringLiteralTypeAnnotation => {
           let value = cvt_string(hermes_get_StringLiteralTypeAnnotation_value(n));
+          let raw = cvt_string(hermes_get_StringLiteralTypeAnnotation_raw(n));
           let mut template = ast::template::StringLiteralTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
+                  raw,
           };
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::StringLiteralTypeAnnotation::build_template(gc, template)
@@ -1196,6 +1218,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::NumberLiteralTypeAnnotation::build_template(gc, template)
+        }
+        NodeKind::BigIntLiteralTypeAnnotation => {
+          let raw = cvt.cvt_label(gc, hermes_get_BigIntLiteralTypeAnnotation_raw(n));
+          let mut template = ast::template::BigIntLiteralTypeAnnotation {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  raw,
+          };
+          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          ast::builder::BigIntLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::BooleanTypeAnnotation => {
           let mut template = ast::template::BooleanTypeAnnotation {
@@ -2298,7 +2329,13 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
           ast::builder::TSCallSignatureDeclaration::build_template(gc, template)
         }
-        _ => panic!("Invalid node kind")
+        _ => {
+          cvt.report_invalid_node(gc, n, range);
+          let template = ast::template::Empty {
+            metadata: ast::TemplateMetadata {range, ..Default::default()}
+          };
+          ast::builder::Empty::build_template(gc, template)
+        }
     };
 
     res

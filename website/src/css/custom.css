@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -38,4 +38,41 @@ textarea {
   font-size: 100%; /* 1 */
   line-height: 1.15; /* 1 */
   margin: 0; /* 2 */
+}
+
+/* Announcement banner */
+
+:root {
+  --docusaurus-announcement-bar-height: auto !important;
+}
+
+div[class^="announcementBarContent"] {
+  line-height: 40px;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 8px 30px;
+}
+
+div[class^="announcementBarContent"] a {
+  text-decoration: underline;
+  display: inline-block;
+  color: var(--ifm-color-primary-lightest) !important;
+}
+
+div[class^="announcementBarContent"] a:hover {
+  color: var(--brand) !important;
+}
+
+@media only screen and (max-width: 768px) {
+  .announcement {
+    font-size: 18px;
+  }
+}
+
+@media only screen and (max-width: 500px) {
+  .announcement {
+    font-size: 15px;
+    line-height: 22px;
+    padding: 6px 30px;
+  }
 }

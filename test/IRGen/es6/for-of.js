@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -87,7 +87,7 @@ function forof_update(seq) {
 //CHECK-NEXT:  %23 = LoadFrameInst [ar]
 //CHECK-NEXT:  %24 = LoadFrameInst [i]
 //CHECK-NEXT:  %25 = AsNumberInst %24
-//CHECK-NEXT:  %26 = BinaryOperatorInst '+', %25 : number, 1 : number
+//CHECK-NEXT:  %26 = UnaryOperatorInst '++', %25 : number
 //CHECK-NEXT:  %27 = StoreFrameInst %26, [i]
 //CHECK-NEXT:  %28 = StorePropertyInst %13, %23, %25 : number
 //CHECK-NEXT:  %29 = BranchInst %BB6

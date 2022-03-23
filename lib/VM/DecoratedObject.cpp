@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -36,27 +36,26 @@ const ObjectVTable DecoratedObject::vt{
 
 void DecoratedObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<DecoratedObject>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&DecoratedObject::vt.base);
 }
 
 // static
 PseudoHandle<DecoratedObject> DecoratedObject::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parentHandle,
     std::unique_ptr<Decoration> decoration,
     unsigned int additionalSlotCount) {
   const size_t reservedSlots =
       numOverlapSlots<DecoratedObject>() + additionalSlotCount;
-  auto *cell = runtime->makeAFixed<DecoratedObject, HasFinalizer::Yes>(
+  auto *cell = runtime.makeAFixed<DecoratedObject, HasFinalizer::Yes>(
       runtime,
-      &vt,
       parentHandle,
-      runtime->getHiddenClassForPrototype(*parentHandle, reservedSlots),
+      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       std::move(decoration));
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
   // Allocate a propStorage if the number of additional slots requires it.
-  auto selfWithSlots = runtime->ignoreAllocationFailure(
+  auto selfWithSlots = runtime.ignoreAllocationFailure(
       JSObject::allocatePropStorage(std::move(self), runtime, reservedSlots));
   return PseudoHandle<DecoratedObject>::vmcast(std::move(selfWithSlots));
 }

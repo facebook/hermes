@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -56,8 +56,8 @@ using namespace hermes::hbc;
 namespace {
 
 Handle<StringPrimitive>
-benchmark(Runtime *runtime, double loopc, double factc) {
-  auto domain = runtime->makeHandle(Domain::create(runtime));
+benchmark(Runtime &runtime, double loopc, double factc) {
+  auto domain = runtime.makeHandle(Domain::create(runtime));
   auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   std::map<int, int> labels{};
@@ -170,9 +170,9 @@ L1:
   newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(loopc);
   newFrame->getArgRef(1) = HermesValue::encodeDoubleValue(factc);
 
-  auto status = runtime->interpretFunction(codeBlock);
+  auto status = runtime.interpretFunction(codeBlock);
   assert(status == ExecutionStatus::RETURNED);
-  return runtime->makeHandle<StringPrimitive>(*status);
+  return runtime.makeHandle<StringPrimitive>(*status);
 }
 } // namespace
 
@@ -204,11 +204,11 @@ int main(int argc, char **argv) {
                                             .build())
                           .build());
 
-  GCScope scope(runtime.get());
-  auto res = benchmark(runtime.get(), LoopCount, FactValue);
+  GCScope scope(*runtime);
+  auto res = benchmark(*runtime, LoopCount, FactValue);
   SmallU16String<32> tmp;
   llvh::outs()
-      << StringPrimitive::createStringView(runtime.get(), res).getUTF16Ref(tmp)
+      << StringPrimitive::createStringView(*runtime, res).getUTF16Ref(tmp)
       << "\n";
 #ifdef HERMESVM_OPCODE_STATS
   Runtime::dumpOpcodeStats(llvh::outs());

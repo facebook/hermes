@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -27,21 +27,22 @@ class FillerCell : public VariableSizeRuntimeCell {
     return &vt;
   };
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::FillerCellKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::FillerCellKind;
   }
 
-  static FillerCell *create(Runtime *runtime, size_type size) {
+  static FillerCell *create(Runtime &runtime, size_type size) {
     assert(
         size >= sizeof(FillerCell) &&
         "Cannot make a FillerCell smaller than the baseline for a FillerCell");
     assert(
         isSizeHeapAligned(size) &&
         "A FillerCell must have a heap aligned size");
-    return runtime->makeAVariable<FillerCell>(size, &runtime->getHeap(), size);
+    return runtime.makeAVariable<FillerCell>(size);
   }
-
-  FillerCell(GC *gc, size_type size) : VariableSizeRuntimeCell(gc, &vt, size) {}
 };
 
 } // namespace vm

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -28,7 +28,7 @@ namespace {
 using IdentifierTableLargeHeapTest = LargeHeapRuntimeTestFixture;
 
 TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
-  IdentifierTable &table = runtime->getIdentifierTable();
+  IdentifierTable &table = runtime.getIdentifierTable();
 
   uint32_t predefinedCount = table.getSymbolsEnd();
 
@@ -82,48 +82,51 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   // Ensure allocations are aligned.
   EXPECT_EQ(
       0u,
-      (uint64_t)runtime->getStringPrimFromSymbolID(sa) % (uint64_t)HeapAlign);
+      (uint64_t)runtime.getStringPrimFromSymbolID(sa) % (uint64_t)HeapAlign);
   EXPECT_EQ(
       0u,
-      (uint64_t)runtime->getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
+      (uint64_t)runtime.getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
 
 using IdentifierTableTest = RuntimeTestFixture;
 
 TEST_F(IdentifierTableTest, NotUniquedSymbol) {
-  auto &idTable = runtime->getIdentifierTable();
+  auto &idTable = runtime.getIdentifierTable();
 
   {
     ASCIIRef asdf{"asdf", 4};
-    Handle<StringPrimitive> id1 = runtime->makeHandle<StringPrimitive>(
+    Handle<StringPrimitive> id1 = runtime.makeHandle<StringPrimitive>(
         *StringPrimitive::create(runtime, asdf));
     Handle<SymbolID> sym =
-        runtime->makeHandle(*idTable.createNotUniquedSymbol(runtime, id1));
+        runtime.makeHandle(*idTable.createNotUniquedSymbol(runtime, id1));
     EXPECT_TRUE((*sym).isNotUniqued());
     EXPECT_FALSE((*sym).isUniqued());
     EXPECT_TRUE(idTable.getStringView(runtime, *sym).equals(asdf));
   }
 }
 
-TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
-  GCScope gcScope{runtime};
-  auto &idTable = runtime->getIdentifierTable();
+TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
+  auto fn = [] {
+    auto rt = Runtime::create(
+        RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build());
+    auto &runtime = *rt;
+    GCScope gcScope{runtime};
+    auto &idTable = runtime.getIdentifierTable();
 
-  const auto extSize = (1 << 24) +
-      std::max(kTestGCConfig.getMaxHeapSize(),
-               toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
+    const auto extSize = (1 << 24) +
+        std::max(kTestGCConfig.getMaxHeapSize(),
+                 toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
-  // A string of this size is definitely too big to be allocated.
-  ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
+    // A string of this size is definitely too big to be allocated.
+    ASSERT_FALSE(runtime.getHeap().canAllocExternalMemory(extSize));
 
-  std::string buf(extSize, '\0');
-  ASCIIRef ref{buf.data(), extSize};
+    std::string buf(extSize, '\0');
+    ASCIIRef ref{buf.data(), extSize};
 
-  SymbolID symbol = idTable.registerLazyIdentifier(ref);
-
-  EXPECT_DEATH_IF_SUPPORTED(
-      { idTable.getStringPrim(runtime, symbol); },
-      "Unhandled out of memory exception");
+    SymbolID symbol = idTable.registerLazyIdentifier(ref);
+    idTable.getStringPrim(runtime, symbol);
+  };
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "Unhandled out of memory exception");
 }
 
 // Verifies that SymbolIDs are allocated consecutively, increasing from zero, as

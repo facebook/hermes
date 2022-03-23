@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -23,19 +23,23 @@ class JSRegExp final : public JSObject {
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSRegExpKind;
+  }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::RegExpKind;
+    return cell->getKind() == CellKind::JSRegExpKind;
   }
 
   /// Create a JSRegExp, with the empty string for pattern and flags.
   static PseudoHandle<JSRegExp> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype);
 
   /// Create a JSRegExp, with the standard RegExp prototype and the empty string
   /// for pattern and flags.
-  static PseudoHandle<JSRegExp> create(Runtime *runtime) {
-    return create(runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
+  static PseudoHandle<JSRegExp> create(Runtime &runtime) {
+    return create(runtime, Handle<JSObject>::vmcast(&runtime.regExpPrototype));
   }
 
   /// Initializes RegExp with existing bytecode. Populates fields for the
@@ -43,7 +47,7 @@ class JSRegExp final : public JSObject {
   /// the bytecode is correct and corresponds to the given pattern/flags.
   static void initialize(
       Handle<JSRegExp> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags,
       llvh::ArrayRef<uint8_t> bytecode);
@@ -53,7 +57,7 @@ class JSRegExp final : public JSObject {
   /// recompiling by just copying the bytecode.
   static ExecutionStatus initialize(
       Handle<JSRegExp> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSRegExp> otherHandle,
       Handle<StringPrimitive> flags);
 
@@ -64,7 +68,7 @@ class JSRegExp final : public JSObject {
   /// Compiles the \p pattern and \p flags to RegExp bytecode.
   static ExecutionStatus initialize(
       Handle<JSRegExp> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> pattern,
       Handle<StringPrimitive> flags);
 
@@ -73,13 +77,13 @@ class JSRegExp final : public JSObject {
   /// implementation of toString(). See 'escapePattern' to properly escape it.
   static PseudoHandle<StringPrimitive> getPattern(
       JSRegExp *self,
-      PointerBase *base);
+      PointerBase &base);
 
   /// \return An escaped version of the regexp pattern per ES6 21.2.3.2.4, or an
   /// exception if the string could not be created.
   static CallResult<HermesValue> escapePattern(
       Handle<StringPrimitive> pattern,
-      Runtime *runtime);
+      Runtime &runtime);
 
   /// \return the flag bits used to initialize this RegExp
   static regex::SyntaxFlags getSyntaxFlags(JSRegExp *self) {
@@ -103,19 +107,19 @@ class JSRegExp final : public JSObject {
   /// the string, not the searchStartOffset.
   static CallResult<RegExpMatch> search(
       Handle<JSRegExp> selfHandle,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<StringPrimitive> strHandle,
       uint32_t searchStartOffset);
 
  public:
-  friend void RegExpBuildMeta(const GCCell *, Metadata::Builder &);
+  friend void JSRegExpBuildMeta(const GCCell *, Metadata::Builder &);
 
-  JSRegExp(Runtime *runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
+  JSRegExp(Runtime &runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
+      : JSObject(runtime, *parent, *clazz),
         pattern_(
             runtime,
-            runtime->getPredefinedString(Predefined::emptyString),
-            &runtime->getHeap()) {}
+            runtime.getPredefinedString(Predefined::emptyString),
+            &runtime.getHeap()) {}
 
  private:
   ~JSRegExp();

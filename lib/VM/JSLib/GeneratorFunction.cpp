@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -14,17 +14,17 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
-  auto proto = Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
+Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
+  auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
-  auto cons = runtime->makeHandle(NativeConstructor::create(
+  auto cons = runtime.makeHandle(NativeConstructor::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->functionConstructor),
+      Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       generatorFunctionConstructor,
       1,
       NativeConstructor::creatorFunction<JSGeneratorFunction>,
-      CellKind::GeneratorFunctionKind));
+      CellKind::JSGeneratorFunctionKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       cons,
@@ -57,21 +57,21 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::prototype),
-      Handle<>(&runtime->generatorPrototype),
+      Handle<>(&runtime.generatorPrototype),
       dpf);
 
   defineProperty(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedStringHandle(Predefined::GeneratorFunction),
+      runtime.getPredefinedStringHandle(Predefined::GeneratorFunction),
       dpf);
 
   return cons;
 }
 
 CallResult<HermesValue>
-generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
+generatorFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 

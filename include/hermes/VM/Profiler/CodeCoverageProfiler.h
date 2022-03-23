@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -42,7 +42,7 @@ class CodeCoverageProfiler {
     std::string debugInfo;
   };
 
-  explicit CodeCoverageProfiler(Runtime *runtime) : runtime_(runtime) {
+  explicit CodeCoverageProfiler(Runtime &runtime) : runtime_(runtime) {
     std::lock_guard<std::mutex> lk(globalMutex());
     allProfilers().insert(this);
   }
@@ -116,7 +116,7 @@ class CodeCoverageProfiler {
   /// \return reference to function bits array map for \p module.
   std::vector<bool> &getModuleFuncMapRef(RuntimeModule *module);
 
-  Runtime *runtime_;
+  Runtime &runtime_;
 
   /// Protect any local state of this code coverage profiler that can be
   /// accessed by the static members. For now, this is only used to protect

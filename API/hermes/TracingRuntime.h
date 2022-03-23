@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -31,6 +31,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
   virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
   virtual SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) = 0;
+  virtual SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) = 0;
 
   virtual void flushAndDisableTrace() = 0;
 
@@ -40,6 +41,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
+
+  bool drainMicrotasks(int maxMicrotasksHint = -1) override;
 
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
@@ -52,6 +55,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
+  jsi::PropNameID createPropNameIDFromSymbol(const jsi::Symbol &sym) override;
 
   jsi::Value getProperty(const jsi::Object &obj, const jsi::String &name)
       override;
@@ -163,6 +167,9 @@ class TracingHermesRuntime final : public TracingRuntime {
   }
   SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
+  }
+  SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) override {
+    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(sym));
   }
 
   void flushAndDisableTrace() override;

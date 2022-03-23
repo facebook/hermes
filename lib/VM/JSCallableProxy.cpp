@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -17,7 +17,7 @@ namespace vm {
 
 const CallableVTable JSCallableProxy::vt{
     {
-        VTable(CellKind::CallableProxyKind, cellSize<JSCallableProxy>()),
+        VTable(CellKind::JSCallableProxyKind, cellSize<JSCallableProxy>()),
         JSCallableProxy::_getOwnIndexedRangeImpl,
         JSCallableProxy::_haveOwnIndexedImpl,
         JSCallableProxy::_getOwnIndexedPropertyFlagsImpl,
@@ -30,7 +30,7 @@ const CallableVTable JSCallableProxy::vt{
     JSCallableProxy::_callImpl,
 };
 
-void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSCallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSCallableProxy>());
   NativeFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const JSCallableProxy *>(cell);
@@ -39,12 +39,12 @@ void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@handler", &self->slots_.handler);
 }
 
-PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
-  auto *cproxy = runtime->makeAFixed<JSCallableProxy>(
+PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime &runtime) {
+  auto *cproxy = runtime.makeAFixed<JSCallableProxy>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      runtime->getHiddenClassForPrototype(
-          runtime->objectPrototypeRawPtr,
+      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      runtime.getHiddenClassForPrototype(
+          runtime.objectPrototypeRawPtr,
           JSObject::numOverlapSlots<JSCallableProxy>()));
 
   cproxy->flags_.proxyObject = true;
@@ -53,36 +53,36 @@ PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
 }
 
 CallResult<HermesValue> JSCallableProxy::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> prototype) {
   assert(
-      prototype.get() == runtime->objectPrototypeRawPtr &&
+      prototype.get() == runtime.objectPrototypeRawPtr &&
       "JSCallableProxy::create() can only be used with object prototype");
   return create(runtime).getHermesValue();
 }
 
 void JSCallableProxy::setTargetAndHandler(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> target,
     Handle<JSObject> handler) {
-  slots_.target.set(runtime, target.get(), &runtime->getHeap());
-  slots_.handler.set(runtime, handler.get(), &runtime->getHeap());
+  slots_.target.set(runtime, target.get(), &runtime.getHeap());
+  slots_.handler.set(runtime, handler.get(), &runtime.getHeap());
 }
 
-CallResult<bool> JSCallableProxy::isConstructor(Runtime *runtime) {
+CallResult<bool> JSCallableProxy::isConstructor(Runtime &runtime) {
   ScopedNativeDepthTracker depthTracker(runtime);
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
   return vm::isConstructor(
       runtime, vmcast_or_null<Callable>(slots_.target.get(runtime)));
 }
 
 CallResult<HermesValue>
-JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
+JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
   // We don't use NativeArgs; the implementations just read the current
   // stack frame directly.
-  StackFramePtr callerFrame = runtime->getCurrentFrame();
+  StackFramePtr callerFrame = runtime.getCurrentFrame();
   auto selfHandle =
       Handle<JSCallableProxy>::vmcast(&callerFrame.getCalleeClosureOrCBRef());
   // detail::slots() will always return the slots_ field here, but
@@ -90,7 +90,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   // worth tweaking the abstractions to avoid the small overhead in
   // this case.
   Handle<JSObject> target =
-      runtime->makeHandle(detail::slots(*selfHandle).target);
+      runtime.makeHandle(detail::slots(*selfHandle).target);
   Predefined::Str trapName = callerFrame->isConstructorCall()
       ? Predefined::construct
       : Predefined::apply;
@@ -112,7 +112,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
         callerFrame.getNewTargetRef(),
         callerFrame.getThisArgRef()};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
-      return runtime->raiseStackOverflow(
+      return runtime.raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
     std::uninitialized_copy_n(
         callerFrame.argsBegin(),
@@ -144,7 +144,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     CallResult<PseudoHandle<>> newObjRes = Callable::executeCall3(
         *trapRes,
         runtime,
-        runtime->makeHandle(detail::slots(*selfHandle).handler),
+        runtime.makeHandle(detail::slots(*selfHandle).handler),
         target.getHermesValue(),
         argArray.getHermesValue(),
         callerFrame.getNewTargetRef());
@@ -153,8 +153,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     }
     // 9. If Type(newObj) is not Object, throw a TypeError exception.
     if (!vmisa<JSObject>(newObjRes->get())) {
-      return runtime->raiseTypeError(
-          "Proxy construct trap returned non-Object");
+      return runtime.raiseTypeError("Proxy construct trap returned non-Object");
     }
     // 10. return newObj.
     return newObjRes->get();
@@ -163,7 +162,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
     auto res = Callable::executeCall3(
         *trapRes,
         runtime,
-        runtime->makeHandle(detail::slots(*selfHandle).handler),
+        runtime.makeHandle(detail::slots(*selfHandle).handler),
         target.getHermesValue(),
         callerFrame.getThisArgRef(),
         argArray.getHermesValue());
@@ -176,7 +175,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
 
 CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     Handle<Callable> callable,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> protoHandle) {
   CallResult<bool> isConstructorRes =
       vmcast<JSCallableProxy>(*callable)->isConstructor(runtime);
@@ -184,11 +183,11 @@ CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
     return ExecutionStatus::EXCEPTION;
   }
   if (!*isConstructorRes) {
-    return runtime->raiseTypeError("Function is not a constructor");
+    return runtime.raiseTypeError("Function is not a constructor");
   }
   return vm::Callable::newObject(
       Handle<Callable>::vmcast(
-          runtime->makeHandle(detail::slots(*callable).target)),
+          runtime.makeHandle(detail::slots(*callable).target)),
       runtime,
       protoHandle);
 }

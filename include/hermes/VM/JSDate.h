@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,20 +16,23 @@ namespace vm {
 /// Date object.
 class JSDate final : public JSObject {
   using Super = JSObject;
-  friend void DateBuildMeta(const GCCell *, Metadata::Builder &);
+  friend void JSDateBuildMeta(const GCCell *, Metadata::Builder &);
 
  public:
   static const ObjectVTable vt;
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSDateKind;
+  }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::DateKind;
+    return cell->getKind() == CellKind::JSDateKind;
   }
 
   static PseudoHandle<JSDate>
-  create(Runtime *runtime, double value, Handle<JSObject> prototype);
+  create(Runtime &runtime, double value, Handle<JSObject> prototype);
 
   static PseudoHandle<JSDate> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> prototype) {
     return create(runtime, std::numeric_limits<double>::quiet_NaN(), prototype);
   }
@@ -45,11 +48,11 @@ class JSDate final : public JSObject {
   }
 
   JSDate(
-      Runtime *runtime,
+      Runtime &runtime,
       double value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_{value} {}
+      : JSObject(runtime, *parent, *clazz), primitiveValue_{value} {}
 
  private:
   double primitiveValue_;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -656,7 +656,8 @@ class CallBuiltinInst : public CallInst {
       : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
-        callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
+        callee->getValue() < (double)BuiltinMethod::_count &&
+        "invalid builtin call");
   }
   explicit CallBuiltinInst(
       const CallBuiltinInst *src,
@@ -683,7 +684,7 @@ class GetBuiltinClosureInst : public Instruction {
       : Instruction(ValueKind::GetBuiltinClosureInstKind) {
     assert(
         builtinIndex->asInt32() &&
-        builtinIndex->getValue() < BuiltinMethod::_count &&
+        builtinIndex->getValue() < (double)BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
     setType(Type::createClosure());
@@ -1486,6 +1487,8 @@ class UnaryOperatorInst : public SingleOperandInst {
     MinusKind, // -
     TildeKind, // ~
     BangKind, // !
+    IncKind, // + 1
+    DecKind, // - 1
     LAST_OPCODE
   };
 

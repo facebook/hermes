@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -47,6 +47,7 @@ class KindAndSize {
   const VTable *getVT() const {
     return VTable::vtableArray[kind_];
   }
+  KindAndSize() = default;
   KindAndSize(CellKind kind, size_t sz)
       : size_(sz), kind_(static_cast<uint8_t>(kind)) {
     assert((sz & 1) == 0 && "LSB of size must always be zero.");
@@ -76,6 +77,10 @@ class KindAndSize {
   RawType kind_ : kNumKindBits;
 };
 
+static_assert(
+    std::is_trivial<KindAndSize>::value,
+    "KindAndSize must be trivial");
+
 /// This include file defines a GCCell that allows forward heap
 /// traversal in a contiguous space: given a pointer to the head, you
 /// can get the size, and thus get to the head of the next cell.
@@ -97,14 +102,7 @@ class GCCell {
 #endif
 
  public:
-  explicit GCCell(GC *gc, const VTable *vtp);
-
-  /// Makes a new GCCell with only a type and a size.
-  /// NOTE: This bypasses some debugging checks in the GCCell constructor taking
-  /// a GC parameter, so this should only be used in cases where the debug
-  /// checks will be wrong.
-  explicit GCCell(const VTable *vtp);
-  explicit GCCell(CellKind kind, size_t sz);
+  GCCell() = default;
 
   // GCCell-s are not copyable (in the C++ sense).
   GCCell(const GCCell &) = delete;
@@ -268,12 +266,6 @@ class GCCell {
     return forwardingPointer_.getRaw() & 0x1;
   }
 
-  /// If the cell has any associated external memory, return the size (in bytes)
-  /// of that external memory, else zero.
-  inline gcheapsize_t externalMemorySize() const {
-    return getVT()->externalMemorySize(this);
-  }
-
   static constexpr uint32_t maxSize() {
     return KindAndSize::maxSize();
   }
@@ -283,29 +275,6 @@ class GCCell {
 /// at runtime, whereas GCCell is for fixed-size objects.
 /// \see ArrayStorage for how to inherit from this class correctly.
 class VariableSizeRuntimeCell : public GCCell {
- protected:
-  /// A VariableSizeRuntimeCell must be constructed from a fixed size, and has
-  /// that same size for its lifetime.
-  /// To change the size, allocate a new object.
-  VariableSizeRuntimeCell(GC *gc, const VTable *vtp, uint32_t size)
-      : GCCell(vtp->kind, heapAlignSize(size)) {
-    // Need to align to the GC here, since the GC doesn't know about this field.
-    assert(
-        size >= sizeof(VariableSizeRuntimeCell) &&
-        "Should not allocate a VariableSizeRuntimeCell of size less than "
-        "the size of a cell");
-  }
-
-  /// Makes a new VariableSizeRuntimeCell with only a type and a size.
-  VariableSizeRuntimeCell(const VTable *vtp, uint32_t size)
-      : GCCell(vtp->kind, heapAlignSize(size)) {
-    // Need to align to the GC here, since the GC doesn't know about this field.
-    assert(
-        size >= sizeof(VariableSizeRuntimeCell) &&
-        "Should not allocate a VariableSizeRuntimeCell of size less than "
-        "the size of a cell");
-  }
-
  public:
   uint32_t getSize() const {
     return getAllocatedSize();
@@ -331,12 +300,6 @@ static_assert(
     "GCCell's alignment exceeds the alignment requirement of the heap");
 
 #ifdef NDEBUG
-inline GCCell::GCCell(GC *, const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
-
-inline GCCell::GCCell(const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
-
-inline GCCell::GCCell(CellKind kind, size_t sz) : kindAndSize_(kind, sz) {}
-
 static_assert(
     sizeof(GCCell) == sizeof(CompressedPointer) &&
         sizeof(VariableSizeRuntimeCell) == sizeof(CompressedPointer),

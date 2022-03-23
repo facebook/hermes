@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -122,6 +122,18 @@ Literal *hermes::evalUnaryOperator(
 
     case UnaryOperatorInst::OpKind::VoidKind:
       return builder.getLiteralUndefined();
+
+    case UnaryOperatorInst::OpKind::IncKind:
+      if (auto *V = evalToNumber(builder, operand)) {
+        return builder.getLiteralNumber(V->getValue() + 1);
+      }
+      break;
+
+    case UnaryOperatorInst::OpKind::DecKind:
+      if (auto *V = evalToNumber(builder, operand)) {
+        return builder.getLiteralNumber(V->getValue() - 1);
+      }
+      break;
 
     default:
       break;

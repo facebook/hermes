@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -67,19 +67,17 @@ function hoist_branch_window(x, y) {
 //CHECK-NEXT:  {{.*}}  %2 = HBCLoadParamInst 1 : number
 //CHECK-NEXT:  {{.*}}  %3 = CondBranchInst %2, %BB1, %BB2
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  {{.*}}  %4 = HBCLoadConstInst 1 : number
-//CHECK-NEXT:  {{.*}}  %5 = BinaryOperatorInst '+', %1 : number, %4 : number
-//CHECK-NEXT:  {{.*}}  %6 = MovInst %5 : number
-//CHECK-NEXT:  {{.*}}  %7 = BranchInst %BB3
+//CHECK-NEXT:  {{.*}}  %4 = UnaryOperatorInst '++', %1 : number
+//CHECK-NEXT:  {{.*}}  %5 = MovInst %4 : number
+//CHECK-NEXT:  {{.*}}  %6 = BranchInst %BB3
 //CHECK-NEXT:%BB2:
-//CHECK-NEXT:  {{.*}}  %8 = HBCLoadConstInst 1 : number
-//CHECK-NEXT:  {{.*}}  %9 = BinaryOperatorInst '-', %1 : number, %8 : number
-//CHECK-NEXT:  {{.*}}  %10 = MovInst %9 : number
-//CHECK-NEXT:  {{.*}}  %11 = BranchInst %BB3
+//CHECK-NEXT:  {{.*}}  %7 = UnaryOperatorInst '--', %1 : number
+//CHECK-NEXT:  {{.*}}  %8 = MovInst %7 : number
+//CHECK-NEXT:  {{.*}}  %9 = BranchInst %BB3
 //CHECK-NEXT:%BB3:
-//CHECK-NEXT:  {{.*}}  %12 = PhiInst %6 : number, %BB1, %10 : number, %BB2
-//CHECK-NEXT:  {{.*}}  %13 = MovInst %12 : number
-//CHECK-NEXT:  {{.*}}  %14 = ReturnInst %13 : number
+//CHECK-NEXT:  {{.*}}  %10 = PhiInst %5 : number, %BB1, %8 : number, %BB2
+//CHECK-NEXT:  {{.*}}  %11 = MovInst %10 : number
+//CHECK-NEXT:  {{.*}}  %12 = ReturnInst %11 : number
 //CHECK-NEXT:function_end
 function no_hoist_inc_dec(x, y) {
   if (x) {
@@ -97,18 +95,17 @@ function no_hoist_inc_dec(x, y) {
 //CHECK-NEXT:  {{.*}}  %1 = HBCLoadConstInst 0 : number
 //CHECK-NEXT:  {{.*}}  %2 = HBCGetGlobalObjectInst
 //CHECK-NEXT:  {{.*}}  %3 = HBCLoadConstInst undefined : undefined
-//CHECK-NEXT:  {{.*}}  %4 = HBCLoadConstInst 1 : number
-//CHECK-NEXT:  {{.*}}  %5 = MovInst %1 : number
-//CHECK-NEXT:  {{.*}}  %6 = CompareBranchInst '<', %5 : number, %0, %BB1, %BB2
+//CHECK-NEXT:  {{.*}}  %4 = MovInst %1 : number
+//CHECK-NEXT:  {{.*}}  %5 = CompareBranchInst '<', %4 : number, %0, %BB1, %BB2
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  {{.*}}  %7 = PhiInst %5 : number, %BB0, %11 : number, %BB1
-//CHECK-NEXT:  {{.*}}  %8 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-//CHECK-NEXT:  {{.*}}  %9 = HBCCallNInst %8, %3 : undefined, %7 : number
-//CHECK-NEXT:  {{.*}}  %10 = BinaryOperatorInst '+', %7 : number, %4 : number
-//CHECK-NEXT:  {{.*}}  %11 = MovInst %10 : number
-//CHECK-NEXT:  {{.*}}  %12 = CompareBranchInst '<', %11 : number, %0, %BB1, %BB2
+//CHECK-NEXT:  {{.*}}  %6 = PhiInst %4 : number, %BB0, %10 : number, %BB1
+//CHECK-NEXT:  {{.*}}  %7 = TryLoadGlobalPropertyInst %2 : object, "print" : string
+//CHECK-NEXT:  {{.*}}  %8 = HBCCallNInst %7, %3 : undefined, %6 : number
+//CHECK-NEXT:  {{.*}}  %9 = UnaryOperatorInst '++', %6 : number
+//CHECK-NEXT:  {{.*}}  %10 = MovInst %9 : number
+//CHECK-NEXT:  {{.*}}  %11 = CompareBranchInst '<', %10 : number, %0, %BB1, %BB2
 //CHECK-NEXT:%BB2:
-//CHECK-NEXT:  {{.*}}  %13 = ReturnInst %3 : undefined
+//CHECK-NEXT:  {{.*}}  %12 = ReturnInst %3 : undefined
 //CHECK-NEXT:function_end
 function hoist_loop(x) {
   for (var i = 0; i < x; i++) {

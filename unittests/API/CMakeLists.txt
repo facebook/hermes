@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -11,9 +11,15 @@ set(APITestsSources
   APITestFactory.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
+  HeapSnapshotAPITest.cpp
+  SynthTraceTest.cpp
+  SynthTraceParserTest.cpp
   )
 set(APISegmentTestCompileSources
   SegmentTestCompile.cpp
+  )
+set(SamplingProfilerSources
+  SamplingProfilerPosixHermesAPITest.cpp
   )
 
 set(HERMES_LINK_COMPONENTS LLVHSupport)
@@ -30,9 +36,12 @@ set(LLVM_ENABLE_RTTI ON)
 
 add_hermes_unittest(APITests ${APITestsSources})
 
-# TODO: The synth trace and heap snapshot tests are currently disabled
+# TODO(T111467508): The synth trace serialization tests are currently disabled
 # because of build issues. We should find a way to re-enable them.
-target_link_libraries(APITests hermesapi compileJS SegmentTestCompile)
+target_link_libraries(APITests hermesapi compileJS SegmentTestCompile traceInterpreter)
 
 add_hermes_unittest(APILeanTests APILeanTest.cpp)
 target_link_libraries(APILeanTests hermesapiLean)
+
+add_hermes_unittest(SamplingProfilerTests ${SamplingProfilerSources})
+target_link_libraries(SamplingProfilerTests hermesapiLean hermesVMRuntimeLean)

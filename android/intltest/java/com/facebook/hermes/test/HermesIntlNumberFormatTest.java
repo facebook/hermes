@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -95,24 +95,8 @@ public class HermesIntlNumberFormatTest extends HermesIntlTest262Base {
 
   @Test
   public void testIntlNumberFormat_prototype_toStringTag() throws IOException {
-
     String basePath = "test262/test/intl402/NumberFormat/prototype/toStringTag";
-
-    Set<String> deviations =
-        new HashSet<>(
-            Arrays.asList(
-                "prop-desc.js", // Test expects Object.getOwnPropertyDescriptor(Intl,
-                // "NumberFormat").value to be "Intl.NumberFormat", but we return
-                // "Object".
-                "configurable.js" // Expected SameValue(«Object», «Intl.NumberFormat») to be true ..
-                // Test expects new Intl.NumberFormat().toString() to return
-                // "[object Intl.NumberFormat]" which Firefox does.. but hermes
-                // (and Chrome) returns "[object Object]:
-                ));
-
-    Set<String> skipList = deviations;
-
-    runTests(basePath, skipList);
+    runTests(basePath);
   }
 
   @Test

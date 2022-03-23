@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -51,8 +51,11 @@ class SegmentedArray final
     static constexpr uint32_t kMaxLength = 1024;
 
     /// Creates an empty segment with zero length
-    static PseudoHandle<Segment> create(Runtime *runtime);
+    static PseudoHandle<Segment> create(Runtime &runtime);
 
+    static constexpr CellKind getCellKind() {
+      return CellKind::SegmentKind;
+    }
     static bool classof(const GCCell *cell) {
       return cell->getKind() == CellKind::SegmentKind;
     }
@@ -79,19 +82,15 @@ class SegmentedArray final
     /// Increases or decreases the length of the segment, up to a max of
     /// kMaxLength. If the length increases, it fills the newly used portion of
     /// the segment with empty values.
-    void setLength(Runtime *runtime, uint32_t newLength);
+    void setLength(Runtime &runtime, uint32_t newLength);
 
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
    private:
     static const VTable vt;
 
-    AtomicIfConcurrentGC<uint32_t> length_;
+    AtomicIfConcurrentGC<uint32_t> length_{0};
     GCHermesValue data_[kMaxLength];
-
-   public:
-    explicit Segment(Runtime *runtime)
-        : GCCell(&runtime->getHeap(), &vt), length_(0) {}
   };
 
   using size_type = uint32_t;
@@ -140,7 +139,7 @@ class SegmentedArray final
 
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
-  AtomicIfConcurrentGC<size_type> numSlotsUsed_;
+  AtomicIfConcurrentGC<size_type> numSlotsUsed_{0};
 
   struct iterator {
     using iterator_category = std::bidirectional_iterator_tag;
@@ -231,15 +230,15 @@ class SegmentedArray final
   /// Creates a new SegmentedArray that has space for at least the requested \p
   /// capacity number of elements, and has size 0.
   static CallResult<PseudoHandle<SegmentedArray>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity);
   static CallResult<PseudoHandle<SegmentedArray>> createLongLived(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity);
   /// Same as \c create(runtime, capacity) except fills in the first \p size
   /// elements with \p fill, and sets the size to \p size.
   static CallResult<PseudoHandle<SegmentedArray>>
-  create(Runtime *runtime, size_type capacity, size_type size);
+  create(Runtime &runtime, size_type capacity, size_type size);
 
   /// Returns a reference to an element. Strongly prefer using at and set
   /// instead.
@@ -309,7 +308,7 @@ class SegmentedArray final
   /// Increase the size by one and set the new element to \p value.
   static ExecutionStatus push_back(
       MutableHandle<SegmentedArray> &self,
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<> value);
 
   /// Change the size of the storage to \p newSize. This can increase the size
@@ -317,7 +316,7 @@ class SegmentedArray final
   /// the size.
   static ExecutionStatus resize(
       MutableHandle<SegmentedArray> &self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize);
 
   /// The same as resize, but add elements to the left instead of the right.
@@ -328,7 +327,7 @@ class SegmentedArray final
   /// as \c resize.
   static ExecutionStatus resizeLeft(
       MutableHandle<SegmentedArray> &self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize);
 
   /// Set the size to a value <= the capacity. This is a special
@@ -336,14 +335,17 @@ class SegmentedArray final
   /// need to reallocate.
   static void resizeWithinCapacity(
       SegmentedArray *self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type newSize);
 
   /// Decrease the size to zero.
-  void clear(Runtime *runtime) {
+  void clear(Runtime &runtime) {
     shrinkRight(runtime, size());
   }
 
+  static constexpr CellKind getCellKind() {
+    return CellKind::SegmentedArrayKind;
+  }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::SegmentedArrayKind;
   }
@@ -357,17 +359,12 @@ class SegmentedArray final
       const GCCell *cell,
       Metadata::Builder &mb);
 
- public:
-  SegmentedArray(Runtime *runtime, uint32_t allocSize)
-      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocSize),
-        numSlotsUsed_(0) {}
-
  private:
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.
   /// \returns ExecutionStatus::EXCEPTION always.
   static ExecutionStatus throwExcessiveCapacityError(
-      Runtime *runtime,
+      Runtime &runtime,
       size_type capacity);
 
   iterator begin() {
@@ -430,7 +427,7 @@ class SegmentedArray final
 
   /// Turns an unallocated segment into an allocated one.
   static void allocateSegment(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<SegmentedArray> self,
       SegmentNumber segment);
 
@@ -519,7 +516,7 @@ class SegmentedArray final
   /// re-allocation will occur.
   static ExecutionStatus growRight(
       MutableHandle<SegmentedArray> &self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type amount);
 
   /// Same as \c growRight, except the empty values are filled to the left.
@@ -528,38 +525,38 @@ class SegmentedArray final
   /// empty values.
   static ExecutionStatus growLeft(
       MutableHandle<SegmentedArray> &self,
-      Runtime *runtime,
+      Runtime &runtime,
       size_type amount);
 
   /// Same as \c growRightWithinCapacity except it fills from the left.
   static void growLeftWithinCapacity(
-      Runtime *runtime,
+      Runtime &runtime,
       PseudoHandle<SegmentedArray> self,
       size_type amount);
 
   /// Shrink the array on the right hand side, removing the existing elements.
   /// \p pre amount <= size().
-  void shrinkRight(Runtime *runtime, size_type amount);
+  void shrinkRight(Runtime &runtime, size_type amount);
 
   /// Shrink the array on the left hand side, removing the existing elements
   /// from the left.
   /// \p pre amount <= size().
-  void shrinkLeft(Runtime *runtime, size_type amount);
+  void shrinkLeft(Runtime &runtime, size_type amount);
 
   /// Increases the size by \p amount, without doing any allocation.
-  void increaseSizeWithinCapacity(Runtime *runtime, size_type amount);
+  void increaseSizeWithinCapacity(Runtime &runtime, size_type amount);
 
   /// Increases the size by \p amount, and adjusts segment sizes
   /// accordingly.
   /// NOTE: increasing size can potentially allocate new segments.
   static PseudoHandle<SegmentedArray> increaseSize(
-      Runtime *runtime,
+      Runtime &runtime,
       PseudoHandle<SegmentedArray> self,
       size_type amount);
 
   /// Decreases the size by \p amount, and no longer tracks the elements past
   /// the new size limit.
-  void decreaseSize(Runtime *runtime, size_type amount);
+  void decreaseSize(Runtime &runtime, size_type amount);
 
   /// @}
 

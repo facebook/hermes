@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,7 +15,7 @@
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %3 : number, %BB1
 //CHECK-NEXT:  %2 = AsNumberInst %1 : undefined|number
-//CHECK-NEXT:  %3 = BinaryOperatorInst '+', %2 : number, 1 : number
+//CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2 : number
 //CHECK-NEXT:  %4 = BranchInst %BB1
 //CHECK-NEXT:function_end
 function bug1() {
@@ -33,4 +33,3 @@ function bug1() {
 function bug2() {
   while (true) { continue; }
 }
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -24,8 +24,8 @@
 
 namespace hermes {
 
-ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
-  runtime->addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
+ConsoleHostContext::ConsoleHostContext(vm::Runtime &runtime) {
+  runtime.addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
     for (auto &entry : taskQueue_) {
       acceptor.acceptPtr(entry.second);
     }
@@ -34,27 +34,27 @@ ConsoleHostContext::ConsoleHostContext(vm::Runtime *runtime) {
 
 /// Raises an uncatchable quit exception.
 static vm::CallResult<vm::HermesValue>
-quit(void *, vm::Runtime *runtime, vm::NativeArgs) {
-  return runtime->raiseQuitError();
+quit(void *, vm::Runtime &runtime, vm::NativeArgs) {
+  return runtime.raiseQuitError();
 }
 
-static void printStats(vm::Runtime *runtime, llvh::raw_ostream &os) {
+static void printStats(vm::Runtime &runtime, llvh::raw_ostream &os) {
   std::string stats;
   {
     llvh::raw_string_ostream tmp{stats};
-    runtime->printHeapStats(tmp);
+    runtime.printHeapStats(tmp);
   }
   vm::instrumentation::PerfEvents::endAndInsertStats(stats);
   os << stats;
 }
 
 static vm::CallResult<vm::HermesValue>
-createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
+createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
   using namespace vm;
   std::string fileName;
   if (args.getArgCount() >= 1 && !args.getArg(0).isUndefined()) {
     if (!args.getArg(0).isString()) {
-      return runtime->raiseTypeError("Filename argument must be a string");
+      return runtime.raiseTypeError("Filename argument must be a string");
     }
     auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(0));
     auto jsFileName = StringPrimitive::createStringView(runtime, str);
@@ -68,13 +68,13 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   } else if (
       !llvh::StringRef{fileName}.endswith(".heapsnapshot") &&
       !llvh::StringRef{fileName}.endswith(".heaptimeline")) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Filename must end in .heapsnapshot or .heaptimeline");
   }
-  if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
+  if (auto err = runtime.getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         TwineChar16("Could not write out to the file located at \"") +
         llvh::StringRef(fileName) +
         "\". System error: " + llvh::StringRef(err.message()));
@@ -83,13 +83,13 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
 }
 
 static vm::CallResult<vm::HermesValue>
-loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+loadSegment(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   using namespace hermes::vm;
   const auto *baseFilename = reinterpret_cast<std::string *>(ctx);
 
   auto requireContext = args.dyncastArg<RequireContext>(0);
   if (!requireContext) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "First argument to loadSegment must be context");
   }
 
@@ -102,18 +102,18 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   auto fileBufRes =
       llvh::MemoryBuffer::getFile(Twine(*baseFilename) + "." + Twine(segment));
   if (!fileBufRes) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         TwineChar16("Failed to open segment: ") + segment);
   }
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
       std::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
   if (!ret.first) {
-    return runtime->raiseTypeError("Error deserializing bytecode");
+    return runtime.raiseTypeError("Error deserializing bytecode");
   }
 
   if (LLVM_UNLIKELY(
-          runtime->loadSegment(std::move(ret.first), requireContext) ==
+          runtime.loadSegment(std::move(ret.first), requireContext) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -122,12 +122,12 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
 }
 
 static vm::CallResult<vm::HermesValue>
-setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+setTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
   using namespace hermes::vm;
   Handle<Callable> callable = args.dyncastArg<Callable>(0);
   if (!callable) {
-    return runtime->raiseTypeError("Argument to setTimeout must be a function");
+    return runtime.raiseTypeError("Argument to setTimeout must be a function");
   }
   CallResult<HermesValue> boundFunction = BoundFunction::create(
       runtime, callable, args.getArgCount() - 1, args.begin() + 1);
@@ -139,18 +139,18 @@ setTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
 }
 
 static vm::CallResult<vm::HermesValue>
-clearTimeout(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+clearTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
   using namespace hermes::vm;
   if (!args.getArg(0).isNumber()) {
-    return runtime->raiseTypeError("Argument to clearTimeout must be a number");
+    return runtime.raiseTypeError("Argument to clearTimeout must be a number");
   }
   consoleHost->clearTask(args.getArg(0).getNumberAs<uint32_t>());
   return HermesValue::encodeUndefinedValue();
 }
 
 void installConsoleBindings(
-    vm::Runtime *runtime,
+    vm::Runtime &runtime,
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
     const std::string *filename) {
@@ -165,7 +165,7 @@ void installConsoleBindings(
     auto func = vm::NativeFunction::createWithoutPrototype(
         runtime, context, functionPtr, name, paramCount);
     auto res = vm::JSObject::defineOwnProperty(
-        runtime->getGlobal(), runtime, name, normalDPF, func);
+        runtime.getGlobal(), runtime, name, normalDPF, func);
     (void)res;
     assert(
         res != vm::ExecutionStatus::EXCEPTION && *res &&
@@ -184,9 +184,8 @@ void installConsoleBindings(
   // Define the 'loadSegment' function.
   defineGlobalFunc(
       runtime
-          ->ignoreAllocationFailure(
-              runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvh::createASCIIRef("loadSegment")))
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("loadSegment")))
           .get(),
       loadSegment,
       reinterpret_cast<void *>(const_cast<std::string *>(filename)),
@@ -194,18 +193,16 @@ void installConsoleBindings(
 
   defineGlobalFunc(
       runtime
-          ->ignoreAllocationFailure(
-              runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvh::createASCIIRef("setTimeout")))
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("setTimeout")))
           .get(),
       setTimeout,
       &ctx,
       2);
   defineGlobalFunc(
       runtime
-          ->ignoreAllocationFailure(
-              runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvh::createASCIIRef("clearTimeout")))
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("clearTimeout")))
           .get(),
       clearTimeout,
       &ctx,
@@ -219,9 +216,8 @@ void installConsoleBindings(
   // event loop.
   defineGlobalFunc(
       runtime
-          ->ignoreAllocationFailure(
-              runtime->getIdentifierTable().getSymbolHandle(
-                  runtime, llvh::createASCIIRef("setImmediate")))
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("setImmediate")))
           .get(),
       setTimeout,
       &ctx,
@@ -276,7 +272,7 @@ bool executeHBCBytecodeImpl(
 
   if (options.timeLimit > 0) {
     vm::TimeLimitMonitor::getInstance().watchRuntime(
-        runtime.get(), options.timeLimit);
+        *runtime, options.timeLimit);
   }
 
   if (shouldRecordGCStats) {
@@ -288,20 +284,20 @@ bool executeHBCBytecodeImpl(
     runtime->enableAllocationLocationTracker();
   }
 
-  vm::GCScope scope(runtime.get());
-  ConsoleHostContext ctx{runtime.get()};
+  vm::GCScope scope(*runtime);
+  ConsoleHostContext ctx{*runtime};
 
-  installConsoleBindings(runtime.get(), ctx, statSampler.get(), filename);
+  installConsoleBindings(*runtime, ctx, statSampler.get(), filename);
 
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;
 
   if (options.stopAfterInit) {
     vm::Handle<vm::Domain> domain =
-        runtime->makeHandle(vm::Domain::create(runtime.get()));
+        runtime->makeHandle(vm::Domain::create(*runtime));
     if (LLVM_UNLIKELY(
             vm::RuntimeModule::create(
-                runtime.get(),
+                *runtime,
                 domain,
                 facebook::hermes::debugger::kInvalidLocation,
                 std::move(bytecode),
@@ -341,16 +337,16 @@ bool executeHBCBytecodeImpl(
   }
 
   // Perform a microtask checkpoint after running script.
-  microtask::performCheckpoint(runtime.get());
+  microtask::performCheckpoint(*runtime);
 
   if (!ctx.tasksEmpty()) {
     vm::GCScopeMarkerRAII marker{scope};
     // Run the tasks until there are no more.
-    vm::MutableHandle<vm::Callable> task{runtime.get()};
+    vm::MutableHandle<vm::Callable> task{*runtime};
     while (auto optTask = ctx.dequeueTask()) {
       task = std::move(*optTask);
       auto callRes = vm::Callable::executeCall0(
-          task, runtime.get(), vm::Runtime::getUndefinedValue(), false);
+          task, *runtime, vm::Runtime::getUndefinedValue(), false);
       if (LLVM_UNLIKELY(callRes == vm::ExecutionStatus::EXCEPTION)) {
         threwException = true;
         llvh::outs().flush();
@@ -360,12 +356,12 @@ bool executeHBCBytecodeImpl(
       }
 
       // Perform a microtask checkpoint at the end of every task tick.
-      microtask::performCheckpoint(runtime.get());
+      microtask::performCheckpoint(*runtime);
     }
   }
 
   if (options.timeLimit > 0) {
-    vm::TimeLimitMonitor::getInstance().unwatchRuntime(runtime.get());
+    vm::TimeLimitMonitor::getInstance().unwatchRuntime(*runtime);
   }
 
 #ifdef HERMESVM_PROFILER_OPCODE
@@ -395,7 +391,7 @@ bool executeHBCBytecodeImpl(
     if (options.forceGCBeforeStats) {
       runtime->collect("forced for stats");
     }
-    printStats(runtime.get(), llvh::errs());
+    printStats(*runtime, llvh::errs());
   }
 
 #ifdef HERMESVM_PROFILER_BB

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -109,7 +109,7 @@ function *loop(x) {
 //CHECK-NEXT:  %10 = LoadFrameInst [x]
 //CHECK-NEXT:  %11 = LoadFrameInst [i]
 //CHECK-NEXT:  %12 = AsNumberInst %11
-//CHECK-NEXT:  %13 = BinaryOperatorInst '+', %12 : number, 1 : number
+//CHECK-NEXT:  %13 = UnaryOperatorInst '++', %12 : number
 //CHECK-NEXT:  %14 = StoreFrameInst %13, [i]
 //CHECK-NEXT:  %15 = LoadPropertyInst %10, %12 : number
 //CHECK-NEXT:  %16 = AllocStackInst $?anon_1_isReturn

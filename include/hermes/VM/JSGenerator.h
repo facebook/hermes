@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -24,33 +24,36 @@ namespace vm {
 /// field storage.
 class JSGenerator final : public JSObject {
   using Super = JSObject;
-  friend void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void JSGeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   const static ObjectVTable vt;
 
  public:
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSGeneratorKind;
+  }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::GeneratorKind;
+    return cell->getKind() == CellKind::JSGeneratorKind;
   }
 
   static CallResult<PseudoHandle<JSGenerator>> create(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<GeneratorInnerFunction> innerFunction,
       Handle<JSObject> parentHandle);
 
   /// \return the inner function.
   static PseudoHandle<GeneratorInnerFunction> getInnerFunction(
-      Runtime *runtime,
+      Runtime &runtime,
       JSGenerator *self) {
     return createPseudoHandle(self->innerFunction_.get(runtime));
   }
 
  public:
   JSGenerator(
-      Runtime *runtime,
+      Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   /// The GeneratorInnerFunction that is called when this generator is advanced.

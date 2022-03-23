@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -19,7 +19,7 @@
 //CHECK-NEXT:    %3 = StoreFrameInst %2, [?anon_0_e]
 //CHECK-NEXT:    %4 = LoadFrameInst [?anon_0_e]
 //CHECK-NEXT:    %5 = AsNumberInst %4
-//CHECK-NEXT:    %6 = BinaryOperatorInst '+', %5 : number, 1 : number
+//CHECK-NEXT:    %6 = UnaryOperatorInst '++', %5 : number
 //CHECK-NEXT:    %7 = StoreFrameInst %6, [?anon_0_e]
 //CHECK-NEXT:    %8 = LoadFrameInst [i]
 //CHECK-NEXT:    %9 = BinaryOperatorInst '-', %8, 3 : number
@@ -50,13 +50,13 @@
 //CHECK-NEXT:  %BB6:
 //CHECK-NEXT:    %28 = LoadFrameInst [i]
 //CHECK-NEXT:    %29 = AsNumberInst %28
-//CHECK-NEXT:    %30 = BinaryOperatorInst '+', %29 : number, 1 : number
+//CHECK-NEXT:    %30 = UnaryOperatorInst '++', %29 : number
 //CHECK-NEXT:    %31 = StoreFrameInst %30, [i]
 //CHECK-NEXT:    %32 = BranchInst %BB8
 //CHECK-NEXT:  %BB9:
 //CHECK-NEXT:    %33 = LoadFrameInst [i]
 //CHECK-NEXT:    %34 = AsNumberInst %33
-//CHECK-NEXT:    %35 = BinaryOperatorInst '-', %34 : number, 1 : number
+//CHECK-NEXT:    %35 = UnaryOperatorInst '--', %34 : number
 //CHECK-NEXT:    %36 = StoreFrameInst %35, [i]
 //CHECK-NEXT:    %37 = BranchInst %BB10
 //CHECK-NEXT:  %BB10:
@@ -112,7 +112,7 @@ function simple_try_catch_test() {
 //CHECK-NEXT:%BB5:
 //CHECK-NEXT:  %20 = LoadFrameInst [i]
 //CHECK-NEXT:  %21 = AsNumberInst %20
-//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number
 //CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
 //CHECK-NEXT:  %24 = BranchInst %BB8
 //CHECK-NEXT:%BB8:
@@ -160,7 +160,7 @@ function simple_try_catch_finally_test() {
 //CHECK-NEXT:  %BB2:
 //CHECK-NEXT:    %12 = LoadFrameInst [i]
 //CHECK-NEXT:    %13 = AsNumberInst %12
-//CHECK-NEXT:    %14 = BinaryOperatorInst '+', %13 : number, 1 : number
+//CHECK-NEXT:    %14 = UnaryOperatorInst '++', %13 : number
 //CHECK-NEXT:    %15 = StoreFrameInst %14, [i]
 //CHECK-NEXT:    %16 = BranchInst %BB4
 //CHECK-NEXT:  %BB4:
@@ -214,7 +214,7 @@ function simple_try_finally_test() {
 //CHECK-NEXT:%BB5:
 //CHECK-NEXT:  %20 = LoadFrameInst [i]
 //CHECK-NEXT:  %21 = AsNumberInst %20
-//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number
 //CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
 //CHECK-NEXT:  %24 = BranchInst %BB9
 //CHECK-NEXT:%BB9:
@@ -307,7 +307,7 @@ function try_catch_finally_with_return_test() {
 //CHECK-NEXT:%BB5:
 //CHECK-NEXT:  %20 = LoadFrameInst [i]
 //CHECK-NEXT:  %21 = AsNumberInst %20
-//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number
 //CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
 //CHECK-NEXT:  %24 = TryStartInst %BB8, %BB9
 //CHECK-NEXT:%BB8:
@@ -481,7 +481,7 @@ function nested_try_test() {
 //CHECK-NEXT:%BB5:
 //CHECK-NEXT:  %20 = LoadFrameInst [i]
 //CHECK-NEXT:  %21 = AsNumberInst %20
-//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number
 //CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
 //CHECK-NEXT:  %24 = BranchInst %BB10
 //CHECK-NEXT:%BB10:
@@ -651,7 +651,7 @@ function nested_catch_test() {
 //CHECK-NEXT:%BB7:
 //CHECK-NEXT:  %14 = LoadFrameInst [i]
 //CHECK-NEXT:  %15 = AsNumberInst %14
-//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15 : number, 1 : number
+//CHECK-NEXT:  %16 = UnaryOperatorInst '++', %15 : number
 //CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
 //CHECK-NEXT:  %18 = BranchInst %BB6
 //CHECK-NEXT:%BB3:
@@ -678,7 +678,7 @@ function nested_catch_test() {
 //CHECK-NEXT:%BB10:
 //CHECK-NEXT:  %35 = LoadFrameInst [i]
 //CHECK-NEXT:  %36 = AsNumberInst %35
-//CHECK-NEXT:  %37 = BinaryOperatorInst '+', %36 : number, 1 : number
+//CHECK-NEXT:  %37 = UnaryOperatorInst '++', %36 : number
 //CHECK-NEXT:  %38 = StoreFrameInst %37, [i]
 //CHECK-NEXT:  %39 = BranchInst %BB15
 //CHECK-NEXT:%BB15:
@@ -744,5 +744,3 @@ function finally_with_break_continue_test() {
   }
   i += 4;
 }
-
-

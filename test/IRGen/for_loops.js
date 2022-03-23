@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -245,7 +245,7 @@ function naked_for_loop() {
 //CHECK-NEXT:  %BB3:
 //CHECK-NEXT:    %8 = LoadFrameInst [i]
 //CHECK-NEXT:    %9 = AsNumberInst %8
-//CHECK-NEXT:    %10 = BinaryOperatorInst '+', %9 : number, 1 : number
+//CHECK-NEXT:    %10 = UnaryOperatorInst '++', %9 : number
 //CHECK-NEXT:    %11 = StoreFrameInst %10, [i]
 //CHECK-NEXT:    %12 = BranchInst %BB6
 //CHECK-NEXT:  %BB7:
@@ -260,7 +260,7 @@ function naked_for_loop() {
 //CHECK-NEXT:  %BB8:
 //CHECK-NEXT:    %18 = LoadFrameInst [i]
 //CHECK-NEXT:    %19 = AsNumberInst %18
-//CHECK-NEXT:    %20 = BinaryOperatorInst '-', %19 : number, 1 : number
+//CHECK-NEXT:    %20 = UnaryOperatorInst '--', %19 : number
 //CHECK-NEXT:    %21 = StoreFrameInst %20, [i]
 //CHECK-NEXT:    %22 = BranchInst %BB11
 //CHECK-NEXT:  %BB12:
@@ -279,4 +279,3 @@ function test_init_update_exprs(param1) {
   for (4        ; false ; --i) { }
   for (param1   ; false ; 2)   { }
 }
-

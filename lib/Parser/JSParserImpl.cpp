@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -2289,6 +2289,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
           tok_,
           tok_,
           new (context_) ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+      advance(JSLexer::AllowDiv);
+      return res;
+    }
+
+    case TokenKind::bigint_literal: {
+      auto *res = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
       advance(JSLexer::AllowDiv);
       return res;
     }

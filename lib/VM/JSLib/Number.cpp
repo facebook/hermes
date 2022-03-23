@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -25,8 +25,8 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createNumberConstructor(Runtime *runtime) {
-  auto numberPrototype = Handle<JSNumber>::vmcast(&runtime->numberPrototype);
+Handle<JSObject> createNumberConstructor(Runtime &runtime) {
+  auto numberPrototype = Handle<JSNumber>::vmcast(&runtime.numberPrototype);
 
   auto cons = defineSystemConstructor<JSNumber>(
       runtime,
@@ -34,7 +34,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       numberConstructor,
       numberPrototype,
       1,
-      CellKind::NumberObjectKind);
+      CellKind::JSNumberKind);
 
   defineMethod(
       runtime,
@@ -155,17 +155,17 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::parseInt),
-      Handle<>(&runtime->parseIntFunction));
+      Handle<>(&runtime.parseIntFunction));
   defineProperty(
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::parseFloat),
-      Handle<>(&runtime->parseFloatFunction));
+      Handle<>(&runtime.parseFloatFunction));
   return cons;
 }
 
 CallResult<HermesValue>
-numberConstructor(void *, Runtime *runtime, NativeArgs args) {
+numberConstructor(void *, Runtime &runtime, NativeArgs args) {
   double value = +0.0;
 
   if (args.getArgCount() > 0) {
@@ -186,7 +186,7 @@ numberConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberIsFinite(void *, Runtime *runtime, NativeArgs args) {
+numberIsFinite(void *, Runtime &runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -198,7 +198,7 @@ numberIsFinite(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
+numberIsInteger(void *, Runtime &runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -209,7 +209,7 @@ numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
     // If number is NaN, +∞, or −∞, return false.
     return HermesValue::encodeBoolValue(false);
   }
-  // Let integer be ToInteger(number).
+  // Let integer be ToIntegerOrInfinity(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
   // Call std::trunc because we've alredy checked NaN with isfinite.
   double integer = std::trunc(number);
@@ -219,7 +219,7 @@ numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(integer == number);
 }
 
-CallResult<HermesValue> numberIsNaN(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsNaN(void *, Runtime &runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -231,7 +231,7 @@ CallResult<HermesValue> numberIsNaN(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
+numberIsSafeInteger(void *, Runtime &runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -243,7 +243,7 @@ numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(false);
   }
 
-  // Let integer be ToInteger(number).
+  // Let integer be ToIntegerOrInfinity(number).
   assert(!std::isnan(number) && "number must not be NaN after the check");
   // Call std::trunc because we've alredy checked NaN with isfinite.
   double integer = std::trunc(number);
@@ -260,20 +260,20 @@ numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
+numberPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
   if (args.getThisArg().isNumber()) {
     return args.getThisArg();
   }
   auto *numPtr = dyn_vmcast<JSNumber>(args.getThisArg());
   if (!numPtr) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Number.prototype.valueOf() can only be used on Number");
   }
   return HermesValue::encodeNumberValue(numPtr->getPrimitiveNumber());
 }
 
 CallResult<HermesValue>
-numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+numberPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   const size_t MIN_RADIX = 2;
   const size_t MAX_RADIX = 36;
 
@@ -286,7 +286,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   } else {
     auto *numPtr = dyn_vmcast<JSNumber>(args.getThisArg());
     if (!numPtr) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Number.prototype.toString() can only be used on Number");
     }
     number = numPtr->getPrimitiveNumber();
@@ -295,14 +295,14 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(0).isUndefined())
     radix = 10;
   else {
-    // ToInteger(arg0).
-    auto intRes = toInteger(runtime, args.getArgHandle(0));
+    // ToIntegerOrInfinity(arg0).
+    auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     auto d = intRes->getNumber();
     if (d < MIN_RADIX || d > MAX_RADIX) {
-      return runtime->raiseRangeError("Invalid radix value");
+      return runtime.raiseRangeError("Invalid radix value");
     }
     radix = (unsigned)d;
   }
@@ -317,7 +317,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Radix 10 and non-finite values simply call toString.
   auto resultRes = toString_RJS(
-      runtime, runtime->makeHandle(HermesValue::encodeNumberValue(number)));
+      runtime, runtime.makeHandle(HermesValue::encodeNumberValue(number)));
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -325,7 +325,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
+numberPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
 #ifdef HERMES_ENABLE_INTL
   return intlNumberPrototypeToLocaleString(/* unused */ ctx, runtime, args);
 #else
@@ -338,7 +338,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
   } else {
     auto *numPtr = dyn_vmcast<JSNumber>(args.getThisArg());
     if (!numPtr) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Number.prototype.toLocaleString() can only be used on Number");
     }
     number = numPtr->getPrimitiveNumber();
@@ -347,7 +347,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
   // Call toString, as JSC does.
   // TODO: Format string according to locale.
   auto res = toString_RJS(
-      runtime, runtime->makeHandle(HermesValue::encodeNumberValue(number)));
+      runtime, runtime.makeHandle(HermesValue::encodeNumberValue(number)));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -357,8 +357,8 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+numberPrototypeToFixed(void *, Runtime &runtime, NativeArgs args) {
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -366,7 +366,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
 
   // 3. If f < 0 or f > 100, throw a RangeError exception.
   if (LLVM_UNLIKELY(fDouble < 0 || fDouble > 100)) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "toFixed argument must be between 0 and 100");
   }
   /// Number of digits after the decimal point.
@@ -381,7 +381,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   } else {
     auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Number.prototype.toFixed() can only be used on Number");
     }
     x = numPtr->getPrimitiveNumber();
@@ -389,14 +389,14 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
 
   if (std::isnan(x)) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::NaN));
+        runtime.getPredefinedString(Predefined::NaN));
   }
 
   // Account for very large numbers.
   if (std::abs(x) >= 1e21) {
     // toString(x) if abs(x) >= 10^21.
     auto resultRes = toString_RJS(
-        runtime, runtime->makeHandle(HermesValue::encodeDoubleValue(x)));
+        runtime, runtime.makeHandle(HermesValue::encodeDoubleValue(x)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -478,7 +478,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
+numberPrototypeToExponential(void *, Runtime &runtime, NativeArgs args) {
   // The number to make a string toExponential.
   double x;
   if (args.getThisArg().isNumber()) {
@@ -486,13 +486,13 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   } else {
     auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Number.prototype.toExponential() can only be used on Number");
     }
     x = numPtr->getPrimitiveNumber();
   }
 
-  auto res = toInteger(runtime, args.getArgHandle(0));
+  auto res = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -500,21 +500,21 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
 
   if (std::isnan(x)) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::NaN));
+        runtime.getPredefinedString(Predefined::NaN));
   }
   if (x == std::numeric_limits<double>::infinity()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::Infinity));
+        runtime.getPredefinedString(Predefined::Infinity));
   }
   if (x == -std::numeric_limits<double>::infinity()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::NegativeInfinity));
+        runtime.getPredefinedString(Predefined::NegativeInfinity));
   }
 
   // 8. If f < 0 or f > 100, throw a RangeError exception.
   if (LLVM_UNLIKELY(
           !args.getArg(0).isUndefined() && (fDouble < 0 || fDouble > 100))) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "toExponential argument must be between 0 and 100");
   }
   /// Number of digits after the decimal point.
@@ -602,11 +602,11 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   if (negative) {
     n.insert(n.begin(), '-');
   }
-  return runtime->ignoreAllocationFailure(StringPrimitive::create(runtime, n));
+  return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, n));
 }
 
 CallResult<HermesValue>
-numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
+numberPrototypeToPrecision(void *, Runtime &runtime, NativeArgs args) {
   // The number to make a string toPrecision.
   double x;
   if (args.getThisArg().isNumber()) {
@@ -614,14 +614,14 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
   } else {
     auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Number.prototype.toPrecision() can only be used on Number");
     }
     x = numPtr->getPrimitiveNumber();
   }
 
   if (args.getArg(0).isUndefined()) {
-    auto xHandle = runtime->makeHandle(HermesValue::encodeDoubleValue(x));
+    auto xHandle = runtime.makeHandle(HermesValue::encodeDoubleValue(x));
     auto resultRes = toString_RJS(runtime, xHandle);
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -629,7 +629,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     return resultRes->getHermesValue();
   }
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -637,20 +637,20 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
 
   if (std::isnan(x)) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::NaN));
+        runtime.getPredefinedString(Predefined::NaN));
   }
   if (x == std::numeric_limits<double>::infinity()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::Infinity));
+        runtime.getPredefinedString(Predefined::Infinity));
   }
   if (x == -std::numeric_limits<double>::infinity()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::NegativeInfinity));
+        runtime.getPredefinedString(Predefined::NegativeInfinity));
   }
 
   // 8. If p < 1 or p > 100, throw a RangeError exception.
   if (pDouble < 1 || pDouble > 100) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "toPrecision argument must be between 1 and 100");
   }
   /// Number of significant digits in the result.
@@ -728,7 +728,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
       if (negative) {
         n.insert(n.begin(), '-');
       }
-      return runtime->ignoreAllocationFailure(
+      return runtime.ignoreAllocationFailure(
           StringPrimitive::create(runtime, n));
     }
   }
@@ -739,8 +739,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     if (negative) {
       n.insert(n.begin(), '-');
     }
-    return runtime->ignoreAllocationFailure(
-        StringPrimitive::create(runtime, n));
+    return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, n));
   }
 
   // Now we know that -6 <= e < p-1, handle the cases that we need to put a
@@ -750,8 +749,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     if (negative) {
       n.insert(n.begin(), '-');
     }
-    return runtime->ignoreAllocationFailure(
-        StringPrimitive::create(runtime, n));
+    return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, n));
   } else {
     // Make a new string m here since it's easier than inserting at the start of
     // n repeatedly.
@@ -764,8 +762,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     if (negative) {
       m.insert(m.begin(), '-');
     }
-    return runtime->ignoreAllocationFailure(
-        StringPrimitive::create(runtime, m));
+    return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, m));
   }
 }
 

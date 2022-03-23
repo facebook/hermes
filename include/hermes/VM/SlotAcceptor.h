@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -63,6 +63,8 @@ struct RootSectionAcceptor {
 struct RootAcceptor : public RootSectionAcceptor {
   virtual void accept(GCCell *&ptr) = 0;
   virtual void accept(PinnedHermesValue &hv) = 0;
+  /// Same as the above, but allows the HermesValue to store a nullptr value.
+  virtual void acceptNullable(PinnedHermesValue &hv) = 0;
   virtual void accept(const RootSymbolID &sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
@@ -89,7 +91,11 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   void accept(PinnedHermesValue &hv) final {
     accept(hv, nullptr);
   }
+  void acceptNullable(PinnedHermesValue &hv) final {
+    acceptNullable(hv, nullptr);
+  }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
+  virtual void acceptNullable(PinnedHermesValue &hv, const char *name) = 0;
 
   void accept(const RootSymbolID &sym) final {
     accept(sym, nullptr);
@@ -156,6 +162,9 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
 
   void accept(PinnedHermesValue &hv, const char *) override {
     acceptor.accept(hv);
+  }
+  void acceptNullable(PinnedHermesValue &hv, const char *) override {
+    acceptor.acceptNullable(hv);
   }
 
   void accept(GCHermesValue &hv, const char *) override {

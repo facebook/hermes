@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -151,7 +151,7 @@ class HandleRootOwner {
       GCScope *inScope,
       HermesValue value);
 
-  /// Allocate storage for a new PinnedHermesValye in the top-most GCScope and
+  /// Allocate storage for a new PinnedHermesValue in the top-most GCScope and
   /// initialize it with \p value.
   PinnedHermesValue *newPinnedHermesValue(HermesValue value);
 };
@@ -228,7 +228,7 @@ class GCScope : public GCScopeDebugBase {
   static constexpr size_t CHUNK_SIZE = 16;
 
   /// Pointer to the runtime this scope is associated with.
-  HandleRootOwner *const runtime_;
+  HandleRootOwner &runtime_;
 
 #ifndef NDEBUG
   /// Maximum number of handles the scope is allowed to allocate in debug mode.
@@ -281,7 +281,7 @@ class GCScope : public GCScopeDebugBase {
   ///   default limit. If we don't want to set a limit at all, \c UINT_MAX
   ///   should be used.
   explicit GCScope(
-      HandleRootOwner *runtime,
+      HandleRootOwner &runtime,
       const char *name = nullptr,
       unsigned handlesLimit = HERMESVM_DEBUG_MAX_GCSCOPE_HANDLES)
       : runtime_(runtime),
@@ -291,9 +291,9 @@ class GCScope : public GCScopeDebugBase {
 #ifdef HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES
         name_(name),
 #endif
-        prevScope_(runtime->topGCScope_),
+        prevScope_(runtime.topGCScope_),
         chunks_({(PinnedHermesValue *)inlineStorage_}) {
-    runtime->topGCScope_ = this;
+    runtime.topGCScope_ = this;
   }
 
   ~GCScope();
@@ -473,8 +473,8 @@ class GCScopeMarkerRAII {
 
  public:
   /// Record a marker for the currently active scope.
-  explicit GCScopeMarkerRAII(HandleRootOwner *runtime)
-      : gcScope_(runtime->getTopGCScope()), marker_(gcScope_->createMarker()) {}
+  explicit GCScopeMarkerRAII(HandleRootOwner &runtime)
+      : gcScope_(runtime.getTopGCScope()), marker_(gcScope_->createMarker()) {}
   /// Record a new a marker for the specified scope.
   explicit GCScopeMarkerRAII(GCScope &gcScope)
       : gcScope_(&gcScope), marker_(gcScope_->createMarker()) {}

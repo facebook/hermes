@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -148,8 +148,8 @@ TEST_F(HandleTest, MarkTest) {
 
 /// Make sure that related Handle-s can be assigned.
 TEST_F(HandleTest, ScopedPointerConstructorTest) {
-  auto function = runtime->makeHandle<JSFunction>(
-      JSFunction::create(runtime, domain, Handle<JSObject>(runtime, nullptr)));
+  auto function = runtime.makeHandle<JSFunction>(
+      JSFunction::create(runtime, domain, runtime.makeNullHandle<JSObject>()));
   Handle<JSObject> obj = function;
   ASSERT_EQ(function.get(), obj.get());
 }

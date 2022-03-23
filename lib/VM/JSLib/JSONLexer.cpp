@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -135,16 +135,16 @@ ExecutionStatus JSONLexer::scanString() {
       ++curCharPtr_;
       // If the string exists in the identifier table, use that one.
       if (auto existing =
-              runtime_->getIdentifierTable().getExistingStringPrimitiveOrNull(
+              runtime_.getIdentifierTable().getExistingStringPrimitiveOrNull(
                   runtime_, tmpStorage.arrayRef())) {
-        token_.setString(runtime_->makeHandle<StringPrimitive>(existing));
+        token_.setString(runtime_.makeHandle<StringPrimitive>(existing));
         return ExecutionStatus::RETURNED;
       }
       auto strRes = StringPrimitive::create(runtime_, tmpStorage.arrayRef());
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      token_.setString(runtime_->makeHandle<StringPrimitive>(*strRes));
+      token_.setString(runtime_.makeHandle<StringPrimitive>(*strRes));
       return ExecutionStatus::RETURNED;
     } else if (*curCharPtr_ <= '\u001F') {
       return error(u"U+0000 thru U+001F is not allowed in string");

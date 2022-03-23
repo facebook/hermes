@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -43,7 +43,8 @@ class WeakValueMap {
   /// \return true if the hash table is known to be empty.
   /// It can report false negatives because it doesn't prune invalid references
   /// - that would be too slow. In other words, if the table contains only
-  /// invalid weak refs, it is not knownto be empty, and this will return false.
+  /// invalid weak refs, it is not known to be empty, and this will return
+  /// false.
   bool isKnownEmpty() const {
     return map_.empty();
   }
@@ -64,7 +65,7 @@ class WeakValueMap {
   /// Look for a key and return the value as Handle<T> if found or llvh::None if
   /// not found.
   llvh::Optional<Handle<ValueT>>
-  lookup(HandleRootOwner *runtime, GC *gc, const KeyT &key) {
+  lookup(HandleRootOwner &runtime, GC *gc, const KeyT &key) {
     auto it = internalFind(key);
     if (it == map_.end())
       return llvh::None;

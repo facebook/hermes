@@ -50,24 +50,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "cc"
+version = "1.0.72"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22a9137b95ea06864e018375b72adfb7db6e6f68cfc8df5a04d00288050485ee"
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "cli"
-version = "0.1.0"
+name = "cmake"
+version = "0.1.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
 dependencies = [
- "anyhow",
- "assert_cmd",
- "command_line",
- "juno",
- "pass",
- "sourcemap",
- "support",
- "toml",
- "url",
+ "cc",
 ]
 
 [[package]]
@@ -112,10 +112,11 @@ dependencies = [
 name = "hermes"
 version = "0.1.0"
 dependencies = [
+ "cmake",
+ "juno_support",
  "libc",
- "support",
+ "libcplusplus",
  "thiserror",
- "toml",
 ]
 
 [[package]]
@@ -146,13 +147,66 @@ name = "juno"
 version = "0.1.0"
 dependencies = [
  "hermes",
- "libc",
- "memoffset",
- "paste",
+ "juno_ast",
+ "juno_support",
  "smallvec",
  "sourcemap",
- "support",
  "thiserror",
+]
+
+[[package]]
+name = "juno_ast"
+version = "0.1.0"
+dependencies = [
+ "juno_support",
+ "libc",
+ "memoffset",
+ "thiserror",
+]
+
+[[package]]
+name = "juno_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "command_line",
+ "juno",
+ "juno_eval",
+ "juno_pass",
+ "juno_support",
+ "lit",
+ "sourcemap",
+ "toml",
+ "url",
+]
+
+[[package]]
+name = "juno_eval"
+version = "0.1.0"
+dependencies = [
+ "juno_ast",
+ "num",
+]
+
+[[package]]
+name = "juno_pass"
+version = "0.1.0"
+dependencies = [
+ "juno",
+ "juno_support",
+]
+
+[[package]]
+name = "juno_support"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.13.0",
+ "cmake",
+ "libcplusplus",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -166,6 +220,17 @@ name = "libc"
 version = "0.2.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b2f96d100e1cf1929e7719b7edb3b90ab5298072638fccd77be9ce942ecdfce"
+
+[[package]]
+name = "libcplusplus"
+version = "0.1.0"
+
+[[package]]
+name = "lit"
+version = "0.1.0"
+dependencies = [
+ "cmake",
+]
 
 [[package]]
 name = "log"
@@ -198,24 +263,86 @@ dependencies = [
 ]
 
 [[package]]
+name = "num"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43db66d1170d347f9a065114077f7dccb00c1b9478c89384490a3425279a4606"
+dependencies = [
+ "num-bigint",
+ "num-complex",
+ "num-integer",
+ "num-iter",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74e768dff5fb39a41b3bcd30bb25cf989706c90d028d1ad71971987aa309d535"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26873667bbbb7c5182d4a37c1add32cdf09f841af72da53318fdb81543c15085"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
+dependencies = [
+ "autocfg",
+ "num-traits",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.42"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2021c8337a54d21aca0d59a92577a029af9431cb59b909b03252b9c164fad59"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d41702bd167c2df5520b384281bc111a4b5efcf7fbc4c9c222c815b07e0a6a6a"
+dependencies = [
+ "autocfg",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-traits"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a64b1ec5cda2586e284722486d802acf1f7dbdc623e2bfc57e65ca1cd099290"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
-
-[[package]]
-name = "pass"
-version = "0.1.0"
-dependencies = [
- "juno",
- "support",
-]
-
-[[package]]
-name = "paste"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 
 [[package]]
 name = "percent-encoding"
@@ -364,17 +491,6 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_json",
- "url",
-]
-
-[[package]]
-name = "support"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.13.0",
- "thiserror",
- "toml",
  "url",
 ]
 

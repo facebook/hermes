@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -15,10 +15,14 @@ namespace {
 // Count the number of native stack frames we can make before it reports
 // overflow. Also verify that our stack descends down.
 static unsigned makeFramesUntilOverflow(
-    Runtime *runtime,
+    Runtime &runtime,
     ScopedNativeCallFrame *prev) {
   ScopedNativeCallFrame frame{
-      runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
+      runtime,
+      0,
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue(),
+      HermesValue::encodeUndefinedValue()};
   if (frame.overflowed())
     return 0;
   EXPECT_TRUE(!prev || (*prev)->ptr() < frame->ptr());
@@ -36,20 +40,33 @@ TEST_F(NativeFrameTest, OverflowTest) {
 }
 
 #if HERMES_SLOW_DEBUG
-TEST_F(NativeFrameTest, PoisonedStackTest) {
-  // Verify that stack frames are poisoned.
-  ScopedNativeCallFrame frame{
-      runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue()};
-  ASSERT_FALSE(frame.overflowed());
-  // We should not die after this because there were no arguments.
-  runtime->collect("test");
+TEST(NativeFrameDeathTest, PoisonedStackTest) {
+  auto fn = [] {
+    auto rt = Runtime::create({});
+    auto &runtime = *rt;
+    // Verify that stack frames are poisoned.
+    ScopedNativeCallFrame frame{
+        runtime,
+        0,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue()};
+    ASSERT_FALSE(frame.overflowed());
+    // We should not die after this because there were no arguments.
+    runtime.collect("test");
 
-  // Now make a frame with arguments.
-  ScopedNativeCallFrame frame2{
-      runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue()};
-  ASSERT_FALSE(frame2.overflowed());
-  // The frame should be poisoned; ensure we die after a GC.
-  EXPECT_DEATH(runtime->collect("test"), "Invalid");
+    // Now make a frame with arguments.
+    ScopedNativeCallFrame frame2{
+        runtime,
+        1,
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue()};
+    ASSERT_FALSE(frame2.overflowed());
+    // The frame should be poisoned; ensure we die after a GC.
+    runtime.collect("test");
+  };
+  EXPECT_DEATH_IF_SUPPORTED(fn(), "Invalid");
 }
 #endif
 

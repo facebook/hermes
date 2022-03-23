@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
@@ -1488,7 +1488,6 @@ SKIP_LIST = [
     "mjsunit/smi-mul-const.js",
     "mjsunit/smi-representation.js",
     "mjsunit/stack-traces-2.js",
-    "mjsunit/stack-traces-custom-lazy.js",
     "mjsunit/stack-traces-custom.js",
     "mjsunit/stack-traces-overflow.js",
     "mjsunit/string-case.js",
@@ -1801,16 +1800,11 @@ PERMANENT_SKIP_LIST = [
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/AsyncGeneratorFunction/",
     "test262/test/built-ins/SharedArrayBuffer/",
-    "test262/test/built-ins/intl402/",
     "test262/test/intl402/Collator/",
     "test262/test/intl402/Date/",
     "test262/test/intl402/DisplayNames/",
     "test262/test/intl402/Intl/supportedValuesOf/",
-    "test262/test/intl402/Intl/toStringTag/",
     "test262/test/intl402/Intl/builtin.js",
-    "test262/test/intl402/Intl/getCanonicalLocales/error-cases.js",
-    "test262/test/intl402/Intl/getCanonicalLocales/canonicalized-unicode-ext-seq.js",
-    "test262/test/intl402/Intl/getCanonicalLocales/main.js",
     "test262/test/intl402/Intl/getCanonicalLocales/has-property.js",
     "test262/test/intl402/Intl/getCanonicalLocales/Locale-object.js",
     "test262/test/intl402/ListFormat/",
@@ -1830,12 +1824,10 @@ PERMANENT_SKIP_LIST = [
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
     # Flow AST features.
-    "flow/bigint/",
     "flow/comment_interning/",
     "flow/decorators/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
-    "flow/types/bigint_literal/",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
 ]

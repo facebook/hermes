@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -16,7 +16,7 @@ namespace vm {
 // class JSGenerator
 
 const ObjectVTable JSGenerator::vt{
-    VTable(CellKind::GeneratorKind, cellSize<JSGenerator>()),
+    VTable(CellKind::JSGeneratorKind, cellSize<JSGenerator>()),
     JSGenerator::_getOwnIndexedRangeImpl,
     JSGenerator::_haveOwnIndexedImpl,
     JSGenerator::_getOwnIndexedPropertyFlagsImpl,
@@ -26,24 +26,24 @@ const ObjectVTable JSGenerator::vt{
     JSGenerator::_checkAllOwnIndexedImpl,
 };
 
-void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSGeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGenerator>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
   mb.setVTable(&JSGenerator::vt.base);
   mb.addField("innerFunction", &self->innerFunction_);
 }
 
 CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime->makeAFixed<JSGenerator>(
+  auto *cell = runtime.makeAFixed<JSGenerator>(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSGenerator>()));
-  cell->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
+  cell->innerFunction_.set(runtime, *innerFunction, &runtime.getHeap());
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 

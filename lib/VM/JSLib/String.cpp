@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -35,8 +35,8 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// String.
 
-Handle<JSObject> createStringConstructor(Runtime *runtime) {
-  auto stringPrototype = Handle<JSString>::vmcast(&runtime->stringPrototype);
+Handle<JSObject> createStringConstructor(Runtime &runtime) {
+  auto stringPrototype = Handle<JSString>::vmcast(&runtime.stringPrototype);
 
   auto cons = defineSystemConstructor<JSString>(
       runtime,
@@ -44,7 +44,7 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       stringConstructor,
       stringPrototype,
       1,
-      CellKind::StringObjectKind);
+      CellKind::JSStringKind);
 
   // String.prototype.xxx methods.
   void *ctx = nullptr;
@@ -155,8 +155,8 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       1);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-  auto trimStartRes = runtime->makeHandle<Callable>(
-      runtime->ignoreAllocationFailure(defineMethod(
+  auto trimStartRes =
+      runtime.makeHandle<Callable>(runtime.ignoreAllocationFailure(defineMethod(
           runtime,
           stringPrototype,
           Predefined::getSymbolID(Predefined::trimStart),
@@ -164,8 +164,8 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
           stringPrototypeTrimStart,
           0,
           dpf)));
-  auto trimEndRes = runtime->makeHandle<Callable>(
-      runtime->ignoreAllocationFailure(defineMethod(
+  auto trimEndRes =
+      runtime.makeHandle<Callable>(runtime.ignoreAllocationFailure(defineMethod(
           runtime,
           stringPrototype,
           Predefined::getSymbolID(Predefined::trimEnd),
@@ -327,10 +327,10 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
 }
 
 CallResult<HermesValue>
-stringConstructor(void *, Runtime *runtime, NativeArgs args) {
+stringConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (args.getArgCount() == 0) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   if (!args.isConstructorCall() && args.getArg(0).isSymbol()) {
@@ -346,7 +346,7 @@ stringConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (sRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto s = runtime->makeHandle(std::move(*sRes));
+  auto s = runtime.makeHandle(std::move(*sRes));
 
   if (!args.isConstructorCall()) {
     // Not a constructor call, just return the string value.
@@ -361,7 +361,7 @@ stringConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
+stringFromCharCode(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   uint32_t n = args.getArgCount();
   if (LLVM_LIKELY(n == 1)) {
@@ -371,7 +371,7 @@ stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     char16_t ch = res->getNumber();
-    return runtime->getCharacterString(ch).getHermesValue();
+    return runtime.getCharacterString(ch).getHermesValue();
   }
   auto builder = StringBuilder::createStringBuilder(runtime, SafeUInt32{n});
   if (builder == ExecutionStatus::EXCEPTION) {
@@ -390,7 +390,7 @@ stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
+stringFromCodePoint(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let codePoints be a List containing the arguments passed to this
@@ -418,20 +418,20 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
     }
     nextCP = *nextCPRes;
 
-    // 5d. If SameValue(nextCP, ToInteger(nextCP)) is false, throw a RangeError
-    // exception.
-    auto nextCPInt = toInteger(runtime, nextCP);
+    // 5d. If SameValue(nextCP, ToIntegerOrInfinity(nextCP)) is false, throw
+    // a RangeError exception.
+    auto nextCPInt = toIntegerOrInfinity(runtime, nextCP);
     if (LLVM_UNLIKELY(nextCPInt == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!isSameValue(*nextCP, *nextCPInt)) {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           TwineChar16("Code point must be an integer: ") + nextCP->getNumber());
     }
 
     // 5e. If nextCP < 0 or nextCP > 0x10FFFF, throw a RangeError exception.
     if (nextCP->getNumber() < 0 || nextCP->getNumber() > 0x10FFFF) {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           TwineChar16("Code point out of bounds: ") + nextCP->getNumber());
     }
 
@@ -450,7 +450,7 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.1.2.4 String.raw ( template , ...substitutions )
-CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let substitutions be a List consisting of all of the arguments passed to
@@ -465,7 +465,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(cookedRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto cooked = runtime->makeHandle<JSObject>(*cookedRes);
+  auto cooked = runtime.makeHandle<JSObject>(*cookedRes);
 
   // 5. Let raw be ToObject(Get(cooked, "raw")).
   auto getRes = JSObject::getNamed_RJS(
@@ -473,11 +473,11 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(getRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto rawRes = toObject(runtime, runtime->makeHandle(std::move(*getRes)));
+  auto rawRes = toObject(runtime, runtime.makeHandle(std::move(*getRes)));
   if (LLVM_UNLIKELY(rawRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto raw = runtime->makeHandle<JSObject>(*rawRes);
+  auto raw = runtime.makeHandle<JSObject>(*rawRes);
 
   // 7. Let literalSegments be ToLength(Get(raw, "length"))
   auto lengthRes = JSObject::getNamed_RJS(
@@ -486,7 +486,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto literalSegmentsRes =
-      toLength(runtime, runtime->makeHandle(std::move(*lengthRes)));
+      toLength(runtime, runtime.makeHandle(std::move(*lengthRes)));
   if (LLVM_UNLIKELY(literalSegmentsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -494,7 +494,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
   // 9. If literalSegments ≤ 0, return the empty string.
   if (literalSegments <= 0) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   // 10. Let stringElements be a new List.
@@ -565,7 +565,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
 /// String.prototype.
 
 CallResult<HermesValue>
-stringPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   if (args.getThisArg().isString()) {
     return args.getThisArg();
   }
@@ -577,12 +577,12 @@ stringPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeStringValue(
         JSString::getPrimitiveString(strPtr, runtime));
   }
-  return runtime->raiseTypeError(
+  return runtime.raiseTypeError(
       "String.prototype.toString() called on non-string object");
 }
 
 CallResult<HermesValue>
-stringPrototypeCharCodeAt(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeCharCodeAt(void *, Runtime &runtime, NativeArgs args) {
   Handle<> thisValue{&args.getThisArg()};
   // Call a function that may throw, let the runtime record it.
   if (LLVM_UNLIKELY(
@@ -594,8 +594,9 @@ stringPrototypeCharCodeAt(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
-  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
+  auto S = runtime.makeHandle(std::move(*strRes));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime.makeHandle(args.getArg(0)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -609,7 +610,7 @@ stringPrototypeCharCodeAt(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeCodePointAt(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
@@ -622,10 +623,10 @@ stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
-  // 4. Let position be ToInteger(pos).
-  auto positionRes = toInteger(runtime, args.getArgHandle(0));
+  // 4. Let position be ToIntegerOrInfinity(pos).
+  auto positionRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(positionRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -665,7 +666,7 @@ stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   if (LLVM_UNLIKELY(
@@ -677,7 +678,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
   // Track the total characters in the result.
   SafeUInt32 size(S->getStringLength());
   uint32_t argCount = args.getArgCount();
@@ -687,7 +688,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = runtime->makeHandle<ArrayStorageSmall>(*arrRes);
+  auto strings = runtime.makeHandle<ArrayStorageSmall>(*arrRes);
 
   // Run toString on the arguments to figure out the final size.
   auto marker = gcScope.createMarker();
@@ -702,12 +703,12 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
     strings->set(
         i,
         SmallHermesValue::encodeStringValue(strRes->get(), runtime),
-        &runtime->getHeap());
+        &runtime.getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
 
     size.add(strLength);
     if (LLVM_UNLIKELY(size.isOverflowed())) {
-      return runtime->raiseRangeError("resulting string length exceeds limit");
+      return runtime.raiseRangeError("resulting string length exceeds limit");
     }
 
     gcScope.flushToMarker(marker);
@@ -732,7 +733,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSubstring(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -742,10 +743,10 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -756,7 +757,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -772,7 +773,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
 }
 
 static CallResult<HermesValue> convertCase(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> S,
     const bool upperCase,
     const bool useCurrentLocale) {
@@ -813,11 +814,11 @@ static CallResult<HermesValue> convertCase(
         char16_t c = str[0];
         if (upperCase) {
           char16_t isLower = 'a' <= c && c <= 'z';
-          return runtime->getCharacterString(c & ~(isLower << 5))
+          return runtime.getCharacterString(c & ~(isLower << 5))
               .getHermesValue();
         } else {
           char16_t isUpper = 'A' <= c && c <= 'Z';
-          return runtime->getCharacterString(c | (isUpper << 5))
+          return runtime.getCharacterString(c | (isUpper << 5))
               .getHermesValue();
         }
       }
@@ -855,7 +856,7 @@ static CallResult<HermesValue> convertCase(
 }
 
 CallResult<HermesValue>
-stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLowerCase(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -866,11 +867,11 @@ stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return convertCase(
-      runtime, runtime->makeHandle(std::move(*res)), false, false);
+      runtime, runtime.makeHandle(std::move(*res)), false, false);
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleLowerCase(void *ctx, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleLowerCase(void *ctx, Runtime &runtime, NativeArgs args) {
 #ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime, args);
 #else
@@ -883,13 +884,12 @@ stringPrototypeToLocaleLowerCase(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return convertCase(
-      runtime, runtime->makeHandle(std::move(*res)), false, true);
+  return convertCase(runtime, runtime.makeHandle(std::move(*res)), false, true);
 #endif
 }
 
 CallResult<HermesValue>
-stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeToUpperCase(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -899,12 +899,11 @@ stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return convertCase(
-      runtime, runtime->makeHandle(std::move(*res)), true, false);
+  return convertCase(runtime, runtime.makeHandle(std::move(*res)), true, false);
 }
 
 CallResult<HermesValue>
-stringPrototypeToLocaleUpperCase(void *ctx, Runtime *runtime, NativeArgs args) {
+stringPrototypeToLocaleUpperCase(void *ctx, Runtime &runtime, NativeArgs args) {
 #ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime, args);
 #else
@@ -917,12 +916,12 @@ stringPrototypeToLocaleUpperCase(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return convertCase(runtime, runtime->makeHandle(std::move(*res)), true, true);
+  return convertCase(runtime, runtime.makeHandle(std::move(*res)), true, true);
 #endif
 }
 
 CallResult<HermesValue>
-stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSubstr(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -932,10 +931,10 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
   double stringLen = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -946,7 +945,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
     length = stringLen;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -959,7 +958,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   double adjustedLength = std::min(std::max(length, 0.0), stringLen - start);
   if (adjustedLength <= 0) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   } else {
     return StringPrimitive::slice(
         runtime,
@@ -996,7 +995,7 @@ static size_t trimEnd(
 }
 
 CallResult<HermesValue>
-stringPrototypeTrim(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeTrim(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1006,7 +1005,7 @@ stringPrototypeTrim(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*res));
+  auto S = runtime.makeHandle(std::move(*res));
 
   // Move begin and end to point to the first and last non-whitespace chars.
   size_t beginIdx = 0, endIdx = S->getStringLength();
@@ -1023,7 +1022,7 @@ stringPrototypeTrim(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeTrimStart(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeTrimStart(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1033,7 +1032,7 @@ stringPrototypeTrimStart(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*res));
+  auto S = runtime.makeHandle(std::move(*res));
 
   // Move begin and end to point to the first and last non-whitespace chars.
   size_t beginIdx = 0;
@@ -1049,7 +1048,7 @@ stringPrototypeTrimStart(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeTrimEnd(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1059,7 +1058,7 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*res));
+  auto S = runtime.makeHandle(std::move(*res));
 
   // Move begin and end to point to the first and last non-whitespace chars.
   size_t endIdx = S->getStringLength();
@@ -1074,7 +1073,7 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
+stringPrototypeLocaleCompare(void *ctx, Runtime &runtime, NativeArgs args) {
 #ifdef HERMES_ENABLE_INTL
   return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime, args);
 #else
@@ -1088,14 +1087,14 @@ stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*sRes));
+  auto S = runtime.makeHandle(std::move(*sRes));
 
   auto tRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(tRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   // "That" string.
-  auto T = runtime->makeHandle(std::move(*tRes));
+  auto T = runtime.makeHandle(std::move(*tRes));
 
   llvh::SmallVector<char16_t, 32> left;
   llvh::SmallVector<char16_t, 32> right;
@@ -1109,7 +1108,7 @@ stringPrototypeLocaleCompare(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeNormalize(void *, Runtime &runtime, NativeArgs args) {
   using platform_unicode::NormalizationForm;
 
   // 1. Let O be RequireObjectCoercible(this value).
@@ -1123,7 +1122,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*sRes));
+  auto S = runtime.makeHandle(std::move(*sRes));
 
   NormalizationForm form;
 
@@ -1136,7 +1135,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(fRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto f = runtime->makeHandle(std::move(*fRes));
+    auto f = runtime.makeHandle(std::move(*fRes));
 
     // 7. If f is not one of "NFC", "NFD", "NFKC", or "NFKD", throw a RangeError
     // exception.
@@ -1150,7 +1149,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
     } else if (sv.equals(ASCIIRef{"NFKD", 4})) {
       form = NormalizationForm::KD;
     } else {
-      return runtime->raiseRangeError(
+      return runtime.raiseRangeError(
           TwineChar16("Invalid normalization form: ") + *f);
     }
   }
@@ -1167,7 +1166,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeRepeat(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   auto O = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1180,11 +1179,11 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*sRes));
+  auto S = runtime.makeHandle(std::move(*sRes));
 
-  // 4. Let n be ToInteger(count).
+  // 4. Let n be ToIntegerOrInfinity(count).
   // 5. ReturnIfAbrupt(n).
-  auto nRes = toInteger(runtime, args.getArgHandle(0));
+  auto nRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1193,7 +1192,7 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   // 6. If n < 0, throw a RangeError exception.
   // 7. If n is +Infinity, throw a RangeError exception.
   if (n < 0 || n == std::numeric_limits<double>::infinity()) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "String.prototype.repeat count must be finite and non-negative");
   }
 
@@ -1203,13 +1202,13 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
 
   if (n == 0 || strLen == 0) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   if (n > std::numeric_limits<uint32_t>::max() ||
       S->getStringLength() > (double)StringPrimitive::MAX_STRING_LENGTH / n) {
     // Check for overflow.
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "String.prototype.repeat result exceeds limit");
   }
 
@@ -1232,7 +1231,7 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES6.0 21.1.3.27 String.prototype [ @@iterator ]( )
 CallResult<HermesValue>
-stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSymbolIterator(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1246,14 +1245,14 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime->makeHandle(std::move(*strRes));
+  auto string = runtime.makeHandle(std::move(*strRes));
 
   // 4. Return CreateStringIterator(S).
   return JSStringIterator::create(runtime, string).getHermesValue();
 }
 
 CallResult<HermesValue>
-stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeMatchAll(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be ? RequireObjectCoercible(this value).
   auto O = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1280,7 +1279,7 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto flags = runtime->makeHandle(std::move(*flagsPropRes));
+      auto flags = runtime.makeHandle(std::move(*flagsPropRes));
       // ii. Perform ? RequireObjectCoercible(flags).
       if (LLVM_UNLIKELY(
               checkObjectCoercible(runtime, flags) ==
@@ -1294,26 +1293,26 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto strView = StringPrimitive::createStringView(
-          runtime, runtime->makeHandle(std::move(*strRes)));
+          runtime, runtime.makeHandle(std::move(*strRes)));
       for (char16_t c : strView)
         if (c == u'g')
           isGlobal = true;
       if (!isGlobal)
-        return runtime->raiseTypeError(
+        return runtime.raiseTypeError(
             "String.prototype.matchAll called with a non-global RegExp argument");
     }
     // c. Let matcher be ? GetMethod(regexp, @@matchAll).
     auto matcherRes = getMethod(
         runtime,
         regexp,
-        runtime->makeHandle(
+        runtime.makeHandle(
             Predefined::getSymbolID(Predefined::SymbolMatchAll)));
     if (LLVM_UNLIKELY(matcherRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // d. If matcher is not undefined, then
     if (!matcherRes->getHermesValue().isUndefined()) {
-      auto matcher = runtime->makeHandle<Callable>(std::move(*matcherRes));
+      auto matcher = runtime.makeHandle<Callable>(std::move(*matcherRes));
       // i. Return ? Call(matcher, regexp, «O»).
       return Callable::executeCall1(
                  matcher, runtime, regexp, O.getHermesValue())
@@ -1326,10 +1325,10 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 4. Let rx be ? RegExpCreate(regexp, "g").
-  auto regRes = regExpCreate(runtime, regexp, runtime->getCharacterString('g'));
+  auto regRes = regExpCreate(runtime, regexp, runtime.getCharacterString('g'));
   if (regRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1342,9 +1341,9 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto func =
-      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
+      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!func)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "RegExp.prototype[@@matchAll] must be callable.");
   }
   return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
@@ -1376,7 +1375,7 @@ stringPrototypeMatchAll(void *, Runtime *runtime, NativeArgs args) {
 ///   (true if running indexOf / lastIndexOf) or not (running StringIndexOf).
 /// \returns Hermes-encoded index of the substring match, or -1 on failure
 static CallResult<HermesValue> stringDirectedIndexOf(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> string,
     Handle<> searchString,
     Handle<> position,
@@ -1394,14 +1393,14 @@ static CallResult<HermesValue> stringDirectedIndexOf(
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 3. Let searchStr be ? ToString(searchString).
   auto searchStrRes = toString_RJS(runtime, searchString);
   if (searchStrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
+  auto searchStr = runtime.makeHandle(std::move(*searchStrRes));
 
   double pos;
   if (reverse) {
@@ -1411,14 +1410,14 @@ static CallResult<HermesValue> stringDirectedIndexOf(
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    Handle<> numPos = runtime->makeHandle(intRes.getValue());
+    Handle<> numPos = runtime.makeHandle(intRes.getValue());
     // 6. If numPos is NaN, let pos be +∞; otherwise, let pos be !
-    // ToInteger(numPos).
+    // ToIntegerOrInfinity(numPos).
     if (std::isnan(numPos->getNumber())) {
       pos = std::numeric_limits<double>::infinity();
     } else {
       if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, numPos)) ==
+              (intRes = toIntegerOrInfinity(runtime, numPos)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1426,8 +1425,8 @@ static CallResult<HermesValue> stringDirectedIndexOf(
     }
   } else {
     // indexOf
-    // 4. Let pos be ? ToInteger(position).
-    auto intRes = toInteger(runtime, position);
+    // 4. Let pos be ? ToIntegerOrInfinity(position).
+    auto intRes = toIntegerOrInfinity(runtime, position);
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1488,7 +1487,7 @@ static CallResult<HermesValue> stringDirectedIndexOf(
 /// Ideally, this can be implemented with less runtime checks and provide a fast
 /// path than stringDirectedIndexOf. TODO(T74338730)
 static CallResult<HermesValue> stringIndexOf(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> string,
     Handle<StringPrimitive> searchValue,
     uint32_t fromIndex) {
@@ -1499,14 +1498,14 @@ static CallResult<HermesValue> stringIndexOf(
       runtime,
       string,
       searchValue,
-      runtime->makeHandle(HermesValue::encodeDoubleValue(fromIndex)),
+      runtime.makeHandle(HermesValue::encodeDoubleValue(fromIndex)),
       false,
       false);
 }
 
 /// ES12 21.1.3.18 String.prototype.replaceAll ( searchValue, replaceValue )
 CallResult<HermesValue>
-stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -1534,7 +1533,7 @@ stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(flagsPropRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto flags = runtime->makeHandle(std::move(*flagsPropRes));
+      auto flags = runtime.makeHandle(std::move(*flagsPropRes));
       // ii. Perform ? RequireObjectCoercible(flags).
       if (LLVM_UNLIKELY(
               checkObjectCoercible(runtime, flags) ==
@@ -1548,27 +1547,26 @@ stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto strView = StringPrimitive::createStringView(
-          runtime, runtime->makeHandle(std::move(*strRes)));
+          runtime, runtime.makeHandle(std::move(*strRes)));
       bool isGlobal = false;
       for (char16_t c : strView)
         if (c == u'g')
           isGlobal = true;
       if (!isGlobal)
-        return runtime->raiseTypeError(
+        return runtime.raiseTypeError(
             "String.prototype.replaceAll called with a non-global RegExp argument");
     }
     // c. Let replacer be ? GetMethod(searchValue, @@replace).
     auto replacerRes = getMethod(
         runtime,
         searchValue,
-        runtime->makeHandle(
-            Predefined::getSymbolID(Predefined::SymbolReplace)));
+        runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolReplace)));
     if (LLVM_UNLIKELY(replacerRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // d. If replacer is not undefined, then
     if (!replacerRes->getHermesValue().isUndefined()) {
-      auto replacer = runtime->makeHandle<Callable>(std::move(*replacerRes));
+      auto replacer = runtime.makeHandle<Callable>(std::move(*replacerRes));
       // i. Return ? Call(replacer, searchValue, « O, replaceValue »)
       return Callable::executeCall2(
                  replacer,
@@ -1585,14 +1583,14 @@ stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime->makeHandle(std::move(*strRes));
+  auto string = runtime.makeHandle(std::move(*strRes));
 
   // 4. Let searchString be ? ToString(searchValue).
   auto searchStrRes = toString_RJS(runtime, searchValue);
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto searchString = runtime->makeHandle(std::move(*searchStrRes));
+  auto searchString = runtime.makeHandle(std::move(*searchStrRes));
 
   // 5. Let functionalReplace be IsCallable(replaceValue).
   auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
@@ -1712,7 +1710,7 @@ stringPrototypeReplaceAll(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeMatch(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -1727,7 +1725,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         regexp,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)));
+        runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)));
     // b. ReturnIfAbrupt(matcher).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1735,7 +1733,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     // c. If matcher is not undefined, then
     //   i. Return Call(matcher, regexp, «‍O»).
     if (!methodRes->getHermesValue().isUndefined()) {
-      auto matcher = runtime->makeHandle<Callable>(std::move(*methodRes));
+      auto matcher = runtime.makeHandle<Callable>(std::move(*methodRes));
       return Callable::executeCall1(
                  matcher, runtime, regexp, O.getHermesValue())
           .toCallResultHermesValue();
@@ -1747,7 +1745,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
   // 7. ReturnIfAbrupt(rx).
@@ -1764,9 +1762,9 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto func =
-      Handle<Callable>::dyn_vmcast(runtime->makeHandle(std::move(*propRes)));
+      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
   if (LLVM_UNLIKELY(!func)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "RegExp.prototype[@@match] must be callable.");
   }
   return Callable::executeCall1(func, runtime, rx, S.getHermesValue())
@@ -1774,7 +1772,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
+stringPrototypePad(void *ctx, Runtime &runtime, NativeArgs args) {
   bool padStart = (bool)ctx;
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -1789,7 +1787,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*sRes));
+  auto S = runtime.makeHandle(std::move(*sRes));
 
   // 3. Let intMaxLength be ? ToLength(maxLength).
   auto intMaxLengthRes = toLength(runtime, args.getArgHandle(0));
@@ -1812,7 +1810,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   if (args.getArg(1).isUndefined()) {
     // 6. If fillString is undefined, let filler be a String consisting solely
     // of the code unit 0x0020 (SPACE).
-    filler = runtime->getPredefinedString(Predefined::space);
+    filler = runtime.getPredefinedString(Predefined::space);
   } else {
     // 7. Else, let filler be ? ToString(fillString).
     auto fillerRes = toString_RJS(runtime, args.getArgHandle(1));
@@ -1833,14 +1831,14 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   // Check for overflow and strings that are too long, so we can ensure uint32_t
   // is a large enough type to use for math below.
   if (fillLen > StringPrimitive::MAX_STRING_LENGTH) {
-    return runtime->raiseRangeError("String pad result exceeds limit");
+    return runtime.raiseRangeError("String pad result exceeds limit");
   }
 
   size.add((uint32_t)fillLen);
 
   if (size.isZero()) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   auto builderRes = StringBuilder::createStringBuilder(runtime, size);
@@ -1882,7 +1880,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeReplace(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -1898,8 +1896,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         searchValue,
-        runtime->makeHandle(
-            Predefined::getSymbolID(Predefined::SymbolReplace)));
+        runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolReplace)));
     // b. ReturnIfAbrupt(replacer).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1925,14 +1922,14 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(stringRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime->makeHandle(std::move(*stringRes));
+  auto string = runtime.makeHandle(std::move(*stringRes));
   // 6. Let searchString be ToString(searchValue).
   auto searchStringRes = toString_RJS(runtime, searchValue);
   // 7. ReturnIfAbrupt(searchString).
   if (LLVM_UNLIKELY(searchStringRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto searchString = runtime->makeHandle(std::move(*searchStringRes));
+  auto searchString = runtime.makeHandle(std::move(*searchStringRes));
   // 8. Let functionalReplace be IsCallable(replaceValue).
   auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
   MutableHandle<StringPrimitive> replaceValueStr{runtime};
@@ -1985,7 +1982,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     }
     // b. Let replStr be ToString(replValue).
     auto replStrRes =
-        toString_RJS(runtime, runtime->makeHandle(std::move(*callRes)));
+        toString_RJS(runtime, runtime.makeHandle(std::move(*callRes)));
     // c. ReturnIfAbrupt(replStr).
     if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -2020,7 +2017,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSearch(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -2035,7 +2032,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         regexp,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)));
+        runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)));
     // b. ReturnIfAbrupt(searcher).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -2057,7 +2054,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime->makeHandle(std::move(*strRes));
+  auto string = runtime.makeHandle(std::move(*strRes));
 
   // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
   // 7. ReturnIfAbrupt(rx).
@@ -2074,17 +2071,16 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!vmisa<Callable>(propRes->get()))) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "RegExp.prototype[@@search] must be callable.");
   }
-  auto func =
-      Handle<Callable>::vmcast(runtime->makeHandle(std::move(*propRes)));
+  auto func = Handle<Callable>::vmcast(runtime.makeHandle(std::move(*propRes)));
   return Callable::executeCall1(func, runtime, rx, string.getHermesValue())
       .toCallResultHermesValue();
 }
 
 CallResult<HermesValue>
-stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeCharAt(void *, Runtime &runtime, NativeArgs args) {
   Handle<> thisValue{&args.getThisArg()};
   // Call a function that may throw, let the runtime record it.
   if (LLVM_UNLIKELY(
@@ -2096,9 +2092,10 @@ stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
-  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
+  auto intRes =
+      toIntegerOrInfinity(runtime, runtime.makeHandle(args.getArg(0)));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2106,15 +2103,15 @@ stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
   auto size = S->getStringLength();
   if (position < 0 || position >= size) {
     return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
+        runtime.getPredefinedString(Predefined::emptyString));
   }
-  auto result = runtime->getCharacterString(
+  auto result = runtime.getCharacterString(
       StringPrimitive::createStringView(runtime, S)[position]);
   return HermesValue::encodeStringValue(result.get());
 }
 
 CallResult<HermesValue>
-stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -2124,10 +2121,10 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2138,7 +2135,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            (intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2155,7 +2152,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeEndsWith(void *, Runtime &runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
@@ -2168,7 +2165,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 4. Let isRegExp be IsRegExp(searchString).
   auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
@@ -2178,7 +2175,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
 
   // 6. If isRegExp is true, throw a TypeError exception.
   if (LLVM_UNLIKELY(*isRegExpRes)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "First argument to endsWith must not be a RegExp");
   }
 
@@ -2187,18 +2184,18 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
+  auto searchStr = runtime.makeHandle(std::move(*searchStrRes));
 
   // 9. Let len be the number of elements in S.
   double len = S->getStringLength();
 
   // 10. If endPosition is undefined, let pos be len, else let pos be
-  // ToInteger(endPosition).
+  // ToIntegerOrInfinity(endPosition).
   double pos;
   if (args.getArg(1).isUndefined()) {
     pos = len;
   } else {
-    auto posRes = toInteger(runtime, args.getArgHandle(1));
+    auto posRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2234,7 +2231,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
 /// \param R a String.
 /// \return Either None or an integer representing the start of the match.
 static OptValue<uint32_t> splitMatch(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> S,
     uint32_t q,
     Handle<StringPrimitive> R) {
@@ -2269,7 +2266,7 @@ static OptValue<uint32_t> splitMatch(
 
 // ES11 21.1.3.20 String.prototype.split ( separator, limit )
 CallResult<HermesValue>
-stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -2285,7 +2282,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         separator,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
+        runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2309,7 +2306,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 4. Let A be ! ArrayCreate(0).
   auto arrRes = JSArray::create(runtime, 0, 0);
@@ -2347,7 +2344,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(sepRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> R = runtime->makeHandle(std::move(sepRes.getValue()));
+  Handle<StringPrimitive> R = runtime.makeHandle(std::move(sepRes.getValue()));
 
   // 10. If lim = 0, return A.
   if (lim == 0) {
@@ -2491,7 +2488,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
     void *ctx,
-    Runtime *runtime,
+    Runtime &runtime,
     NativeArgs args) {
   // If true, perform the startsWith operation.
   // Else, do the standard "includes" operation.
@@ -2509,7 +2506,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime->makeHandle(std::move(*strRes));
+  auto S = runtime.makeHandle(std::move(*strRes));
 
   // 4. Let isRegExp be IsRegExp(searchString).
   // 6. If isRegExp is true, throw a TypeError exception.
@@ -2519,7 +2516,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   }
 
   if (LLVM_UNLIKELY(*isRegExpRes)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "First argument to startsWith and includes must not be a RegExp");
   }
 
@@ -2528,11 +2525,11 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto searchStr = runtime->makeHandle(std::move(*searchStrRes));
+  auto searchStr = runtime.makeHandle(std::move(*searchStrRes));
 
-  // 9. Let pos be ToInteger(position).
+  // 9. Let pos be ToIntegerOrInfinity(position).
   // (If position is undefined, this step produces the value 0).
-  auto posRes = toInteger(runtime, args.getArgHandle(1));
+  auto posRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2580,7 +2577,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
 }
 
 CallResult<HermesValue>
-stringPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeIndexOf(void *, Runtime &runtime, NativeArgs args) {
   auto searchString = args.getArgHandle(0);
   auto position = args.getArgHandle(1);
   return stringDirectedIndexOf(
@@ -2588,7 +2585,7 @@ stringPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeLastIndexOf(void *, Runtime &runtime, NativeArgs args) {
   auto searchString = args.getArgHandle(0);
   auto position = args.getArgHandle(1);
   return stringDirectedIndexOf(

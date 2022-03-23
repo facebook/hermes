@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -49,16 +49,16 @@ TEST_F(JSLibTest, CreateObjectTest) {
   CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
   // Object constructor.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Object.prototype.
   GET_VALUE(objectCons, prototype);
-  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newObj = runtime->makeHandle<JSObject>(std::move(*crtRes));
+  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newObj->getParent(runtime));
@@ -66,36 +66,36 @@ TEST_F(JSLibTest, CreateObjectTest) {
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
   ASSERT_RETURNED(callRes.getStatus());
-  auto newObj1 = runtime->makeHandle<JSObject>(std::move(*callRes));
+  auto newObj1 = runtime.makeHandle<JSObject>(std::move(*callRes));
   ASSERT_EQ(newObj, newObj1);
 }
 
-static Handle<JSObject> createObject(Runtime *runtime) {
+static Handle<JSObject> createObject(Runtime &runtime) {
   // Object constructor.
   auto propRes = JSObject::getNamed_RJS(
-      runtime->getGlobal(),
+      runtime.getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::Object));
   assert(propRes == ExecutionStatus::RETURNED);
-  auto objectCons = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Object.prototype.
   propRes = JSObject::getNamed_RJS(
       objectCons, runtime, Predefined::getSymbolID(Predefined::prototype));
   assert(propRes == ExecutionStatus::RETURNED);
-  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
   assert(crtRes == ExecutionStatus::RETURNED);
-  auto newObj = runtime->makeHandle<JSObject>(std::move(*crtRes));
+  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
 
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
   assert(callRes == ExecutionStatus::RETURNED);
   return (*callRes)->isUndefined()
       ? newObj
-      : runtime->makeHandle<JSObject>(std::move(*callRes));
+      : runtime.makeHandle<JSObject>(std::move(*callRes));
 }
 
 TEST_F(JSLibTest, ObjectToStringTest) {
@@ -104,7 +104,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
   auto propRes = JSObject::getNamed_RJS(
       obj, runtime, Predefined::getSymbolID(Predefined::toString));
   ASSERT_RETURNED(propRes.getStatus());
-  auto toStringFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto toStringFn = runtime.makeHandle<Callable>(std::move(*propRes));
   EXPECT_CALLRESULT_STRING(
       "[object Object]", toStringFn->executeCall0(toStringFn, runtime, obj));
 
@@ -114,7 +114,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
       toStringFn->executeCall0(
           toStringFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10))));
+          runtime.makeHandle(HermesValue::encodeDoubleValue(10))));
 
   // Check that toStringFn.call(toStringFn) is "[object Function]".
   EXPECT_CALLRESULT_STRING(
@@ -131,29 +131,29 @@ TEST_F(JSLibTest, ObjectSealTest) {
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>((std::move(*propRes)));
+  auto objectCons = runtime.makeHandle<JSObject>((std::move(*propRes)));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::seal)))
           .getStatus());
-  auto sealFn = runtime->makeHandle<Callable>((std::move(*propRes)));
+  auto sealFn = runtime.makeHandle<Callable>((std::move(*propRes)));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isSealed)))
           .getStatus());
-  auto isSealedFn = runtime->makeHandle<Callable>((std::move(*propRes)));
+  auto isSealedFn = runtime.makeHandle<Callable>((std::move(*propRes)));
 
   // Create a property "obj.prop1".
-  auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
+  auto prop1ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
       JSObject::putNamed_RJS(
           obj,
           runtime,
           *prop1ID,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -167,7 +167,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
       isSealedFn->executeCall1(
           isSealedFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 
   // obj.seal().
@@ -176,7 +176,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
           ->executeCall1(
               sealFn,
               runtime,
-              runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+              runtime.makeHandle(HermesValue::encodeUndefinedValue()),
               obj.getHermesValue())
           .getStatus());
 
@@ -194,7 +194,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
       isSealedFn->executeCall1(
           isSealedFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 }
 
@@ -204,29 +204,29 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::freeze)))
           .getStatus());
-  auto freezeFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto freezeFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   ASSERT_RETURNED(
       (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isFrozen)))
           .getStatus());
-  auto isFrozenFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto isFrozenFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Create a property "obj.prop1".
-  auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
+  auto prop1ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
       JSObject::putNamed_RJS(
           obj,
           runtime,
           *prop1ID,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -241,7 +241,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
       isFrozenFn->executeCall1(
           isFrozenFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 
   // obj.freeze().
@@ -250,7 +250,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
           ->executeCall1(
               freezeFn,
               runtime,
-              runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+              runtime.makeHandle(HermesValue::encodeUndefinedValue()),
               obj.getHermesValue())
           .getStatus());
 
@@ -269,7 +269,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
       isFrozenFn->executeCall1(
           isFrozenFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 }
 
@@ -280,21 +280,21 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
 
   GET_GLOBAL(Object);
 
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::preventExtensions)))
                       .getStatus());
-  auto preventExtensionsFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto preventExtensionsFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::isExtensible)))
                       .getStatus());
-  auto isExtensibleFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto isExtensibleFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Make sure it's extensible.
   EXPECT_CALLRESULT_BOOL(
@@ -302,7 +302,7 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
       isExtensibleFn->executeCall1(
           isExtensibleFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 
   // obj.preventExtensions().
@@ -311,7 +311,7 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
           ->executeCall1(
               preventExtensionsFn,
               runtime,
-              runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+              runtime.makeHandle(HermesValue::encodeUndefinedValue()),
               obj.getHermesValue())
           .getStatus());
 
@@ -321,7 +321,7 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
       isExtensibleFn->executeCall1(
           isExtensibleFn,
           runtime,
-          runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+          runtime.makeHandle(HermesValue::encodeUndefinedValue()),
           obj.getHermesValue()));
 }
 
@@ -330,33 +330,33 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
   auto obj = createObject(runtime);
 
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::getPrototypeOf)))
                       .getStatus());
-  auto getPrototypeOfFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto getPrototypeOfFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Object.getPrototypeOf(obj).
   auto callRes = getPrototypeOfFn->executeCall1(
       getPrototypeOfFn,
       runtime,
-      runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+      runtime.makeHandle(HermesValue::encodeUndefinedValue()),
       obj.getHermesValue());
   ASSERT_RETURNED(callRes.getStatus());
-  auto objProto = runtime->makeHandle<JSObject>(std::move(*callRes));
+  auto objProto = runtime.makeHandle<JSObject>(std::move(*callRes));
 
   // Create a property "objProto.prop1".
-  auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
+  auto prop1ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
       JSObject::putNamed_RJS(
           objProto,
           runtime,
           *prop1ID,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   auto obj2 = createObject(runtime);
@@ -365,10 +365,10 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
   ASSERT_RETURNED((callRes = getPrototypeOfFn->executeCall1(
                        getPrototypeOfFn,
                        runtime,
-                       runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+                       runtime.makeHandle(HermesValue::encodeUndefinedValue()),
                        obj2.getHermesValue()))
                       .getStatus());
-  auto obj2Proto = runtime->makeHandle<JSObject>(std::move(*callRes));
+  auto obj2Proto = runtime.makeHandle<JSObject>(std::move(*callRes));
 
   // Make sure that the new object's prototype is correct.
   EXPECT_CALLRESULT_DOUBLE(
@@ -383,7 +383,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto obj = createObject(runtime);
 
     GET_GLOBAL(Object);
-    auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+    auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
     ASSERT_RETURNED(
         (propRes = JSObject::getNamed_RJS(
@@ -392,29 +392,29 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
             .getStatus());
     auto getOwnPropertyDescriptorFn =
-        runtime->makeHandle<Callable>(std::move(*propRes));
+        runtime.makeHandle<Callable>(std::move(*propRes));
 
     // Create a property "objProto.prop1".
-    auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
+    auto prop1ID = *runtime.getIdentifierTable().getSymbolHandle(
         runtime, createUTF16Ref(u"prop1"));
     ASSERT_TRUE(
         JSObject::putNamed_RJS(
             obj,
             runtime,
             *prop1ID,
-            runtime->makeHandle(HermesValue::encodeDoubleValue(10))) !=
+            runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
         ExecutionStatus::EXCEPTION);
 
     // Object.getOwnPropertyDescriptor(obj).
     auto callRes = Callable::executeCall2(
         getOwnPropertyDescriptorFn,
         runtime,
-        runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+        runtime.makeHandle(HermesValue::encodeUndefinedValue()),
         obj.getHermesValue(),
         HermesValue::encodeStringValue(
-            runtime->getStringPrimFromSymbolID(*prop1ID)));
+            runtime.getStringPrimFromSymbolID(*prop1ID)));
     ASSERT_RETURNED(callRes.getStatus());
-    auto desc = runtime->makeHandle<JSObject>(std::move(*callRes));
+    auto desc = runtime.makeHandle<JSObject>(std::move(*callRes));
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
@@ -438,7 +438,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto obj = createObject(runtime);
 
     GET_GLOBAL(Object);
-    auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+    auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
     ASSERT_RETURNED(
         (propRes = JSObject::getNamed_RJS(
@@ -447,10 +447,10 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
             .getStatus());
     auto getOwnPropertyDescriptorFn =
-        runtime->makeHandle<Callable>(std::move(*propRes));
+        runtime.makeHandle<Callable>(std::move(*propRes));
 
     // Create a property "objProto.prop1".
-    auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
+    auto prop1ID = *runtime.getIdentifierTable().getSymbolHandle(
         runtime, createUTF16Ref(u"prop1"));
 
     DefinePropertyFlags dpf{};
@@ -467,19 +467,19 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     BFG->emitLoadConstDouble(0, 18);
     BFG->emitRet(0);
     auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
-    auto getter = runtime->makeHandle<JSFunction>(JSFunction::create(
+    auto getter = runtime.makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
-        Handle<JSObject>(runtime),
-        Handle<Environment>(runtime),
+        runtime.makeNullHandle<JSObject>(),
+        runtime.makeNullHandle<Environment>(),
         codeBlock));
-    auto setter = runtime->makeHandle<JSFunction>(JSFunction::create(
+    auto setter = runtime.makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
-        Handle<JSObject>(runtime),
-        Handle<Environment>(runtime),
+        runtime.makeNullHandle<JSObject>(),
+        runtime.makeNullHandle<Environment>(),
         codeBlock));
-    auto accessor = runtime->makeHandle<PropertyAccessor>(
+    auto accessor = runtime.makeHandle<PropertyAccessor>(
         *PropertyAccessor::create(runtime, getter, setter));
     ASSERT_TRUE(
         JSObject::defineOwnProperty(obj, runtime, *prop1ID, dpf, accessor) !=
@@ -489,12 +489,12 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto callRes = Callable::executeCall2(
         getOwnPropertyDescriptorFn,
         runtime,
-        runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+        runtime.makeHandle(HermesValue::encodeUndefinedValue()),
         obj.getHermesValue(),
         HermesValue::encodeStringValue(
-            runtime->getStringPrimFromSymbolID(*prop1ID)));
+            runtime.getStringPrimFromSymbolID(*prop1ID)));
     ASSERT_RETURNED(callRes.getStatus());
-    auto desc = runtime->makeHandle<JSObject>(std::move(*callRes));
+    auto desc = runtime.makeHandle<JSObject>(std::move(*callRes));
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
@@ -523,7 +523,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
 
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.defineProperty() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -532,7 +532,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                        Predefined::getSymbolID(Predefined::defineProperty),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto definePropertyFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto definePropertyFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   {
     // Create a PropertyDescriptor object with enumerable and configurable set.
@@ -541,14 +541,14 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
 
@@ -558,7 +558,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
-                    runtime->makeHandle(value),
+                    runtime.makeHandle(value),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
 
@@ -570,7 +570,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
             ->executeCall3(
                 definePropertyFn,
                 runtime,
-                runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+                runtime.makeHandle(HermesValue::encodeUndefinedValue()),
                 objectCons.getHermesValue(),
                 propHandle.getHermesValue(),
                 attributes.getHermesValue(),
@@ -600,7 +600,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
         runtime,
         Predefined::getSymbolID(Predefined::toString));
     ASSERT_RETURNED(propRes.getStatus());
-    auto toStringFn = runtime->makeHandle<Callable>(std::move(*propRes));
+    auto toStringFn = runtime.makeHandle<Callable>(std::move(*propRes));
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     accessorAttributes,
                     runtime,
@@ -618,7 +618,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                     .getValue());
 
     // Call Object.defineProperty() with prop.
-    auto prop = runtime->makeHandle(HermesValue::encodeStringValue(
+    auto prop = runtime.makeHandle(HermesValue::encodeStringValue(
         StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"newkey1"))
             .get()));
     ASSERT_RETURNED(
@@ -626,7 +626,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
             ->executeCall3(
                 definePropertyFn,
                 runtime,
-                runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+                runtime.makeHandle(HermesValue::encodeUndefinedValue()),
                 objectCons.getHermesValue(),
                 prop.get(),
                 accessorAttributes.getHermesValue(),
@@ -644,11 +644,11 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
     PseudoHandle<> accessor = std::move(
         JSObject::getNamedSlotValue(objectCons, runtime, desc).getValue());
     ASSERT_TRUE(accessor->isPointer());
-    ASSERT_NE(accessor->getPointer(), nullptr);
+    ASSERT_TRUE(accessor->getPointer() != nullptr);
 
     auto accessorPtr =
         PseudoHandle<PropertyAccessor>::dyn_vmcast(std::move(accessor));
-    ASSERT_NE(accessorPtr.get(), nullptr);
+    ASSERT_TRUE(accessorPtr.get() != nullptr);
     EXPECT_EQ(
         accessorPtr->getter.get(runtime),
         vmcast<Callable>(toStringFn.getHermesValue()));
@@ -673,14 +673,14 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key1")).get();
   auto id1 =
       valueToSymbolID(
-          runtime, runtime->makeHandle(HermesValue::encodeStringValue(str1)))
+          runtime, runtime.makeHandle(HermesValue::encodeStringValue(str1)))
           .getValue();
 
   auto str2 =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key2")).get();
   auto id2 =
       valueToSymbolID(
-          runtime, runtime->makeHandle(HermesValue::encodeStringValue(str2)))
+          runtime, runtime.makeHandle(HermesValue::encodeStringValue(str2)))
           .getValue();
 
   auto properties = createObject(runtime);
@@ -692,14 +692,14 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value1 = HermesValue::encodeDoubleValue(123);
@@ -707,7 +707,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
-                    runtime->makeHandle(value1),
+                    runtime.makeHandle(value1),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
@@ -725,7 +725,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::writable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value2 = HermesValue::encodeNullValue();
@@ -733,7 +733,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
-                    runtime->makeHandle(value2),
+                    runtime.makeHandle(value2),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
@@ -746,7 +746,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   }
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.defineProperties() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -755,7 +755,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                        Predefined::getSymbolID(Predefined::defineProperties),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto definePropertiesFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto definePropertiesFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Define the properties.
   auto obj = createObject(runtime);
@@ -764,7 +764,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
           ->executeCall2(
               definePropertiesFn,
               runtime,
-              runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+              runtime.makeHandle(HermesValue::encodeUndefinedValue()),
               obj.getHermesValue(),
               properties.getHermesValue(),
               false)
@@ -802,14 +802,14 @@ TEST_F(JSLibTest, ObjectCreateTest) {
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key1")).get();
   auto id1 =
       valueToSymbolID(
-          runtime, runtime->makeHandle(HermesValue::encodeStringValue(str1)))
+          runtime, runtime.makeHandle(HermesValue::encodeStringValue(str1)))
           .getValue();
 
   auto str2 =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"key2")).get();
   auto id2 =
       valueToSymbolID(
-          runtime, runtime->makeHandle(HermesValue::encodeStringValue(str2)))
+          runtime, runtime.makeHandle(HermesValue::encodeStringValue(str2)))
           .getValue();
 
   auto properties = createObject(runtime);
@@ -821,14 +821,14 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value1 = HermesValue::encodeDoubleValue(123);
@@ -836,7 +836,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
-                    runtime->makeHandle(value1),
+                    runtime.makeHandle(value1),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
@@ -854,7 +854,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::writable),
-                    runtime->makeHandle(HermesValue::encodeBoolValue(true)),
+                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value2 = HermesValue::encodeNullValue();
@@ -862,7 +862,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
-                    runtime->makeHandle(value2),
+                    runtime.makeHandle(value2),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     ASSERT_TRUE(JSObject::putNamed_RJS(
@@ -875,7 +875,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   }
   // Get global object.
   GET_GLOBAL(Object);
-  auto objectCons = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto objectCons = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // Get Object.create() function.
   ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
@@ -884,20 +884,20 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                        Predefined::getSymbolID(Predefined::create),
                        PropOpFlags().plusMustExist()))
                       .getStatus());
-  auto createFn = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto createFn = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // Call Object.create().
   auto prototype = createObject(runtime);
   auto callRes = createFn->executeCall2(
       createFn,
       runtime,
-      runtime->makeHandle(HermesValue::encodeUndefinedValue()),
+      runtime.makeHandle(HermesValue::encodeUndefinedValue()),
       prototype.getHermesValue(),
       properties.getHermesValue(),
       false);
   ASSERT_RETURNED(callRes.getStatus());
 
-  auto obj = runtime->makeHandle<JSObject>(std::move(*callRes));
+  auto obj = runtime.makeHandle<JSObject>(std::move(*callRes));
 
   // Verify the first property.
   {
@@ -929,16 +929,16 @@ TEST_F(JSLibTest, CreateStringTest) {
 
   // String constructor.
   GET_GLOBAL(String);
-  auto stringCons = runtime->makeHandle<Callable>(std::move(*propRes));
+  auto stringCons = runtime.makeHandle<Callable>(std::move(*propRes));
 
   // String.prototype.
   GET_VALUE(stringCons, prototype);
-  auto prototype = runtime->makeHandle<JSObject>(std::move(*propRes));
+  auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
   auto crtRes = stringCons->newObject(stringCons, runtime, prototype);
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newStr = runtime->makeHandle<JSObject>(std::move(*crtRes));
+  auto newStr = runtime.makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newStr->getParent(runtime));
@@ -1091,7 +1091,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
 
   const std::deque<MockedEnvironment::StatsTable> instrumentedStats{statsTable};
 
-  runtime->setMockedEnvironment(hermes::vm::MockedEnvironment{
+  runtime.setMockedEnvironment(hermes::vm::MockedEnvironment{
       mathRandomSeed,
       dateNowColl,
       newDateColl,
@@ -1101,18 +1101,18 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   {
     // Call Math.random() and check that its output matches the one given.
     auto propRes = JSObject::getNamed_RJS(
-        runtime->getGlobal(),
+        runtime.getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::Math));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing Math on the global object";
-    auto mathObj = runtime->makeHandle<JSObject>(std::move(propRes.getValue()));
+    auto mathObj = runtime.makeHandle<JSObject>(std::move(propRes.getValue()));
     propRes = JSObject::getNamed_RJS(
         mathObj, runtime, Predefined::getSymbolID(Predefined::random));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing random on the Math object";
     auto randomFunc =
-        runtime->makeHandle<Callable>(std::move(propRes.getValue()));
+        runtime.makeHandle<Callable>(std::move(propRes.getValue()));
     auto val = Callable::executeCall0(
         randomFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
@@ -1131,20 +1131,20 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     // Call various Date functions and check that the output matches the ones
     // given.
     auto propRes = JSObject::getNamed_RJS(
-        runtime->getGlobal(),
+        runtime.getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::Date));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing Date on the global object";
     Handle<Callable> dateFunc =
-        runtime->makeHandle<Callable>(std::move(propRes.getValue()));
+        runtime.makeHandle<Callable>(std::move(propRes.getValue()));
 
     // Call Date.now().
     propRes = JSObject::getNamed_RJS(
         dateFunc, runtime, Predefined::getSymbolID(Predefined::now));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing now on the Date object";
-    auto nowFunc = runtime->makeHandle<Callable>(std::move(propRes.getValue()));
+    auto nowFunc = runtime.makeHandle<Callable>(std::move(propRes.getValue()));
     auto val =
         Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
@@ -1181,14 +1181,14 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     // Call HermesInternal.getInstrumentedStats() and check that the values
     // we've set are what we recorded.
     CallResult<PseudoHandle<>> hermesInternalRes = JSObject::getNamed_RJS(
-        runtime->getGlobal(),
+        runtime.getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::HermesInternal));
     ASSERT_NE(hermesInternalRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing HermesInternal on the global object";
     ASSERT_TRUE(hermesInternalRes.getValue()->isObject())
         << "HermesInternal is not an object.";
-    auto hermesInternal = runtime->makeHandle(
+    auto hermesInternal = runtime.makeHandle(
         PseudoHandle<JSObject>::vmcast(std::move(*hermesInternalRes)));
     auto propRes = JSObject::getNamed_RJS(
         hermesInternal,
@@ -1197,7 +1197,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing getInstrumentedStats on the "
         << "HermesInternal object";
-    auto getInstrumentedStatsFunc = runtime->makeHandle(
+    auto getInstrumentedStatsFunc = runtime.makeHandle(
         PseudoHandle<Callable>::vmcast(std::move(propRes.getValue())));
     auto statsObjRes = Callable::executeCall0(
         getInstrumentedStatsFunc, runtime, Runtime::getUndefinedValue());
@@ -1206,11 +1206,11 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         << "HermesInternal.getInstrumentedStats";
     ASSERT_TRUE(statsObjRes.getValue()->isObject())
         << "HermesInternal.getInstrumentedStats result is not an object.";
-    auto statsObj = runtime->makeHandle(
+    auto statsObj = runtime.makeHandle(
         PseudoHandle<JSObject>::vmcast(std::move(statsObjRes.getValue())));
 
     auto affinityMaskSymHandleRes =
-        runtime->getIdentifierTable().getSymbolHandle(
+        runtime.getIdentifierTable().getSymbolHandle(
             runtime, ASCIIRef(affinityMaskKey.c_str(), affinityMaskKey.size()));
     ASSERT_NE(affinityMaskSymHandleRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing creating symbol for 'js_threadAffinityMask'";
@@ -1229,7 +1229,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
             affinityMaskVal2ResStringRef.size()));
 
     auto totalAllocBytesSymHandleRes =
-        runtime->getIdentifierTable().getSymbolHandle(
+        runtime.getIdentifierTable().getSymbolHandle(
             runtime,
             ASCIIRef(totalAllocBytesKey.c_str(), totalAllocBytesKey.size()));
     ASSERT_NE(totalAllocBytesSymHandleRes, ExecutionStatus::EXCEPTION)
@@ -1247,7 +1247,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
 
   // If the tracing mode is also engaged, ensure that the same values were
   // traced as well.
-  auto *storage = runtime->getCommonStorage();
+  auto *storage = runtime.getCommonStorage();
   EXPECT_EQ(mathRandomSeed, storage->tracedEnv.mathRandomSeed);
   EXPECT_EQ(dateNowColl, storage->tracedEnv.callsToDateNow);
   EXPECT_EQ(newDateColl, storage->tracedEnv.callsToNewDate);

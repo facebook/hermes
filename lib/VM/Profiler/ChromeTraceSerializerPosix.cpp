@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -9,6 +9,8 @@
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 
 #include "hermes/VM/JSNativeFunctions.h"
+
+#include <unordered_map>
 
 namespace hermes {
 namespace vm {
@@ -40,10 +42,32 @@ std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
     // get root => leaf represenation.
     for (const auto &frame : llvh::reverse(sample.stack))
       leafNode = leafNode->findOrAddNewChild(frameIdGen, frame);
+    leafNode->addHit();
     trace.sampleEvents_.emplace_back(sample.tid, sample.timeStamp, leafNode);
   }
   return trace;
 }
+
+namespace {
+std::string getJSFunctionName(hbc::BCProvider *bcProvider, uint32_t funcId) {
+  hbc::RuntimeFunctionHeader functionHeader =
+      bcProvider->getFunctionHeader(funcId);
+  return bcProvider->getStringRefFromID(functionHeader.functionName()).str();
+}
+
+OptValue<hbc::DebugSourceLocation> getSourceLocation(
+    hbc::BCProvider *bcProvider,
+    uint32_t funcId,
+    uint32_t opcodeOffset) {
+  const hbc::DebugOffsets *debugOffsets = bcProvider->getDebugOffsets(funcId);
+  if (debugOffsets &&
+      debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+    return bcProvider->getDebugInfo()->getLocationForAddress(
+        debugOffsets->sourceLocations, opcodeOffset);
+  }
+  return llvh::None;
+}
+} // namespace
 
 ChromeTraceSerializer::ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace)
     : trace_(std::move(chromeTrace)) {
@@ -52,21 +76,17 @@ ChromeTraceSerializer::ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace)
       : trace_.getSampledEvents()[0].getTimeStamp();
 }
 
-enum class ChromeEventType {
-  Completed = 0,
-  Instant = 1,
-  Metadata = 2,
-};
-static const char *ChromeEventTypeNames[] = {"X", "i", "M"};
+namespace chrome_event_type {
+static const char *Completed = "X";
+static const char *Metadata = "M";
+} // namespace chrome_event_type
 
 void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
   double pid = trace_.getPid();
   json.openDict();
   {
     json.emitKeyValue("name", "process_name");
-    json.emitKeyValue(
-        "ph",
-        ChromeEventTypeNames[static_cast<uint32_t>(ChromeEventType::Metadata)]);
+    json.emitKeyValue("ph", chrome_event_type::Metadata);
     json.emitKeyValue("cat", "__metadata");
     json.emitKeyValue("pid", pid);
     // Use first event time for process_name time.
@@ -93,10 +113,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
     json.openDict();
     {
       json.emitKeyValue("name", "thread_name");
-      json.emitKeyValue(
-          "ph",
-          ChromeEventTypeNames[static_cast<uint32_t>(
-              ChromeEventType::Metadata)]);
+      json.emitKeyValue("ph", chrome_event_type::Metadata);
       json.emitKeyValue("cat", "__metadata");
       json.emitKeyValue("pid", static_cast<double>(pid));
       // Use first event time for thread_name time.
@@ -115,10 +132,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
     {
       json.emitKeyValue("name", threadName);
       json.emitKeyValue("cat", threadName);
-      json.emitKeyValue(
-          "ph",
-          ChromeEventTypeNames[static_cast<uint32_t>(
-              ChromeEventType::Completed)]);
+      json.emitKeyValue("ph", chrome_event_type::Completed);
       json.emitKeyValue("dur", 0.0);
       json.emitKeyValue("pid", static_cast<double>(pid));
       json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
@@ -166,27 +180,6 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
     }
 
     json.openDict();
-
-    auto getJSFunctionName = [](hbc::BCProvider *bcProvider, uint32_t funcId) {
-      hbc::RuntimeFunctionHeader functionHeader =
-          bcProvider->getFunctionHeader(funcId);
-      return bcProvider->getStringRefFromID(functionHeader.functionName())
-          .str();
-    };
-
-    auto getSourceLocation =
-        [](hbc::BCProvider *bcProvider,
-           uint32_t funcId,
-           uint32_t opcodeOffset) -> OptValue<hbc::DebugSourceLocation> {
-      const hbc::DebugOffsets *debugOffsets =
-          bcProvider->getDebugOffsets(funcId);
-      if (debugOffsets != nullptr &&
-          debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
-        return bcProvider->getDebugInfo()->getLocationForAddress(
-            debugOffsets->sourceLocations, opcodeOffset);
-      }
-      return llvh::None;
-    };
 
     std::string frameName, categoryName;
     const auto &frame = node.getFrameInfo();
@@ -320,6 +313,243 @@ void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
                             .count());
 }
 
+namespace {
+class ProfilerProfileSerializer {
+  ProfilerProfileSerializer(const ProfilerProfileSerializer &) = delete;
+  ProfilerProfileSerializer &operator=(const ProfilerProfileSerializer &) =
+      delete;
+  ProfilerProfileSerializer() = delete;
+
+ public:
+  ProfilerProfileSerializer(
+      JSONEmitter &emitter,
+      ChromeTraceFormat &&chromeTrace)
+      : json_(emitter), chromeTrace_(std::move(chromeTrace)) {}
+
+  void serialize() const;
+
+ private:
+  void emitNodes() const;
+  void emitStartTime() const;
+  void emitEndTime() const;
+  void emitSamples() const;
+  void emitTimeDeltas() const;
+
+  JSONEmitter &json_;
+  ChromeTraceFormat chromeTrace_;
+};
+
+void ProfilerProfileSerializer::serialize() const {
+  json_.openDict();
+
+  if (!chromeTrace_.getSampledEvents().empty()) {
+    // samples and timeDeltas are optional, so don't emit if there are no
+    // samples.
+    emitSamples();
+    emitTimeDeltas();
+  }
+
+  emitNodes();
+  emitStartTime();
+  emitEndTime();
+
+  json_.closeDict();
+}
+
+static void emitProfileNode(
+    JSONEmitter &json,
+    const ChromeStackFrameNode &node,
+    const std::string &name,
+    uint32_t scriptId,
+    const std::string &url,
+    uint32_t lineNumber,
+    uint32_t columnNumber) {
+  json.openDict();
+
+  json.emitKeyValue("id", node.getId());
+
+  json.emitKey("callFrame");
+
+  json.openDict();
+  json.emitKeyValue("functionName", name);
+  json.emitKeyValue("scriptId", scriptId);
+  json.emitKeyValue("url", url);
+  json.emitKeyValue("lineNumber", lineNumber);
+  json.emitKeyValue("columnNumber", columnNumber);
+
+  json.closeDict(); // callFrame
+
+  const auto children = node.getChildren();
+  if (!children.empty()) {
+    json.emitKey("children");
+
+    json.openArray();
+    for (const auto &child : children) {
+      json.emitValue(child->getId());
+    }
+    json.closeArray(); // children
+  }
+
+  const uint32_t hitCount = node.getHitCount();
+  if (hitCount > 0) {
+    json.emitKeyValue("hitCount", hitCount);
+  }
+
+  json.closeDict(); // node
+}
+
+static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
+  std::string name;
+  std::string url;
+  uint32_t scriptId = 0;
+  uint32_t lineNumber = 0;
+  uint32_t columnNumber = 0;
+  const SamplingProfiler::StackFrame &frame = node.getFrameInfo();
+  switch (frame.kind) {
+    case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
+      RuntimeModule *module = frame.jsFrame.module;
+      hbc::BCProvider *bcProvider = module->getBytecode();
+
+      llvh::raw_string_ostream os(name);
+      os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
+
+      url = "unknown";
+      OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
+          bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
+      if (sourceLocOpt.hasValue()) {
+        // Bundle has debug info.
+        scriptId = sourceLocOpt.getValue().filenameId;
+        url = bcProvider->getDebugInfo()->getFilenameByID(scriptId);
+
+        lineNumber = sourceLocOpt.getValue().line;
+        columnNumber = sourceLocOpt.getValue().column;
+        // format: frame_name(file:line:column)
+        os << "(" << url << ":" << lineNumber << ":" << columnNumber << ")";
+      }
+      break;
+    }
+
+    case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
+      name = std::string("[Native] ") + getFunctionName(frame.nativeFrame);
+      url = "[native]";
+      break;
+    }
+
+    case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction: {
+      name = "[Host Function]";
+      url = "[host]";
+      break;
+    }
+
+    case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
+      name = frame.gcFrame != nullptr
+          ? std::string("[GC ") + *frame.gcFrame + "]"
+          : "[GC]";
+      url = "[gc]";
+      break;
+    }
+
+    default:
+      llvm_unreachable("Unknown frame kind");
+  }
+
+  emitProfileNode(json, node, name, scriptId, url, lineNumber, columnNumber);
+}
+
+void ProfilerProfileSerializer::emitNodes() const {
+  json_.emitKey("nodes");
+  json_.openArray();
+
+  // Emit the root node first as required by CDP.
+  const ChromeStackFrameNode *root = &chromeTrace_.getRoot();
+  assert(root && "no profile root");
+  emitProfileNode(json_, *root, "[root]", 0, "[root]", 0, 0);
+
+  chromeTrace_.getRoot().dfsWalk([this, root](
+                                     const ChromeStackFrameNode &node,
+                                     const ChromeStackFrameNode *parent) {
+    if (&node == root) {
+      assert(!parent && "root node should not have parent");
+    } else {
+      processNode(json_, node);
+    }
+  });
+
+  json_.closeArray(); // nodes
+}
+
+template <typename T>
+static uint64_t toMicros(T t) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(t).count();
+}
+
+static SamplingProfiler::TimeStampType getFirstTimeStamp(
+    const std::vector<ChromeSampleEvent> &events) {
+  return events.empty() ? SamplingProfiler::TimeStampType{}
+                        : events.front().getTimeStamp();
+}
+
+static SamplingProfiler::TimeStampType getLastTimeStamp(
+    const std::vector<ChromeSampleEvent> &events) {
+  return events.empty() ? SamplingProfiler::TimeStampType{}
+                        : events.back().getTimeStamp();
+}
+
+void ProfilerProfileSerializer::emitStartTime() const {
+  json_.emitKeyValue(
+      "startTime",
+      toMicros(getFirstTimeStamp(chromeTrace_.getSampledEvents())
+                   .time_since_epoch()));
+}
+
+void ProfilerProfileSerializer::emitEndTime() const {
+  json_.emitKeyValue(
+      "endTime",
+      toMicros(getLastTimeStamp(chromeTrace_.getSampledEvents())
+                   .time_since_epoch()));
+}
+
+void ProfilerProfileSerializer::emitSamples() const {
+  json_.emitKey("samples");
+
+  json_.openArray();
+  const auto &sampledEvents = chromeTrace_.getSampledEvents();
+  for (const ChromeSampleEvent &sample : sampledEvents) {
+    uint32_t stackId = sample.getLeafNode()->getId();
+    assert(stackId > 0 && "Invalid stack id");
+    json_.emitValue(stackId);
+  }
+
+  json_.closeArray(); // samples
+}
+
+void ProfilerProfileSerializer::emitTimeDeltas() const {
+  json_.emitKey("timeDeltas");
+
+  json_.openArray();
+
+  const auto &sampledEvents = chromeTrace_.getSampledEvents();
+  SamplingProfiler::TimeStampType previousTimeStampMicros =
+      getFirstTimeStamp(sampledEvents);
+  for (const ChromeSampleEvent &sample : sampledEvents) {
+    SamplingProfiler::TimeStampType currentTimeStampMicros =
+        sample.getTimeStamp();
+    json_.emitValue(toMicros(currentTimeStampMicros - previousTimeStampMicros));
+    previousTimeStampMicros = currentTimeStampMicros;
+  }
+
+  json_.closeArray(); // samples
+}
+} // namespace
+
+void serializeAsProfilerProfile(
+    llvh::raw_ostream &os,
+    ChromeTraceFormat &&chromeTrace) {
+  JSONEmitter json(os);
+
+  ProfilerProfileSerializer s(json, std::move(chromeTrace));
+  s.serialize();
+}
 } // namespace vm
 } // namespace hermes
 

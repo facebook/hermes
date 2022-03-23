@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -14,7 +14,7 @@ namespace hermes {
 namespace vm {
 
 const ObjectVTable JSDataView::vt{
-    VTable(CellKind::DataViewKind, cellSize<JSDataView>()),
+    VTable(CellKind::JSDataViewKind, cellSize<JSDataView>()),
     JSDataView::_getOwnIndexedRangeImpl,
     JSDataView::_haveOwnIndexedImpl,
     JSDataView::_getOwnIndexedPropertyFlagsImpl,
@@ -24,30 +24,30 @@ const ObjectVTable JSDataView::vt{
     JSDataView::_checkAllOwnIndexedImpl,
 };
 
-void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void JSDataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDataView>());
-  ObjectBuildMeta(cell, mb);
+  JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
   mb.setVTable(&JSDataView::vt.base);
   mb.addField("buffer", &self->buffer_);
 }
 
 PseudoHandle<JSDataView> JSDataView::create(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> prototype) {
-  auto *cell = runtime->makeAFixed<JSDataView>(
+  auto *cell = runtime.makeAFixed<JSDataView>(
       runtime,
       prototype,
-      runtime->getHiddenClassForPrototype(
+      runtime.getHiddenClassForPrototype(
           *prototype, numOverlapSlots<JSDataView>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
 JSDataView::JSDataView(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSObject(runtime, &vt.base, *parent, *clazz),
+    : JSObject(runtime, *parent, *clazz),
       buffer_(nullptr),
       offset_(0),
       length_(0) {}

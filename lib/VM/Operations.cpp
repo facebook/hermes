@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -34,15 +34,15 @@ namespace hermes {
 namespace vm {
 
 CallResult<Handle<SymbolID>> stringToSymbolID(
-    Runtime *runtime,
+    Runtime &runtime,
     PseudoHandle<StringPrimitive> strPrim) {
   // Unique the string.
-  return runtime->getIdentifierTable().getSymbolHandleFromPrimitive(
+  return runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
       runtime, std::move(strPrim));
 }
 
 CallResult<Handle<SymbolID>> valueToSymbolID(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> nameValHnd) {
   if (nameValHnd->isSymbol()) {
     return Handle<SymbolID>::vmcast(nameValHnd);
@@ -56,36 +56,40 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
   return stringToSymbolID(runtime, std::move(*res));
 }
 
-HermesValue typeOf(Runtime *runtime, Handle<> valueHandle) {
-  switch (valueHandle->getTag()) {
-    case UndefinedNullTag:
-      return HermesValue::encodeStringValue(runtime->getPredefinedString(
-          valueHandle->isUndefined() ? Predefined::undefined
-                                     : Predefined::object));
-    case StrTag:
+HermesValue typeOf(Runtime &runtime, Handle<> valueHandle) {
+  switch (valueHandle->getETag()) {
+    case HermesValue::ETag::Undefined:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::string));
-    case BoolTag:
+          runtime.getPredefinedString(Predefined::undefined));
+    case HermesValue::ETag::Null:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::boolean));
-    case SymbolTag:
+          runtime.getPredefinedString(Predefined::object));
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::symbol));
-    case ObjectTag:
+          runtime.getPredefinedString(Predefined::string));
+    case HermesValue::ETag::Bool:
+      return HermesValue::encodeStringValue(
+          runtime.getPredefinedString(Predefined::boolean));
+    case HermesValue::ETag::Symbol:
+      return HermesValue::encodeStringValue(
+          runtime.getPredefinedString(Predefined::symbol));
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       if (vmisa<Callable>(*valueHandle))
         return HermesValue::encodeStringValue(
-            runtime->getPredefinedString(Predefined::function));
+            runtime.getPredefinedString(Predefined::function));
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::object));
+          runtime.getPredefinedString(Predefined::object));
     default:
       assert(valueHandle->isNumber() && "Invalid type.");
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::number));
+          runtime.getPredefinedString(Predefined::number));
   }
 }
 
 OptValue<uint32_t> toArrayIndex(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strPrim) {
   auto view = StringPrimitive::createStringView(runtime, strPrim);
   return toArrayIndex(view);
@@ -136,7 +140,7 @@ bool isPrimitive(HermesValue val) {
 
 CallResult<HermesValue> ordinaryToPrimitive(
     Handle<JSObject> selfHandle,
-    Runtime *runtime,
+    Runtime &runtime,
     PreferredType preferredType) {
   GCScope gcScope{runtime};
   assert(
@@ -150,7 +154,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
       if (auto funcHandle = Handle<Callable>::dyn_vmcast(
-              runtime->makeHandle(std::move(*propRes)))) {
+              runtime.makeHandle(std::move(*propRes)))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
@@ -167,7 +171,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
       if (auto funcHandle = Handle<Callable>::dyn_vmcast(
-              runtime->makeHandle(std::move(*propRes)))) {
+              runtime.makeHandle(std::move(*propRes)))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
@@ -182,12 +186,12 @@ CallResult<HermesValue> ordinaryToPrimitive(
   }
 
   // Nothing succeeded, time to give up.
-  return runtime->raiseTypeError("Cannot determine default value of object");
+  return runtime.raiseTypeError("Cannot determine default value of object");
 }
 
 /// ES5.1 9.1
 CallResult<HermesValue>
-toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
+toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint) {
   assert(
       valueHandle->getTag() != EmptyInvalidTag && "empty value is not allowed");
   assert(
@@ -200,20 +204,20 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
   auto exoticToPrim = getMethod(
       runtime,
       valueHandle,
-      runtime->makeHandle(
+      runtime.makeHandle(
           Predefined::getSymbolID(Predefined::SymbolToPrimitive)));
   if (LLVM_UNLIKELY(exoticToPrim == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   // 6. If exoticToPrim is not undefined, then
   if (vmisa<Callable>(exoticToPrim->getHermesValue())) {
-    auto callable = runtime->makeHandle<Callable>(
+    auto callable = runtime.makeHandle<Callable>(
         dyn_vmcast<Callable>(exoticToPrim->getHermesValue()));
     CallResult<PseudoHandle<>> resultRes = Callable::executeCall1(
         callable,
         runtime,
         valueHandle,
-        HermesValue::encodeStringValue(runtime->getPredefinedString(
+        HermesValue::encodeStringValue(runtime.getPredefinedString(
             hint == PreferredType::NONE         ? Predefined::defaultStr
                 : hint == PreferredType::STRING ? Predefined::string
                                                 : Predefined::number)));
@@ -224,7 +228,7 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
     if (!result->isObject()) {
       return result.getHermesValue();
     }
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Symbol.toPrimitive function must return a primitive");
   }
 
@@ -237,19 +241,27 @@ toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
 }
 
 bool toBoolean(HermesValue value) {
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case UndefinedNullTag:
+    case HermesValue::ETag::Undefined:
+    case HermesValue::ETag::Null:
       return false;
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return value.getBool();
-    case SymbolTag:
-    case ObjectTag:
+    case HermesValue::ETag::Symbol:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       return true;
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       return value.getString()->getStringLength() != 0;
     default: {
       auto m = value.getNumber();
@@ -260,11 +272,11 @@ bool toBoolean(HermesValue value) {
 
 /// ES5.1 9.8.1
 static CallResult<PseudoHandle<StringPrimitive>> numberToString(
-    Runtime *runtime,
+    Runtime &runtime,
     double m) LLVM_NO_SANITIZE("float-cast-overflow");
 
 static CallResult<PseudoHandle<StringPrimitive>> numberToString(
-    Runtime *runtime,
+    Runtime &runtime,
     double m) {
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
 
@@ -286,8 +298,8 @@ static CallResult<PseudoHandle<StringPrimitive>> numberToString(
     return createPseudoHandle(vmcast<StringPrimitive>(*result));
   }
 
-  auto getPredefined = [runtime](Predefined::Str predefinedID) {
-    return createPseudoHandle(runtime->getPredefinedString(predefinedID));
+  auto getPredefined = [&runtime](Predefined::Str predefinedID) {
+    return createPseudoHandle(runtime.getPredefinedString(predefinedID));
   };
 
   if (std::isnan(m))
@@ -310,36 +322,45 @@ static CallResult<PseudoHandle<StringPrimitive>> numberToString(
 }
 
 CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   HermesValue value = valueHandle.get();
   StringPrimitive *result;
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       result = vmcast<StringPrimitive>(value);
       break;
-    case UndefinedNullTag:
-      result = runtime->getPredefinedString(
-          value.isUndefined() ? Predefined::undefined : Predefined::null);
+    case HermesValue::ETag::Undefined:
+      result = runtime.getPredefinedString(Predefined::undefined);
       break;
-    case BoolTag:
+    case HermesValue::ETag::Null:
+      result = runtime.getPredefinedString(Predefined::null);
+      break;
+    case HermesValue::ETag::Bool:
       result = value.getBool()
-          ? runtime->getPredefinedString(Predefined::trueStr)
-          : runtime->getPredefinedString(Predefined::falseStr);
+          ? runtime.getPredefinedString(Predefined::trueStr)
+          : runtime.getPredefinedString(Predefined::falseStr);
       break;
-    case ObjectTag: {
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      return toString_RJS(runtime, runtime->makeHandle(res.getValue()));
+      return toString_RJS(runtime, runtime.makeHandle(res.getValue()));
     }
-    case SymbolTag:
-      return runtime->raiseTypeError("Cannot convert Symbol to string");
+    case HermesValue::ETag::Symbol:
+      return runtime.raiseTypeError("Cannot convert Symbol to string");
     default:
       return numberToString(runtime, value.getNumber());
   }
@@ -355,23 +376,23 @@ double parseIntWithRadix(const StringView str, int radix) {
 
 /// ES5.1 9.3.1
 static inline double stringToNumber(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<StringPrimitive> strPrim) {
-  auto &idTable = runtime->getIdentifierTable();
+  auto &idTable = runtime.getIdentifierTable();
 
   // Fast check for special values (no extraneous whitespace).
-  if (runtime->symbolEqualsToStringPrim(
+  if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::Infinity), *strPrim)) {
     return std::numeric_limits<double>::infinity();
   }
-  if (runtime->symbolEqualsToStringPrim(
+  if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::PositiveInfinity), *strPrim)) {
     return std::numeric_limits<double>::infinity();
   }
-  if (runtime->symbolEqualsToStringPrim(
+  if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NegativeInfinity), *strPrim)) {
   }
-  if (runtime->symbolEqualsToStringPrim(
+  if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NaN), *strPrim)) {
     return std::numeric_limits<double>::quiet_NaN();
   }
@@ -459,34 +480,43 @@ static inline double stringToNumber(
   return std::numeric_limits<double>::quiet_NaN();
 }
 
-CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
   double result;
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case ObjectTag: {
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      return toNumber_RJS(runtime, runtime->makeHandle(res.getValue()));
+      return toNumber_RJS(runtime, runtime.makeHandle(res.getValue()));
     }
-    case StrTag:
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
       result =
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(valueHandle));
       break;
-    case UndefinedNullTag:
-      result =
-          value.isUndefined() ? std::numeric_limits<double>::quiet_NaN() : +0.0;
+    case HermesValue::ETag::Undefined:
+      result = std::numeric_limits<double>::quiet_NaN();
       break;
-    case BoolTag:
+    case HermesValue::ETag::Null:
+      result = +0.0;
+      break;
+    case HermesValue::ETag::Bool:
       result = value.getBool();
       break;
-    case SymbolTag:
-      return runtime->raiseTypeError("Cannot convert Symbol to number");
+    case HermesValue::ETag::Symbol:
+      return runtime.raiseTypeError("Cannot convert Symbol to number");
     default:
       // Already have a number, just return it.
       return value;
@@ -494,9 +524,9 @@ CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
   return HermesValue::encodeDoubleValue(result);
 }
 
-CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
   constexpr double maxLength = 9007199254740991.0; // 2**53 - 1
-  auto res = toInteger(runtime, valueHandle);
+  auto res = toIntegerOrInfinity(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -509,10 +539,10 @@ CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle) {
   return HermesValue::encodeDoubleValue(len);
 }
 
-CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle) {
+CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
   constexpr double highestIntegralDouble =
       ((uint64_t)1 << std::numeric_limits<double>::digits) - 1;
-  auto res = toInteger(runtime, valueHandle);
+  auto res = toIntegerOrInfinity(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -525,33 +555,35 @@ CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle) {
   return len;
 }
 
-CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
-      ? runtime->makeHandle(HermesValue::encodeDoubleValue(0))
+      ? runtime.makeHandle(HermesValue::encodeDoubleValue(0))
       : valueHandle;
-  auto res = toInteger(runtime, value);
+  auto res = toIntegerOrInfinity(runtime, value);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto integerIndex = res->getNumber();
   if (integerIndex < 0) {
-    return runtime->raiseRangeError("A negative value cannot be an index");
+    return runtime.raiseRangeError("A negative value cannot be an index");
   }
   auto integerIndexHandle =
-      runtime->makeHandle(HermesValue::encodeDoubleValue(integerIndex));
+      runtime.makeHandle(HermesValue::encodeDoubleValue(integerIndex));
   res = toLength(runtime, integerIndexHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto index = res.getValue();
   if (index.getNumber() != integerIndex) {
-    return runtime->raiseRangeError(
+    return runtime.raiseRangeError(
         "The value given for the index must be between 0 and 2 ^ 53 - 1");
   }
   return res;
 }
 
-CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toIntegerOrInfinity(
+    Runtime &runtime,
+    Handle<> valueHandle) {
   auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -571,7 +603,7 @@ CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
 /// Conversion of HermesValues to integers.
 template <typename T>
 static inline CallResult<HermesValue> toInt(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle) {
   auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
@@ -582,19 +614,19 @@ static inline CallResult<HermesValue> toInt(
   return HermesValue::encodeNumberValue(result);
 }
 
-CallResult<HermesValue> toInt8(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toInt8(Runtime &runtime, Handle<> valueHandle) {
   return toInt<int8_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toInt16(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toInt16(Runtime &runtime, Handle<> valueHandle) {
   return toInt<int16_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toInt32_RJS(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toInt32_RJS(Runtime &runtime, Handle<> valueHandle) {
   return toInt<int32_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toUInt8(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toUInt8(Runtime &runtime, Handle<> valueHandle) {
   return toInt<uint8_t>(runtime, valueHandle);
 }
 
@@ -629,7 +661,7 @@ uint8_t toUInt8Clamp(double number) {
   }
 }
 
-CallResult<HermesValue> toUInt8Clamp(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toUInt8Clamp(Runtime &runtime, Handle<> valueHandle) {
   // 1. Let number be toNumber_RJS(argument)
   auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
@@ -639,87 +671,101 @@ CallResult<HermesValue> toUInt8Clamp(Runtime *runtime, Handle<> valueHandle) {
   return HermesValue::encodeNumberValue(toUInt8Clamp(res->getNumber()));
 }
 
-CallResult<HermesValue> toUInt16(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toUInt16(Runtime &runtime, Handle<> valueHandle) {
   return toInt<uint16_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toUInt32_RJS(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toUInt32_RJS(Runtime &runtime, Handle<> valueHandle) {
   return toInt<uint32_t>(runtime, valueHandle);
 }
 
 CallResult<Handle<JSObject>> getPrimitivePrototype(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> base) {
-  switch (base->getTag()) {
-    case EmptyInvalidTag:
+  switch (base->getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case ObjectTag:
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       llvm_unreachable("object value");
-    case UndefinedNullTag:
-      return runtime->raiseTypeError(
-          base->isUndefined() ? "Cannot convert undefined value to object"
-                              : "Cannot convert null value to object");
-    case StrTag:
-      return Handle<JSObject>::vmcast(&runtime->stringPrototype);
-    case BoolTag:
-      return Handle<JSObject>::vmcast(&runtime->booleanPrototype);
-    case SymbolTag:
-      return Handle<JSObject>::vmcast(&runtime->symbolPrototype);
+    case HermesValue::ETag::Undefined:
+      return runtime.raiseTypeError("Cannot convert undefined value to object");
+    case HermesValue::ETag::Null:
+      return runtime.raiseTypeError("Cannot convert null value to object");
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
+      return Handle<JSObject>::vmcast(&runtime.stringPrototype);
+    case HermesValue::ETag::Bool:
+      return Handle<JSObject>::vmcast(&runtime.booleanPrototype);
+    case HermesValue::ETag::Symbol:
+      return Handle<JSObject>::vmcast(&runtime.symbolPrototype);
     default:
       assert(base->isNumber() && "Unknown tag in getPrimitivePrototype.");
-      return Handle<JSObject>::vmcast(&runtime->numberPrototype);
+      return Handle<JSObject>::vmcast(&runtime.numberPrototype);
   }
 }
 
-CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
-  switch (value.getTag()) {
-    case EmptyInvalidTag:
+  switch (value.getETag()) {
+#ifdef HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Invalid:
+      llvm_unreachable("invalid value");
+#endif // HERMES_SLOW_DEBUG
+    case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case NativeValueTag:
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
-    case UndefinedNullTag:
-      return runtime->raiseTypeError(
-          value.isUndefined() ? "Cannot convert undefined value to object"
-                              : "Cannot convert null value to object");
-    case ObjectTag:
+    case HermesValue::ETag::Undefined:
+      return runtime.raiseTypeError("Cannot convert undefined value to object");
+    case HermesValue::ETag::Null:
+      return runtime.raiseTypeError("Cannot convert null value to object");
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2:
       return value;
-    case BoolTag:
+    case HermesValue::ETag::Bool:
       return JSBoolean::create(
                  runtime,
                  value.getBool(),
-                 Handle<JSObject>::vmcast(&runtime->booleanPrototype))
+                 Handle<JSObject>::vmcast(&runtime.booleanPrototype))
           .getHermesValue();
-    case StrTag: {
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2: {
       auto res = JSString::create(
           runtime,
-          runtime->makeHandle(value.getString()),
-          Handle<JSObject>::vmcast(&runtime->stringPrototype));
+          runtime.makeHandle(value.getString()),
+          Handle<JSObject>::vmcast(&runtime.stringPrototype));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       return res->getHermesValue();
     }
-    case SymbolTag:
+    case HermesValue::ETag::Symbol:
       return JSSymbol::create(
                  runtime,
                  *Handle<SymbolID>::vmcast(valueHandle),
-                 Handle<JSObject>::vmcast(&runtime->symbolPrototype))
+                 Handle<JSObject>::vmcast(&runtime.symbolPrototype))
           .getHermesValue();
     default:
       assert(valueHandle->isNumber() && "Unknown tag in toObject.");
       return JSNumber::create(
                  runtime,
                  value.getNumber(),
-                 Handle<JSObject>::vmcast(&runtime->numberPrototype))
+                 Handle<JSObject>::vmcast(&runtime.numberPrototype))
           .getHermesValue();
   }
 }
 
 ExecutionStatus amendPropAccessErrorMsgWithPropName(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> valueHandle,
     llvh::StringRef operationStr,
     SymbolID id) {
@@ -727,15 +773,15 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
     // If value is not null/undefined, fall back to the original exception.
     return ExecutionStatus::EXCEPTION;
   }
-  assert(!runtime->getThrownValue().isEmpty() && "Error must have been thrown");
+  assert(!runtime.getThrownValue().isEmpty() && "Error must have been thrown");
   // Clear the error first because we will re-throw.
-  runtime->clearThrownValue();
+  runtime.clearThrownValue();
 
   // Construct an error message that contains the property name.
   llvh::StringRef valueStr = valueHandle->isNull() ? "null" : "undefined";
-  return runtime->raiseTypeError(
+  return runtime.raiseTypeError(
       TwineChar16("Cannot ") + operationStr + " property '" +
-      runtime->getIdentifierTable().getStringView(runtime, id) + "' of " +
+      runtime.getIdentifierTable().getStringView(runtime, id) + "' of " +
       valueStr);
 }
 
@@ -746,7 +792,7 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
 /// \param oper is the comparison operator to use when comparing numbers.
 #define IMPLEMENT_COMPARISON_OP(name, oper)                           \
   CallResult<bool> name(                                              \
-      Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle) {  \
+      Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle) {  \
     auto resLeft =                                                    \
         toPrimitive_RJS(runtime, leftHandle, PreferredType::NUMBER);  \
     if (resLeft == ExecutionStatus::EXCEPTION)                        \
@@ -782,7 +828,7 @@ IMPLEMENT_COMPARISON_OP(greaterOp_RJS, >);
 IMPLEMENT_COMPARISON_OP(lessEqualOp_RJS, <=);
 IMPLEMENT_COMPARISON_OP(greaterEqualOp_RJS, >=);
 CallResult<HermesValue>
-abstractEqualityTest_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
+abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
@@ -805,11 +851,11 @@ abstractEqualityTailCall:
         // Return true if x and y refer to the same object.
         result = x->getPointer() == y->getPointer();
         break;
-      case BoolTag:
-        result = x->getBool() == y->getBool();
-        break;
-      case SymbolTag:
-        result = x->getSymbol() == y->getSymbol();
+      case BoolSymbolTag:
+        // Return true if x's and y's bits are exactly the same. This works
+        // because the ETag as well as the value (i.e., symbol id, true,
+        // or false) all being encoded in HermesValue's payload.
+        result = x->getRaw() == y->getRaw();
         break;
       default: {
         result = x->getNumber() == y->getNumber();
@@ -826,50 +872,87 @@ abstractEqualityTailCall:
   assert(
       !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
 
-  constexpr TagKind NumberTag = NativeValueTag;
+  // The following macros are used to generate the switch cases using
+  // HermesValue::combineETags; an S in the name means it is a single ETag
+  // (e.g., ETag::Bool), while M means it is a multi ETag (e.g., ETag::Object1
+  // and ETag::Object2).
+#define CASE_S_S(typeA, typeB)    \
+  case HermesValue::combineETags( \
+      HermesValue::ETag::typeA, HermesValue::ETag::typeB):
 
-  // Tag numbers as numbers, and use default tag values for everything else.
-  TagKind xType = x->isNumber() ? NumberTag : x->getTag();
-  TagKind yType = y->isNumber() ? NumberTag : y->getTag();
+#define CASE_S_M(typeA, typeB) \
+  CASE_S_S(typeA, typeB##1)    \
+  CASE_S_S(typeA, typeB##2)
 
-  switch (HermesValue::combineTags(xType, yType)) {
-    case HermesValue::combineTags(UndefinedNullTag, UndefinedNullTag):
+#define CASE_M_S(typeA, typeB) \
+  CASE_S_S(typeA##1, typeB)    \
+  CASE_S_S(typeA##2, typeB)
+
+#define CASE_M_M(typeA, typeB) \
+  CASE_M_S(typeA, typeB##1)    \
+  CASE_M_S(typeA, typeB##2)
+
+  // NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
+  // don't have a tag assigned to them). It reuses ETag::Native1 there will
+  // never be any native values in this part of the code.
+#define NUMBER_TAG Native1
+
+  // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
+  // tag values for everything else.
+  HermesValue::ETag xType =
+      x->isNumber() ? HermesValue::ETag::NUMBER_TAG : x->getETag();
+  HermesValue::ETag yType =
+      y->isNumber() ? HermesValue::ETag::NUMBER_TAG : y->getETag();
+
+  switch (HermesValue::combineETags(xType, yType)) {
+    CASE_S_S(Undefined, Undefined)
+    CASE_S_S(Undefined, Null)
+    CASE_S_S(Null, Undefined)
+    CASE_S_S(Null, Null) {
       return HermesValue::encodeBoolValue(true);
+    }
 
-    case HermesValue::combineTags(NumberTag, StrTag):
+    CASE_S_M(NUMBER_TAG, Str) {
       return HermesValue::encodeBoolValue(
           x->getNumber() ==
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
-    case HermesValue::combineTags(StrTag, NumberTag):
+    }
+    CASE_M_S(Str, NUMBER_TAG) {
       return HermesValue::encodeBoolValue(
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
           y->getNumber());
+    }
 
-    case HermesValue::combineTags(BoolTag, NumberTag):
+    CASE_S_S(Bool, NUMBER_TAG) {
       // Do both conversions and check numerical equality.
       return HermesValue::encodeBoolValue(x->getBool() == y->getNumber());
-    case HermesValue::combineTags(BoolTag, StrTag):
+    }
+    CASE_S_M(Bool, Str) {
       // Do string parsing and check double equality.
       return HermesValue::encodeBoolValue(
           x->getBool() ==
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
-    case HermesValue::combineTags(BoolTag, ObjectTag):
+    }
+    CASE_S_M(Bool, Object) {
       x = HermesValue::encodeDoubleValue(x->getBool());
       goto abstractEqualityTailCall;
+    }
 
-    case HermesValue::combineTags(NumberTag, BoolTag):
+    CASE_S_S(NUMBER_TAG, Bool) {
       return HermesValue::encodeBoolValue(x->getNumber() == y->getBool());
-    case HermesValue::combineTags(StrTag, BoolTag):
+    }
+    CASE_M_S(Str, Bool) {
       return HermesValue::encodeBoolValue(
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
           y->getBool());
-    case HermesValue::combineTags(ObjectTag, BoolTag):
+    }
+    CASE_M_S(Object, Bool) {
       y = HermesValue::encodeDoubleValue(y->getBool());
       goto abstractEqualityTailCall;
-
-    case HermesValue::combineTags(StrTag, ObjectTag):
-    case HermesValue::combineTags(SymbolTag, ObjectTag):
-    case HermesValue::combineTags(NumberTag, ObjectTag): {
+    }
+    CASE_M_M(Str, Object)
+    CASE_S_M(Symbol, Object)
+    CASE_S_M(NUMBER_TAG, Object) {
       auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -877,9 +960,9 @@ abstractEqualityTailCall:
       y = status.getValue();
       goto abstractEqualityTailCall;
     }
-    case HermesValue::combineTags(ObjectTag, StrTag):
-    case HermesValue::combineTags(ObjectTag, SymbolTag):
-    case HermesValue::combineTags(ObjectTag, NumberTag): {
+    CASE_M_M(Object, Str)
+    CASE_M_S(Object, Symbol)
+    CASE_M_S(Object, NUMBER_TAG) {
       auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -892,6 +975,12 @@ abstractEqualityTailCall:
       // Final case, return false.
       return HermesValue::encodeBoolValue(false);
   } // namespace vm
+
+#undef CASE_S_S
+#undef CASE_S_M
+#undef CASE_M_S
+#undef CASE_M_M
+#undef NUMBER_TAG
 } // namespace hermes
 
 bool strictEqualityTest(HermesValue x, HermesValue y) {
@@ -910,18 +999,18 @@ bool strictEqualityTest(HermesValue x, HermesValue y) {
 }
 
 CallResult<HermesValue>
-addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
+addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   auto resX = toPrimitive_RJS(runtime, xHandle, PreferredType::NONE);
   if (resX == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto x = runtime->makeHandle(resX.getValue());
+  auto x = runtime.makeHandle(resX.getValue());
 
   auto resY = toPrimitive_RJS(runtime, yHandle, PreferredType::NONE);
   if (resY == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto y = runtime->makeHandle(resY.getValue());
+  auto y = runtime.makeHandle(resY.getValue());
 
   // If one of the values is a string, concatenate as strings.
   if (x->isString() || y->isString()) {
@@ -929,13 +1018,13 @@ addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
     if (resX == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto xStr = runtime->makeHandle(std::move(*resX));
+    auto xStr = runtime.makeHandle(std::move(*resX));
 
     auto resY = toString_RJS(runtime, y);
     if (resY == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto yStr = runtime->makeHandle(std::move(*resY));
+    auto yStr = runtime.makeHandle(std::move(*resY));
 
     return StringPrimitive::concat(runtime, xStr, yStr);
   }
@@ -976,7 +1065,7 @@ static inline int doubleExponent(double x) {
 }
 
 Handle<StringPrimitive>
-numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
+numberToStringWithRadix(Runtime &runtime, double number, unsigned radix) {
   (void)MIN_RADIX;
   (void)MAX_RADIX;
   assert(MIN_RADIX <= radix && radix <= MAX_RADIX && "Invalid radix");
@@ -1104,18 +1193,18 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
     result.insert(result.begin(), '-');
   }
 
-  return runtime->makeHandle<StringPrimitive>(runtime->ignoreAllocationFailure(
+  return runtime.makeHandle<StringPrimitive>(runtime.ignoreAllocationFailure(
       StringPrimitive::create(runtime, result)));
 }
 
 CallResult<PseudoHandle<>>
-getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
+getMethod(Runtime &runtime, Handle<> O, Handle<> key) {
   GCScopeMarkerRAII gcScope{runtime};
   auto objRes = toObject(runtime, O);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto obj = runtime->makeHandle<JSObject>(*objRes);
+  auto obj = runtime.makeHandle<JSObject>(*objRes);
   auto funcRes = JSObject::getComputed_RJS(obj, runtime, key);
   if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1124,13 +1213,13 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
     return PseudoHandle<>::create(HermesValue::encodeUndefinedValue());
   }
   if (!vmisa<Callable>(funcRes->get())) {
-    return runtime->raiseTypeError("Could not get callable method from object");
+    return runtime.raiseTypeError("Could not get callable method from object");
   }
   return funcRes;
 }
 
 CallResult<IteratorRecord> getIterator(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> obj,
     llvh::Optional<Handle<Callable>> methodOpt) {
   MutableHandle<Callable> method{runtime};
@@ -1138,13 +1227,13 @@ CallResult<IteratorRecord> getIterator(
     auto methodRes = getMethod(
         runtime,
         obj,
-        runtime->makeHandle(
+        runtime.makeHandle(
             Predefined::getSymbolID(Predefined::SymbolIterator)));
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!vmisa<Callable>(methodRes->getHermesValue())) {
-      return runtime->raiseTypeError("iterator method is not callable");
+      return runtime.raiseTypeError("iterator method is not callable");
     }
     method = vmcast<Callable>(methodRes->getHermesValue());
   } else {
@@ -1155,9 +1244,9 @@ CallResult<IteratorRecord> getIterator(
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!(*iteratorRes)->isObject())) {
-    return runtime->raiseTypeError("iterator is not an object");
+    return runtime.raiseTypeError("iterator is not an object");
   }
-  auto iterator = runtime->makeHandle<JSObject>(std::move(*iteratorRes));
+  auto iterator = runtime.makeHandle<JSObject>(std::move(*iteratorRes));
 
   CallResult<PseudoHandle<>> nextMethodRes = JSObject::getNamed_RJS(
       iterator, runtime, Predefined::getSymbolID(Predefined::next));
@@ -1168,18 +1257,17 @@ CallResult<IteratorRecord> getIterator(
   // We perform this check prior to returning, because every function in the JS
   // library which gets an iterator immediately calls the 'next' function.
   if (!vmisa<Callable>(nextMethodRes->get())) {
-    return runtime->raiseTypeError(
-        "'next' method on iterator must be callable");
+    return runtime.raiseTypeError("'next' method on iterator must be callable");
   }
 
   auto nextMethod =
-      Handle<Callable>::vmcast(runtime->makeHandle(std::move(*nextMethodRes)));
+      Handle<Callable>::vmcast(runtime.makeHandle(std::move(*nextMethodRes)));
 
   return IteratorRecord{iterator, nextMethod};
 }
 
 CallResult<PseudoHandle<JSObject>> iteratorNext(
-    Runtime *runtime,
+    Runtime &runtime,
     const IteratorRecord &iteratorRecord,
     llvh::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
@@ -1195,19 +1283,19 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!(*resultRes)->isObject())) {
-    return runtime->raiseTypeError("iterator.next() did not return an object");
+    return runtime.raiseTypeError("iterator.next() did not return an object");
   }
   return PseudoHandle<JSObject>::vmcast(std::move(*resultRes));
 }
 
 CallResult<Handle<JSObject>> iteratorStep(
-    Runtime *runtime,
+    Runtime &runtime,
     const IteratorRecord &iteratorRecord) {
   auto resultRes = iteratorNext(runtime, iteratorRecord);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> result = runtime->makeHandle(std::move(*resultRes));
+  Handle<JSObject> result = runtime.makeHandle(std::move(*resultRes));
   auto completeRes = JSObject::getNamed_RJS(
       result, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(completeRes == ExecutionStatus::EXCEPTION)) {
@@ -1220,7 +1308,7 @@ CallResult<Handle<JSObject>> iteratorStep(
 }
 
 ExecutionStatus iteratorClose(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<JSObject> iterator,
     Handle<> completion) {
   ExecutionStatus completionStatus = completion->isEmpty()
@@ -1234,19 +1322,19 @@ ExecutionStatus iteratorClose(
   auto returnRes = getMethod(
       runtime,
       iterator,
-      runtime->makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
+      runtime.makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
 
   MutableHandle<> innerResult{runtime};
   if (LLVM_LIKELY(returnRes != ExecutionStatus::EXCEPTION)) {
     if (!vmisa<Callable>(returnRes->getHermesValue())) {
-      runtime->setThrownValue(*completion);
+      runtime.setThrownValue(*completion);
       return completionStatus;
     }
     Handle<Callable> returnFn =
-        runtime->makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
+        runtime.makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
     auto innerResultRes = Callable::executeCall0(returnFn, runtime, iterator);
     if (LLVM_UNLIKELY(innerResultRes == ExecutionStatus::EXCEPTION)) {
-      if (isUncatchableError(runtime->getThrownValue())) {
+      if (isUncatchableError(runtime.getThrownValue())) {
         // If the call to return threw an uncatchable exception, that overrides
         // the completion, since the point of an uncatchable exception is to
         // prevent more JS from executing.
@@ -1265,10 +1353,10 @@ ExecutionStatus iteratorClose(
   if (completionStatus == ExecutionStatus::EXCEPTION) {
     // 6. If completion.[[Type]] is throw, return Completion(completion).
     // Note: Overrides the innerResult exception.
-    runtime->setThrownValue(*completion);
+    runtime.setThrownValue(*completion);
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!runtime->getThrownValue().isEmpty())) {
+  if (LLVM_UNLIKELY(!runtime.getThrownValue().isEmpty())) {
     // 7. If innerResult.[[Type]] is throw, return Completion(innerResult).
     // Note: innerResult exception is still in Runtime::thrownValue,
     // so there is no need to set it again.
@@ -1277,8 +1365,7 @@ ExecutionStatus iteratorClose(
   if (!innerResult->isObject()) {
     // 8. If Type(innerResult.[[Value]]) is not Object,
     //    throw a TypeError exception.
-    return runtime->raiseTypeError(
-        "iterator.return() did not return an object");
+    return runtime.raiseTypeError("iterator.return() did not return an object");
   }
   return ExecutionStatus::RETURNED;
 }
@@ -1291,8 +1378,8 @@ bool isUncatchableError(HermesValue value) {
 }
 
 Handle<JSObject>
-createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
-  auto objHandle = runtime->makeHandle(JSObject::create(runtime));
+createIterResultObject(Runtime &runtime, Handle<> value, bool done) {
+  auto objHandle = runtime.makeHandle(JSObject::create(runtime));
   auto status = JSObject::defineOwnProperty(
       objHandle,
       runtime,
@@ -1317,7 +1404,7 @@ createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
 
 CallResult<Handle<Callable>> speciesConstructor(
     Handle<JSObject> O,
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<Callable> defaultConstructor) {
   // construct from the "constructor" property in self if that is defined, else
   // use the default one.
@@ -1331,7 +1418,7 @@ CallResult<Handle<Callable>> speciesConstructor(
     return defaultConstructor;
   }
   if (!cons->isObject()) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Constructor must be an object if it is not undefined");
   }
   // There is no @@species (no Symbols yet), so we'll assume that there was
@@ -1339,11 +1426,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-CallResult<bool> isConstructor(Runtime *runtime, HermesValue value) {
+CallResult<bool> isConstructor(Runtime &runtime, HermesValue value) {
   return isConstructor(runtime, dyn_vmcast<Callable>(value));
 }
 
-CallResult<bool> isConstructor(Runtime *runtime, Callable *callable) {
+CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.
@@ -1381,7 +1468,7 @@ CallResult<bool> isConstructor(Runtime *runtime, Callable *callable) {
 }
 
 CallResult<bool>
-ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
+ordinaryHasInstance(Runtime &runtime, Handle<> constructor, Handle<> object) {
   // 1. If IsCallable(C) is false, return false.
   if (!vmisa<Callable>(*constructor)) {
     return false;
@@ -1412,7 +1499,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
 
   // 4. Let P be Get(C, "prototype").
   auto propRes = JSObject::getNamed_RJS(
-      runtime->makeHandle(ctor),
+      runtime.makeHandle(ctor),
       runtime,
       Predefined::getSymbolID(Predefined::prototype));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -1420,10 +1507,10 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
   }
 
   // 5. If Type(P) is not Object, throw a TypeError exception.
-  Handle<JSObject> ctorPrototype = runtime->makeHandle(
+  Handle<JSObject> ctorPrototype = runtime.makeHandle(
       PseudoHandle<JSObject>::dyn_vmcast(std::move(*propRes)));
   if (LLVM_UNLIKELY(!ctorPrototype)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "function's '.prototype' is not an object in 'instanceof'");
   }
 
@@ -1457,7 +1544,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
     if (head->isProxyObject()) {
       ++proxyCount;
       if (proxyCount > kMaxProxyCount) {
-        return runtime->raiseRangeError(
+        return runtime.raiseRangeError(
             "Maximum prototype chain length exceeded");
       }
     }
@@ -1467,12 +1554,12 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
 }
 
 CallResult<bool> instanceOfOperator_RJS(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<> object,
     Handle<> constructor) {
   // 1. If Type(C) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!constructor->isObject())) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "right operand of 'instanceof' is not an object");
   }
 
@@ -1491,13 +1578,13 @@ CallResult<bool> instanceOfOperator_RJS(
   if (LLVM_UNLIKELY(instOfHandlerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto instOfHandler = runtime->makeHandle(std::move(*instOfHandlerRes));
+  auto instOfHandler = runtime.makeHandle(std::move(*instOfHandlerRes));
 
   // 4. If instOfHandler is not undefined, then
   if (!instOfHandler->isUndefined()) {
     // 5. Return ToBoolean(Call(instOfHandler, C, «O»)).
     if (!vmisa<Callable>(*instOfHandler)) {
-      return runtime->raiseTypeError("instanceof handler must be callable");
+      return runtime.raiseTypeError("instanceof handler must be callable");
     }
     auto callRes = Callable::executeCall1(
         Handle<Callable>::vmcast(instOfHandler), runtime, constructor, *object);
@@ -1509,7 +1596,7 @@ CallResult<bool> instanceOfOperator_RJS(
 
   // 6. If IsCallable(C) is false, throw a TypeError exception.
   if (!vmisa<Callable>(*constructor)) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "right operand of 'instanceof' is not callable");
   }
 
@@ -1520,7 +1607,7 @@ CallResult<bool> instanceOfOperator_RJS(
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that
 /// evaluates to true.
-CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
+CallResult<bool> isRegExp(Runtime &runtime, Handle<> arg) {
   // 1. If Type(argument) is not Object, return false.
   if (!arg->isObject()) {
     return false;
@@ -1543,14 +1630,14 @@ CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
 }
 
 CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
-    Runtime *runtime,
+    Runtime &runtime,
     Handle<SymbolID> sym) {
   // 1. Assert: Type(sym) is Symbol.
   // 2. Let desc be sym's [[Description]] value.
   // 3. If desc is undefined, set desc to the empty string.
   // 4. Assert: Type(desc) is String.
-  auto desc = runtime->makeHandle<StringPrimitive>(
-      runtime->getStringPrimFromSymbolID(*sym));
+  auto desc = runtime.makeHandle<StringPrimitive>(
+      runtime.getStringPrimFromSymbolID(*sym));
   SafeUInt32 descLen(desc->getStringLength());
   descLen.add(8);
 
@@ -1566,7 +1653,7 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
   return builder->getStringPrimitive();
 }
 
-CallResult<bool> isArray(Runtime *runtime, JSObject *obj) {
+CallResult<bool> isArray(Runtime &runtime, JSObject *obj) {
   if (!obj) {
     return false;
   }
@@ -1578,14 +1665,14 @@ CallResult<bool> isArray(Runtime *runtime, JSObject *obj) {
       return false;
     }
     if (JSProxy::isRevoked(obj, runtime)) {
-      return runtime->raiseTypeError("Proxy has been revoked");
+      return runtime.raiseTypeError("Proxy has been revoked");
     }
     obj = JSProxy::getTarget(obj, runtime).get();
     assert(obj && "target of non-revoked Proxy is null");
   }
 }
 
-CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
+CallResult<bool> isConcatSpreadable(Runtime &runtime, Handle<> value) {
   auto O = Handle<JSObject>::dyn_vmcast(value);
   if (!O) {
     return false;
@@ -1608,7 +1695,7 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
 
 ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
-    Runtime *runtime,
+    Runtime &runtime,
     DefinePropertyFlags &flags,
     MutableHandle<> &valueOrAccessor) {
   GCScopeMarkerRAII gcMarker{runtime};
@@ -1616,7 +1703,7 @@ ExecutionStatus toPropertyDescriptor(
   // Verify that the attributes argument is also an object.
   auto attributes = Handle<JSObject>::dyn_vmcast(obj);
   if (!attributes) {
-    return runtime->raiseTypeError(
+    return runtime.raiseTypeError(
         "Object.defineProperty() Attributes argument is not an object");
   }
 
@@ -1699,7 +1786,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_LIKELY(!getter->isUndefined())) {
       getterPtr = dyn_vmcast<Callable>(getter.get());
       if (LLVM_UNLIKELY(!getterPtr)) {
-        return runtime->raiseTypeError(
+        return runtime.raiseTypeError(
             "Invalid property descriptor. Getter must be a function.");
       }
     }
@@ -1722,7 +1809,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_LIKELY(!setter->isUndefined())) {
       setterPtr = PseudoHandle<Callable>::dyn_vmcast(std::move(setter));
       if (LLVM_UNLIKELY(!setterPtr)) {
-        return runtime->raiseTypeError(
+        return runtime.raiseTypeError(
             "Invalid property descriptor. Setter must be a function.");
       }
     }
@@ -1731,11 +1818,11 @@ ExecutionStatus toPropertyDescriptor(
   // Construct property accessor if getter/setter is set.
   if (flags.setSetter || flags.setGetter) {
     if (flags.setValue) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and value.");
     }
     if (flags.setWritable) {
-      return runtime->raiseTypeError(
+      return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and writable.");
     }
     auto crtRes = PropertyAccessor::create(runtime, getterPtr, setterPtr);
@@ -1749,10 +1836,10 @@ ExecutionStatus toPropertyDescriptor(
 }
 
 CallResult<HermesValue> objectFromPropertyDescriptor(
-    Runtime *runtime,
+    Runtime &runtime,
     ComputedPropertyDescriptor desc,
     Handle<> valueOrAccessor) {
-  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
+  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime));
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 
@@ -1789,15 +1876,15 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     // Accessor
     auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
 
-    auto getter = runtime->makeHandle(
-        accessor->getter
-            ? HermesValue::encodeObjectValue(accessor->getter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+    auto getter = runtime.makeHandle(
+        accessor->getter ? HermesValue::encodeObjectValue(
+                               accessor->getter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
-    auto setter = runtime->makeHandle(
-        accessor->setter
-            ? HermesValue::encodeObjectValue(accessor->setter.get(runtime))
-            : HermesValue::encodeUndefinedValue());
+    auto setter = runtime.makeHandle(
+        accessor->setter ? HermesValue::encodeObjectValue(
+                               accessor->setter.getNonNull(runtime))
+                         : HermesValue::encodeUndefinedValue());
 
     auto result = JSObject::defineOwnProperty(
         obj,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
@@ -47,7 +47,7 @@ class WeakRef;
 ///
 /// The old generation is a collection of heap segments, and allocations in the
 /// old gen are done with a freelist (not a bump-pointer). When the old
-/// collection is nearly full, it starts a backthround thread that will mark all
+/// collection is nearly full, it starts a background thread that will mark all
 /// objects in the old gen, and then sweep the dead ones onto freelists.
 ///
 /// Compaction is done in the old gen on a per-segment basis.
@@ -64,8 +64,8 @@ class HadesGC final : public GCBase {
   /// sizes.
   /// \param provider A provider of storage to be used by segments.
   HadesGC(
-      GCCallbacks *gcCallbacks,
-      PointerBase *pointerBase,
+      GCCallbacks &gcCallbacks,
+      PointerBase &pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,
@@ -335,9 +335,6 @@ class HadesGC final : public GCBase {
   /// found reachable in a full GC.
   void trackReachable(CellKind kind, unsigned sz) override;
 
-  /// Returns true if \p cell is the most-recently allocated finalizable object.
-  bool isMostRecentFinalizableObj(const GCCell *cell) const override;
-
   /// \}
 #endif
 
@@ -380,7 +377,7 @@ class HadesGC final : public GCBase {
     void forAllObjs(CallbackFunction callback);
     /// Only call the callback on cells without forwarding pointers.
     template <typename CallbackFunction>
-    void forCompactedObjs(CallbackFunction callback, PointerBase *base);
+    void forCompactedObjs(CallbackFunction callback, PointerBase &base);
   };
 
   class OldGen final {
@@ -393,7 +390,6 @@ class HadesGC final : public GCBase {
     std::deque<HeapSegment>::const_iterator end() const;
 
     size_t numSegments() const;
-    size_t maxNumSegments() const;
 
     HeapSegment &operator[](size_t i);
 
@@ -450,10 +446,8 @@ class HadesGC final : public GCBase {
     uint64_t size() const;
 
     /// \return the total number of bytes that we aim to use in the OG
-    /// section of the JS heap, including free list entries. This may be smaller
-    /// or greater than size(). It is rounded up to the nearest segment to make
-    /// to reflect the fact that in practice, the heap size will be an integer
-    /// multiple of segment size.
+    /// section of the heap, including free list entries and external memory.
+    /// This may be smaller or greater than size() + externalBytes().
     uint64_t targetSizeBytes() const;
 
     /// Add some external memory cost to the OG.
@@ -484,8 +478,6 @@ class HadesGC final : public GCBase {
       // If null, this is the tail of the free list.
       AssignableCompressedPointer next_{nullptr};
 
-      explicit FreelistCell(uint32_t sz) : VariableSizeRuntimeCell{&vt, sz} {}
-
       /// Shrink this cell by carving out a region of size \p sz bytes. Unpoison
       /// the carved out region if necessary and return it (without any
       /// initialisation).
@@ -493,6 +485,9 @@ class HadesGC final : public GCBase {
       /// \pre getAllocatedSize() >= sz + minAllocationSize()
       GCCell *carve(uint32_t sz);
 
+      static constexpr CellKind getCellKind() {
+        return CellKind::FreelistKind;
+      }
       static bool classof(const GCCell *cell) {
         return cell->getKind() == CellKind::FreelistKind;
       }
@@ -558,10 +553,7 @@ class HadesGC final : public GCBase {
     /// remain valid across a push_back.
     std::deque<HeapSegment> segments_;
 
-    /// This is the target size in bytes for the OG JS heap. It does not
-    /// include external memory and may be larger or smaller than the actual
-    /// capacity of the heap. Should be initialised using setTargetSizeBytes
-    /// before use.
+    /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
@@ -688,7 +680,8 @@ class HadesGC final : public GCBase {
   /// Note that we only set the YG size using this at the end of the first real
   /// YG, since doing it for direct promotions would waste OG memory without a
   /// pause time benefit.
-  double ygSizeFactor_{0.5};
+  static constexpr double kYGInitialSizeFactor = 0.5;
+  double ygSizeFactor_{kYGInitialSizeFactor};
 
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
@@ -722,7 +715,7 @@ class HadesGC final : public GCBase {
   /// Represents whether the background thread is currently marking. Should only
   /// be accessed by the mutator thread or during a STW pause.
   /// ogMarkingBarriers_ is true from the start of marking the OG heap until the
-  /// start of WeakMap marking but is kept separate from concurrentPhase_ in
+  /// start of the STW pause but is kept separate from concurrentPhase_ in
   /// order to reduce synchronisation requirements for write barriers.
   bool ogMarkingBarriers_{false};
 
@@ -771,8 +764,9 @@ class HadesGC final : public GCBase {
   /// together in a linked list.
   WeakRefSlot *firstFreeWeak_{nullptr};
 
-  /// The weighted average of the YG survival ratio over time.
-  ExponentialMovingAverage ygAverageSurvivalRatio_;
+  /// The weighted average of the number of bytes that are promoted to the OG in
+  /// each YG collection.
+  ExponentialMovingAverage ygAverageSurvivalBytes_;
 
   /// The amount of bytes of external memory credited to objects in the YG.
   /// Only accessible to the mutator.
@@ -902,10 +896,11 @@ class HadesGC final : public GCBase {
   /// This function checks if the live bytes after the last OG GC is greater
   /// than the tripwire limit. If the conditions are met, the tripwire is
   /// triggered and tripwireCallback_ is called.
-  /// Also resets the stats counter, so that it calls the analytics callback.
+  /// Also submits pending OG collection stats, and calls the analytics
+  /// callback.
   /// WARNING: Do not call this while there is an ongoing collection. It can
   /// cause a race condition and a deadlock.
-  void checkTripwireAndResetStats();
+  void checkTripwireAndSubmitStats();
 
   /// Transfer any external memory charges from YG to OG. Used as part of YG
   /// collection.
@@ -997,10 +992,6 @@ class HadesGC final : public GCBase {
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
-
-  /// Run the finalizers for all heap objects, if the gcMutex_ is already
-  /// locked.
-  void finalizeAllLocked();
 
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
@@ -1105,11 +1096,14 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
   if (longLived == LongLived::Yes) {
     auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
-    return new (allocLongLived(size)) T(std::forward<Args>(args)...);
+    return constructCell<T>(
+        allocLongLived(size), size, std::forward<Args>(args)...);
   }
 
-  return new (allocWork<fixedSize, hasFinalizer>(size))
-      T(std::forward<Args>(args)...);
+  return constructCell<T>(
+      allocWork<fixedSize, hasFinalizer>(size),
+      size,
+      std::forward<Args>(args)...);
 }
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
