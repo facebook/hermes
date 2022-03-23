@@ -24,8 +24,7 @@ const VTable DummyObject::vt{
     _mallocSizeImpl,
     nullptr};
 
-DummyObject::DummyObject(GC *gc)
-    : GCCell(gc, &vt), other(), x(1), y(2), weak(gc, this) {
+DummyObject::DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
   hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
@@ -53,7 +52,9 @@ void DummyObject::setPointer(GC *gc, DummyObject *obj) {
 }
 
 DummyObject *DummyObject::create(GC *gc) {
-  return gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+  auto *cell = gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+  cell->weak.emplace(gc, cell);
+  return cell;
 }
 DummyObject *DummyObject::createLongLived(GC *gc) {
   return gc->makeAFixed<DummyObject, HasFinalizer::Yes, LongLived::Yes>(gc);
@@ -79,7 +80,8 @@ void DummyObject::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = reinterpret_cast<DummyObject *>(cell);
   if (self->markWeakCallback)
     (*self->markWeakCallback)(cell, acceptor);
-  acceptor.accept(self->weak);
+  if (self->weak)
+    acceptor.accept(*self->weak);
 }
 
 } // namespace testhelpers

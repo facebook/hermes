@@ -65,7 +65,7 @@ void HadesGC::OldGen::addCellToFreelist(
   assert(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
-  FreelistCell *newFreeCell = new (addr) FreelistCell{sz};
+  FreelistCell *newFreeCell = constructCell<FreelistCell>(addr, sz, sz);
   HeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
   addCellToFreelist(newFreeCell, segmentIdx);
 }
@@ -107,7 +107,8 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   if (setHead)
     HeapSegment::setCellHead(
         reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
-  FreelistCell *newCell = new (freeRangeStart) FreelistCell(newCellSize);
+  auto *newCell =
+      constructCell<FreelistCell>(freeRangeStart, newCellSize, newCellSize);
   // Get the size bucket for the cell being added;
   const uint32_t bucket = getFreelistBucket(newCellSize);
   // Push onto the size-specific free list for this bucket and segment.
@@ -1152,7 +1153,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
             trimmedSize);
         GCCell *newCell = cell->nextCell();
         // Just create a FillerCell, the next iteration will free it.
-        new (newCell) FillerCell{gc_, trimmableBytes};
+        constructCell<FillerCell>(newCell, trimmableBytes, gc_, trimmableBytes);
         assert(
             !HeapSegment::getCellMarkBit(newCell) &&
             "Trimmed space cannot be marked");

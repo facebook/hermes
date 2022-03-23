@@ -369,7 +369,7 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   void *mem = alloc<fixedSize, hasFinalizer>(size);
-  return new (mem) T(std::forward<Args>(args)...);
+  return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {

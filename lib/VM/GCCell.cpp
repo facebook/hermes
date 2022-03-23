@@ -12,24 +12,10 @@ namespace hermes {
 namespace vm {
 
 #ifndef NDEBUG
-GCCell::GCCell(const VTable *vtp) : GCCell(vtp->kind, vtp->size) {
-  assert(vtp->size != 0 && "Fixed size cells should have non-zero size.");
-}
+GCCell::GCCell(CellKind, size_t) : _debugAllocationId_(0) {}
 
-GCCell::GCCell(CellKind kind, size_t sz)
-    : kindAndSize_(kind, sz), _debugAllocationId_(0) {
-  assert(getVT()->size == 0 || getVT()->size == sz && "Invalid size");
-  assert(getVT()->kind == kind && "VTable does not match kind.");
-}
-
-GCCell::GCCell(GC *gc, const VTable *vtp)
-    : kindAndSize_(vtp->kind, vtp->size),
-      _debugAllocationId_(gc->nextObjectID()) {
-  assert(getVT() == vtp && "VTable does not match kind.");
-  assert(
-      (!vtp->mallocSize_ || vtp->finalize_) &&
-      "If a cell uses malloc, then it needs a finalizer");
-}
+GCCell::GCCell(GC *gc, const VTable *)
+    : _debugAllocationId_(gc->nextObjectID()) {}
 #endif
 
 } // namespace vm

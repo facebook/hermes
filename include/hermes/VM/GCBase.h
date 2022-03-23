@@ -1401,6 +1401,14 @@ class GCBase {
       Acceptor &,
       std::false_type) {}
 
+  template <typename T, class... Args>
+  static T *constructCell(void *ptr, uint32_t size, Args &&...args) {
+    auto *cell = new (ptr) T(std::forward<Args>(args)...);
+    constexpr auto kind = T::getCellKind();
+    cell->setKindAndSize({kind, size});
+    return cell;
+  }
+
   /// Number of finalized objects in the last collection.
   unsigned numFinalizedObjects_{0};
 

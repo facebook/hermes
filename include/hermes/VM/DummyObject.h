@@ -29,7 +29,7 @@ struct DummyObject final : public GCCell {
   GCHermesValue hvEmpty;
   GCHermesValue hvNative;
   GCHermesValue hvNull;
-  WeakRef<DummyObject> weak;
+  llvh::Optional<WeakRef<DummyObject>> weak;
   uint32_t externalBytes{};
   uint32_t extraBytes{};
 

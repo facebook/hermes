@@ -1098,11 +1098,14 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
   if (longLived == LongLived::Yes) {
     auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
-    return new (allocLongLived(size)) T(std::forward<Args>(args)...);
+    return constructCell<T>(
+        allocLongLived(size), size, std::forward<Args>(args)...);
   }
 
-  return new (allocWork<fixedSize, hasFinalizer>(size))
-      T(std::forward<Args>(args)...);
+  return constructCell<T>(
+      allocWork<fixedSize, hasFinalizer>(size),
+      size,
+      std::forward<Args>(args)...);
 }
 
 template <bool fixedSize, HasFinalizer hasFinalizer>

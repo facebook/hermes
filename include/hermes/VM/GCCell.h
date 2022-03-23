@@ -103,7 +103,6 @@ class GCCell {
   /// NOTE: This bypasses some debugging checks in the GCCell constructor taking
   /// a GC parameter, so this should only be used in cases where the debug
   /// checks will be wrong.
-  explicit GCCell(const VTable *vtp);
   explicit GCCell(CellKind kind, size_t sz);
 
   // GCCell-s are not copyable (in the C++ sense).
@@ -325,11 +324,8 @@ static_assert(
     "GCCell's alignment exceeds the alignment requirement of the heap");
 
 #ifdef NDEBUG
-inline GCCell::GCCell(GC *, const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
-
-inline GCCell::GCCell(const VTable *vtp) : GCCell(vtp->kind, vtp->size) {}
-
-inline GCCell::GCCell(CellKind kind, size_t sz) : kindAndSize_(kind, sz) {}
+inline GCCell::GCCell(GC *, const VTable *) {}
+inline GCCell::GCCell(CellKind, size_t) {}
 
 static_assert(
     sizeof(GCCell) == sizeof(CompressedPointer) &&
