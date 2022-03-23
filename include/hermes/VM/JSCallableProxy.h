@@ -50,7 +50,6 @@ class JSCallableProxy : public NativeFunction {
       Handle<HiddenClass> clazz)
       : NativeFunction(
             runtime,
-            &vt.base.base,
             parent,
             clazz,
             nullptr /* context */,

@@ -216,9 +216,6 @@ class Domain final : public GCCell {
   /// context for this domain.
   PseudoHandle<NativeFunction> getThrowingRequire(Runtime &runtime) const;
 
-  /// Create a domain with no associated RuntimeModules.
-  Domain(Runtime &runtime) : GCCell(&runtime.getHeap(), &vt) {}
-
  private:
   /// Destroy associated RuntimeModules.
   ~Domain();
@@ -283,7 +280,7 @@ class RequireContext final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   GCPointer<Domain> domain_;

@@ -32,7 +32,7 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime &runtime) {
-  return createPseudoHandle(runtime.makeAFixed<HashMapEntry>(runtime));
+  return createPseudoHandle(runtime.makeAFixed<HashMapEntry>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -53,8 +53,7 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 OrderedHashMap::OrderedHashMap(
     Runtime &runtime,
     Handle<ArrayStorageSmall> hashTableStorage)
-    : GCCell(&runtime.getHeap(), &vt),
-      hashTable_(runtime, hashTableStorage.get(), &runtime.getHeap()) {}
+    : hashTable_(runtime, hashTableStorage.get(), &runtime.getHeap()) {}
 
 CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
     Runtime &runtime) {

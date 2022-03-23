@@ -478,8 +478,6 @@ class HadesGC final : public GCBase {
       // If null, this is the tail of the free list.
       AssignableCompressedPointer next_{nullptr};
 
-      explicit FreelistCell(uint32_t sz) : VariableSizeRuntimeCell{&vt, sz} {}
-
       /// Shrink this cell by carving out a region of size \p sz bytes. Unpoison
       /// the carved out region if necessary and return it (without any
       /// initialisation).

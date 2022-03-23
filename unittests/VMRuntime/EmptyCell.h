@@ -28,15 +28,13 @@ struct EmptyCell final : public FillerCell {
   }
 
   static EmptyCell *create(DummyRuntime &runtime) {
-    return runtime.makeAVariable<EmptyCell>(size(), &runtime.getHeap());
+    return runtime.makeAVariable<EmptyCell>(size());
   }
 
   static EmptyCell *createLongLived(DummyRuntime &runtime) {
     return runtime.makeAVariable<EmptyCell, HasFinalizer::No, LongLived::Yes>(
-        size(), &runtime.getHeap());
+        size());
   }
-
-  EmptyCell(GC *gc) : FillerCell(gc, Size) {}
 
   /// Touch bytes in the cell from the end of its header until the end of its
   /// memory region, at page sized intervals.

@@ -16,7 +16,6 @@ set(source_files
   Domain.cpp
   DummyObject.cpp
   GCBase.cpp
-  GCCell.cpp
   OrderedHashMap.cpp
   HandleRootOwner.cpp
   HeapSnapshot.cpp

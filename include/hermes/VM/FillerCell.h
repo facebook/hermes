@@ -41,10 +41,8 @@ class FillerCell : public VariableSizeRuntimeCell {
     assert(
         isSizeHeapAligned(size) &&
         "A FillerCell must have a heap aligned size");
-    return runtime.makeAVariable<FillerCell>(size, &runtime.getHeap(), size);
+    return runtime.makeAVariable<FillerCell>(size);
   }
-
-  FillerCell(GC *gc, size_type size) : VariableSizeRuntimeCell(gc, &vt, size) {}
 };
 
 } // namespace vm

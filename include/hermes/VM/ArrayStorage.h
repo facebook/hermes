@@ -82,8 +82,7 @@ class ArrayStorageBase final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     const auto allocSize = allocationSize(capacity);
-    auto *cell = runtime.makeAVariable<ArrayStorageBase<HVType>>(
-        allocSize, &runtime.getHeap(), allocSize);
+    auto *cell = runtime.makeAVariable<ArrayStorageBase<HVType>>(allocSize);
     return HermesValue::encodeObjectValue(cell);
   }
 
@@ -94,7 +93,7 @@ class ArrayStorageBase final
   static ArrayStorageBase *createForTest(GC *gc, size_type capacity) {
     assert(capacity <= maxElements());
     const auto allocSize = allocationSize(capacity);
-    auto *cell = gc->makeAVariable<ArrayStorageBase>(allocSize, gc, allocSize);
+    auto *cell = gc->makeAVariable<ArrayStorageBase>(allocSize);
     ArrayStorageBase::resizeWithinCapacity(cell, gc, capacity);
     return cell;
   }
@@ -108,11 +107,10 @@ class ArrayStorageBase final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     const auto allocSize = allocationSize(capacity);
-    return HermesValue::encodeObjectValue(
-        runtime.makeAVariable<
-            ArrayStorageBase<HVType>,
-            HasFinalizer::No,
-            LongLived::Yes>(allocSize, &runtime.getHeap(), allocSize));
+    return HermesValue::encodeObjectValue(runtime.makeAVariable<
+                                          ArrayStorageBase<HVType>,
+                                          HasFinalizer::No,
+                                          LongLived::Yes>(allocSize));
   }
 
   /// Create a new instance with at least the specified \p capacity and a size
@@ -268,12 +266,10 @@ class ArrayStorageBase final
   AtomicIfConcurrentGC<size_type> size_{0};
 
  public:
-  ArrayStorageBase() = delete;
+  ArrayStorageBase() = default;
   ArrayStorageBase(const ArrayStorageBase &) = delete;
   void operator=(const ArrayStorageBase &) = delete;
   ~ArrayStorageBase() = delete;
-
-  ArrayStorageBase(GC *gc, uint32_t allocSize);
 
  private:
   /// Throws a RangeError with a descriptive message describing the attempted

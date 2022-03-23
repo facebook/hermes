@@ -43,7 +43,7 @@ class SingleObject final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 };
 
 template <CellKind kind>

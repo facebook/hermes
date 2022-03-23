@@ -47,7 +47,7 @@ JSDataView::JSDataView(
     Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSObject(runtime, &vt.base, *parent, *clazz),
+    : JSObject(runtime, *parent, *clazz),
       buffer_(nullptr),
       offset_(0),
       length_(0) {}

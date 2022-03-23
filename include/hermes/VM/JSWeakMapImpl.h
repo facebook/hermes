@@ -108,11 +108,10 @@ class JSWeakMapImplBase : public JSObject {
  protected:
   JSWeakMapImplBase(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<BigStorage> valueStorage)
-      : JSObject(runtime, vtp, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         valueStorage_(runtime, *valueStorage, &runtime.getHeap()) {}
 
  public:
@@ -332,7 +331,7 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<BigStorage> valueStorage)
-      : JSWeakMapImplBase(runtime, &vt.base, parent, clazz, valueStorage) {}
+      : JSWeakMapImplBase(runtime, parent, clazz, valueStorage) {}
 };
 
 using JSWeakMap = JSWeakMapImpl<CellKind::JSWeakMapKind>;

@@ -81,8 +81,7 @@ class Environment final
       Runtime &runtime,
       Handle<Environment> parentEnvironment,
       uint32_t size)
-      : VariableSizeRuntimeCell(&runtime.getHeap(), &vt, allocationSize(size)),
-        parentEnvironment_(
+      : parentEnvironment_(
             runtime,
             parentEnvironment.get(),
             &runtime.getHeap()),
@@ -310,18 +309,13 @@ class Callable : public JSObject {
  protected:
   Callable(
       Runtime &runtime,
-      const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> env)
-      : JSObject(runtime, vt, parent, clazz),
+      : JSObject(runtime, parent, clazz),
         environment_(runtime, *env, &runtime.getHeap()) {}
-  Callable(
-      Runtime &runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : JSObject(runtime, vt, parent, clazz), environment_() {}
+  Callable(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, parent, clazz), environment_() {}
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 
@@ -399,7 +393,7 @@ class BoundFunction final : public Callable {
       Handle<HiddenClass> clazz,
       Handle<Callable> target,
       Handle<ArrayStorage> argStorage)
-      : Callable(runtime, &vt.base.base, *parent, *clazz),
+      : Callable(runtime, *parent, *clazz),
         target_(runtime, *target, &runtime.getHeap()),
         argStorage_(runtime, *argStorage, &runtime.getHeap()) {}
 
@@ -642,23 +636,21 @@ class NativeFunction : public Callable {
  public:
   NativeFunction(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, *parent, *clazz),
+      : Callable(runtime, *parent, *clazz),
         context_(context),
         functionPtr_(functionPtr) {}
   NativeFunction(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, *parent, *clazz, environment),
+      : Callable(runtime, *parent, *clazz, environment),
         context_(context),
         functionPtr_(functionPtr) {}
 
@@ -784,13 +776,7 @@ class NativeConstructor final : public NativeFunction {
       NativeFunctionPtr functionPtr,
       CreatorFunction *creator,
       CellKind targetKind)
-      : NativeFunction(
-            runtime,
-            &vt.base.base,
-            parent,
-            clazz,
-            context,
-            functionPtr),
+      : NativeFunction(runtime, parent, clazz, context, functionPtr),
 #ifndef NDEBUG
         targetKind_(targetKind),
 #endif
@@ -808,7 +794,6 @@ class NativeConstructor final : public NativeFunction {
       CellKind targetKind)
       : NativeFunction(
             runtime,
-            &vt.base.base,
             parent,
             clazz,
             parentEnvHandle,
@@ -857,35 +842,18 @@ class JSFunction : public Callable {
  public:
   JSFunction(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<Domain> domain,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Callable(runtime, vtp, *parent, *clazz, environment),
+      : Callable(runtime, *parent, *clazz, environment),
         codeBlock_(codeBlock),
         domain_(runtime, *domain, &runtime.getHeap()) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
-
-  JSFunction(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<Environment> environment,
-      CodeBlock *codeBlock)
-      : JSFunction(
-            runtime,
-            &vt.base.base,
-            domain,
-            parent,
-            clazz,
-            environment,
-            codeBlock) {}
 
  public:
   static const CallableVTable vt;
@@ -999,33 +967,16 @@ class JSAsyncFunction final : public JSFunction {
 
   JSAsyncFunction(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<Domain> domain,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Super(runtime, vtp, domain, parent, clazz, environment, codeBlock) {
+      : Super(runtime, domain, parent, clazz, environment, codeBlock) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
-
-  JSAsyncFunction(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<Environment> environment,
-      CodeBlock *codeBlock)
-      : JSFunction(
-            runtime,
-            &vt.base.base,
-            domain,
-            parent,
-            clazz,
-            environment,
-            codeBlock) {}
 };
 
 /// A function which interprets code and returns a Generator when called.
@@ -1071,33 +1022,16 @@ class JSGeneratorFunction final : public JSFunction {
  public:
   JSGeneratorFunction(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<Domain> domain,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Super(runtime, vtp, domain, parent, clazz, environment, codeBlock) {
+      : Super(runtime, domain, parent, clazz, environment, codeBlock) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
-
-  JSGeneratorFunction(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      Handle<Environment> environment,
-      CodeBlock *codeBlock)
-      : JSFunction(
-            runtime,
-            &vt.base.base,
-            domain,
-            parent,
-            clazz,
-            environment,
-            codeBlock) {}
 };
 
 /// A function which can save its state and yield execution to the caller.
@@ -1242,14 +1176,7 @@ class GeneratorInnerFunction final : public JSFunction {
       Handle<Environment> environment,
       CodeBlock *codeBlock,
       uint32_t argCount)
-      : JSFunction(
-            runtime,
-            &vt.base.base,
-            domain,
-            parent,
-            clazz,
-            environment,
-            codeBlock),
+      : JSFunction(runtime, domain, parent, clazz, environment, codeBlock),
         argCount_(argCount) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&

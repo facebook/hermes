@@ -44,10 +44,6 @@ void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 template <typename HVType>
-ArrayStorageBase<HVType>::ArrayStorageBase(GC *gc, uint32_t allocSize)
-    : VariableSizeRuntimeCell(gc, &vt, allocSize) {}
-
-template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
     MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime &runtime,

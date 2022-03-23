@@ -38,7 +38,7 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
-  return createPseudoHandle(runtime.makeAFixed<Segment>(runtime));
+  return createPseudoHandle(runtime.makeAFixed<Segment>());
 }
 
 void SegmentedArray::Segment::setLength(Runtime &runtime, uint32_t newLength) {
@@ -96,8 +96,7 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
   const auto allocSize = allocationSizeForCapacity(capacity);
-  return createPseudoHandle(
-      runtime.makeAVariable<SegmentedArray>(allocSize, runtime, allocSize));
+  return createPseudoHandle(runtime.makeAVariable<SegmentedArray>(allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
@@ -111,7 +110,7 @@ CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
   const auto allocSize = allocationSizeForCapacity(capacity);
   return createPseudoHandle(
       runtime.makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
-          allocSize, runtime, allocSize));
+          allocSize));
 }
 
 CallResult<PseudoHandle<SegmentedArray>>

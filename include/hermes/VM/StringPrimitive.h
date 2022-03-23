@@ -90,13 +90,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   uint32_t lengthAndUniquedFlag_;
 
   /// Super constructor to set the length properly.
-  explicit StringPrimitive(
-      Runtime &runtime,
-      const VTable *vt,
-      uint32_t cellSize,
-      uint32_t length)
-      : VariableSizeRuntimeCell(&runtime.getHeap(), vt, cellSize),
-        lengthAndUniquedFlag_(length) {}
+  explicit StringPrimitive(uint32_t length) : lengthAndUniquedFlag_(length) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
@@ -469,16 +463,12 @@ class DynamicStringPrimitive final
  public:
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
-  explicit DynamicStringPrimitive(Runtime &runtime, uint32_t length)
-      : OptSymbolStringPrimitive<Uniqued>(
-            runtime,
-            &vt,
-            allocationSize(length),
-            length) {
+  explicit DynamicStringPrimitive(uint32_t length)
+      : OptSymbolStringPrimitive<Uniqued>(length) {
     assert(!isExternalLength(length) && "length should not be external");
   }
 
-  explicit DynamicStringPrimitive(Runtime &runtime, Ref src);
+  explicit DynamicStringPrimitive(Ref src);
 
  private:
   /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
@@ -572,7 +562,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
   template <class BasicString>
-  ExternalStringPrimitive(Runtime &runtime, BasicString &&contents);
+  ExternalStringPrimitive(BasicString &&contents);
 
  private:
   /// Destructor deallocates the contents_ string.
@@ -695,11 +685,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       Runtime &runtime,
       uint32_t length,
       Handle<ExternalStringPrimitive<T>> concatBuffer)
-      : StringPrimitive(
-            runtime,
-            &vt,
-            sizeof(BufferedStringPrimitive<T>),
-            length) {
+      : StringPrimitive(length) {
     concatBufferHV_.set(
         HermesValue::encodeObjectValue(*concatBuffer), &runtime.getHeap());
     assert(

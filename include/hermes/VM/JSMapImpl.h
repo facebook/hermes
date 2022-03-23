@@ -143,7 +143,7 @@ class JSMapImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   /// The underlying storage.
@@ -265,7 +265,7 @@ class JSMapIteratorImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   /// The internal pointer to the Map data. nullptr if the iterator has not been

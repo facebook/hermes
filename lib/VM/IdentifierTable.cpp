@@ -265,7 +265,6 @@ IdentifierTable::allocateDynamicString(
         HasFinalizer::No,
         LongLived::Yes>(
         DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length),
-        runtime,
         length);
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.

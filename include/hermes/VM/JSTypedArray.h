@@ -162,7 +162,6 @@ class JSTypedArrayBase : public JSObject {
 
   explicit JSTypedArrayBase(
       Runtime &runtime,
-      const VTable *vt,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz);
 

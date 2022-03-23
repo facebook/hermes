@@ -73,7 +73,6 @@ PseudoHandle<JSObject> JSObject::create(
     Handle<JSObject> parentHandle) {
   auto *cell = runtime.makeAFixed<JSObject>(
       runtime,
-      &vt.base,
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSObject>()),

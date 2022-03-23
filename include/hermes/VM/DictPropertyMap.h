@@ -339,16 +339,8 @@ class DictPropertyMap final
   }
 
  public:
-  DictPropertyMap(
-      Runtime &runtime,
-      size_type descriptorCapacity,
-      size_type hashCapacity)
-      : VariableSizeRuntimeCell(
-            &runtime.getHeap(),
-            &vt,
-            allocationSize(descriptorCapacity, hashCapacity)),
-        descriptorCapacity_(descriptorCapacity),
-        hashCapacity_(hashCapacity) {
+  DictPropertyMap(size_type descriptorCapacity, size_type hashCapacity)
+      : descriptorCapacity_(descriptorCapacity), hashCapacity_(hashCapacity) {
     // Clear the hash table.
     std::fill_n(getHashPairs(), hashCapacity_, HashPair{});
   }

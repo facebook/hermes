@@ -177,7 +177,7 @@ class JSProxy : public JSObject {
 
  public:
   JSProxy(Runtime &runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz) {}
+      : JSObject(runtime, *parent, *clazz) {}
 
  private:
   detail::ProxySlots slots_;

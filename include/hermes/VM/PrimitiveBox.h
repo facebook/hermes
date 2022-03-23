@@ -64,7 +64,7 @@ class JSString final : public JSObject {
       Handle<StringPrimitive> value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         primitiveValue_(runtime, *value, &runtime.getHeap()) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
@@ -153,7 +153,7 @@ class JSStringIterator : public JSObject {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<StringPrimitive> iteratedString)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         iteratedString_(runtime, *iteratedString, &runtime.getHeap()) {}
 
  private:
@@ -191,7 +191,7 @@ class JSNumber final : public JSObject {
       double value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+      : JSObject(runtime, *parent, *clazz), primitiveValue_(value) {}
 
   double getPrimitiveNumber() const {
     return primitiveValue_;
@@ -231,7 +231,7 @@ class JSBoolean final : public JSObject {
       bool value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+      : JSObject(runtime, *parent, *clazz), primitiveValue_(value) {}
 
   void setPrimitiveBoolean(bool b) {
     primitiveValue_ = b;
@@ -278,7 +278,7 @@ class JSSymbol final : public JSObject {
       SymbolID value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_(value) {}
+      : JSObject(runtime, *parent, *clazz), primitiveValue_(value) {}
 
  private:
   const GCSymbolID primitiveValue_;

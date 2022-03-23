@@ -101,11 +101,10 @@ class DecoratedObject : public JSObject {
 
   DecoratedObject(
       Runtime &runtime,
-      const ObjectVTable *vt,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       std::unique_ptr<Decoration> decoration)
-      : JSObject(runtime, &vt->base, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         decoration_(std::move(decoration)) {}
 
  protected:

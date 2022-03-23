@@ -104,7 +104,6 @@ Handle<JSObject> createJSCallSite(Runtime &runtime) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.callSitePrototype);
   auto *cell = runtime.makeAFixed<JSObject>(
       runtime,
-      &JSObject::vt.base,
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle, JSObject::numOverlapSlots<JSObject>()),

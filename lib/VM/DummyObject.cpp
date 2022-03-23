@@ -24,7 +24,7 @@ const VTable DummyObject::vt{
     _mallocSizeImpl,
     nullptr};
 
-DummyObject::DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
+DummyObject::DummyObject(GC *gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
   hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);

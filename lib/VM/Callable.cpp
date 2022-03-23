@@ -862,7 +862,6 @@ Handle<NativeFunction> NativeFunction::create(
       numOverlapSlots<NativeFunction>() + additionalSlotCount;
   auto *cell = runtime.makeAFixed<NativeFunction>(
       runtime,
-      &vt.base.base,
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       context,
@@ -900,7 +899,6 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned additionalSlotCount) {
   auto *cell = runtime.makeAFixed<NativeFunction>(
       runtime,
-      &vt.base.base,
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle,

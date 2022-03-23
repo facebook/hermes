@@ -380,10 +380,8 @@ std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
 }
 
 template <typename T, bool Uniqued>
-DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(
-    Runtime &runtime,
-    Ref src)
-    : DynamicStringPrimitive(runtime, (uint32_t)src.size()) {
+DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(Ref src)
+    : DynamicStringPrimitive((uint32_t)src.size()) {
   hermes::uninitializedCopy(
       src.begin(), src.end(), this->template getTrailingObjects<T>());
 }
@@ -394,7 +392,7 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
   auto *cell = runtime.makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
-      allocationSize((uint32_t)str.size()), runtime, str);
+      allocationSize((uint32_t)str.size()), str);
   return HermesValue::encodeStringValue(cell);
 }
 
@@ -406,7 +404,7 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
   auto *obj = runtime.makeAVariable<
       DynamicStringPrimitive<T, Uniqued>,
       HasFinalizer::No,
-      LongLived::Yes>(allocationSize((uint32_t)str.size()), runtime, str);
+      LongLived::Yes>(allocationSize((uint32_t)str.size()), str);
   return HermesValue::encodeStringValue(obj);
 }
 
@@ -415,7 +413,7 @@ CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime &runtime,
     uint32_t length) {
   auto *cell = runtime.makeAVariable<DynamicStringPrimitive<T, Uniqued>>(
-      allocationSize(length), runtime, length);
+      allocationSize(length), length);
   return HermesValue::encodeStringValue(cell);
 }
 
@@ -428,14 +426,8 @@ template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 // template<> lines.
 template <typename T>
 template <class BasicString>
-ExternalStringPrimitive<T>::ExternalStringPrimitive(
-    Runtime &runtime,
-    BasicString &&contents)
-    : SymbolStringPrimitive(
-          runtime,
-          &vt,
-          sizeof(ExternalStringPrimitive<T>),
-          contents.size()),
+ExternalStringPrimitive<T>::ExternalStringPrimitive(BasicString &&contents)
+    : SymbolStringPrimitive(contents.size()),
       contents_(std::forward<BasicString>(contents)) {
   static_assert(
       std::is_same<T, typename BasicString::value_type>::value,
@@ -462,9 +454,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
   // VariableSizeRuntimeCell
   auto *extStr =
       runtime.makeAVariable<ExternalStringPrimitive<T>, HasFinalizer::Yes>(
-          sizeof(ExternalStringPrimitive<T>),
-          runtime,
-          std::forward<BasicString>(str));
+          sizeof(ExternalStringPrimitive<T>), std::forward<BasicString>(str));
   runtime.getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   auto res = HermesValue::encodeStringValue(extStr);
@@ -487,8 +477,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
   auto *extStr = runtime.makeAVariable<
       ExternalStringPrimitive<T>,
       HasFinalizer::Yes,
-      LongLived::Yes>(
-      sizeof(ExternalStringPrimitive<T>), runtime, std::move(str));
+      LongLived::Yes>(sizeof(ExternalStringPrimitive<T>), std::move(str));
   runtime.getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   return HermesValue::encodeStringValue(extStr);

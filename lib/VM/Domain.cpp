@@ -37,7 +37,7 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 PseudoHandle<Domain> Domain::create(Runtime &runtime) {
-  auto *cell = runtime.makeAFixed<Domain, HasFinalizer::Yes>(runtime);
+  auto *cell = runtime.makeAFixed<Domain, HasFinalizer::Yes>();
   auto self = createPseudoHandle(cell);
   return self;
 }

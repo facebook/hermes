@@ -60,9 +60,6 @@ class HashMapEntry final : public GCCell {
     key.setNonPtr(HermesValue::encodeEmptyValue(), &runtime.getHeap());
     value.setNonPtr(HermesValue::encodeEmptyValue(), &runtime.getHeap());
   }
-
- public:
-  HashMapEntry(Runtime &runtime) : GCCell(&runtime.getHeap(), &vt) {}
 }; // HashMapEntry
 
 /// OrderedHashMap is a gc-managed hash map that maintains insertion order.

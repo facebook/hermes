@@ -497,8 +497,7 @@ class HiddenClass final : public GCCell {
       SymbolID symbolID,
       PropertyFlags propertyFlags,
       unsigned numProperties)
-      : GCCell(&runtime.getHeap(), &vt),
-        symbolID_(symbolID),
+      : symbolID_(symbolID),
         propertyFlags_(propertyFlags),
         flags_(flags),
         numProperties_(numProperties),

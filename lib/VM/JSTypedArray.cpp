@@ -18,10 +18,9 @@ namespace vm {
 
 JSTypedArrayBase::JSTypedArrayBase(
     Runtime &runtime,
-    const VTable *vt,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSObject(runtime, vt, *parent, *clazz),
+    : JSObject(runtime, *parent, *clazz),
       buffer_(nullptr),
       length_(0),
       offset_(0) {
@@ -423,7 +422,7 @@ JSTypedArray<T, C>::JSTypedArray(
     Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSTypedArrayBase(runtime, &vt.base, parent, clazz) {}
+    : JSTypedArrayBase(runtime, parent, clazz) {}
 
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(

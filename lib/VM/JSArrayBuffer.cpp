@@ -107,7 +107,7 @@ JSArrayBuffer::JSArrayBuffer(
     Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSObject(runtime, &vt.base, *parent, *clazz),
+    : JSObject(runtime, *parent, *clazz),
       data_(nullptr),
       size_(0),
       attached_(false) {}

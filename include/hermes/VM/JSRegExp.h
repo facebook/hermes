@@ -115,7 +115,7 @@ class JSRegExp final : public JSObject {
   friend void JSRegExpBuildMeta(const GCCell *, Metadata::Builder &);
 
   JSRegExp(Runtime &runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         pattern_(
             runtime,
             runtime.getPredefinedString(Predefined::emptyString),

@@ -75,7 +75,7 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
   }
   size_type hashCapacity = calcHashCapacity(capacity);
   auto *cell = runtime.makeAVariable<DictPropertyMap>(
-      allocationSize(capacity, hashCapacity), runtime, capacity, hashCapacity);
+      allocationSize(capacity, hashCapacity), capacity, hashCapacity);
   return createPseudoHandle(cell);
 }
 

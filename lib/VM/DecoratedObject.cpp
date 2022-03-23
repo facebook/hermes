@@ -50,7 +50,6 @@ PseudoHandle<DecoratedObject> DecoratedObject::create(
       numOverlapSlots<DecoratedObject>() + additionalSlotCount;
   auto *cell = runtime.makeAFixed<DecoratedObject, HasFinalizer::Yes>(
       runtime,
-      &vt,
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       std::move(decoration));

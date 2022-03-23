@@ -32,11 +32,10 @@ class BoxedDouble final : public GCCell {
   }
 
   static BoxedDouble *create(double d, Runtime &runtime) {
-    return runtime.makeAFixed<BoxedDouble>(d, runtime);
+    return runtime.makeAFixed<BoxedDouble>(d);
   }
 
-  BoxedDouble(double d, Runtime &runtime)
-      : GCCell(&runtime.getHeap(), &vt), value_(d) {}
+  BoxedDouble(double d) : value_(d) {}
 
   double get() const {
     return value_;

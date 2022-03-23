@@ -57,13 +57,7 @@ class FinalizableNativeFunction final : public NativeFunction {
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
-      : NativeFunction(
-            runtime,
-            &vt.base.base,
-            parent,
-            clazz,
-            context,
-            functionPtr),
+      : NativeFunction(runtime, parent, clazz, context, functionPtr),
         finalizePtr_(finalizePtr) {}
 
  protected:
@@ -139,7 +133,7 @@ class HostObject final : public DecoratedObject {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       std::unique_ptr<HostObjectProxy> proxy)
-      : DecoratedObject(runtime, &vt, parent, clazz, std::move(proxy)) {}
+      : DecoratedObject(runtime, parent, clazz, std::move(proxy)) {}
 };
 
 } // namespace vm

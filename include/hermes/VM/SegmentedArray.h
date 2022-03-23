@@ -89,12 +89,8 @@ class SegmentedArray final
    private:
     static const VTable vt;
 
-    AtomicIfConcurrentGC<uint32_t> length_;
+    AtomicIfConcurrentGC<uint32_t> length_{0};
     GCHermesValue data_[kMaxLength];
-
-   public:
-    explicit Segment(Runtime &runtime)
-        : GCCell(&runtime.getHeap(), &vt), length_(0) {}
   };
 
   using size_type = uint32_t;
@@ -143,7 +139,7 @@ class SegmentedArray final
 
   /// The number of slots that are currently valid. The \c size() is a derived
   /// field from this value.
-  AtomicIfConcurrentGC<size_type> numSlotsUsed_;
+  AtomicIfConcurrentGC<size_type> numSlotsUsed_{0};
 
   struct iterator {
     using iterator_category = std::bidirectional_iterator_tag;
@@ -362,11 +358,6 @@ class SegmentedArray final
   friend void SegmentedArrayBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
-
- public:
-  SegmentedArray(Runtime &runtime, uint32_t allocSize)
-      : VariableSizeRuntimeCell(&runtime.getHeap(), &vt, allocSize),
-        numSlotsUsed_(0) {}
 
  private:
   /// Throws a RangeError with a descriptive message describing the attempted

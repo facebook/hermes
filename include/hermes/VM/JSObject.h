@@ -321,12 +321,10 @@ class JSObject : public GCCell {
   template <typename NeedsBarriers>
   JSObject(
       Runtime &runtime,
-      const VTable *vtp,
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : GCCell(&runtime.getHeap(), vtp),
-        parent_(runtime, parent, &runtime.getHeap(), needsBarriers),
+      : parent_(runtime, parent, &runtime.getHeap(), needsBarriers),
         clazz_(runtime, clazz, &runtime.getHeap(), needsBarriers),
         propStorage_(runtime, nullptr, &runtime.getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
@@ -335,12 +333,10 @@ class JSObject : public GCCell {
   template <typename NeedsBarriers>
   JSObject(
       Runtime &runtime,
-      const VTable *vtp,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
-      : GCCell(&runtime.getHeap(), vtp),
-        parent_(runtime, *parent, &runtime.getHeap(), needsBarriers),
+      : parent_(runtime, *parent, &runtime.getHeap(), needsBarriers),
         clazz_(runtime, *clazz, &runtime.getHeap(), needsBarriers),
         propStorage_(runtime, nullptr, &runtime.getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
@@ -349,12 +345,8 @@ class JSObject : public GCCell {
   /// Until we apply the NeedsBarriers pattern to all subtypes of JSObject, we
   /// will need versions that do not take the extra NeedsBarrier argument
   /// (defaulting to NoBarriers).
-  JSObject(
-      Runtime &runtime,
-      const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {
+  JSObject(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, parent, clazz, GCPointerBase::NoBarriers()) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 

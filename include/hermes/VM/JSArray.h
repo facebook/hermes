@@ -139,22 +139,17 @@ class ArrayImpl : public JSObject {
   template <typename NeedsBarriers>
   ArrayImpl(
       Runtime &runtime,
-      const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, parent, clazz, needsBarriers) {
+      : JSObject(runtime, parent, clazz, needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
 
   /// Default needsBarriers to Yes.
-  ArrayImpl(
-      Runtime &runtime,
-      const VTable *vt,
-      JSObject *parent,
-      HiddenClass *clazz)
-      : ArrayImpl(runtime, vt, parent, clazz, GCPointerBase::YesBarriers()) {}
+  ArrayImpl(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
+      : ArrayImpl(runtime, parent, clazz, GCPointerBase::YesBarriers()) {}
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
@@ -256,7 +251,7 @@ class Arguments final : public ArrayImpl {
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz) {}
+      : ArrayImpl(runtime, *parent, *clazz) {}
 };
 
 class JSArray final : public ArrayImpl {
@@ -355,7 +350,7 @@ class JSArray final : public ArrayImpl {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarrier needsBarrier)
-      : ArrayImpl(runtime, &vt.base, *parent, *clazz, needsBarrier) {}
+      : ArrayImpl(runtime, *parent, *clazz, needsBarrier) {}
 
  private:
   /// A helper to update the named '.length' property.
@@ -418,7 +413,7 @@ class JSArrayIterator : public JSObject {
       Handle<HiddenClass> clazz,
       Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, *parent, *clazz),
+      : JSObject(runtime, *parent, *clazz),
         iteratedObject_(runtime, *iteratedObject, &runtime.getHeap()),
         iterationKind_(iterationKind) {}
 

@@ -139,7 +139,7 @@ class JSError final : public JSObject {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       bool catchable)
-      : JSObject(runtime, &vt.base, *parent, *clazz), catchable_{catchable} {}
+      : JSObject(runtime, *parent, *clazz), catchable_{catchable} {}
 
  private:
   friend void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);

@@ -52,7 +52,7 @@ class JSDate final : public JSObject {
       double value,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
-      : JSObject(runtime, &vt.base, *parent, *clazz), primitiveValue_{value} {}
+      : JSObject(runtime, *parent, *clazz), primitiveValue_{value} {}
 
  private:
   double primitiveValue_;
