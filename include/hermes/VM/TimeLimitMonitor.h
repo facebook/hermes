@@ -28,8 +28,6 @@ class TimeLimitMonitor {
   /// \return the singleton instance reference.
   static TimeLimitMonitor &getInstance();
 
-  ~TimeLimitMonitor();
-
   /// Watch \p runtime for timeout after \p timeoutInMs.
   void watchRuntime(Runtime &runtime, int timeoutInMs);
 
@@ -49,29 +47,29 @@ class TimeLimitMonitor {
   /// Timer loop that wake periodically to process expired work items.
   void timerLoop();
 
-  /// Lazily creates the timer loop worker thread.
-  void createTimerLoopIfNeeded() {
-    if (!timerThread_.joinable()) {
-      timerThread_ = std::thread(&TimeLimitMonitor::timerLoop, this);
-    }
-  }
-
   /// Notify \p runtime to check timeout.
   void notifyRuntimeTimeout(Runtime *runtime) {
     runtime->triggerTimeoutAsyncBreak();
   }
 
  private:
-  /// Mutex that protects timeoutMap_, and shouldExit_.
+  /// Mutex that protects timeoutMap_, and state_.
   std::mutex timeoutMapMtx_;
   /// Map from runtime to its deadline time point.
   std::unordered_map<Runtime *, std::chrono::steady_clock::time_point>
       timeoutMap_;
-  /// Whether worker thread should exit or not.
-  bool shouldExit_{false};
 
-  /// Used to signal when a new monitor request came.
-  std::condition_variable newRequestCond_;
+  /// State of the timer loop.
+  enum State {
+    JOINED, // Thread was joined or has not yet been created.
+    RUNNING, // Loop can process work items.
+    STOPPING, // Transient state: loop will stop.
+    STOPPED, // Transient state: thread will be joined.
+  };
+  State state_{JOINED};
+
+  /// Signals an addition to timeoutMap_ or change to state_.
+  std::condition_variable cond_;
 
   std::thread timerThread_;
 };

@@ -268,6 +268,37 @@ TEST_F(HermesRuntimeTest, ReferencesCanEscapeScope) {
   EXPECT_EQ(rootsDelta, 1);
 }
 
+TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
+  // Some code that exercies the async break checks.
+  const char *forABit = "var t = Date.now(); while (Date.now() < t + 100) {}";
+  const char *forEver = "for (;;){}";
+  {
+    // Single runtime with ~20 minute limit that will not be reached.
+    auto rt = makeHermesRuntime();
+    rt->watchTimeLimit(1234567);
+    rt->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
+  }
+  {
+    // Multiple runtimes, but neither will time out.
+    auto rt1 = makeHermesRuntime();
+    rt1->watchTimeLimit(1234567);
+    auto rt2 = makeHermesRuntime();
+    rt2->watchTimeLimit(1234567 / 2);
+    rt1->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
+    rt2->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
+  }
+  {
+    // Timeout in one of the runtimes.
+    auto rt1 = makeHermesRuntime();
+    rt1->watchTimeLimit(1234567);
+    auto rt2 = makeHermesRuntime();
+    rt2->watchTimeLimit(123);
+    ASSERT_THROW(
+        rt2->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
+        JSIException);
+  }
+}
+
 TEST(HermesRuntimeCrashManagerTest, CrashGetStackTrace) {
   class CrashManagerImpl : public hermes::vm::CrashManager {
    public:
