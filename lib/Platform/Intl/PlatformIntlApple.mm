@@ -66,7 +66,7 @@ const std::u16string &getDefaultLocale() {
 }
 
 /// https://402.ecma-international.org/8.0/#sec-bestavailablelocale
-llvh::Optional<std::u16string> bestAvailableLocale(
+std::optional<std::u16string> bestAvailableLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::u16string &locale) {
   // 1. Let candidate be locale
@@ -85,7 +85,7 @@ llvh::Optional<std::u16string> bestAvailableLocale(
 
     // ...If that character does not occur, return undefined.
     if (pos == std::u16string::npos)
-      return llvh::None;
+      return std::nullopt;
 
     // c. If pos ≥ 2 and the character "-" occurs at index pos-2 of candidate,
     // decrease pos by 2.
@@ -117,7 +117,7 @@ LocaleMatch lookupMatcher(
     // unicode extensions.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    llvh::Optional<std::u16string> availableLocale =
+    std::optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, then
     if (availableLocale) {
@@ -181,7 +181,7 @@ ResolvedLocale resolveLocale(
     // g. Let supportedExtensionAddition be "".
     // h. If r has an [[extension]] field, then
     auto extIt = r.extensions.find(key);
-    llvh::Optional<std::u16string> value;
+    std::optional<std::u16string> value;
     std::u16string supportedExtensionAddition;
     // i. If keywords contains an element whose [[Key]] is the same as key, then
     if (extIt != r.extensions.end()) {
@@ -267,7 +267,7 @@ std::vector<std::u16string> lookupSupportedLocales(
     // We can skip this step, see the comment in lookupMatcher.
     // b. Let availableLocale be BestAvailableLocale(availableLocales,
     // noExtensionsLocale).
-    llvh::Optional<std::u16string> availableLocale =
+    std::optional<std::u16string> availableLocale =
         bestAvailableLocale(availableLocales, locale);
     // c. If availableLocale is not undefined, append locale to the end of
     // subset.
@@ -372,10 +372,10 @@ vm::CallResult<std::u16string> localeListToLocaleString(
   // 8. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
   // Convert to C++ array for bestAvailableLocale function
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
-  llvh::Optional<std::u16string> locale =
+  std::optional<std::u16string> locale =
       bestAvailableLocale(availableLocales, requestedLocale);
   // 9. If locale is undefined, let locale be "und".
-  return locale.getValueOr(u"und");
+  return locale.value_or(u"und");
 }
 /// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase
 vm::CallResult<std::u16string> toLocaleLowerCase(

@@ -8,9 +8,8 @@
 #ifndef HERMES_BCP47_PARSER_H
 #define HERMES_BCP47_PARSER_H
 
-#include "llvh/ADT/Optional.h"
-
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -23,7 +22,7 @@ bool isUnicodeExtensionType(const std::u16string &);
 struct ParsedLocaleIdentifier {
   // Parses \p localeId and returns ParsedLocaleIdentifier if it is a
   // structurally valid language tag.
-  static llvh::Optional<ParsedLocaleIdentifier> parse(
+  static std::optional<ParsedLocaleIdentifier> parse(
       const std::u16string &localeId);
   // Returns a string containing the canonicalized representation of this
   // identifier.

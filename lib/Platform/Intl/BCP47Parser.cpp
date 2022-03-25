@@ -101,7 +101,7 @@ bool isUnicodeExtensionType(const std::u16string &str) {
 class LanguageTagParser {
  public:
   LanguageTagParser(const std::u16string &localeId);
-  llvh::Optional<ParsedLocaleIdentifier> parseUnicodeLocaleId();
+  std::optional<ParsedLocaleIdentifier> parseUnicodeLocaleId();
 
  private:
   LLVM_NODISCARD bool parseUnicodeLanguageId(bool transformedExtensionId);
@@ -134,7 +134,7 @@ LanguageTagParser::LanguageTagParser(const std::u16string &localeId) {
 // 	  unicode_language_id
 //    extensions*
 //    pu_extensions? ;
-llvh::Optional<ParsedLocaleIdentifier>
+std::optional<ParsedLocaleIdentifier>
 LanguageTagParser::parseUnicodeLocaleId() {
   if (!parseUnicodeLanguageId(false))
     return {};
@@ -346,7 +346,7 @@ const std::u16string &LanguageTagParser::getCurrentSubtag() const {
   return subtags_.back();
 }
 
-/* static */ llvh::Optional<ParsedLocaleIdentifier>
+/* static */ std::optional<ParsedLocaleIdentifier>
 ParsedLocaleIdentifier::parse(const std::u16string &localeId) {
   LanguageTagParser parser(localeId);
   return parser.parseUnicodeLocaleId();
