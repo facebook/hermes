@@ -427,6 +427,103 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
       uppercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
+/// https://402.ecma-international.org/8.0/#sec-getoption
+/// Split into getOptionString and getOptionBool to help readability
+vm::CallResult<std::optional<std::u16string>> getOptionString(
+    vm::Runtime &runtime,
+    const Options &options,
+    const std::u16string &property,
+    llvh::ArrayRef<std::u16string_view> values,
+    std::optional<std::u16string_view> fallback) {
+  // 1. Assert type(options) is object
+  // 2. Let value be ? Get(options, property).
+  auto valueIt = options.find(property);
+  // 3. If value is undefined, return fallback.
+  if (valueIt == options.end())
+    return std::optional<std::u16string>(fallback);
+
+  const auto &value = valueIt->second.getString();
+  // 4. Assert: type is "boolean" or "string".
+  // 5. If type is "boolean", then
+  // a. Set value to ! ToBoolean(value).
+  // 6. If type is "string", then
+  // a. Set value to ? ToString(value).
+  // 7. If values is not undefined and values does not contain an element equal
+  // to value, throw a RangeError exception.
+  if (!values.empty() && llvh::find(values, value) == values.end())
+    return runtime.raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is invalid."));
+
+  // 8. Return value.
+  return std::optional<std::u16string>(value);
+}
+
+std::optional<bool> getOptionBool(
+    vm::Runtime &runtime,
+    const Options &options,
+    const std::u16string &property,
+    std::optional<bool> fallback) {
+  //  1. Assert: Type(options) is Object.
+  //  2. Let value be ? Get(options, property).
+  auto value = options.find(property);
+  //  3. If value is undefined, return fallback.
+  if (value == options.end()) {
+    return fallback;
+  }
+  //  8. Return value.
+  return value->second.getBool();
+}
+
+/// https://402.ecma-international.org/8.0/#sec-defaultnumberoption
+vm::CallResult<std::optional<uint8_t>> defaultNumberOption(
+    vm::Runtime &runtime,
+    const std::u16string &property,
+    std::optional<Option> value,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback) {
+  //  1. If value is undefined, return fallback.
+  if (!value) {
+    return fallback;
+  }
+  //  2. Set value to ? ToNumber(value).
+  //  3. If value is NaN or less than minimum or greater than maximum, throw a
+  //  RangeError exception.
+  if (std::isnan(value->getNumber()) || value->getNumber() < minimum ||
+      value->getNumber() > maximum) {
+    return runtime.raiseRangeError(
+        vm::TwineChar16(property.c_str()) +
+        vm::TwineChar16(" value is invalid."));
+  }
+  //  4. Return floor(value).
+  return std::optional<uint8_t>(std::floor(value->getNumber()));
+}
+
+/// https://402.ecma-international.org/8.0/#sec-getnumberoption
+vm::CallResult<std::optional<uint8_t>> getNumberOption(
+    vm::Runtime &runtime,
+    const Options &options,
+    const std::u16string &property,
+    const std::uint8_t minimum,
+    const std::uint8_t maximum,
+    std::optional<uint8_t> fallback) {
+  //  1. Assert: Type(options) is Object.
+  //  2. Let value be ? Get(options, property).
+  std::optional<Option> value;
+  auto iter = options.find(property);
+  if (iter != options.end()) {
+    value = Option(iter->second);
+  }
+  //  3. Return ? DefaultNumberOption(value, minimum, maximum, fallback).
+  auto defaultNumber =
+      defaultNumberOption(runtime, property, value, minimum, maximum, fallback);
+  if (defaultNumber == vm::ExecutionStatus::EXCEPTION) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  return std::optional<uint8_t>(defaultNumber.getValue());
+}
+
 struct Collator::Impl {
   std::u16string locale;
 };
