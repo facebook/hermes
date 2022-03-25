@@ -263,6 +263,7 @@ const OptionData kCollatorOptions[] = {
     {u"caseFirst", platform_intl::Option::Kind::String, 0},
     {u"sensitivity", platform_intl::Option::Kind::String, 0},
     {u"ignorePunctuation", platform_intl::Option::Kind::Bool, 0},
+    {u"collation", platform_intl::Option::Kind::String, 0},
     {nullptr, platform_intl::Option::Kind::Bool, 0},
 };
 

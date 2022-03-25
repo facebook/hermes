@@ -7,6 +7,8 @@
 
 #include "hermes/Platform/Intl/BCP47Parser.h"
 
+#include "llvh/ADT/STLExtras.h"
+
 namespace hermes {
 namespace platform_intl {
 namespace {
@@ -90,6 +92,11 @@ std::vector<std::u16string> splitIntoSubtags(const std::u16string &locale) {
   return subtags;
 }
 } // namespace
+
+bool isUnicodeExtensionType(const std::u16string &str) {
+  // = alphanum{3,8} (sep alphanum{3,8})*;
+  return llvh::all_of(splitIntoSubtags(str), isUnicodeExtensionKeyTypeItem);
+}
 
 class LanguageTagParser {
  public:

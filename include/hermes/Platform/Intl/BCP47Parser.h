@@ -8,7 +8,6 @@
 #ifndef HERMES_BCP47_PARSER_H
 #define HERMES_BCP47_PARSER_H
 
-#include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/Optional.h"
 
 #include <map>
@@ -18,6 +17,8 @@
 
 namespace hermes {
 namespace platform_intl {
+
+bool isUnicodeExtensionType(const std::u16string &);
 
 struct ParsedLocaleIdentifier {
   // Parses \p localeId and returns ParsedLocaleIdentifier if it is a

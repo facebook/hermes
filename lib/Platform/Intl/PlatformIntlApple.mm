@@ -525,7 +525,15 @@ vm::CallResult<std::optional<uint8_t>> getNumberOption(
 }
 
 struct Collator::Impl {
+  NSLocale *nsLocale;
+  NSStringCompareOptions nsCompareOptions;
   std::u16string locale;
+  std::u16string usage;
+  std::u16string collation;
+  std::u16string caseFirst;
+  std::u16string sensitivity;
+  bool numeric;
+  bool ignorePunctuation;
 };
 
 Collator::Collator() : impl_(std::make_unique<Impl>()) {}
@@ -546,25 +554,206 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
   return supportedLocales(availableLocales, *requestedLocalesRes);
 }
 
+/// https://402.ecma-international.org/8.0/#sec-initializecollator
 vm::ExecutionStatus Collator::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  impl_->locale = u"en-US";
+  // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
+  auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
+  if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 2. Set options to ? CoerceOptionsToObject(options).
+  // 3. Let usage be ? GetOption(options, "usage", "string", « "sort", "search"
+  // », "sort").
+  auto usageRes = getOptionString(
+      runtime, options, u"usage", {u"sort", u"search"}, {u"sort"});
+  if (LLVM_UNLIKELY(usageRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 4. Set collator.[[Usage]] to usage.
+  impl_->usage = std::move(**usageRes);
+  // 5. If usage is "sort", then
+  // a. Let localeData be %Collator%.[[SortLocaleData]].
+  // 6. Else,
+  // a. Let localeData be %Collator%.[[SearchLocaleData]].
+  // 7. Let opt be a new Record.
+  std::unordered_map<std::u16string, std::u16string> opt;
+  // 8. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //    "lookup", "best fit" », "best fit").
+  // 9. Set opt.[[localeMatcher]] to matcher.
+  // We only implement lookup matcher, so we don't need to record this.
+  auto localeMatcherRes = getOptionString(
+      runtime,
+      options,
+      u"localeMatcher",
+      {u"lookup", u"best fit"},
+      u"best fit");
+  if (LLVM_UNLIKELY(localeMatcherRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 10. Let collation be ? GetOption(options, "collation", "string", undefined,
+  // undefined).
+  auto collationRes = getOptionString(runtime, options, u"collation", {}, {});
+  if (LLVM_UNLIKELY(collationRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 11. If collation is not undefined, then
+  // a. If collation does not match the Unicode Locale Identifier type
+  // nonterminal, throw a RangeError exception.
+  // 12. Set opt.[[co]] to collation.
+  if (auto &collationOpt = *collationRes) {
+    if (!isUnicodeExtensionType(*collationOpt)) {
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid collation: ") +
+          vm::TwineChar16(collationOpt->c_str()));
+    }
+    opt.emplace(u"co", std::move(*collationOpt));
+  }
+  // 13. Let numeric be ? GetOption(options, "numeric", "boolean", undefined,
+  // undefined).
+  auto numericOpt = getOptionBool(runtime, options, u"numeric", {});
+  // 14. If numeric is not undefined, then
+  // a. Let numeric be ! ToString(numeric).
+  // 15. Set opt.[[kn]] to numeric.
+  if (numericOpt)
+    opt.emplace(u"kn", *numericOpt ? u"true" : u"false");
+  // 16. Let caseFirst be ? GetOption(options, "caseFirst", "string", « "upper",
+  // "lower", "false" », undefined).
+  auto caseFirstRes = getOptionString(
+      runtime, options, u"caseFirst", {u"upper", u"lower", u"false"}, {});
+  if (LLVM_UNLIKELY(caseFirstRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 17. Set opt.[[kf]] to caseFirst.
+  if (auto caseFirstOpt = *caseFirstRes)
+    opt.emplace(u"kf", *caseFirstOpt);
+  // 18. Let relevantExtensionKeys be %Collator%.[[RelevantExtensionKeys]].
+  std::vector<std::u16string> relevantExtensionKeys = {u"co", u"kn", u"kf"};
+  // 19. Let r be ResolveLocale(%Collator%.[[AvailableLocales]],
+  // requestedLocales, opt,relevantExtensionKeys, localeData).
+  auto r = resolveLocale(
+      getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
+  // 20. Set collator.[[Locale]] to r.[[locale]].
+  impl_->locale = std::move(r.locale);
+  // 21. Let collation be r.[[co]].
+  auto coIt = r.extensions.find(u"co");
+  // 22. If collation is null, let collation be "default".
+  // 23. Set collator.[[Collation]] to collation.
+  if (coIt == r.extensions.end())
+    impl_->collation = u"default";
+  else
+    impl_->collation = std::move(coIt->second);
+  // 24. If relevantExtensionKeys contains "kn", then
+  // a. Set collator.[[Numeric]] to ! SameValue(r.[[kn]], "true").
+  auto knIt = r.extensions.find(u"kn");
+  if (knIt == r.extensions.end())
+    impl_->numeric = false;
+  else
+    impl_->numeric = (knIt->second == u"true");
+
+  // 25. If relevantExtensionKeys contains "kf", then
+  // a. Set collator.[[CaseFirst]] to r.[[kf]].
+  auto kfIt = r.extensions.find(u"kf");
+  if (kfIt == r.extensions.end())
+    impl_->caseFirst = u"false";
+  else
+    impl_->caseFirst = kfIt->second;
+
+  // 26. Let sensitivity be ? GetOption(options, "sensitivity", "string", «
+  // "base", "accent", "case", "variant" », undefined).
+  auto sensitivityRes = getOptionString(
+      runtime,
+      options,
+      u"sensitivity",
+      {u"base", u"accent", u"case", u"variant"},
+      {});
+  if (LLVM_UNLIKELY(sensitivityRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 27. If sensitivity is undefined, then
+  // a. If usage is "sort", then
+  // i. Let sensitivity be "variant".
+  // b. Else,
+  // i. Let dataLocale be r.[[dataLocale]].
+  // ii. Let dataLocaleData be localeData.[[<dataLocale>]].
+  // iii. Let sensitivity be dataLocaleData.[[sensitivity]].
+  // 28. Set collator.[[Sensitivity]] to sensitivity.
+  if (auto &sensitivityOpt = *sensitivityRes)
+    impl_->sensitivity = std::move(*sensitivityOpt);
+  else
+    impl_->sensitivity = u"variant";
+
+  // 29. Let ignorePunctuation be ? GetOption(options, "ignorePunctuation",
+  // "boolean", undefined,false).
+  auto ignorePunctuationOpt =
+      getOptionBool(runtime, options, u"ignorePunctuation", false);
+  // 30. Set collator.[[IgnorePunctuation]] to ignorePunctuation.
+  impl_->ignorePunctuation = *ignorePunctuationOpt;
+
+  // Set up the state for calling into Obj-C APIs.
+  NSStringCompareOptions cmpOpts = 0;
+  if (impl_->numeric)
+    cmpOpts |= NSNumericSearch;
+  if (impl_->sensitivity == u"base")
+    cmpOpts |= (NSDiacriticInsensitiveSearch | NSCaseInsensitiveSearch);
+  else if (impl_->sensitivity == u"accent")
+    cmpOpts |= NSCaseInsensitiveSearch;
+  else if (impl_->sensitivity == u"case")
+    cmpOpts |= NSDiacriticInsensitiveSearch;
+  impl_->nsCompareOptions = cmpOpts;
+
+  std::u16string nsLocaleExtensions;
+  if (impl_->collation != u"default")
+    nsLocaleExtensions.append(u"-co-").append(impl_->collation);
+  else if (impl_->usage == u"search")
+    nsLocaleExtensions.append(u"-co-search");
+  if (impl_->caseFirst != u"false")
+    nsLocaleExtensions.append(u"-kf-").append(impl_->caseFirst);
+  auto nsLocaleIdentifier = r.dataLocale;
+  if (!nsLocaleExtensions.empty())
+    nsLocaleIdentifier.append(u"-u").append(nsLocaleExtensions);
+  impl_->nsLocale = [NSLocale
+      localeWithLocaleIdentifier:u16StringToNSString(nsLocaleIdentifier)];
+  // 31. Return collator.
   return vm::ExecutionStatus::RETURNED;
 }
 
+/// https://402.ecma-international.org/8.0/#sec-intl.collator.prototype.resolvedoptions
 Options Collator::resolvedOptions() noexcept {
   Options options;
   options.emplace(u"locale", Option(impl_->locale));
-  options.emplace(u"numeric", Option(false));
+  options.emplace(u"usage", Option(impl_->usage));
+  options.emplace(u"sensitivity", Option(impl_->sensitivity));
+  options.emplace(u"ignorePunctuation", Option(impl_->ignorePunctuation));
+  options.emplace(u"collation", Option(impl_->collation));
+  options.emplace(u"numeric", Option(impl_->numeric));
+  options.emplace(u"caseFirst", Option(impl_->caseFirst));
   return options;
 }
 
+/// https://402.ecma-international.org/8.0/#sec-intl.collator.prototype.compare
 double Collator::compare(
     const std::u16string &x,
     const std::u16string &y) noexcept {
-  return x.compare(y);
+  NSString *nsX = u16StringToNSString(x);
+  NSString *nsY = u16StringToNSString(y);
+  if (impl_->ignorePunctuation) {
+    // Unfortunately, NSLocale does not provide a way to specify alternate
+    // handling, so we simulate it by manually stripping punctuation and
+    // whitespace.
+    auto *set = [NSMutableCharacterSet punctuationCharacterSet];
+    [set formUnionWithCharacterSet:[NSCharacterSet
+                                       whitespaceAndNewlineCharacterSet]];
+    auto removePunctuation = [&](NSString *nsStr) {
+      auto *res = [NSMutableString new];
+      for (size_t i = 0; i < nsStr.length; ++i)
+        if (![set characterIsMember:[nsStr characterAtIndex:i]])
+          [res appendFormat:@"%c", [nsStr characterAtIndex:i]];
+      return res;
+    };
+    nsX = removePunctuation(nsX);
+    nsY = removePunctuation(nsY);
+  }
+  return [nsX compare:nsY
+              options:impl_->nsCompareOptions
+                range:NSMakeRange(0, nsX.length)
+               locale:impl_->nsLocale];
 }
 
 struct DateTimeFormat::Impl {
