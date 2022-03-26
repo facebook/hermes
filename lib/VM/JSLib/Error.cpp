@@ -194,7 +194,9 @@ errorPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   // 2. If Type(O) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!O)) {
     return runtime.raiseTypeErrorForValue(
-        "Error.prototype.toString called on incompatible receiver ", O, "");
+        "Error.prototype.toString called on incompatible receiver ",
+        args.getThisHandle(),
+        "");
   }
 
   // 3. Let name be ? Get(O, "name").

@@ -21,14 +21,14 @@ print(e.__proto__.hasOwnProperty('name'));
 print(e.__proto__.hasOwnProperty('message'));
 //CHECK-NEXT: true
 
-try { Error.prototype.toString.call(undefined); } catch (e) { print(e.name); }
-//CHECK-NEXT: TypeError
-try { Error.prototype.toString.call('string'); } catch (e) { print(e.name); }
-//CHECK-NEXT: TypeError
-try { Error.prototype.toString.call(11); } catch (e) { print(e.name); }
-//CHECK-NEXT: TypeError
-try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e.name); }
-//CHECK-NEXT: TypeError
+try { Error.prototype.toString.call(undefined); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Error.prototype.toString called on incompatible receiver undefined
+try { Error.prototype.toString.call('string'); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Error.prototype.toString called on incompatible receiver 'string'
+try { Error.prototype.toString.call(11); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Error.prototype.toString called on incompatible receiver 11
+try { Error.prototype.toString.call(Symbol()); } catch (e) { print(e); }
+//CHECK-NEXT: TypeError: Error.prototype.toString called on incompatible receiver Symbol()
 
 print(Error.prototype.toString())
 // CHECK-NEXT: Error

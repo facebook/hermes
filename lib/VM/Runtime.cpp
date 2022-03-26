@@ -1260,7 +1260,9 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
           return raiseTypeError(msg1 + TwineChar16("false") + msg2);
         }
       }
-      break;
+      return raiseTypeError(
+          msg1 + TwineChar16("Symbol(") +
+          getStringPrimFromSymbolID(value->getSymbol()) + ")" + msg2);
     case UndefinedNullTag:
       if (value->isUndefined())
         return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
