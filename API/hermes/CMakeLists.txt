@@ -38,7 +38,7 @@ add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport
 set(HERMES_ENABLE_EH OFF)
 
 # compileJS uses neither exceptions nor RTTI
-add_hermes_library(compileJS STATIC CompileJS.cpp)
+add_hermes_library(compileJS STATIC CompileJS.cpp LINK_LIBS hermesPublic)
 
 # Restore EH and RTTI (Note: At the time of writing, there is no usage of
 # add_hermes_library either after this line in this file or in a sub directory.
