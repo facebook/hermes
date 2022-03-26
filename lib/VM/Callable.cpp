@@ -48,7 +48,7 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Callable>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
-  mb.setVTable(&Callable::vt.base);
+  mb.setVTable(&Callable::vt);
   mb.addField("environment", &self->environment_);
 }
 
@@ -482,7 +482,7 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
-  mb.setVTable(&BoundFunction::vt.base.base);
+  mb.setVTable(&BoundFunction::vt);
   mb.addField("target", &self->target_);
   mb.addField("argStorage", &self->argStorage_);
 }
@@ -841,7 +841,7 @@ const CallableVTable NativeFunction::vt{
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
-  mb.setVTable(&NativeFunction::vt.base.base);
+  mb.setVTable(&NativeFunction::vt);
 }
 
 std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
@@ -1011,7 +1011,7 @@ const CallableVTable NativeConstructor::vt{
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeConstructor>());
   NativeFunctionBuildMeta(cell, mb);
-  mb.setVTable(&NativeConstructor::vt.base.base);
+  mb.setVTable(&NativeConstructor::vt);
 }
 
 #ifndef NDEBUG
@@ -1065,7 +1065,7 @@ void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
-  mb.setVTable(&JSFunction::vt.base.base);
+  mb.setVTable(&JSFunction::vt);
 }
 
 PseudoHandle<JSFunction> JSFunction::create(
@@ -1175,7 +1175,7 @@ const CallableVTable JSAsyncFunction::vt{
 void JSAsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
   JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSAsyncFunction::vt.base.base);
+  mb.setVTable(&JSAsyncFunction::vt);
 }
 
 PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
@@ -1229,7 +1229,7 @@ const CallableVTable JSGeneratorFunction::vt{
 void JSGeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
   JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSGeneratorFunction::vt.base.base);
+  mb.setVTable(&JSGeneratorFunction::vt);
 }
 
 PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
@@ -1287,7 +1287,7 @@ void GeneratorInnerFunctionBuildMeta(
       JSObject::numOverlapSlots<GeneratorInnerFunction>());
   JSFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
-  mb.setVTable(&GeneratorInnerFunction::vt.base.base);
+  mb.setVTable(&GeneratorInnerFunction::vt);
   mb.addField("savedContext", &self->savedContext_);
   mb.addField("result", &self->result_);
 }

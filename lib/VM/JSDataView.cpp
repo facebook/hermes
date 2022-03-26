@@ -28,7 +28,7 @@ void JSDataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDataView>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
-  mb.setVTable(&JSDataView::vt.base);
+  mb.setVTable(&JSDataView::vt);
   mb.addField("buffer", &self->buffer_);
 }
 

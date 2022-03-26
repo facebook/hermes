@@ -13,13 +13,13 @@ namespace vm {
 void JSMathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMath>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSMath::vt.base);
+  mb.setVTable(&JSMath::vt);
 }
 
 void JSJSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSJSON>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSJSON::vt.base);
+  mb.setVTable(&JSJSON::vt);
 }
 
 } // namespace vm

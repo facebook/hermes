@@ -38,7 +38,7 @@ void FinalizableNativeFunctionBuildMeta(
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
-  mb.setVTable(&FinalizableNativeFunction::vt.base.base);
+  mb.setVTable(&FinalizableNativeFunction::vt);
 }
 
 CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
@@ -96,7 +96,7 @@ const ObjectVTable HostObject::vt{
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&HostObject::vt.base);
+  mb.setVTable(&HostObject::vt);
 }
 
 CallResult<HermesValue> HostObject::createWithoutPrototype(

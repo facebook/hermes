@@ -42,7 +42,7 @@ const ObjectVTable JSArrayBuffer::vt{
 void JSArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSArrayBuffer::vt.base);
+  mb.setVTable(&JSArrayBuffer::vt);
 }
 
 PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(

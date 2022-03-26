@@ -49,7 +49,7 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSObject>());
 
   const auto *self = static_cast<const JSObject *>(cell);
-  mb.setVTable(&JSObject::vt.base);
+  mb.setVTable(&JSObject::vt);
   mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazz_);
   mb.addField("propStorage", &self->propStorage_);
@@ -2321,7 +2321,7 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
     }
   }
 
-  std::string name = getVT()->base.snapshotMetaData.defaultNameForNode(this);
+  std::string name = getVT()->snapshotMetaData.defaultNameForNode(this);
   // A constructor's name was not found, check if the object is in dictionary
   // mode.
   if (getClass(base)->isDictionary()) {

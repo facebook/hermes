@@ -200,9 +200,7 @@ HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
 // in-directly, cannot use a direct 'self' pointer and must instead use
 // Handle<JSObject>.
 
-struct ObjectVTable {
-  VTable base;
-
+struct ObjectVTable : public VTable {
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   std::pair<uint32_t, uint32_t> (
       *getOwnIndexedRange)(JSObject *self, Runtime &runtime);
@@ -1332,7 +1330,7 @@ class JSObject : public GCCell {
   // Internal API
 
   const ObjectVTable *getVT() const {
-    return reinterpret_cast<const ObjectVTable *>(GCCell::getVT());
+    return static_cast<const ObjectVTable *>(GCCell::getVT());
   }
 
   /// Allocate storage for a new slot after the slot index itself has been

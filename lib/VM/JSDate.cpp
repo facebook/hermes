@@ -30,7 +30,7 @@ const ObjectVTable JSDate::vt{
 void JSDateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSDate::vt.base);
+  mb.setVTable(&JSDate::vt);
 }
 
 PseudoHandle<JSDate>

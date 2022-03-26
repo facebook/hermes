@@ -37,7 +37,7 @@ const ObjectVTable DecoratedObject::vt{
 void DecoratedObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<DecoratedObject>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&DecoratedObject::vt.base);
+  mb.setVTable(&DecoratedObject::vt);
 }
 
 // static

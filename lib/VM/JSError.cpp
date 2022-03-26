@@ -45,7 +45,7 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
-  mb.setVTable(&JSError::vt.base);
+  mb.setVTable(&JSError::vt);
   mb.addField("funcNames", &self->funcNames_);
   mb.addField("domains", &self->domains_);
 }

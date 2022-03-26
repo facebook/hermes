@@ -32,7 +32,7 @@ void JSStringBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSString *>(cell);
-  mb.setVTable(&JSString::vt.base);
+  mb.setVTable(&JSString::vt);
   mb.addField(&self->primitiveValue_);
 }
 
@@ -181,7 +181,7 @@ void JSStringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
-  mb.setVTable(&JSStringIterator::vt.base);
+  mb.setVTable(&JSStringIterator::vt);
   mb.addField("iteratedString", &self->iteratedString_);
 }
 
@@ -276,7 +276,7 @@ const ObjectVTable JSNumber::vt{
 void JSNumberBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSNumber::vt.base);
+  mb.setVTable(&JSNumber::vt);
 }
 
 PseudoHandle<JSNumber> JSNumber::create(
@@ -307,7 +307,7 @@ const ObjectVTable JSBoolean::vt{
 void JSBooleanBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
   JSObjectBuildMeta(cell, mb);
-  mb.setVTable(&JSBoolean::vt.base);
+  mb.setVTable(&JSBoolean::vt);
 }
 
 PseudoHandle<JSBoolean>
@@ -337,7 +337,7 @@ void JSSymbolBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSSymbol *>(cell);
-  mb.setVTable(&JSSymbol::vt.base);
+  mb.setVTable(&JSSymbol::vt);
   mb.addField(&self->primitiveValue_);
 }
 

@@ -339,7 +339,7 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const RequireContext *>(cell);
-  mb.setVTable(&RequireContext::vt.base);
+  mb.setVTable(&RequireContext::vt);
   mb.addField(&self->domain_);
   mb.addField(&self->dirname_);
 }

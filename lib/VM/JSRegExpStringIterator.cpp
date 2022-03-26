@@ -38,7 +38,7 @@ void JSRegExpStringIteratorBuildMeta(
       JSObject::numOverlapSlots<JSRegExpStringIterator>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExpStringIterator *>(cell);
-  mb.setVTable(&JSRegExpStringIterator::vt.base);
+  mb.setVTable(&JSRegExpStringIterator::vt);
   mb.addField("iteratedRegExp", &self->iteratedRegExp_);
   mb.addField("iteratedString", &self->iteratedString_);
 }

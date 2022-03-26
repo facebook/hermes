@@ -322,12 +322,12 @@ void JSWeakMapImpl<C>::WeakMapOrSetBuildMeta(
 
 void JSWeakMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMap::WeakMapOrSetBuildMeta(cell, mb);
-  mb.setVTable(&JSWeakMap::vt.base);
+  mb.setVTable(&JSWeakMap::vt);
 }
 
 void JSWeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakSet::WeakMapOrSetBuildMeta(cell, mb);
-  mb.setVTable(&JSWeakSet::vt.base);
+  mb.setVTable(&JSWeakSet::vt);
 }
 
 template <CellKind C>

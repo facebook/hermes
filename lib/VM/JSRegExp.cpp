@@ -50,7 +50,7 @@ void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSRegExp *>(cell);
-  mb.setVTable(&JSRegExp::vt.base);
+  mb.setVTable(&JSRegExp::vt);
   mb.addField(&self->pattern_);
 }
 

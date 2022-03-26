@@ -104,9 +104,7 @@ class Environment final
   }
 };
 
-struct CallableVTable {
-  ObjectVTable base;
-
+struct CallableVTable : public ObjectVTable {
   /// Create a new object instance to be passed as the 'this' argument when
   /// invoking the constructor. Overriding this method allows creation of
   /// different underlying native objects.
@@ -140,7 +138,7 @@ class Callable : public JSObject {
   }
 
   const CallableVTable *getVT() const {
-    return reinterpret_cast<const CallableVTable *>(GCCell::getVT());
+    return static_cast<const CallableVTable *>(GCCell::getVT());
   }
 
   /// \return the environment associated with this callable.
@@ -851,7 +849,7 @@ class JSFunction : public Callable {
         codeBlock_(codeBlock),
         domain_(runtime, *domain, &runtime.getHeap()) {
     assert(
-        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
 
@@ -974,7 +972,7 @@ class JSAsyncFunction final : public JSFunction {
       CodeBlock *codeBlock)
       : Super(runtime, domain, parent, clazz, environment, codeBlock) {
     assert(
-        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
 };
@@ -1029,7 +1027,7 @@ class JSGeneratorFunction final : public JSFunction {
       CodeBlock *codeBlock)
       : Super(runtime, domain, parent, clazz, environment, codeBlock) {
     assert(
-        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
 };
@@ -1179,7 +1177,7 @@ class GeneratorInnerFunction final : public JSFunction {
       : JSFunction(runtime, domain, parent, clazz, environment, codeBlock),
         argCount_(argCount) {
     assert(
-        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
 

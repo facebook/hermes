@@ -371,7 +371,7 @@ const ObjectVTable Arguments::vt{
 void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Arguments>());
   ArrayImplBuildMeta(cell, mb);
-  mb.setVTable(&Arguments::vt.base);
+  mb.setVTable(&Arguments::vt);
 }
 
 CallResult<Handle<Arguments>> Arguments::create(
@@ -484,7 +484,7 @@ const ObjectVTable JSArray::vt{
 void JSArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
-  mb.setVTable(&JSArray::vt.base);
+  mb.setVTable(&JSArray::vt);
 }
 
 Handle<HiddenClass> JSArray::createClass(
@@ -725,7 +725,7 @@ void JSArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
-  mb.setVTable(&JSArrayIterator::vt.base);
+  mb.setVTable(&JSArrayIterator::vt);
   mb.addField("iteratedObject", &self->iteratedObject_);
 }
 

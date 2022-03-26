@@ -325,7 +325,7 @@ const ObjectVTable JSTypedArray<T, C>::vt{
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
-    mb.setVTable(&name##Array::vt.base);                                 \
+    mb.setVTable(&name##Array::vt);                                      \
   }
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY

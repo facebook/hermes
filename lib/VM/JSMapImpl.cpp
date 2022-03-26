@@ -28,12 +28,12 @@ void JSMapImpl<C>::MapOrSetBuildMeta(
 
 void JSMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMap::MapOrSetBuildMeta(cell, mb);
-  mb.setVTable(&JSMap::vt.base);
+  mb.setVTable(&JSMap::vt);
 }
 
 void JSSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSSet::MapOrSetBuildMeta(cell, mb);
-  mb.setVTable(&JSSet::vt.base);
+  mb.setVTable(&JSSet::vt);
 }
 
 template <CellKind C>
@@ -79,12 +79,12 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
 
 void JSMapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIterator::MapOrSetIteratorBuildMeta(cell, mb);
-  mb.setVTable(&JSMapIterator::vt.base);
+  mb.setVTable(&JSMapIterator::vt);
 }
 
 void JSSetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSSetIterator::MapOrSetIteratorBuildMeta(cell, mb);
-  mb.setVTable(&JSSetIterator::vt.base);
+  mb.setVTable(&JSSetIterator::vt);
 }
 
 template <CellKind C>
