@@ -1474,17 +1474,6 @@ class JSObject : public GCCell {
   /// Byte offset to the first direct property slot in a JSObject.
   static inline constexpr size_t directPropsOffset();
 
-  /// The number of direct property slots that would be unused due to overlap
-  /// with C++ fields in a subclass of size \p sizeofDerived, if the number
-  /// of direct properties in JSObject were unlimited.
-  static constexpr size_t uncappedOverlapSlots(size_t sizeofDerived) {
-    return sizeofDerived <= directPropsOffset()
-        ? 0
-        : (sizeofDerived - directPropsOffset() + sizeof(GCSmallHermesValue) -
-           1) /
-            sizeof(GCSmallHermesValue);
-  }
-
   /// The allocation size needed for a plain JSObject instance (including its
   /// direct property slots).
   static inline constexpr size_t cellSizeJSObject();
@@ -1509,10 +1498,9 @@ class JSObject : public GCCell {
   static constexpr unsigned numOverlapSlots() {
     static_assert(
         std::is_convertible<Derived *, JSObject *>::value, "must be subclass");
-    return uncappedOverlapSlots(sizeof(Derived)) >
-            (size_t)JSObject::DIRECT_PROPERTY_SLOTS
-        ? (size_t)JSObject::DIRECT_PROPERTY_SLOTS
-        : uncappedOverlapSlots(sizeof(Derived));
+    auto aligned = llvh::alignTo<sizeof(GCSmallHermesValue)>(sizeof(Derived));
+    auto excess = (aligned - directPropsOffset()) / sizeof(GCSmallHermesValue);
+    return std::min<size_t>(excess, DIRECT_PROPERTY_SLOTS);
   }
 };
 
