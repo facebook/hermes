@@ -84,6 +84,8 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'PrivateName':
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
+      case 'Property':
+        return this.mapProperty(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -206,6 +208,17 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     }
 
     return this.mapNodeDefault(node);
+  }
+
+  mapProperty(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+
+    if (node.value.type === 'FunctionExpression') {
+      node.value.loc.start = node.key.loc.end;
+      node.value.range[0] = node.key.range[1];
+    }
+
+    return node;
   }
 
   mapComment(node: HermesNode): HermesNode {

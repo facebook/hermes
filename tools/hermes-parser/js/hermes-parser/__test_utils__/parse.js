@@ -18,7 +18,10 @@ export const parse: typeof parseOriginal = (source, options) => {
   return parseOriginal(source, {flow: 'all', ...options});
 };
 
-export function parseForSnapshot(source: string): mixed {
+export function parseForSnapshot(
+  source: string,
+  options?: {preserveRange?: boolean},
+): mixed {
   const program = parse(source);
   SimpleTraverser.traverse(program, {
     enter(node) {
@@ -26,8 +29,10 @@ export function parseForSnapshot(source: string): mixed {
       delete node.loc;
       // $FlowExpectedError[cannot-write]
       delete node.parent;
-      // $FlowExpectedError[cannot-write]
-      delete node.range;
+      if (options?.preserveRange !== true) {
+        // $FlowExpectedError[cannot-write]
+        delete node.range;
+      }
     },
     leave() {},
   });
