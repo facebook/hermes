@@ -626,6 +626,193 @@ const y = 1; // this should remain inline #2
     });
 
     describe('addition', () => {
+      it('should attach leading block comments on line before node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addLeadingComments(node, [
+              t.BlockComment({
+                value: `*
+ * Line preceeding comment 1
+ `,
+              }),
+              t.BlockComment({
+                value: `*
+ * Line preceeding comment 2
+ `,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+/**
+ * Line preceeding comment 1
+ */
+/**
+ * Line preceeding comment 2
+ */
+statement();
+`);
+      });
+
+      it('should attach leading inline block comments on node line', () => {
+        const code = `
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addLeadingInlineComments(node, [
+              t.BlockComment({
+                value: `Inline comment 1`,
+              }),
+              t.BlockComment({
+                value: `Inline comment 2`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+/*Inline comment 1*/ /*Inline comment 2*/ statement();
+`);
+      });
+
+      it('should attach leading line comments on line before node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addLeadingComments(node, [
+              t.LineComment({
+                value: `Line preceeding comment 1`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+//Line preceeding comment 1
+statement();
+`);
+      });
+
+      it('should attach leading inline line comments on line before node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addLeadingInlineComments(node, [
+              t.LineComment({
+                value: `Line preceeding comment 1`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+//Line preceeding comment 1
+statement();
+`);
+      });
+
+      it('should attach trailing block comments on line after node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addTrailingComments(node, [
+              t.BlockComment({
+                value: `Inline comment 1`,
+              }),
+              t.BlockComment({
+                value: `Inline comment 2`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+statement();
+/*Inline comment 1*/
+/*Inline comment 2*/
+`);
+      });
+
+      it('should attach trailing inline block comments on node line', () => {
+        const code = `
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addTrailingInlineComments(node, [
+              t.BlockComment({
+                value: `Inline comment 1`,
+              }),
+              t.BlockComment({
+                value: `Inline comment 2`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+statement(); /*Inline comment 1*/ /*Inline comment 2*/
+`);
+      });
+
+      it('should attach trailing line comments on line after node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addTrailingComments(node, [
+              t.LineComment({
+                value: `Line trailing comment 1`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+statement();
+//Line trailing comment 1
+`);
+      });
+
+      it('should attach trailing inline line comments on line after node', () => {
+        const code = `\
+statement();
+`;
+
+        const result = transform(code, context => ({
+          ExpressionStatement(node) {
+            context.addTrailingInlineComments(node, [
+              t.LineComment({
+                value: `Line trailing comment 1`,
+              }),
+            ]);
+          },
+        }));
+
+        expect(result).toBe(`\
+statement(); //Line trailing comment 1
+`);
+      });
+
       it('should allow leading comment addition', () => {
         const code = `\
 const x = 1;
@@ -647,7 +834,8 @@ const y = 2;`;
         expect(result).toBe(`\
 //line
 const x = 1;
-/*block*/ const y = 2;
+/*block*/
+const y = 2;
 `);
       });
 
@@ -691,8 +879,9 @@ const y = 2;
               t.BlockComment({value: 'leading block'}),
             ]);
             context.addTrailingComments(newNode, [
+              t.BlockComment({value: 'trailing block 1'}),
               t.LineComment({value: 'trailing line'}),
-              t.BlockComment({value: 'trailing block'}),
+              t.BlockComment({value: 'trailing block 2'}),
             ]);
           },
         }));
@@ -701,8 +890,9 @@ const y = 2;
 //leading line
 /*leading block*/
 ('inserted');
+/*trailing block 1*/
 //trailing line
-/*trailing block*/
+/*trailing block 2*/
 const x = 1;
 `);
       });
@@ -742,6 +932,88 @@ const y = 2; //line`;
         expect(result).toBe(`\
 const x = 1;
 const y = 2;
+`);
+      });
+    });
+
+    describe('clone', () => {
+      it('should clone line comments to new nodes', () => {
+        const code = `\
+// Leading comment
+x; // EOL comment
+y;`;
+        const result = transform(code, context => ({
+          Program(node) {
+            context.cloneCommentsTo(node.body[0], node.body[1]);
+          },
+        }));
+
+        expect(result).toBe(`\
+// Leading comment
+x; // EOL comment
+// Leading comment
+y; // EOL comment
+`);
+      });
+      it('should clone block comments to new nodes', () => {
+        const code = `\
+/* Leading comment 1 */
+/* Leading comment 2 */
+x; /* EOL comment */
+y;`;
+        const result = transform(code, context => ({
+          Program(node) {
+            context.cloneCommentsTo(node.body[0], node.body[1]);
+          },
+        }));
+
+        expect(result).toBe(`\
+/* Leading comment 1 */
+/* Leading comment 2 */
+x; /* EOL comment */
+/* Leading comment 1 */
+/* Leading comment 2 */
+y; /* EOL comment */
+`);
+      });
+      it('should clone comments to newly created nodes', () => {
+        const code = `\
+x; // EOL comment`;
+        const result = transform(code, context => ({
+          Program(node) {
+            const x = node.body[0];
+            const y = t.ExpressionStatement({
+              expression: t.Identifier({name: 'y'}),
+            });
+            context.cloneCommentsTo(x, y);
+            context.insertAfterStatement(x, y);
+          },
+        }));
+
+        expect(result).toBe(`\
+x; // EOL comment
+y; // EOL comment
+`);
+      });
+      it('should clone newly created comments to nodes', () => {
+        const code = `\
+x;
+y;`;
+        const result = transform(code, context => ({
+          Program(node) {
+            const x = node.body[0];
+            const y = node.body[1];
+            context.addTrailingInlineComments(
+              x,
+              t.LineComment({value: ' EOL comment'}),
+            );
+            context.cloneCommentsTo(x, y);
+          },
+        }));
+
+        expect(result).toBe(`\
+x; // EOL comment
+y; // EOL comment
 `);
       });
     });

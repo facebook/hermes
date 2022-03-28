@@ -8,6 +8,7 @@
  * @format
  */
 
+import type {CommentPlacement} from './comments/comments';
 import type {Comment, ESNode} from 'hermes-estree';
 
 import {NodeIsDeletedError, NodeIsMutatedError} from './Errors';
@@ -74,7 +75,7 @@ export class MutationContext {
     }
   }
 
-  appendCommentToSource(comment: Comment): void {
-    this.code = appendCommentToSource(this.code, comment);
+  appendCommentToSource(comment: Comment, placement: CommentPlacement): void {
+    this.code = appendCommentToSource(this.code, comment, placement);
   }
 }

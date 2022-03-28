@@ -20,8 +20,7 @@ import {traverseWithContext} from '../traverse/traverse';
 import {MutationContext} from './MutationContext';
 import {getTransformContext} from './TransformContext';
 import {attachComments} from './comments/comments';
-import {performAddLeadingCommentsMutation} from './mutations/AddLeadingComments';
-import {performAddTrailingCommentsMutation} from './mutations/AddTrailingComments';
+import {performAddCommentsMutation} from './mutations/AddComments';
 import {performCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
 import {performRemoveCommentMutations} from './mutations/RemoveComment';
@@ -93,12 +92,8 @@ export function getTransformedAST(
           return null;
         }
 
-        case 'addLeadingComments': {
-          return performAddLeadingCommentsMutation(mutationContext, mutation);
-        }
-
-        case 'addTrailingComments': {
-          return performAddTrailingCommentsMutation(mutationContext, mutation);
+        case 'addComments': {
+          return performAddCommentsMutation(mutationContext, mutation);
         }
 
         case 'cloneCommentsTo': {

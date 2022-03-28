@@ -22,8 +22,7 @@ import type {DetachedNode} from '../detachedNode';
 import type {TransformCloneSignatures} from '../generated/TransformCloneSignatures';
 import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 import type {TraversalContext} from '../traverse/traverse';
-import type {AddLeadingCommentsMutation} from './mutations/AddLeadingComments';
-import type {AddTrailingCommentsMutation} from './mutations/AddTrailingComments';
+import type {AddCommentsMutation} from './mutations/AddComments';
 import type {CloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import type {InsertStatementMutation} from './mutations/InsertStatement';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
@@ -34,12 +33,12 @@ import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatemen
 
 import {deepCloneNode, shallowCloneNode} from '../detachedNode';
 import {
+  CommentPlacement,
   getCommentsForNode,
   isLeadingComment,
   isTrailingComment,
 } from './comments/comments';
-import {createAddLeadingCommentsMutation} from './mutations/AddLeadingComments';
-import {createAddTrailingCommentsMutation} from './mutations/AddTrailingComments';
+import {createAddCommentsMutation} from './mutations/AddComments';
 import {createCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {createInsertStatementMutation} from './mutations/InsertStatement';
 import {createRemoveCommentMutation} from './mutations/RemoveComment';
@@ -49,8 +48,7 @@ import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 
 type Mutation = $ReadOnly<
-  | AddLeadingCommentsMutation
-  | AddTrailingCommentsMutation
+  | AddCommentsMutation
   | CloneCommentsToMutation
   | InsertStatementMutation
   | RemoveCommentMutation
@@ -154,7 +152,7 @@ type TransformCommentAPIs = $ReadOnly<{
   ) => void,
 
   /**
-   * Add leading comments to the specified node.
+   * Add comments on the line before a specified node.
    */
   addLeadingComments: (
     node: ESNode | DetachedNode<ESNode>,
@@ -162,9 +160,25 @@ type TransformCommentAPIs = $ReadOnly<{
   ) => void,
 
   /**
-   * Add trailing comments to the specified node.
+   * Add comments inline before a specified node.
+   */
+  addLeadingInlineComments: (
+    node: ESNode | DetachedNode<ESNode>,
+    comments: SingleOrArray<Comment>,
+  ) => void,
+
+  /**
+   * Add comments on the line after a specified node.
    */
   addTrailingComments: (
+    node: ESNode | DetachedNode<ESNode>,
+    comments: SingleOrArray<Comment>,
+  ) => void,
+
+  /**
+   * Add comments inline after a specified node.
+   */
+  addTrailingInlineComments: (
     node: ESNode | DetachedNode<ESNode>,
     comments: SingleOrArray<Comment>,
   ) => void,
@@ -374,12 +388,52 @@ export function getTransformContext(): TransformContextAdditions {
     }: TransformCommentAPIs['cloneCommentsTo']),
 
     addLeadingComments: ((node, comments): void => {
-      pushMutation(createAddLeadingCommentsMutation(node, toArray(comments)));
+      pushMutation(
+        createAddCommentsMutation(
+          node,
+          toArray(comments).map(comment => ({
+            comment,
+            placement: CommentPlacement.LEADING_OWN_LINE,
+          })),
+        ),
+      );
     }: TransformCommentAPIs['addLeadingComments']),
 
+    addLeadingInlineComments: ((node, comments): void => {
+      pushMutation(
+        createAddCommentsMutation(
+          node,
+          toArray(comments).map(comment => ({
+            comment,
+            placement: CommentPlacement.LEADING_INLINE,
+          })),
+        ),
+      );
+    }: TransformCommentAPIs['addLeadingInlineComments']),
+
     addTrailingComments: ((node, comments): void => {
-      pushMutation(createAddTrailingCommentsMutation(node, toArray(comments)));
+      pushMutation(
+        createAddCommentsMutation(
+          node,
+          toArray(comments).map(comment => ({
+            comment,
+            placement: CommentPlacement.TRAILING_OWN_LINE,
+          })),
+        ),
+      );
     }: TransformCommentAPIs['addTrailingComments']),
+
+    addTrailingInlineComments: ((node, comments): void => {
+      pushMutation(
+        createAddCommentsMutation(
+          node,
+          toArray(comments).map(comment => ({
+            comment,
+            placement: CommentPlacement.TRAILING_INLINE,
+          })),
+        ),
+      );
+    }: TransformCommentAPIs['addTrailingInlineComments']),
 
     removeComments: ((comments): void => {
       toArray(comments).forEach(comment => {

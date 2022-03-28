@@ -36,13 +36,12 @@ export function createCloneCommentsToMutation(
 }
 
 export function performCloneCommentsToMutation(
-  mutationContext: MutationContext,
+  _mutationContext: MutationContext,
   mutation: CloneCommentsToMutation,
 ): null {
   const newComments = [];
   for (const originalComment of getCommentsForNode(mutation.target)) {
     const comment = cloneCommentWithMarkers(originalComment);
-    mutationContext.appendCommentToSource(comment);
     newComments.push(comment);
   }
   addCommentsToNode(mutation.destination, newComments);
