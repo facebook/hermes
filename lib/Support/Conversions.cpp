@@ -21,7 +21,7 @@ namespace hermes {
 /// the integer are then returned.
 int32_t truncateToInt32SlowPath(double d) {
   double tmp = d; // Allow d to stay in a register.
-  uint64_t bits = safeTypeCast<double, uint64_t>(tmp);
+  uint64_t bits = llvh::DoubleToBits(tmp);
   int exp = (int)(bits >> 52) & 0x7FF;
   // A negative sign is turned into 2, a positive into 0. Subtracting from 1
   // gives us what we need.

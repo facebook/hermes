@@ -37,7 +37,7 @@ void decodeOperand(const uint8_t *operandBuf, T *val) {
   }
 
   if (std::is_same<T, double>::value) {
-    *val = safeTypeCast<param_t, double>(ret);
+    *val = llvh::BitsToDouble(ret);
   } else {
     *val = ret;
   }

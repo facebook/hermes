@@ -264,8 +264,8 @@ TEST(HermesValueTest, NanTest) {
           .getDouble();
   EXPECT_TRUE(std::isnan(v1));
   EXPECT_TRUE(std::isnan(v2));
-  int64_t v1_int = hermes::safeTypeCast<double, int64_t>(v1);
-  int64_t v2_int = hermes::safeTypeCast<double, int64_t>(v2);
+  int64_t v1_int = llvh::DoubleToBits(v1);
+  int64_t v2_int = llvh::DoubleToBits(v2);
   EXPECT_EQ(v1_int, v2_int);
 }
 

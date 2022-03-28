@@ -155,7 +155,7 @@ class BytecodeInstructionGenerator {
   /// a raw double value instead of having to convert it
   /// to int64_t.
   offset_t emitLoadConstDoubleDirect(param_t dst, double value) {
-    return emitLoadConstDouble(dst, safeTypeCast<double, param_t>(value));
+    return emitLoadConstDouble(dst, llvh::DoubleToBits(value));
   }
 };
 } // namespace hbc

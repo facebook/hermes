@@ -165,7 +165,7 @@ class JSONNumber : public JSONScalar, public llvh::FoldingSetNode {
   }
 
   static void Profile(llvh::FoldingSetNodeID &id, double value) {
-    id.AddInteger(safeTypeCast<double, int64_t>(value));
+    id.AddInteger(llvh::DoubleToBits(value));
   }
 
   void Profile(llvh::FoldingSetNodeID &id) {

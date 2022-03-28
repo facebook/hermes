@@ -390,8 +390,8 @@ static void makeWritable(void *address, size_t length) {
   void *endAddress = static_cast<void *>(static_cast<char *>(address) + length);
 
   // Align the address to page size before setting the pagesize.
-  void *alignedAddress = safeTypeCast<size_t, void *>(llvh::alignDown(
-      safeTypeCast<void *, size_t>(address), hermes::oscompat::page_size()));
+  void *alignedAddress = reinterpret_cast<void *>(llvh::alignDown(
+      reinterpret_cast<uintptr_t>(address), hermes::oscompat::page_size()));
 
   size_t totalLength =
       static_cast<char *>(endAddress) - static_cast<char *>(alignedAddress);

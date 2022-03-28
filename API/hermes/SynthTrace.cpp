@@ -46,7 +46,7 @@ double decodeNumber(const std::string &numberAsString) {
   ss << std::hex << numberAsString;
   uint64_t x;
   ss >> x;
-  return ::hermes::safeTypeCast<uint64_t, double>(x);
+  return llvh::BitsToDouble(x);
 }
 
 std::string doublePrinter(double x) {
@@ -61,7 +61,7 @@ std::string doublePrinter(double x) {
   llvh::raw_string_ostream resultStream{result};
   llvh::write_hex(
       resultStream,
-      ::hermes::safeTypeCast<double, uint64_t>(x),
+      llvh::DoubleToBits(x),
       llvh::HexPrintStyle::PrefixLower,
       16);
   resultStream.flush();

@@ -17,41 +17,6 @@
 
 namespace hermes {
 
-template <typename From, typename To>
-union SafeTypeCastUnion {
-  From from;
-  To to;
-};
-
-/// This is a helper function that performs type conversion that does not
-/// violate the strict aliasing rules.
-template <typename From, typename To>
-static constexpr To safeTypeCast(From from) {
-  static_assert(
-      sizeof(From) == sizeof(To), "conversion of different size types");
-  return SafeTypeCastUnion<From, To>{from}.to;
-}
-
-/// This is a helper function that performs zero extend type conversion
-/// that does not violate the strict aliasing rules. The type To must be
-/// Nullable (ptr or integer).
-template <typename From, typename To>
-static To safeZeroExtend(From from) {
-  static_assert(sizeof(From) <= sizeof(To), "Type extend to a smaller type");
-  SafeTypeCastUnion<From, To> X;
-  X.to = 0;
-  X.from = from;
-  return X.to;
-}
-
-/// This is a helper function that performs type size truncation type
-/// conversion that does not violate the strict aliasing rules.
-template <typename From, typename To>
-static constexpr To safeSizeTrunc(From from) {
-  static_assert(sizeof(From) >= sizeof(To), "Type extend to a bigger type");
-  return SafeTypeCastUnion<From, To>{from}.to;
-}
-
 /// Convert a double to a 32-bit integer according to ES5.1 section 9.5.
 /// It can also be used for converting to an unsigned integer, which has the
 /// same bit pattern.

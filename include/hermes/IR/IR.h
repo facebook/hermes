@@ -765,7 +765,7 @@ class LiteralNumber : public Literal, public llvh::FoldingSetNode {
   }
 
   static void Profile(llvh::FoldingSetNodeID &ID, double value) {
-    ID.AddInteger(safeTypeCast<double, int64_t>(value));
+    ID.AddInteger(llvh::DoubleToBits(value));
   }
 
   void Profile(llvh::FoldingSetNodeID &ID) const {

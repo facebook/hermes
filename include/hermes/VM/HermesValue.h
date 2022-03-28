@@ -197,7 +197,7 @@ class HermesValue {
   static void validatePointer(const void *ptr) {
 #if LLVM_PTR_SIZE == 8
     assert(
-        (safeTypeCast<const void *, uint64_t>(ptr) & ~kDataMask) == 0 &&
+        (reinterpret_cast<uintptr_t>(ptr) & ~kDataMask) == 0 &&
         "Pointer top bits are set");
 #endif
   }
@@ -241,7 +241,7 @@ class HermesValue {
 
   inline static HermesValue encodeObjectValueUnsafe(void *val) {
     validatePointer(val);
-    HermesValue RV(safeTypeCast<void *, uintptr_t>(val), ObjectTag);
+    HermesValue RV(reinterpret_cast<uintptr_t>(val), ObjectTag);
     assert(RV.isObject());
     return RV;
   }
@@ -249,7 +249,7 @@ class HermesValue {
   inline static HermesValue encodeStringValueUnsafe(
       const StringPrimitive *val) {
     validatePointer(val);
-    HermesValue RV(safeTypeCast<const void *, uintptr_t>(val), StrTag);
+    HermesValue RV(reinterpret_cast<uintptr_t>(val), StrTag);
     assert(RV.isString());
     return RV;
   }
@@ -309,7 +309,7 @@ class HermesValue {
 #endif
 
   inline static HermesValue encodeDoubleValue(double num) {
-    HermesValue RV(safeTypeCast<double, uint64_t>(num));
+    HermesValue RV(llvh::DoubleToBits(num));
     assert(RV.isDouble());
     return RV;
   }
@@ -338,15 +338,15 @@ class HermesValue {
     return encodeDoubleValue((double)num);
   }
 
-  static constexpr HermesValue encodeNaNValue() {
-    return HermesValue(safeTypeCast<double, uint64_t>(
-        std::numeric_limits<double>::quiet_NaN()));
+  static HermesValue encodeNaNValue() {
+    return HermesValue(
+        llvh::DoubleToBits(std::numeric_limits<double>::quiet_NaN()));
   }
 
   /// Keeping tag constant, make a new HermesValue with \p val stored in it.
   inline HermesValue updatePointer(void *val) const {
     assert(isPointer());
-    HermesValue V(safeTypeCast<void *, uintptr_t>(val), getTag());
+    HermesValue V(reinterpret_cast<uintptr_t>(val), getTag());
     assert(V.isPointer());
     return V;
   }
@@ -402,12 +402,12 @@ class HermesValue {
   inline void *getPointer() const {
     assert(isPointer());
     // Mask out the tag.
-    return safeSizeTrunc<uint64_t, void *>(raw_ & kDataMask);
+    return reinterpret_cast<void *>(raw_ & kDataMask);
   }
 
   inline double getDouble() const {
     assert(isDouble());
-    return safeTypeCast<uint64_t, double>(raw_);
+    return llvh::BitsToDouble(raw_);
   }
 
   inline uint32_t getNativeUInt32() const {

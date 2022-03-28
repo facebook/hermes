@@ -607,24 +607,20 @@ class GCBase {
         // occur naturally.
         // NOTE: HermesValue uses NaN tagging internally so we can use that to
         // get the encoding.
-        return ::hermes::safeTypeCast<uint64_t, double>(
-            HermesValue::encodeUndefinedValue().getRaw());
+        return llvh::BitsToDouble(HermesValue::encodeUndefinedValue().getRaw());
       }
       static double getTombstoneKey() {
         // Use a non-canonical NaN value as the tombstone, which should never
         // occur naturally.
         // NOTE: HermesValue uses NaN tagging internally so we can use that to
         // get the encoding.
-        return ::hermes::safeTypeCast<uint64_t, double>(
-            HermesValue::encodeNullValue().getRaw());
+        return llvh::BitsToDouble(HermesValue::encodeNullValue().getRaw());
       }
       static unsigned getHashValue(double val) {
-        return std::hash<uint64_t>{}(
-            ::hermes::safeTypeCast<double, uint64_t>(val));
+        return std::hash<uint64_t>{}(llvh::DoubleToBits(val));
       }
       static bool isEqual(double LHS, double RHS) {
-        return ::hermes::safeTypeCast<double, uint64_t>(LHS) ==
-            ::hermes::safeTypeCast<double, uint64_t>(RHS);
+        return llvh::DoubleToBits(LHS) == llvh::DoubleToBits(RHS);
       }
     };
 
