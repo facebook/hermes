@@ -359,15 +359,15 @@ class JSObject : public GCCell {
   static const ObjectVTable vt;
 
   /// Default capacity of indirect property storage.
-  static const PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
+  static constexpr PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
 
   /// Number of property slots used by the implementation that are named,
   /// meaning they are also visible to user code. Child classes should override
   /// this value by adding to it and defining a constant with the same name.
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS = 0;
+  static constexpr PropStorage::size_type NAMED_PROPERTY_SLOTS = 0;
 
   /// Number of property slots allocated directly inside the object.
-  static const PropStorage::size_type DIRECT_PROPERTY_SLOTS = 5;
+  static constexpr PropStorage::size_type DIRECT_PROPERTY_SLOTS = 5;
 
   static constexpr CellKind getCellKind() {
     return CellKind::JSObjectKind;
