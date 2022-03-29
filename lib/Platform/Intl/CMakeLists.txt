@@ -16,6 +16,7 @@ if(HERMES_ENABLE_INTL)
         LINK_LIBS
         ${FOUNDATION}
         hermesBCP47Parser
+        hermesPublic
     )
     # Work around a bug in unity builds where it tries to build Obj-C as C++.
     set_target_properties(hermesPlatformIntl PROPERTIES UNITY_BUILD false)

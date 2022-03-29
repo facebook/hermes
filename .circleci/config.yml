@@ -337,6 +337,12 @@ jobs:
             hermes/utils/build/configure.py
             cmake --build ./build
             cmake --build ./build --target check-hermes
+      - run:
+          name: Build Apple Intl
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py --cmake-flags="-DHERMES_ENABLE_INTL=ON" build_intl
+            cmake --build ./build_intl
 
   windows:
     executor:
