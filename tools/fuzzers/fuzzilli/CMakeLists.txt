@@ -4,8 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 if(HERMES_ENABLE_FUZZILLI)
-    set(CMAKE_CXX_STANDARD 14)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(HERMES_ENABLE_EH ON)
     set(HERMES_ENABLE_FUZZILLI ON)
 
