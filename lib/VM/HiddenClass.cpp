@@ -779,7 +779,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::reserveSlot(
       "Reserved slots can only be added in class mode");
   SlotIndex index = selfHandle->numProperties_;
   assert(
-      index < InternalProperty::NumInternalProperties &&
+      index < InternalProperty::NumAnonymousInternalProperties &&
       "Reserved slot index is too large");
 
   return HiddenClass::addProperty(

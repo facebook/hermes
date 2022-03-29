@@ -36,7 +36,7 @@ class DecoratedObject : public JSObject {
 
   /// \param additionalSlotCount internal slots to reserve within the
   /// object.  Only a small number of slots are available; this value
-  /// cannot be greater than InternalProperty::NumInternalProperties -
+  /// cannot be greater than InternalProperty::NumAnonymousInternalProperties -
   /// numOverlaps, which is currently 3.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<DecoratedObject> create(

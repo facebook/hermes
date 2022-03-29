@@ -1217,7 +1217,9 @@ class Runtime : public HandleRootOwner,
 
   /// rootClazzes_[i] is a PinnedHermesValue pointing to a hidden class with
   /// its i first slots pre-reserved.
-  std::array<PinnedHermesValue, InternalProperty::NumInternalProperties + 1>
+  std::array<
+      PinnedHermesValue,
+      InternalProperty::NumAnonymousInternalProperties + 1>
       rootClazzes_;
 
   /// Cache for property lookups in non-JS code.

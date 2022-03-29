@@ -452,7 +452,8 @@ TEST_F(HiddenClassTest, ForEachProperty) {
 TEST_F(HiddenClassTest, ReservedSlots) {
   auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
-  for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
+  for (unsigned i = 0; i <= InternalProperty::NumAnonymousInternalProperties;
+       ++i) {
     Handle<HiddenClass> clazz =
         runtime.getHiddenClassForPrototype(*runtime.getGlobal(), i);
     EXPECT_FALSE(clazz->isDictionary());

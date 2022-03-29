@@ -308,7 +308,8 @@ Runtime::Runtime(
         vmcast<HiddenClass>(
             ignoreAllocationFailure(HiddenClass::createRoot(*this))));
     rootClazzes_[0] = clazz.getHermesValue();
-    for (unsigned i = 1; i <= InternalProperty::NumInternalProperties; ++i) {
+    for (unsigned i = 1; i <= InternalProperty::NumAnonymousInternalProperties;
+         ++i) {
       auto addResult = HiddenClass::reserveSlot(clazz, *this);
       assert(
           addResult != ExecutionStatus::EXCEPTION &&

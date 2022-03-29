@@ -475,7 +475,7 @@ class HiddenClass final : public GCCell {
 
   /// Create a new class where the next slot is reserved, by calling addProperty
   /// with an internal property name. Only slots with index less than
-  /// InternalProperty::NumInternalProperties can be reserved.
+  /// InternalProperty::NumAnonymousInternalProperties can be reserved.
   /// \param selfHandle must not be in dictionary mode.
   /// \return the resulting new class and the index of the reserved slot.
   static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> reserveSlot(

@@ -29,7 +29,7 @@ inline Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
     JSObject *proto,
     unsigned reservedSlots) {
   assert(
-      reservedSlots <= InternalProperty::NumInternalProperties &&
+      reservedSlots <= InternalProperty::NumAnonymousInternalProperties &&
       "out of bounds");
   PinnedHermesValue *clazz = &rootClazzes_[reservedSlots];
   assert(!clazz->isUndefined() && "must initialize root classes before use");
