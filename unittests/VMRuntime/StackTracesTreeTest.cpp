@@ -47,7 +47,6 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     // Ideally none of this should require debug info, so let's ensure it
     // doesn't.
     flags.debug = false;
-    flags.optimize = false;
     auto runRes = runtime.run(code, "eval.js", flags);
     return isException(runRes);
   };
@@ -57,7 +56,6 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
       const std::string &expectedTrace) {
     hbc::CompileFlags flags;
     flags.debug = false;
-    flags.optimize = false;
     auto runRes = runtime.run(code, "test.js", flags);
     if (isException(runRes)) {
       return isException(runRes);

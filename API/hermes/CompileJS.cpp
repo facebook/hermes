@@ -8,6 +8,7 @@
 #include "CompileJS.h"
 
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvh/Support/SHA1.h"
@@ -48,7 +49,6 @@ bool compileJS(
     DiagnosticHandler *diagHandler) {
   hbc::CompileFlags flags{};
   flags.format = EmitBundle;
-  flags.optimize = optimize;
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
@@ -59,7 +59,8 @@ bool compileJS(
       flags,
       {} /* scopeChain */,
       diagHandler ? diagHandlerAdapter : nullptr,
-      diagHandler);
+      diagHandler,
+      optimize ? runFullOptimizationPasses : nullptr);
   if (!res.first)
     return false;
 

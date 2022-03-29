@@ -40,8 +40,7 @@ class DiagnosticHandler {
 /// and outputs to \p bytecode otherwise returns false.
 /// \param sourceURL this will be used as the "file name" of the buffer for
 ///   errors, stack traces, etc.
-/// \param optimize this will enable optimizations, but only if the
-/// HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME preprocessor directive is set.
+/// \param optimize this will enable optimizations.
 /// \param diagHandler if not null, receives any and all errors, warnings and
 ///   notes produced during compilation.
 bool compileJS(

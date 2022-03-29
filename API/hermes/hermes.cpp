@@ -206,7 +206,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
                 .build())),
         runtime_(*rt_),
         vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()) {
-    compileFlags_.optimize = false;
 #ifdef HERMES_ENABLE_DEBUGGER
     compileFlags_.debug = true;
 #endif

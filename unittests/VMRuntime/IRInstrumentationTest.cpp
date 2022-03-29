@@ -28,7 +28,6 @@ class IRInstrumentationTest : public ::testing::Test {
   CallResult<HermesValue> run(llvh::StringRef ref, bool instrument) {
     CompileFlags flags;
     flags.instrumentIR = instrument;
-    flags.optimize = false;
     auto result = runtime_->run(ref, "IRInstrumentationTest.cpp", flags);
     EXPECT_EQ(ExecutionStatus::RETURNED, result.getStatus());
     return result;

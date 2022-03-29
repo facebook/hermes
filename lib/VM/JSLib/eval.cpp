@@ -18,6 +18,10 @@
 #include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/raw_ostream.h"
 
+#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
+#include "hermes/Optimizer/PassManager/Pipeline.h"
+#endif
+
 namespace hermes {
 namespace vm {
 
@@ -38,7 +42,6 @@ CallResult<HermesValue> evalInEnvironment(
   hbc::CompileFlags compileFlags;
   compileFlags.strict = false;
   compileFlags.includeLibHermes = false;
-  compileFlags.optimize = runtime.optimizedEval;
   compileFlags.verifyIR = runtime.verifyEvalIR;
   compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
   compileFlags.lazy =
@@ -46,6 +49,12 @@ CallResult<HermesValue> evalInEnvironment(
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code
   compileFlags.debug = true;
+#endif
+
+  std::function<void(Module &)> runOptimizationPasses;
+#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
+  if (runtime.optimizedEval)
+    runOptimizationPasses = runFullOptimizationPasses;
 #endif
 
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
@@ -60,7 +69,14 @@ CallResult<HermesValue> evalInEnvironment(
     }
 
     auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(buffer), "JavaScript", nullptr, compileFlags, scopeChain);
+        std::move(buffer),
+        "JavaScript",
+        nullptr,
+        compileFlags,
+        scopeChain,
+        {},
+        nullptr,
+        runOptimizationPasses);
     if (!bytecode_err.first) {
       return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
     }

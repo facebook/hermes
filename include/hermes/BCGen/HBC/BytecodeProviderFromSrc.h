@@ -18,7 +18,6 @@ namespace hbc {
 
 /// Flags passed to createBCProviderFromSrc to set parameters on execution.
 struct CompileFlags {
-  bool optimize{false};
   bool debug{false};
   bool lazy{false};
 
@@ -167,7 +166,8 @@ class BCProviderFromSrc final : public BCProviderBase {
       const CompileFlags &compileFlags,
       const ScopeChain &scopeChain,
       SourceErrorManager::DiagHandlerTy diagHandler = nullptr,
-      void *diagContext = nullptr);
+      void *diagContext = nullptr,
+      const std::function<void(Module &)> &runOptimizationPasses = {});
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());

@@ -9,9 +9,6 @@
 
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
-#include "hermes/Optimizer/PassManager/Pipeline.h"
-#endif
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
@@ -89,7 +86,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags) {
   return createBCProviderFromSrc(
-      std::move(buffer), sourceURL, std::move(sourceMap), compileFlags, {});
+      std::move(buffer), sourceURL, std::move(sourceMap), compileFlags, {}, {});
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
@@ -100,15 +97,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
     const CompileFlags &compileFlags,
     const ScopeChain &scopeChain,
     SourceErrorManager::DiagHandlerTy diagHandler,
-    void *diagContext) {
-  std::function<void(Module &)> runOptimizationPasses{};
-#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
-  if (compileFlags.optimize) {
-    runOptimizationPasses = runFullOptimizationPasses;
-  } else {
-    runOptimizationPasses = runNoOptimizationPasses;
-  }
-#endif
+    void *diagContext,
+    const std::function<void(Module &)> &runOptimizationPasses) {
   return createBCProviderFromSrcImpl(
       std::move(buffer),
       sourceURL,
@@ -174,7 +164,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   context->setPreemptiveFileCompilationThreshold(
       compileFlags.preemptiveFileCompilationThreshold);
 
-  if (compileFlags.lazy && !compileFlags.optimize) {
+  if (compileFlags.lazy && !runOptimizationPasses) {
     context->setLazyCompilation(true);
   }
 
@@ -237,11 +227,11 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     return {nullptr, getErrorString()};
   }
 
-  if (compileFlags.optimize && runOptimizationPasses)
+  if (runOptimizationPasses)
     runOptimizationPasses(M);
 
   BytecodeGenerationOptions opts{compileFlags.format};
-  opts.optimizationEnabled = compileFlags.optimize;
+  opts.optimizationEnabled = !!runOptimizationPasses;
   opts.staticBuiltinsEnabled =
       context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
