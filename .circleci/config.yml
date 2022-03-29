@@ -318,23 +318,20 @@ jobs:
   test-macos:
     # CheckedMalloc.Death fails in release mode, so build a debug version
     # TODO: Switch to `release` and reuse `build_macosx` from previous job
-    <<: *apple_defaults
+    macos:
+      xcode: 12.4.0
+    working_directory: /Users/distiller
     steps:
-      - checkout
+      - checkout:
+          path: hermes
       - run:
           name: Install dependencies
           command: |
-            brew install cmake ninja
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            brew install cmake
       - run:
           name: Run MacOS regression tests in debug mode
           command: |
-            cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py
+            hermes/utils/build/configure.py --build-system=Xcode
             cmake --build ./build
             cmake --build ./build --target check-hermes
 
