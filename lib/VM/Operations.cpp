@@ -832,50 +832,50 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
-abstractEqualityTailCall:
-  // Same type comparison.
-  if (x->getTag() == y->getTag() || (x->isNumber() && y->isNumber())) {
-    bool result;
-    switch (x->getTag()) {
-      case EmptyInvalidTag:
-        llvm_unreachable("can't compare empties");
-      case NativeValueTag:
-        llvm_unreachable("native value");
-      case UndefinedNullTag:
-        result = true;
-        break;
-      case StrTag:
-        result = x->getString()->equals(y->getString());
-        break;
-      case ObjectTag:
-        // Return true if x and y refer to the same object.
-        result = x->getPointer() == y->getPointer();
-        break;
-      case BoolSymbolTag:
-        // Return true if x's and y's bits are exactly the same. This works
-        // because the ETag as well as the value (i.e., symbol id, true,
-        // or false) all being encoded in HermesValue's payload.
-        result = x->getRaw() == y->getRaw();
-        break;
-      default: {
-        result = x->getNumber() == y->getNumber();
-        break;
+  while (true) {
+    // Same type comparison.
+    if (x->getTag() == y->getTag() || (x->isNumber() && y->isNumber())) {
+      bool result;
+      switch (x->getTag()) {
+        case EmptyInvalidTag:
+          llvm_unreachable("can't compare empties");
+        case NativeValueTag:
+          llvm_unreachable("native value");
+        case UndefinedNullTag:
+          result = true;
+          break;
+        case StrTag:
+          result = x->getString()->equals(y->getString());
+          break;
+        case ObjectTag:
+          // Return true if x and y refer to the same object.
+          result = x->getPointer() == y->getPointer();
+          break;
+        case BoolSymbolTag:
+          // Return true if x's and y's bits are exactly the same. This works
+          // because the ETag as well as the value (i.e., symbol id, true,
+          // or false) all being encoded in HermesValue's payload.
+          result = x->getRaw() == y->getRaw();
+          break;
+        default: {
+          result = x->getNumber() == y->getNumber();
+          break;
+        }
       }
+      return result;
     }
-    return result;
-  }
 
-  // If the types are different, combine tags for use in the switch statement.
-  // Use NativeValueTag as a placeholder for numbers.
-  assert(
-      !x->isNativeValue() && !x->isEmpty() && "invalid value for comparison");
-  assert(
-      !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
+    // If the types are different, combine tags for use in the switch statement.
+    // Use NativeValueTag as a placeholder for numbers.
+    assert(
+        !x->isNativeValue() && !x->isEmpty() && "invalid value for comparison");
+    assert(
+        !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
 
-  // The following macros are used to generate the switch cases using
-  // HermesValue::combineETags; an S in the name means it is a single ETag
-  // (e.g., ETag::Bool), while M means it is a multi ETag (e.g., ETag::Object1
-  // and ETag::Object2).
+    // The following macros are used to generate the switch cases using
+    // HermesValue::combineETags; an S in the name means it is a single ETag
+    // (e.g., ETag::Bool), while M means it is a multi ETag (e.g., ETag::Object1
+    // and ETag::Object2).
 #define CASE_S_S(typeA, typeB)    \
   case HermesValue::combineETags( \
       HermesValue::ETag::typeA, HermesValue::ETag::typeB):
@@ -892,92 +892,93 @@ abstractEqualityTailCall:
   CASE_M_S(typeA, typeB##1)    \
   CASE_M_S(typeA, typeB##2)
 
-  // NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
-  // don't have a tag assigned to them). It reuses ETag::Native1 there will
-  // never be any native values in this part of the code.
+// NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
+// don't have a tag assigned to them). It reuses ETag::Native1 there will
+// never be any native values in this part of the code.
 #define NUMBER_TAG Native1
 
-  // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
-  // tag values for everything else.
-  HermesValue::ETag xType =
-      x->isNumber() ? HermesValue::ETag::NUMBER_TAG : x->getETag();
-  HermesValue::ETag yType =
-      y->isNumber() ? HermesValue::ETag::NUMBER_TAG : y->getETag();
+    // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
+    // tag values for everything else.
+    HermesValue::ETag xType =
+        x->isNumber() ? HermesValue::ETag::NUMBER_TAG : x->getETag();
+    HermesValue::ETag yType =
+        y->isNumber() ? HermesValue::ETag::NUMBER_TAG : y->getETag();
 
-  switch (HermesValue::combineETags(xType, yType)) {
-    CASE_S_S(Undefined, Undefined)
-    CASE_S_S(Undefined, Null)
-    CASE_S_S(Null, Undefined)
-    CASE_S_S(Null, Null) {
-      return true;
-    }
-
-    CASE_S_M(NUMBER_TAG, Str) {
-      return x->getNumber() ==
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
-    }
-    CASE_M_S(Str, NUMBER_TAG) {
-      return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
-          y->getNumber();
-    }
-
-    CASE_S_S(Bool, NUMBER_TAG) {
-      // Do both conversions and check numerical equality.
-      return x->getBool() == y->getNumber();
-    }
-    CASE_S_M(Bool, Str) {
-      // Do string parsing and check double equality.
-      return x->getBool() ==
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
-    }
-    CASE_S_M(Bool, Object) {
-      x = HermesValue::encodeDoubleValue(x->getBool());
-      goto abstractEqualityTailCall;
-    }
-
-    CASE_S_S(NUMBER_TAG, Bool) {
-      return x->getNumber() == y->getBool();
-    }
-    CASE_M_S(Str, Bool) {
-      return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
-          y->getBool();
-    }
-    CASE_M_S(Object, Bool) {
-      y = HermesValue::encodeDoubleValue(y->getBool());
-      goto abstractEqualityTailCall;
-    }
-    CASE_M_M(Str, Object)
-    CASE_S_M(Symbol, Object)
-    CASE_S_M(NUMBER_TAG, Object) {
-      auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
-      if (status == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
+    switch (HermesValue::combineETags(xType, yType)) {
+      CASE_S_S(Undefined, Undefined)
+      CASE_S_S(Undefined, Null)
+      CASE_S_S(Null, Undefined)
+      CASE_S_S(Null, Null) {
+        return true;
       }
-      y = status.getValue();
-      goto abstractEqualityTailCall;
-    }
-    CASE_M_M(Object, Str)
-    CASE_M_S(Object, Symbol)
-    CASE_M_S(Object, NUMBER_TAG) {
-      auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
-      if (status == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      x = status.getValue();
-      goto abstractEqualityTailCall;
-    }
 
-    default:
-      // Final case, return false.
-      return false;
-  } // namespace vm
+      CASE_S_M(NUMBER_TAG, Str) {
+        return x->getNumber() ==
+            stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
+      }
+      CASE_M_S(Str, NUMBER_TAG) {
+        return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
+            y->getNumber();
+      }
+
+      CASE_S_S(Bool, NUMBER_TAG) {
+        // Do both conversions and check numerical equality.
+        return x->getBool() == y->getNumber();
+      }
+      CASE_S_M(Bool, Str) {
+        // Do string parsing and check double equality.
+        return x->getBool() ==
+            stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
+      }
+      CASE_S_M(Bool, Object) {
+        x = HermesValue::encodeDoubleValue(x->getBool());
+        break;
+      }
+
+      CASE_S_S(NUMBER_TAG, Bool) {
+        return x->getNumber() == y->getBool();
+      }
+      CASE_M_S(Str, Bool) {
+        return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
+            y->getBool();
+      }
+      CASE_M_S(Object, Bool) {
+        y = HermesValue::encodeDoubleValue(y->getBool());
+        break;
+      }
+      CASE_M_M(Str, Object)
+      CASE_S_M(Symbol, Object)
+      CASE_S_M(NUMBER_TAG, Object) {
+        auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
+        if (status == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        y = status.getValue();
+        break;
+      }
+      CASE_M_M(Object, Str)
+      CASE_M_S(Object, Symbol)
+      CASE_M_S(Object, NUMBER_TAG) {
+        auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
+        if (status == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        x = status.getValue();
+        break;
+      }
+
+      default:
+        // Final case, return false.
+        return false;
+    }
 
 #undef CASE_S_S
 #undef CASE_S_M
 #undef CASE_M_S
 #undef CASE_M_M
 #undef NUMBER_TAG
-} // namespace hermes
+  }
+}
 
 bool strictEqualityTest(HermesValue x, HermesValue y) {
   // Numbers are special because they can have different tags and they don't
