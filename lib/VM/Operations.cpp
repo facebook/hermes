@@ -827,7 +827,7 @@ IMPLEMENT_COMPARISON_OP(lessOp_RJS, <);
 IMPLEMENT_COMPARISON_OP(greaterOp_RJS, >);
 IMPLEMENT_COMPARISON_OP(lessEqualOp_RJS, <=);
 IMPLEMENT_COMPARISON_OP(greaterEqualOp_RJS, >=);
-CallResult<HermesValue>
+CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
@@ -862,7 +862,7 @@ abstractEqualityTailCall:
         break;
       }
     }
-    return HermesValue::encodeBoolValue(result);
+    return result;
   }
 
   // If the types are different, combine tags for use in the switch statement.
@@ -909,29 +909,26 @@ abstractEqualityTailCall:
     CASE_S_S(Undefined, Null)
     CASE_S_S(Null, Undefined)
     CASE_S_S(Null, Null) {
-      return HermesValue::encodeBoolValue(true);
+      return true;
     }
 
     CASE_S_M(NUMBER_TAG, Str) {
-      return HermesValue::encodeBoolValue(
-          x->getNumber() ==
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
+      return x->getNumber() ==
+          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
     }
     CASE_M_S(Str, NUMBER_TAG) {
-      return HermesValue::encodeBoolValue(
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
-          y->getNumber());
+      return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
+          y->getNumber();
     }
 
     CASE_S_S(Bool, NUMBER_TAG) {
       // Do both conversions and check numerical equality.
-      return HermesValue::encodeBoolValue(x->getBool() == y->getNumber());
+      return x->getBool() == y->getNumber();
     }
     CASE_S_M(Bool, Str) {
       // Do string parsing and check double equality.
-      return HermesValue::encodeBoolValue(
-          x->getBool() ==
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y)));
+      return x->getBool() ==
+          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
     }
     CASE_S_M(Bool, Object) {
       x = HermesValue::encodeDoubleValue(x->getBool());
@@ -939,12 +936,11 @@ abstractEqualityTailCall:
     }
 
     CASE_S_S(NUMBER_TAG, Bool) {
-      return HermesValue::encodeBoolValue(x->getNumber() == y->getBool());
+      return x->getNumber() == y->getBool();
     }
     CASE_M_S(Str, Bool) {
-      return HermesValue::encodeBoolValue(
-          stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
-          y->getBool());
+      return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
+          y->getBool();
     }
     CASE_M_S(Object, Bool) {
       y = HermesValue::encodeDoubleValue(y->getBool());
@@ -973,7 +969,7 @@ abstractEqualityTailCall:
 
     default:
       // Final case, return false.
-      return HermesValue::encodeBoolValue(false);
+      return false;
   } // namespace vm
 
 #undef CASE_S_S

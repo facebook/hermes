@@ -193,7 +193,7 @@ CallResult<bool>
 greaterEqualOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 
 /// ES5.1 11.9.3
-CallResult<HermesValue>
+CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle);
 
 /// ES5.1 11.9.6

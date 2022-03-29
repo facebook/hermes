@@ -1390,16 +1390,17 @@ tailCall:
 /// \param falseDest  ip value if the conditional evaluates to false
 #define JCOND_EQ_IMPL(name, suffix, trueDest, falseDest) \
   CASE(name##suffix) {                                   \
-    CAPTURE_IP(                                          \
-        res = abstractEqualityTest_RJS(                  \
+    CAPTURE_IP_ASSIGN(                                   \
+        auto eqRes,                                      \
+        abstractEqualityTest_RJS(                        \
             runtime,                                     \
             Handle<>(&O2REG(name##suffix)),              \
             Handle<>(&O3REG(name##suffix))));            \
-    if (res == ExecutionStatus::EXCEPTION) {             \
+    if (eqRes == ExecutionStatus::EXCEPTION) {           \
       goto exception;                                    \
     }                                                    \
     gcScope.flushToSmallCount(KEEP_HANDLES);             \
-    if (res->getBool()) {                                \
+    if (*eqRes) {                                        \
       ip = trueDest;                                     \
       DISPATCH;                                          \
     }                                                    \
@@ -3080,16 +3081,16 @@ tailCall:
 
       CASE(Eq)
       CASE(Neq) {
-        CAPTURE_IP(
-            res = abstractEqualityTest_RJS(
+        CAPTURE_IP_ASSIGN(
+            auto eqRes,
+            abstractEqualityTest_RJS(
                 runtime, Handle<>(&O2REG(Eq)), Handle<>(&O3REG(Eq))));
-        if (res == ExecutionStatus::EXCEPTION) {
+        if (eqRes == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(Eq) = ip->opCode == OpCode::Eq
-            ? res.getValue()
-            : HermesValue::encodeBoolValue(!res->getBool());
+        O1REG(Eq) = HermesValue::encodeBoolValue(
+            ip->opCode == OpCode::Eq ? *eqRes : !*eqRes);
         ip = NEXTINST(Eq);
         DISPATCH;
       }

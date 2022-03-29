@@ -134,11 +134,11 @@ TEST_F(OperationsTest, IsSameValueTest) {
     auto yHandle = runtime.makeHandle(y);                           \
     auto res = abstractEqualityTest_RJS(runtime, xHandle, yHandle); \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());          \
-    EXPECT_##result(res->getBool());                                \
+    EXPECT_##result(*res);                                          \
                                                                     \
     res = abstractEqualityTest_RJS(runtime, yHandle, xHandle);      \
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());          \
-    EXPECT_##result(res->getBool());                                \
+    EXPECT_##result(*res);                                          \
   }
 
 TEST_F(OperationsTest, AbstractEqualityTest) {
