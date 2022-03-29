@@ -192,7 +192,7 @@ lessEqualOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 CallResult<bool>
 greaterEqualOp_RJS(Runtime &runtime, Handle<> leftHandle, Handle<> rightHandle);
 
-/// ES5.1 11.9.3
+/// ES11 7.2.15 Abstract Equality Comparison
 CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle);
 

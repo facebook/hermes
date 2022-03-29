@@ -827,46 +827,16 @@ IMPLEMENT_COMPARISON_OP(lessOp_RJS, <);
 IMPLEMENT_COMPARISON_OP(greaterOp_RJS, >);
 IMPLEMENT_COMPARISON_OP(lessEqualOp_RJS, <=);
 IMPLEMENT_COMPARISON_OP(greaterEqualOp_RJS, >=);
+
+/// ES11 7.2.15 Abstract Equality Comparison
 CallResult<bool>
 abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
   while (true) {
-    // Same type comparison.
-    if (x->getTag() == y->getTag() || (x->isNumber() && y->isNumber())) {
-      bool result;
-      switch (x->getTag()) {
-        case EmptyInvalidTag:
-          llvm_unreachable("can't compare empties");
-        case NativeValueTag:
-          llvm_unreachable("native value");
-        case UndefinedNullTag:
-          result = true;
-          break;
-        case StrTag:
-          result = x->getString()->equals(y->getString());
-          break;
-        case ObjectTag:
-          // Return true if x and y refer to the same object.
-          result = x->getPointer() == y->getPointer();
-          break;
-        case BoolSymbolTag:
-          // Return true if x's and y's bits are exactly the same. This works
-          // because the ETag as well as the value (i.e., symbol id, true,
-          // or false) all being encoded in HermesValue's payload.
-          result = x->getRaw() == y->getRaw();
-          break;
-        default: {
-          result = x->getNumber() == y->getNumber();
-          break;
-        }
-      }
-      return result;
-    }
-
-    // If the types are different, combine tags for use in the switch statement.
-    // Use NativeValueTag as a placeholder for numbers.
+    // Combine tags for use in the switch statement. Use NativeValueTag as a
+    // placeholder for numbers.
     assert(
         !x->isNativeValue() && !x->isEmpty() && "invalid value for comparison");
     assert(
@@ -905,22 +875,49 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         y->isNumber() ? HermesValue::ETag::NUMBER_TAG : y->getETag();
 
     switch (HermesValue::combineETags(xType, yType)) {
+      // 1. If Type(x) is the same as Type(y), then
+      // a. Return the result of performing Strict Equality Comparison x === y.
       CASE_S_S(Undefined, Undefined)
-      CASE_S_S(Undefined, Null)
-      CASE_S_S(Null, Undefined)
       CASE_S_S(Null, Null) {
         return true;
       }
-
+      CASE_S_S(NUMBER_TAG, NUMBER_TAG) {
+        return x->getNumber() == y->getNumber();
+      }
+      CASE_M_M(Str, Str) {
+        return x->getString()->equals(y->getString());
+      }
+      CASE_S_S(Bool, Bool)
+      CASE_S_S(Symbol, Symbol)
+      CASE_M_M(Object, Object) {
+        return x->getRaw() == y->getRaw();
+      }
+      // 2. If x is null and y is undefined, return true.
+      // 3. If x is undefined and y is null, return true.
+      CASE_S_S(Undefined, Null)
+      CASE_S_S(Null, Undefined) {
+        return true;
+      }
+      // 4. If Type(x) is Number and Type(y) is String, return the result of the
+      // comparison x == ! ToNumber(y).
       CASE_S_M(NUMBER_TAG, Str) {
         return x->getNumber() ==
             stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
       }
+      // 5. If Type(x) is String and Type(y) is Number, return the result of the
+      // comparison ! ToNumber(x) == y.
       CASE_M_S(Str, NUMBER_TAG) {
         return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
             y->getNumber();
       }
-
+      // 6. If Type(x) is BigInt and Type(y) is String, then
+      // a. Let n be ! StringToBigInt(y).
+      // b. If n is NaN, return false.
+      // c. Return the result of the comparison x == n.
+      // 7. If Type(x) is String and Type(y) is BigInt, return the result of the
+      // comparison y == x.
+      // 8. If Type(x) is Boolean, return the result of the comparison !
+      // ToNumber(x) == y.
       CASE_S_S(Bool, NUMBER_TAG) {
         // Do both conversions and check numerical equality.
         return x->getBool() == y->getNumber();
@@ -934,7 +931,8 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         x = HermesValue::encodeDoubleValue(x->getBool());
         break;
       }
-
+      // 9. If Type(y) is Boolean, return the result of the comparison x == !
+      // ToNumber(y).
       CASE_S_S(NUMBER_TAG, Bool) {
         return x->getNumber() == y->getBool();
       }
@@ -946,6 +944,8 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         y = HermesValue::encodeDoubleValue(y->getBool());
         break;
       }
+      // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y)
+      // is Object, return the result of the comparison x == ToPrimitive(y).
       CASE_M_M(Str, Object)
       CASE_S_M(Symbol, Object)
       CASE_S_M(NUMBER_TAG, Object) {
@@ -956,6 +956,8 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         y = status.getValue();
         break;
       }
+      // 11. If Type(x) is Object and Type(y) is either String, Number, BigInt,
+      // or Symbol, return the result of the comparison ToPrimitive(x) == y.
       CASE_M_M(Object, Str)
       CASE_M_S(Object, Symbol)
       CASE_M_S(Object, NUMBER_TAG) {
@@ -966,9 +968,12 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         x = status.getValue();
         break;
       }
-
+        // 12. If Type(x) is BigInt and Type(y) is Number, or if Type(x) is
+        // Number and Type(y) is BigInt, then a. If x or y are any of NaN, +∞,
+        // or -∞, return false. b. If the mathematical value of x is equal to
+        // the mathematical value of y, return true; otherwise return false.
+        // 13. Return false.
       default:
-        // Final case, return false.
         return false;
     }
 
