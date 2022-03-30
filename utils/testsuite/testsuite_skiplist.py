@@ -1868,6 +1868,7 @@ HANDLESAN_SKIP_LIST = [
     "test262/test/built-ins/encodeURIComponent/S15.1.3.4_A2.3_T1.js",
     "test262/test/built-ins/parseInt/S15.1.2.2_A8.js",
     "test262/test/built-ins/parseFloat/S15.1.2.3_A6.js",
+    "test262/test/built-ins/String/prototype/repeat/repeat-string-n-times.js",
 ]
 
 UNSUPPORTED_FEATURES = [

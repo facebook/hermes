@@ -1888,15 +1888,13 @@ void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
   if (inYoungGen(cell)) {
     size_t newYGExtBytes = getYoungGenExternalBytes() + sz;
     setYoungGenExternalBytes(newYGExtBytes);
-    // If the YG now contains an entire segment worth of external memory, set
-    // the effective end to the level, which will force a GC to occur on the
-    // next YG alloc.
-    if (newYGExtBytes >= HeapSegment::maxSize())
-      youngGen_.setEffectiveEnd(youngGen_.level());
+    auto adj = std::min<size_t>(sz, youngGen_.available());
+    youngGen_.setEffectiveEnd(youngGen_.effectiveEnd() - adj);
   } else {
     std::lock_guard<Mutex> lk{gcMutex_};
     oldGen_.creditExternalMemory(sz);
-    if (heapFootprint() > maxHeapSize_)
+    uint64_t totalBytes = oldGen_.allocatedBytes() + oldGen_.externalBytes();
+    if (totalBytes > oldGen_.targetSizeBytes())
       youngGen_.setEffectiveEnd(youngGen_.level());
   }
 }
