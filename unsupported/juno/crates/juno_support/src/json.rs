@@ -265,7 +265,6 @@ impl<W: Write> JSONEmitter<W> {
         out!(self, "\"");
     }
 
-
     /// Signal that we're about to emit a dict or array value and handle
     /// any necessary `,` and newlines.
     fn will_emit_value(&mut self) {
