@@ -496,6 +496,16 @@ impl<'gc> Node<'gc> {
             _ => self.function_like_panic(),
         }
     }
+    pub fn is_loop_statement(&self) -> bool {
+        matches!(
+            self,
+            Node::WhileStatement(_)
+                | Node::DoWhileStatement(_)
+                | Node::ForInStatement(_)
+                | Node::ForOfStatement(_)
+                | Node::ForStatement(_)
+        )
+    }
 }
 
 #[macro_export]

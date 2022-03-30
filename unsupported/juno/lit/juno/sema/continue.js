@@ -26,3 +26,11 @@ switch (1) {
     continue;
   }
 }
+
+foo: while(1) {
+  continue foo;
+}
+
+bar: while(1) {
+  continue;
+}

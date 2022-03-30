@@ -331,10 +331,31 @@ impl<'gc> Resolver<'gc, '_> {
                     );
                 }
                 Entry::Vacant(entry) => {
+                    // Determine the target statement. We need to check if it directly encloses
+                    // a loop or another label enclosing a loop.
+                    let mut target_statement = statement;
+                    {
+                        let mut cur_statement = statement;
+                        while let Node::LabeledStatement(ast::LabeledStatement { body, .. }) =
+                            cur_statement
+                        {
+                            if body.is_loop_statement() {
+                                target_statement = body;
+                                break;
+                            }
+                            cur_statement = body;
+                        }
+                    }
+                    debug_assert!(
+                        target_statement.is_loop_statement()
+                            || matches!(target_statement, Node::LabeledStatement(_)),
+                        "invalid target statement detected for loop: {:?}",
+                        target_statement
+                    );
                     entry.insert(Label {
                         id: new_label,
                         label: node_cast!(Node::Identifier, identifier),
-                        target_statement: statement,
+                        target_statement,
                     });
                     inserted = Some(key);
                 }
