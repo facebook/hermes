@@ -50,38 +50,179 @@ const y = null;
   });
 
   describe('insert', () => {
-    it('works with the insertBeforeStatement mutation', () => {
-      const code = 'const x = 1;';
-      const result = transform(code, context => ({
-        VariableDeclaration(node) {
-          context.insertBeforeStatement(
-            node,
-            t.VariableDeclaration({
-              kind: 'const',
-              declarations: [
-                t.VariableDeclarator({
-                  id: t.Identifier({
-                    name: 'y',
+    describe('insertBeforeStatement mutation', () => {
+      it('Insert before only statement', () => {
+        const code = `\
+const x = 1;
+`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            context.insertBeforeStatement(
+              node,
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                      raw: '1',
+                    }),
                   }),
-                  init: t.NumericLiteral({
-                    value: 1,
-                    raw: '1',
-                  }),
-                }),
-              ],
-            }),
-          );
-        },
-      }));
+                ],
+              }),
+            );
+          },
+        }));
 
-      expect(result).toBe(`\
+        expect(result).toBe(`\
 const y = 1;
 const x = 1;
 `);
-    });
+      });
+      it('Insert before first statement', () => {
+        const code = `\
+const x = 1;
+lastStatement;
+`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            context.insertBeforeStatement(
+              node,
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                      raw: '1',
+                    }),
+                  }),
+                ],
+              }),
+            );
+          },
+        }));
 
-    it('works with the insertAfterStatement mutation', () => {
-      const code = 'const x = 1;';
+        expect(result).toBe(`\
+const y = 1;
+const x = 1;
+lastStatement;
+`);
+      });
+
+      it('Insert before middle statement', () => {
+        const code = `\
+firstStatement;
+const x = 1;
+lastStatement;
+`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            context.insertBeforeStatement(
+              node,
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                      raw: '1',
+                    }),
+                  }),
+                ],
+              }),
+            );
+          },
+        }));
+
+        expect(result).toBe(`\
+firstStatement;
+const y = 1;
+const x = 1;
+lastStatement;
+`);
+      });
+
+      it('Insert before last statement', () => {
+        const code = `\
+firstStatement;
+const x = 1;
+`;
+        const result = transform(code, context => ({
+          VariableDeclaration(node) {
+            context.insertBeforeStatement(
+              node,
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                      raw: '1',
+                    }),
+                  }),
+                ],
+              }),
+            );
+          },
+        }));
+
+        expect(result).toBe(`\
+firstStatement;
+const y = 1;
+const x = 1;
+`);
+      });
+
+      it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
+        const code = 'if (condition) return true;';
+        const result = transform(code, context => ({
+          ReturnStatement(node) {
+            context.insertBeforeStatement(
+              node,
+              t.VariableDeclaration({
+                kind: 'const',
+                declarations: [
+                  t.VariableDeclarator({
+                    id: t.Identifier({
+                      name: 'y',
+                    }),
+                    init: t.NumericLiteral({
+                      value: 1,
+                    }),
+                  }),
+                ],
+              }),
+            );
+          },
+        }));
+
+        expect(result).toBe(`\
+if (condition) {
+  const y = 1;
+  return true;
+}
+`);
+      });
+    });
+  });
+  describe('insertAfterStatement mutation', () => {
+    it('Insert after only statement', () => {
+      const code = `\
+const x = 1;
+`;
       const result = transform(code, context => ({
         VariableDeclaration(node) {
           context.insertAfterStatement(
@@ -109,12 +250,14 @@ const x = 1;
 const y = 1;
 `);
     });
-
-    it('wraps statements in a BlockStatement if they were in a bodyless parent', () => {
-      const code = 'if (condition) return true;';
+    it('Insert after first statement', () => {
+      const code = `\
+const x = 1;
+lastStatement;
+`;
       const result = transform(code, context => ({
-        ReturnStatement(node) {
-          context.insertBeforeStatement(
+        VariableDeclaration(node) {
+          context.insertAfterStatement(
             node,
             t.VariableDeclaration({
               kind: 'const',
@@ -125,6 +268,7 @@ const y = 1;
                   }),
                   init: t.NumericLiteral({
                     value: 1,
+                    raw: '1',
                   }),
                 }),
               ],
@@ -134,10 +278,79 @@ const y = 1;
       }));
 
       expect(result).toBe(`\
-if (condition) {
-  const y = 1;
-  return true;
-}
+const x = 1;
+const y = 1;
+lastStatement;
+`);
+    });
+
+    it('Insert after middle statement', () => {
+      const code = `\
+firstStatement;
+const x = 1;
+lastStatement;
+`;
+      const result = transform(code, context => ({
+        VariableDeclaration(node) {
+          context.insertAfterStatement(
+            node,
+            t.VariableDeclaration({
+              kind: 'const',
+              declarations: [
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+firstStatement;
+const x = 1;
+const y = 1;
+lastStatement;
+`);
+    });
+
+    it('Insert after last statement', () => {
+      const code = `\
+firstStatement;
+const x = 1;
+`;
+      const result = transform(code, context => ({
+        VariableDeclaration(node) {
+          context.insertAfterStatement(
+            node,
+            t.VariableDeclaration({
+              kind: 'const',
+              declarations: [
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+firstStatement;
+const x = 1;
+const y = 1;
 `);
     });
   });

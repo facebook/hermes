@@ -70,7 +70,7 @@ export function performInsertStatementMutation(
       case 'before': {
         parent[insertionParent.key] = insertInArray(
           parent[insertionParent.key],
-          insertionParent.targetIndex - 1,
+          insertionParent.targetIndex,
           mutation.nodesToInsert,
         );
         break;
