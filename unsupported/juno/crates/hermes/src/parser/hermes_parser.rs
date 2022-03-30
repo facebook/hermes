@@ -184,7 +184,7 @@ extern "C" {
     fn hermes_parser_free(parser_ctx: *mut ParserContext);
     fn hermes_parser_get_first_error(parser_ctx: *const ParserContext) -> isize;
     fn hermes_parser_get_messages<'a>(parser_ctx: *const ParserContext)
-        -> DataRef<'a, DiagMessage>;
+    -> DataRef<'a, DiagMessage>;
     fn hermes_parser_get_ast(parser_ctx: *const ParserContext) -> NodePtrOpt;
     fn hermes_parser_find_location(
         parser_ctx: *mut ParserContext,
