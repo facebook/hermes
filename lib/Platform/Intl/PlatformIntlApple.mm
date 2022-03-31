@@ -297,7 +297,6 @@ std::vector<std::u16string> supportedLocales(
   // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
   return lookupSupportedLocales(availableLocales, requestedLocales);
 }
-}
 
 /// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
@@ -336,15 +335,6 @@ vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
   return seen;
 }
 
-/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
-vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &locales) {
-  // 1. Let ll be ? CanonicalizeLocaleList(locales).
-  // 2. Return CreateArrayFromList(ll).
-  return canonicalizeLocaleList(runtime, locales);
-}
-
 vm::CallResult<std::u16string> localeListToLocaleString(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
@@ -376,55 +366,6 @@ vm::CallResult<std::u16string> localeListToLocaleString(
       bestAvailableLocale(availableLocales, requestedLocale);
   // 9. If locale is undefined, let locale be "und".
   return locale.value_or(u"und");
-}
-/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase
-vm::CallResult<std::u16string> toLocaleLowerCase(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &locales,
-    const std::u16string &str) {
-  NSString *nsStr = u16StringToNSString(str);
-  // Steps 3-9 in localeListToLocaleString()
-  vm::CallResult<std::u16string> locale =
-      localeListToLocaleString(runtime, locales);
-  // 10. Let cpList be a List containing in order the code points of S as
-  // defined in es2022, 6.1.4, starting at the first element of S.
-  // 11. Let cuList be a List where the elements are the result of a lower case
-  // transformation of the ordered code points in cpList according to the
-  // Unicode Default Case Conversion algorithm or an implementation-defined
-  // conversion algorithm. A conforming implementation's lower case
-  // transformation algorithm must always yield the same cpList given the same
-  // cuList and locale.
-  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
-  // es2022, 6.1.4) of the code points of cuList.
-  NSString *L = u16StringToNSString(locale.getValue());
-  // 13. Return L.
-  return nsStringToU16String([nsStr
-      lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
-}
-
-/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocaleuppercase
-vm::CallResult<std::u16string> toLocaleUpperCase(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &locales,
-    const std::u16string &str) {
-  NSString *nsStr = u16StringToNSString(str);
-  // Steps 3-9 in localeListToLocaleString()
-  vm::CallResult<std::u16string> locale =
-      localeListToLocaleString(runtime, locales);
-  // 10. Let cpList be a List containing in order the code points of S as
-  // defined in es2022, 6.1.4, starting at the first element of S.
-  // 11. Let cuList be a List where the elements are the result of a lower case
-  // transformation of the ordered code points in cpList according to the
-  // Unicode Default Case Conversion algorithm or an implementation-defined
-  // conversion algorithm. A conforming implementation's lower case
-  // transformation algorithm must always yield the same cpList given the same
-  // cuList and locale.
-  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
-  // es2022, 6.1.4) of the code points of cuList.
-  NSString *L = u16StringToNSString(locale.getValue());
-  // 13. Return L.
-  return nsStringToU16String([nsStr
-      uppercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
 /// https://402.ecma-international.org/8.0/#sec-getoption
@@ -522,6 +463,66 @@ vm::CallResult<std::optional<uint8_t>> getNumberOption(
     return vm::ExecutionStatus::EXCEPTION;
   }
   return std::optional<uint8_t>(defaultNumber.getValue());
+}
+}
+
+/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
+vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales) {
+  // 1. Let ll be ? CanonicalizeLocaleList(locales).
+  // 2. Return CreateArrayFromList(ll).
+  return canonicalizeLocaleList(runtime, locales);
+}
+
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocalelowercase
+vm::CallResult<std::u16string> toLocaleLowerCase(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales,
+    const std::u16string &str) {
+  NSString *nsStr = u16StringToNSString(str);
+  // Steps 3-9 in localeListToLocaleString()
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(locale.getValue());
+  // 13. Return L.
+  return nsStringToU16String([nsStr
+      lowercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
+}
+
+/// https://402.ecma-international.org/8.0/#sup-string.prototype.tolocaleuppercase
+vm::CallResult<std::u16string> toLocaleUpperCase(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales,
+    const std::u16string &str) {
+  NSString *nsStr = u16StringToNSString(str);
+  // Steps 3-9 in localeListToLocaleString()
+  vm::CallResult<std::u16string> locale =
+      localeListToLocaleString(runtime, locales);
+  // 10. Let cpList be a List containing in order the code points of S as
+  // defined in es2022, 6.1.4, starting at the first element of S.
+  // 11. Let cuList be a List where the elements are the result of a lower case
+  // transformation of the ordered code points in cpList according to the
+  // Unicode Default Case Conversion algorithm or an implementation-defined
+  // conversion algorithm. A conforming implementation's lower case
+  // transformation algorithm must always yield the same cpList given the same
+  // cuList and locale.
+  // 12. Let L be a String whose elements are the UTF-16 Encoding (defined in
+  // es2022, 6.1.4) of the code points of cuList.
+  NSString *L = u16StringToNSString(locale.getValue());
+  // 13. Return L.
+  return nsStringToU16String([nsStr
+      uppercaseStringWithLocale:[[NSLocale alloc] initWithLocaleIdentifier:L]]);
 }
 
 struct Collator::Impl {
