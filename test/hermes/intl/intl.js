@@ -28,6 +28,9 @@ function testServiceTypes(service) {
   var snew = new service();
   assert(s.constructor === service);
   assert(s.__proto__ === service.prototype);
+
+  // Verify that the type tag is not visible to JS.
+  assert(Object.getOwnPropertySymbols(snew).length === 0);
 }
 
 function testServiceGetterTypes(service, getter) {

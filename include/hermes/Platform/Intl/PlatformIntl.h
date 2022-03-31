@@ -93,10 +93,20 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
     const std::vector<std::u16string> &locales,
     const std::u16string &str);
 
+enum class NativeType {
+  Collator,
+  DateTimeFormat,
+  NumberFormat,
+};
+
 class Collator : public vm::DecoratedObject::Decoration {
  public:
   Collator();
   ~Collator();
+
+  static constexpr NativeType getNativeType() {
+    return NativeType::Collator;
+  }
 
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
       vm::Runtime &runtime,
@@ -121,6 +131,10 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
   DateTimeFormat();
   ~DateTimeFormat();
 
+  static constexpr NativeType getNativeType() {
+    return NativeType::DateTimeFormat;
+  }
+
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
@@ -144,6 +158,10 @@ class NumberFormat : public vm::DecoratedObject::Decoration {
  public:
   NumberFormat();
   ~NumberFormat();
+
+  static constexpr NativeType getNativeType() {
+    return NativeType::NumberFormat;
+  }
 
   static vm::CallResult<std::vector<std::u16string>> supportedLocalesOf(
       vm::Runtime &runtime,

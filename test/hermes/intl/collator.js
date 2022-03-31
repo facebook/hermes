@@ -40,3 +40,7 @@ print(JSON.stringify([...puncList].sort(new Intl.Collator("en", ).compare)));
 // CHECK-NEXT: ["","...",".a.a","a\na","a\nb","a  a","a  b","a,b","aa","ab"]
 print(JSON.stringify([...puncList].sort(new Intl.Collator("en", { ignorePunctuation: true }).compare)));
 // CHECK-NEXT: ["...","","aa","a\na","a a",".a.a","ab","a,b","a\nb","a b"]
+
+try { Intl.Collator.prototype.resolvedOptions.call(new Intl.DateTimeFormat()) }
+catch (e) { print(e) }
+// CHECK-NEXT: TypeError: Intl.Collator.prototype.resolvedOptions called with incompatible 'this'

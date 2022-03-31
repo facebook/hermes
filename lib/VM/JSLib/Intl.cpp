@@ -454,17 +454,31 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
+  auto typeHandle = runtime.makeHandle(
+      HermesValue::encodeNumberValue((uint32_t)T::getNativeType()));
+  auto setType = [&](Handle<DecoratedObject> obj) {
+    auto res = JSObject::defineNewOwnProperty(
+        obj,
+        runtime,
+        Predefined::getSymbolID(Predefined::InternalPropertyIntlNativeType),
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        typeHandle);
+    assert(res != ExecutionStatus::EXCEPTION && "Setting type cannot fail.");
+  };
+
   // If constructor, use the allocated object
   if (args.isConstructorCall()) {
     Handle<DecoratedObject> selfHandle = args.vmcastThis<DecoratedObject>();
     selfHandle->setDecoration(std::move(native));
+    setType(selfHandle);
     return HermesValue::encodeUndefinedValue();
   }
 
   // Otherwise allocate a new one.
-  return DecoratedObject::create(
-             runtime, servicePrototype, std::move(native), additionalSlots)
-      .getHermesValue();
+  auto newHandle = runtime.makeHandle(DecoratedObject::create(
+      runtime, servicePrototype, std::move(native), additionalSlots));
+  setType(newHandle);
+  return newHandle.getHermesValue();
 }
 
 // T is a class from platform_intl which has an appropriate
@@ -493,7 +507,7 @@ CallResult<HermesValue> intlServiceSupportedLocalesOf(
 // dyn_vmcast to make it), and that the native decoration on the
 // handle corresponds to the expected class.
 template <typename T>
-CallResult<T> verifyDecoration(
+CallResult<T *> verifyDecoration(
     Runtime &runtime,
     Handle<DecoratedObject> handle,
     const char *what) {
@@ -502,15 +516,22 @@ CallResult<T> verifyDecoration(
         TwineChar16(what) + " called with incompatible 'this'");
   }
 
-  // TODO how can I ensure DecoratedObject has the right decoration
-  // type, without using RTTI or introducing another CellKind?
-  T service = static_cast<T>(handle->getDecoration());
-  if (!service) {
+  NamedPropertyDescriptor desc;
+  bool exists = JSObject::getOwnNamedDescriptor(
+      handle,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyIntlNativeType),
+      desc);
+  if (!exists) {
     return runtime.raiseTypeError(
         TwineChar16(what) + " called with incompatible 'this'");
   }
-
-  return service;
+  auto val = JSObject::getNamedSlotValueUnsafe(*handle, runtime, desc);
+  if (val.getNumber(runtime) != (uint32_t)T::getNativeType()) {
+    return runtime.raiseTypeError(
+        TwineChar16(what) + " called with incompatible 'this'");
+  }
+  return static_cast<T *>(handle->getDecoration());
 }
 
 } // namespace
@@ -710,7 +731,7 @@ intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
-      verifyDecoration<platform_intl::Collator *>(
+      verifyDecoration<platform_intl::Collator>(
           runtime, collatorHandle, "Intl.Collator.prototype.compare getter");
   if (LLVM_UNLIKELY(collatorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -743,8 +764,8 @@ CallResult<HermesValue> intlCollatorPrototypeResolvedOptions(
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
-      verifyDecoration<platform_intl::Collator *>(
-          runtime, collatorHandle, "Intl.Collator.prototype.resolvedOption");
+      verifyDecoration<platform_intl::Collator>(
+          runtime, collatorHandle, "Intl.Collator.prototype.resolvedOptions");
   if (LLVM_UNLIKELY(collatorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1000,7 +1021,7 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
-      verifyDecoration<platform_intl::DateTimeFormat *>(
+      verifyDecoration<platform_intl::DateTimeFormat>(
           runtime,
           dateTimeFormatHandle,
           "Intl.DateTimeFormat.prototype.format getter");
@@ -1036,7 +1057,7 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
-      verifyDecoration<platform_intl::DateTimeFormat *>(
+      verifyDecoration<platform_intl::DateTimeFormat>(
           runtime,
           dateTimeFormatHandle,
           "Intl.DateTimeFormat.prototype.formatToParts");
@@ -1059,7 +1080,7 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeResolvedOptions(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
-      verifyDecoration<platform_intl::DateTimeFormat *>(
+      verifyDecoration<platform_intl::DateTimeFormat>(
           runtime,
           dateTimeFormatHandle,
           "Intl.DateTimeFormat.prototype.resolvedOptions");
@@ -1280,7 +1301,7 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::NumberFormat *> numberFormatRes =
-      verifyDecoration<platform_intl::NumberFormat *>(
+      verifyDecoration<platform_intl::NumberFormat>(
           runtime,
           numberFormatHandle,
           "Intl.NumberFormat.prototype.format getter");
@@ -1316,7 +1337,7 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::NumberFormat *> numberFormatRes =
-      verifyDecoration<platform_intl::NumberFormat *>(
+      verifyDecoration<platform_intl::NumberFormat>(
           runtime,
           numberFormatHandle,
           "Intl.NumberFormat.prototype.formatToParts");
@@ -1340,7 +1361,7 @@ CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
       args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::NumberFormat *> numberFormatRes =
-      verifyDecoration<platform_intl::NumberFormat *>(
+      verifyDecoration<platform_intl::NumberFormat>(
           runtime,
           numberFormatHandle,
           "Intl.NumberFormat.prototype.resolvedOptions");

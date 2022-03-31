@@ -29,6 +29,7 @@ NAMED_PROP(NamedPropForUnitTestOnly)
 NAMED_PROP(CapturedError)
 NAMED_PROP(CallSiteError)
 NAMED_PROP(CallSiteStackFrameIndex)
+NAMED_PROP(IntlNativeType)
 
 #undef PROP
 #undef NAMED_PROP
