@@ -300,7 +300,7 @@ endif()
 # We can't simply CHECK_CXX_COMPILER_FLAG("-Wl,--gc-sections" ..) because CMake
 # will compile and link separately and only passes the flag during compilation.
 set(OLD_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS "--gc-sections")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--gc-sections")
 CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
 
