@@ -9,7 +9,7 @@ than the host development machines.
 
 ## A Two-stage Build
 
-Hermes now requires a two stage build proecess because the VM now contains
+Hermes now requires a two stage build process because the VM now contains
 Hermes bytecode which needs to be compiled by Hermes
 
 ### Setting up the workspace
