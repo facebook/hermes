@@ -930,12 +930,21 @@ class HadesGC final : public GCBase {
   /// thread, to perform it concurrently with the mutator.
   void collectOGInBackground();
 
+  /// Ensures that work on the background thread to be suspended when
+  /// concurrent GC is enabled.
+  LLVM_NODISCARD std::lock_guard<Mutex> ensureBackgroundTaskPaused() {
+    if constexpr (kConcurrentGC) {
+      return pauseBackgroundTask();
+    }
+    return std::lock_guard(gcMutex_);
+  }
+
   /// Forces work on the background thread to be suspended and returns a lock
   /// holding gcMutex_. This is used to ensure that the mutator receives
   /// priority in acquiring gcMutex_, and does not remain blocked on the
   /// background thread for an extended period of time. The background thread
   /// will resume once the lock is released.
-  std::unique_lock<Mutex> pauseBackgroundTask();
+  LLVM_NODISCARD std::lock_guard<Mutex> pauseBackgroundTask();
 
   /// Perform a single step of an OG collection. \p backgroundThread indicates
   /// whether this call was made from the background thread.
@@ -1096,7 +1105,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       "Call to makeA must use a size aligned to HeapAlign");
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
   if (longLived == LongLived::Yes) {
-    auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
+    auto lk = ensureBackgroundTaskPaused();
     return constructCell<T>(
         allocLongLived(size), size, std::forward<Args>(args)...);
   }
