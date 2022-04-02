@@ -1918,8 +1918,17 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
-  if (samplingProfiler != nullptr) {
-    samplingProfiler->onGCEvent(kind, extraInfo);
+  if (samplingProfiler) {
+    switch (kind) {
+      case GCEventKind::CollectionStart:
+        samplingProfiler->suspend(extraInfo);
+        break;
+      case GCEventKind::CollectionEnd:
+        samplingProfiler->resume();
+        break;
+      default:
+        llvm_unreachable("unknown GCEventKind");
+    }
   }
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());

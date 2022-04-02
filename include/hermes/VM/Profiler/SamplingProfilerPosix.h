@@ -60,8 +60,8 @@ class SamplingProfiler {
   using NativeFunctionFrameInfo = NativeFunctionPtr;
   /// Captured FinalizableNativeFunction frame information for symbolication.
   using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
-  /// GC frame info. Pointing to string in gcEventExtraInfoSet_.
-  using GCFrameInfo = const std::string *;
+  /// GC frame info. Pointing to string in suspendEventExtraInfoSet_.
+  using SuspendFrameInfo = const std::string *;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -72,7 +72,7 @@ class SamplingProfiler {
       JSFunction,
       NativeFunction,
       FinalizableNativeFunction,
-      GCFrame,
+      SuspendFrame,
     };
 
     // TODO: figure out how to store BoundFunction.
@@ -84,12 +84,12 @@ class SamplingProfiler {
       NativeFunctionFrameInfo nativeFrame;
       /// Host function frame info.
       FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
-      /// GC frame info. Pointing to string
-      /// in gcEventExtraInfoSet_; it is optionally and
+      /// Suspend frame info. Pointing to string
+      /// in suspendExtraInfoSet_; it is optional and
       /// can be null to indicate no extra info.
       /// We can't directly use std::string here because it is
       /// inside a union.
-      GCFrameInfo gcFrame;
+      SuspendFrameInfo suspendFrame;
     };
     FrameKind kind;
   };
@@ -222,14 +222,16 @@ class SamplingProfiler {
   /// Sampled stack traces overtime. Protected by runtimeDataLock_.
   std::vector<StackTrace> sampledStacks_;
 
-  /// Threading: preGCStackDepth_/preGCStackStorage_ are only accessed from
-  /// interpreter thread.
-  /// The actual sampled stack depth in \p preGCStackStorage_.
-  /// It resets to zero at the end of young and full GCs so that we can verify
-  /// that there aren't two nesting preGC stack walking.
-  uint32_t preGCStackDepth_{0};
+  // Threading: the suspendCount/preSuspendStack are accessed by both the VM
+  // thread as well as the sampling profiler timer thread, hence they are all
+  // protected by runtimeDataLock_.
+  /// The counter of how many suspend calls are pending -- i.e., need to be
+  /// resume()d.
+  volatile uint32_t suspendCount_{0};
+  /// The actual sampled stack depth in preSuspendStackStorage_.
+  volatile uint32_t preSuspendStackDepth_{0};
   /// JS stack captured at time of GC.
-  StackTrace preGCStackStorage_{kMaxStackDepth};
+  StackTrace preSuspendStackStorage_{kMaxStackDepth};
 
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
@@ -241,7 +243,7 @@ class SamplingProfiler {
   pthread_t currentThread_;
 
   /// Unique GC event extra info strings container.
-  std::unordered_set<std::string> gcEventExtraInfoSet_;
+  std::unordered_set<std::string> suspendEventExtraInfoSet_;
 
   /// Domains to be kept alive for sampled RuntimeModules. Protected by
   /// runtimeDataLock_.
@@ -270,8 +272,9 @@ class SamplingProfiler {
       SaveDomains saveDomains,
       uint32_t startIndex = 0);
 
-  /// Record JS stack at time of the GC.
-  void recordPreGCStack(const std::string &extraInfo);
+  /// Record JS stack at time of suspension, , caller must hold
+  /// runtimeDataLock_.
+  void recordPreSuspendStack(std::string_view extraInfo);
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
@@ -320,8 +323,36 @@ class SamplingProfiler {
   /// Disable and stop profiling.
   static bool disable();
 
-  /// Called for various GC events.
-  void onGCEvent(GCEventKind kind, const std::string &extraInfo);
+  /// Suspends the sample profiling. Every call to suspend must be matched by a
+  /// call to resume.
+  void suspend(std::string_view reason);
+
+  /// Resumes the sample profiling. There must have been a previous call to
+  /// suspend() that hansn't been resume()d yet.
+  void resume();
+};
+
+/// An RAII class for temporarily suspending (and auto-resuming) the sampling
+/// profiler.
+class SuspendSamplingProfilerRAII {
+ public:
+  explicit SuspendSamplingProfilerRAII(
+      Runtime &runtime,
+      std::string_view reason = "")
+      : profiler_(runtime.samplingProfiler.get()) {
+    if (profiler_) {
+      profiler_->suspend(reason);
+    }
+  }
+
+  ~SuspendSamplingProfilerRAII() {
+    if (profiler_) {
+      profiler_->resume();
+    }
+  }
+
+ private:
+  SamplingProfiler *profiler_;
 };
 
 bool operator==(

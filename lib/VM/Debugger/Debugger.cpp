@@ -15,6 +15,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -335,6 +336,7 @@ ExecutionStatus Debugger::debuggerLoop(
   MutableHandle<> evalResult{runtime_};
   // Keep the evalResult alive, even if all other handles are flushed.
   static constexpr unsigned KEEP_HANDLES = 1;
+  SuspendSamplingProfilerRAII ssp{runtime_, "debugger"};
   while (true) {
     GCScopeMarkerRAII marker{runtime_};
     auto command = getNextCommand(

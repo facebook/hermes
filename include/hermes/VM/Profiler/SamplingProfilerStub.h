@@ -10,6 +10,8 @@
 
 #include "hermes/VM/Runtime.h"
 
+#include <string_view>
+
 namespace hermes {
 namespace vm {
 
@@ -42,8 +44,20 @@ class SamplingProfiler {
     return true;
   }
 
-  /// Called for various GC events.
-  void onGCEvent(GCEventKind kind, const std::string &extraInfo) {}
+  /// Suspends the sample profiling. Every call to suspend must be matched by a
+  // call to resume.
+  void suspend(std::string_view) {}
+
+  /// Resumes the sample profiling. There must have been a previous call to
+  /// suspend() that hansn't been resume()d yet.
+  void resume() {}
+};
+
+class SuspendSamplingProfilerRAII {
+ public:
+  explicit SuspendSamplingProfilerRAII(
+      Runtime &runtime,
+      std::string_view reason = "") {}
 };
 
 } // namespace vm

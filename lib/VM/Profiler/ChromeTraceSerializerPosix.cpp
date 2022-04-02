@@ -246,12 +246,9 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
         break;
       }
 
-      case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
-        if (frame.gcFrame != nullptr) {
-          frameName = std::string("[GC ") + *frame.gcFrame + "]";
-        } else {
-          frameName = "[GC]";
-        }
+      case SamplingProfiler::StackFrame::FrameKind::SuspendFrame: {
+        assert(frame.suspendFrame && "suspendFrame name should never be null");
+        frameName = "[" + *frame.suspendFrame + "]";
         categoryName = "Metadata";
         break;
       }
@@ -441,11 +438,10 @@ static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
       break;
     }
 
-    case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
-      name = frame.gcFrame != nullptr
-          ? std::string("[GC ") + *frame.gcFrame + "]"
-          : "[GC]";
-      url = "[gc]";
+    case SamplingProfiler::StackFrame::FrameKind::SuspendFrame: {
+      assert(frame.suspendFrame && "suspendFrame should never be nullptr");
+      name = "[" + *frame.suspendFrame + "]";
+      url = "[suspended]";
       break;
     }
 
