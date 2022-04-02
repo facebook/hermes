@@ -1357,7 +1357,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   // Let any existing collections complete before taking the snapshot.
   waitForCollectionToFinish("snapshot");
   {
-    GCCycle cycle{this, &gcCallbacks_, "Heap Snapshot"};
+    GCCycle cycle{this, "Heap Snapshot"};
     WeakRefLock lk{weakRefMutex()};
     GCBase::createSnapshot(this, os);
   }
@@ -1484,7 +1484,7 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   if (concurrentPhase_ == Phase::None) {
     return;
   }
-  GCCycle cycle{this, &gcCallbacks_, "Old Gen (Direct)"};
+  GCCycle cycle{this, "Old Gen (Direct)"};
 
   assert(!ygCollectionStats_ && "Cannot collect OG during a YG collection");
   CollectionStats waitingStats(this, std::move(cause), "waiting");
@@ -2417,7 +2417,7 @@ void HadesGC::youngGenCollection(
   auto lk = kConcurrentGC ? pauseBackgroundTask() : std::unique_lock<Mutex>();
   // The YG is not parseable while a collection is occurring.
   assert(!inGC() && "Cannot be in GC at the start of YG!");
-  GCCycle cycle{this, &gcCallbacks_, "Young Gen"};
+  GCCycle cycle{this, "Young Gen"};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
   // Check that the card tables are well-formed before the collection.

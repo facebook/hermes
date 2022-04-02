@@ -374,13 +374,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect("test");
 #ifndef HERMESVM_GC_RUNTIME
-#ifdef HERMESVM_GC_HADES
-  // Hades will record the YG and OG collections as separate events.
-  // Hades also runs additional collections as part of rt->collect.
   EXPECT_EQ(6, ev.size());
-#else
-  EXPECT_EQ(2, ev.size());
-#endif
 #endif
   for (size_t i = 0; i < ev.size(); i++) {
     if (i % 2 == 0) {

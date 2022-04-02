@@ -1299,10 +1299,7 @@ class GCBase {
   /// active.
   class GCCycle final {
    public:
-    GCCycle(
-        GCBase *gc,
-        OptValue<GCCallbacks *> gcCallbacksOpt = llvh::None,
-        std::string extraInfo = "");
+    explicit GCCycle(GCBase *gc, std::string extraInfo = "");
     ~GCCycle();
 
     const std::string &extraInfo() {
@@ -1311,7 +1308,6 @@ class GCBase {
 
    private:
     GCBase *const gc_;
-    OptValue<GCCallbacks *> gcCallbacksOpt_;
     std::string extraInfo_;
     bool previousInGC_;
   };

@@ -283,7 +283,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this, &gcCallbacks_, "Full collection"};
+    GCCycle cycle{this, "Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
