@@ -36,14 +36,14 @@ static CallResult<PseudoHandle<>> getCallSiteProp(
     Runtime &runtime,
     Handle<JSObject> selfHandle,
     Predefined::IProp iProp) {
-  auto pof = PropOpFlags().plusMustExist().plusThrowOnError();
-  CallResult<PseudoHandle<>> res = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(iProp), pof);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    runtime.clearThrownValue();
+  NamedPropertyDescriptor desc;
+  bool exists = JSObject::getOwnNamedDescriptor(
+      selfHandle, runtime, Predefined::getSymbolID(iProp), desc);
+  if (!exists)
     return raiseIncompatibleReceiverError(runtime);
-  }
-  return res;
+
+  auto sv = JSObject::getNamedSlotValueUnsafe(*selfHandle, runtime, desc);
+  return createPseudoHandle(sv.unboxToHV(runtime));
 }
 
 /// Extracts the CallSite information from \p selfHandle. Raises TypeError if

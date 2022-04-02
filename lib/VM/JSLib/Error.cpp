@@ -285,7 +285,8 @@ CallResult<HermesValue>
 errorCaptureStackTrace(void *, Runtime &runtime, NativeArgs args) {
   // Get the target object.
   auto targetHandle = args.dyncastArg<JSObject>(0);
-  if (!targetHandle) {
+  if (!targetHandle || targetHandle->isHostObject() ||
+      targetHandle->isProxyObject()) {
     return runtime.raiseTypeError("Invalid argument");
   }
 

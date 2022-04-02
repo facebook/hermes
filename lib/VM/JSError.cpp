@@ -54,18 +54,18 @@ CallResult<Handle<JSError>> JSError::getErrorFromStackTarget_RJS(
     Runtime &runtime,
     Handle<JSObject> targetHandle) {
   if (targetHandle) {
-    auto capturedErrorRes = JSObject::getNamed_RJS(
+    NamedPropertyDescriptor desc;
+    bool exists = JSObject::getOwnNamedDescriptor(
         targetHandle,
         runtime,
-        Predefined::getSymbolID(Predefined::InternalPropertyCapturedError));
-    if (capturedErrorRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+        Predefined::getSymbolID(Predefined::InternalPropertyCapturedError),
+        desc);
+    if (exists) {
+      auto sv = JSObject::getNamedSlotValueUnsafe(*targetHandle, runtime, desc);
+      return runtime.makeHandle(vmcast<JSError>(sv.getObject(runtime)));
     }
-    auto capturedErrorHandle = runtime.makeHandle(std::move(*capturedErrorRes));
-    auto errorHandle = Handle<JSError>::dyn_vmcast(
-        capturedErrorHandle ? capturedErrorHandle : targetHandle);
-    if (errorHandle) {
-      return errorHandle;
+    if (vmisa<JSError>(*targetHandle)) {
+      return Handle<JSError>::vmcast(targetHandle);
     }
   }
   return runtime.raiseTypeError(
