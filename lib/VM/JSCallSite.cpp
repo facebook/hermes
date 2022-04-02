@@ -125,33 +125,23 @@ CallResult<HermesValue> JSCallSite::create(
       stackFrameIndex < errorHandle->getStackTrace()->size() &&
       "Stack frame index out of bounds");
 
-  auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   auto addCallSiteProp = [&](Predefined::IProp iProp, Handle<> value) {
-    auto res = JSObject::defineOwnProperty(
+    auto res = JSObject::defineNewOwnProperty(
         selfHandle,
         runtime,
         Predefined::getSymbolID(iProp),
-        dpf,
-        std::move(value));
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        value);
+    (void)res;
     assert(
-        res != ExecutionStatus::EXCEPTION && *res &&
-        "defineOwnProperty() failed");
-    return res;
+        res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
   };
 
-  auto res = addCallSiteProp(
-      Predefined::InternalPropertyCallSiteError, std::move(errorHandle));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
+  addCallSiteProp(Predefined::InternalPropertyCallSiteError, errorHandle);
   auto frameIndexHV = HermesValue::encodeNumberValue(stackFrameIndex);
-  res = addCallSiteProp(
+  addCallSiteProp(
       Predefined::InternalPropertyCallSiteStackFrameIndex,
-      runtime.makeHandle(std::move(frameIndexHV)));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+      runtime.makeHandle(frameIndexHV));
 
   assert(
       callSiteFromSelfHandle(runtime, selfHandle) !=

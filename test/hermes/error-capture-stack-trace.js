@@ -133,7 +133,7 @@ try {
 } catch (e) {
   print(e);
 }
-//CHECK: TypeError: Cannot add new property 'stack'
+//CHECK: TypeError: Cannot add new properties to object
 
 // Does not add a user-visible symbol to the target object
 var target = {};

@@ -290,17 +290,6 @@ errorCaptureStackTrace(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Invalid argument");
   }
 
-  // Before we perform any side effects, check that we're going to be able to
-  // add the `stack` accessor to the target object.
-  // This provides a better error message than `Cannot add new property ''`
-  // which would otherwise happen when we try to add [[CapturedError]].
-  if (LLVM_UNLIKELY(!targetHandle->isExtensible())) {
-    return runtime.raiseTypeError(
-        // NOTE: Using string concatenation here so that we only refer to
-        // strings which already exist in Hermes.
-        TwineChar16("Cannot add new property '") + "stack" + "'");
-  }
-
   // Construct a temporary Error instance.
   auto errorPrototype = Handle<JSObject>::vmcast(&runtime.ErrorPrototype);
   auto errorHandle =
@@ -316,25 +305,21 @@ errorCaptureStackTrace(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // Initialize the target's [[CapturedError]] slot with the error instance.
-  DefinePropertyFlags dpf;
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
-  dpf.setValue = 1;
-  dpf.setConfigurable = 1;
-  dpf.configurable = 0;
-  dpf.setWritable = 1;
-  dpf.writable = 1;
   auto res = JSObject::defineOwnProperty(
       targetHandle,
       runtime,
       Predefined::getSymbolID(Predefined::InternalPropertyCapturedError),
-      dpf,
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
       errorHandle);
 
   // Even though highly unlikely, something could have happened that caused
   // defineOwnProperty to throw an exception.
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*res)) {
+    return runtime.raiseTypeError(
+        TwineChar16("Cannot add new properties to object"));
   }
 
   // Initialize the `stack` accessor on the target object.
