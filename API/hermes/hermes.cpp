@@ -1060,8 +1060,12 @@ void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
 }
 
 void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
+  vm::SamplingProfiler *sp = impl(this)->runtime_.samplingProfiler.get();
+  if (!sp) {
+    throw jsi::JSINativeException("Runtime not registered for profiling");
+  }
   llvh::raw_os_ostream os(stream);
-  impl(this)->runtime_.samplingProfiler->serializeInDevToolsFormat(os);
+  sp->serializeInDevToolsFormat(os);
 }
 
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
