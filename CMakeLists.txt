@@ -292,18 +292,27 @@ if (HERMES_STATIC_LINK)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
-# Check if the linker supports --gc-sections
+# Check if the linker supports --gc-sections and ICF.
 # We can't simply CHECK_CXX_COMPILER_FLAG("-Wl,--gc-sections" ..) because CMake
 # will compile and link separately and only passes the flag during compilation.
+# TODO: Use check_linker_flag once we have CMake 3.18.
 set(OLD_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--gc-sections")
+set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
 CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
+set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--icf=safe")
+CHECK_CXX_COMPILER_FLAG("" HAVE_ICF)
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
 
 if(HAVE_GC_SECTIONS)
   add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
   add_flag_if_supported("-fdata-sections" DATA_SECTIONS)
   list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--gc-sections")
+endif()
+
+# Check if the compiler and linker support ICF
+if(HAVE_ICF)
+  add_flag_if_supported("-faddrsig" ADDRSIG)
+  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--icf=safe")
 endif()
 
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
