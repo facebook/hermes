@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 if [ "$DEBUG" = true ]; then
-  BUILD_TYPE="--build-type=Debug"
+  BUILD_TYPE="Debug"
 else
-  BUILD_TYPE="--distribute"
+  BUILD_TYPE="Release"
 fi
 
 function command_exists {
@@ -39,7 +39,7 @@ function get_mac_deployment_target {
 
 # Build host hermes compiler for internal bytecode
 function build_host_hermesc {
-  ./utils/build/configure.py build_host_hermesc
+  cmake -S . -B build_host_hermesc
   cmake --build ./build_host_hermesc --target hermesc
 }
 
@@ -58,22 +58,21 @@ function configure_apple_framework {
     build_cli_tools="false"
   fi
 
-  local cmake_flags=" \
-    -DHERMES_APPLE_TARGET_PLATFORM:STRING=$1 \
-    -DCMAKE_OSX_ARCHITECTURES:STRING=$2 \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=$3 \
+  cmake -S . -B "build_$1" -G "$BUILD_SYSTEM" \
+    -DHERMES_APPLE_TARGET_PLATFORM:STRING="$1" \
+    -DCMAKE_OSX_ARCHITECTURES:STRING="$2" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING="$3" \
     -DHERMES_ENABLE_DEBUGGER:BOOLEAN=true \
     -DHERMES_ENABLE_LIBFUZZER:BOOLEAN=false \
     -DHERMES_ENABLE_FUZZILLI:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
-    -DHERMES_ENABLE_BITCODE:BOOLEAN=$enable_bitcode \
+    -DHERMES_ENABLE_BITCODE:BOOLEAN="$enable_bitcode" \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
     -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true \
-    -DHERMES_ENABLE_TOOLS:BOOLEAN=$build_cli_tools \
-    -DIMPORT_HERMESC:PATH=$PWD/build_host_hermesc/ImportHermesc.cmake \
-    -DCMAKE_INSTALL_PREFIX:PATH=../destroot"
-
-  ./utils/build/configure.py "$BUILD_TYPE" --cmake-flags "$cmake_flags" --build-system="$BUILD_SYSTEM" "build_$1"
+    -DHERMES_ENABLE_TOOLS:BOOLEAN="$build_cli_tools" \
+    -DIMPORT_HERMESC:PATH="$PWD/build_host_hermesc/ImportHermesc.cmake" \
+    -DCMAKE_INSTALL_PREFIX:PATH=../destroot \
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
 }
 
 # Utility function to build an Apple framework
