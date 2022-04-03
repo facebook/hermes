@@ -52,9 +52,9 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("environment", &self->environment_);
 }
 
-std::string Callable::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string Callable::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = reinterpret_cast<Callable *>(cell);
-  return self->getNameIfExists(gc->getPointerBase());
+  return self->getNameIfExists(gc.getPointerBase());
 }
 
 CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
@@ -527,7 +527,7 @@ CallResult<HermesValue> BoundFunction::create(
     ArrayStorage::push_back(handle, runtime, Runtime::getUndefinedValue());
   }
   // Update the storage pointer in case push_back() needed to reallocate.
-  selfHandle->argStorage_.set(runtime, *handle, &runtime.getHeap());
+  selfHandle->argStorage_.set(runtime, *handle, runtime.getHeap());
 
   if (target->isLazy()) {
     // If the target is lazy we can make the bound function lazy.
@@ -844,7 +844,7 @@ void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&NativeFunction::vt);
 }
 
-std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = reinterpret_cast<NativeFunction *>(cell);
   return getFunctionName(self->functionPtr_);
 }
@@ -1111,18 +1111,18 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
   return createPseudoHandle(*result);
 }
 
-std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<JSFunction>(cell);
   std::string funcName = Callable::_snapshotNameImpl(self, gc);
   if (!funcName.empty()) {
     return funcName;
   }
-  return self->codeBlock_->getNameString(gc->getCallbacks());
+  return self->codeBlock_->getNameString(gc.getCallbacks());
 }
 
 void JSFunction::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSFunction>(cell);
   // Add the super type's edges too.
@@ -1132,15 +1132,15 @@ void JSFunction::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Shortcut,
       "codeBlock",
-      gc->getIDTracker().getNativeID(self->codeBlock_));
+      gc.getIDTracker().getNativeID(self->codeBlock_));
 }
 
 void JSFunction::_snapshotAddLocationsImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSFunction>(cell);
-  self->addLocationToSnapshot(snap, gc->getObjectID(self));
+  self->addLocationToSnapshot(snap, gc.getObjectID(self));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1319,15 +1319,15 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
   auto ctx = runtime.makeHandle<ArrayStorage>(*ctxRes);
 
   // Set "this" as the first element.
-  ctx->set(0, args.getThisArg(), &runtime.getHeap());
+  ctx->set(0, args.getThisArg(), runtime.getHeap());
 
   // Set the rest of the arguments.
   // Argument i goes in slot i+1 to account for the "this".
   for (uint32_t i = 0, e = args.getArgCount(); i < e; ++i) {
-    ctx->set(i + 1, args.getArg(i), &runtime.getHeap());
+    ctx->set(i + 1, args.getArg(i), runtime.getHeap());
   }
 
-  self->savedContext_.set(runtime, ctx.get(), &runtime.getHeap());
+  self->savedContext_.set(runtime, ctx.get(), runtime.getHeap());
 
   return self;
 }
@@ -1342,7 +1342,7 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
 
   SmallHermesValue shv =
       SmallHermesValue::encodeHermesValue(arg.getHermesValue(), runtime);
-  self->result_.set(shv, &runtime.getHeap());
+  self->result_.set(shv, runtime.getHeap());
   self->action_ = action;
 
   auto ctx = runtime.makeMutableHandle(selfHandle->savedContext_);
@@ -1378,7 +1378,7 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    selfHandle->savedContext_.set(runtime, ctx.get(), &runtime.getHeap());
+    selfHandle->savedContext_.set(runtime, ctx.get(), runtime.getHeap());
   }
 
   return JSFunction::_callImpl(selfHandle, runtime);
@@ -1410,7 +1410,7 @@ void GeneratorInnerFunction::saveStack(Runtime &runtime) {
       first,
       first + frameSize,
       savedContext_.getNonNull(runtime)->data() + frameOffset,
-      &runtime.getHeap());
+      runtime.getHeap());
 }
 
 } // namespace vm

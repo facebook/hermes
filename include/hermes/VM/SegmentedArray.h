@@ -268,11 +268,11 @@ class SegmentedArray final
 
   /// Sets the element located at \p index to \p val.
   template <Inline inl = Inline::No>
-  void set(TotalIndex index, HermesValue val, GC *gc) {
+  void set(TotalIndex index, HermesValue val, GC &gc) {
     atRef<inl>(index).set(val, gc);
   }
   template <Inline inl = Inline::No>
-  void setNonPtr(TotalIndex index, HermesValue val, GC *gc) {
+  void setNonPtr(TotalIndex index, HermesValue val, GC &gc) {
     atRef<inl>(index).setNonPtr(val, gc);
   }
 

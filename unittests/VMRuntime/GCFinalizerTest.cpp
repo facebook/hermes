@@ -25,7 +25,7 @@ namespace {
 
 using testhelpers::DummyObject;
 
-static DummyObject *createWithFinalizeCount(GC *gc, int *numFinalized) {
+static DummyObject *createWithFinalizeCount(GC &gc, int *numFinalized) {
   auto *obj = DummyObject::create(gc);
   obj->finalizerCallback = std::make_unique<DummyObject::Callback>(
       [numFinalized]() mutable { (*numFinalized)++; });
@@ -38,8 +38,8 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   DummyRuntime &rt = *runtime;
 
   GCScope scope{rt};
-  DummyObject::create(&rt.getHeap());
-  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
+  DummyObject::create(rt.getHeap());
+  rt.makeHandle(createWithFinalizeCount(rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(0, finalized);
@@ -51,8 +51,8 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   DummyRuntime &rt = *runtime;
 
   GCScope scope{rt};
-  createWithFinalizeCount(&rt.getHeap(), &finalized);
-  rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
+  createWithFinalizeCount(rt.getHeap(), &finalized);
+  rt.makeHandle(createWithFinalizeCount(rt.getHeap(), &finalized));
   rt.collect();
 
   ASSERT_EQ(1, finalized);
@@ -65,11 +65,11 @@ TEST(GCFinalizerTest, MultipleCollect) {
 
   {
     GCScope scope{rt};
-    createWithFinalizeCount(&rt.getHeap(), &finalized);
-    DummyObject::create(&rt.getHeap());
-    createWithFinalizeCount(&rt.getHeap(), &finalized);
-    rt.makeHandle(createWithFinalizeCount(&rt.getHeap(), &finalized));
-    rt.makeHandle(DummyObject::create(&rt.getHeap()));
+    createWithFinalizeCount(rt.getHeap(), &finalized);
+    DummyObject::create(rt.getHeap());
+    createWithFinalizeCount(rt.getHeap(), &finalized);
+    rt.makeHandle(createWithFinalizeCount(rt.getHeap(), &finalized));
+    rt.makeHandle(DummyObject::create(rt.getHeap()));
     rt.collect();
 
     ASSERT_EQ(2, finalized);
@@ -86,8 +86,8 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
     auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
     GCScope scope{*rt};
-    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
-    rt->makeHandle(createWithFinalizeCount(&rt->getHeap(), &finalized));
+    rt->makeHandle(createWithFinalizeCount(rt->getHeap(), &finalized));
+    rt->makeHandle(createWithFinalizeCount(rt->getHeap(), &finalized));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.
@@ -108,9 +108,9 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
     GCScope gcScope(*rt);
 
     auto r1 = rt->makeHandle(HermesValue::encodeObjectValue(
-        createWithFinalizeCount(&rt->getHeap(), &finalized)));
+        createWithFinalizeCount(rt->getHeap(), &finalized)));
     auto r2 = rt->makeHandle(HermesValue::encodeObjectValue(
-        createWithFinalizeCount(&rt->getHeap(), &finalized)));
+        createWithFinalizeCount(rt->getHeap(), &finalized)));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

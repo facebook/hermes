@@ -65,7 +65,7 @@ class JSString final : public JSObject {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, *parent, *clazz),
-        primitiveValue_(runtime, *value, &runtime.getHeap()) {
+        primitiveValue_(runtime, *value, runtime.getHeap()) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -154,7 +154,7 @@ class JSStringIterator : public JSObject {
       Handle<HiddenClass> clazz,
       Handle<StringPrimitive> iteratedString)
       : JSObject(runtime, *parent, *clazz),
-        iteratedString_(runtime, *iteratedString, &runtime.getHeap()) {}
+        iteratedString_(runtime, *iteratedString, runtime.getHeap()) {}
 
  private:
   /// [[IteratedString]]

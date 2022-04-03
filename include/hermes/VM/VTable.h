@@ -31,10 +31,10 @@ class GCCell;
 struct VTable {
   class HeapSnapshotMetadata final {
    private:
-    using NameCallback = std::string(GCCell *, GC *);
-    using AddEdgesCallback = void(GCCell *, GC *, HeapSnapshot &);
-    using AddNodesCallback = void(GCCell *, GC *, HeapSnapshot &);
-    using AddLocationsCallback = void(GCCell *, GC *, HeapSnapshot &);
+    using NameCallback = std::string(GCCell *, GC &);
+    using AddEdgesCallback = void(GCCell *, GC &, HeapSnapshot &);
+    using AddNodesCallback = void(GCCell *, GC &, HeapSnapshot &);
+    using AddLocationsCallback = void(GCCell *, GC &, HeapSnapshot &);
 
    public:
     /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
@@ -67,12 +67,12 @@ struct VTable {
     HeapSnapshot::NodeType nodeType() const {
       return nodeType_;
     }
-    std::string nameForNode(GCCell *cell, GC *gc) const;
+    std::string nameForNode(GCCell *cell, GC &gc) const;
     /// Get the default name for the node, without any custom behavior.
     std::string defaultNameForNode(GCCell *cell) const;
-    void addEdges(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
-    void addNodes(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
-    void addLocations(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
+    void addEdges(GCCell *cell, GC &gc, HeapSnapshot &snap) const;
+    void addNodes(GCCell *cell, GC &gc, HeapSnapshot &snap) const;
+    void addLocations(GCCell *cell, GC &gc, HeapSnapshot &snap) const;
 
    private:
     const HeapSnapshot::NodeType nodeType_;
@@ -108,7 +108,7 @@ struct VTable {
   /// allocations or access any garbage-collectable objects.  Unless an
   /// operation is documented to be safe to call from a finalizer, it probably
   /// isn't.
-  using FinalizeCallback = void(GCCell *, GC *gc);
+  using FinalizeCallback = void(GCCell *, GC &gc);
   FinalizeCallback *const finalize_;
   /// Call GC functions on weak-reference-holding objects. In a concurrent GC,
   /// guaranteed to be called while the weak ref mutex is held.
@@ -160,14 +160,14 @@ struct VTable {
     return size == 0;
   }
 
-  void finalizeIfExists(GCCell *cell, GC *gc) const {
+  void finalizeIfExists(GCCell *cell, GC &gc) const {
     assert(isValid());
     if (finalize_) {
       finalize_(cell, gc);
     }
   }
 
-  void finalize(GCCell *cell, GC *gc) const {
+  void finalize(GCCell *cell, GC &gc) const {
     assert(isValid());
     assert(
         finalize_ &&

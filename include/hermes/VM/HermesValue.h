@@ -467,7 +467,7 @@ class HermesValue {
   /// This form performs assignments of pointer values without
   /// write barriers, to be used only within GC. The GC argument is
   /// used to assert that this is used only within GC.
-  inline void setInGC(HermesValue hv, GC *gc);
+  inline void setInGC(HermesValue hv, GC &gc);
 
   /// We delete the assignment operator: HermesValues should either
   /// PinnedHermesValues, to indicate that they can be assigned, or
@@ -569,55 +569,55 @@ class GCHermesValueBase final : public HVType {
   GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
   /// Initialize a GCHermesValue from another HV. Performs a write barrier.
   template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC *gc);
+  GCHermesValueBase(HVType hv, GC &gc);
   /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
   /// barrier, depending on the GC.
   /// NOTE: The last parameter is unused, but acts as an overload selector.
   template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t);
+  GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
   GCHermesValueBase(const HVType &) = delete;
 
   /// The HermesValue \p hv may be an object pointer.  Assign the
   /// value, and perform any necessary write barriers.
   template <typename NeedsBarriers = std::true_type>
-  inline void set(HVType hv, GC *gc);
+  inline void set(HVType hv, GC &gc);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
-  inline void setNonPtr(HVType hv, GC *gc);
+  inline void setNonPtr(HVType hv, GC &gc);
 
   /// Force a write barrier to occur on this value, as if the value was being
   /// set to null. This should be used when a value is becoming unreachable by
   /// the GC, without having anything written to its memory.
   /// NOTE: This barrier is typically used when a variable-sized object's length
   /// decreases.
-  inline void unreachableWriteBarrier(GC *gc);
+  inline void unreachableWriteBarrier(GC &gc);
 
   /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
   template <typename InputIt>
-  static inline void fill(InputIt first, InputIt last, HVType fill, GC *gc);
+  static inline void fill(InputIt first, InputIt last, HVType fill, GC &gc);
 
   /// Same as \p fill except the range expressed by  [\p first, \p last) has not
   /// been previously initialized. Cannot use this on previously initialized
   /// memory, as it will use an incorrect write barrier.
   template <typename InputIt>
   static inline void
-  uninitialized_fill(InputIt first, InputIt last, HVType fill, GC *gc);
+  uninitialized_fill(InputIt first, InputIt last, HVType fill, GC &gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
-  copy(InputIt first, InputIt last, OutputIt result, GC *gc);
+  copy(InputIt first, InputIt last, OutputIt result, GC &gc);
 
   /// Same as \p copy, but the range [result, result + (last - first)) has not
   /// been previously initialized. Cannot use this on previously initialized
   /// memory, as it will use an incorrect write barrier.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
-  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC *gc);
+  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC &gc);
 
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   /// Same as \p copy, but specialized for raw pointers.
@@ -625,7 +625,7 @@ class GCHermesValueBase final : public HVType {
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
-      GC *gc);
+      GC &gc);
 #endif
 
   /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
@@ -636,19 +636,19 @@ class GCHermesValueBase final : public HVType {
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
-      GC *gc);
+      GC &gc);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
-  copy_backward(InputIt first, InputIt last, OutputIt result, GC *gc);
+  copy_backward(InputIt first, InputIt last, OutputIt result, GC &gc);
 
   /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
   /// unreachable.
   static inline void rangeUnreachableWriteBarrier(
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
-      GC *gc);
+      GC &gc);
 };
 
 using GCHermesValue = GCHermesValueBase<HermesValue>;

@@ -24,11 +24,11 @@ class WeakRootBase : protected CompressedPointer {
   explicit WeakRootBase(GCCell *ptr, PointerBase &base)
       : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
 
-  void *get(PointerBase &base, GC *gc) const {
+  void *get(PointerBase &base, GC &gc) const {
     if (!*this)
       return nullptr;
     GCCell *ptr = CompressedPointer::getNonNull(base);
-    gc->weakRefReadBarrier(ptr);
+    gc.weakRefReadBarrier(ptr);
     return ptr;
   }
 
@@ -66,7 +66,7 @@ class WeakRoot final : public WeakRootBase {
   explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
   explicit WeakRoot(T *ptr, PointerBase &base) : WeakRootBase(ptr, base) {}
 
-  T *get(PointerBase &base, GC *gc) const {
+  T *get(PointerBase &base, GC &gc) const {
     return static_cast<T *>(WeakRootBase::get(base, gc));
   }
 

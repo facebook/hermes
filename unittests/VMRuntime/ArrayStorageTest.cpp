@@ -24,7 +24,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(1u, st->size());
   ASSERT_EQ(4u, st->capacity());
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  st->setNonPtr(0, 1.0_hd, &runtime.getHeap());
+  st->setNonPtr(0, 1.0_hd, runtime.getHeap());
   // "1"
   ASSERT_EQ(1.0_hd, st->at(0));
 
@@ -35,7 +35,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(1.0_hd, st->at(0));
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
   // "12"
-  st->setNonPtr(1, 2.0_hd, &runtime.getHeap());
+  st->setNonPtr(1, 2.0_hd, runtime.getHeap());
 
   // Resize "12" to ".12."
   (void)ArrayStorage::shift(st, runtime, 0, 1, 4);
@@ -74,7 +74,7 @@ TEST_F(ArrayStorageTest, ShiftTest) {
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(2));
   ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(3));
   // "12.."
-  st->setNonPtr(1, 2.0_hd, &runtime.getHeap());
+  st->setNonPtr(1, 2.0_hd, runtime.getHeap());
 
   // Now let's do a reallocation. Resize to 6. "12.." -> "...12."
   (void)ArrayStorage::shift(st, runtime, 0, 3, 6);

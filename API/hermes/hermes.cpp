@@ -1801,7 +1801,7 @@ jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
 jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
   vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
 
-  if (const auto ptr = wr.get(runtime_, &runtime_.getHeap()))
+  if (const auto ptr = wr.get(runtime_, runtime_.getHeap()))
     return add<jsi::Object>(vm::HermesValue::encodeObjectValue(ptr));
 
   return jsi::Value();

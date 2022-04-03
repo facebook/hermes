@@ -20,8 +20,8 @@ class PropertyAccessor final : public GCCell {
       Runtime &runtime,
       Handle<Callable> getter,
       Handle<Callable> setter)
-      : getter(runtime, *getter, &runtime.getHeap()),
-        setter(runtime, *setter, &runtime.getHeap()) {}
+      : getter(runtime, *getter, runtime.getHeap()),
+        setter(runtime, *setter, runtime.getHeap()) {}
 
   static const VTable vt;
 

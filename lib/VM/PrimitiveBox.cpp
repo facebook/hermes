@@ -80,7 +80,7 @@ void JSString::setPrimitiveString(
   auto shv =
       SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
   JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
-  selfHandle->primitiveValue_.set(runtime, *string, &runtime.getHeap());
+  selfHandle->primitiveValue_.set(runtime, *string, runtime.getHeap());
 }
 
 bool JSString::_haveOwnIndexedImpl(
@@ -218,7 +218,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
   if (position >= len) {
     // 8a. Set the value of the [[IteratedString]] internal slot of O to
     // undefined.
-    self->iteratedString_.setNull(&runtime.getHeap());
+    self->iteratedString_.setNull(runtime.getHeap());
     // 8b. Return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();

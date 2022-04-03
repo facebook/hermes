@@ -76,7 +76,7 @@ class ArrayImpl : public JSObject {
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
     self->getIndexedStorage(runtime)->set(
-        index - self->beginIndex_, value, &runtime.getHeap());
+        index - self->beginIndex_, value, runtime.getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -120,7 +120,7 @@ class ArrayImpl : public JSObject {
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
-  void setIndexedStorage(PointerBase &base, StorageType *p, GC *gc) {
+  void setIndexedStorage(PointerBase &base, StorageType *p, GC &gc) {
     indexedStorage_.set(base, p, gc);
   }
 
@@ -153,7 +153,7 @@ class ArrayImpl : public JSObject {
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
@@ -356,7 +356,7 @@ class JSArray final : public ArrayImpl {
   /// A helper to update the named '.length' property.
   static void
   putLength(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
-    setDirectSlotValue<lengthPropIndex()>(self, newLength, &runtime.getHeap());
+    setDirectSlotValue<lengthPropIndex()>(self, newLength, runtime.getHeap());
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.
@@ -414,7 +414,7 @@ class JSArrayIterator : public JSObject {
       Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
       : JSObject(runtime, *parent, *clazz),
-        iteratedObject_(runtime, *iteratedObject, &runtime.getHeap()),
+        iteratedObject_(runtime, *iteratedObject, runtime.getHeap()),
         iterationKind_(iterationKind) {}
 
  private:

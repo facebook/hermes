@@ -527,7 +527,7 @@ void Runtime::markRoots(
         identifierTable_.snapshotAddNodes(snap);
       });
       acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
-      identifierTable_.markIdentifiers(acceptor, &getHeap());
+      identifierTable_.markIdentifiers(acceptor, getHeap());
       acceptor.provideSnapshot([this](HeapSnapshot &snap) {
         identifierTable_.snapshotAddEdges(snap);
       });

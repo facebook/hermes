@@ -22,7 +22,7 @@ namespace vm {
 /*static*/
 template <typename IsMarkedFunc>
 void GCBase::clearEntriesWithUnreachableKeys(
-    GC *gc,
+    GC &gc,
     JSWeakMap *weakMap,
     IsMarkedFunc objIsMarked) {
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
@@ -38,7 +38,7 @@ void GCBase::clearEntriesWithUnreachableKeys(
 /*static*/
 template <typename Acceptor, typename ObjIsMarkedFunc, typename MarkFromValFunc>
 bool GCBase::markFromReachableWeakMapKeys(
-    GC *gc,
+    GC &gc,
     JSWeakMap *weakMap,
     Acceptor &acceptor,
     llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
@@ -59,7 +59,7 @@ bool GCBase::markFromReachableWeakMapKeys(
   auto eraseFrom = std::remove_if(
       keyList->begin(),
       keyList->end(),
-      [weakMap, gc, objIsMarked, markFromVal, &newlyMarkedValue](
+      [weakMap, &gc, objIsMarked, markFromVal, &newlyMarkedValue](
           detail::WeakRefKey *key) {
         GCCell *cell = key->getObjectInGC(gc);
         if (!cell) {
@@ -96,7 +96,7 @@ template <
     typename DrainMarkStackFunc,
     typename CheckMarkStackOverflowFunc>
 gcheapsize_t GCBase::completeWeakMapMarking(
-    GC *gc,
+    GC &gc,
     Acceptor &acceptor,
     std::vector<JSWeakMap *> &reachableWeakMaps,
     ObjIsMarkedFunc objIsMarked,
@@ -111,7 +111,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
 
   /// A specialized acceptor, which does not mark weak refs.  We will
   /// revisit the WeakMaps with an acceptor that does, at the end.
-  SkipWeakRefsAcceptor<Acceptor> skipWeakAcceptor(*gc, &acceptor);
+  SkipWeakRefsAcceptor<Acceptor> skipWeakAcceptor(gc, &acceptor);
 
   // Must declare this outside the loop, but the initial value doesn't matter:
   // we make it false at the start of each loop iteration.
@@ -143,7 +143,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
         auto &valueStorageRef = weakMap->getValueStorageRef(gc);
         CompressedPointer valueStorage = valueStorageRef;
         valueStorageRef.setInGC(CompressedPointer{nullptr});
-        gc->markCell(weakMap, skipWeakAcceptor);
+        gc.markCell(weakMap, skipWeakAcceptor);
         drainMarkStack(acceptor);
         valueStorageRef.setInGC(valueStorage);
         scannedWeakMaps.insert(weakMap);
@@ -194,7 +194,7 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     // segment objects.  Note that we might visit some already-visited
     // fields, pointing to already-marked objects; this is why we
     // require the acceptor to be idempotent.
-    gc->markCell(weakMap, acceptor);
+    gc.markCell(weakMap, acceptor);
     drainMarkStack(acceptor);
   }
   // Because of the limited nature of the marking done above, we can

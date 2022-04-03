@@ -322,9 +322,9 @@ class JSObject : public GCCell {
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, parent, &runtime.getHeap(), needsBarriers),
-        clazz_(runtime, clazz, &runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, &runtime.getHeap(), needsBarriers) {
+      : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
+        clazz_(runtime, clazz, runtime.getHeap(), needsBarriers),
+        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -334,9 +334,9 @@ class JSObject : public GCCell {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, *parent, &runtime.getHeap(), needsBarriers),
-        clazz_(runtime, *clazz, &runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, &runtime.getHeap(), needsBarriers) {
+      : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
+        clazz_(runtime, *clazz, runtime.getHeap(), needsBarriers),
+        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -581,7 +581,7 @@ class JSObject : public GCCell {
   /// \pre index < DIRECT_PROPERTY_SLOTS.
   template <SlotIndex index>
   inline static void
-  setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc);
+  setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
@@ -1235,7 +1235,7 @@ class JSObject : public GCCell {
   /// Return the type name of this object, if it can be found heuristically.
   /// There is no one definitive type name for an object. If no heuristic is
   /// able to produce a name, the empty string is returned.
-  std::string getHeuristicTypeName(GC *gc);
+  std::string getHeuristicTypeName(GC &gc);
 
   /// Accesses the name property on an object, returns the empty string if it
   /// doesn't exist or isn't a string.
@@ -1247,14 +1247,14 @@ class JSObject : public GCCell {
 
   /// Add an estimate of the type name for this object as the name in heap
   /// snapshots.
-  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+  static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
 
   /// Add user-visible property names to a snapshot.
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
   /// Add the location of the constructor for this object to the heap snapshot.
   static void
-  _snapshotAddLocationsImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  _snapshotAddLocationsImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
@@ -1617,7 +1617,7 @@ inline ExecutionStatus JSObject::allocatePropStorage(
     return ExecutionStatus::EXCEPTION;
 
   selfHandle->propStorage_.setNonNull(
-      runtime, vmcast<PropStorage>(*res), &runtime.getHeap());
+      runtime, vmcast<PropStorage>(*res), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -1648,7 +1648,7 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
       SmallHermesValue::encodeUndefinedValue(),
-      &runtime.getHeap());
+      runtime.getHeap());
   return self;
 }
 
@@ -1660,7 +1660,7 @@ inline SmallHermesValue JSObject::getDirectSlotValue(const JSObject *self) {
 
 template <SlotIndex index>
 inline void
-JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC *gc) {
+JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
   self->directProps()[index].set(value, gc);
 }
@@ -1737,10 +1737,10 @@ inline void JSObject::setNamedSlotValueUnsafe(
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index].set(value, &runtime.getHeap());
+    return self->directProps()[index].set(value, runtime.getHeap());
 
   self->propStorage_.getNonNull(runtime)->set<inl>(
-      index - DIRECT_PROPERTY_SLOTS, value, &runtime.getHeap());
+      index - DIRECT_PROPERTY_SLOTS, value, runtime.getHeap());
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(

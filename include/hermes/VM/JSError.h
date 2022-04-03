@@ -143,7 +143,7 @@ class JSError final : public JSObject {
 
  private:
   friend void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-  static void _finalizeImpl(GCCell *cell, GC *gc);
+  static void _finalizeImpl(GCCell *cell, GC &gc);
   static size_t _mallocSizeImpl(GCCell *cell);
 
   static PseudoHandle<JSError>

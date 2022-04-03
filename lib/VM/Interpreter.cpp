@@ -2143,14 +2143,14 @@ tailCall:
       CASE(StoreToEnvironment) {
         vmcast<Environment>(O1REG(StoreToEnvironment))
             ->slot(ip->iStoreToEnvironment.op2)
-            .set(O3REG(StoreToEnvironment), &runtime.getHeap());
+            .set(O3REG(StoreToEnvironment), runtime.getHeap());
         ip = NEXTINST(StoreToEnvironment);
         DISPATCH;
       }
       CASE(StoreToEnvironmentL) {
         vmcast<Environment>(O1REG(StoreToEnvironmentL))
             ->slot(ip->iStoreToEnvironmentL.op2)
-            .set(O3REG(StoreToEnvironmentL), &runtime.getHeap());
+            .set(O3REG(StoreToEnvironmentL), runtime.getHeap());
         ip = NEXTINST(StoreToEnvironmentL);
         DISPATCH;
       }
@@ -2158,14 +2158,14 @@ tailCall:
       CASE(StoreNPToEnvironment) {
         vmcast<Environment>(O1REG(StoreNPToEnvironment))
             ->slot(ip->iStoreNPToEnvironment.op2)
-            .setNonPtr(O3REG(StoreNPToEnvironment), &runtime.getHeap());
+            .setNonPtr(O3REG(StoreNPToEnvironment), runtime.getHeap());
         ip = NEXTINST(StoreNPToEnvironment);
         DISPATCH;
       }
       CASE(StoreNPToEnvironmentL) {
         vmcast<Environment>(O1REG(StoreNPToEnvironmentL))
             ->slot(ip->iStoreNPToEnvironmentL.op2)
-            .setNonPtr(O3REG(StoreNPToEnvironmentL), &runtime.getHeap());
+            .setNonPtr(O3REG(StoreNPToEnvironmentL), runtime.getHeap());
         ip = NEXTINST(StoreNPToEnvironmentL);
         DISPATCH;
       }
@@ -2291,7 +2291,7 @@ tailCall:
               "unaccounted handles were created");
           auto objHandle = runtime.makeHandle(obj);
           auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, &runtime.getHeap())));
+              cacheEntry->clazz.get(runtime, runtime.getHeap())));
           CAPTURE_IP(runtime.recordHiddenClass(
               curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
           // obj may be moved by GC due to recordHiddenClass
@@ -2402,7 +2402,7 @@ tailCall:
 #endif
 #ifdef HERMES_SLOW_DEBUG
         auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
-            ? cacheEntry->clazz.get(runtime, &runtime.getHeap())
+            ? cacheEntry->clazz.get(runtime, runtime.getHeap())
             : nullptr;
 #endif
         ++NumGetByIdSlow;
@@ -2420,7 +2420,7 @@ tailCall:
         }
 #ifdef HERMES_SLOW_DEBUG
         if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
-            cacheEntry->clazz.get(runtime, &runtime.getHeap()) != savedClass) {
+            cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
           ++NumGetByIdCacheEvicts;
         }
 #endif
@@ -2482,7 +2482,7 @@ tailCall:
           auto shvHandle = runtime.makeHandle(shv.toHV(runtime));
           auto objHandle = runtime.makeHandle(obj);
           auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, &runtime.getHeap())));
+              cacheEntry->clazz.get(runtime, runtime.getHeap())));
           CAPTURE_IP(runtime.recordHiddenClass(
               curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
           // shv/obj may be invalidated by recordHiddenClass

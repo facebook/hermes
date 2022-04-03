@@ -86,13 +86,13 @@ class JSArrayBuffer final : public JSObject {
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
-  void detach(GC *gc);
+  void detach(GC &gc);
 
  protected:
-  static void _finalizeImpl(GCCell *cell, GC *gc);
+  static void _finalizeImpl(GCCell *cell, GC &gc);
   static size_t _mallocSizeImpl(GCCell *cell);
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
  private:
   uint8_t *data_;

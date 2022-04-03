@@ -108,7 +108,7 @@ class DecoratedObject : public JSObject {
         decoration_(std::move(decoration)) {}
 
  protected:
-  static void _finalizeImpl(GCCell *cell, GC *);
+  static void _finalizeImpl(GCCell *cell, GC &);
   static size_t _mallocSizeImpl(GCCell *cell);
 
  private:

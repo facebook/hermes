@@ -27,7 +27,7 @@ RuntimeModule::RuntimeModule(
     llvh::StringRef sourceURL,
     facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
-      domain_(&runtime.getHeap(), domain),
+      domain_(runtime.getHeap(), domain),
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
@@ -411,7 +411,7 @@ llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
         getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
     if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end()) {
       if (HiddenClass *const cachedHiddenClass =
-              cachedHiddenClassIter->second.get(runtime, &runtime.getHeap())) {
+              cachedHiddenClassIter->second.get(runtime, runtime.getHeap())) {
         return runtime_.makeHandle(cachedHiddenClass);
       }
     }
@@ -441,7 +441,7 @@ size_t RuntimeModule::additionalMemorySize() const {
       templateMap_.getMemorySize();
 }
 
-void RuntimeModule::snapshotAddNodes(GC *gc, HeapSnapshot &snap) const {
+void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   // Create a native node for each CodeBlock owned by this module.
   for (const CodeBlock *cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time
@@ -452,7 +452,7 @@ void RuntimeModule::snapshotAddNodes(GC *gc, HeapSnapshot &snap) const {
       snap.endNode(
           HeapSnapshot::NodeType::Native,
           "CodeBlock",
-          gc->getNativeID(cb),
+          gc.getNativeID(cb),
           sizeof(CodeBlock) + cb->additionalMemorySize(),
           0);
     }
@@ -468,22 +468,22 @@ void RuntimeModule::snapshotAddNodes(GC *gc, HeapSnapshot &snap) const {
     if (cb && cb->getRuntimeModule() == this) {
       // Only add a CodeBlock if this runtime module is the owner.
       snap.addIndexedEdge(
-          HeapSnapshot::EdgeType::Element, i, gc->getNativeID(cb));
+          HeapSnapshot::EdgeType::Element, i, gc.getNativeID(cb));
     }
   }
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "std::vector<CodeBlock *>",
-      gc->getNativeID(&functionMap_),
+      gc.getNativeID(&functionMap_),
       functionMap_.capacity() * sizeof(CodeBlock *),
       0);
 }
 
-void RuntimeModule::snapshotAddEdges(GC *gc, HeapSnapshot &snap) const {
+void RuntimeModule::snapshotAddEdges(GC &gc, HeapSnapshot &snap) const {
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Internal,
       "functionMap",
-      gc->getNativeID(&functionMap_));
+      gc.getNativeID(&functionMap_));
 }
 
 namespace detail {

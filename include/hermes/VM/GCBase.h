@@ -966,7 +966,7 @@ class GCBase {
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
-  void createSnapshot(GC *gc, llvh::raw_ostream &os);
+  void createSnapshot(GC &gc, llvh::raw_ostream &os);
 
   /// Subclasses can override and add more specific native memory usage.
   virtual void snapshotAddGCNativeNodes(HeapSnapshot &snap);
@@ -1086,7 +1086,7 @@ class GCBase {
   /// The \p gc argument is passed to methods that verify they're only
   /// called during GC.
   static std::vector<detail::WeakRefKey *> buildKeyList(
-      GC *gc,
+      GC &gc,
       JSWeakMap *weakMap);
 
   /// For all non-null keys in \p weakMap that are unreachable, clear
@@ -1094,7 +1094,7 @@ class GCBase {
   /// to undefined).
   template <typename KeyReachableFunc>
   static void clearEntriesWithUnreachableKeys(
-      GC *gc,
+      GC &gc,
       JSWeakMap *weakMap,
       KeyReachableFunc keyReachable);
 
@@ -1127,7 +1127,7 @@ class GCBase {
       typename ObjIsMarkedFunc,
       typename MarkFromValFunc>
   static bool markFromReachableWeakMapKeys(
-      GC *gc,
+      GC &gc,
       JSWeakMap *weakMap,
       Acceptor &acceptor,
       llvh::DenseMap<JSWeakMap *, std::vector<detail::WeakRefKey *>>
@@ -1185,7 +1185,7 @@ class GCBase {
       typename DrainMarkStackFunc,
       typename CheckMarkStackOverflowFunc>
   static gcheapsize_t completeWeakMapMarking(
-      GC *gc,
+      GC &gc,
       Acceptor &acceptor,
       std::vector<JSWeakMap *> &reachableWeakMaps,
       ObjIsMarkedFunc objIsMarked,
@@ -1299,7 +1299,7 @@ class GCBase {
   /// active.
   class GCCycle final {
    public:
-    explicit GCCycle(GCBase *gc, std::string extraInfo = "");
+    explicit GCCycle(GCBase &gc, std::string extraInfo = "");
     ~GCCycle();
 
     const std::string &extraInfo() {
@@ -1307,7 +1307,7 @@ class GCBase {
     }
 
    private:
-    GCBase *const gc_;
+    GCBase &gc_;
     std::string extraInfo_;
     bool previousInGC_;
   };

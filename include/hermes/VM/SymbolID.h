@@ -167,7 +167,7 @@ class GCSymbolID final : public SymbolID {
   GCSymbolID &operator=(const GCSymbolID &) = delete;
 
   /// Write a new value into this. Performs a write barrier for some GCs.
-  inline GCSymbolID &set(SymbolID sym, GC *gc);
+  inline GCSymbolID &set(SymbolID sym, GC &gc);
 };
 
 /// A SymbolID which is stored in non-moveable memory and is known to the

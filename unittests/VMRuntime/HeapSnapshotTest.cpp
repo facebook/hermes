@@ -430,7 +430,7 @@ TEST(HeapSnapshotTest, IDReversibleTest) {
   GCScope gcScope(rt);
 
   // Make a dummy object.
-  auto obj = rt.makeHandle(DummyObject::create(&gc));
+  auto obj = rt.makeHandle(DummyObject::create(gc));
   const auto objID = gc.getObjectID(obj.get());
   // Make sure the ID can be translated back to the object pointer.
   EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
@@ -581,9 +581,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   auto &gc = rt.getHeap();
   GCScope gcScope(rt);
 
-  auto dummy = rt.makeHandle(DummyObject::create(&gc));
-  auto *dummy2 = DummyObject::create(&gc);
-  dummy->setPointer(&gc, dummy2);
+  auto dummy = rt.makeHandle(DummyObject::create(gc));
+  auto *dummy2 = DummyObject::create(gc);
+  dummy->setPointer(gc, dummy2);
   const auto blockSize = dummy->getAllocatedSize();
 
   JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
@@ -696,7 +696,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
           .build());
   DummyRuntime &rt = *runtime;
   GCScope scope{rt};
-  auto dummy = rt.makeHandle(DummyObject::create(&rt.getHeap()));
+  auto dummy = rt.makeHandle(DummyObject::create(rt.getHeap()));
   const auto dummyID = rt.getHeap().getObjectID(dummy.get());
   rt.collect();
   ASSERT_TRUE(triggeredTripwire);
@@ -891,7 +891,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
           "0",
           runtime.getHeap().getObjectID(key.get())));
   // Test the native edge.
-  const auto nativeMapID = map->getMapID(&runtime.getHeap());
+  const auto nativeMapID = map->getMapID(runtime.getHeap());
   EXPECT_EQ(
       nodesAndEdges.second[firstNamed + 2],
       Edge(HeapSnapshot::EdgeType::Internal, "map", nativeMapID));
@@ -951,7 +951,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
       runtime.makeHandle(HermesValue::encodeNumberValue(200)))));
   // Forcibly clear the final hidden class's property map.
   auto *clazz = obj->getClass(runtime);
-  clazz->clearPropertyMap(&runtime.getHeap());
+  clazz->clearPropertyMap(runtime.getHeap());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory);
   ASSERT_TRUE(root != nullptr);

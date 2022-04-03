@@ -65,7 +65,7 @@ class FinalizableNativeFunction final : public NativeFunction {
     finalizePtr_(context_);
   }
 
-  static void _finalizeImpl(GCCell *cell, GC *) {
+  static void _finalizeImpl(GCCell *cell, GC &) {
     auto *self = vmcast<FinalizableNativeFunction>(cell);
     // Destruct the object.
     self->~FinalizableNativeFunction();

@@ -142,7 +142,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
-      hv.setInGC(hv.updatePointer(ptr), &gc);
+      hv.setInGC(hv.updatePointer(ptr), gc);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -152,7 +152,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       accept(ptr);
-      hv.setInGC(hv.updatePointer(ptr, pointerBase_), &gc);
+      hv.setInGC(hv.updatePointer(ptr, pointerBase_), gc);
     } else if (hv.isSymbol()) {
       acceptSym(hv.getSymbol());
     }
@@ -247,7 +247,7 @@ void MallocGC::collectBeforeAlloc(std::string cause, uint32_t size) {
 
 #ifdef HERMES_SLOW_DEBUG
 void MallocGC::checkWellFormed() {
-  GCCycle cycle{this};
+  GCCycle cycle{*this};
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   markRoots(nameAcceptor, true);
@@ -263,7 +263,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
   for (CellHeader *header : pointers_)
     if (!header->isMarked())
       if (auto hc = dyn_vmcast<HiddenClass>(header->data()))
-        hc->clearPropertyMap(this);
+        hc->clearPropertyMap(*this);
 }
 #endif
 
@@ -283,7 +283,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this, "GC Full collection"};
+    GCCycle cycle{*this, "GC Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
@@ -315,7 +315,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       const auto freedSize = cell->getAllocatedSize();
       // Run the finalizer if it exists and the cell is actually dead.
       if (!header->isMarked()) {
-        cell->getVT()->finalizeIfExists(cell, this);
+        cell->getVT()->finalizeIfExists(cell, *this);
 #ifndef NDEBUG
         // Update statistics.
         if (cell->getVT()->finalize_) {
@@ -411,7 +411,7 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
 
 void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
   gcheapsize_t weakMapAllocBytes = GCBase::completeWeakMapMarking(
-      this,
+      *this,
       acceptor,
       acceptor.reachableWeakMaps_,
       /*objIsMarked*/
@@ -424,7 +424,7 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
           valRef.setInGC(
               HermesValue::encodeObjectValue(
                   valHeader->getForwardingPointer()->data()),
-              this);
+              *this);
 #endif
           return false;
         }
@@ -447,7 +447,7 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
 void MallocGC::finalizeAll() {
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
-    cell->getVT()->finalizeIfExists(cell, this);
+    cell->getVT()->finalizeIfExists(cell, *this);
   }
 }
 
@@ -578,8 +578,8 @@ bool MallocGC::dbgContains(const void *p) const {
 #endif
 
 void MallocGC::createSnapshot(llvh::raw_ostream &os) {
-  GCCycle cycle{this};
-  GCBase::createSnapshot(this, os);
+  GCCycle cycle{*this};
+  GCBase::createSnapshot(*this, os);
 }
 
 void MallocGC::creditExternalMemory(GCCell *, uint32_t size) {

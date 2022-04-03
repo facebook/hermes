@@ -74,7 +74,7 @@ void JSRegExp::initialize(
   assert(
       pattern && flags &&
       "Null pattern and/or flags passed to JSRegExp::initialize");
-  selfHandle->pattern_.set(runtime, *pattern, &runtime.getHeap());
+  selfHandle->pattern_.set(runtime, *pattern, runtime.getHeap());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -268,10 +268,10 @@ JSRegExp::~JSRegExp() {
   free(bytecode_);
 }
 
-void JSRegExp::_finalizeImpl(GCCell *cell, GC *gc) {
+void JSRegExp::_finalizeImpl(GCCell *cell, GC &gc) {
   JSRegExp *self = vmcast<JSRegExp>(cell);
   if (self->bytecode_) {
-    gc->getIDTracker().untrackNative(self->bytecode_);
+    gc.getIDTracker().untrackNative(self->bytecode_);
   }
   self->~JSRegExp();
 }
@@ -281,12 +281,12 @@ size_t JSRegExp::_mallocSizeImpl(GCCell *cell) {
   return self->bytecodeSize_;
 }
 
-std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<JSRegExp>(cell);
-  return converter(getPattern(self, gc->getPointerBase()).get());
+  return converter(getPattern(self, gc.getPointerBase()).get());
 }
 
-void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   // Call the super type to add any other custom edges.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
@@ -294,11 +294,11 @@ void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         "bytecode",
-        gc->getNativeID(self->bytecode_));
+        gc.getNativeID(self->bytecode_));
   }
 }
 
-void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   if (self->bytecode_) {
     // Add a native node for regex bytecode, to account for native size
@@ -307,7 +307,7 @@ void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RegExpBytecode",
-        gc->getNativeID(self->bytecode_),
+        gc.getNativeID(self->bytecode_),
         self->bytecodeSize_,
         0);
   }

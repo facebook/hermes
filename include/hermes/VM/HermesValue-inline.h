@@ -17,9 +17,9 @@
 namespace hermes {
 namespace vm {
 
-void HermesValue::setInGC(HermesValue hv, GC *gc) {
+void HermesValue::setInGC(HermesValue hv, GC &gc) {
   setNoBarrier(hv);
-  assert(gc->calledByGC());
+  assert(gc.calledByGC());
 }
 
 template <typename T>
@@ -31,15 +31,15 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc) : HVType{hv} {
+GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
   assert(!hv.isPointer() || hv.getPointer());
   if (NeedsBarriers::value)
-    gc->constructorWriteBarrier(this, hv);
+    gc.constructorWriteBarrier(this, hv);
 }
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t)
+GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
     : HVType{hv} {
   assert(!hv.isPointer());
   // No need to invoke any write barriers here, since the old value is
@@ -49,34 +49,32 @@ GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC *gc, std::nullptr_t)
 
 template <typename HVType>
 template <typename NeedsBarriers>
-inline void GCHermesValueBase<HVType>::set(HVType hv, GC *gc) {
-  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
+inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
   if (hv.isPointer()) {
     HERMES_SLOW_ASSERT(
-        gc->validPointer(hv.getPointer(gc->getPointerBase())) &&
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
         "Setting an invalid pointer into a GCHermesValue");
     assert(
         NeedsBarriers::value ||
-        !gc->needsWriteBarrier(
-            this, static_cast<GCCell *>(hv.getPointer(gc->getPointerBase()))));
+        !gc.needsWriteBarrier(
+            this, static_cast<GCCell *>(hv.getPointer(gc.getPointerBase()))));
   }
   if (NeedsBarriers::value)
-    gc->writeBarrier(this, hv);
+    gc.writeBarrier(this, hv);
   HVType::setNoBarrier(hv);
 }
 
 template <typename HVType>
-void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC *gc) {
-  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
+void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC &gc) {
   assert(!hv.isPointer());
-  gc->snapshotWriteBarrier(this);
+  gc.snapshotWriteBarrier(this);
   HVType::setNoBarrier(hv);
 }
 
 template <typename HVType>
-void GCHermesValueBase<HVType>::unreachableWriteBarrier(GC *gc) {
+void GCHermesValueBase<HVType>::unreachableWriteBarrier(GC &gc) {
   // Hades needs a snapshot barrier executed when something becomes unreachable.
-  gc->snapshotWriteBarrier(this);
+  gc.snapshotWriteBarrier(this);
 }
 
 /*static*/
@@ -86,8 +84,7 @@ inline void GCHermesValueBase<HVType>::fill(
     InputIt start,
     InputIt end,
     HVType fill,
-    GC *gc) {
-  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
+    GC &gc) {
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
       cur->set(fill, gc);
@@ -106,8 +103,7 @@ inline void GCHermesValueBase<HVType>::uninitialized_fill(
     InputIt start,
     InputIt end,
     HVType fill,
-    GC *gc) {
-  HERMES_SLOW_ASSERT(gc && "Need a GC parameter in case of a write barrier");
+    GC &gc) {
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
       // Use the constructor write barrier. Assume it needs barriers.
@@ -127,7 +123,7 @@ inline OutputIt GCHermesValueBase<HVType>::copy(
     InputIt first,
     InputIt last,
     OutputIt result,
-    GC *gc) {
+    GC &gc) {
 #if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   static_assert(
       !std::is_same<InputIt, GCHermesValueBase *>::value ||
@@ -146,7 +142,7 @@ inline OutputIt GCHermesValueBase<HVType>::uninitialized_copy(
     InputIt first,
     InputIt last,
     OutputIt result,
-    GC *gc) {
+    GC &gc) {
   static_assert(
       !std::is_same<InputIt, GCHermesValueBase *>::value ||
           !std::is_same<OutputIt, GCHermesValueBase *>::value,
@@ -167,14 +163,14 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
-    GC *gc) {
+    GC &gc) {
   // We must use "raw" function such as memmove here, rather than a
   // function like std::copy (or copy_backward) that respects
   // constructors and operator=.  For HermesValue, those require the
   // contents not to contain pointers.  The range write barrier
   // before the copies ensure that sufficient barriers are
   // performed.
-  gc->writeBarrierRange(result, last - first);
+  gc.writeBarrierRange(result, last - first);
   std::memmove(
       reinterpret_cast<void *>(result),
       first,
@@ -189,7 +185,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
-    GC *gc) {
+    GC &gc) {
 #ifndef NDEBUG
   uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
             fromLast = reinterpret_cast<uintptr_t>(last);
@@ -200,7 +196,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
-  gc->constructorWriteBarrierRange(result, last - first);
+  gc.constructorWriteBarrierRange(result, last - first);
   // memcpy is fine for an uninitialized copy.
   std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
@@ -213,7 +209,7 @@ inline OutputIt GCHermesValueBase<HVType>::copy_backward(
     InputIt first,
     InputIt last,
     OutputIt result,
-    GC *gc) {
+    GC &gc) {
   while (first != last) {
     (--result)->set(*--last, gc);
   }
@@ -224,8 +220,8 @@ template <typename HVType>
 inline void GCHermesValueBase<HVType>::rangeUnreachableWriteBarrier(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
-    GC *gc) {
-  gc->snapshotWriteBarrierRange(first, last - first);
+    GC &gc) {
+  gc.snapshotWriteBarrierRange(first, last - first);
 }
 
 inline void GCHermesValueUtil::copyToPinned(

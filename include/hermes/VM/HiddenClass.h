@@ -157,14 +157,14 @@ class TransitionMap {
   }
 
   /// Return true if there is an entry with the given key and a valid value.
-  bool containsKey(const Transition &key, GC *gc) {
+  bool containsKey(const Transition &key, GC &gc) {
     return (smallKey_ == key && smallValue().isValid()) ||
         (isLarge() && large()->containsKey(key));
   }
 
   /// Look for key and return the value as Handle<T> if found or None if not.
   llvh::Optional<Handle<HiddenClass>>
-  lookup(HandleRootOwner &runtime, GC *gc, const Transition &key) {
+  lookup(HandleRootOwner &runtime, GC &gc, const Transition &key) {
     if (smallKey_ == key) {
       return smallValue().get(runtime, gc);
     } else if (isLarge()) {
@@ -190,12 +190,12 @@ class TransitionMap {
     WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     if (isClean()) {
       smallKey_ = key;
-      smallValue() = WeakRef<HiddenClass>(&runtime.getHeap(), value);
+      smallValue() = WeakRef<HiddenClass>(runtime.getHeap(), value);
       return true;
     }
     if (!isLarge())
       uncleanMakeLarge(runtime);
-    return large()->insertNewLocked(&runtime.getHeap(), key, value);
+    return large()->insertNewLocked(runtime.getHeap(), key, value);
   }
 
   /// Insert key/value into the map. Used by deserialization.
@@ -228,9 +228,9 @@ class TransitionMap {
     }
   }
 
-  void snapshotAddNodes(GC *gc, HeapSnapshot &snap);
-  void snapshotAddEdges(GC *gc, HeapSnapshot &snap);
-  void snapshotUntrackMemory(GC *gc);
+  void snapshotAddNodes(GC &gc, HeapSnapshot &snap);
+  void snapshotAddEdges(GC &gc, HeapSnapshot &snap);
+  void snapshotUntrackMemory(GC &gc);
 
  private:
   /// Clean = no transition has been inserted since construction.
@@ -332,16 +332,16 @@ class HiddenClass final : public GCCell {
   }
 
   void setForInCache(BigStorage *arr, Runtime &runtime) {
-    forInCache_.set(runtime, arr, &runtime.getHeap());
+    forInCache_.set(runtime, arr, runtime.getHeap());
   }
 
   void clearForInCache(Runtime &runtime) {
-    forInCache_.setNull(&runtime.getHeap());
+    forInCache_.setNull(runtime.getHeap());
   }
 
   /// Reset the property map, unless this class is in dictionary mode.
   /// May be called by the GC for any HiddenClass not in a Handle.
-  void clearPropertyMap(GC *gc) {
+  void clearPropertyMap(GC &gc) {
     if (!isDictionary())
       propertyMap_.setNull(gc);
   }
@@ -501,7 +501,7 @@ class HiddenClass final : public GCCell {
         propertyFlags_(propertyFlags),
         flags_(flags),
         numProperties_(numProperties),
-        parent_(runtime, *parent, &runtime.getHeap()) {
+        parent_(runtime, *parent, runtime.getHeap()) {
     assert(propertyFlags.isValid() && "propertyFlags must be valid");
   }
 
@@ -552,7 +552,7 @@ class HiddenClass final : public GCCell {
       Runtime &runtime);
 
   /// Free all non-GC managed resources associated with the object.
-  static void _finalizeImpl(GCCell *cell, GC *gc);
+  static void _finalizeImpl(GCCell *cell, GC &gc);
 
   /// Mark all the weak references for an object.
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
@@ -561,9 +561,9 @@ class HiddenClass final : public GCCell {
   /// is assumed to be a HiddenClass.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
  private:
   /// The symbol that was added when transitioning to this hidden class.

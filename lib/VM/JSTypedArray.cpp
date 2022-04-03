@@ -303,7 +303,7 @@ void JSTypedArrayBase::setBuffer(
   assert(
       self->getByteWidth() == byteWidth &&
       "Cannot set to a buffer of a different byte width");
-  self->buffer_.setNonNull(runtime, buf, &runtime.getHeap());
+  self->buffer_.setNonNull(runtime, buf, runtime.getHeap());
   self->offset_ = offset;
   self->length_ = size / byteWidth;
 }

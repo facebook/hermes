@@ -57,8 +57,8 @@ class HashMapEntry final : public GCCell {
 
   /// Mark this entry as deleted.
   void markDeleted(Runtime &runtime) {
-    key.setNonPtr(HermesValue::encodeEmptyValue(), &runtime.getHeap());
-    value.setNonPtr(HermesValue::encodeEmptyValue(), &runtime.getHeap());
+    key.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
+    value.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
   }
 }; // HashMapEntry
 
@@ -174,7 +174,7 @@ class OrderedHashMap final : public GCCell {
   }
 
   /// Remove a node from the linked list.
-  void removeLinkedListNode(Runtime &runtime, HashMapEntry *entry, GC *gc);
+  void removeLinkedListNode(Runtime &runtime, HashMapEntry *entry, GC &gc);
 
   /// Lookup an entry with key as \p key in a given \p bucket.
   HashMapEntry *

@@ -89,7 +89,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
     return reinterpret_cast<uintptr_t>(HermesValue::getPointer());
   }
 
-  inline void setInGC(SmallHermesValueAdaptor hv, GC *gc);
+  inline void setInGC(SmallHermesValueAdaptor hv, GC &gc);
 
   SmallHermesValueAdaptor updatePointer(GCCell *ptr, PointerBase &) const {
     return SmallHermesValueAdaptor{HermesValue::updatePointer(ptr)};
@@ -110,7 +110,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
 
   static constexpr SmallHermesValueAdaptor
-  encodeHermesValue(HermesValue hv, GC *, PointerBase &) {
+  encodeHermesValue(HermesValue hv, GC &, PointerBase &) {
     return SmallHermesValueAdaptor{hv};
   }
   static constexpr SmallHermesValueAdaptor encodeHermesValue(
@@ -119,7 +119,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
     return SmallHermesValueAdaptor{hv};
   }
   static SmallHermesValueAdaptor
-  encodeNumberValue(double d, GC *, PointerBase &) {
+  encodeNumberValue(double d, GC &, PointerBase &) {
     return SmallHermesValueAdaptor{HermesValue::encodeNumberValue(d)};
   }
   static SmallHermesValueAdaptor encodeNumberValue(double d, Runtime &) {
@@ -375,7 +375,7 @@ class HermesValue32 {
     return getETagValue();
   }
 
-  inline void setInGC(HermesValue32 hv, GC *gc);
+  inline void setInGC(HermesValue32 hv, GC &gc);
 
   HermesValue32 updatePointer(GCCell *ptr, PointerBase &pb) const {
     return encodePointerImpl(ptr, getTag(), pb);

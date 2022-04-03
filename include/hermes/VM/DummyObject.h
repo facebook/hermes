@@ -38,17 +38,17 @@ struct DummyObject final : public GCCell {
   using MarkWeakCallback = std::function<VTable::MarkWeakCallback>;
   std::unique_ptr<MarkWeakCallback> markWeakCallback;
 
-  DummyObject(GC *gc);
+  DummyObject(GC &gc);
 
-  void acquireExtMem(GC *gc, uint32_t sz);
-  void releaseExtMem(GC *gc);
-  void setPointer(GC *gc, DummyObject *obj);
+  void acquireExtMem(GC &gc, uint32_t sz);
+  void releaseExtMem(GC &gc);
+  void setPointer(GC &gc, DummyObject *obj);
 
-  static DummyObject *create(GC *gc);
-  static DummyObject *createLongLived(GC *gc);
+  static DummyObject *create(GC &gc);
+  static DummyObject *createLongLived(GC &gc);
   static constexpr CellKind getCellKind();
   static bool classof(const GCCell *cell);
-  static void _finalizeImpl(GCCell *cell, GC *);
+  static void _finalizeImpl(GCCell *cell, GC &);
   static size_t _mallocSizeImpl(GCCell *cell);
   static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 };

@@ -97,7 +97,7 @@ PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->clazz_.setNonNull(runtime, *clazz, &runtime.getHeap());
+  obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
   if (LLVM_UNLIKELY(
@@ -199,7 +199,7 @@ CallResult<bool> JSObject::setParent(
     }
   }
   // 9.
-  self->parent_.set(runtime, parent, &runtime.getHeap());
+  self->parent_.set(runtime, parent, runtime.getHeap());
   // 10.
   return true;
 }
@@ -212,7 +212,7 @@ void JSObject::allocateNewSlotStorage(
   // If it is a direct property, just store the value and we are done.
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
     auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
-    selfHandle->directProps()[newSlotIndex].set(shv, &runtime.getHeap());
+    selfHandle->directProps()[newSlotIndex].set(shv, runtime.getHeap());
     return;
   }
 
@@ -226,7 +226,7 @@ void JSObject::allocateNewSlotStorage(
     auto arrRes = runtime.ignoreAllocationFailure(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
     selfHandle->propStorage_.setNonNull(
-        runtime, vmcast<PropStorage>(arrRes), &runtime.getHeap());
+        runtime, vmcast<PropStorage>(arrRes), runtime.getHeap());
   } else if (LLVM_UNLIKELY(
                  newSlotIndex >=
                  selfHandle->propStorage_.getNonNull(runtime)->capacity())) {
@@ -236,7 +236,7 @@ void JSObject::allocateNewSlotStorage(
         "allocated slot must be at end");
     auto hnd = runtime.makeMutableHandle(selfHandle->propStorage_);
     PropStorage::resize(hnd, runtime, newSlotIndex + 1);
-    selfHandle->propStorage_.setNonNull(runtime, *hnd, &runtime.getHeap());
+    selfHandle->propStorage_.setNonNull(runtime, *hnd, runtime.getHeap());
   }
 
   {
@@ -254,7 +254,7 @@ void JSObject::allocateNewSlotStorage(
   auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
   // If we don't need to resize, just store it directly.
   selfHandle->propStorage_.getNonNull(runtime)->set(
-      newSlotIndex, shv, &runtime.getHeap());
+      newSlotIndex, shv, runtime.getHeap());
 }
 
 CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
@@ -1860,7 +1860,7 @@ CallResult<bool> JSObject::deleteNamed(
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
       runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
 
   return true;
 }
@@ -1960,7 +1960,7 @@ CallResult<bool> JSObject::deleteComputed(
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
         runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
   } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
@@ -2307,12 +2307,12 @@ CallResult<bool> JSObject::defineOwnComputed(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
 }
 
-std::string JSObject::getHeuristicTypeName(GC *gc) {
-  PointerBase &base = gc->getPointerBase();
+std::string JSObject::getHeuristicTypeName(GC &gc) {
+  PointerBase &base = gc.getPointerBase();
   if (auto constructorVal = tryGetNamedNoAlloc(
           this, base, Predefined::getSymbolID(Predefined::constructor))) {
     if (auto *constructor = dyn_vmcast<JSObject>(
-            constructorVal->unboxToHV(gc->getPointerBase()))) {
+            constructorVal->unboxToHV(gc.getPointerBase()))) {
       auto name = constructor->getNameIfExists(base);
       // If the constructor's name doesn't exist, or it is just the object
       // constructor, attempt to find a different name.
@@ -2339,12 +2339,12 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
   HiddenClass::forEachPropertyNoAlloc(
       getClass(base),
       base,
-      [gc, &propertyNames](SymbolID id, NamedPropertyDescriptor) {
+      [&gc, &propertyNames](SymbolID id, NamedPropertyDescriptor) {
         if (InternalProperty::isInternal(id)) {
           // Internal properties aren't user-visible, skip them.
           return;
         }
-        propertyNames.emplace_back(gc->convertSymbolToUTF8(id));
+        propertyNames.emplace_back(gc.convertSymbolToUTF8(id));
       });
   // NOTE: One option is to sort the property names before truncation, to
   // reduce the number of groups; however, by not sorting them it makes it
@@ -2405,12 +2405,12 @@ std::string JSObject::getNameIfExists(PointerBase &base) {
   return "";
 }
 
-std::string JSObject::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string JSObject::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<JSObject>(cell);
   return self->getHeuristicTypeName(gc);
 }
 
-void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSObject>(cell);
 
   // Add the prototype as a property edge, so it's easy for JS developers to
@@ -2420,27 +2420,27 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         HeapSnapshot::EdgeType::Property,
         // __proto__ chosen for similarity to V8.
         "__proto__",
-        gc->getObjectID(self->parent_));
+        gc.getObjectID(self->parent_));
   }
 
   HiddenClass::forEachPropertyNoAlloc(
-      self->clazz_.get(gc->getPointerBase()),
-      gc->getPointerBase(),
-      [self, gc, &snap](SymbolID id, NamedPropertyDescriptor desc) {
+      self->clazz_.get(gc.getPointerBase()),
+      gc.getPointerBase(),
+      [self, &gc, &snap](SymbolID id, NamedPropertyDescriptor desc) {
         if (InternalProperty::isInternal(id)) {
           // Internal properties aren't user-visible, skip them.
           return;
         }
         // Else, it's a user-visible property.
         HermesValue prop =
-            getNamedSlotValueUnsafe(self, gc->getPointerBase(), desc.slot)
-                .unboxToHV(gc->getPointerBase());
+            getNamedSlotValueUnsafe(self, gc.getPointerBase(), desc.slot)
+                .unboxToHV(gc.getPointerBase());
         const llvh::Optional<HeapSnapshot::NodeID> idForProp =
-            gc->getSnapshotID(prop);
+            gc.getSnapshotID(prop);
         if (!idForProp) {
           return;
         }
-        std::string propName = gc->convertSymbolToUTF8(id);
+        std::string propName = gc.convertSymbolToUTF8(id);
         // If the property name is a valid array index, display it as an
         // "element" instead of a "property". This will put square brackets
         // around the number and sort it numerically rather than
@@ -2459,10 +2459,10 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
 
 void JSObject::_snapshotAddLocationsImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSObject>(cell);
-  PointerBase &base = gc->getPointerBase();
+  PointerBase &base = gc.getPointerBase();
   // Add the location of the constructor function for this object, if that
   // constructor is a user-defined JS function.
   if (auto constructorVal = tryGetNamedNoAlloc(
@@ -2470,7 +2470,7 @@ void JSObject::_snapshotAddLocationsImpl(
     if (constructorVal->isObject()) {
       if (auto *constructor =
               dyn_vmcast<JSFunction>(constructorVal->getObject(base))) {
-        constructor->addLocationToSnapshot(snap, gc->getObjectID(self));
+        constructor->addLocationToSnapshot(snap, gc.getObjectID(self));
       }
     }
   }
@@ -2546,7 +2546,7 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
       runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
 
   selfHandle->flags_.sealed = true;
 
@@ -2571,7 +2571,7 @@ ExecutionStatus JSObject::freeze(
 
   auto newClazz = HiddenClass::makeAllReadOnly(
       runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
@@ -2591,7 +2591,7 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
       flagsToClear,
       flagsToSet,
       props);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
 }
 
 CallResult<bool> JSObject::isExtensible(
@@ -2716,7 +2716,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.setNonNull(runtime, *addResult->first, &runtime.getHeap());
+  selfHandle->clazz_.setNonNull(runtime, *addResult->first, runtime.getHeap());
 
   allocateNewSlotStorage(
       selfHandle, runtime, addResult->second, valueOrAccessor);
@@ -2759,7 +2759,7 @@ CallResult<bool> JSObject::updateOwnProperty(
         runtime,
         propertyPos,
         desc.flags);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, &runtime.getHeap());
+    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
   }
 
   if (updateStatus->first == PropertyUpdateStatus::done)
@@ -2940,9 +2940,9 @@ JSObject::checkPropertyUpdate(
 
     // If not setting the getter or the setter, re-use the current one.
     if (!dpFlags.setGetter)
-      newAccessor->getter.set(runtime, curAccessor->getter, &runtime.getHeap());
+      newAccessor->getter.set(runtime, curAccessor->getter, runtime.getHeap());
     if (!dpFlags.setSetter)
-      newAccessor->setter.set(runtime, curAccessor->setter, &runtime.getHeap());
+      newAccessor->setter.set(runtime, curAccessor->setter, runtime.getHeap());
   }
 
   // 8.12.9 [12] For each attribute field of Desc that is present, set the

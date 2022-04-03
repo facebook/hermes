@@ -43,7 +43,7 @@ hermesInternalDetachArrayBuffer(void *, Runtime &runtime, NativeArgs args) {
         "Cannot use detachArrayBuffer on something which "
         "is not an ArrayBuffer foo");
   }
-  buffer->detach(&runtime.getHeap());
+  buffer->detach(runtime.getHeap());
   // "void" return
   return HermesValue::encodeUndefinedValue();
 }
@@ -86,12 +86,12 @@ CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime &runtime, NativeArgs args) {
   if (auto M = args.dyncastArg<JSWeakMap>(0)) {
     return HermesValue::encodeNumberValue(JSWeakMap::debugFreeSlotsAndGetSize(
-        static_cast<PointerBase &>(runtime), &runtime.getHeap(), *M));
+        static_cast<PointerBase &>(runtime), runtime.getHeap(), *M));
   }
 
   if (auto S = args.dyncastArg<JSWeakSet>(0)) {
     return HermesValue::encodeNumberValue(JSWeakSet::debugFreeSlotsAndGetSize(
-        static_cast<PointerBase &>(runtime), &runtime.getHeap(), *S));
+        static_cast<PointerBase &>(runtime), runtime.getHeap(), *S));
   }
 
   return runtime.raiseTypeError(

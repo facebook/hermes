@@ -42,10 +42,10 @@ PseudoHandle<Domain> Domain::create(Runtime &runtime) {
   return self;
 }
 
-void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
+void Domain::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<Domain>(cell);
   for (RuntimeModule *rm : self->runtimeModules_) {
-    gc->getIDTracker().untrackNative(rm);
+    gc.getIDTracker().untrackNative(rm);
   }
   self->~Domain();
 }
@@ -83,14 +83,14 @@ size_t Domain::_mallocSizeImpl(GCCell *cell) {
       self->runtimeModules_.capacity_in_bytes() + rmSize;
 }
 
-void Domain::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+void Domain::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   auto *const self = vmcast<Domain>(cell);
   for (RuntimeModule *rm : self->runtimeModules_)
     snap.addNamedEdge(
-        HeapSnapshot::EdgeType::Internal, "RuntimeModule", gc->getNativeID(rm));
+        HeapSnapshot::EdgeType::Internal, "RuntimeModule", gc.getNativeID(rm));
 }
 
-void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+void Domain::_snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   auto *const self = vmcast<Domain>(cell);
   for (RuntimeModule *rm : self->runtimeModules_) {
     // Create a native node for each RuntimeModule owned by this domain.
@@ -100,7 +100,7 @@ void Domain::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RuntimeModule",
-        gc->getNativeID(rm),
+        gc.getNativeID(rm),
         sizeof(RuntimeModule) + rm->additionalMemorySize(),
         0);
   }
@@ -148,7 +148,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     self->cjsRuntimeModules_.reserve(firstSegmentModules);
     for (size_t i = self->cjsRuntimeModules_.size(); i < firstSegmentModules;
          i++) {
-      self->cjsRuntimeModules_.push_back(nullptr, &runtime.getHeap());
+      self->cjsRuntimeModules_.push_back(nullptr, runtime.getHeap());
     }
 
     auto requireFn = NativeFunction::create(
@@ -179,7 +179,7 @@ ExecutionStatus Domain::importCJSModuleTable(
       return ExecutionStatus::EXCEPTION;
     }
 
-    self->throwingRequire_.set(runtime, *requireFn, &runtime.getHeap());
+    self->throwingRequire_.set(runtime, *requireFn, runtime.getHeap());
   } else {
     cjsModules = self->cjsModules_.get(runtime);
   }
@@ -230,7 +230,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     }
     self->cjsRuntimeModules_.reserve(maxModuleID + 1);
     for (size_t i = self->cjsRuntimeModules_.size(); i <= maxModuleID; i++) {
-      self->cjsRuntimeModules_.push_back(nullptr, &runtime.getHeap());
+      self->cjsRuntimeModules_.push_back(nullptr, runtime.getHeap());
     }
   }
 
@@ -276,15 +276,15 @@ ExecutionStatus Domain::importCJSModuleTable(
     cjsModules->set(
         index + CachedExportsOffset,
         HermesValue::encodeEmptyValue(),
-        &runtime.getHeap());
+        runtime.getHeap());
     cjsModules->set(
         index + ModuleOffset,
         HermesValue::encodeNullValue(),
-        &runtime.getHeap());
+        runtime.getHeap());
     cjsModules->set(
         index + FunctionIndexOffset,
         HermesValue::encodeNativeUInt32(functionID),
-        &runtime.getHeap());
+        runtime.getHeap());
     cjsRuntimeModules[moduleID] = runtimeModule;
     assert(isModuleRegistered(moduleID) && "CJS module was not registered");
     return index;
@@ -320,7 +320,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     }
   }
 
-  self->cjsModules_.set(runtime, cjsModules.get(), &runtime.getHeap());
+  self->cjsModules_.set(runtime, cjsModules.get(), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -355,8 +355,8 @@ Handle<RequireContext> RequireContext::create(
       runtime.getHiddenClassForPrototype(
           *objProto, numOverlapSlots<RequireContext>()));
   auto self = JSObjectInit::initToHandle(runtime, cell);
-  self->domain_.set(runtime, *domain, &runtime.getHeap());
-  self->dirname_.set(runtime, *dirname, &runtime.getHeap());
+  self->domain_.set(runtime, *domain, runtime.getHeap());
+  self->dirname_.set(runtime, *dirname, runtime.getHeap());
   return self;
 }
 

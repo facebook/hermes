@@ -108,8 +108,8 @@ void JSProxy::setTargetAndHandler(
     Handle<JSObject> target,
     Handle<JSObject> handler) {
   auto &slots = detail::slots(*selfHandle);
-  slots.target.set(runtime, target.get(), &runtime.getHeap());
-  slots.handler.set(runtime, handler.get(), &runtime.getHeap());
+  slots.target.set(runtime, target.get(), runtime.getHeap());
+  slots.handler.set(runtime, handler.get(), runtime.getHeap());
 }
 
 namespace {

@@ -112,11 +112,11 @@ JSArrayBuffer::JSArrayBuffer(
       size_(0),
       attached_(false) {}
 
-void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
+void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
-  gc->getIDTracker().untrackNative(self->data_);
-  gc->debitExternalMemory(self, self->size_);
+  gc.getIDTracker().untrackNative(self->data_);
+  gc.debitExternalMemory(self, self->size_);
   free(self->data_);
   self->~JSArrayBuffer();
 }
@@ -128,7 +128,7 @@ size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
 
 void JSArrayBuffer::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
   if (!self->data_) {
@@ -139,13 +139,13 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Internal,
       "backingStore",
-      gc->getNativeID(self->data_));
+      gc.getNativeID(self->data_));
   // The backing store just has numbers, so there's no edges to add here.
 }
 
 void JSArrayBuffer::_snapshotAddNodesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
   if (!self->data_) {
@@ -156,14 +156,14 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
-      gc->getNativeID(self->data_),
+      gc.getNativeID(self->data_),
       self->size_,
       0);
 }
 
-void JSArrayBuffer::detach(GC *gc) {
+void JSArrayBuffer::detach(GC &gc) {
   if (data_) {
-    gc->debitExternalMemory(this, size_);
+    gc.debitExternalMemory(this, size_);
     free(data_);
     data_ = nullptr;
     size_ = 0;
@@ -177,7 +177,7 @@ void JSArrayBuffer::detach(GC *gc) {
 
 ExecutionStatus
 JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
-  detach(&runtime.getHeap());
+  detach(runtime.getHeap());
   if (size == 0) {
     // Even though there is no storage allocated, the spec requires an empty
     // ArrayBuffer to still be considered as attached.

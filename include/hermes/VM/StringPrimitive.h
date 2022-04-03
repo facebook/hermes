@@ -358,7 +358,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
     lengthAndUniquedFlag_ &= ~LENGTH_FLAG_UNIQUED;
   }
 
-  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+  static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
 };
 
 /// A subclass of StringPrimitive which stores a SymbolID.
@@ -602,14 +602,14 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   }
 
   // Finalizer to clean up the malloc'ed string.
-  static void _finalizeImpl(GCCell *cell, GC *gc);
+  static void _finalizeImpl(GCCell *cell, GC &gc);
 
   /// \return the size of the external memory associated with \p cell, which is
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
   /// The backing storage of this string. Note that the string's length is fixed
   /// and must always be equal to StringPrimitive::getStringLength().
@@ -687,7 +687,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       Handle<ExternalStringPrimitive<T>> concatBuffer)
       : StringPrimitive(length) {
     concatBufferHV_.set(
-        HermesValue::encodeObjectValue(*concatBuffer), &runtime.getHeap());
+        HermesValue::encodeObjectValue(*concatBuffer), runtime.getHeap());
     assert(
         concatBuffer->contents_.size() >= length &&
         "length exceeds size of concatenation buffer");
@@ -743,8 +743,8 @@ class BufferedStringPrimitive final : public StringPrimitive {
     return vmcast<ExternalStringPrimitive<T>>(concatBufferHV_);
   }
 
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
   /// Reference to an ExternalStringPrimitive used as a concatenation buffer.
   /// Every concatenation appends to it and allocates a new

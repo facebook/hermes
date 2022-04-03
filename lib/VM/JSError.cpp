@@ -363,7 +363,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
     }
     auto shv =
         SmallHermesValue::encodeHermesValue(name.getHermesValue(), runtime);
-    names->set(namesIndex, shv, &runtime.getHeap());
+    names->set(namesIndex, shv, runtime.getHeap());
     ++namesIndex;
     gcScope.flushToMarker(marker);
   }
@@ -451,7 +451,7 @@ ExecutionStatus JSError::recordStackTrace(
       stack->emplace_back(nullptr, 0);
     }
   }
-  selfHandle->domains_.set(runtime, domains.get(), &runtime.getHeap());
+  selfHandle->domains_.set(runtime, domains.get(), runtime.getHeap());
 
   // Remove the last entry.
   stack->pop_back();
@@ -465,7 +465,7 @@ ExecutionStatus JSError::recordStackTrace(
       "Function names and stack trace must have same size.");
 
   selfHandle->stacktrace_ = std::move(stack);
-  selfHandle->funcNames_.set(runtime, *funcNames, &runtime.getHeap());
+  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -764,7 +764,7 @@ void JSError::popFramesUntilInclusive(
   }
 }
 
-void JSError::_finalizeImpl(GCCell *cell, GC *) {
+void JSError::_finalizeImpl(GCCell *cell, GC &) {
   JSError *self = vmcast<JSError>(cell);
   self->~JSError();
 }

@@ -23,18 +23,18 @@ TEST_F(CopyableVectorTest, PushBackInt) {
     CopyableVector<int> v;
     EXPECT_TRUE(v.empty());
 
-    v.push_back(42, &runtime.getHeap());
+    v.push_back(42, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(1, v.size());
     EXPECT_EQ(42, v[0]);
 
-    v.push_back(43, &runtime.getHeap());
+    v.push_back(43, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(2, v.size());
     EXPECT_EQ(42, v[0]);
     EXPECT_EQ(43, v[1]);
 
-    v.push_back(44, &runtime.getHeap());
+    v.push_back(44, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(3, v.size());
     EXPECT_EQ(42, v[0]);
@@ -47,18 +47,18 @@ TEST_F(CopyableVectorTest, PushBackInt) {
     v.reserve(10);
     EXPECT_TRUE(v.empty());
 
-    v.push_back(42, &runtime.getHeap());
+    v.push_back(42, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(1, v.size());
     EXPECT_EQ(42, v[0]);
 
-    v.push_back(43, &runtime.getHeap());
+    v.push_back(43, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(2, v.size());
     EXPECT_EQ(42, v[0]);
     EXPECT_EQ(43, v[1]);
 
-    v.push_back(44, &runtime.getHeap());
+    v.push_back(44, runtime.getHeap());
     EXPECT_FALSE(v.empty());
     EXPECT_EQ(3, v.size());
     EXPECT_EQ(42, v[0]);
@@ -112,11 +112,11 @@ TEST_F(CopyableVectorTest, PushBackStruct) {
   };
 
   CopyableVector<Elem> v;
-  v.push_back({100, 200}, &runtime.getHeap());
+  v.push_back({100, 200}, runtime.getHeap());
   EXPECT_EQ(1, v.size());
   EXPECT_EQ(100, v[0].x);
   EXPECT_EQ(200, v[0].y);
-  v.push_back({101, 201}, &runtime.getHeap());
+  v.push_back({101, 201}, runtime.getHeap());
   EXPECT_EQ(2, v.size());
   EXPECT_EQ(100, v[0].x);
   EXPECT_EQ(200, v[0].y);
@@ -126,10 +126,10 @@ TEST_F(CopyableVectorTest, PushBackStruct) {
 
 TEST_F(CopyableVectorTest, Pop) {
   CopyableVector<int> v;
-  v.push_back(10, &runtime.getHeap());
-  v.push_back(11, &runtime.getHeap());
-  v.push_back(12, &runtime.getHeap());
-  v.push_back(13, &runtime.getHeap());
+  v.push_back(10, runtime.getHeap());
+  v.push_back(11, runtime.getHeap());
+  v.push_back(12, runtime.getHeap());
+  v.push_back(13, runtime.getHeap());
   EXPECT_EQ(4, v.size());
 
   v.pop_back();
@@ -156,10 +156,10 @@ TEST_F(CopyableVectorTest, Iteration) {
   EXPECT_EQ(v.begin(), v.end());
   EXPECT_TRUE(v.empty());
 
-  v.push_back(10, &runtime.getHeap());
-  v.push_back(11, &runtime.getHeap());
-  v.push_back(12, &runtime.getHeap());
-  v.push_back(13, &runtime.getHeap());
+  v.push_back(10, runtime.getHeap());
+  v.push_back(11, runtime.getHeap());
+  v.push_back(12, runtime.getHeap());
+  v.push_back(13, runtime.getHeap());
 
   {
     int sum = 0;
@@ -191,7 +191,7 @@ TEST_F(CopyableVectorTest, PushPop) {
   EXPECT_TRUE(v.empty());
   EXPECT_EQ(1, v.capacity());
   for (int i = 0; i < 1000; ++i) {
-    v.push_back(i, &runtime.getHeap());
+    v.push_back(i, runtime.getHeap());
     EXPECT_EQ(i, v[0]);
     EXPECT_EQ(1, v.size());
     EXPECT_EQ(1, v.capacity());
@@ -206,7 +206,7 @@ TEST_F(CopyableVectorTest, MovePush) {
   CopyableVector<std::unique_ptr<int>> v(1);
   for (uint32_t i = 0; i < 10; ++i) {
     std::unique_ptr<int> ref = std::unique_ptr<int>(new int(i));
-    v.push_back(std::move(ref), &runtime.getHeap());
+    v.push_back(std::move(ref), runtime.getHeap());
   }
   EXPECT_EQ(10, v.size());
   for (uint32_t i = 0; i < 10; ++i) {
@@ -222,7 +222,7 @@ TEST_F(CopyableVectorTest, NonTrivialTest) {
 
     // Ensure that pushing back and growing has proper memory management.
     for (uint32_t i = 0; i < 10; ++i) {
-      v.push_back(ref, &runtime.getHeap());
+      v.push_back(ref, runtime.getHeap());
       EXPECT_EQ(i + 2, ref.use_count());
     }
 

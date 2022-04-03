@@ -86,7 +86,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
   {
     GCHVType *from = self->data() + fromFirst;
     GCHVType *to = newSelf->data() + toFirst;
-    GCHVType::uninitialized_copy(from, from + copySize, to, &runtime.getHeap());
+    GCHVType::uninitialized_copy(from, from + copySize, to, runtime.getHeap());
   }
 
   // Initialize the elements before the first copied element.
@@ -94,7 +94,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
       newSelf->data(),
       newSelf->data() + toFirst,
       HVType::encodeEmptyValue(),
-      &runtime.getHeap());
+      runtime.getHeap());
 
   // Initialize the elements after the last copied element and toLast.
   if (toFirst + copySize < toLast) {
@@ -102,7 +102,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
         HVType::encodeEmptyValue(),
-        &runtime.getHeap());
+        runtime.getHeap());
   }
 
   newSelf->size_.store(toLast, std::memory_order_release);
@@ -116,7 +116,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
 template <typename HVType>
 void ArrayStorageBase<HVType>::resizeWithinCapacity(
     ArrayStorageBase<HVType> *self,
-    GC *gc,
+    GC &gc,
     size_type newSize) {
   assert(
       newSize <= self->capacity() &&
@@ -168,7 +168,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst,
-          &runtime.getHeap());
+          runtime.getHeap());
     } else if (fromFirst < toFirst) {
       // Copying to the right, need to copy backwards to avoid overwriting what
       // is being copied.
@@ -176,7 +176,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst + copySize,
-          &runtime.getHeap());
+          runtime.getHeap());
     }
 
     // Initialize the elements which were emptied in front.
@@ -184,7 +184,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
         self->data(),
         self->data() + toFirst,
         HVType::encodeEmptyValue(),
-        &runtime.getHeap());
+        runtime.getHeap());
 
     // Initialize the elements between the last copied element and toLast.
     if (toFirst + copySize < toLast) {
@@ -192,14 +192,14 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + toFirst + copySize,
           self->data() + toLast,
           HVType::encodeEmptyValue(),
-          &runtime.getHeap());
+          runtime.getHeap());
     }
     if (toLast < self->size()) {
       // Some elements are becoming unreachable, let the GC know.
       GCHVType::rangeUnreachableWriteBarrier(
           self->data() + toLast,
           self->data() + self->size(),
-          &runtime.getHeap());
+          runtime.getHeap());
     }
     self->size_.store(toLast, std::memory_order_release);
     return ExecutionStatus::RETURNED;
@@ -242,7 +242,7 @@ ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
     return ExecutionStatus::EXCEPTION;
   }
   auto hv = HVType::encodeHermesValue(*value, runtime);
-  selfHandle->set(size, hv, &runtime.getHeap());
+  selfHandle->set(size, hv, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 

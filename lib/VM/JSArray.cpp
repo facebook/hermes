@@ -30,12 +30,12 @@ void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 void ArrayImpl::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<ArrayImpl>(cell);
   // Add the super type's edges too.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
-  if (!self->getIndexedStorage(gc->getPointerBase())) {
+  if (!self->getIndexedStorage(gc.getPointerBase())) {
     return;
   }
 
@@ -44,13 +44,13 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Internal,
       "elements",
-      gc->getObjectID(self->getIndexedStorage(gc->getPointerBase())));
-  auto *const indexedStorage = self->getIndexedStorage(gc->getPointerBase());
+      gc.getObjectID(self->getIndexedStorage(gc.getPointerBase())));
+  auto *const indexedStorage = self->getIndexedStorage(gc.getPointerBase());
   const auto beginIndex = self->beginIndex_;
   const auto endIndex = self->endIndex_;
   for (uint32_t i = beginIndex; i < endIndex; i++) {
     const auto &elem = indexedStorage->at(i - beginIndex);
-    const llvh::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
+    const llvh::Optional<HeapSnapshot::NodeID> elemID = gc.getSnapshotID(elem);
     if (!elemID) {
       continue;
     }
@@ -137,8 +137,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       return ExecutionStatus::EXCEPTION;
     }
     auto newStorage = runtime.makeHandle<StorageType>(std::move(*arrRes));
-    selfHandle->setIndexedStorage(
-        runtime, newStorage.get(), &runtime.getHeap());
+    selfHandle->setIndexedStorage(runtime, newStorage.get(), runtime.getHeap());
     selfHandle->beginIndex_ = 0;
     selfHandle->endIndex_ = newLength;
     return ExecutionStatus::RETURNED;
@@ -154,7 +153,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       // the new length is prior to beginIndex, clearing the storage.
       selfHandle->endIndex_ = beginIndex;
       // Remove the storage. If this array grows again it can be re-allocated.
-      self->setIndexedStorage(runtime, nullptr, &runtime.getHeap());
+      self->setIndexedStorage(runtime, nullptr, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
       selfHandle->endIndex_ = newLength;
@@ -173,7 +172,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
   }
   selfHandle->endIndex_ = newLength;
   selfHandle->setIndexedStorage(
-      runtime, indexedStorage.get(), &runtime.getHeap());
+      runtime, indexedStorage.get(), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -192,7 +191,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
   // Check whether the index is within the storage.
   if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
     self->getIndexedStorage(runtime)->set(
-        index - beginIndex, value.get(), &runtime.getHeap());
+        index - beginIndex, value.get(), runtime.getHeap());
     return true;
   }
 
@@ -207,10 +206,10 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
     self = vmcast<ArrayImpl>(selfHandle.get());
 
-    self->setIndexedStorage(runtime, newStorage.get(), &runtime.getHeap());
+    self->setIndexedStorage(runtime, newStorage.get(), runtime.getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
-    newStorage->set(0, value.get(), &runtime.getHeap());
+    newStorage->set(0, value.get(), runtime.getHeap());
     return true;
   }
 
@@ -224,7 +223,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
-      indexedStorage->set(index - beginIndex, value.get(), &runtime.getHeap());
+      indexedStorage->set(index - beginIndex, value.get(), runtime.getHeap());
       return true;
     }
   }
@@ -240,7 +239,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorageHandle->set(0, value.getHermesValue(), &runtime.getHeap());
+    indexedStorageHandle->set(0, value.getHermesValue(), runtime.getHeap());
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
@@ -279,7 +278,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->endIndex_ = index + 1;
     indexedStorageHandle->set(
-        index - beginIndex, value.get(), &runtime.getHeap());
+        index - beginIndex, value.get(), runtime.getHeap());
   } else {
     // Extending to the left. 'index' will become the new 'beginIndex'.
     assert(index < beginIndex);
@@ -293,12 +292,12 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
-    indexedStorageHandle->set(0, value.get(), &runtime.getHeap());
+    indexedStorageHandle->set(0, value.get(), runtime.getHeap());
   }
 
   // Update the potentially changed pointer.
   self->setIndexedStorage(
-      runtime, indexedStorageHandle.get(), &runtime.getHeap());
+      runtime, indexedStorageHandle.get(), runtime.getHeap());
   return true;
 }
 
@@ -320,7 +319,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     indexedStorage->setNonPtr(
         index - self->beginIndex_,
         HermesValue::encodeEmptyValue(),
-        &runtime.getHeap());
+        runtime.getHeap());
   }
 
   return true;
@@ -389,7 +388,7 @@ CallResult<Handle<Arguments>> Arguments::create(
     auto arrRes = StorageType::create(runtime, length);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-    selfHandle->setIndexedStorage(runtime, arrRes->get(), &runtime.getHeap());
+    selfHandle->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
   }
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -542,7 +541,7 @@ CallResult<Handle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    self->setIndexedStorage(runtime, arrRes->get(), &runtime.getHeap());
+    self->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
   }
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
   putLength(self.get(), runtime, shv);
@@ -786,7 +785,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // 10. If index ≥ len, then
     // a. Set the value of the [[IteratedObject]] internal slot of O to
     // undefined.
-    self->iteratedObject_.setNull(&runtime.getHeap());
+    self->iteratedObject_.setNull(runtime.getHeap());
     // b. Return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();

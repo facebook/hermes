@@ -30,11 +30,11 @@ TEST(CastingTest, SmokeTest) {
   const auto SHVTAG2 = SmallHermesValue::encodeSymbolValue(TAG2);
 
   auto h1 =
-      runtime.makeHandle(ArrayStorage::createForTest(&runtime.getHeap(), 1));
-  h1->set(0, HVTAG1, &runtime.getHeap());
+      runtime.makeHandle(ArrayStorage::createForTest(runtime.getHeap(), 1));
+  h1->set(0, HVTAG1, runtime.getHeap());
   auto h2 = runtime.makeHandle(
-      ArrayStorageSmall::createForTest(&runtime.getHeap(), 1));
-  h2->set(0, SHVTAG2, &runtime.getHeap());
+      ArrayStorageSmall::createForTest(runtime.getHeap(), 1));
+  h2->set(0, SHVTAG2, runtime.getHeap());
 
   GCCell *p1 = h1.get();
   GCCell *p2 = h2.get();

@@ -164,11 +164,11 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   return "";
 }
 
-void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC *gc) {
+void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC &gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
       assert(
-          !gc->inYoungGen(vectorEntry.getStringPrimRef()) &&
+          !gc.inYoungGen(vectorEntry.getStringPrimRef()) &&
           "Identifiers must be allocated in the old gen");
       acceptor.acceptPtr(vectorEntry.getStringPrimRef());
     }

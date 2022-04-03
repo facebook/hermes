@@ -47,7 +47,7 @@ class JSMapImpl final : public JSObject {
       return ExecutionStatus::EXCEPTION;
     }
     auto storageHandle = runtime.makeHandle<OrderedHashMap>(std::move(*crtRes));
-    self->storage_.set(runtime, storageHandle.get(), &runtime.getHeap());
+    self->storage_.set(runtime, storageHandle.get(), runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
 
@@ -191,7 +191,7 @@ class JSMapIteratorImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data,
       IterationKind kind) {
-    data_.set(runtime, data.get(), &runtime.getHeap());
+    data_.set(runtime, data.get(), runtime.getHeap());
     iterationKind_ = kind;
 
     assert(data_ && "Invalid storage data");
@@ -217,7 +217,7 @@ class JSMapIteratorImpl final : public JSObject {
           runtime,
           self->data_.getNonNull(runtime)->iteratorNext(
               runtime, self->itr_.get(runtime)),
-          &runtime.getHeap());
+          runtime.getHeap());
       if (self->itr_) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
@@ -249,7 +249,7 @@ class JSMapIteratorImpl final : public JSObject {
         // If the next element in the iterator is invalid, we have
         // reached the end.
         self->iterationFinished_ = true;
-        self->data_.setNull(&runtime.getHeap());
+        self->data_.setNull(runtime.getHeap());
       }
     }
     return createIterResultObject(runtime, value, self->iterationFinished_)

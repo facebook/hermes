@@ -383,7 +383,7 @@ class HadesGC final : public GCBase {
 
   class OldGen final {
    public:
-    explicit OldGen(HadesGC *gc);
+    explicit OldGen(HadesGC &gc);
 
     std::deque<HeapSegment>::iterator begin();
     std::deque<HeapSegment>::iterator end();
@@ -454,8 +454,7 @@ class HadesGC final : public GCBase {
     /// Add some external memory cost to the OG.
     void creditExternalMemory(uint32_t size) {
       assert(
-          gc_->gcMutex_ &&
-          "OG external bytes must be accessed under gcMutex_.");
+          gc_.gcMutex_ && "OG external bytes must be accessed under gcMutex_.");
       externalBytes_ += size;
     }
 
@@ -464,8 +463,7 @@ class HadesGC final : public GCBase {
       assert(
           externalBytes_ >= size && "Debiting more memory than was credited");
       assert(
-          gc_->gcMutex_ &&
-          "OG external bytes must be accessed under gcMutex_.");
+          gc_.gcMutex_ && "OG external bytes must be accessed under gcMutex_.");
       externalBytes_ -= size;
     }
 
@@ -548,7 +546,7 @@ class HadesGC final : public GCBase {
         char *freeRangeEnd,
         bool setHead);
 
-    HadesGC *gc_;
+    HadesGC &gc_;
 
     /// Use a std::deque instead of a std::vector so that references into it
     /// remain valid across a push_back.

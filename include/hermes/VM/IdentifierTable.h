@@ -147,7 +147,7 @@ class IdentifierTable {
   }
 
   /// Mark all identifiers for the garbage collector.
-  void markIdentifiers(RootAcceptor &acceptor, GC *gc);
+  void markIdentifiers(RootAcceptor &acceptor, GC &gc);
 
   /// Add native nodes and edges to heap snapshots.
   void snapshotAddNodes(HeapSnapshot &snap);

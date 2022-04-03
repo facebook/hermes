@@ -57,12 +57,12 @@ template <class T>
 class WeakRef : public WeakRefBase {
  public:
   using Traits = HermesValueTraits<T>;
-  explicit WeakRef(GC *gc, typename Traits::value_type value)
-      : WeakRefBase(gc->allocWeakSlot(Traits::encode(value))) {
+  explicit WeakRef(GC &gc, typename Traits::value_type value)
+      : WeakRefBase(gc.allocWeakSlot(Traits::encode(value))) {
     HermesValueCast<T>::assertValid(slot_->value());
   }
 
-  explicit WeakRef(GC *gc, Handle<T> handle) : WeakRef(gc, *handle) {}
+  explicit WeakRef(GC &gc, Handle<T> handle) : WeakRef(gc, *handle) {}
 
   /// Used only by hash tables to allow for special WeakRef creation.
   /// In particular, this makes tombstone and empty values in the hash table.
@@ -88,13 +88,13 @@ class WeakRef : public WeakRefBase {
   /// The weak ref may be invalid, in which case an "empty" value is returned.
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
-  OptValue<typename Traits::value_type> unsafeGetOptional(GC *gc) const {
+  OptValue<typename Traits::value_type> unsafeGetOptional(GC &gc) const {
     if (!isValid()) {
       return OptValue<typename Traits::value_type>(llvh::None);
     }
 
     const HermesValue value = slot_->value();
-    gc->weakRefReadBarrier(value);
+    gc.weakRefReadBarrier(value);
     return Traits::decode(value);
   }
 
@@ -113,7 +113,7 @@ class WeakRef : public WeakRefBase {
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
-  llvh::Optional<Handle<T>> get(HandleRootOwner &runtime, GC *gc) const {
+  llvh::Optional<Handle<T>> get(HandleRootOwner &runtime, GC &gc) const {
     if (const auto optValue = unsafeGetOptional(gc)) {
       return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
     }
@@ -130,7 +130,7 @@ class WeakRef : public WeakRefBase {
 /// Defined as a free function to avoid template errors.
 template <typename T>
 inline typename std::enable_if<!std::is_same<T, HermesValue>::value, T *>::type
-getNoHandle(const WeakRef<T> &wr, GC *gc) {
+getNoHandle(const WeakRef<T> &wr, GC &gc) {
   if (const auto hv = wr.unsafeGetOptional(gc)) {
     return ::hermes::vm::vmcast_or_null<T>(hv.getValue());
   }

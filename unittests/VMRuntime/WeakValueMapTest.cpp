@@ -33,7 +33,7 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   auto wvpPtr = std::make_shared<WeakValueMap<int, JSNumber>>();
   auto &wvp = *wvpPtr;
 
-  auto dummyObj = runtime.makeHandle(DummyObject::create(&runtime.getHeap()));
+  auto dummyObj = runtime.makeHandle(DummyObject::create(runtime.getHeap()));
   dummyObj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
       [wvpPtr](GCCell *, WeakRefAcceptor &acceptor) {
         wvpPtr->markWeakRefs(acceptor);
@@ -57,11 +57,11 @@ TEST_F(WeakValueMapTest, SmokeTest) {
 
   gcScope.flushToMarker(marker);
 
-  EXPECT_TRUE(wvp.insertNew(&runtime.getHeap(), 1, h1));
-  EXPECT_TRUE(wvp.insertNew(&runtime.getHeap(), 2, h2));
-  EXPECT_TRUE(wvp.insertNew(&runtime.getHeap(), 3, h3));
-  EXPECT_FALSE(wvp.insertNew(&runtime.getHeap(), 2, h2));
-  EXPECT_FALSE(wvp.insertNew(&runtime.getHeap(), 3, h3));
+  EXPECT_TRUE(wvp.insertNew(runtime.getHeap(), 1, h1));
+  EXPECT_TRUE(wvp.insertNew(runtime.getHeap(), 2, h2));
+  EXPECT_TRUE(wvp.insertNew(runtime.getHeap(), 3, h3));
+  EXPECT_FALSE(wvp.insertNew(runtime.getHeap(), 2, h2));
+  EXPECT_FALSE(wvp.insertNew(runtime.getHeap(), 3, h3));
 
   // Make sure enumaration covers all cases.
   {
@@ -74,15 +74,15 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   // Validate erase. Erase 1 and 2.
   ASSERT_TRUE(wvp.containsKey(1));
   ASSERT_TRUE(wvp.containsKey(2));
-  wvp.erase(1, &runtime.getHeap());
+  wvp.erase(1, runtime.getHeap());
   ASSERT_FALSE(wvp.containsKey(1));
-  ASSERT_FALSE(wvp.erase(1, &runtime.getHeap()));
-  ASSERT_TRUE(wvp.erase(2, &runtime.getHeap()));
+  ASSERT_FALSE(wvp.erase(1, runtime.getHeap()));
+  ASSERT_TRUE(wvp.erase(2, runtime.getHeap()));
   ASSERT_FALSE(wvp.containsKey(2));
 
   // Add 1 and 2 again.
-  EXPECT_TRUE(wvp.insertNew(&runtime.getHeap(), 1, h1));
-  EXPECT_TRUE(wvp.insertNew(&runtime.getHeap(), 2, h2));
+  EXPECT_TRUE(wvp.insertNew(runtime.getHeap(), 1, h1));
+  EXPECT_TRUE(wvp.insertNew(runtime.getHeap(), 2, h2));
 
   // Now make sure 1 gets garbage collected.
   ASSERT_TRUE(wvp.containsKey(1));
@@ -119,8 +119,8 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   ASSERT_TRUE(wvp.containsKey(3));
 
   // Test lookup.
-  ASSERT_TRUE(wvp.lookup(runtime, &runtime.getHeap(), 3));
-  ASSERT_FALSE(wvp.lookup(runtime, &runtime.getHeap(), 300));
+  ASSERT_TRUE(wvp.lookup(runtime, runtime.getHeap(), 3));
+  ASSERT_FALSE(wvp.lookup(runtime, runtime.getHeap(), 300));
 }
 } // namespace
 

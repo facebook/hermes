@@ -61,7 +61,7 @@ PseudoHandle<DecoratedObject> DecoratedObject::create(
 }
 
 // static
-void DecoratedObject::_finalizeImpl(GCCell *cell, GC *) {
+void DecoratedObject::_finalizeImpl(GCCell *cell, GC &) {
   auto *self = vmcast<DecoratedObject>(cell);
   self->~DecoratedObject();
 }

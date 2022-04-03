@@ -33,7 +33,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     // No allocations should occur while a WeakRefKey is live.
     NoAllocScope noAlloc{runtime};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{&runtime.getHeap(), key},
+        WeakRef<JSObject>{runtime.getHeap(), key},
         runtime.gcStableHashHermesValue(key));
     DenseMapT::iterator it = self->map_.find(mapKey);
 
@@ -43,7 +43,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
           it->second < self->valueStorage_.getNonNull(runtime)->size() &&
           "invalid index");
       self->valueStorage_.getNonNull(runtime)->set(
-          it->second, *value, &runtime.getHeap());
+          it->second, *value, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -61,14 +61,14 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     // Holding the WeakRefLock will prevent the weak ref from getting cleared.
     WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{&runtime.getHeap(), key},
+        WeakRef<JSObject>{runtime.getHeap(), key},
         runtime.gcStableHashHermesValue(key));
     auto result = self->map_.try_emplace(mapKey, i);
     (void)result;
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.getNonNull(runtime)->set(i, *value, &runtime.getHeap());
+  self->valueStorage_.getNonNull(runtime)->set(i, *value, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -81,43 +81,43 @@ bool JSWeakMapImplBase::deleteValue(
   WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime.getHeap(), key},
+      WeakRef<JSObject>{runtime.getHeap(), key},
       runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return false;
   }
-  self->deleteInternal(runtime, &runtime.getHeap(), it);
+  self->deleteInternal(runtime, runtime.getHeap(), it);
   return true;
 }
 
 // Only during GC.
-bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
-  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
+bool JSWeakMapImplBase::clearEntryDirect(GC &gc, const WeakRefKey &key) {
+  assert(gc.calledByGC() && "Should only be used by the GC implementation.");
   DenseMapT::iterator it = map_.find(key);
   if (it == map_.end()) {
     return false;
   }
   it->first.ref.clear();
-  valueStorage_.get(gc->getPointerBase())
+  valueStorage_.get(gc.getPointerBase())
       ->atRef(it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
   return true;
 }
 
 GCHermesValue *JSWeakMapImplBase::getValueDirect(
-    GC *gc,
+    GC &gc,
     const WeakRefKey &key) {
-  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
+  assert(gc.calledByGC() && "Should only be used by the GC implementation.");
   DenseMapT::iterator it = map_.find(key);
   if (it == map_.end()) {
     return nullptr;
   }
-  return &valueStorage_.get(gc->getPointerBase())->atRef(it->second);
+  return &valueStorage_.get(gc.getPointerBase())->atRef(it->second);
 }
 
-GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
-  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
+GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC &gc) {
+  assert(gc.calledByGC() && "Should only be used by the GC implementation.");
   return valueStorage_;
 }
 
@@ -128,7 +128,7 @@ bool JSWeakMapImplBase::hasValue(
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime.getHeap(), key},
+      WeakRef<JSObject>{runtime.getHeap(), key},
       runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find_as(mapKey);
   return it != self->map_.end();
@@ -140,7 +140,7 @@ HermesValue JSWeakMapImplBase::getValue(
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{&runtime.getHeap(), key},
+      WeakRef<JSObject>{runtime.getHeap(), key},
       runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
@@ -151,7 +151,7 @@ HermesValue JSWeakMapImplBase::getValue(
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
     PointerBase &base,
-    GC *gc,
+    GC &gc,
     JSWeakMapImplBase *self) {
   /// Free up any freeable slots, so the count is more accurate.
   if (self->hasFreeableSlots_) {
@@ -169,8 +169,8 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
   return KeyIterator{map_.end()};
 }
 
-JSObject *detail::WeakRefKey::getObjectInGC(GC *gc) const {
-  assert(gc->calledByGC() && "Should only be used by the GC implementation.");
+JSObject *detail::WeakRefKey::getObjectInGC(GC &gc) const {
+  assert(gc.calledByGC() && "Should only be used by the GC implementation.");
   const auto ptrOpt = ref.unsafeGetOptionalNoReadBarrier();
   if (!ptrOpt)
     return nullptr;
@@ -196,10 +196,10 @@ void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   }
 }
 
-HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC *gc) {
+HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC &gc) {
   assert(map_.size() && "Shouldn't call getMapID on an empty map");
-  GCBase::IDTracker &tracker = gc->getIDTracker();
-  const auto id = gc->getObjectID(this);
+  GCBase::IDTracker &tracker = gc.getIDTracker();
+  const auto id = gc.getObjectID(this);
   auto &nativeIDList = tracker.getExtraNativeIDs(id);
   if (nativeIDList.empty()) {
     nativeIDList.push_back(tracker.nextNativeID());
@@ -209,7 +209,7 @@ HeapSnapshot::NodeID JSWeakMapImplBase::getMapID(GC *gc) {
 
 void JSWeakMapImplBase::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSWeakMapImplBase>(cell);
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
@@ -221,7 +221,7 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
 
 void JSWeakMapImplBase::_snapshotAddNodesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSWeakMapImplBase>(cell);
   if (self->map_.size()) {
@@ -236,8 +236,8 @@ void JSWeakMapImplBase::_snapshotAddNodesImpl(
 }
 
 /// Mark weak references and remove any invalid weak refs.
-void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase &base, GC *gc) {
-  WeakRefLock lk{gc->weakRefMutex()};
+void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase &base, GC &gc) {
+  WeakRefLock lk{gc.weakRefMutex()};
   for (auto it = map_.begin(); it != map_.end(); ++it) {
     if (!it->first.ref.isValid()) {
       // If invalid, clear the value and remove the key from the map.
@@ -249,7 +249,7 @@ void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase &base, GC *gc) {
 
 void JSWeakMapImplBase::deleteInternal(
     PointerBase &base,
-    GC *gc,
+    GC &gc,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
   valueStorage_.getNonNull(base)->setNonPtr(
@@ -264,7 +264,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
-    self->findAndDeleteFreeSlots(runtime, &runtime.getHeap());
+    self->findAndDeleteFreeSlots(runtime, runtime.getHeap());
   }
 
   // Index in valueStorage_ in which to place the new element.
@@ -307,7 +307,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   assert(i < storageHandle->size() && "invalid index");
-  self->valueStorage_.setNonNull(runtime, *storageHandle, &runtime.getHeap());
+  self->valueStorage_.setNonNull(runtime, *storageHandle, runtime.getHeap());
 
   return i;
 }

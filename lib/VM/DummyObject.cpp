@@ -24,7 +24,7 @@ const VTable DummyObject::vt{
     _mallocSizeImpl,
     nullptr};
 
-DummyObject::DummyObject(GC *gc) : other(), x(1), y(2) {
+DummyObject::DummyObject(GC &gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
   hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
@@ -33,38 +33,38 @@ DummyObject::DummyObject(GC *gc) : other(), x(1), y(2) {
   hvNull.setNonPtr(HermesValue::encodeNullValue(), gc);
 }
 
-void DummyObject::acquireExtMem(GC *gc, uint32_t sz) {
+void DummyObject::acquireExtMem(GC &gc, uint32_t sz) {
   assert(externalBytes == 0);
   externalBytes = sz;
-  gc->creditExternalMemory(this, sz);
+  gc.creditExternalMemory(this, sz);
 }
-void DummyObject::releaseExtMem(GC *gc) {
-  gc->debitExternalMemory(this, externalBytes);
+void DummyObject::releaseExtMem(GC &gc) {
+  gc.debitExternalMemory(this, externalBytes);
   externalBytes = 0;
 }
 
-void DummyObject::setPointer(GC *gc, DummyObject *obj) {
-  other.set(gc->getPointerBase(), obj, gc);
+void DummyObject::setPointer(GC &gc, DummyObject *obj) {
+  other.set(gc.getPointerBase(), obj, gc);
 }
 
 /* static */ constexpr CellKind DummyObject::getCellKind() {
   return CellKind::DummyObjectKind;
 }
 
-DummyObject *DummyObject::create(GC *gc) {
-  auto *cell = gc->makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
+DummyObject *DummyObject::create(GC &gc) {
+  auto *cell = gc.makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
   cell->weak.emplace(gc, cell);
   return cell;
 }
-DummyObject *DummyObject::createLongLived(GC *gc) {
-  return gc->makeAFixed<DummyObject, HasFinalizer::Yes, LongLived::Yes>(gc);
+DummyObject *DummyObject::createLongLived(GC &gc) {
+  return gc.makeAFixed<DummyObject, HasFinalizer::Yes, LongLived::Yes>(gc);
 }
 
 bool DummyObject::classof(const GCCell *cell) {
   return cell->getKind() == CellKind::DummyObjectKind;
 }
 
-void DummyObject::_finalizeImpl(GCCell *cell, GC *gc) {
+void DummyObject::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<DummyObject>(cell);
   if (self->finalizerCallback)
     (*self->finalizerCallback)();

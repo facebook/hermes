@@ -162,7 +162,7 @@ class CopyableVector {
   /// Push a new element on the vector.
   /// If this requires a resize, moves the underlying elements into a newly
   /// allocated region.
-  void push_back(const T &elem, GC *gc) {
+  void push_back(const T &elem, GC &gc) {
     if (LLVM_UNLIKELY(size_ == capacity_)) {
       grow(gc);
     }
@@ -173,7 +173,7 @@ class CopyableVector {
   /// Push a new element on the vector.
   /// If this requires a resize, moves the underlying elements into a newly
   /// allocated region.
-  void push_back(T &&elem, GC *gc) {
+  void push_back(T &&elem, GC &gc) {
     if (LLVM_UNLIKELY(size_ == capacity_)) {
       grow(gc);
     }
@@ -204,12 +204,12 @@ class CopyableVector {
  private:
   /// Grow the vector storage according to its growth strategy.
   /// Trigger OOM on \p gc on overflow.
-  void grow(GC *gc) {
+  void grow(GC &gc) {
     // Grow by a factor of 1.5, rounding up.
     size_t desired = capacity_ + (capacity_ - capacity_ / 2u);
     if (desired < capacity_ || desired > kMaxCapacity) {
       // Overflow.
-      gc->oom(make_error_code(OOMError::CopyableVectorCapacityIntegerOverflow));
+      gc.oom(make_error_code(OOMError::CopyableVectorCapacityIntegerOverflow));
     }
     setCapacity(std::max<size_type>(1u, desired));
   }

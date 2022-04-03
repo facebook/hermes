@@ -19,13 +19,13 @@
 namespace hermes {
 namespace vm {
 
-void SmallHermesValueAdaptor::setInGC(SmallHermesValueAdaptor hv, GC *gc) {
+void SmallHermesValueAdaptor::setInGC(SmallHermesValueAdaptor hv, GC &gc) {
   HermesValue::setInGC(hv, gc);
 }
 
-void HermesValue32::setInGC(HermesValue32 hv, GC *gc) {
+void HermesValue32::setInGC(HermesValue32 hv, GC &gc) {
   setNoBarrier(hv);
-  assert(gc->calledByGC());
+  assert(gc.calledByGC());
 }
 
 HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {

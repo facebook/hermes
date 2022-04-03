@@ -119,7 +119,7 @@ class JSRegExp final : public JSObject {
         pattern_(
             runtime,
             runtime.getPredefinedString(Predefined::emptyString),
-            &runtime.getHeap()) {}
+            runtime.getHeap()) {}
 
  private:
   ~JSRegExp();
@@ -139,12 +139,12 @@ class JSRegExp final : public JSObject {
   regex::SyntaxFlags syntaxFlags_ = {};
 
   // Finalizer to clean up stored native regex
-  static void _finalizeImpl(GCCell *cell, GC *gc);
+  static void _finalizeImpl(GCCell *cell, GC &gc);
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 };
 
 static_assert(

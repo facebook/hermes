@@ -354,7 +354,7 @@ StringView StringPrimitive::createStringViewMustBeFlat(
   return StringView(self);
 }
 
-std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
+std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<StringPrimitive>(cell);
   // Only convert up to EXTERNAL_STRING_THRESHOLD characters, because large
   // strings can cause crashes in the snapshot visualizer.
@@ -499,12 +499,12 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 }
 
 template <typename T>
-void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
+void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC &gc) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
   // Remove the external string from the snapshot tracking system if it's being
   // tracked.
-  gc->getIDTracker().untrackNative(self->contents_.data());
-  gc->debitExternalMemory(self, self->calcExternalMemorySize());
+  gc.getIDTracker().untrackNative(self->contents_.data());
+  gc.debitExternalMemory(self, self->calcExternalMemorySize());
   self->~ExternalStringPrimitive<T>();
 }
 
@@ -517,26 +517,26 @@ size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
 template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Internal,
       "externalString",
-      gc->getNativeID(self->contents_.data()));
+      gc.getNativeID(self->contents_.data()));
 }
 
 template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.beginNode();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "ExternalStringPrimitive",
-      gc->getNativeID(self->contents_.data()),
+      gc.getNativeID(self->contents_.data()),
       self->contents_.size(),
       0);
 }
@@ -711,13 +711,13 @@ PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
 template <typename T>
 void BufferedStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {}
 
 template <typename T>
 void BufferedStringPrimitive<T>::_snapshotAddNodesImpl(
     GCCell *cell,
-    GC *gc,
+    GC &gc,
     HeapSnapshot &snap) {}
 
 template class BufferedStringPrimitive<char16_t>;

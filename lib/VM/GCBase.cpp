@@ -93,18 +93,18 @@ GCBase::GCBase(
 #endif
 }
 
-GCBase::GCCycle::GCCycle(GCBase *gc, std::string extraInfo)
-    : gc_(gc), extraInfo_(std::move(extraInfo)), previousInGC_(gc_->inGC_) {
+GCBase::GCCycle::GCCycle(GCBase &gc, std::string extraInfo)
+    : gc_(gc), extraInfo_(std::move(extraInfo)), previousInGC_(gc_.inGC_) {
   if (!previousInGC_) {
-    gc_->getCallbacks().onGCEvent(GCEventKind::CollectionStart, extraInfo_);
-    gc_->inGC_ = true;
+    gc_.getCallbacks().onGCEvent(GCEventKind::CollectionStart, extraInfo_);
+    gc_.inGC_ = true;
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (!previousInGC_) {
-    gc_->inGC_ = false;
-    gc_->getCallbacks().onGCEvent(GCEventKind::CollectionEnd, extraInfo_);
+    gc_.inGC_ = false;
+    gc_.getCallbacks().onGCEvent(GCEventKind::CollectionEnd, extraInfo_);
   }
 }
 
@@ -467,11 +467,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 } // namespace
 
-void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
+void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
   JSONEmitter json(os);
   HeapSnapshot snap(json, gcCallbacks_.getStackTracesTree());
 
-  const auto rootScan = [gc, &snap, this]() {
+  const auto rootScan = [&gc, &snap, this]() {
     {
       // Make the super root node and add edges to each root section.
       SnapshotRootSectionAcceptor rootSectionAcceptor(getPointerBase(), snap);
@@ -507,7 +507,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       // Within a root section, there might be duplicates. The root acceptor
       // filters out duplicate edges because there cannot be duplicate edges to
       // nodes reachable from the super root.
-      SnapshotRootAcceptor rootAcceptor(*gc, snap);
+      SnapshotRootAcceptor rootAcceptor(gc, snap);
       markRoots(rootAcceptor, true);
       markWeakRoots(rootAcceptor, /*markLongLived*/ true);
     }
@@ -542,11 +542,11 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
       primitiveAcceptor};
   // Add a node for each object in the heap.
   const auto snapshotForObject =
-      [&snap, &primitiveVisitor, gc, this](GCCell *cell) {
+      [&snap, &primitiveVisitor, &gc, this](GCCell *cell) {
         auto &allocationLocationTracker = getAllocationLocationTracker();
         // First add primitive nodes.
         markCellWithNames(primitiveVisitor, cell);
-        EdgeAddingAcceptor acceptor(*gc, snap);
+        EdgeAddingAcceptor acceptor(gc, snap);
         SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
         // Allow nodes to add extra nodes not in the JS heap.
         cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
@@ -557,15 +557,15 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
         cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
         auto stackTracesTreeNode =
             allocationLocationTracker.getStackTracesTreeNodeForAlloc(
-                gc->getObjectID(cell));
+                gc.getObjectID(cell));
         snap.endNode(
             cell->getVT()->snapshotMetaData.nodeType(),
             cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
-            gc->getObjectID(cell),
+            gc.getObjectID(cell),
             cell->getAllocatedSize(),
             stackTracesTreeNode ? stackTracesTreeNode->id : 0);
       };
-  gc->forAllObjs(snapshotForObject);
+  gc.forAllObjs(snapshotForObject);
   // Write the singleton number nodes into the snapshot.
   primitiveAcceptor.writeAllNodes();
   snap.endSection(HeapSnapshot::Section::Nodes);
@@ -584,7 +584,7 @@ void GCBase::createSnapshot(GC *gc, llvh::raw_ostream &os) {
   snap.endSection(HeapSnapshot::Section::Samples);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
-  forAllObjs([&snap, gc](GCCell *cell) {
+  forAllObjs([&snap, &gc](GCCell *cell) {
     cell->getVT()->snapshotMetaData.addLocations(cell, gc, snap);
   });
   snap.endSection(HeapSnapshot::Section::Locations);
@@ -942,7 +942,7 @@ GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 
 /*static*/
 std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
-    GC *gc,
+    GC &gc,
     JSWeakMap *weakMap) {
   std::vector<detail::WeakRefKey *> res;
   for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();

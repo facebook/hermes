@@ -90,10 +90,10 @@ class ArrayStorageBase final
   /// Make it possible to construct an ArrayStorage with just a GC* that is
   /// immediately resized to its capacity. This is used only in tests, where we
   /// have a GC* but not a Runtime*.
-  static ArrayStorageBase *createForTest(GC *gc, size_type capacity) {
+  static ArrayStorageBase *createForTest(GC &gc, size_type capacity) {
     assert(capacity <= maxElements());
     const auto allocSize = allocationSize(capacity);
-    auto *cell = gc->makeAVariable<ArrayStorageBase>(allocSize);
+    auto *cell = gc.makeAVariable<ArrayStorageBase>(allocSize);
     ArrayStorageBase::resizeWithinCapacity(cell, gc, capacity);
     return cell;
   }
@@ -149,14 +149,14 @@ class ArrayStorageBase final
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  void set(size_type index, HVType val, GC *gc) {
+  void set(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
     data()[index].set(val, gc);
   }
 
   /// \return the element at index \p index
   template <Inline inl = Inline::No>
-  void setNonPtr(size_type index, HVType val, GC *gc) {
+  void setNonPtr(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
     data()[index].setNonPtr(val, gc);
   }
@@ -193,7 +193,7 @@ class ArrayStorageBase final
     if (LLVM_LIKELY(currSz < self->capacity())) {
       // Use the constructor of GCHermesValue to use the correct write barrier
       // for uninitialized memory.
-      new (&self->data()[currSz]) GCHVType(hv, &runtime.getHeap());
+      new (&self->data()[currSz]) GCHVType(hv, runtime.getHeap());
       self->size_.store(currSz + 1, std::memory_order_release);
       return ExecutionStatus::RETURNED;
     }
@@ -208,7 +208,7 @@ class ArrayStorageBase final
     // In Hades, a snapshot write barrier must be executed on the value that is
     // conceptually being changed to null. The write doesn't need to occur, but
     // it is the only correct way to use the write barrier.
-    data()[sz - 1].unreachableWriteBarrier(&runtime.getHeap());
+    data()[sz - 1].unreachableWriteBarrier(runtime.getHeap());
     // The background thread can't mutate size, so we don't need fetch_sub here.
     // Relaxed is fine, because the GC doesn't care about the order of seeing
     // the length and the individual elements, as long as illegal HermesValues
@@ -252,14 +252,14 @@ class ArrayStorageBase final
   /// need to reallocate.
   static void resizeWithinCapacity(
       ArrayStorageBase<HVType> *self,
-      GC *gc,
+      GC &gc,
       size_type newSize);
 
   static void resizeWithinCapacity(
       ArrayStorageBase<HVType> *self,
       Runtime &runtime,
       size_type newSize) {
-    resizeWithinCapacity(self, &runtime.getHeap(), newSize);
+    resizeWithinCapacity(self, runtime.getHeap(), newSize);
   }
 
  private:

@@ -703,7 +703,7 @@ stringPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
     strings->set(
         i,
         SmallHermesValue::encodeStringValue(strRes->get(), runtime),
-        &runtime.getHeap());
+        runtime.getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
 
     size.add(strLength);

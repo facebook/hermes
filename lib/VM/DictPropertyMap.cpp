@@ -253,7 +253,7 @@ DictPropertyMap::findOrAdd(
 
   auto *descPair = self->getDescriptorPairs() + numDescriptors;
 
-  descPair->first.set(id, &runtime.getHeap());
+  descPair->first.set(id, runtime.getHeap());
   self->numDescriptors_.fetch_add(1, std::memory_order_acq_rel);
 
   return std::make_pair(&descPair->second, true);
@@ -275,7 +275,7 @@ void DictPropertyMap::erase(
       "accessing deleted descriptor pair");
 
   hashPair->setDeleted();
-  descPair->first.set(SymbolID::deleted(), &runtime.getHeap());
+  descPair->first.set(SymbolID::deleted(), runtime.getHeap());
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
   self->deletedListHead_ = descIndex;

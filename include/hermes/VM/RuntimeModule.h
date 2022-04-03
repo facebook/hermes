@@ -359,8 +359,8 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   size_t additionalMemorySize() const;
 
   /// Add native nodes and edges to heap snapshots.
-  void snapshotAddNodes(GC *gc, HeapSnapshot &snap) const;
-  void snapshotAddEdges(GC *gc, HeapSnapshot &snap) const;
+  void snapshotAddNodes(GC &gc, HeapSnapshot &snap) const;
+  void snapshotAddEdges(GC &gc, HeapSnapshot &snap) const;
 
   /// Find the cached hidden class for an object literal, if one exists.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.

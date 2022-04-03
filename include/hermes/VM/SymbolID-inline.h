@@ -15,8 +15,8 @@
 namespace hermes {
 namespace vm {
 
-inline GCSymbolID &GCSymbolID::set(SymbolID sym, GC *gc) {
-  gc->snapshotWriteBarrier(this);
+inline GCSymbolID &GCSymbolID::set(SymbolID sym, GC &gc) {
+  gc.snapshotWriteBarrier(this);
   id_ = sym.unsafeGetRaw();
   return *this;
 }
