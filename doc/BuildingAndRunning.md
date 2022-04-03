@@ -33,32 +33,26 @@ Create a base directory to work in, e.g. `~/workspace`, and cd into it.
 After `cd`ing, follow the steps below to generate the Hermes build system:
 
     git clone https://github.com/facebook/hermes.git
-    hermes/utils/build/configure.py
+    cmake -S hermes -B build -G Ninja
 
 The build system has now been generated in the `build` directory. To perform the build:
 
-    cd build && ninja
-
-Note that you can also pass an argument to specify a customized directory:
-
-    hermes/utils/build/configure.py ~/out_of_tree_build
-    cd out_of_tree_build && ninja
+    cmake --build ./build
 
 
 ## Release Build
 
-The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
+The above instructions create an unoptimized debug build. The `-DCMAKE_BUILD_TYPE=Release` flag will create a release build:
 
-    hermes/utils/build/configure.py --distribute
-    cd build_release && ninja
+    cmake -S hermes -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build ./build_release
 
 ## Building on Windows
 
-The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
+To build on Windows using Visual Studio with a checkout in the `hermes` directory:
 
-    git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --distribute
-    cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
+    cmake -S hermes -B build -G 'Visual Studio 16 2019'
+    cmake --build ./build
 
 ## Running Hermes
 

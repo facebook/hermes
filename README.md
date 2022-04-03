@@ -23,9 +23,8 @@ To build a local debug version of the Hermes CLI tools the following steps shoul
 mkdir hermes_workingdir
 cd hermes_workingdir
 git clone https://github.com/facebook/hermes.git
-hermes/utils/build/configure.py
-cd build
-ninja
+cmake -S hermes -B build -G Ninja
+cmake --build ./build
 ```
 
 Or if you're using Windows, the following should get you going in a Git Bash shell:
@@ -34,9 +33,8 @@ Or if you're using Windows, the following should get you going in a Git Bash she
 mkdir hermes_workingdir
 cd hermes_workingdir
 git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
-cd build
-MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
+cmake -S hermes -B build -G 'Visual Studio 16 2019' -A x64
+cmake --build ./build
 ```
 
 You will now be in a directory with the output of building Hermes into CLI tools. From here you can run a piece of JavaScript as follows:

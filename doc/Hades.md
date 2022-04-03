@@ -12,9 +12,8 @@ with the interpreter.
 
 # Enabling Hades
 
-In local builds on the command line using CMake or `configure.py` (which
-forwards to CMake), Hades is the default GC used, and currently the only GC
-supported for production use.
+In local builds on the command line using CMake (which forwards to CMake), Hades
+is the default GC used, and currently the only GC supported for production use.
 The GC being used is controlled by the CMake variable `-DHERMESVM_GCKIND=value`.
 
 To use a pre-built package of Hermes with Hades enabled, check the
