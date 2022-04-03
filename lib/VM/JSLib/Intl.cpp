@@ -463,6 +463,7 @@ CallResult<HermesValue> intlServiceConstructor(
         Predefined::getSymbolID(Predefined::InternalPropertyIntlNativeType),
         PropertyFlags::defaultNewNamedPropertyFlags(),
         typeHandle);
+    (void)res;
     assert(res != ExecutionStatus::EXCEPTION && "Setting type cannot fail.");
   };
 
