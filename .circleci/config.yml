@@ -117,59 +117,36 @@ jobs:
 
   linux:
     docker:
-      - image: debian:buster
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      - DEBIAN_FRONTEND: noninteractive
+      - image: fedora:35
+    working_directory: /root
     steps:
       - run:
           name: Install dependencies
           command: |
-            apt-get update
-            apt-get install -y \
-                sudo git openssh-client cmake ninja-build python \
-                build-essential libreadline-dev libicu-dev
-      - checkout
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            # See top comment
-            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+            true
+      - checkout:
+          path: hermes
       - run:
           name: Build Hermes for Linux
           command: |
-            cd "$HERMES_WS_DIR"
-            cmake -S hermes -B build_release -G Ninja -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
-            cd build_release
-            ninja github-cli-release
-      - run:
-          name: Copy artifacts
-          command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_release/github"/hermes-cli-*.tar.gz "output"
+            cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
+            cmake --build build --target check-hermes github-cli-release
+            cp build/github/hermes-cli-*.tar.gz output
       - run:
           name: Checksum artifacts
           command: |
-            cd "$HERMES_WS_DIR/output"
-            for file in *
+            for file in output/*
             do
               sha256sum "$file" > "$file.sha256"
             done
       - store_artifacts:
-          path: /tmp/hermes/output/
+          path: /root/output/
       - persist_to_workspace:
-          root: /tmp/hermes/output/
+          root: /root/output/
           paths:
             - .
 
   test-linux:
-    # execution-time-limit.js and sampling-profiler.js segfault in statically
-    # linked release mode, so this job is just a duplicate of the Linux job
-    # that builds in dynamically linked debug mode
     docker:
       - image: debian:buster
     environment:
