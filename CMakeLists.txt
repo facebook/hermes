@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-cmake_minimum_required(VERSION 3.8.0)
+cmake_minimum_required(VERSION 3.13.0)
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -301,9 +301,9 @@ CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
 set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
 
 if(HAVE_GC_SECTIONS)
-  set(OPTIONAL_GC_SECTIONS "-Wl,--gc-sections")
-else()
-  set(OPTIONAL_GC_SECTIONS "")
+  add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
+  add_flag_if_supported("-fdata-sections" DATA_SECTIONS)
+  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--gc-sections")
 endif()
 
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.

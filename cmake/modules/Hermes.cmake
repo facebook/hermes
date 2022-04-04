@@ -133,6 +133,7 @@ function(add_hermes_executable name)
   cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
   add_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
   target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
+  target_link_options(${name} PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
   hermes_update_compile_flags(${name})
 endfunction(add_hermes_executable)
 

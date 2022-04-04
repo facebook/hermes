@@ -58,9 +58,8 @@ endif()
 target_link_libraries(libhermes
   jsi
   ${LIBHERMES_VM_DEP}
-  # Linker flags
-  ${OPTIONAL_GC_SECTIONS}
 )
+target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
 # Export the required header directory
 target_include_directories(libhermes PUBLIC ..)
