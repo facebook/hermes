@@ -80,7 +80,6 @@ def parse_args():
     parser.add_argument(
         "--enable-trace-pc-guard", dest="enable_trace_pc_guard", action="store_true"
     )
-    parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--unicode-lite", dest="unicode_lite", action="store_true")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--jsidir", type=str, dest="jsi_dir", default="")
@@ -112,8 +111,6 @@ def parse_args():
         "emscripten v2 and above",
     )
     args = parser.parse_args()
-    if args.icu_root:
-        args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
         args.fbsource_dir = os.path.realpath(args.fbsource_dir)
     if args.jsi_dir:
@@ -140,17 +137,6 @@ def parse_args():
     if not args.hermes_build_dir:
         args.hermes_build_dir = "build" + build_dir_suffix(args)
     args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
-
-    # Guess the ICU directory based on platform.
-    if not args.icu_root and platform.system() == "Linux":
-        icu_prefs = [
-            "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787",
-            "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/",
-        ]
-        for pref in icu_prefs:
-            if os.path.exists(pref):
-                args.icu_root = pref
-                break
     return args
 
 
@@ -273,15 +259,6 @@ def main():
         ]
     if args.unicode_lite:
         cmake_flags += ["-DHERMES_UNICODE_LITE=ON"]
-
-    if args.icu_root:
-        cmake_flags += ["-DICU_ROOT=" + args.icu_root]
-    elif os.environ.get("SANDCASTLE") and platform.system() not in (
-        "macos",
-        "Darwin",
-        "Windows",
-    ):
-        raise Exception("No ICU path provided on sandcastle")
 
     print("CMake flags: {}".format(" ".join(cmake_flags)))
     hermes_src_dir = os.path.realpath(__file__)

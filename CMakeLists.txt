@@ -463,10 +463,15 @@ if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
 endif()
 
 if (NOT ICU_FOUND)
-  # Workaround: FindICU does not correctly recognize ICU include dir until
-  # CMake 3.8.0.  https://github.com/Kitware/CMake/commit/cdf7e5d8
-  list(APPEND icu_include_suffixes "include")
-
+  if (NOT ICU_ROOT)
+    set(FB_ICU_ROOT_A "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787")
+    set(FB_ICU_ROOT_B "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/")
+    if(EXISTS ${FB_ICU_ROOT_A})
+      set(ICU_ROOT ${FB_ICU_ROOT_A})
+    elseif(EXISTS ${FB_ICU_ROOT_B})
+      set(ICU_ROOT ${FB_ICU_ROOT_B})
+    endif()
+  endif()
   set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
   if (HERMES_USE_STATIC_ICU)
     add_definitions(-DU_STATIC_IMPLEMENTATION)
