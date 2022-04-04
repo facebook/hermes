@@ -85,7 +85,7 @@ jobs:
           name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py ./build
+            cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
             cmake --build ./build --target hermesc
@@ -143,7 +143,7 @@ jobs:
           name: Build Hermes for Linux
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --static-link --distribute --cmake-flags="-DCMAKE_CXX_FLAGS=-s"
+            cmake -S hermes -B build_release -G Ninja -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
             cd build_release
             ninja github-cli-release
       - run:
@@ -197,7 +197,7 @@ jobs:
           name: Run Hermes regression tests
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py
+            cmake -S hermes -B build -G Ninja
             cd build
             ninja
             ninja check-hermes
@@ -334,14 +334,14 @@ jobs:
           name: Run MacOS regression tests in debug mode
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py
+            cmake -S hermes -B build
             cmake --build ./build
             cmake --build ./build --target check-hermes
       - run:
           name: Build Apple Intl
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --cmake-flags="-DHERMES_ENABLE_INTL=ON" build_intl
+            cmake -S hermes -B build_intl -DHERMES_ENABLE_INTL=ON
             cmake --build ./build_intl
 
   windows:
@@ -399,7 +399,7 @@ jobs:
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags="-DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR=$Env:HERMES_WS_DIR\deps" --distribute
+            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DCMAKE_BUILD_TYPE=Release -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
             if (-not $?) { throw "Failed to configure Hermes" }
             cd build_release
             cmake --build . --target github-cli-release --config Release
@@ -536,7 +536,7 @@ jobs:
           name: Build Hermes Compiler
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py ./build_host_hermesc
+            cmake -S hermes -B build_host_hermesc -G Ninja
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
             cmake --build ./build_host_hermesc --target hermesc
@@ -612,7 +612,7 @@ jobs:
       - run:
           name: Build Hermes Compiler
           command: |
-            hermes/utils/build/configure.py --build-system="Unix Makefiles" --build-type=MinSizeRel ./build
+            cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: ''
