@@ -24,7 +24,7 @@ workspace where the `hermes` git checkout directory is a subdirectory.
 cd "$HERMES_WS_DIR"
 
 # Generate the build system at $HERMES_WS_DIR/build_host_hermesc
-hermes/utils/build/configure.py ./build_host_hermesc
+cmake -S hermes -B ./build_host_hermesc
 
 # Build the Hermes compiler
 cmake --build ./build_host_hermesc --target hermesc

@@ -176,7 +176,7 @@ set(HERMES_ENABLE_TRACE_PC_GUARD OFF CACHE BOOL
   "Enable -fsanitize-coverage=trace-pc-guard")
 
 set(HERMES_ENABLE_CODE_COVERAGE OFF CACHE BOOL
-  "Enable code coverage to be generated when running binaries")
+  "Enables code coverage to be collected from binaries. Coverage output will be placed in a subdirectory called \"coverage\" of the build directory.")
 
 set(HERMES_ENABLE_LIBFUZZER OFF CACHE BOOL
   "Enable libfuzzer")
