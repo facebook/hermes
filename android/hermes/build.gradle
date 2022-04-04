@@ -47,7 +47,6 @@ android {
     debug {
       externalNativeBuild {
         cmake {
-          arguments "-DHERMES_ENABLE_DEBUGGER=True"
           // JS developers aren't VM developers. Give them a faster build.
           arguments "-DCMAKE_BUILD_TYPE=Release"
         }
@@ -56,6 +55,7 @@ android {
     release {
       externalNativeBuild {
         cmake {
+          arguments "-DHERMES_ENABLE_DEBUGGER=False"
           arguments "-DCMAKE_BUILD_TYPE=MinSizeRel"
         }
       }
