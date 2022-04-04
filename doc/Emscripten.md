@@ -38,46 +38,22 @@ Please follow the [Cross Compilation](./CrossCompilation.md) to set up a workpla
 and build a host hermesc at `$HERMES_WS_DIR/build_host_hermesc`.
 
 
-## Building Hermes With configure.py
+# Building Hermes With Emscripten and CMake
 
-```
-# Configure the build. Here the build is output to a
-# directory starting with the prefix "embuild".
-python3 ${HERMES_WS_DIR}/hermes/utils/build/configure.py \
-    --cmake-flags " -DIMPORT_HERMESC:PATH=${HERMES_WS_DIR}/build_host_hermesc/ImportHermesc.cmake " \
-    --distribute \
-    --wasm \
-    --emscripten-platform=upstream \
-    --emscripten-root="${EmscriptenRoot?}" \
-    /tmp/embuild
+    cmake -S ${HermesSourcePath?} -B build \
+          -DCMAKE_TOOLCHAIN_FILE=${EmscriptenRoot?}/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+          -DCMAKE_BUILD_TYPE=MinSizeRel \
+          -DEMSCRIPTEN_FASTCOMP=1 \
+          -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=0 -s ALLOW_MEMORY_GROWTH=1"
+    # Build Hermes
+    cmake --build ./build --target hermes --parallel
+    # Execute hermes
+    node bin/hermes.js --help
 
-# Build Hermes. The build directory name will depend on the flags passed to
-# configure.py.
-cmake --build /tmp/embuild --target hermes
-# Execute hermes
-node /tmp/embuild/bin/hermes.js --help
-```
+In the commands above, replace `${HermesSourcePath?}` with the path where you
+cloned Hermes, and `${EmscriptenRoot?}` with the path to your Emscripten
+install.
 
-Make sure that the `--emscripten-platform` option matches the directory given
-to `--emscripten-root`, and is also the current activated Emscripten toolchain
-via `emsdk activate`.
-
-See `configure.py --help` for more build options.
-
-## Build with CMake directly
-
-The `configure.py` script runs CMake for you with options chosen by the Hermes
-project. If you want to customize your build, you can take this command as a
-base.
-
-```
-cmake ${HERMES_WS_DIR}/hermes \
-        -B embuild \
-        -DCMAKE_TOOLCHAIN_FILE=${EmscriptenRoot?}/cmake/Modules/Platform/Emscripten.cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1" \
-        -DIMPORT_HERMESC:PATH="${HERMES_WS_DIR}/build_host_hermesc/ImportHermesc.cmake"
-```
 
 Each option is explained below:
 * `CMAKE_BUILD_TYPE`: set it to one of CMake's build modes: `Debug`, `Release`,
