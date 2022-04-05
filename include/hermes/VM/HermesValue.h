@@ -132,12 +132,12 @@ class Runtime;
 /// A NaN-box encoded value.
 class HermesValue {
  public:
-  using TagType = uint32_t;
+  using TagType = intptr_t;
   /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
   /// word.
   enum class Tag : TagType {
     /// If tag < FirstTag, the encoded value is a double.
-    First = 0xfff9,
+    First = llvh::SignExtend32<8>(0xf9),
     EmptyInvalid = First,
     UndefinedNull,
     BoolSymbol,
@@ -147,7 +147,7 @@ class HermesValue {
     FirstPointer,
     Str = FirstPointer,
     Object,
-    Last = 0xffff,
+    Last = llvh::SignExtend32<8>(0xff),
   };
   static_assert(Tag::Object <= Tag::Last, "Tags overflow");
 
@@ -213,17 +213,16 @@ class HermesValue {
   void dump(llvh::raw_ostream &stream = llvh::errs()) const;
 
   inline Tag getTag() const {
-    return (Tag)(raw_ >> kNumDataBits);
+    return (Tag)((int64_t)raw_ >> kNumDataBits);
   }
   inline ETag getETag() const {
-    return (ETag)(raw_ >> (kNumDataBits - 1));
+    return (ETag)((int64_t)raw_ >> (kNumDataBits - 1));
   }
 
   /// Combine two tags into an 8-bit value.
-  inline static constexpr unsigned combineETags(ETag a, ETag b) {
-    unsigned au = static_cast<unsigned>(a);
-    unsigned bu = static_cast<unsigned>(b);
-    return ((au & kETagMask) << kETagWidth) | (bu & kETagMask);
+  inline static constexpr unsigned combineETags(ETag aTag, ETag bTag) {
+    auto a = static_cast<TagType>(aTag), b = static_cast<TagType>(bTag);
+    return ((a & kETagMask) << kETagWidth) | (b & kETagMask);
   }
 
   /// Special functions that allow nullptr to be stored in a HermesValue.
