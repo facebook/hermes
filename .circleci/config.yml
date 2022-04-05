@@ -143,7 +143,7 @@ jobs:
           name: Build Hermes for Linux
           command: |
             cd "$HERMES_WS_DIR"
-            cmake -S hermes -B build_release -G Ninja -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
+            cmake -S hermes -B build_release -G Ninja -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
             cd build_release
             ninja github-cli-release
       - run:
@@ -399,7 +399,7 @@ jobs:
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DCMAKE_BUILD_TYPE=Release -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
+            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
             if (-not $?) { throw "Failed to configure Hermes" }
             cd build_release
             cmake --build . --target github-cli-release --config Release
