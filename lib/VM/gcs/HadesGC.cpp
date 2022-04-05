@@ -1710,10 +1710,13 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     return;
 
   llvh::Optional<size_t> compacteeIdx;
-  // We should compact if the actual size of the heap is more than 5% larger
-  // than the target size. Since the selected segment will be removed from the
-  // heap, we only want to compact if there are at least 2 segments in the OG.
-  double threshold = oldGen_.targetSizeBytes() * 1.05;
+  // To avoid compacting too often, keep a buffer of one segment or 5% of the
+  // heap (whichever is greater). Since the selected segment will be removed
+  // from the heap, we only want to compact if there are at least 2 segments in
+  // the OG.
+  uint64_t buffer = std::max<uint64_t>(
+      oldGen_.targetSizeBytes() / 20, HeapSegment::maxSize());
+  uint64_t threshold = oldGen_.targetSizeBytes() + buffer;
   uint64_t totalBytes = oldGen_.size() + oldGen_.externalBytes();
   if ((forceCompaction || totalBytes > threshold) &&
       oldGen_.numSegments() > 1) {
