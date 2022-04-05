@@ -185,13 +185,13 @@ class HermesValue {
   static constexpr unsigned kNumDataBits = (64 - kNumTagExpBits);
 
   /// Width of a tag in bits. The tag is aligned to the right of the top bits.
-  static constexpr unsigned kTagWidth = 4;
+  static constexpr unsigned kTagWidth = 3;
   static constexpr unsigned kTagMask = (1 << kTagWidth) - 1;
   /// Mask to extract the data from the whole 64-bit word.
   static constexpr uint64_t kDataMask = (1ull << kNumDataBits) - 1;
 
-  static constexpr unsigned kETagWidth = 5;
-  static constexpr unsigned kETagMask = (1 << kTagWidth) - 1;
+  static constexpr unsigned kETagWidth = 4;
+  static constexpr unsigned kETagMask = (1 << kETagWidth) - 1;
 
   /// Assert that the pointer can be encoded in \c kNumDataBits.
   static void validatePointer(const void *ptr) {
@@ -225,7 +225,7 @@ class HermesValue {
     return (ETag)(raw_ >> (kNumDataBits - 1));
   }
 
-  /// Combine two tags into an 10-bit value.
+  /// Combine two tags into an 8-bit value.
   inline static constexpr unsigned combineETags(ETag a, ETag b) {
     unsigned au = static_cast<unsigned>(a);
     unsigned bu = static_cast<unsigned>(b);
