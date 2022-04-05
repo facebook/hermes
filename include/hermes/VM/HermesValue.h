@@ -129,52 +129,46 @@ class PointerBase;
 class GCCell;
 class Runtime;
 
-// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
-// word.
-
-using TagKind = uint32_t;
-
-/// If tag < FirstTag, the encoded value is a double.
-static constexpr TagKind FirstTag = 0xfff9;
-static constexpr TagKind LastTag = 0xffff;
-
-static constexpr TagKind EmptyInvalidTag = FirstTag;
-static constexpr TagKind UndefinedNullTag = FirstTag + 1;
-static constexpr TagKind BoolSymbolTag = FirstTag + 2;
-
-// Tags with 48-bit data start here.
-static constexpr TagKind NativeValueTag = FirstTag + 3;
-
-// Pointer tags start here.
-static constexpr TagKind StrTag = FirstTag + 4;
-static constexpr TagKind ObjectTag = FirstTag + 6;
-
-static_assert(ObjectTag == LastTag, "Tags mismatch");
-
-/// Only values in the range [FirstPointerTag..LastTag] are pointers.
-static constexpr TagKind FirstPointerTag = StrTag;
-
 /// A NaN-box encoded value.
 class HermesValue {
  public:
+  using TagType = uint32_t;
+  /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
+  /// word.
+  enum class Tag : TagType {
+    /// If tag < FirstTag, the encoded value is a double.
+    First = 0xfff9,
+    EmptyInvalid = First,
+    UndefinedNull,
+    BoolSymbol,
+    NativeValue,
+
+    /// Pointer tags start here.
+    FirstPointer,
+    Str = FirstPointer,
+    Object,
+    Last = 0xffff,
+  };
+  static_assert(Tag::Object <= Tag::Last, "Tags overflow");
+
   /// An "extended tag", occupying one extra bit.
-  enum class ETag : uint32_t {
-    Empty = EmptyInvalidTag * 2,
+  enum class ETag : TagType {
+    Empty = (TagType)Tag::EmptyInvalid * 2,
 #ifdef HERMES_SLOW_DEBUG
     /// An invalid hermes value is one that should never exist in normal
     /// operation, it can be used as a sigil to indicate a programming failure.
-    Invalid = EmptyInvalidTag * 2 + 1,
+    Invalid = (TagType)Tag::EmptyInvalid * 2 + 1,
 #endif
-    Undefined = UndefinedNullTag * 2,
-    Null = UndefinedNullTag * 2 + 1,
-    Bool = BoolSymbolTag * 2,
-    Symbol = BoolSymbolTag * 2 + 1,
-    Native1 = NativeValueTag * 2,
-    Native2 = NativeValueTag * 2 + 1,
-    Str1 = StrTag * 2,
-    Str2 = StrTag * 2 + 1,
-    Object1 = ObjectTag * 2,
-    Object2 = ObjectTag * 2 + 1,
+    Undefined = (TagType)Tag::UndefinedNull * 2,
+    Null = (TagType)Tag::UndefinedNull * 2 + 1,
+    Bool = (TagType)Tag::BoolSymbol * 2,
+    Symbol = (TagType)Tag::BoolSymbol * 2 + 1,
+    Native1 = (TagType)Tag::NativeValue * 2,
+    Native2 = (TagType)Tag::NativeValue * 2 + 1,
+    Str1 = (TagType)Tag::Str * 2,
+    Str2 = (TagType)Tag::Str * 2 + 1,
+    Object1 = (TagType)Tag::Object * 2,
+    Object2 = (TagType)Tag::Object * 2 + 1,
 
     FirstPointer = Str1,
   };
@@ -218,8 +212,8 @@ class HermesValue {
   /// Dump the contents to stderr.
   void dump(llvh::raw_ostream &stream = llvh::errs()) const;
 
-  inline TagKind getTag() const {
-    return (TagKind)(raw_ >> kNumDataBits);
+  inline Tag getTag() const {
+    return (Tag)(raw_ >> kNumDataBits);
   }
   inline ETag getETag() const {
     return (ETag)(raw_ >> (kNumDataBits - 1));
@@ -236,12 +230,12 @@ class HermesValue {
   /// WARNING: These should never be used on the JS stack or heap, and are only
   /// intended for Handles.
   constexpr inline static HermesValue encodeNullptrObjectValueUnsafe() {
-    return HermesValue(0, ObjectTag);
+    return HermesValue(0, Tag::Object);
   }
 
   inline static HermesValue encodeObjectValueUnsafe(void *val) {
     validatePointer(val);
-    HermesValue RV(reinterpret_cast<uintptr_t>(val), ObjectTag);
+    HermesValue RV(reinterpret_cast<uintptr_t>(val), Tag::Object);
     assert(RV.isObject());
     return RV;
   }
@@ -249,7 +243,7 @@ class HermesValue {
   inline static HermesValue encodeStringValueUnsafe(
       const StringPrimitive *val) {
     validatePointer(val);
-    HermesValue RV(reinterpret_cast<uintptr_t>(val), StrTag);
+    HermesValue RV(reinterpret_cast<uintptr_t>(val), Tag::Str);
     assert(RV.isString());
     return RV;
   }
@@ -265,7 +259,7 @@ class HermesValue {
   }
 
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
-    HermesValue RV(val, NativeValueTag);
+    HermesValue RV(val, Tag::NativeValue);
     assert(
         RV.isNativeValue() && RV.getNativeUInt32() == val &&
         "native value doesn't fit");
@@ -371,7 +365,7 @@ class HermesValue {
   }
 #endif
   inline bool isNativeValue() const {
-    return getTag() == NativeValueTag;
+    return getTag() == Tag::NativeValue;
   }
   inline bool isSymbol() const {
     return getETag() == ETag::Symbol;
@@ -380,16 +374,16 @@ class HermesValue {
     return getETag() == ETag::Bool;
   }
   inline bool isObject() const {
-    return getTag() == ObjectTag;
+    return getTag() == Tag::Object;
   }
   inline bool isString() const {
-    return getTag() == StrTag;
+    return getTag() == Tag::Str;
   }
   inline bool isDouble() const {
-    return raw_ < ((uint64_t)FirstTag << kNumDataBits);
+    return raw_ < ((uint64_t)Tag::First << kNumDataBits);
   }
   inline bool isPointer() const {
-    return raw_ >= ((uint64_t)FirstPointerTag << kNumDataBits);
+    return raw_ >= ((uint64_t)Tag::FirstPointer << kNumDataBits);
   }
   inline bool isNumber() const {
     return isDouble();
@@ -508,7 +502,7 @@ class HermesValue {
 
  private:
   constexpr explicit HermesValue(uint64_t val) : raw_(val) {}
-  constexpr explicit HermesValue(uint64_t val, TagKind tag)
+  constexpr explicit HermesValue(uint64_t val, Tag tag)
       : raw_(val | ((uint64_t)tag << kNumDataBits)) {}
   constexpr explicit HermesValue(uint64_t val, ETag etag)
       : raw_(val | ((uint64_t)etag << (kNumDataBits - 1))) {}

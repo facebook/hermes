@@ -1247,13 +1247,13 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
     Handle<> value,
     llvh::StringRef msg2) {
   switch (value->getTag()) {
-    case ObjectTag:
+    case HermesValue::Tag::Object:
       return raiseTypeError(msg1 + TwineChar16("Object") + msg2);
-    case StrTag:
+    case HermesValue::Tag::Str:
       return raiseTypeError(
           msg1 + TwineChar16("'") + vmcast<StringPrimitive>(*value) + "'" +
           msg2);
-    case BoolSymbolTag:
+    case HermesValue::Tag::BoolSymbol:
       if (value->isBool()) {
         if (value->getBool()) {
           return raiseTypeError(msg1 + TwineChar16("true") + msg2);
@@ -1264,18 +1264,19 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
       return raiseTypeError(
           msg1 + TwineChar16("Symbol(") +
           getStringPrimFromSymbolID(value->getSymbol()) + ")" + msg2);
-    case UndefinedNullTag:
+    case HermesValue::Tag::UndefinedNull:
       if (value->isUndefined())
         return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
       else
         return raiseTypeError(msg1 + TwineChar16("null") + msg2);
-  }
-
-  if (value->isNumber()) {
-    char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
-    size_t len = numberToString(
-        value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
-    return raiseTypeError(msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
+    default:
+      if (value->isNumber()) {
+        char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
+        size_t len = numberToString(
+            value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
+        return raiseTypeError(
+            msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
+      }
   }
   return raiseTypeError(msg1 + TwineChar16("Value") + msg2);
 }
@@ -1714,13 +1715,13 @@ ExecutionStatus Runtime::drainJobs() {
 
 uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
   switch (value->getTag()) {
-    case ObjectTag: {
+    case HermesValue::Tag::Object: {
       // For objects, because pointers can move, we need a unique ID
       // that does not change for each object.
       auto id = JSObject::getObjectID(vmcast<JSObject>(*value), *this);
       return llvh::hash_value(id);
     }
-    case StrTag: {
+    case HermesValue::Tag::Str: {
       // For strings, we hash the string content.
       auto strView = StringPrimitive::createStringView(
           *this, Handle<StringPrimitive>::vmcast(value));

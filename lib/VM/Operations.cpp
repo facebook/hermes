@@ -133,8 +133,8 @@ bool isSameValueZero(HermesValue x, HermesValue y) {
 }
 
 bool isPrimitive(HermesValue val) {
-  assert(val.getTag() != EmptyInvalidTag && "empty value encountered");
-  assert(val.getTag() != NativeValueTag && "native value encountered");
+  assert(!val.isEmpty() && "empty value encountered");
+  assert(!val.isNativeValue() && "native value encountered");
   return !val.isObject();
 }
 
@@ -192,12 +192,10 @@ CallResult<HermesValue> ordinaryToPrimitive(
 /// ES5.1 9.1
 CallResult<HermesValue>
 toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint) {
-  assert(
-      valueHandle->getTag() != EmptyInvalidTag && "empty value is not allowed");
-  assert(
-      valueHandle->getTag() != NativeValueTag && "native value is not allowed");
+  assert(!valueHandle->isEmpty() && "empty value is not allowed");
+  assert(!valueHandle->isNativeValue() && "native value is not allowed");
 
-  if (valueHandle->getTag() != ObjectTag)
+  if (!valueHandle->isObject())
     return *valueHandle;
 
   // 4. Let exoticToPrim be GetMethod(input, @@toPrimitive).
