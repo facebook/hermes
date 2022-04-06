@@ -132,8 +132,9 @@ jobs:
           name: Build Hermes for Linux
           command: |
             cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
-            cmake --build build --target github-cli-release -j 4
+              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
+              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive"
+            cmake --build build --target check-hermes github-cli-release -j 4
             mkdir output && cp build/github/hermes-cli-*.tar.gz output
       - run:
           name: Checksum artifacts
