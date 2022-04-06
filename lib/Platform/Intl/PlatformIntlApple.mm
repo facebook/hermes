@@ -150,7 +150,7 @@ ResolvedLocale resolveLocale(
     const std::vector<std::u16string> &availableLocales,
     const std::vector<std::u16string> &requestedLocales,
     const std::unordered_map<std::u16string, std::u16string> &options,
-    llvh::ArrayRef<std::u16string> relevantExtensionKeys) {
+    llvh::ArrayRef<std::u16string_view> relevantExtensionKeys) {
   // 1. Let matcher be options.[[localeMatcher]].
   // 2. If matcher is "lookup", then
   // a. Let r be LookupMatcher(availableLocales, requestedLocales).
@@ -169,7 +169,10 @@ ResolvedLocale resolveLocale(
   // 8. Let supportedExtension be "-u".
   std::u16string supportedExtension = u"-u";
   // 9. For each element key of relevantExtensionKeys, do
-  for (const auto &key : relevantExtensionKeys) {
+  for (const auto &keyView : relevantExtensionKeys) {
+    // TODO(T116352920): Make relevantExtensionKeys an ArrayRef<std::u16string>
+    // and remove this temporary once we have constexpr std::u16string.
+    std::u16string key{keyView};
     // a. Let foundLocaleData be localeData.[[<foundLocale>]].
     // NOTE: We don't actually have access to the underlying locale data, so we
     // accept everything and defer to NSLocale.
@@ -567,8 +570,9 @@ vm::ExecutionStatus Collator::initialize(
   // 2. Set options to ? CoerceOptionsToObject(options).
   // 3. Let usage be ? GetOption(options, "usage", "string", « "sort", "search"
   // », "sort").
-  auto usageRes = getOptionString(
-      runtime, options, u"usage", {u"sort", u"search"}, {u"sort"});
+  static constexpr std::u16string_view usageOpts[] = {u"sort", u"search"};
+  auto usageRes =
+      getOptionString(runtime, options, u"usage", usageOpts, {u"sort"});
   if (LLVM_UNLIKELY(usageRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 4. Set collator.[[Usage]] to usage.
@@ -583,12 +587,10 @@ vm::ExecutionStatus Collator::initialize(
   //    "lookup", "best fit" », "best fit").
   // 9. Set opt.[[localeMatcher]] to matcher.
   // We only implement lookup matcher, so we don't need to record this.
+  static constexpr std::u16string_view localeMatcherOpts[] = {
+      u"lookup", u"best fit"};
   auto localeMatcherRes = getOptionString(
-      runtime,
-      options,
-      u"localeMatcher",
-      {u"lookup", u"best fit"},
-      u"best fit");
+      runtime, options, u"localeMatcher", localeMatcherOpts, u"best fit");
   if (LLVM_UNLIKELY(localeMatcherRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 10. Let collation be ? GetOption(options, "collation", "string", undefined,
@@ -618,15 +620,18 @@ vm::ExecutionStatus Collator::initialize(
     opt.emplace(u"kn", *numericOpt ? u"true" : u"false");
   // 16. Let caseFirst be ? GetOption(options, "caseFirst", "string", « "upper",
   // "lower", "false" », undefined).
-  auto caseFirstRes = getOptionString(
-      runtime, options, u"caseFirst", {u"upper", u"lower", u"false"}, {});
+  static constexpr std::u16string_view caseFirstOpts[] = {
+      u"upper", u"lower", u"false"};
+  auto caseFirstRes =
+      getOptionString(runtime, options, u"caseFirst", caseFirstOpts, {});
   if (LLVM_UNLIKELY(caseFirstRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 17. Set opt.[[kf]] to caseFirst.
   if (auto caseFirstOpt = *caseFirstRes)
     opt.emplace(u"kf", *caseFirstOpt);
   // 18. Let relevantExtensionKeys be %Collator%.[[RelevantExtensionKeys]].
-  std::vector<std::u16string> relevantExtensionKeys = {u"co", u"kn", u"kf"};
+  static constexpr std::u16string_view relevantExtensionKeys[] = {
+      u"co", u"kn", u"kf"};
   // 19. Let r be ResolveLocale(%Collator%.[[AvailableLocales]],
   // requestedLocales, opt,relevantExtensionKeys, localeData).
   auto r = resolveLocale(
@@ -659,12 +664,10 @@ vm::ExecutionStatus Collator::initialize(
 
   // 26. Let sensitivity be ? GetOption(options, "sensitivity", "string", «
   // "base", "accent", "case", "variant" », undefined).
-  auto sensitivityRes = getOptionString(
-      runtime,
-      options,
-      u"sensitivity",
-      {u"base", u"accent", u"case", u"variant"},
-      {});
+  static constexpr std::u16string_view sensitivityOpts[] = {
+      u"base", u"accent", u"case", u"variant"};
+  auto sensitivityRes =
+      getOptionString(runtime, options, u"sensitivity", sensitivityOpts, {});
   if (LLVM_UNLIKELY(sensitivityRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 27. If sensitivity is undefined, then
