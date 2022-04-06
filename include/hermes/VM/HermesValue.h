@@ -221,7 +221,8 @@ class HermesValue {
 
   /// Combine two tags into an 8-bit value.
   inline static constexpr unsigned combineETags(ETag aTag, ETag bTag) {
-    auto a = static_cast<TagType>(aTag), b = static_cast<TagType>(bTag);
+    using UTagType = std::make_unsigned<TagType>::type;
+    auto a = static_cast<UTagType>(aTag), b = static_cast<UTagType>(bTag);
     return ((a & kETagMask) << kETagWidth) | (b & kETagMask);
   }
 
