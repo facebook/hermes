@@ -705,6 +705,7 @@ endif()
 # This is how github release files are built.
 
 set(HERMES_GITHUB_DIR ${HERMES_BINARY_DIR}/github)
+file(MAKE_DIRECTORY ${HERMES_GITHUB_DIR})
 string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
 
 if(HERMES_ENABLE_TOOLS)
