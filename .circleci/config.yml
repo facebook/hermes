@@ -117,90 +117,57 @@ jobs:
 
   linux:
     docker:
-      - image: debian:buster
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      - DEBIAN_FRONTEND: noninteractive
+      - image: debian:bullseye
+    working_directory: /root
     steps:
       - run:
           name: Install dependencies
           command: |
-            apt-get update
-            apt-get install -y \
-                sudo git openssh-client cmake ninja-build python \
-                build-essential libreadline-dev libicu-dev
-      - checkout
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            # See top comment
-            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+            apt update
+            apt install -y git openssh-client cmake build-essential \
+                libreadline-dev libicu-dev zip python3
+      - checkout:
+          path: hermes
       - run:
           name: Build Hermes for Linux
           command: |
-            cd "$HERMES_WS_DIR"
-            cmake -S hermes -B build_release -G Ninja -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
-            cd build_release
-            ninja github-cli-release
-      - run:
-          name: Copy artifacts
-          command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_release/github"/hermes-cli-*.tar.gz "output"
+            cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s
+            cmake --build build --target github-cli-release -j 4
+            mkdir output && cp build/github/hermes-cli-*.tar.gz output
       - run:
           name: Checksum artifacts
           command: |
-            cd "$HERMES_WS_DIR/output"
+            cd output
             for file in *
             do
               sha256sum "$file" > "$file.sha256"
             done
       - store_artifacts:
-          path: /tmp/hermes/output/
+          path: output
       - persist_to_workspace:
-          root: /tmp/hermes/output/
+          root: output
           paths:
             - .
 
   test-linux:
-    # execution-time-limit.js and sampling-profiler.js segfault in statically
-    # linked release mode, so this job is just a duplicate of the Linux job
-    # that builds in dynamically linked debug mode
     docker:
-      - image: debian:buster
-    environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      - DEBIAN_FRONTEND: noninteractive
+      - image: debian:bullseye
+    working_directory: /root
     steps:
       - run:
           name: Install dependencies
           command: |
-            apt-get update
-            apt-get install -y \
-                sudo git openssh-client cmake ninja-build python \
-                build-essential libreadline-dev libicu-dev zip python3
-      - checkout
-      - run:
-          name: Set up workspace
-          command: |
-            mkdir -p "$HERMES_WS_DIR"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            # See top comment
-            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+            apt update
+            apt install -y git openssh-client cmake build-essential \
+                libicu-dev zip python3
+      - checkout:
+          path: hermes
       - run:
           name: Run Hermes regression tests
           command: |
-            cd "$HERMES_WS_DIR"
-            cmake -S hermes -B build -G Ninja
-            cd build
-            ninja
-            ninja check-hermes
+            cmake -S hermes -B build
+            cmake --build build --target check-hermes all -j 4
 
   test-apple-runtime:
     <<: *apple_defaults
