@@ -134,6 +134,15 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
+if(APPLE OR WIN32)
+    set(DEFAULT_CONTIGUOUS_HEAP OFF)
+else()
+    set(DEFAULT_CONTIGUOUS_HEAP ON)
+endif()
+
+set(HERMESVM_ALLOW_CONTIGUOUS_HEAP ${DEFAULT_CONTIGUOUS_HEAP} CACHE BOOL
+  "If this is on and compressed pointers are used, the heap will be allocated in a contiguous 4GB region.")
+
 set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
         "Enable huge pages to back the GC managed heap. Only useful on Linux.")
 
@@ -345,6 +354,9 @@ if(HERMESVM_INDIRECT_THREADING)
 endif()
 if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
     add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+endif()
+if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
+    add_definitions(-DHERMESVM_ALLOW_CONTIGUOUS_HEAP)
 endif()
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
