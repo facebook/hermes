@@ -24,9 +24,7 @@ TEST(GCGuardPageNCTest, ObjectUnderflow) {
   if (hermes::oscompat::page_size() != pagesize::kExpectedPageSize)
     return;
   auto fn = [] {
-    // Use an mmap-based storage for this test.
-    std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
-    auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
+    auto runtime = DummyRuntime::create(kGCConfig);
     DummyRuntime &rt = *runtime;
 
     // Allocate the first cell in the segment and try to write directly before
