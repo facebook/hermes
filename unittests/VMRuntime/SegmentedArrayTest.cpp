@@ -66,7 +66,7 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
   EXPECT_LE(array->capacity(), originalCapacity);
   ASSERT_RETURNED(
       SegmentedArray::push_back(array, runtime, runtime.makeHandle(0.0_hd)));
-  EXPECT_EQ(1, array->size());
+  EXPECT_EQ(1, array->size(runtime));
 
   // Now force some GCs to happen.
   for (auto i = 0; i < 2; i++) {
@@ -74,7 +74,7 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
   }
 
   // The array should be trimmed.
-  EXPECT_EQ(array->size(), array->capacity());
+  EXPECT_EQ(array->size(runtime), array->capacity());
 }
 
 } // namespace

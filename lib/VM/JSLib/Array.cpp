@@ -1246,9 +1246,9 @@ CallResult<HermesValue> sortSparse(
 
   // Find out how many sortable numeric properties we have.
   JSArray::StorageType::size_type numProps = 0;
-  for (JSArray::StorageType::size_type e = names->size(); numProps != e;
+  for (JSArray::StorageType::size_type e = names->size(runtime); numProps != e;
        ++numProps) {
-    HermesValue hv = names->at(numProps);
+    HermesValue hv = names->at(runtime, numProps);
     // Stop at the first non-number.
     if (!hv.isNumber())
       break;
@@ -1281,7 +1281,7 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    propName = names->at(i);
+    propName = names->at(runtime, i);
     auto res = JSObject::getComputed_RJS(O, runtime, propName);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;

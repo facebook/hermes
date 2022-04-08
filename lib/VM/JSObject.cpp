@@ -3034,7 +3034,7 @@ CallResult<uint32_t> appendAllPropertyNames(
       bool dupFound = false;
       if (prop->isNumber()) {
         for (uint32_t j = beginIndex; j < size && !dupFound; ++j) {
-          HermesValue val = arr->at(j);
+          HermesValue val = arr->at(runtime, j);
           if (val.isNumber()) {
             dupFound = val.getNumber() == prop->getNumber();
           } else {
@@ -3047,7 +3047,7 @@ CallResult<uint32_t> appendAllPropertyNames(
         }
       } else {
         for (uint32_t j = beginIndex; j < size && !dupFound; ++j) {
-          HermesValue val = arr->at(j);
+          HermesValue val = arr->at(runtime, j);
           if (val.isNumber()) {
             // val is number, prop is string.
             auto propNum = toArrayIndex(StringPrimitive::createStringView(
@@ -3138,7 +3138,7 @@ uint32_t matchesProtoClasses(
   MutableHandle<JSObject> head(runtime, obj->getParent(runtime));
   uint32_t i = 0;
   while (head.get()) {
-    HermesValue protoCls = arr->at(i++);
+    HermesValue protoCls = arr->at(runtime, i++);
     if (protoCls.isNull() || protoCls.getObject() != head->getClass(runtime) ||
         head->isProxyObject()) {
       return 0;
@@ -3146,7 +3146,7 @@ uint32_t matchesProtoClasses(
     head = head->getParent(runtime);
   }
   // The chains must both end at the same point.
-  if (head || !arr->at(i++).isNull()) {
+  if (head || !arr->at(runtime, i++).isNull()) {
     return 0;
   }
   assert(i > 0 && "success should be positive");
@@ -3170,7 +3170,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
       beginIndex = matchesProtoClasses(runtime, obj, arr);
       if (beginIndex) {
         // Cache is valid for this object, so use it.
-        endIndex = arr->size();
+        endIndex = arr->size(runtime);
         return arr;
       }
       // Invalid for this object. We choose to clear the cache since the
@@ -3193,7 +3193,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   if (setProtoClasses(runtime, obj, arr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  beginIndex = arr->size();
+  beginIndex = arr->size(runtime);
   // If obj or any of its prototypes are unsuitable for caching, then
   // beginIndex is 0 and we return an array with only the property names.
   bool canCache = beginIndex;

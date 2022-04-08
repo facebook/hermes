@@ -49,7 +49,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto beginIndex = self->beginIndex_;
   const auto endIndex = self->endIndex_;
   for (uint32_t i = beginIndex; i < endIndex; i++) {
-    const auto &elem = indexedStorage->at(i - beginIndex);
+    const auto &elem = indexedStorage->at(gc.getPointerBase(), i - beginIndex);
     const llvh::Optional<HeapSnapshot::NodeID> elemID = gc.getSnapshotID(elem);
     if (!elemID) {
       continue;
@@ -67,7 +67,7 @@ bool ArrayImpl::_haveOwnIndexedImpl(
   // Check whether the index is within the storage.
   if (index >= self->beginIndex_ && index < self->endIndex_)
     return !self->getIndexedStorage(runtime)
-                ->at(index - self->beginIndex_)
+                ->at(runtime, index - self->beginIndex_)
                 .isEmpty();
 
   return false;
@@ -82,7 +82,7 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
   // Check whether the index is within the storage.
   if (index >= self->beginIndex_ && index < self->endIndex_ &&
       !self->getIndexedStorage(runtime)
-           ->at(index - self->beginIndex_)
+           ->at(runtime, index - self->beginIndex_)
            .isEmpty()) {
     PropertyFlags indexedElementFlags{};
     indexedElementFlags.enumerable = 1;
@@ -285,7 +285,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     if (StorageType::resizeLeft(
             indexedStorageHandle,
             runtime,
-            indexedStorageHandle->size() + beginIndex - index) ==
+            indexedStorageHandle->size(runtime) + beginIndex - index) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -310,7 +310,7 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     auto *indexedStorage = self->getIndexedStorage(runtime);
     // Cannot delete indexed elements if we are sealed.
     if (LLVM_UNLIKELY(self->flags_.sealed)) {
-      HermesValue elem = indexedStorage->at(index - self->beginIndex_);
+      HermesValue elem = indexedStorage->at(runtime, index - self->beginIndex_);
       if (!elem.isEmpty())
         return false;
     }
@@ -332,7 +332,7 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
   // If we have any indexed properties at all, they don't satisfy the
   // requirements.
   for (uint32_t i = 0, e = self->endIndex_ - self->beginIndex_; i != e; ++i) {
-    if (!self->getIndexedStorage(runtime)->at(i).isEmpty())
+    if (!self->getIndexedStorage(runtime)->at(runtime, i).isEmpty())
       return false;
   }
   return true;

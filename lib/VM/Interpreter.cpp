@@ -2668,7 +2668,7 @@ tailCall:
           MutableHandle<SymbolID> tmpPropNameStorage{runtime};
           // Loop until we find a property which is present.
           while (idx < size) {
-            tmpHandle = arr->at(idx);
+            tmpHandle = arr->at(runtime, idx);
             ComputedPropertyDescriptor desc;
             CAPTURE_IP_ASSIGN(
                 ExecutionStatus status,

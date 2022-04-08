@@ -166,7 +166,7 @@ ExecutionStatus SegmentedArrayBase<HVType>::push_back(
     MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     Handle<> value) {
-  auto oldSize = self->size();
+  auto oldSize = self->size(runtime);
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -181,10 +181,10 @@ ExecutionStatus SegmentedArrayBase<HVType>::resize(
     MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type newSize) {
-  if (newSize > self->size()) {
-    return growRight(self, runtime, newSize - self->size());
-  } else if (newSize < self->size()) {
-    self->shrinkRight(runtime, self->size() - newSize);
+  if (newSize > self->size(runtime)) {
+    return growRight(self, runtime, newSize - self->size(runtime));
+  } else if (newSize < self->size(runtime)) {
+    self->shrinkRight(runtime, self->size(runtime) - newSize);
   }
   return ExecutionStatus::RETURNED;
 }
@@ -194,12 +194,12 @@ ExecutionStatus SegmentedArrayBase<HVType>::resizeLeft(
     MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type newSize) {
-  if (newSize == self->size()) {
+  if (newSize == self->size(runtime)) {
     return ExecutionStatus::RETURNED;
-  } else if (newSize > self->size()) {
-    return growLeft(self, runtime, newSize - self->size());
+  } else if (newSize > self->size(runtime)) {
+    return growLeft(self, runtime, newSize - self->size(runtime));
   } else {
-    self->shrinkLeft(runtime, self->size() - newSize);
+    self->shrinkLeft(runtime, self->size(runtime) - newSize);
     return ExecutionStatus::RETURNED;
   }
 }
@@ -209,7 +209,7 @@ void SegmentedArrayBase<HVType>::resizeWithinCapacity(
     SegmentedArrayBase *self,
     Runtime &runtime,
     size_type newSize) {
-  const size_type currSize = self->size();
+  const size_type currSize = self->size(runtime);
   assert(
       newSize <= self->capacity() &&
       "Cannot resizeWithinCapacity to a size not within capacity");
@@ -251,13 +251,14 @@ ExecutionStatus SegmentedArrayBase<HVType>::growRight(
     MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type amount) {
-  if (self->size() + amount <= self->totalCapacityOfSpine()) {
+  if (self->size(runtime) + amount <= self->totalCapacityOfSpine()) {
     increaseSize(runtime, self, amount);
     return ExecutionStatus::RETURNED;
   }
-  const auto newSize = self->size() + amount;
+  const auto newSize = self->size(runtime) + amount;
   // Allocate a new SegmentedArray according to the resize policy.
-  auto arrRes = create(runtime, calculateNewCapacity(self->size(), newSize));
+  auto arrRes =
+      create(runtime, calculateNewCapacity(self->size(runtime), newSize));
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -285,13 +286,13 @@ ExecutionStatus SegmentedArrayBase<HVType>::growLeft(
     MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type amount) {
-  if (self->size() + amount <= self->totalCapacityOfSpine()) {
+  if (self->size(runtime) + amount <= self->totalCapacityOfSpine()) {
     growLeftWithinCapacity(runtime, self, amount);
     return ExecutionStatus::RETURNED;
   }
-  const auto newSize = self->size() + amount;
-  auto arrRes =
-      create(runtime, calculateNewCapacity(self->size(), newSize), newSize);
+  const auto newSize = self->size(runtime) + amount;
+  auto arrRes = create(
+      runtime, calculateNewCapacity(self->size(runtime), newSize), newSize);
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -315,7 +316,7 @@ void SegmentedArrayBase<HVType>::growLeftWithinCapacity(
     PseudoHandle<SegmentedArrayBase> self,
     size_type amount) {
   assert(
-      self->size() + amount <= self->totalCapacityOfSpine() &&
+      self->size(runtime) + amount <= self->totalCapacityOfSpine() &&
       "Cannot grow higher than capacity");
   // Fill with empty values at the end to simplify the write barrier.
   self = increaseSize(runtime, std::move(self), amount);
@@ -357,7 +358,7 @@ void SegmentedArrayBase<HVType>::increaseSizeWithinCapacity(
     size_type amount) {
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
-  const auto currSize = size();
+  const auto currSize = size(runtime);
   const auto finalSize = currSize + amount;
   assert(
       finalSize <= capacity() &&
@@ -386,7 +387,7 @@ void SegmentedArrayBase<HVType>::increaseSizeWithinCapacity(
         HVType::encodeEmptyValue(),
         runtime.getHeap());
   }
-  segmentAt(segment)->setLength(runtime, segmentLength);
+  segmentAt(runtime, segment)->setLength(runtime, segmentLength);
 }
 
 template <typename HVType>
@@ -395,7 +396,7 @@ SegmentedArrayBase<HVType>::increaseSize(
     Runtime &runtime,
     PseudoHandle<SegmentedArrayBase> self,
     size_type amount) {
-  const auto currSize = self->size();
+  const auto currSize = self->size(runtime);
   const auto finalSize = currSize + amount;
 
   if (finalSize <= self->capacity()) {
@@ -467,7 +468,7 @@ SegmentedArrayBase<HVType>::increaseSize(
     // elements.
     const auto segmentLength =
         i == lastSegment ? toInterior(finalSize - 1) + 1 : Segment::kMaxLength;
-    selfHandle->segmentAt(i)->setLength(runtime, segmentLength);
+    selfHandle->segmentAt(runtime, i)->setLength(runtime, segmentLength);
   }
   self = selfHandle;
   return self;
@@ -477,7 +478,7 @@ template <typename HVType>
 void SegmentedArrayBase<HVType>::decreaseSize(
     Runtime &runtime,
     size_type amount) {
-  const auto initialSize = size();
+  const auto initialSize = size(runtime);
   const auto initialNumSlots = numSlotsUsed_.load(std::memory_order_relaxed);
   assert(amount <= initialSize && "Cannot decrease size past zero");
   const auto finalSize = initialSize - amount;
@@ -487,7 +488,7 @@ void SegmentedArrayBase<HVType>::decreaseSize(
       "Should not be increasing the number of slots");
   if (finalSize > kValueToSegmentThreshold) {
     // Set the new last used segment's length to be the leftover.
-    segmentAt(toSegment(finalSize - 1))
+    segmentAt(runtime, toSegment(finalSize - 1))
         ->setLength(runtime, toInterior(finalSize - 1) + 1);
   }
   // Before shrinking, do a snapshot write barrier for the elements being

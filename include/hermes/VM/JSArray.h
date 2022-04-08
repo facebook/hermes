@@ -103,7 +103,7 @@ class ArrayImpl : public JSObject {
   /// contained in the storage.
   const HermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)->at(index - beginIndex_)
+        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
         : HermesValue::encodeEmptyValue();
   }
 
@@ -210,7 +210,7 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const HermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)->at(index - beginIndex_);
+    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
   }
 
  private:

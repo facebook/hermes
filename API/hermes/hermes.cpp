@@ -1773,7 +1773,7 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
     auto ret = createArray(length);
     for (size_t i = 0; i < length; ++i) {
-      vm::HermesValue name = arr->at(beginIndex + i);
+      vm::HermesValue name = arr->at(runtime_, beginIndex + i);
       if (name.isString()) {
         ret.setValueAtIndex(*this, i, valueFromHermesValue(name));
       } else if (name.isNumber()) {

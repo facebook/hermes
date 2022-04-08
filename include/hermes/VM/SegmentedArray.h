@@ -168,7 +168,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
         PointerBase &base)
         : owner_(owner), index_(index), base_(base) {
       assert(
-          index_ <= owner_->size() &&
+          index_ <= owner_->size(base_) &&
           "Cannot make an iterator that points outside of the storage");
     }
 
@@ -180,7 +180,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
           "Cannot assign to an iterator from a different SegmentedArray");
       index_ = that.index_;
       assert(
-          index_ <= owner_->size() &&
+          index_ <= owner_->size(base_) &&
           "Cannot make an iterator that points outside of the storage");
       return *this;
     }
@@ -219,13 +219,14 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
 
     reference operator*() {
       assert(
-          index_ < owner_->size() &&
+          index_ < owner_->size(base_) &&
           "Trying to read from an index outside the size");
       // Almost all arrays fit entirely in the inline storage.
       if (LLVM_LIKELY(index_ < kValueToSegmentThreshold)) {
         return owner_->inlineStorage()[index_];
       } else {
-        return owner_->segmentAt(toSegment(index_))->at(toInterior(index_));
+        return owner_->segmentAt(base_, toSegment(index_))
+            ->at(toInterior(index_));
       }
     }
 
@@ -256,7 +257,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   GCHVType &atRef(PointerBase &base, TotalIndex index) {
     if (inl == Inline::Yes) {
       assert(
-          index < kValueToSegmentThreshold && index < size() &&
+          index < kValueToSegmentThreshold && index < size(base) &&
           "Using the inline storage accessor when the index is larger than the "
           "inline storage");
       return inlineStorage()[index];
@@ -267,12 +268,12 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
 
   /// Gets the element located at \p index.
   template <Inline inl = Inline::No>
-  HVType at(size_type index) const {
-    assert(index < size() && "Invalid index.");
+  HVType at(PointerBase &base, size_type index) const {
+    assert(index < size(base) && "Invalid index.");
     if (inl == Inline::Yes || index < kValueToSegmentThreshold) {
       return inlineStorage()[index];
     } else {
-      return segmentAt(toSegment(index))->at(toInterior(index));
+      return segmentAt(base, toSegment(index))->at(toInterior(index));
     }
   }
 
@@ -288,7 +289,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
 
   /// Gets the size of the SegmentedArray. The size is the number of elements
   /// currently active in the array.
-  size_type size() const {
+  size_type size(PointerBase &base) const {
     const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
     if (LLVM_LIKELY(numSlotsUsed <= kValueToSegmentThreshold)) {
       return numSlotsUsed;
@@ -296,7 +297,8 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
       const SegmentNumber numSegments = numSlotsUsed - kValueToSegmentThreshold;
       const size_type numBeforeLastSegment =
           kValueToSegmentThreshold + (numSegments - 1) * Segment::kMaxLength;
-      const uint32_t numInLastSegment = segmentAt(numSegments - 1)->length();
+      const uint32_t numInLastSegment =
+          segmentAt(base, numSegments - 1)->length();
       return numBeforeLastSegment + numInLastSegment;
     }
   }
@@ -350,7 +352,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
 
   /// Decrease the size to zero.
   void clear(Runtime &runtime) {
-    shrinkRight(runtime, size());
+    shrinkRight(runtime, size(runtime));
   }
 
   static constexpr CellKind getCellKind() {
@@ -383,11 +385,11 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
     return iterator(this, 0, base);
   }
   iterator end(PointerBase &base) {
-    return iterator(this, size(), base);
+    return iterator(this, size(base), base);
   }
   iterator inlineStorageEnd(PointerBase &base) {
     return iterator(
-        this, std::min(size(), toRValue(kValueToSegmentThreshold)), base);
+        this, std::min(size(base), toRValue(kValueToSegmentThreshold)), base);
   }
 
   /// \return the capacity that should be used for a new SegmentedArray based on
@@ -455,12 +457,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// any collections.
   /// \pre The \p segment is within the numSlotsUsed_ in the spine, and it has
   /// been allocated.
-  Segment *segmentAt(SegmentNumber segment) {
+  Segment *segmentAt(PointerBase &base, SegmentNumber segment) {
     return const_cast<Segment *>(
-        static_cast<const SegmentedArrayBase *>(this)->segmentAt(segment));
+        static_cast<const SegmentedArrayBase *>(this)->segmentAt(
+            base, segment));
   }
   /// const version of \c segmentAt.
-  const Segment *segmentAt(SegmentNumber segment) const {
+  const Segment *segmentAt(PointerBase &base, SegmentNumber segment) const {
     assert(
         segment < numUsedSegments() &&
         "Trying to get a segment that does not exist");

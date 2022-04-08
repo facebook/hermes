@@ -40,7 +40,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     if (it != self->map_.end()) {
       // Key already exists, update existing value.
       assert(
-          it->second < self->valueStorage_.getNonNull(runtime)->size() &&
+          it->second < self->valueStorage_.getNonNull(runtime)->size(runtime) &&
           "invalid index");
       self->valueStorage_.getNonNull(runtime)->set(runtime, it->second, *value);
       return ExecutionStatus::RETURNED;
@@ -146,7 +146,7 @@ HermesValue JSWeakMapImplBase::getValue(
   if (it == self->map_.end()) {
     return HermesValue::encodeUndefinedValue();
   }
-  return self->valueStorage_.getNonNull(runtime)->at(it->second);
+  return self->valueStorage_.getNonNull(runtime)->at(runtime, it->second);
 }
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
@@ -284,12 +284,12 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   }
 
   auto storageHandle = runtime.makeMutableHandle(self->valueStorage_);
-  if (i >= storageHandle->size()) {
+  if (i >= storageHandle->size(runtime)) {
     if (LLVM_UNLIKELY(
             BigStorage::resize(
                 storageHandle,
                 runtime,
-                std::max(i + 1, storageHandle->size() * 2)) ==
+                std::max(i + 1, storageHandle->size(runtime) * 2)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -301,10 +301,10 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   } else {
     // Set the start of the free list to the next element.
     // If the next element is kFreeListInvalid, the free list is now empty.
-    self->freeListHead_ = storageHandle->at(i).getNativeUInt32();
+    self->freeListHead_ = storageHandle->at(runtime, i).getNativeUInt32();
   }
 
-  assert(i < storageHandle->size() && "invalid index");
+  assert(i < storageHandle->size(runtime) && "invalid index");
   self->valueStorage_.setNonNull(runtime, *storageHandle, runtime.getHeap());
 
   return i;
