@@ -33,6 +33,11 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&SegmentedArray::Segment::vt);
   mb.addArray("data", self->data_, &self->length_, sizeof(GCHermesValue));
 }
+void SegmentSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const SegmentedArraySmall::Segment *>(cell);
+  mb.setVTable(&SegmentedArraySmall::Segment::vt);
+  mb.addArray("data", self->data_, &self->length_, sizeof(GCSmallHermesValue));
+}
 
 template <typename HVType>
 PseudoHandle<typename SegmentedArrayBase<HVType>::Segment>
@@ -89,6 +94,16 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       sizeof(GCHermesValue));
 }
 
+void SegmentedArraySmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const SegmentedArraySmall *>(cell);
+  mb.setVTable(&SegmentedArraySmall::vt);
+  mb.addArray(
+      "slots",
+      self->inlineStorage(),
+      &self->numSlotsUsed_,
+      sizeof(GCSmallHermesValue));
+}
+
 template <typename HVType>
 CallResult<PseudoHandle<SegmentedArrayBase<HVType>>>
 SegmentedArrayBase<HVType>::create(Runtime &runtime, size_type capacity) {
@@ -115,8 +130,9 @@ CallResult<PseudoHandle<SegmentedArrayBase<HVType>>> SegmentedArrayBase<
   // will be allocated.
   const auto allocSize = allocationSizeForCapacity(capacity);
   return createPseudoHandle(
-      runtime.makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
-          allocSize));
+      runtime
+          .makeAVariable<SegmentedArrayBase, HasFinalizer::No, LongLived::Yes>(
+              allocSize));
 }
 
 template <typename HVType>
@@ -243,7 +259,7 @@ void SegmentedArrayBase<HVType>::allocateSegment(
       "Allocating into a non-empty segment");
   PseudoHandle<Segment> c = Segment::create(runtime);
   self->segmentAtPossiblyUnallocated(segment)->set(
-      c.getHermesValue(), runtime.getHeap());
+      HVType::encodeObjectValue(c.get(), runtime), runtime.getHeap());
 }
 
 template <typename HVType>
@@ -510,6 +526,7 @@ gcheapsize_t SegmentedArrayBase<HVType>::_trimSizeCallback(const GCCell *cell) {
 }
 
 template class SegmentedArrayBase<HermesValue>;
+template class SegmentedArrayBase<SmallHermesValue>;
 
 } // namespace vm
 } // namespace hermes

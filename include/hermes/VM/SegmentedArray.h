@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/TrailingObjects.h"
 
@@ -59,8 +60,12 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
 
     static constexpr CellKind getCellKind() {
       static_assert(
-          std::is_same<HVType, HermesValue>::value, "Illegal HVType.");
-      return CellKind::SegmentKind;
+          std::is_same<HVType, HermesValue>::value ||
+              std::is_same<HVType, SmallHermesValue>::value,
+          "Illegal HVType.");
+      return std::is_same<HVType, HermesValue>::value
+          ? CellKind::SegmentKind
+          : CellKind::SegmentSmallKind;
     }
     static bool classof(const GCCell *cell) {
       return cell->getKind() == getCellKind();
@@ -91,6 +96,9 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
     void setLength(Runtime &runtime, uint32_t newLength);
 
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+    friend void SegmentSmallBuildMeta(
+        const GCCell *cell,
+        Metadata::Builder &mb);
 
    private:
     static const VTable vt;
@@ -356,8 +364,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   }
 
   static constexpr CellKind getCellKind() {
-    static_assert(std::is_same<HVType, HermesValue>::value, "Illegal HVType.");
-    return CellKind::SegmentedArrayKind;
+    static_assert(
+        std::is_same<HVType, HermesValue>::value ||
+            std::is_same<HVType, SmallHermesValue>::value,
+        "Illegal HVType.");
+    return std::is_same<HVType, HermesValue>::value
+        ? CellKind::SegmentedArrayKind
+        : CellKind::SegmentedArraySmallKind;
   }
   static bool classof(const GCCell *cell) {
     return cell->getKind() == getCellKind();
@@ -370,6 +383,10 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
       TrailingObjects<SegmentedArrayBase<HVType>, GCHermesValueBase<HVType>>;
   friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void SegmentedArrayBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+  friend void SegmentSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void SegmentedArraySmallBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
 
@@ -467,7 +484,8 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
     assert(
         segment < numUsedSegments() &&
         "Trying to get a segment that does not exist");
-    return vmcast<Segment>(*segmentAtPossiblyUnallocated(segment));
+    return vmcast<Segment>(
+        segmentAtPossiblyUnallocated(segment)->getObject(base));
   }
 
   /// Same as \c segmentAt, except for any segment, including ones between
@@ -611,13 +629,20 @@ SegmentedArrayBase<HVType>::maxNumSegmentsWithoutOverflow() {
 }
 
 using SegmentedArray = SegmentedArrayBase<HermesValue>;
+using SegmentedArraySmall = SegmentedArrayBase<SmallHermesValue>;
 
 template <>
 struct IsGCObject<SegmentedArray::Segment> : public std::true_type {};
+template <>
+struct IsGCObject<SegmentedArraySmall::Segment> : public std::true_type {};
 
 static_assert(
     SegmentedArray::allocationSizeForCapacity(SegmentedArray::maxElements()) <=
         GC::maxAllocationSize(),
+    "maxElements() is too big");
+static_assert(
+    SegmentedArraySmall::allocationSizeForCapacity(
+        SegmentedArraySmall::maxElements()) <= GC::maxAllocationSize(),
     "maxElements() is too big");
 
 } // namespace vm

@@ -482,9 +482,15 @@ class HermesValue {
   GCCell *getPointer(PointerBase &) const {
     return static_cast<GCCell *>(getPointer());
   }
+  GCCell *getObject(PointerBase &) const {
+    return static_cast<GCCell *>(getObject());
+  }
 
   static HermesValue encodeHermesValue(HermesValue hv, Runtime &) {
     return hv;
+  }
+  static HermesValue encodeObjectValue(GCCell *obj, Runtime &) {
+    return encodeObjectValue(obj);
   }
 
   /// }
