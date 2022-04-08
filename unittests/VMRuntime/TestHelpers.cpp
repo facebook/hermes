@@ -8,6 +8,7 @@
 #include "TestHelpers.h"
 
 #include "hermes/Support/Compiler.h"
+#include "hermes/VM/HeapRuntime.h"
 
 namespace hermes {
 namespace vm {
@@ -48,8 +49,9 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> provider,
     std::shared_ptr<CrashManager> crashMgr) {
-  DummyRuntime *rt = new DummyRuntime(gcConfig, provider, crashMgr);
-  return std::shared_ptr<DummyRuntime>{rt};
+  auto rt = HeapRuntime<DummyRuntime>::create(provider);
+  new (rt.get()) DummyRuntime(gcConfig, provider, crashMgr);
+  return rt;
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(const GCConfig &gcConfig) {
@@ -57,7 +59,11 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(const GCConfig &gcConfig) {
 }
 
 std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+  return StorageProvider::contiguousVAProvider(128 << 20);
+#else
   return StorageProvider::mmapProvider();
+#endif
 }
 
 void DummyRuntime::collect() {

@@ -23,6 +23,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
+#include "hermes/VM/HeapRuntime.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
@@ -123,7 +124,17 @@ class Runtime::StackRuntime {
 
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD)
+#if defined(HERMESVM_CONTIGUOUS_HEAP)
+  uint64_t maxHeapSize = runtimeConfig.getGCConfig().getMaxHeapSize();
+  // Allow some extra segments for the runtime, and as a buffer for the GC.
+  uint64_t providerSize =
+      std::min<uint64_t>(1ULL << 32, maxHeapSize + AlignedStorage::size() * 4);
+  std::shared_ptr<StorageProvider> sp =
+      StorageProvider::contiguousVAProvider(providerSize);
+  auto rt = HeapRuntime<Runtime>::create(sp);
+  new (rt.get()) Runtime(std::move(sp), runtimeConfig);
+  return rt;
+#elif defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD)
   // TODO (T84179835): Disable this once it is no longer useful for debugging.
   return StackRuntime::create(runtimeConfig);
 #else
