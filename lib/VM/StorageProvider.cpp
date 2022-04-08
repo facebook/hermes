@@ -40,6 +40,49 @@ class VMAllocateStorageProvider final : public StorageProvider {
   void deleteStorageImpl(void *storage) override;
 };
 
+class ContiguousVAStorageProvider final : public StorageProvider {
+ public:
+  ContiguousVAStorageProvider(size_t size)
+      : size_(llvh::alignTo<AlignedStorage::size()>(size)) {
+    auto result = oscompat::vm_allocate_aligned(size_, AlignedStorage::size());
+    if (!result)
+      hermes_fatal("Contiguous storage allocation failed.", result.getError());
+    level_ = start_ = static_cast<char *>(*result);
+    oscompat::vm_name(start_, size_, kFreeRegionName);
+  }
+
+  llvh::ErrorOr<void *> newStorageImpl(const char *name) override {
+    void *storage;
+    if (!freelist_.empty()) {
+      storage = freelist_.back();
+      freelist_.pop_back();
+    } else if (level_ < start_ + size_) {
+      storage = std::exchange(level_, level_ + AlignedStorage::size());
+    } else {
+      return make_error_code(OOMError::MaxStorageReached);
+    }
+    oscompat::vm_name(storage, AlignedStorage::size(), name);
+    return storage;
+  }
+
+  void deleteStorageImpl(void *storage) override {
+    assert(
+        !llvh::alignmentAdjustment(storage, AlignedStorage::size()) &&
+        "Storage not aligned");
+    assert(storage >= start_ && storage < level_ && "Storage not in region");
+    oscompat::vm_name(storage, AlignedStorage::size(), kFreeRegionName);
+    oscompat::vm_unused(storage, AlignedStorage::size());
+    freelist_.push_back(storage);
+  }
+
+ private:
+  static constexpr const char *kFreeRegionName = "hermes-free-heap";
+  size_t size_;
+  char *start_;
+  char *level_;
+  llvh::SmallVector<void *, 0> freelist_;
+};
+
 class MallocStorageProvider final : public StorageProvider {
  public:
   llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
@@ -107,6 +150,12 @@ StorageProvider::~StorageProvider() {
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::mmapProvider() {
   return std::unique_ptr<StorageProvider>(new VMAllocateStorageProvider);
+}
+
+/* static */
+std::unique_ptr<StorageProvider> StorageProvider::contiguousVAProvider(
+    size_t size) {
+  return std::make_unique<ContiguousVAStorageProvider>(size);
 }
 
 /* static */

@@ -29,6 +29,9 @@ class StorageProvider {
   /// Provide storage from mmap'ed separate regions.
   static std::unique_ptr<StorageProvider> mmapProvider();
 
+  /// Provide storage from a contiguous mmap'ed region.
+  static std::unique_ptr<StorageProvider> contiguousVAProvider(size_t size);
+
   /// Provide storage via malloc.
   static std::unique_ptr<StorageProvider> mallocProvider();
 
