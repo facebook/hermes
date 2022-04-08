@@ -154,9 +154,13 @@ class SegmentedArray final
     SegmentedArray *const owner_;
     /// The current index that the iterator points at.
     TotalIndex index_;
+    PointerBase &base_;
 
-    explicit iterator(SegmentedArray *owner, TotalIndex index)
-        : owner_(owner), index_(index) {
+    explicit iterator(
+        SegmentedArray *owner,
+        TotalIndex index,
+        PointerBase &base)
+        : owner_(owner), index_(index), base_(base) {
       assert(
           index_ <= owner_->size() &&
           "Cannot make an iterator that points outside of the storage");
@@ -188,11 +192,11 @@ class SegmentedArray final
       assert(
           index_ <= std::numeric_limits<TotalIndex>::max() - index &&
           "Overflow in addition");
-      return iterator(owner_, index_ + index);
+      return iterator(owner_, index_ + index, base_);
     }
     iterator operator-(TotalIndex index) const {
       assert(index_ >= index && "Overflow in subtraction");
-      return iterator(owner_, index_ - index);
+      return iterator(owner_, index_ - index, base_);
     }
     iterator &operator+=(TotalIndex index) {
       return *this = *this + index;
@@ -243,7 +247,7 @@ class SegmentedArray final
   /// Returns a reference to an element. Strongly prefer using at and set
   /// instead.
   template <Inline inl = Inline::No>
-  GCHermesValue &atRef(TotalIndex index) {
+  GCHermesValue &atRef(PointerBase &base, TotalIndex index) {
     if (inl == Inline::Yes) {
       assert(
           index < kValueToSegmentThreshold && index < size() &&
@@ -251,7 +255,7 @@ class SegmentedArray final
           "inline storage");
       return inlineStorage()[index];
     } else {
-      return *(begin() + index);
+      return *(begin(base) + index);
     }
   }
 
@@ -268,12 +272,12 @@ class SegmentedArray final
 
   /// Sets the element located at \p index to \p val.
   template <Inline inl = Inline::No>
-  void set(TotalIndex index, HermesValue val, GC &gc) {
-    atRef<inl>(index).set(val, gc);
+  void set(Runtime &runtime, TotalIndex index, HermesValue val) {
+    atRef<inl>(runtime, index).set(val, runtime.getHeap());
   }
   template <Inline inl = Inline::No>
-  void setNonPtr(TotalIndex index, HermesValue val, GC &gc) {
-    atRef<inl>(index).setNonPtr(val, gc);
+  void setNonPtr(Runtime &runtime, TotalIndex index, HermesValue val) {
+    atRef<inl>(runtime, index).setNonPtr(val, runtime.getHeap());
   }
 
   /// Gets the size of the SegmentedArray. The size is the number of elements
@@ -367,14 +371,15 @@ class SegmentedArray final
       Runtime &runtime,
       size_type capacity);
 
-  iterator begin() {
-    return iterator(this, 0);
+  iterator begin(PointerBase &base) {
+    return iterator(this, 0, base);
   }
-  iterator end() {
-    return iterator(this, size());
+  iterator end(PointerBase &base) {
+    return iterator(this, size(), base);
   }
-  iterator inlineStorageEnd() {
-    return iterator(this, std::min(size(), toRValue(kValueToSegmentThreshold)));
+  iterator inlineStorageEnd(PointerBase &base) {
+    return iterator(
+        this, std::min(size(), toRValue(kValueToSegmentThreshold)), base);
   }
 
   /// \return the capacity that should be used for a new SegmentedArray based on

@@ -42,8 +42,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
       assert(
           it->second < self->valueStorage_.getNonNull(runtime)->size() &&
           "invalid index");
-      self->valueStorage_.getNonNull(runtime)->set(
-          it->second, *value, runtime.getHeap());
+      self->valueStorage_.getNonNull(runtime)->set(runtime, it->second, *value);
       return ExecutionStatus::RETURNED;
     }
   }
@@ -68,7 +67,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     assert(result.second && "unable to add a new value to map");
   }
 
-  self->valueStorage_.getNonNull(runtime)->set(i, *value, runtime.getHeap());
+  self->valueStorage_.getNonNull(runtime)->set(runtime, i, *value);
   return ExecutionStatus::RETURNED;
 }
 
@@ -87,7 +86,7 @@ bool JSWeakMapImplBase::deleteValue(
   if (it == self->map_.end()) {
     return false;
   }
-  self->deleteInternal(runtime, runtime.getHeap(), it);
+  self->deleteInternal(runtime, it);
   return true;
 }
 
@@ -100,7 +99,7 @@ bool JSWeakMapImplBase::clearEntryDirect(GC &gc, const WeakRefKey &key) {
   }
   it->first.ref.clear();
   valueStorage_.get(gc.getPointerBase())
-      ->atRef(it->second)
+      ->atRef(gc.getPointerBase(), it->second)
       .setInGC(HermesValue::encodeEmptyValue(), gc);
   return true;
 }
@@ -113,7 +112,8 @@ GCHermesValue *JSWeakMapImplBase::getValueDirect(
   if (it == map_.end()) {
     return nullptr;
   }
-  return &valueStorage_.get(gc.getPointerBase())->atRef(it->second);
+  return &valueStorage_.get(gc.getPointerBase())
+              ->atRef(gc.getPointerBase(), it->second);
 }
 
 GCPointerBase &JSWeakMapImplBase::getValueStorageRef(GC &gc) {
@@ -150,13 +150,12 @@ HermesValue JSWeakMapImplBase::getValue(
 }
 
 uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
-    PointerBase &base,
-    GC &gc,
+    Runtime &runtime,
     JSWeakMapImplBase *self) {
   /// Free up any freeable slots, so the count is more accurate.
   if (self->hasFreeableSlots_) {
     // There are freeable slots: find and delete them.
-    self->findAndDeleteFreeSlots(base, gc);
+    self->findAndDeleteFreeSlots(runtime);
   }
   return self->map_.size();
 }
@@ -236,24 +235,23 @@ void JSWeakMapImplBase::_snapshotAddNodesImpl(
 }
 
 /// Mark weak references and remove any invalid weak refs.
-void JSWeakMapImplBase::findAndDeleteFreeSlots(PointerBase &base, GC &gc) {
-  WeakRefLock lk{gc.weakRefMutex()};
+void JSWeakMapImplBase::findAndDeleteFreeSlots(Runtime &runtime) {
+  WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   for (auto it = map_.begin(); it != map_.end(); ++it) {
     if (!it->first.ref.isValid()) {
       // If invalid, clear the value and remove the key from the map.
-      deleteInternal(base, gc, it);
+      deleteInternal(runtime, it);
     }
   }
   hasFreeableSlots_ = false;
 }
 
 void JSWeakMapImplBase::deleteInternal(
-    PointerBase &base,
-    GC &gc,
+    Runtime &runtime,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
-  valueStorage_.getNonNull(base)->setNonPtr(
-      it->second, HermesValue::encodeNativeUInt32(freeListHead_), gc);
+  valueStorage_.getNonNull(runtime)->setNonPtr(
+      runtime, it->second, HermesValue::encodeNativeUInt32(freeListHead_));
   freeListHead_ = it->second;
   map_.erase(it);
 }
@@ -264,7 +262,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
     // No elements in the free list and there are freeable slots.
     // Try to find some.
-    self->findAndDeleteFreeSlots(runtime, runtime.getHeap());
+    self->findAndDeleteFreeSlots(runtime);
   }
 
   // Index in valueStorage_ in which to place the new element.

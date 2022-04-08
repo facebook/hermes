@@ -76,7 +76,7 @@ class ArrayImpl : public JSObject {
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
     self->getIndexedStorage(runtime)->set(
-        index - self->beginIndex_, value, runtime.getHeap());
+        runtime, index - self->beginIndex_, value);
   }
 
   /// Set the element at index \p index to empty. This does not affect the

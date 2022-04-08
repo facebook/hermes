@@ -158,7 +158,7 @@ ExecutionStatus SegmentedArray::push_back(
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto &elm = self->atRef(oldSize);
+  auto &elm = self->atRef(runtime, oldSize);
   new (&elm) GCHermesValue(*value, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -280,9 +280,9 @@ ExecutionStatus SegmentedArray::growLeft(
   // Since self and newSegmentedArray are distinct, don't need to worry about
   // order.
   GCHermesValue::copy(
-      self->begin(),
-      self->end(),
-      newSegmentedArray->begin() + amount,
+      self->begin(runtime),
+      self->end(runtime),
+      newSegmentedArray->begin(runtime) + amount,
       runtime.getHeap());
   // Assign back to self.
   self = newSegmentedArray.get();
@@ -300,11 +300,14 @@ void SegmentedArray::growLeftWithinCapacity(
   self = increaseSize(runtime, std::move(self), amount);
   // Copy the range from the beginning to the end.
   GCHermesValue::copy_backward(
-      self->begin(), self->end() - amount, self->end(), runtime.getHeap());
+      self->begin(runtime),
+      self->end(runtime) - amount,
+      self->end(runtime),
+      runtime.getHeap());
   // Fill the beginning with empty values.
   GCHermesValue::fill(
-      self->begin(),
-      self->begin() + amount,
+      self->begin(runtime),
+      self->begin(runtime) + amount,
       HermesValue::encodeEmptyValue(),
       runtime.getHeap());
 }
@@ -315,7 +318,8 @@ void SegmentedArray::shrinkRight(Runtime &runtime, size_type amount) {
 
 void SegmentedArray::shrinkLeft(Runtime &runtime, size_type amount) {
   // Copy the end values leftwards to the beginning.
-  GCHermesValue::copy(begin() + amount, end(), begin(), runtime.getHeap());
+  GCHermesValue::copy(
+      begin(runtime) + amount, end(runtime), begin(runtime), runtime.getHeap());
   // Now that all the values are moved down, fill the end with empty values.
   decreaseSize(runtime, amount);
 }
