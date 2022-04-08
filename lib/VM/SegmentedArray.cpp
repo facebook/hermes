@@ -13,9 +13,10 @@
 namespace hermes {
 namespace vm {
 
-const VTable SegmentedArray::Segment::vt(
-    CellKind::SegmentKind,
-    cellSize<SegmentedArray::Segment>(),
+template <typename HVType>
+const VTable SegmentedArrayBase<HVType>::Segment::vt(
+    getCellKind(),
+    cellSize<SegmentedArrayBase::Segment>(),
     nullptr,
     nullptr,
     nullptr,
@@ -33,34 +34,39 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addArray("data", self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
-PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
-    Runtime &runtime) {
+template <typename HVType>
+PseudoHandle<typename SegmentedArrayBase<HVType>::Segment>
+SegmentedArrayBase<HVType>::Segment::create(Runtime &runtime) {
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
   return createPseudoHandle(runtime.makeAFixed<Segment>());
 }
 
-void SegmentedArray::Segment::setLength(Runtime &runtime, uint32_t newLength) {
+template <typename HVType>
+void SegmentedArrayBase<HVType>::Segment::setLength(
+    Runtime &runtime,
+    uint32_t newLength) {
   const auto len = length();
   if (newLength > len) {
     // Length is increasing, fill with emptys.
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         data_ + len,
         data_ + newLength,
-        HermesValue::encodeEmptyValue(),
+        HVType::encodeEmptyValue(),
         runtime.getHeap());
     length_.store(newLength, std::memory_order_release);
   } else if (newLength < len) {
     // If length is decreasing a write barrier needs to be done.
-    GCHermesValue::rangeUnreachableWriteBarrier(
+    GCHVType::rangeUnreachableWriteBarrier(
         data_ + newLength, data_ + len, runtime.getHeap());
     length_.store(newLength, std::memory_order_release);
   }
 }
 
-const VTable SegmentedArray::vt(
-    CellKind::SegmentedArrayKind,
+template <typename HVType>
+const VTable SegmentedArrayBase<HVType>::vt(
+    getCellKind(),
     /*variableSize*/ 0,
     nullptr,
     nullptr,
@@ -83,50 +89,53 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       sizeof(GCHermesValue));
 }
 
-CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
-    Runtime &runtime,
-    size_type capacity) {
+template <typename HVType>
+CallResult<PseudoHandle<SegmentedArrayBase<HVType>>>
+SegmentedArrayBase<HVType>::create(Runtime &runtime, size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
     return throwExcessiveCapacityError(runtime, capacity);
   }
-  // Leave the segments as null. Whenever the size is changed, the segments will
-  // be allocated.
-  // Note that this means the capacity argument won't be reflected in capacity()
-  // if it is larger than the inline storage space. That is in order to avoid
-  // having an extra field to track, and the upper bound of "size" can be used
-  // instead.
+  // Leave the segments as null. Whenever the size is changed, the segments
+  // will be allocated. Note that this means the capacity argument won't be
+  // reflected in capacity() if it is larger than the inline storage space.
+  // That is in order to avoid having an extra field to track, and the upper
+  // bound of "size" can be used instead.
   const auto allocSize = allocationSizeForCapacity(capacity);
-  return createPseudoHandle(runtime.makeAVariable<SegmentedArray>(allocSize));
+  return createPseudoHandle(
+      runtime.makeAVariable<SegmentedArrayBase>(allocSize));
 }
 
-CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
-    Runtime &runtime,
-    size_type capacity) {
+template <typename HVType>
+CallResult<PseudoHandle<SegmentedArrayBase<HVType>>> SegmentedArrayBase<
+    HVType>::createLongLived(Runtime &runtime, size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
     return throwExcessiveCapacityError(runtime, capacity);
   }
-  // Leave the segments as null. Whenever the size is changed, the segments will
-  // be allocated.
+  // Leave the segments as null. Whenever the size is changed, the segments
+  // will be allocated.
   const auto allocSize = allocationSizeForCapacity(capacity);
   return createPseudoHandle(
       runtime.makeAVariable<SegmentedArray, HasFinalizer::No, LongLived::Yes>(
           allocSize));
 }
 
-CallResult<PseudoHandle<SegmentedArray>>
-SegmentedArray::create(Runtime &runtime, size_type capacity, size_type size) {
+template <typename HVType>
+CallResult<PseudoHandle<SegmentedArrayBase<HVType>>> SegmentedArrayBase<
+    HVType>::create(Runtime &runtime, size_type capacity, size_type size) {
   auto arrRes = create(runtime, capacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  PseudoHandle<SegmentedArray> self = std::move(*arrRes);
-  // TODO T25663446: This is potentially optimizable to iterate over the inline
-  // storage and the segments separately.
+  PseudoHandle<SegmentedArrayBase> self = std::move(*arrRes);
+  // TODO T25663446: This is potentially optimizable to iterate over the
+  // inline storage and the segments separately.
   self = increaseSize(runtime, std::move(self), size);
   return self;
 }
 
-SegmentedArray::size_type SegmentedArray::capacity() const {
+template <typename HVType>
+typename SegmentedArrayBase<HVType>::size_type
+SegmentedArrayBase<HVType>::capacity() const {
   const auto numSlotsUsed = numSlotsUsed_.load(std::memory_order_relaxed);
   if (numSlotsUsed <= kValueToSegmentThreshold) {
     // In the case where the size is less than the number of inline elements,
@@ -140,7 +149,9 @@ SegmentedArray::size_type SegmentedArray::capacity() const {
   }
 }
 
-SegmentedArray::size_type SegmentedArray::totalCapacityOfSpine() const {
+template <typename HVType>
+typename SegmentedArrayBase<HVType>::size_type
+SegmentedArrayBase<HVType>::totalCapacityOfSpine() const {
   const auto slotCap = slotCapacity();
   if (slotCap <= kValueToSegmentThreshold) {
     return slotCap;
@@ -150,21 +161,24 @@ SegmentedArray::size_type SegmentedArray::totalCapacityOfSpine() const {
   }
 }
 
-ExecutionStatus SegmentedArray::push_back(
-    MutableHandle<SegmentedArray> &self,
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::push_back(
+    MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     Handle<> value) {
   auto oldSize = self->size();
   if (growRight(self, runtime, 1) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  const auto shv = HVType::encodeHermesValue(*value, runtime);
   auto &elm = self->atRef(runtime, oldSize);
-  new (&elm) GCHermesValue(*value, runtime.getHeap());
+  new (&elm) GCHVType(shv, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus SegmentedArray::resize(
-    MutableHandle<SegmentedArray> &self,
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::resize(
+    MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type newSize) {
   if (newSize > self->size()) {
@@ -175,8 +189,9 @@ ExecutionStatus SegmentedArray::resize(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus SegmentedArray::resizeLeft(
-    MutableHandle<SegmentedArray> &self,
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::resizeLeft(
+    MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type newSize) {
   if (newSize == self->size()) {
@@ -189,8 +204,9 @@ ExecutionStatus SegmentedArray::resizeLeft(
   }
 }
 
-void SegmentedArray::resizeWithinCapacity(
-    SegmentedArray *self,
+template <typename HVType>
+void SegmentedArrayBase<HVType>::resizeWithinCapacity(
+    SegmentedArrayBase *self,
     Runtime &runtime,
     size_type newSize) {
   const size_type currSize = self->size();
@@ -204,7 +220,8 @@ void SegmentedArray::resizeWithinCapacity(
   }
 }
 
-ExecutionStatus SegmentedArray::throwExcessiveCapacityError(
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::throwExcessiveCapacityError(
     Runtime &runtime,
     size_type capacity) {
   assert(
@@ -216,9 +233,10 @@ ExecutionStatus SegmentedArray::throwExcessiveCapacityError(
       capacity + ", max elements = " + maxElements());
 }
 
-void SegmentedArray::allocateSegment(
+template <typename HVType>
+void SegmentedArrayBase<HVType>::allocateSegment(
     Runtime &runtime,
-    Handle<SegmentedArray> self,
+    Handle<SegmentedArrayBase> self,
     SegmentNumber segment) {
   assert(
       self->segmentAtPossiblyUnallocated(segment)->isEmpty() &&
@@ -228,8 +246,9 @@ void SegmentedArray::allocateSegment(
       c.getHermesValue(), runtime.getHeap());
 }
 
-ExecutionStatus SegmentedArray::growRight(
-    MutableHandle<SegmentedArray> &self,
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::growRight(
+    MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type amount) {
   if (self->size() + amount <= self->totalCapacityOfSpine()) {
@@ -242,11 +261,11 @@ ExecutionStatus SegmentedArray::growRight(
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
+  PseudoHandle<SegmentedArrayBase> newSegmentedArray = std::move(*arrRes);
   // Copy inline storage and segments over.
   // Do this with raw pointers so that the range write barrier occurs.
   const auto numSlotsUsed = self->numSlotsUsed_.load(std::memory_order_relaxed);
-  GCHermesValue::uninitialized_copy(
+  GCHVType::uninitialized_copy(
       self->inlineStorage(),
       self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
@@ -261,8 +280,9 @@ ExecutionStatus SegmentedArray::growRight(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus SegmentedArray::growLeft(
-    MutableHandle<SegmentedArray> &self,
+template <typename HVType>
+ExecutionStatus SegmentedArrayBase<HVType>::growLeft(
+    MutableHandle<SegmentedArrayBase> &self,
     Runtime &runtime,
     size_type amount) {
   if (self->size() + amount <= self->totalCapacityOfSpine()) {
@@ -275,11 +295,11 @@ ExecutionStatus SegmentedArray::growLeft(
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
+  PseudoHandle<SegmentedArrayBase> newSegmentedArray = std::move(*arrRes);
   // Copy element-by-element, since a shift would need to happen anyway.
   // Since self and newSegmentedArray are distinct, don't need to worry about
   // order.
-  GCHermesValue::copy(
+  GCHVType::copy(
       self->begin(runtime),
       self->end(runtime),
       newSegmentedArray->begin(runtime) + amount,
@@ -289,9 +309,10 @@ ExecutionStatus SegmentedArray::growLeft(
   return ExecutionStatus::RETURNED;
 }
 
-void SegmentedArray::growLeftWithinCapacity(
+template <typename HVType>
+void SegmentedArrayBase<HVType>::growLeftWithinCapacity(
     Runtime &runtime,
-    PseudoHandle<SegmentedArray> self,
+    PseudoHandle<SegmentedArrayBase> self,
     size_type amount) {
   assert(
       self->size() + amount <= self->totalCapacityOfSpine() &&
@@ -299,37 +320,43 @@ void SegmentedArray::growLeftWithinCapacity(
   // Fill with empty values at the end to simplify the write barrier.
   self = increaseSize(runtime, std::move(self), amount);
   // Copy the range from the beginning to the end.
-  GCHermesValue::copy_backward(
+  GCHVType::copy_backward(
       self->begin(runtime),
       self->end(runtime) - amount,
       self->end(runtime),
       runtime.getHeap());
   // Fill the beginning with empty values.
-  GCHermesValue::fill(
+  GCHVType::fill(
       self->begin(runtime),
       self->begin(runtime) + amount,
-      HermesValue::encodeEmptyValue(),
+      HVType::encodeEmptyValue(),
       runtime.getHeap());
 }
 
-void SegmentedArray::shrinkRight(Runtime &runtime, size_type amount) {
+template <typename HVType>
+void SegmentedArrayBase<HVType>::shrinkRight(
+    Runtime &runtime,
+    size_type amount) {
   decreaseSize(runtime, amount);
 }
 
-void SegmentedArray::shrinkLeft(Runtime &runtime, size_type amount) {
+template <typename HVType>
+void SegmentedArrayBase<HVType>::shrinkLeft(
+    Runtime &runtime,
+    size_type amount) {
   // Copy the end values leftwards to the beginning.
-  GCHermesValue::copy(
+  GCHVType::copy(
       begin(runtime) + amount, end(runtime), begin(runtime), runtime.getHeap());
   // Now that all the values are moved down, fill the end with empty values.
   decreaseSize(runtime, amount);
 }
 
-void SegmentedArray::increaseSizeWithinCapacity(
+template <typename HVType>
+void SegmentedArrayBase<HVType>::increaseSizeWithinCapacity(
     Runtime &runtime,
     size_type amount) {
   // This function has the same logic as increaseSize, but removes some
   // complexity from avoiding dealing with alllocations.
-  const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = size();
   const auto finalSize = currSize + amount;
   assert(
@@ -338,10 +365,10 @@ void SegmentedArray::increaseSizeWithinCapacity(
 
   if (finalSize <= kValueToSegmentThreshold) {
     // currSize and finalSize are inside inline storage, bump and fill.
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         inlineStorage() + currSize,
         inlineStorage() + finalSize,
-        empty,
+        HVType::encodeEmptyValue(),
         runtime.getHeap());
     // Set the final size.
     numSlotsUsed_.store(finalSize, std::memory_order_release);
@@ -353,20 +380,21 @@ void SegmentedArray::increaseSizeWithinCapacity(
   const auto segmentLength = toInterior(finalSize - 1) + 1;
   // Fill the inline slots if necessary, and the single segment.
   if (currSize < kValueToSegmentThreshold) {
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         inlineStorage() + currSize,
         inlineStorage() + kValueToSegmentThreshold,
-        empty,
+        HVType::encodeEmptyValue(),
         runtime.getHeap());
   }
   segmentAt(segment)->setLength(runtime, segmentLength);
 }
 
-PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
+template <typename HVType>
+PseudoHandle<SegmentedArrayBase<HVType>>
+SegmentedArrayBase<HVType>::increaseSize(
     Runtime &runtime,
-    PseudoHandle<SegmentedArray> self,
+    PseudoHandle<SegmentedArrayBase> self,
     size_type amount) {
-  const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = self->size();
   const auto finalSize = currSize + amount;
 
@@ -385,10 +413,10 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   if (currSize <= kValueToSegmentThreshold) {
     // Segments will need to be allocated, if the old size didn't have the
     // inline storage filled up, fill it up now.
-    GCHermesValue::uninitialized_fill(
+    GCHVType::uninitialized_fill(
         self->inlineStorage() + currSize,
         self->inlineStorage() + kValueToSegmentThreshold,
-        empty,
+        HVType::encodeEmptyValue(),
         runtime.getHeap());
     // Set the size to the inline storage threshold.
     self->numSlotsUsed_.store(
@@ -399,22 +427,22 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   // If one of these allocations triggers a full compacting GC, then the array
   // currently being increased might have its capacity shrunk to match its
   // numSlotsUsed. So, increase numSlotsUsed immediately to its final value
-  // before the allocations happen so it isn't shrunk, and also fill with empty
-  // values so that any mark passes don't fail.
-  // The segments should all have length 0 until allocations are finished, so
-  // that uninitialized memory is not scanned inside the segments. Once
-  // allocations are finished, go back and fixup the lengths.
+  // before the allocations happen so it isn't shrunk, and also fill with
+  // empty values so that any mark passes don't fail. The segments should all
+  // have length 0 until allocations are finished, so that uninitialized
+  // memory is not scanned inside the segments. Once allocations are finished,
+  // go back and fixup the lengths.
   const SegmentNumber startSegment =
       currSize <= kValueToSegmentThreshold ? 0 : toSegment(currSize - 1);
   const SegmentNumber lastSegment = toSegment(finalSize - 1);
   const auto newNumSlotsUsed = numSlotsForCapacity(finalSize);
   // Put empty values into all of the added slots so that the memory is not
   // uninitialized during marking.
-  GCHermesValue::uninitialized_fill(
+  GCHVType::uninitialized_fill(
       self->inlineStorage() +
           self->numSlotsUsed_.load(std::memory_order_relaxed),
       self->inlineStorage() + newNumSlotsUsed,
-      empty,
+      HVType::encodeEmptyValue(),
       runtime.getHeap());
   self->numSlotsUsed_.store(newNumSlotsUsed, std::memory_order_release);
 
@@ -423,8 +451,8 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   // Allocate each segment.
   if (startSegment <= lastSegment &&
       selfHandle->segmentAtPossiblyUnallocated(startSegment)->isEmpty()) {
-    // The start segment might already be allocated if it was half full when we
-    // increase the size.
+    // The start segment might already be allocated if it was half full when
+    // we increase the size.
     allocateSegment(runtime, selfHandle, startSegment);
   }
   for (auto i = startSegment + 1; i <= lastSegment; ++i) {
@@ -445,7 +473,10 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   return self;
 }
 
-void SegmentedArray::decreaseSize(Runtime &runtime, size_type amount) {
+template <typename HVType>
+void SegmentedArrayBase<HVType>::decreaseSize(
+    Runtime &runtime,
+    size_type amount) {
   const auto initialSize = size();
   const auto initialNumSlots = numSlotsUsed_.load(std::memory_order_relaxed);
   assert(amount <= initialSize && "Cannot decrease size past zero");
@@ -461,20 +492,23 @@ void SegmentedArray::decreaseSize(Runtime &runtime, size_type amount) {
   }
   // Before shrinking, do a snapshot write barrier for the elements being
   // removed.
-  GCHermesValue::rangeUnreachableWriteBarrier(
+  GCHVType::rangeUnreachableWriteBarrier(
       inlineStorage() + finalNumSlots,
       inlineStorage() + initialNumSlots,
       runtime.getHeap());
   numSlotsUsed_.store(finalNumSlots, std::memory_order_release);
 }
 
-gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
-  const auto *self = reinterpret_cast<const SegmentedArray *>(cell);
+template <typename HVType>
+gcheapsize_t SegmentedArrayBase<HVType>::_trimSizeCallback(const GCCell *cell) {
+  const auto *self = reinterpret_cast<const SegmentedArrayBase *>(cell);
   // This array will shrink so that it has the same slot capacity as the slot
   // size.
   return allocationSizeForSlots(
       self->numSlotsUsed_.load(std::memory_order_relaxed));
 }
+
+template class SegmentedArrayBase<HermesValue>;
 
 } // namespace vm
 } // namespace hermes
