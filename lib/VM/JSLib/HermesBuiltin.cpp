@@ -514,11 +514,10 @@ hermesBuiltinCopyRestArgs(void *, Runtime &runtime, NativeArgs args) {
   auto array = *cr;
   JSArray::setStorageEndIndex(array, runtime, length);
 
-  NoAllocScope noAlloc{runtime};
-  JSArray *arrPtr = array.get();
   for (uint32_t i = 0; i != length; ++i) {
-    JSArray::unsafeSetExistingElementAt(
-        arrPtr, runtime, i, it->getArgRef(from));
+    const auto shv =
+        SmallHermesValue::encodeHermesValue(it->getArgRef(from), runtime);
+    JSArray::unsafeSetExistingElementAt(*array, runtime, i, shv);
     ++from;
   }
 

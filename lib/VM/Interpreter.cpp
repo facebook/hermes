@@ -186,8 +186,9 @@ CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
   Handle<Arguments> args = *argRes;
 
   for (uint32_t argIndex = 0; argIndex < argCount; ++argIndex) {
-    Arguments::unsafeSetExistingElementAt(
-        *args, runtime, argIndex, frame.getArgRef(argIndex));
+    SmallHermesValue shv =
+        SmallHermesValue::encodeHermesValue(frame.getArgRef(argIndex), runtime);
+    Arguments::unsafeSetExistingElementAt(*args, runtime, argIndex, shv);
   }
 
   // The returned value should already be set from the create call.
@@ -652,7 +653,8 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   JSArray::size_type i = 0;
   while (iter.hasNext()) {
     // NOTE: we must get the value in a separate step to guarantee ordering.
-    auto value = iter.get(runtime);
+    const auto value =
+        SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
     JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
   }
 

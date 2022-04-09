@@ -73,8 +73,8 @@ hermesInternalGetEpilogues(void *, Runtime &runtime, NativeArgs args) {
       }
       auto ta = result.getValue();
       std::memcpy(ta->begin(runtime), eps[i].begin(), innerLen);
-      JSArray::unsafeSetExistingElementAt(
-          *outer, runtime, i, ta.getHermesValue());
+      const auto shv = SmallHermesValue::encodeObjectValue(*ta, runtime);
+      JSArray::unsafeSetExistingElementAt(*outer, runtime, i, shv);
     }
   }
   return HermesValue::encodeObjectValue(*outer);

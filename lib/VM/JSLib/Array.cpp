@@ -649,8 +649,10 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
             LLVM_LIKELY(n < A->getEndIndex())) {
           // Fast path: quickly set element without making any extra calls.
           // Cast is safe because A->getEndIndex must be in uint32_t range.
+          const auto shv =
+              SmallHermesValue::encodeHermesValue(subElement, runtime);
           JSArray::unsafeSetExistingElementAt(
-              A.get(), runtime, static_cast<uint32_t>(n), subElement);
+              A.get(), runtime, static_cast<uint32_t>(n), shv);
         } else {
           // Slow path fallback if there's an empty slot in arr.
           // We have to use getComputedPrimitiveDescriptor because the property
@@ -1248,12 +1250,12 @@ CallResult<HermesValue> sortSparse(
   JSArray::StorageType::size_type numProps = 0;
   for (JSArray::StorageType::size_type e = names->size(runtime); numProps != e;
        ++numProps) {
-    HermesValue hv = names->at(runtime, numProps);
+    SmallHermesValue hv = names->at(runtime, numProps);
     // Stop at the first non-number.
     if (!hv.isNumber())
       break;
     // Stop if the property name is beyond "len".
-    if (hv.getNumberAs<uint64_t>() >= len)
+    if (hv.getNumber(runtime) >= len)
       break;
   }
 
@@ -1281,7 +1283,7 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    propName = names->at(runtime, i);
+    propName = names->at(runtime, i).unboxToHV(runtime);
     auto res = JSObject::getComputed_RJS(O, runtime, propName);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
@@ -1289,8 +1291,8 @@ CallResult<HermesValue> sortSparse(
     if (res->getHermesValue().isEmpty())
       continue;
 
-    JSArray::unsafeSetExistingElementAt(
-        *array, runtime, i, res->getHermesValue());
+    const auto shv = SmallHermesValue::encodeHermesValue(res->get(), runtime);
+    JSArray::unsafeSetExistingElementAt(*array, runtime, i, shv);
 
     if (JSObject::deleteComputed(
             O, runtime, propName, PropOpFlags().plusThrowOnError()) ==

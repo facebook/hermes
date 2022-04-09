@@ -33,7 +33,7 @@ class ArrayImpl : public JSObject {
   using size_type = uint32_t;
   /// StorageType is the underlying storage that JSArray uses to put the values
   /// into.
-  using StorageType = BigStorage;
+  using StorageType = SegmentedArraySmall;
 
   /// Resize the internal storage. The ".length" property is not affected. It
   /// does \b NOT check for read-only properties.
@@ -67,7 +67,7 @@ class ArrayImpl : public JSObject {
       ArrayImpl *self,
       Runtime &runtime,
       size_type index,
-      HermesValue value) {
+      SmallHermesValue value) {
     // The array must be extendable (and by implication is not frozen or sealed)
     // because we don't know whether the element being set is empty or not.
     assert(!self->flags_.noExtend && "this array cannot be extended");
@@ -103,7 +103,9 @@ class ArrayImpl : public JSObject {
   /// contained in the storage.
   const HermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
+        ? getIndexedStorage(runtime)
+              ->at(runtime, index - beginIndex_)
+              .unboxToHV(runtime)
         : HermesValue::encodeEmptyValue();
   }
 
@@ -210,7 +212,9 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const HermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
+    return getIndexedStorage(runtime)
+        ->at(runtime, index - beginIndex_)
+        .unboxToHV(runtime);
   }
 
  private:

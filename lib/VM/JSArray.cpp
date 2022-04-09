@@ -50,7 +50,8 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto endIndex = self->endIndex_;
   for (uint32_t i = beginIndex; i < endIndex; i++) {
     const auto &elem = indexedStorage->at(gc.getPointerBase(), i - beginIndex);
-    const llvh::Optional<HeapSnapshot::NodeID> elemID = gc.getSnapshotID(elem);
+    const llvh::Optional<HeapSnapshot::NodeID> elemID =
+        gc.getSnapshotID(elem.toHV(gc.getPointerBase()));
     if (!elemID) {
       continue;
     }
@@ -190,8 +191,10 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
   // Check whether the index is within the storage.
   if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
-    self->getIndexedStorage(runtime)->set(
-        runtime, index - beginIndex, value.get());
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
+    Handle<ArrayImpl>::vmcast(selfHandle)
+        ->getIndexedStorage(runtime)
+        ->set(runtime, index - beginIndex, shv);
     return true;
   }
 
@@ -203,18 +206,20 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
       return ExecutionStatus::EXCEPTION;
     }
     auto newStorage = runtime.makeHandle<StorageType>(std::move(*arrRes));
-
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
 
     self->setIndexedStorage(runtime, newStorage.get(), runtime.getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
-    newStorage->set(runtime, 0, value.get());
+    newStorage->set(runtime, 0, shv);
     return true;
   }
 
   {
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     NoAllocScope scope{runtime};
+    self = vmcast<ArrayImpl>(selfHandle.get());
     auto *const indexedStorage = self->getIndexedStorage(runtime);
 
     // Can we do it without reallocation for sure?
@@ -223,7 +228,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
-      indexedStorage->set(runtime, index - beginIndex, value.get());
+      indexedStorage->set(runtime, index - beginIndex, shv);
       return true;
     }
   }
@@ -239,7 +244,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorageHandle->set(runtime, 0, value.getHermesValue());
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
+    indexedStorageHandle->set(runtime, 0, shv);
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
@@ -275,9 +281,10 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->endIndex_ = index + 1;
-    indexedStorageHandle->set(runtime, index - beginIndex, value.get());
+    indexedStorageHandle->set(runtime, index - beginIndex, shv);
   } else {
     // Extending to the left. 'index' will become the new 'beginIndex'.
     assert(index < beginIndex);
@@ -289,9 +296,10 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
+    const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
-    indexedStorageHandle->set(runtime, 0, value.get());
+    indexedStorageHandle->set(runtime, 0, shv);
   }
 
   // Update the potentially changed pointer.
@@ -310,13 +318,16 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     auto *indexedStorage = self->getIndexedStorage(runtime);
     // Cannot delete indexed elements if we are sealed.
     if (LLVM_UNLIKELY(self->flags_.sealed)) {
-      HermesValue elem = indexedStorage->at(runtime, index - self->beginIndex_);
+      SmallHermesValue elem =
+          indexedStorage->at(runtime, index - self->beginIndex_);
       if (!elem.isEmpty())
         return false;
     }
 
     indexedStorage->setNonPtr(
-        runtime, index - self->beginIndex_, HermesValue::encodeEmptyValue());
+        runtime,
+        index - self->beginIndex_,
+        SmallHermesValue::encodeEmptyValue());
   }
 
   return true;

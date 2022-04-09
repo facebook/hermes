@@ -136,8 +136,9 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
   Handle<JSArray> argArray = *argArrayRes;
   JSArray::setStorageEndIndex(argArray, runtime, callerFrame->getArgCount());
   for (uint32_t i = 0; i < callerFrame->getArgCount(); ++i) {
-    JSArray::unsafeSetExistingElementAt(
-        *argArray, runtime, i, callerFrame.getArgRef(i));
+    const auto shv =
+        SmallHermesValue::encodeHermesValue(callerFrame.getArgRef(i), runtime);
+    JSArray::unsafeSetExistingElementAt(*argArray, runtime, i, shv);
   }
   // 8. Let newObj be ? Call(trap, handler, « target, argArray, newTarget »).
   if (callerFrame->isConstructorCall()) {
