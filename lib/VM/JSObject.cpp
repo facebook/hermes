@@ -548,7 +548,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
        last != numIndexed;) {
     --last;
     --toLast;
-    tmpHandle = array->at(runtime, last);
+    tmpHandle = array->at(runtime, last).unboxToHV(runtime);
     JSArray::setElementAt(array, runtime, toLast, tmpHandle);
   }
 
@@ -560,7 +560,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
                 indexNamesLast = indexNames.size();
        toLast != 0;) {
     if (numIndexed) {
-      uint32_t a = (uint32_t)array->at(runtime, numIndexed - 1).getNumber();
+      uint32_t a =
+          (uint32_t)array->at(runtime, numIndexed - 1).getNumber(runtime);
       uint32_t b;
 
       if (indexNamesLast && (b = indexNames[indexNamesLast - 1]) > a) {
@@ -3018,7 +3019,7 @@ CallResult<uint32_t> appendAllPropertyNames(
     auto marker = gcScope.createMarker();
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
-      prop = enumerableProps->at(runtime, i);
+      prop = enumerableProps->at(runtime, i).unboxToHV(runtime);
       if (!needDedup) {
         // If no dedup is needed, add it directly.
         if (LLVM_UNLIKELY(

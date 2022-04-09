@@ -92,10 +92,10 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
       executedFuncInfos.find(runtime.getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res));
-  Handle<JSFunction> funcUsed =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
-  Handle<JSFunction> funcUnused =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
+  Handle<JSFunction> funcUsed = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 0).getObject(runtime)));
+  Handle<JSFunction> funcUnused = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 1).getObject(runtime)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
@@ -138,9 +138,9 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
 
     Handle<JSArray> funcArr = rt.makeHandle(vmcast<JSArray>(res));
     Handle<JSFunction> funcUsed =
-        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0)));
+        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 0).getObject(rt)));
     Handle<JSFunction> funcUnused =
-        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1)));
+        rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1).getObject(rt)));
 
     // Used and unused functions should have different info.
     EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
@@ -172,10 +172,10 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
       executedFuncInfos.find(runtime.getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res2));
-  Handle<JSFunction> funcBar =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
-  Handle<JSFunction> funcUnused =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
+  Handle<JSFunction> funcBar = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 0).getObject(runtime)));
+  Handle<JSFunction> funcUnused = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 1).getObject(runtime)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcFoo, funcUnused));
@@ -204,12 +204,12 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
       executedFuncInfos.find(runtime.getHeap().getName())->second;
 
   Handle<JSArray> funcArr = runtime.makeHandle(vmcast<JSArray>(*res));
-  Handle<JSFunction> funcUsed1 =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 0)));
-  Handle<JSFunction> funcUsed2 =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 1)));
-  Handle<JSFunction> funcUnused =
-      runtime.makeHandle(vmcast<JSFunction>(funcArr->at(runtime, 2)));
+  Handle<JSFunction> funcUsed1 = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 0).getObject(runtime)));
+  Handle<JSFunction> funcUsed2 = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 1).getObject(runtime)));
+  Handle<JSFunction> funcUnused = runtime.makeHandle(
+      vmcast<JSFunction>(funcArr->at(runtime, 2).getObject(runtime)));
 
   // Used and unused functions should have different info.
   EXPECT_TRUE(hasDifferentInfo(funcUsed1, funcUnused));

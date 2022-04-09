@@ -428,7 +428,7 @@ CallResult<HermesValue> createDynamicFunction(
   MutableHandle<StringPrimitive> element{runtime};
   for (uint32_t i = 0; i < paramCount; ++i) {
     // Copy params into str.
-    element = params->at(runtime, i).getString();
+    element = params->at(runtime, i).getString(runtime);
     builder->appendStringPrim(element);
     if (i < paramCount - 1) {
       // If there's more params left to put, need to add a comma.

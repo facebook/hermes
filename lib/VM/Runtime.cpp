@@ -2022,7 +2022,8 @@ HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
   }
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
   auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
-  auto hcHermesVal = hiddenClassArray->at(*this, classIdToIdxMap[classId]);
+  auto hcHermesVal =
+      hiddenClassArray->at(*this, classIdToIdxMap[classId]).unboxToHV(*this);
   return vmcast<HiddenClass>(hcHermesVal);
 }
 

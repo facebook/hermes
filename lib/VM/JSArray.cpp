@@ -113,7 +113,7 @@ HermesValue ArrayImpl::_getOwnIndexedImpl(
     JSObject *selfObj,
     Runtime &runtime,
     uint32_t index) {
-  return vmcast<ArrayImpl>(selfObj)->at(runtime, index);
+  return vmcast<ArrayImpl>(selfObj)->at(runtime, index).unboxToHV(runtime);
 }
 
 ExecutionStatus ArrayImpl::setStorageEndIndex(

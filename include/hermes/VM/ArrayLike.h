@@ -51,7 +51,8 @@ ExecutionStatus createListFromArrayLike(
       // Fast path: we already have an array, so try and bypass the getComputed
       // checks and the handle loads & stores. Directly call ArrayImpl::at,
       // and only call getComputed if the element is empty.
-      PseudoHandle<> elem = createPseudoHandle(elemArray->at(runtime, elemIdx));
+      PseudoHandle<> elem = createPseudoHandle(
+          elemArray->at(runtime, elemIdx).unboxToHV(runtime));
       if (LLVM_LIKELY(!elem->isEmpty())) {
         if (LLVM_UNLIKELY(
                 elementCB(runtime, elemIdx, std::move(elem)) ==

@@ -522,12 +522,12 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   MutableHandle<StringPrimitive> element{runtime};
-  element = strings->at(runtime, 0).getString();
+  element = strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(element);
   for (uint32_t j = 1; j < len; ++j) {
     // Every element after the first needs a separator before it.
     builder->appendCharacter(separator);
-    element = strings->at(runtime, j).getString();
+    element = strings->at(runtime, j).getString(runtime);
     builder->appendStringPrim(element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
@@ -642,17 +642,15 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
       // appended to the result array.
       // 5.c.iv. Repeat, while k < len
       for (uint64_t k = 0; k < len; ++k, ++n) {
-        HermesValue subElement = LLVM_LIKELY(arrHandle)
+        SmallHermesValue subElement = LLVM_LIKELY(arrHandle)
             ? arrHandle->at(runtime, k)
-            : HermesValue::encodeEmptyValue();
+            : SmallHermesValue::encodeEmptyValue();
         if (LLVM_LIKELY(!subElement.isEmpty()) &&
             LLVM_LIKELY(n < A->getEndIndex())) {
           // Fast path: quickly set element without making any extra calls.
           // Cast is safe because A->getEndIndex must be in uint32_t range.
-          const auto shv =
-              SmallHermesValue::encodeHermesValue(subElement, runtime);
           JSArray::unsafeSetExistingElementAt(
-              A.get(), runtime, static_cast<uint32_t>(n), shv);
+              A.get(), runtime, static_cast<uint32_t>(n), subElement);
         } else {
           // Slow path fallback if there's an empty slot in arr.
           // We have to use getComputedPrimitiveDescriptor because the property
@@ -829,11 +827,11 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   MutableHandle<StringPrimitive> element{runtime};
-  element = strings->at(runtime, 0).getString();
+  element = strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(element);
   for (size_t i = 1; i < len; ++i) {
     builder->appendStringPrim(sep);
-    element = strings->at(runtime, i).getString();
+    element = strings->at(runtime, i).getString(runtime);
     builder->appendStringPrim(element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
@@ -1313,7 +1311,7 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    auto hv = array->at(runtime, i);
+    auto hv = array->at(runtime, i).unboxToHV(runtime);
     assert(
         !hv.isEmpty() &&
         "empty values cannot appear in the array out of nowhere");

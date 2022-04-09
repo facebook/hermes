@@ -45,7 +45,7 @@ TEST_F(ArrayTest, CppAPITest) {
 
 // Obtain the value a couple of different ways and check its value.
 #define EXPECT_INDEX_VALUE(value, array, index)                        \
-  EXPECT_EQ(value, array->at(runtime, index));                         \
+  EXPECT_EQ(value, array->at(runtime, index).unboxToHV(runtime));      \
   ASSERT_TRUE(*array->getOwnComputedDescriptor(                        \
       array,                                                           \
       runtime,                                                         \

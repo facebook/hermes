@@ -275,7 +275,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
        nextKeyIdx < endIdx;
        ++nextKeyIdx) {
     marker.flush();
-    nextKeyHandle = keys->at(runtime, nextKeyIdx);
+    nextKeyHandle = keys->at(runtime, nextKeyIdx).unboxToHV(runtime);
     if (nextKeyHandle->isNumber()) {
       CallResult<PseudoHandle<StringPrimitive>> strRes =
           toString_RJS(runtime, nextKeyHandle);
@@ -566,7 +566,7 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
              ++i) {
           marker.flush();
           // Fast path: look up the property in indexed storage.
-          nextValue = arr->at(runtime, i);
+          nextValue = arr->at(runtime, i).unboxToHV(runtime);
           if (LLVM_UNLIKELY(nextValue->isEmpty())) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
@@ -696,7 +696,7 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 
   for (uint32_t i = 0; i < len; ++i) {
     assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
-    HermesValue arg = argArray->at(runtime, i);
+    HermesValue arg = argArray->at(runtime, i).unboxToHV(runtime);
     newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
         ? HermesValue::encodeUndefinedValue()
         : arg;

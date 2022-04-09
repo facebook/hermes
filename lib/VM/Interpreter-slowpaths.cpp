@@ -206,9 +206,9 @@ ExecutionStatus Interpreter::caseIteratorNext(
       // No need to check the fastIndexProperties flag because the indexed
       // storage would be deleted and at() would return empty in that case.
       NoAllocScope noAlloc{runtime};
-      HermesValue value = arr->at(runtime, i);
+      SmallHermesValue value = arr->at(runtime, i);
       if (LLVM_LIKELY(!value.isEmpty())) {
-        O1REG(IteratorNext) = value;
+        O1REG(IteratorNext) = value.unboxToHV(runtime);
         O2REG(IteratorNext) = HermesValue::encodeNumberValue(i + 1);
         return ExecutionStatus::RETURNED;
       }

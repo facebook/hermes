@@ -999,10 +999,10 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElements) {
   CallResult<HermesValue> res = runtime.run(source, "file:///fake.js", flags);
   ASSERT_FALSE(isException(res));
   Handle<JSArray> array = runtime.makeHandle(vmcast<JSArray>(*res));
-  Handle<JSObject> firstElement =
-      runtime.makeHandle<JSObject>(array->at(runtime, 10));
-  Handle<JSObject> secondElement =
-      runtime.makeHandle<JSObject>(array->at(runtime, 15));
+  Handle<JSObject> firstElement = runtime.makeHandle<JSObject>(
+      vmcast<JSObject>(array->at(runtime, 10).getObject(runtime)));
+  Handle<JSObject> secondElement = runtime.makeHandle(
+      vmcast<JSObject>(array->at(runtime, 15).getObject(runtime)));
   auto cr = JSObject::getComputed_RJS(
       array,
       runtime,

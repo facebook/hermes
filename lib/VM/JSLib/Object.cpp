@@ -419,7 +419,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
   // 4. For each element key of ownKeys in List order, do
   for (uint32_t i = 0; i < len; ++i) {
     gcScope.flushToMarker(marker);
-    key = ownKeys->at(runtime, i);
+    key = ownKeys->at(runtime, i).unboxToHV(runtime);
     // a. Let desc be ? obj.[[GetOwnProperty]](key).
     // b. Let descriptor be ! FromPropertyDescriptor(desc).
     auto descriptorRes = getOwnPropertyDescriptor(runtime, obj, key);
@@ -460,7 +460,7 @@ CallResult<HermesValue> getOwnPropertyKeysAsStrings(
   auto marker = gcScope.createMarker();
   for (unsigned i = 0, e = array->getEndIndex(); i < e; ++i) {
     gcScope.flushToMarker(marker);
-    prop = array->at(runtime, i);
+    prop = array->at(runtime, i).unboxToHV(runtime);
     if (prop->isString() || prop->isSymbol()) {
       // Nothing to do if it's already a string or symbol.
       continue;
@@ -614,7 +614,7 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
 
   for (unsigned i = 0, e = propNames->getEndIndex(); i < e; ++i) {
-    propName = propNames->at(runtime, i);
+    propName = propNames->at(runtime, i).unboxToHV(runtime);
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
         propsHandle, runtime, propName, tmpPropNameStorage, desc);
@@ -646,7 +646,7 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
 
   // For each descriptor in the list, add it to the object.
   for (const auto &newProp : newProps) {
-    propName = propNames->at(runtime, newProp.propNameIndex);
+    propName = propNames->at(runtime, newProp.propNameIndex).unboxToHV(runtime);
     auto result = JSObject::defineOwnComputedPrimitive(
         objHandle,
         runtime,
@@ -833,7 +833,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
        ++i) {
     gcScope.flushToMarker(marker);
 
-    name = names->at(runtime, i).getString();
+    name = names->at(runtime, i).getString(runtime);
     // By calling getString, name is guaranteed to be primitive.
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedPrimitiveDescriptor(
@@ -897,7 +897,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       assert(
           objHandle->isProxyObject() &&
           "Key kind did not return early but not proxy");
-      entry = names->at(runtime, i);
+      entry = names->at(runtime, i).unboxToHV(runtime);
     }
 
     // The element must exist because we just read it.
@@ -1055,7 +1055,7 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
          ++nextKeyIdx) {
       GCScopeMarkerRAII markerInner(gcScope);
 
-      nextKeyHandle = keys->at(runtime, nextKeyIdx);
+      nextKeyHandle = keys->at(runtime, nextKeyIdx).unboxToHV(runtime);
 
       // 5.c.i. Let desc be from.[[GetOwnProperty]](nextKey).
       auto descCr = JSObject::getOwnComputedDescriptor(

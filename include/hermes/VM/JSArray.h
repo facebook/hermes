@@ -101,17 +101,15 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, or \c empty if the index is not
   /// contained in the storage.
-  const HermesValue at(Runtime &runtime, size_type index) const {
+  const SmallHermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)
-              ->at(runtime, index - beginIndex_)
-              .unboxToHV(runtime)
-        : HermesValue::encodeEmptyValue();
+        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
+        : SmallHermesValue::encodeEmptyValue();
   }
 
   /// Return the value at index \p index.
   Handle<> handleAt(Runtime &runtime, size_type index) const {
-    return runtime.makeHandle(at(runtime, index));
+    return runtime.makeHandle(at(runtime, index).unboxToHV(runtime));
   }
 
   /// Get a pointer to the indexed storage for this array. The returned value
@@ -211,10 +209,8 @@ class ArrayImpl : public JSObject {
       ObjectVTable::CheckAllOwnIndexedMode mode);
 
   /// Return the value at index \p index, which must be valid.
-  const HermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)
-        ->at(runtime, index - beginIndex_)
-        .unboxToHV(runtime);
+  const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
+    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
   }
 
  private:

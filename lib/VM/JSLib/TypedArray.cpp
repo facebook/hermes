@@ -1173,7 +1173,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime &runtime, NativeArgs args) {
   MutableHandle<> storage(runtime);
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < insert; ++i) {
-    storage = values->at(runtime, i);
+    storage = values->at(runtime, i).unboxToHV(runtime);
     if (JSObject::setOwnIndexed(TA, runtime, i, storage) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1264,12 +1264,12 @@ typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   MutableHandle<StringPrimitive> element{runtime};
-  element = strings->at(runtime, 0).getString();
+  element = strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(element);
   // Copy the strings.
   for (decltype(len) i = 1; i < len; ++i) {
     builder->appendStringPrim(sep);
-    element = strings->at(runtime, i).getString();
+    element = strings->at(runtime, i).getString(runtime);
     builder->appendStringPrim(element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
@@ -1606,13 +1606,13 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   MutableHandle<StringPrimitive> element{runtime};
-  element = strings->at(runtime, 0).getString();
+  element = strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(element);
 
   for (uint32_t i = 1; i < len; ++i) {
     // Every element after the first needs a separator before it.
     builder->appendASCIIRef(separator);
-    element = strings->at(runtime, i).getString();
+    element = strings->at(runtime, i).getString(runtime);
     builder->appendStringPrim(element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());

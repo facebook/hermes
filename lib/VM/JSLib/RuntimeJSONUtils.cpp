@@ -520,7 +520,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     auto keys = *cr;
     GCScopeMarkerRAII marker(runtime_);
     for (uint32_t index = 0, e = keys->getEndIndex(); index < e; ++index) {
-      tmpHandle = keys->at(runtime_, index);
+      tmpHandle = keys->at(runtime_, index).unboxToHV(runtime_);
       if (LLVM_UNLIKELY(
               filter(scopedObject, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -666,7 +666,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     auto len = propertyList_->getEndIndex();
     for (uint32_t i = 0; i < len; ++i) {
       if (propertyList_->at(runtime_, i)
-              .getString()
+              .getString(runtime_)
               ->equals(tmpHandle_->getString())) {
         exists = true;
         break;
@@ -1013,7 +1013,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       indent();
     }
 
-    tmpHandle_ = operationJOK_->at(runtime_, index);
+    tmpHandle_ = operationJOK_->at(runtime_, index).unboxToHV(runtime_);
     if (LLVM_UNLIKELY(!tmpHandle_->isString())) {
       // property may come from getOwnPropertyNames, which may contain numbers.
       // getOwnPropertyNames and propertyList_ are both only populated
