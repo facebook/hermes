@@ -14,8 +14,14 @@ namespace hermes {
 
 // Iterator that counts number of operator++ invocations
 template <typename T>
-class CountingIterator : public std::iterator<std::input_iterator_tag, T> {
+class CountingIterator {
  public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = T;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   CountingIterator() = default;
   CountingIterator(const CountingIterator &cit) : count_(cit.count_) {}
 

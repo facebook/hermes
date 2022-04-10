@@ -68,8 +68,7 @@ class StringView {
   /// Iterator for StringView. It's mostly standard except *operator does not
   /// return a reference, which disables certain things such as creating a
   /// reverse_iterator using std::reverse_iterator.
-  class const_iterator
-      : public std::iterator<std::random_access_iterator_tag, char16_t> {
+  class const_iterator {
     friend class StringView;
 
     /// Current pointer position if the underlying string is char string.
@@ -91,6 +90,9 @@ class StringView {
         : const_iterator(nullptr, ptr) {}
 
    public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = char16_t;
+    using pointer = char16_t *;
     using difference_type = std::ptrdiff_t;
     using reference = char16_t;
 

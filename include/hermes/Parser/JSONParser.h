@@ -329,9 +329,7 @@ class JSONObject : public JSONValue {
   /// Iterator creating the impression that we are storing key/value pairs.
   /// The illusion is not complete as "it->first" doesn't work, but it is better
   /// than nothing.
-  class iterator : public std::iterator<
-                       std::bidirectional_iterator_tag,
-                       std::pair<JSONString *, JSONValue *&>> {
+  class iterator {
     JSONObject *obj_;
     size_t index_;
 
@@ -340,6 +338,12 @@ class JSONObject : public JSONValue {
     friend class const_iterator;
 
    public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = std::pair<JSONString *, JSONValue *&>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     iterator(const iterator &) = default;
     iterator &operator=(const iterator &) = default;
 
@@ -369,9 +373,7 @@ class JSONObject : public JSONValue {
       return obj_ != it.obj_ || index_ != it.index_;
     }
   };
-  class const_iterator : public std::iterator<
-                             std::bidirectional_iterator_tag,
-                             std::pair<JSONString *, JSONValue *>> {
+  class const_iterator {
     const JSONObject *obj_;
     size_t index_;
 
@@ -380,6 +382,12 @@ class JSONObject : public JSONValue {
     friend class JSONObject;
 
    public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = std::pair<JSONString *, JSONValue *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     const_iterator(const const_iterator &) = default;
     const_iterator &operator=(const const_iterator &) = default;
 
@@ -395,12 +403,12 @@ class JSONObject : public JSONValue {
       return value_type{obj_->hiddenClass_->begin()[index_], (*obj_)[index_]};
     }
 
-    iterator &operator++() {
+    const_iterator &operator++() {
       ++index_;
       return *this;
     }
 
-    iterator &operator--() {
+    const_iterator &operator--() {
       --index_;
       return *this;
     }

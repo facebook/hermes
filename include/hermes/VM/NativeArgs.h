@@ -136,8 +136,7 @@ class NativeArgs final {
   ///   auto arg0 = argsHandles[0];
   ///   auto arg1 = argsHandles[1];
   /// \endcode
-  class handle_iterator
-      : public std::iterator<std::random_access_iterator_tag, Handle<>> {
+  class handle_iterator {
     friend class NativeArgs;
 
     ConstArgIterator arg_;
@@ -145,6 +144,12 @@ class NativeArgs final {
     explicit handle_iterator(ConstArgIterator arg) : arg_(arg) {}
 
    public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = Handle<>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     handle_iterator(const handle_iterator &) = default;
     handle_iterator &operator=(const handle_iterator &) = default;
 
