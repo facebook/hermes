@@ -339,11 +339,16 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
         "variable length arrays must allocate their own arrays");
     allocArrayInst = Builder.createAllocArrayInst(elements, list.size());
   }
-  if (count > 0 && llvh::isa<ESTree::EmptyNode>(&list.back())) {
+  if (!list.empty() && llvh::isa<ESTree::EmptyNode>(&list.back())) {
     // Last element is an elision, VM cannot derive the length properly.
     // We have to explicitly set it.
+    Value *newLength;
+    if (variableLength)
+      newLength = Builder.createLoadStackInst(nextIndex);
+    else
+      newLength = Builder.getLiteralNumber(count);
     Builder.createStorePropertyInst(
-        Builder.getLiteralNumber(count), allocArrayInst, StringRef("length"));
+        newLength, allocArrayInst, StringRef("length"));
   }
   return allocArrayInst;
 }

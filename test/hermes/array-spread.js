@@ -30,6 +30,10 @@ var arr = ['a','b',...[1,2,3],'c',...[4,5,6],'d'];
 print(arr, arr.length);
 // CHECK-NEXT: a,b,1,2,3,c,4,5,6,d 10
 
+var arr = [...[1,2,3], ,];
+print(arr, arr.length);
+// CHECK-NEXT: 1,2,3, 4
+
 var arr0 = [1,,3];
 var arr = [...arr0];
 print(arr);
