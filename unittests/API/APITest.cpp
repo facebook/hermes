@@ -627,7 +627,8 @@ TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
     std::vector<DiagnosticHandler::Diagnostic> ds;
   } diagHandler;
   std::string bytecode;
-  ASSERT_FALSE(hermes::compileJS("x++1", "", bytecode, true, &diagHandler));
+  ASSERT_FALSE(
+      hermes::compileJS("x++1", "", bytecode, true, true, &diagHandler));
   ASSERT_EQ(1, diagHandler.ds.size());
   EXPECT_EQ(DiagnosticHandler::Error, diagHandler.ds[0].kind);
   EXPECT_EQ(1, diagHandler.ds[0].line);
@@ -646,7 +647,7 @@ TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
   std::string bytecode;
   // Succeeds with a warning + associated note.
   ASSERT_TRUE(
-      hermes::compileJS("({a:1,a:2})", "", bytecode, true, &diagHandler));
+      hermes::compileJS("({a:1,a:2})", "", bytecode, true, true, &diagHandler));
   ASSERT_EQ(2, diagHandler.ds.size());
 
   // warning: the property "a" was set multiple times in the object definition.

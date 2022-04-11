@@ -46,9 +46,11 @@ bool compileJS(
     const std::string &sourceURL,
     std::string &bytecode,
     bool optimize,
+    bool emitAsyncBreakCheck,
     DiagnosticHandler *diagHandler) {
   hbc::CompileFlags flags{};
   flags.format = EmitBundle;
+  flags.emitAsyncBreakCheck = emitAsyncBreakCheck;
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
@@ -81,7 +83,7 @@ bool compileJS(
 }
 
 bool compileJS(const std::string &str, std::string &bytecode, bool optimize) {
-  return compileJS(str, "", bytecode, optimize, nullptr);
+  return compileJS(str, "", bytecode, optimize, false, nullptr);
 }
 
 bool compileJS(
@@ -89,7 +91,7 @@ bool compileJS(
     const std::string &sourceURL,
     std::string &bytecode,
     bool optimize) {
-  return compileJS(str, sourceURL, bytecode, optimize, nullptr);
+  return compileJS(str, sourceURL, bytecode, optimize, false, nullptr);
 }
 
 } // namespace hermes
