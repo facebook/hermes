@@ -35,15 +35,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW)
 endif()
 
-# Don't complain about mixing plain and keyword target_link_libraries commands.
-# Keyword style is when you specify whether library symbols are re-exported,
-# e.g. target_link_libraries(target PRIVATE lib).
-# LLVM currently uses plain-style target_link_libraries calls so we must
-# allow mixing.
-if (POLICY CMP0023)
-  cmake_policy(SET CMP0023 OLD)
-endif()
-
 # Allow reading the LOCATION property of a target to determine the eventual
 # location of build targets. This is needed when building the debugging symbols
 # bundles for Apple platforms.
@@ -529,11 +520,11 @@ endif()
 # This adds the correct -rpath link flag as necessary.
 function(hermes_link_icu target_name)
   get_target_property(target_type ${target_name} TYPE)
-  target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
+  target_link_libraries(${target_name} ${ICU_LIBRARIES})
 
   if (HERMES_USE_STATIC_ICU)
     if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-      target_link_libraries(${target_name} PRIVATE dl pthread)
+      target_link_libraries(${target_name} dl pthread)
     elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
       message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
     endif()
