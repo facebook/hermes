@@ -40,7 +40,7 @@ class WeakRootBase : protected CompressedPointer {
 
   /// This function should only be used in cases where it is known that no read
   /// barrier is necessary.
-  GCCell *getNoBarrierUnsafe(PointerBase &base) {
+  GCCell *getNoBarrierUnsafe(PointerBase &base) const {
     return CompressedPointer::get(base);
   }
 
@@ -68,6 +68,10 @@ class WeakRoot final : public WeakRootBase {
 
   T *get(PointerBase &base, GC &gc) const {
     return static_cast<T *>(WeakRootBase::get(base, gc));
+  }
+
+  T *getNoBarrierUnsafe(PointerBase &base) const {
+    return static_cast<T *>(WeakRootBase::getNoBarrierUnsafe(base));
   }
 
   void set(PointerBase &base, T *ptr) {

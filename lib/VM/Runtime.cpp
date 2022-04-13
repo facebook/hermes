@@ -604,8 +604,10 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
       acceptor.acceptWeak(entry.clazz);
     }
     for (auto &rm : runtimeModuleList_)
-      rm.markWeakRoots(acceptor);
+      rm.markLongLivedWeakRoots(acceptor);
   }
+  for (auto &rm : runtimeModuleList_)
+    rm.markDomainRef(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
   acceptor.endRootSection();

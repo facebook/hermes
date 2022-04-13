@@ -15,7 +15,6 @@
 #include "hermes/VM/IdentifierTable.h"
 
 #include "hermes/VM/StringRefUtils.h"
-#include "hermes/VM/WeakRef.h"
 #include "hermes/VM/WeakRoot.h"
 
 #include "llvh/ADT/simple_ilist.h"
@@ -82,13 +81,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   std::vector<RootSymbolID> stringIDMap_;
 
   /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
-  /// NOTE: This will not be made invalid through marking, because the domain
-  /// updates the WeakRefs on the RuntimeModule when it is marked.
-  /// We use WeakRef<Domain> here to express that the RuntimeModule does not own
-  /// the Domain.
+  /// We use WeakRoot<Domain> here to express that the RuntimeModule does not
+  /// own the Domain.
   /// We avoid using a raw pointer to Domain because we must be able to update
   /// it when the GC moves the Domain.
-  WeakRef<Domain> domain_;
+  WeakRoot<Domain> domain_;
 
   /// The table maps from a function index to a CodeBlock.
   std::vector<CodeBlock *> functionMap_{};
@@ -313,7 +310,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   /// Does not execute any read or write barriers on the GC. Should only be
   /// used during a signal handler or from a non-mutator thread.
-  inline Domain *getDomainForSamplingProfiler();
+  inline Domain *getDomainForSamplingProfiler(PointerBase &base);
 
   /// \return the Runtime of this module.
   Runtime &getRuntime() {
@@ -348,11 +345,13 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// Mark the non-weak roots owned by this RuntimeModule.
   void markRoots(RootAcceptor &acceptor, bool markLongLived);
 
-  /// Mark the weak roots owned by this RuntimeModule.
-  void markWeakRoots(WeakRootAcceptor &acceptor);
+  /// Mark the long lived weak roots owned by this RuntimeModule.
+  void markLongLivedWeakRoots(WeakRootAcceptor &acceptor);
 
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
-  void markDomainRef(WeakRefAcceptor &acceptor);
+  void markDomainRef(WeakRootAcceptor &acceptor) {
+    acceptor.acceptWeak(domain_);
+  }
 
   /// \return an estimate of the size of additional memory used by this
   /// RuntimeModule.

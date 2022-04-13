@@ -13,7 +13,6 @@
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValueTraits.h"
 #include "hermes/VM/SymbolID.h"
-#include "hermes/VM/WeakRef.h"
 
 namespace hermes {
 namespace vm {

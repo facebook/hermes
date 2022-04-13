@@ -272,7 +272,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       // Don't execute a read or write barrier here because this is a signal
       // handler.
       if (saveDomains == SaveDomains::Yes)
-        registerDomain(module->getDomainForSamplingProfiler());
+        registerDomain(module->getDomainForSamplingProfiler(runtime_));
     } else if (
         auto *nativeFunction =
             dyn_vmcast<NativeFunction>(frame.getCalleeClosureUnsafe())) {

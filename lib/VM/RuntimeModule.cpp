@@ -27,7 +27,7 @@ RuntimeModule::RuntimeModule(
     llvh::StringRef sourceURL,
     facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
-      domain_(runtime.getHeap(), domain),
+      domain_(*domain, runtime),
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
@@ -383,7 +383,7 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   }
 }
 
-void RuntimeModule::markWeakRoots(WeakRootAcceptor &acceptor) {
+void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
   for (auto &cbPtr : functionMap_) {
     // Only mark a CodeBlock is its non-null, and has not been scanned
     // previously in this top-level markRoots invocation.
@@ -396,10 +396,6 @@ void RuntimeModule::markWeakRoots(WeakRootAcceptor &acceptor) {
       acceptor.acceptWeak(entry.second);
     }
   }
-}
-
-void RuntimeModule::markDomainRef(WeakRefAcceptor &acceptor) {
-  acceptor.accept(domain_);
 }
 
 llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
