@@ -8,7 +8,8 @@
 #ifndef HERMES_VM_WEAKROOT_H
 #define HERMES_VM_WEAKROOT_H
 
-#include "hermes/VM/GC.h"
+#include "hermes/VM/CompressedPointer.h"
+#include "hermes/VM/GCDecl.h"
 
 namespace hermes {
 namespace vm {
@@ -24,13 +25,7 @@ class WeakRootBase : protected CompressedPointer {
   explicit WeakRootBase(GCCell *ptr, PointerBase &base)
       : CompressedPointer(CompressedPointer::encode(ptr, base)) {}
 
-  void *get(PointerBase &base, GC &gc) const {
-    if (!*this)
-      return nullptr;
-    GCCell *ptr = CompressedPointer::getNonNull(base);
-    gc.weakRefReadBarrier(ptr);
-    return ptr;
-  }
+  inline void *get(PointerBase &base, GC &gc) const;
 
  public:
   using CompressedPointer::StorageType;
@@ -66,9 +61,7 @@ class WeakRoot final : public WeakRootBase {
   explicit WeakRoot(std::nullptr_t) : WeakRootBase(nullptr) {}
   explicit WeakRoot(T *ptr, PointerBase &base) : WeakRootBase(ptr, base) {}
 
-  T *get(PointerBase &base, GC &gc) const {
-    return static_cast<T *>(WeakRootBase::get(base, gc));
-  }
+  inline T *get(PointerBase &base, GC &gc) const;
 
   T *getNoBarrierUnsafe(PointerBase &base) const {
     return static_cast<T *>(WeakRootBase::getNoBarrierUnsafe(base));

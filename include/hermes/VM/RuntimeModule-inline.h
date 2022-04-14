@@ -9,6 +9,7 @@
 #define HERMES_VM_RUNTIMEMODULE_INLINE_H
 
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 namespace hermes {
 namespace vm {

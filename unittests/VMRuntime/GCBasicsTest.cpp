@@ -11,6 +11,7 @@
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/WeakRef.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 #include <functional>
 #include <new>

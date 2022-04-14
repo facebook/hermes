@@ -36,6 +36,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 #include "llvh/Support/ErrorHandling.h"
 #include "llvh/Support/FileSystem.h"

@@ -16,6 +16,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 namespace hermes {
 namespace vm {

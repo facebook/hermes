@@ -30,6 +30,7 @@
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/Format.h"
