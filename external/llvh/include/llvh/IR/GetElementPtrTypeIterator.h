@@ -28,28 +28,24 @@
 
 namespace llvh {
 
-  template<typename ItTy = User::const_op_iterator>
-  class generic_gep_type_iterator
-    : public std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t> {
-    using super = std::iterator<std::forward_iterator_tag, Type *, ptrdiff_t>;
+  template <typename ItTy = User::const_op_iterator>
+  class generic_gep_type_iterator {
 
     ItTy OpIt;
     PointerUnion<StructType *, Type *> CurTy;
-    enum : uint64_t { Unbounded = -1ull };
-    uint64_t NumElements = Unbounded;
 
     generic_gep_type_iterator() = default;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = Type *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     static generic_gep_type_iterator begin(Type *Ty, ItTy It) {
       generic_gep_type_iterator I;
       I.CurTy = Ty;
-      I.OpIt = It;
-      return I;
-    }
-
-    static generic_gep_type_iterator end(ItTy It) {
-      generic_gep_type_iterator I;
       I.OpIt = It;
       return I;
     }

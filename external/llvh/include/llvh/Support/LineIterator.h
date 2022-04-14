@@ -29,8 +29,7 @@ class MemoryBuffer;
 /// character.
 ///
 /// Note that this iterator requires the buffer to be nul terminated.
-class line_iterator
-    : public std::iterator<std::forward_iterator_tag, StringRef> {
+class line_iterator {
   const MemoryBuffer *Buffer;
   char CommentMarker;
   bool SkipBlanks;
@@ -39,6 +38,12 @@ class line_iterator
   StringRef CurrentLine;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = StringRef;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   /// Default construct an "end" iterator.
   line_iterator() : Buffer(nullptr) {}
 

@@ -117,11 +117,16 @@ public:
   unsigned size() const { return N ? N->getNumOperands() : 0u; }
   DITypeRef operator[](unsigned I) const { return DITypeRef(N->getOperand(I)); }
 
-  class iterator : std::iterator<std::input_iterator_tag, DITypeRef,
-                                 std::ptrdiff_t, void, DITypeRef> {
+  class iterator {
     MDNode::op_iterator I = nullptr;
 
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = DIType *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = void;
+    using reference = DIType *;
+
     iterator() = default;
     explicit iterator(MDNode::op_iterator I) : I(I) {}
 
@@ -2356,11 +2361,16 @@ public:
   };
 
   /// An iterator for expression operands.
-  class expr_op_iterator
-      : public std::iterator<std::input_iterator_tag, ExprOperand> {
+  class expr_op_iterator {
     ExprOperand Op;
 
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = ExprOperand;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     expr_op_iterator() = default;
     explicit expr_op_iterator(element_iterator I) : Op(I) {}
 

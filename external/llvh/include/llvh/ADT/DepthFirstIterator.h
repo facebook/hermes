@@ -83,10 +83,15 @@ template <class GraphT,
           class SetType =
               df_iterator_default_set<typename GraphTraits<GraphT>::NodeRef>,
           bool ExtStorage = false, class GT = GraphTraits<GraphT>>
-class df_iterator
-    : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef>,
-      public df_iterator_storage<SetType, ExtStorage> {
-  using super = std::iterator<std::forward_iterator_tag, typename GT::NodeRef>;
+class df_iterator : public df_iterator_storage<SetType, ExtStorage> {
+public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = typename GT::NodeRef;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+private:
   using NodeRef = typename GT::NodeRef;
   using ChildItTy = typename GT::ChildIteratorType;
 
@@ -145,8 +150,6 @@ private:
   }
 
 public:
-  using pointer = typename super::pointer;
-
   // Provide static begin and end methods as our public "constructors"
   static df_iterator begin(const GraphT &G) {
     return df_iterator(GT::getEntryNode(G));
