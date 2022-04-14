@@ -17,6 +17,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/WeakRefSlot-inline.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"

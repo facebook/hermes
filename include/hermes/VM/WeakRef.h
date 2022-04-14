@@ -12,6 +12,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/Handle.h"
+#include "hermes/VM/WeakRefSlot-inline.h"
 
 namespace hermes {
 namespace vm {
