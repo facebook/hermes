@@ -256,12 +256,6 @@ if (MSVC)
     -D_SCL_SECURE_NO_WARNINGS
   )
 
-  add_definitions(
-    # Suppress 'The std::iterator class template (used as a base class to provide typedefs)
-    # is deprecated in C++17.'.
-    -D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
-  )
-
   # Tell MSVC to use the Unicode version of the Win32 APIs instead of ANSI.
   #    add_definitions(
   #      -DUNICODE
