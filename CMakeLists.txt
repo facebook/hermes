@@ -64,8 +64,6 @@ endif()
 project(Hermes
         VERSION 0.11.0
         LANGUAGES C CXX)
-# Optional suffix like "-rc3"
-set(VERSION_SUFFIX "")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
@@ -74,7 +72,11 @@ set(LLVH_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/llvh)
 include(Hermes)
 include(Lit)
 
-set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
+# This is not a cache variable so that it is recomputed when the project
+# version is updated.
+if(NOT DEFINED HERMES_RELEASE_VERSION)
+  set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
+endif()
 
 include(FindPythonInterp)
 if (NOT PYTHONINTERP_FOUND)
@@ -315,7 +317,9 @@ if(HAVE_ICF)
 endif()
 
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
-add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
+if(HERMES_RELEASE_VERSION)
+    add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
+endif()
 
 if(HERMES_ENABLE_IR_INSTRUMENTATION)
     add_definitions(-DHERMES_ENABLE_IR_INSTRUMENTATION)
