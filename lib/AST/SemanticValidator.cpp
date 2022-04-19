@@ -166,8 +166,9 @@ void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
   visitFunction(arrowFunc, nullptr, arrowFunc->_params, arrowFunc->_body);
 
   curFunction()->semInfo->containsArrowFunctions = true;
-  curFunction()->semInfo->containsArrowFunctionsUsingArguments |=
-      arrowFunc->getSemInfo()->containsArrowFunctionsUsingArguments |
+  curFunction()->semInfo->containsArrowFunctionsUsingArguments =
+      curFunction()->semInfo->containsArrowFunctionsUsingArguments ||
+      arrowFunc->getSemInfo()->containsArrowFunctionsUsingArguments ||
       arrowFunc->getSemInfo()->usesArguments;
 }
 
