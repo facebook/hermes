@@ -1155,6 +1155,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             }
 
             Node::FunctionExpression(fe) => self.visit_function_expression(lock, fe, node),
+            Node::ArrowFunctionExpression(_) => self.visit_function_like(lock, node),
 
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
 
