@@ -696,8 +696,7 @@ impl<'gc> Resolver<'gc, '_> {
         | Node::CatchClause(_)
         | Node::ForStatement(_)
         | Node::ForInStatement(_)
-        | Node::ForOfStatement(_)
-        | Node::Program(_) = path.parent
+        | Node::ForOfStatement(_) = path.parent
         {
             return node.visit_children(lock, self);
         }
