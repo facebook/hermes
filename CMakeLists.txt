@@ -571,10 +571,7 @@ endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17")
 
-set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-# JSI_DIR has always priority over other folders like FBSOURCE_DIR.
+# JSI_DIR has always priority over other folders.
 # It's used by React Native when building Hermes from source so
 # the copy of JSI inside `react-native/ReactCommon/jsi` can be used.
 if(JSI_DIR)
@@ -583,12 +580,10 @@ if(JSI_DIR)
   else()
     message(FATAL_ERROR "You specified a JSI directory with -DJSI_DIR but JSI can't be found there.")
   endif()
-elseif(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
-  set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
-elseif(EXISTS ${FBSOURCE_DIR}/xplat/jsi)
-  set(HERMES_JSI_DIR ${FBSOURCE_DIR}/xplat/jsi)
-elseif(EXISTS ${HERMES_SOURCE_DIR}/../jsi)
-  set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/../jsi)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/API/jsi)
+  set(HERMES_JSI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/API/jsi)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../jsi)
+  set(HERMES_JSI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../jsi)
 else()
   message(FATAL_ERROR "Unable to find jsi.")
 endif()
@@ -673,8 +668,8 @@ if(HERMES_ENABLE_TEST_SUITE)
   endif()
 
   set(HERMES_LIT_TEST_PARAMS
-    test_exec_root=${HERMES_BINARY_DIR}/test
-    unittests_dir=${HERMES_BINARY_DIR}/unittests
+    test_exec_root=${CMAKE_CURRENT_BINARY_DIR}/test
+    unittests_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
     intl_enabled=${HERMES_ENABLE_INTL}
     use_flowparser=${HERMES_USE_FLOWPARSER}
@@ -700,8 +695,8 @@ if(HERMES_ENABLE_TEST_SUITE)
   set(LLVH_LIT_ARGS "-sv")
 
   add_lit_testsuite(check-hermes "Running the Hermes regression tests"
-    ${HERMES_SOURCE_DIR}/test
-    ${HERMES_SOURCE_DIR}/unittests
+    ${CMAKE_CURRENT_SOURCE_DIR}/test
+    ${CMAKE_CURRENT_SOURCE_DIR}/unittests
     PARAMS ${HERMES_LIT_TEST_PARAMS}
     DEPENDS ${HERMES_TEST_DEPS}
     ARGS ${HERMES_TEST_EXTRA_ARGS}
@@ -711,13 +706,13 @@ endif()
 
 # This is how github release files are built.
 
-set(HERMES_GITHUB_DIR ${HERMES_BINARY_DIR}/github)
+set(HERMES_GITHUB_DIR ${CMAKE_CURRENT_BINARY_DIR}/github)
 file(MAKE_DIRECTORY ${HERMES_GITHUB_DIR})
 string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
 
 if(HERMES_ENABLE_TOOLS)
   set(HERMES_CLI_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz)
-  set(HERMES_GITHUB_BUNDLE_DIR ${HERMES_BINARY_DIR}/bundle)
+  set(HERMES_GITHUB_BUNDLE_DIR ${CMAKE_CURRENT_BINARY_DIR}/bundle)
 
   # If the github release should include extra files (like dlls)
   if (HERMES_GITHUB_RESOURCE_DIR STREQUAL "")

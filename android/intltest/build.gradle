@@ -71,7 +71,6 @@ android {
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
         arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
-        arguments "-DFBSOURCE_DIR=${rootProject.ext.fbsource}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=True"
         targets "jsijni", "jsijniepi", "libhermes"
