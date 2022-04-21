@@ -1004,14 +1004,28 @@ impl<'gc> Resolver<'gc, '_> {
                     );
                 }
                 match n.kind {
-                    VariableDeclarationKind::Var => DeclKind::Var,
+                    VariableDeclarationKind::Var => {
+                        if self.binding_table.current_scope_depth()
+                            == self.global_binding_scope_depth.unwrap()
+                        {
+                            DeclKind::GlobalProperty
+                        } else {
+                            DeclKind::Var
+                        }
+                    }
                     VariableDeclarationKind::Let => DeclKind::Let,
                     VariableDeclarationKind::Const => DeclKind::Const,
                 }
             }
             Node::FunctionDeclaration(n) => {
                 Self::extract_declared_idents_from_id(lock, n.id, idents);
-                DeclKind::ScopedFunction
+                if self.binding_table.current_scope_depth()
+                    == self.global_binding_scope_depth.unwrap()
+                {
+                    DeclKind::GlobalProperty
+                } else {
+                    DeclKind::ScopedFunction
+                }
             }
             Node::ClassDeclaration(n) => {
                 Self::extract_declared_idents_from_id(lock, n.id, idents);
