@@ -39,9 +39,7 @@ workflows:
             - windows
       - test-emscripten
       - test-linux
-      - test-e2e:
-          requires:
-            - npm
+      - test-e2e
       - test-e2e-intl
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
@@ -496,9 +494,9 @@ jobs:
     executor:
       name: android/android-machine
     working_directory: /home/circleci
+    environment:
+      REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
     steps:
-      - attach_workspace:
-          at: /tmp/input
       - node/install:
           install-yarn: true
           lts: true
@@ -506,15 +504,14 @@ jobs:
           name: Setup dependencies
           command: |
             (yes | sdkmanager "cmake;3.18.1" --verbose) || true
-            sudo apt-get update
-            sudo apt-get install -y ninja-build
+      - checkout:
+          path: hermes
       - run:
           name: Prepare RNTester
           command: |
             git clone --depth=1 https://github.com/facebook/react-native
             cd react-native
             yarn install
-            npm install /tmp/input/hermes-engine-v*.tgz
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
           post-emulator-launch-assemble-command: ''
