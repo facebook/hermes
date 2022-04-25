@@ -10,6 +10,7 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/HiddenClass.h"
@@ -546,7 +547,8 @@ void MallocGC::updateWeakReferences() {
           HERMES_SLOW_ASSERT(
               validPointer(cell) &&
               "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(nextCell);
+          slot.setPointer(
+              CompressedPointer::encode(nextCell, getPointerBase()));
 #endif
         }
         break;
@@ -554,8 +556,8 @@ void MallocGC::updateWeakReferences() {
   }
 }
 
-WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
-  weakSlots_.push_back({init});
+WeakRefSlot *MallocGC::allocWeakSlot(CompressedPointer ptr) {
+  weakSlots_.push_back({ptr});
   return &weakSlots_.back();
 }
 

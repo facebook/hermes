@@ -78,10 +78,10 @@ struct WeakRefInfo {
     // The underlying object may have been collected already,
     // but markWeakRefs may not have run at this point.
     // The value will be cleared on the next GC cycle, but for now,
-    // isValid needs to be checked to avoid an invalid vmcast.
+    // isSlotValid needs to be checked to avoid an error on access.
     return WeakRef<JSObject>::isSlotValid(aSlot) &&
         WeakRef<JSObject>::isSlotValid(bSlot) &&
-        vmcast<JSObject>(aSlot->value()) == vmcast<JSObject>(bSlot->value());
+        aSlot->value() == bSlot->value();
   }
 
  private:

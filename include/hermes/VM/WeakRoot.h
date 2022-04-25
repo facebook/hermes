@@ -39,6 +39,10 @@ class WeakRootBase : protected CompressedPointer {
     return CompressedPointer::get(base);
   }
 
+  CompressedPointer getNoBarrierUnsafe() const {
+    return *this;
+  }
+
   WeakRootBase &operator=(CompressedPointer ptr) {
     // No need for a write barrier on weak roots currently.
     setNoBarrier(ptr);
@@ -62,6 +66,10 @@ class WeakRoot final : public WeakRootBase {
   explicit WeakRoot(T *ptr, PointerBase &base) : WeakRootBase(ptr, base) {}
 
   inline T *get(PointerBase &base, GC &gc) const;
+
+  CompressedPointer getNoBarrierUnsafe() const {
+    return WeakRootBase::getNoBarrierUnsafe();
+  }
 
   T *getNoBarrierUnsafe(PointerBase &base) const {
     return static_cast<T *>(WeakRootBase::getNoBarrierUnsafe(base));

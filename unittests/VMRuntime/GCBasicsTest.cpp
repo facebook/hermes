@@ -8,6 +8,7 @@
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/WeakRef.h"
@@ -165,17 +166,18 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
 TEST_F(GCBasicsTest, WeakRefSlotTest) {
   // WeakRefSlot can hold any 4-byte aligned pointer.
   auto obj = (void *)0x12345670;
-  HermesValue hv = HermesValue::encodeObjectValue(obj);
+  CompressedPointer ptr =
+      CompressedPointer::encode(static_cast<GCCell *>(obj), rt);
 
-  WeakRefSlot s(hv);
+  WeakRefSlot s(ptr);
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
-  EXPECT_EQ(hv, s.value());
   EXPECT_TRUE(s.hasValue());
+  EXPECT_EQ(ptr, s.value());
   EXPECT_EQ(obj, s.getPointer(rt));
 
   // Update pointer of unmarked slot.
   auto obj2 = (void *)0x76543210;
-  s.setPointer(obj2);
+  s.setPointer(CompressedPointer::encode(static_cast<GCCell *>(obj2), rt));
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj2, s.getPointer(rt));
@@ -185,7 +187,7 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   EXPECT_EQ(WeakSlotState::Marked, s.state());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj2, s.getPointer(rt));
-  s.setPointer(obj);
+  s.setPointer(ptr);
   EXPECT_EQ(WeakSlotState::Marked, s.state());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj, s.getPointer(rt));

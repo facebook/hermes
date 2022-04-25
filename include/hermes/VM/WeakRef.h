@@ -58,14 +58,11 @@ class WeakRefBase {
 template <class T>
 class WeakRef : public WeakRefBase {
  public:
-  using Traits = HermesValueTraits<T>;
-  explicit WeakRef(PointerBase &base, GC &gc, typename Traits::value_type value)
-      : WeakRefBase(gc.allocWeakSlot(Traits::encode(value))) {
-    HermesValueCast<T>::assertValid(slot_->value(base));
-  }
-
   explicit WeakRef(Runtime &runtime, Handle<T> handle)
       : WeakRef(runtime, runtime.getHeap(), *handle) {}
+
+  explicit WeakRef(PointerBase &base, GC &gc, T *ptr)
+      : WeakRefBase(gc.allocWeakSlot(CompressedPointer::encode(ptr, base))) {}
 
   explicit WeakRef(PointerBase &base, GC &gc, Handle<T> handle)
       : WeakRef(base, gc, *handle) {}
@@ -94,21 +91,17 @@ class WeakRef : public WeakRefBase {
   /// The weak ref may be invalid, in which case an "empty" value is returned.
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
-  OptValue<typename Traits::value_type> unsafeGetOptional(
-      Runtime &runtime) const {
+  OptValue<T *> unsafeGetOptional(Runtime &runtime) const {
     return unsafeGetOptional(runtime, runtime.getHeap());
   }
 
-  OptValue<typename Traits::value_type> unsafeGetOptional(
-      PointerBase &base,
-      GC &gc) const {
+  OptValue<T *> unsafeGetOptional(PointerBase &base, GC &gc) const {
     if (!isValid()) {
-      return OptValue<typename Traits::value_type>(llvh::None);
+      return llvh::None;
     }
-
-    const HermesValue value = slot_->value(base);
+    GCCell *value = slot_->value(base);
     gc.weakRefReadBarrier(value);
-    return Traits::decode(value);
+    return static_cast<T *>(value);
   }
 
   /// Same as \c unsafeGetOptional, but without a read barrier to the GC.
@@ -116,37 +109,31 @@ class WeakRef : public WeakRefBase {
   /// If you call this in normal VM operations, the pointer might be garbage
   /// collected from underneath you at some time in the future, even if it's
   /// placed in a handle.
-  OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier(
-      PointerBase &base) const {
+  OptValue<T *> unsafeGetOptionalNoReadBarrier(PointerBase &base) const {
     if (!isValid()) {
-      return OptValue<typename Traits::value_type>(llvh::None);
+      return llvh::None;
     }
-    return Traits::decode(slot_->value(base));
+    return static_cast<T *>(slot_->value(base));
   }
 
-  /// This function returns the stored HermesValue and wraps it into a new
-  /// handle, ensuring that it cannot be freed while the handle is alive.
-  /// If the weak reference is not live, returns None.
   llvh::Optional<Handle<T>> get(Runtime &runtime) const {
-    if (const auto optValue = unsafeGetOptional(runtime, runtime.getHeap())) {
-      return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
+    if (auto optValue = unsafeGetOptional(runtime)) {
+      return runtime.makeHandle<T>(optValue.getValue());
     }
     return llvh::None;
   }
-
   /// Clear the slot to which the WeakRef refers.
   void clear() {
     unsafeGetSlot()->clearPointer();
   }
 };
 
-template <typename T>
 /// Only enabled if T is non-HV.
 /// Defined as a free function to avoid template errors.
-inline typename std::enable_if<!std::is_same<T, HermesValue>::value, T *>::type
-getNoHandle(const WeakRef<T> &wr, PointerBase &base, GC &gc) {
-  if (const auto hv = wr.unsafeGetOptional(base, gc)) {
-    return ::hermes::vm::vmcast_or_null<T>(hv.getValue());
+template <typename T>
+inline T *getNoHandle(const WeakRef<T> &wr, PointerBase &base, GC &gc) {
+  if (auto optVal = wr.unsafeGetOptional(base, gc)) {
+    return optVal.getValue();
   }
   return nullptr;
 }

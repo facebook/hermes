@@ -2099,7 +2099,7 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
 
-WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
+WeakRefSlot *HadesGC::allocWeakSlot(CompressedPointer ptr) {
   assert(
       !calledByBackgroundThread() &&
       "allocWeakSlot should only be called from the mutator");
@@ -2112,9 +2112,9 @@ WeakRefSlot *HadesGC::allocWeakSlot(HermesValue init) {
         "invalid free slot state");
     slot = firstFreeWeak_;
     firstFreeWeak_ = firstFreeWeak_->nextFree();
-    slot->reset(init);
+    slot->reset(ptr);
   } else {
-    weakSlots_.push_back({init});
+    weakSlots_.push_back({ptr});
     slot = &weakSlots_.back();
   }
   if (ogMarkingBarriers_) {
@@ -2842,7 +2842,8 @@ void HadesGC::updateWeakReferencesForYoungGen() {
           HERMES_SLOW_ASSERT(
               validPointer(forwardedCell) &&
               "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(forwardedCell);
+          slot.setPointer(
+              CompressedPointer::encode(forwardedCell, getPointerBase()));
         } else {
           // Can't free this slot because it might only be used by an OG
           // object.
