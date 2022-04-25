@@ -59,9 +59,7 @@ apple_defaults: &apple_defaults
 jobs:
   android:
     executor:
-      name: android/android
-      sdk-version: '28'
-      variant: ndk
+      name: android/android-machine
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -94,8 +92,6 @@ jobs:
           name: Build Hermes for Android
           command: |
             export NINJA_STATUS="[%s/%t] %es"
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
             cd "$HERMES_WS_DIR/hermes/android" && ./gradlew githubRelease
       - run:
           name: Copy artifacts
