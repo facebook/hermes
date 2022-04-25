@@ -82,8 +82,8 @@ void TransitionMap::uncleanMakeLarge(Runtime &runtime) {
   assert(!isLarge() && "must not yet be large");
   auto large = new WeakValueMap<Transition, HiddenClass>();
   // Move any valid entry into the allocated map.
-  if (auto handle = smallValue().get(runtime, runtime.getHeap()))
-    large->insertNewLocked(runtime.getHeap(), smallKey_, handle.getValue());
+  if (auto handle = smallValue().get(runtime))
+    large->insertNewLocked(runtime, smallKey_, handle.getValue());
   u.large_ = large;
   smallKey_.symbolID = SymbolID::deleted();
   assert(isLarge());
@@ -277,8 +277,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
             dbgs() << "Property " << runtime.formatSymbolID(name)
                    << " NOT FOUND in Class:" << self->getDebugAllocationId()
                    << " due to existing transition to Class:"
-                   << (*self->transitionMap_.lookup(
-                           runtime, runtime.getHeap(), t))
+                   << (*self->transitionMap_.lookup(runtime, t))
                           ->getDebugAllocationId()
                    << "\n");
         return llvh::None;
@@ -409,8 +408,8 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   }
 
   // Do we already have a transition for that property+flags pair?
-  auto optChildHandle = selfHandle->transitionMap_.lookup(
-      runtime, runtime.getHeap(), {name, propertyFlags});
+  auto optChildHandle =
+      selfHandle->transitionMap_.lookup(runtime, {name, propertyFlags});
   if (LLVM_LIKELY(optChildHandle)) {
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.
@@ -568,8 +567,8 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   transitionFlags.flagsTransition = 1;
 
   // Do we already have a transition for that property+flags pair?
-  auto optChildHandle = selfHandle->transitionMap_.lookup(
-      runtime, runtime.getHeap(), {name, transitionFlags});
+  auto optChildHandle =
+      selfHandle->transitionMap_.lookup(runtime, {name, transitionFlags});
   if (LLVM_LIKELY(optChildHandle)) {
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.

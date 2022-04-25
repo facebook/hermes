@@ -33,8 +33,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     // No allocations should occur while a WeakRefKey is live.
     NoAllocScope noAlloc{runtime};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{runtime.getHeap(), key},
-        runtime.gcStableHashHermesValue(key));
+        WeakRef<JSObject>{runtime, key}, runtime.gcStableHashHermesValue(key));
     DenseMapT::iterator it = self->map_.find(mapKey);
 
     if (it != self->map_.end()) {
@@ -60,8 +59,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
     // Holding the WeakRefLock will prevent the weak ref from getting cleared.
     WeakRefLock lk{runtime.getHeap().weakRefMutex()};
     WeakRefKey mapKey(
-        WeakRef<JSObject>{runtime.getHeap(), key},
-        runtime.gcStableHashHermesValue(key));
+        WeakRef<JSObject>{runtime, key}, runtime.gcStableHashHermesValue(key));
     auto result = self->map_.try_emplace(mapKey, i);
     (void)result;
     assert(result.second && "unable to add a new value to map");
@@ -80,8 +78,7 @@ bool JSWeakMapImplBase::deleteValue(
   WeakRefLock lk{runtime.getHeap().weakRefMutex()};
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{runtime.getHeap(), key},
-      runtime.gcStableHashHermesValue(key));
+      WeakRef<JSObject>{runtime, key}, runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return false;
@@ -128,8 +125,7 @@ bool JSWeakMapImplBase::hasValue(
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{runtime.getHeap(), key},
-      runtime.gcStableHashHermesValue(key));
+      WeakRef<JSObject>{runtime, key}, runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find_as(mapKey);
   return it != self->map_.end();
 }
@@ -140,8 +136,7 @@ HermesValue JSWeakMapImplBase::getValue(
     Handle<JSObject> key) {
   NoAllocScope noAlloc{runtime};
   WeakRefKey mapKey(
-      WeakRef<JSObject>{runtime.getHeap(), key},
-      runtime.gcStableHashHermesValue(key));
+      WeakRef<JSObject>{runtime, key}, runtime.gcStableHashHermesValue(key));
   DenseMapT::iterator it = self->map_.find(mapKey);
   if (it == self->map_.end()) {
     return HermesValue::encodeUndefinedValue();
@@ -170,7 +165,7 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 
 JSObject *detail::WeakRefKey::getObjectInGC(GC &gc) const {
   assert(gc.calledByGC() && "Should only be used by the GC implementation.");
-  const auto ptrOpt = ref.unsafeGetOptionalNoReadBarrier();
+  const auto ptrOpt = ref.unsafeGetOptionalNoReadBarrier(gc.getPointerBase());
   if (!ptrOpt)
     return nullptr;
   return *ptrOpt;

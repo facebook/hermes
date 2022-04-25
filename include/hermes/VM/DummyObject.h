@@ -44,7 +44,7 @@ struct DummyObject final : public GCCell {
   void releaseExtMem(GC &gc);
   void setPointer(GC &gc, DummyObject *obj);
 
-  static DummyObject *create(GC &gc);
+  static DummyObject *create(GC &gc, PointerBase &base);
   static DummyObject *createLongLived(GC &gc);
   static constexpr CellKind getCellKind();
   static bool classof(const GCCell *cell);

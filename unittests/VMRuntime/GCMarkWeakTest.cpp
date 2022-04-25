@@ -29,7 +29,7 @@ namespace {
 using testhelpers::DummyObject;
 
 static DummyObject *createWithMarkWeakCount(GC &gc, int *numMarkWeakCalls) {
-  auto *obj = DummyObject::create(gc);
+  auto *obj = DummyObject::create(gc, gc.getPointerBase());
   obj->markWeakCallback = std::make_unique<DummyObject::MarkWeakCallback>(
       [numMarkWeakCalls](GCCell *, WeakRefAcceptor &) mutable {
         (*numMarkWeakCalls)++;
@@ -60,7 +60,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
 
     WeakRefLock lk{gc.weakRefMutex()};
     ASSERT_TRUE(t->weak->isValid());
-    EXPECT_EQ(*t, getNoHandle(*t->weak, gc));
+    EXPECT_EQ(*t, getNoHandle(*t->weak, rt, gc));
     // Exactly one call to _markWeakImpl
     EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
     EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());

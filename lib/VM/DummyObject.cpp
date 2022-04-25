@@ -51,9 +51,9 @@ void DummyObject::setPointer(GC &gc, DummyObject *obj) {
   return CellKind::DummyObjectKind;
 }
 
-DummyObject *DummyObject::create(GC &gc) {
+DummyObject *DummyObject::create(GC &gc, PointerBase &base) {
   auto *cell = gc.makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
-  cell->weak.emplace(gc, cell);
+  cell->weak.emplace(base, gc, cell);
   return cell;
 }
 DummyObject *DummyObject::createLongLived(GC &gc) {

@@ -12,6 +12,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/Handle.h"
+#include "hermes/VM/Runtime.h"
 #include "hermes/VM/WeakRefSlot-inline.h"
 
 namespace hermes {
@@ -58,12 +59,16 @@ template <class T>
 class WeakRef : public WeakRefBase {
  public:
   using Traits = HermesValueTraits<T>;
-  explicit WeakRef(GC &gc, typename Traits::value_type value)
+  explicit WeakRef(PointerBase &base, GC &gc, typename Traits::value_type value)
       : WeakRefBase(gc.allocWeakSlot(Traits::encode(value))) {
-    HermesValueCast<T>::assertValid(slot_->value());
+    HermesValueCast<T>::assertValid(slot_->value(base));
   }
 
-  explicit WeakRef(GC &gc, Handle<T> handle) : WeakRef(gc, *handle) {}
+  explicit WeakRef(Runtime &runtime, Handle<T> handle)
+      : WeakRef(runtime, runtime.getHeap(), *handle) {}
+
+  explicit WeakRef(PointerBase &base, GC &gc, Handle<T> handle)
+      : WeakRef(base, gc, *handle) {}
 
   /// Used only by hash tables to allow for special WeakRef creation.
   /// In particular, this makes tombstone and empty values in the hash table.
@@ -89,12 +94,19 @@ class WeakRef : public WeakRefBase {
   /// The weak ref may be invalid, in which case an "empty" value is returned.
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
-  OptValue<typename Traits::value_type> unsafeGetOptional(GC &gc) const {
+  OptValue<typename Traits::value_type> unsafeGetOptional(
+      Runtime &runtime) const {
+    return unsafeGetOptional(runtime, runtime.getHeap());
+  }
+
+  OptValue<typename Traits::value_type> unsafeGetOptional(
+      PointerBase &base,
+      GC &gc) const {
     if (!isValid()) {
       return OptValue<typename Traits::value_type>(llvh::None);
     }
 
-    const HermesValue value = slot_->value();
+    const HermesValue value = slot_->value(base);
     gc.weakRefReadBarrier(value);
     return Traits::decode(value);
   }
@@ -104,18 +116,19 @@ class WeakRef : public WeakRefBase {
   /// If you call this in normal VM operations, the pointer might be garbage
   /// collected from underneath you at some time in the future, even if it's
   /// placed in a handle.
-  OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier() const {
+  OptValue<typename Traits::value_type> unsafeGetOptionalNoReadBarrier(
+      PointerBase &base) const {
     if (!isValid()) {
       return OptValue<typename Traits::value_type>(llvh::None);
     }
-    return Traits::decode(slot_->value());
+    return Traits::decode(slot_->value(base));
   }
 
   /// This function returns the stored HermesValue and wraps it into a new
   /// handle, ensuring that it cannot be freed while the handle is alive.
   /// If the weak reference is not live, returns None.
-  llvh::Optional<Handle<T>> get(HandleRootOwner &runtime, GC &gc) const {
-    if (const auto optValue = unsafeGetOptional(gc)) {
+  llvh::Optional<Handle<T>> get(Runtime &runtime) const {
+    if (const auto optValue = unsafeGetOptional(runtime, runtime.getHeap())) {
       return Handle<T>::vmcast(runtime, Traits::encode(optValue.getValue()));
     }
     return llvh::None;
@@ -127,12 +140,12 @@ class WeakRef : public WeakRefBase {
   }
 };
 
+template <typename T>
 /// Only enabled if T is non-HV.
 /// Defined as a free function to avoid template errors.
-template <typename T>
 inline typename std::enable_if<!std::is_same<T, HermesValue>::value, T *>::type
-getNoHandle(const WeakRef<T> &wr, GC &gc) {
-  if (const auto hv = wr.unsafeGetOptional(gc)) {
+getNoHandle(const WeakRef<T> &wr, PointerBase &base, GC &gc) {
+  if (const auto hv = wr.unsafeGetOptional(base, gc)) {
     return ::hermes::vm::vmcast_or_null<T>(hv.getValue());
   }
   return nullptr;

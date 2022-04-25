@@ -63,7 +63,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, info.allocatedBytes);
 
   // Allocate a single object without GC.
-  DummyObject::create(rt.getHeap());
+  DummyObject::create(rt.getHeap(), rt);
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
@@ -85,8 +85,8 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, info.allocatedBytes);
 
   // Allocate two objects, the second with a GC handle.
-  DummyObject::create(rt.getHeap());
-  rt.makeHandle(DummyObject::create(rt.getHeap()));
+  DummyObject::create(rt.getHeap(), rt);
+  rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
@@ -171,24 +171,24 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasPointer());
   EXPECT_EQ(hv, s.value());
-  EXPECT_EQ(obj, s.getPointer());
+  EXPECT_EQ(obj, s.getPointer(rt));
 
   // Update pointer of unmarked slot.
   auto obj2 = (void *)0x76543210;
   s.setPointer(obj2);
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasPointer());
-  EXPECT_EQ(obj2, s.getPointer());
+  EXPECT_EQ(obj2, s.getPointer(rt));
 
   // Marked slot.
   s.mark();
   EXPECT_EQ(WeakSlotState::Marked, s.state());
   EXPECT_TRUE(s.hasPointer());
-  EXPECT_EQ(obj2, s.getPointer());
+  EXPECT_EQ(obj2, s.getPointer(rt));
   s.setPointer(obj);
   EXPECT_EQ(WeakSlotState::Marked, s.state());
   EXPECT_TRUE(s.hasPointer());
-  EXPECT_EQ(obj, s.getPointer());
+  EXPECT_EQ(obj, s.getPointer(rt));
 
   s.clearPointer();
   EXPECT_EQ(WeakSlotState::Marked, s.state());
@@ -211,7 +211,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto dummyObj = rt.makeHandle(DummyObject::create(gc));
+  auto dummyObj = rt.makeHandle(DummyObject::create(gc, rt));
   auto a2 = rt.makeHandle(ArrayStorage::createForTest(gc, 10));
   auto *a1 = ArrayStorage::createForTest(gc, 10);
 
@@ -220,14 +220,14 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 
   WeakRefMutex &mtx = gc.weakRefMutex();
   mtx.lock();
-  WeakRef<ArrayStorage> wr1{gc, a1};
-  WeakRef<ArrayStorage> wr2{gc, a2};
+  WeakRef<ArrayStorage> wr1{rt, gc, a1};
+  WeakRef<ArrayStorage> wr2{rt, gc, a2};
 
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wr2.isValid());
 
-  ASSERT_EQ(a1, getNoHandle(wr1, gc));
-  ASSERT_EQ(*a2, getNoHandle(wr2, gc));
+  ASSERT_EQ(a1, getNoHandle(wr1, rt, gc));
+  ASSERT_EQ(*a2, getNoHandle(wr2, rt, gc));
 
   /// Use the MarkWeakCallback of DummyObject as a hack to update these
   /// WeakRefs.
@@ -252,7 +252,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // Though the slot is empty, it's still reachable, so must not be freed yet.
   ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
   ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(*a2, getNoHandle(wr2, gc));
+  ASSERT_EQ(*a2, getNoHandle(wr2, rt, gc));
 
   // Make the slot unreachable and test that it is freed.
   mtx.unlock();
@@ -267,10 +267,10 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 
   // Create a new weak ref, possibly reusing the just freed slot.
   auto *a3 = ArrayStorage::createForTest(gc, 10);
-  WeakRef<ArrayStorage> wr3{gc, a3};
+  WeakRef<ArrayStorage> wr3{rt, gc, a3};
 
   ASSERT_TRUE(wr3.isValid());
-  ASSERT_EQ(a3, getNoHandle(wr3, gc));
+  ASSERT_EQ(a3, getNoHandle(wr3, rt, gc));
 #undef LOCK
 #undef UNLOCK
 }
@@ -284,7 +284,7 @@ TEST_F(GCBasicsTest, WeakRootTest) {
   rt.weakRoots.push_back(&wr);
   {
     GCScopeMarkerRAII marker{rt};
-    auto obj = rt.makeHandle(DummyObject::create(gc));
+    auto obj = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
     wr.set(rt, *obj);
     rt.collect();
     ASSERT_EQ(wr.get(rt, gc), *obj);
@@ -300,7 +300,7 @@ TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
 }
 
 TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
-  auto *cell = DummyObject::create(rt.getHeap());
+  auto *cell = DummyObject::create(rt.getHeap(), rt);
   EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(sizeof(DummyObject)));
 }
 
@@ -310,7 +310,7 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 
   {
     GCBase::HeapInfo info;
-    auto *obj = DummyObject::create(rt.getHeap());
+    auto *obj = DummyObject::create(rt.getHeap(), rt);
     obj->acquireExtMem(gc, 256);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
@@ -322,7 +322,7 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 
   {
     GCBase::HeapInfo info;
-    auto *obj = DummyObject::create(rt.getHeap());
+    auto *obj = DummyObject::create(rt.getHeap(), rt);
     obj->acquireExtMem(gc, 1024);
     obj->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
@@ -342,16 +342,16 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 
 /// Test that the id is set to a unique number for each allocated object.
 TEST_F(GCBasicsTest, TestIDIsUnique) {
-  auto *cell = DummyObject::create(rt.getHeap());
+  auto *cell = DummyObject::create(rt.getHeap(), rt);
   auto id1 = rt.getHeap().getObjectID(cell);
-  cell = DummyObject::create(rt.getHeap());
+  cell = DummyObject::create(rt.getHeap(), rt);
   auto id2 = rt.getHeap().getObjectID(cell);
   EXPECT_NE(id1, id2);
 }
 
 TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   GCScope scope{rt};
-  auto handle = rt.makeHandle(DummyObject::create(rt.getHeap()));
+  auto handle = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
   const auto idBefore = rt.getHeap().getObjectID(*handle);
   rt.collect();
   const auto idAfter = rt.getHeap().getObjectID(*handle);
@@ -361,7 +361,7 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
 /// Test that objects that die during (YG) GC are untracked.
 TEST_F(GCBasicsTest, TestIDDeathInYoung) {
   GCScope scope{rt};
-  rt.getHeap().getObjectID(DummyObject::create(rt.getHeap()));
+  rt.getHeap().getObjectID(DummyObject::create(rt.getHeap(), rt));
   rt.collect();
   // ~DummyRuntime will verify all pointers in ID map.
 }

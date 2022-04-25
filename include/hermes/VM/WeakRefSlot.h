@@ -40,7 +40,13 @@ class WeakRefSlot {
   }
 
   /// Return the object as a HermesValue.
-  inline const HermesValue value() const;
+  inline const HermesValue value(PointerBase &base) const;
+
+  inline const HermesValue value() const {
+    // Cannot check state() here because it can race with marking code.
+    assert(hasValue() && "tried to access collected referent");
+    return value_;
+  }
 
   // GC methods to update slot when referent moves/dies.
 
@@ -51,7 +57,7 @@ class WeakRefSlot {
   }
 
   /// Return the pointer to a GCCell, whether or not this slot is marked.
-  inline GCCell *getPointer() const;
+  inline GCCell *getPointer(PointerBase &base) const;
 
   /// Update the stored pointer (because the object moved).
   void setPointer(void *newPtr) {

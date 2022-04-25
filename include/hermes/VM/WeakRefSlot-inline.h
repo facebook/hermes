@@ -14,13 +14,13 @@
 namespace hermes {
 namespace vm {
 
-const HermesValue WeakRefSlot::value() const {
+const HermesValue WeakRefSlot::value(PointerBase &base) const {
   // Cannot check state() here because it can race with marking code.
   assert(hasValue() && "tried to access collected referent");
   return value_;
 }
 
-GCCell *WeakRefSlot::getPointer() const {
+GCCell *WeakRefSlot::getPointer(PointerBase &base) const {
   // Cannot check state() here because it can race with marking code.
   return static_cast<GCCell *>(value_.getPointer());
 }
