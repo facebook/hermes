@@ -50,12 +50,6 @@ class WeakRefSlot {
 
   // GC methods to update slot when referent moves/dies.
 
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    return value_.isPointer();
-  }
-
   /// Return the pointer to a GCCell, whether or not this slot is marked.
   inline GCCell *getPointer(PointerBase &base) const;
 

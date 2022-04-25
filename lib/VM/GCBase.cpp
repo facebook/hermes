@@ -282,7 +282,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
       // If the slot is free, there's no edge to add.
       return;
     }
-    if (!slot->hasPointer()) {
+    if (!slot->hasValue()) {
       // Filter out empty refs from adding edges.
       return;
     }
@@ -373,7 +373,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       // If the slot is free, there's no edge to add.
       return;
     }
-    if (!slot->hasPointer()) {
+    if (!slot->hasValue()) {
       // Filter out empty refs from adding edges.
       return;
     }

@@ -527,7 +527,7 @@ void MallocGC::updateWeakReferences() {
         break;
       case WeakSlotState::Marked:
         // If it's not a pointer, nothing to do.
-        if (!slot.hasPointer()) {
+        if (!slot.hasValue()) {
           break;
         }
         auto *cell = slot.getPointer(getPointerBase());

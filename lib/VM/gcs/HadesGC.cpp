@@ -2824,7 +2824,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
         LLVM_FALLTHROUGH;
       case WeakSlotState::Unmarked: {
         // Both marked and unmarked weak ref slots need to be updated.
-        if (!slot.hasPointer()) {
+        if (!slot.hasValue()) {
           // Non-pointers need no work.
           break;
         }
@@ -2863,7 +2863,7 @@ void HadesGC::updateWeakReferencesForOldGen() {
       case WeakSlotState::Marked: {
         // Set all allocated slots to unmarked.
         slot.unmark();
-        if (!slot.hasPointer()) {
+        if (!slot.hasValue()) {
           // Skip non-pointers.
           break;
         }

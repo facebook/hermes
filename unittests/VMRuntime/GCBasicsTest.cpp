@@ -169,30 +169,30 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 
   WeakRefSlot s(hv);
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
-  EXPECT_TRUE(s.hasPointer());
   EXPECT_EQ(hv, s.value());
+  EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj, s.getPointer(rt));
 
   // Update pointer of unmarked slot.
   auto obj2 = (void *)0x76543210;
   s.setPointer(obj2);
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
-  EXPECT_TRUE(s.hasPointer());
+  EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj2, s.getPointer(rt));
 
   // Marked slot.
   s.mark();
   EXPECT_EQ(WeakSlotState::Marked, s.state());
-  EXPECT_TRUE(s.hasPointer());
+  EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj2, s.getPointer(rt));
   s.setPointer(obj);
   EXPECT_EQ(WeakSlotState::Marked, s.state());
-  EXPECT_TRUE(s.hasPointer());
+  EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(obj, s.getPointer(rt));
 
   s.clearPointer();
   EXPECT_EQ(WeakSlotState::Marked, s.state());
-  EXPECT_FALSE(s.hasPointer());
+  EXPECT_FALSE(s.hasValue());
 
   // Unmark and free.
   s.unmark();
