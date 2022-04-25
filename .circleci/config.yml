@@ -84,6 +84,7 @@ jobs:
       - run:
           name: Build Hermes Compiler
           command: |
+            export NINJA_STATUS="[%s/%t] %es"
             cd "$HERMES_WS_DIR"
             cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
             # Build the Hermes compiler so that the cross compiler build can
@@ -92,6 +93,7 @@ jobs:
       - run:
           name: Build Hermes for Android
           command: |
+            export NINJA_STATUS="[%s/%t] %es"
             export ANDROID_SDK="$ANDROID_HOME"
             export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
             cd "$HERMES_WS_DIR/hermes/android" && ./gradlew githubRelease
