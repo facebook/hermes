@@ -72,7 +72,7 @@ void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
   const WeakRefSlot *slot = wr.unsafeGetSlot();
   // If the weak value is a pointer, check that it's within the valid region.
   if (slot->state() != WeakSlotState::Free && slot->hasValue()) {
-    GCCell *cell = slot->getPointer(gc.getPointerBase());
+    GCCell *cell = slot->getNoBarrierUnsafe(gc.getPointerBase());
     accept(cell);
   }
 }

@@ -81,7 +81,7 @@ struct WeakRefInfo {
     // isSlotValid needs to be checked to avoid an error on access.
     return WeakRef<JSObject>::isSlotValid(aSlot) &&
         WeakRef<JSObject>::isSlotValid(bSlot) &&
-        aSlot->value() == bSlot->value();
+        aSlot->getNoBarrierUnsafe() == bSlot->getNoBarrierUnsafe();
   }
 
  private:

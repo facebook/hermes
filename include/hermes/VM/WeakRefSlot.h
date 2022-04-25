@@ -46,18 +46,18 @@ class WeakRefSlot {
     return value_.root != CompressedPointer(nullptr);
   }
 
-  /// Return the object as a GCCell *
-  inline GCCell *value(PointerBase &base) const;
+  /// Return the object as a GCCell *, with a read barrier
+  inline GCCell *get(PointerBase &base, GC &gc) const;
 
-  CompressedPointer value() const {
+  /// Same as get, but without a read barrier
+  inline GCCell *getNoBarrierUnsafe(PointerBase &base) const;
+
+  CompressedPointer getNoBarrierUnsafe() const {
     assert(hasValue() && "tried to access collected referent");
     return value_.root.getNoBarrierUnsafe();
   }
 
   // GC methods to update slot when referent moves/dies.
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  inline GCCell *getPointer(PointerBase &base) const;
 
   /// Update the stored pointer (because the object moved).
   void setPointer(CompressedPointer ptr) {

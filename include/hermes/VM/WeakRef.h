@@ -99,8 +99,7 @@ class WeakRef : public WeakRefBase {
     if (!isValid()) {
       return llvh::None;
     }
-    GCCell *value = slot_->value(base);
-    gc.weakRefReadBarrier(value);
+    GCCell *value = slot_->get(base, gc);
     return static_cast<T *>(value);
   }
 
@@ -113,7 +112,7 @@ class WeakRef : public WeakRefBase {
     if (!isValid()) {
       return llvh::None;
     }
-    return static_cast<T *>(slot_->value(base));
+    return static_cast<T *>(slot_->getNoBarrierUnsafe(base));
   }
 
   llvh::Optional<Handle<T>> get(Runtime &runtime) const {

@@ -2828,8 +2828,7 @@ void HadesGC::updateWeakReferencesForYoungGen() {
           // Non-pointers need no work.
           break;
         }
-        auto *const cell =
-            static_cast<GCCell *>(slot.getPointer(getPointerBase()));
+        auto *const cell = slot.getNoBarrierUnsafe(getPointerBase());
         if (!inYoungGen(cell) && !compactee_.evacContains(cell)) {
           break;
         }
@@ -2868,8 +2867,7 @@ void HadesGC::updateWeakReferencesForOldGen() {
           // Skip non-pointers.
           break;
         }
-        auto *const cell =
-            static_cast<GCCell *>(slot.getPointer(getPointerBase()));
+        auto *const cell = slot.getNoBarrierUnsafe(getPointerBase());
         // If the object isn't live, clear the weak ref.
         // YG has all of its mark bits set whenever there's no YG collection
         // happening, so this also excludes clearing any pointers to YG objects.

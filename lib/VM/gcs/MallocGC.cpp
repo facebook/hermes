@@ -531,7 +531,7 @@ void MallocGC::updateWeakReferences() {
         if (!slot.hasValue()) {
           break;
         }
-        auto *cell = slot.getPointer(getPointerBase());
+        auto *cell = slot.getNoBarrierUnsafe(getPointerBase());
         HERMES_SLOW_ASSERT(
             validPointer(cell) &&
             "Got a pointer out of a weak reference slot that is not owned by "

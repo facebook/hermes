@@ -292,7 +292,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc_.getObjectID(slot->getPointer(gc_.getPointerBase())));
+        gc_.getObjectID(slot->getNoBarrierUnsafe(gc_.getPointerBase())));
   }
 
   void acceptSym(SymbolID sym, const char *name) override {
@@ -377,7 +377,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       // Filter out empty refs from adding edges.
       return;
     }
-    pointerAccept(slot->getPointer(gc_.getPointerBase()), nullptr, true);
+    pointerAccept(
+        slot->getNoBarrierUnsafe(gc_.getPointerBase()), nullptr, true);
   }
 
   void acceptSym(SymbolID sym, const char *name) override {
