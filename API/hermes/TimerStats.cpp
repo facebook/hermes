@@ -205,6 +205,13 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
         name, paramCount, TimedHostFunction{*this, std::move(func), rts_});
   }
 
+  jsi::Value evaluateJavaScript(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      const std::string &sourceURL) override {
+    auto timer = rts_.incomingTimer("evaluateJavaScript");
+    return RD::evaluateJavaScript(buffer, sourceURL);
+  }
+
   jsi::Value evaluatePreparedJavaScript(
       const std::shared_ptr<const jsi::PreparedJavaScript> &js) override {
     auto timer = rts_.incomingTimer("evaluatePreparedJavaScript");
@@ -226,6 +233,11 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
       size_t count) override {
     auto timer = rts_.incomingTimer("callAsConstructor");
     return RD::callAsConstructor(func, args, count);
+  }
+
+  bool drainMicrotasks(int maxMicrotasksHint) override {
+    auto timer = rts_.incomingTimer("drainMicrotasks");
+    return RD::drainMicrotasks(maxMicrotasksHint);
   }
   /// @}
 
