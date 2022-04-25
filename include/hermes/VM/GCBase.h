@@ -1335,6 +1335,11 @@ class GCBase {
   /// initialization, using the context provided then (on this heap).
   void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     gcCallbacks_.markWeakRoots(acceptor, markLongLived);
+    acceptor.beginRootSection(RootAcceptor::Section::WeakRefSlots);
+    for (auto &slot : weakSlots_) {
+      slot.markWeakRoots(acceptor);
+    }
+    acceptor.endRootSection();
   }
 
   /// Print the cumulative statistics.

@@ -2461,11 +2461,6 @@ void HadesGC::youngGenCollection(
       youngGenEvacuateImpl(acceptor, false);
       heapBytes.after = acceptor.evacuatedBytes();
     }
-    {
-      WeakRefLock weakRefLock{weakRefMutex_};
-      // Now that all YG objects have been marked, update weak references.
-      updateWeakReferencesForYoungGen();
-    }
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {
       auto trackerCallback = [this](GCCell *cell) {
@@ -2809,77 +2804,19 @@ void HadesGC::finalizeYoungGenObjects() {
   youngGenFinalizables_.clear();
 }
 
-void HadesGC::updateWeakReferencesForYoungGen() {
-  assert(gcMutex_ && "gcMutex must be held when updating weak refs");
-  for (auto &slot : weakSlots_) {
-    switch (slot.state()) {
-      case WeakSlotState::Free:
-        break;
-
-      case WeakSlotState::Marked:
-        // WeakRefSlots may only be marked while an OG collection is in the mark
-        // phase or in the STW pause. The OG collection should unmark any slots
-        // after it is complete.
-        assert(ogMarkingBarriers_);
-        LLVM_FALLTHROUGH;
-      case WeakSlotState::Unmarked: {
-        // Both marked and unmarked weak ref slots need to be updated.
-        if (!slot.hasValue()) {
-          // Non-pointers need no work.
-          break;
-        }
-        auto *const cell = slot.getNoBarrierUnsafe(getPointerBase());
-        if (!inYoungGen(cell) && !compactee_.evacContains(cell)) {
-          break;
-        }
-        // A young-gen GC doesn't know if a weak ref is reachable via old gen
-        // references, so be conservative and do nothing to the slot.
-        // The value must also be forwarded.
-        if (cell->hasMarkedForwardingPointer()) {
-          GCCell *const forwardedCell =
-              cell->getMarkedForwardingPointer().getNonNull(getPointerBase());
-          HERMES_SLOW_ASSERT(
-              validPointer(forwardedCell) &&
-              "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(
-              CompressedPointer::encode(forwardedCell, getPointerBase()));
-        } else {
-          // Can't free this slot because it might only be used by an OG
-          // object.
-          slot.clearPointer();
-        }
-        break;
-      }
-    }
-  }
-}
-
 void HadesGC::updateWeakReferencesForOldGen() {
   for (auto &slot : weakSlots_) {
     switch (slot.state()) {
       case WeakSlotState::Free:
         // Skip free weak slots.
         break;
-      case WeakSlotState::Marked: {
+      case WeakSlotState::Marked:
         // Set all allocated slots to unmarked.
         slot.unmark();
-        if (!slot.hasValue()) {
-          // Skip non-pointers.
-          break;
-        }
-        auto *const cell = slot.getNoBarrierUnsafe(getPointerBase());
-        // If the object isn't live, clear the weak ref.
-        // YG has all of its mark bits set whenever there's no YG collection
-        // happening, so this also excludes clearing any pointers to YG objects.
-        if (!HeapSegment::getCellMarkBit(cell)) {
-          slot.clearPointer();
-        }
         break;
-      }
-      case WeakSlotState::Unmarked: {
+      case WeakSlotState::Unmarked:
         freeWeakSlot(&slot);
         break;
-      }
     }
   }
 }

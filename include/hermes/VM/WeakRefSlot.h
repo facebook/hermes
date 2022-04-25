@@ -57,6 +57,12 @@ class WeakRefSlot {
     return value_.root.getNoBarrierUnsafe();
   }
 
+  void markWeakRoots(WeakRootAcceptor &acceptor) {
+    if (state_ != State::Free) {
+      acceptor.acceptWeak(value_.root);
+    }
+  }
+
   // GC methods to update slot when referent moves/dies.
 
   /// Update the stored pointer (because the object moved).

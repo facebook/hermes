@@ -520,38 +520,8 @@ void MallocGC::resetWeakReferences() {
 
 void MallocGC::updateWeakReferences() {
   for (auto &slot : weakSlots_) {
-    switch (slot.state()) {
-      case WeakSlotState::Free:
-        break;
-      case WeakSlotState::Unmarked:
-        freeWeakSlot(&slot);
-        break;
-      case WeakSlotState::Marked:
-        // If it's not a pointer, nothing to do.
-        if (!slot.hasValue()) {
-          break;
-        }
-        auto *cell = slot.getNoBarrierUnsafe(getPointerBase());
-        HERMES_SLOW_ASSERT(
-            validPointer(cell) &&
-            "Got a pointer out of a weak reference slot that is not owned by "
-            "the GC");
-        CellHeader *header = CellHeader::from(cell);
-        if (!header->isMarked()) {
-          // This pointer is no longer live, zero it out
-          slot.clearPointer();
-        } else {
-#ifdef HERMESVM_SANITIZE_HANDLES
-          // Update the value to point to the new location
-          GCCell *nextCell = header->getForwardingPointer()->data();
-          HERMES_SLOW_ASSERT(
-              validPointer(cell) &&
-              "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(
-              CompressedPointer::encode(nextCell, getPointerBase()));
-#endif
-        }
-        break;
+    if (slot.state() == WeakSlotState::Unmarked) {
+      freeWeakSlot(&slot);
     }
   }
 }
