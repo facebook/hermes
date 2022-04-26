@@ -34,7 +34,7 @@ class RuntimeStats {
     ::hermes::PerfSection perfSection_;
 
     /// The RuntimeStats we are updating. This is stored so we can manipulate
-    /// its timerStack.
+    /// its timerStack and statistics.
     RuntimeStats &runtimeStats_;
 
     /// The particular statistic we are updating.
@@ -63,6 +63,8 @@ class RuntimeStats {
           cpuTimeStart_(::hermes::oscompat::thread_cpu_time()) {
       runtimeStats.timerStack_ = this;
       stat_.count += 1;
+      if (!parent_)
+        runtimeStats_.total_.count += 1;
     }
 
     /// Flush the timer to the referenced statistic, resetting the start times.
@@ -72,11 +74,20 @@ class RuntimeStats {
     void flush() {
       auto currentCPUTime = ::hermes::oscompat::thread_cpu_time();
       auto currentWallTime = std::chrono::steady_clock::now();
-      stat_.wallDuration +=
+      auto wallDiff =
           std::chrono::duration<double>(currentWallTime - wallTimeStart_)
               .count();
-      stat_.cpuDuration +=
+      auto cpuDiff =
           std::chrono::duration<double>(currentCPUTime - cpuTimeStart_).count();
+      auto update = [wallDiff, cpuDiff](Statistic &stat) {
+        stat.wallDuration += wallDiff;
+        stat.cpuDuration += cpuDiff;
+      };
+      update(stat_);
+      // If this is the initial entrypoint to the runtime, also increase the
+      // total stats.
+      if (!parent_)
+        update(runtimeStats_.total_);
       wallTimeStart_ = currentWallTime;
       cpuTimeStart_ = currentCPUTime;
     }
@@ -97,6 +108,9 @@ class RuntimeStats {
   /// Measure of incoming calls through JSI.
   Statistic incoming_;
 
+  /// Measure of total time spent in Hermes.
+  Statistic total_;
+
   /// The topmost RAIITimer in the stack.
   RAIITimer *timerStack_{nullptr};
 
@@ -113,6 +127,12 @@ class RuntimeStats {
   }
   double getRuntimeCPUDuration() const {
     return incoming_.cpuDuration - outgoing_.cpuDuration;
+  }
+  double getTotalDuration() const {
+    return total_.wallDuration;
+  }
+  double getTotalCPUDuration() const {
+    return total_.cpuDuration;
   }
 
   /// Flush all timers pending in our timer stack.
@@ -257,9 +277,11 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
       rts_.flushPendingTimers();
 
       ret.setProperty(*this, "jsi_runtimeDuration", rts_.getRuntimeDuration());
-
+      ret.setProperty(*this, "jsi_totalDuration", rts_.getTotalDuration());
       ret.setProperty(
           *this, "jsi_runtimeCPUDuration", rts_.getRuntimeCPUDuration());
+      ret.setProperty(
+          *this, "jsi_totalCPUDuration", rts_.getTotalCPUDuration());
 
       return ret;
     };
