@@ -374,7 +374,7 @@ uint32_t CodeBlock::getNextOffset(uint32_t offset) const {
   assert(offset < opcodes.size() && "invalid offset to breakOnNextInstruction");
 
   auto opCode = reinterpret_cast<const Inst *>(&opcodes[offset])->opCode;
-  assert(opCode < OpCode::_last && "invalid opecode");
+  assert(opCode < OpCode::_last && "invalid opcode");
 
   static const uint8_t sizes[] = {
 #define DEFINE_OPCODE(name) sizeof(inst::name##Inst),
