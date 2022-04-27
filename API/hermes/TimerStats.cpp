@@ -7,17 +7,14 @@
 
 #include "TimerStats.h"
 
-#include <hermes/Platform/Logging.h>
-#include <hermes/VM/Runtime.h>
 #include <hermes/VM/RuntimeStats.h>
 #include <jsi/decorator.h>
-
-#include "hermes/hermes.h"
 
 namespace vm = hermes::vm;
 
 namespace facebook {
 namespace hermes {
+namespace {
 
 class TimedHostObject final : public jsi::DecoratedHostObject {
  public:
@@ -218,6 +215,8 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
     addImmutableGlobal(jsiTimerInternalName, jsiTimerInternalObject);
   }
 };
+
+} // namespace
 
 std::unique_ptr<jsi::Runtime> makeTimedRuntime(
     std::unique_ptr<jsi::Runtime> hermesRuntime) {
