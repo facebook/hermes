@@ -14,8 +14,8 @@
 namespace facebook {
 namespace hermes {
 
-/// Creates and returns a Runtime that computes the time spent within the Hermes
-/// VM itself, discarding time spent in HostFunctions and HostObjects.
+/// Creates and returns a Runtime that computes the time spent in invocations to
+/// the Hermes VM.
 std::unique_ptr<jsi::Runtime> makeTimedRuntime(
     std::unique_ptr<jsi::Runtime> hermesRuntime);
 

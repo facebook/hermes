@@ -1092,7 +1092,7 @@ void ESTreeIRGen::emitRestProperty(
   auto lref = createLRef(rest->_argument, declInit);
 
   // Construct the excluded items.
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap exMap{};
+  AllocObjectLiteralInst::ObjectPropertyMap exMap{};
   llvh::SmallVector<Value *, 4> computedExcludedItems{};
   // Keys need de-duping so we don't create a dummy exclusion object with
   // duplicate keys.
@@ -1100,15 +1100,15 @@ void ESTreeIRGen::emitRestProperty(
   auto *zeroValue = Builder.getLiteralPositiveZero();
 
   for (Value *key : excludedItems) {
-    if (auto *lit = llvh::dyn_cast<Literal>(key)) {
-      // If the key is a literal, we can place it in the
-      // HBCAllocObjectFromBufferInst buffer.
+    if (auto *lit = llvh::dyn_cast<LiteralString>(key)) {
+      // If the key is a literal string, we can place it in the
+      // AllocObjectLiteralInst buffer.
       if (keyDeDupeSet.insert(lit).second) {
         exMap.emplace_back(std::make_pair(lit, zeroValue));
       }
     } else {
-      // If the key is not a literal, then we have to dynamically populate the
-      // excluded object with it after creation from the buffer.
+      // If the key is not a supported literal, then we have to dynamically
+      // populate the excluded object with it after creation from the buffer.
       computedExcludedItems.push_back(key);
     }
   }
@@ -1123,8 +1123,7 @@ void ESTreeIRGen::emitRestProperty(
     if (exMap.empty()) {
       excludedObj = Builder.createAllocObjectInst(excludedSizeHint);
     } else {
-      excludedObj =
-          Builder.createHBCAllocObjectFromBufferInst(exMap, excludedSizeHint);
+      excludedObj = Builder.createAllocObjectLiteralInst(exMap);
     }
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);

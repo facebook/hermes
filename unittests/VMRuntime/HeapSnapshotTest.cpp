@@ -430,7 +430,7 @@ TEST(HeapSnapshotTest, IDReversibleTest) {
   GCScope gcScope(rt);
 
   // Make a dummy object.
-  auto obj = rt.makeHandle(DummyObject::create(gc));
+  auto obj = rt.makeHandle(DummyObject::create(gc, rt));
   const auto objID = gc.getObjectID(obj.get());
   // Make sure the ID can be translated back to the object pointer.
   EXPECT_EQ(obj.get(), gc.getObjectForID(objID));
@@ -581,8 +581,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   auto &gc = rt.getHeap();
   GCScope gcScope(rt);
 
-  auto dummy = rt.makeHandle(DummyObject::create(gc));
-  auto *dummy2 = DummyObject::create(gc);
+  auto dummy = rt.makeHandle(DummyObject::create(gc, rt));
+  auto *dummy2 = DummyObject::create(gc, rt);
   dummy->setPointer(gc, dummy2);
   const auto blockSize = dummy->getAllocatedSize();
 
@@ -696,7 +696,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
           .build());
   DummyRuntime &rt = *runtime;
   GCScope scope{rt};
-  auto dummy = rt.makeHandle(DummyObject::create(rt.getHeap()));
+  auto dummy = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
   const auto dummyID = rt.getHeap().getObjectID(dummy.get());
   rt.collect();
   ASSERT_TRUE(triggeredTripwire);

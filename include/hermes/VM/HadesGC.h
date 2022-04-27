@@ -284,7 +284,7 @@ class HadesGC final : public GCBase {
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size) override;
 
-  WeakRefSlot *allocWeakSlot(HermesValue init) override;
+  WeakRefSlot *allocWeakSlot(CompressedPointer ptr) override;
 
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.

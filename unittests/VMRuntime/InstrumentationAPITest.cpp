@@ -88,7 +88,7 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
   GCScope scope{runtime};
-  auto h = runtime.makeHandle(DummyObject::create(runtime.getHeap()));
+  auto h = runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
   h->acquireExtMem(runtime.getHeap(), 200);
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
@@ -110,7 +110,7 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
   GCScope scope{runtime};
-  runtime.makeHandle(DummyObject::create(runtime.getHeap()));
+  runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
 }

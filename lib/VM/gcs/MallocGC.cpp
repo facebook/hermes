@@ -10,6 +10,7 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/HiddenClass.h"
@@ -519,43 +520,14 @@ void MallocGC::resetWeakReferences() {
 
 void MallocGC::updateWeakReferences() {
   for (auto &slot : weakSlots_) {
-    switch (slot.state()) {
-      case WeakSlotState::Free:
-        break;
-      case WeakSlotState::Unmarked:
-        freeWeakSlot(&slot);
-        break;
-      case WeakSlotState::Marked:
-        // If it's not a pointer, nothing to do.
-        if (!slot.hasPointer()) {
-          break;
-        }
-        auto *cell = reinterpret_cast<GCCell *>(slot.getPointer());
-        HERMES_SLOW_ASSERT(
-            validPointer(cell) &&
-            "Got a pointer out of a weak reference slot that is not owned by "
-            "the GC");
-        CellHeader *header = CellHeader::from(cell);
-        if (!header->isMarked()) {
-          // This pointer is no longer live, zero it out
-          slot.clearPointer();
-        } else {
-#ifdef HERMESVM_SANITIZE_HANDLES
-          // Update the value to point to the new location
-          GCCell *nextCell = header->getForwardingPointer()->data();
-          HERMES_SLOW_ASSERT(
-              validPointer(cell) &&
-              "Forwarding weak ref must be to a valid cell");
-          slot.setPointer(nextCell);
-#endif
-        }
-        break;
+    if (slot.state() == WeakSlotState::Unmarked) {
+      freeWeakSlot(&slot);
     }
   }
 }
 
-WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
-  weakSlots_.push_back({init});
+WeakRefSlot *MallocGC::allocWeakSlot(CompressedPointer ptr) {
+  weakSlots_.push_back({ptr});
   return &weakSlots_.back();
 }
 

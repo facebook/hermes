@@ -282,7 +282,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
       // If the slot is free, there's no edge to add.
       return;
     }
-    if (!slot->hasPointer()) {
+    if (!slot->hasValue()) {
       // Filter out empty refs from adding edges.
       return;
     }
@@ -292,7 +292,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc_.getObjectID(slot->getPointer()));
+        gc_.getObjectID(slot->getNoBarrierUnsafe(gc_.getPointerBase())));
   }
 
   void acceptSym(SymbolID sym, const char *name) override {
@@ -373,11 +373,12 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       // If the slot is free, there's no edge to add.
       return;
     }
-    if (!slot->hasPointer()) {
+    if (!slot->hasValue()) {
       // Filter out empty refs from adding edges.
       return;
     }
-    pointerAccept(slot->getPointer(), nullptr, true);
+    pointerAccept(
+        slot->getNoBarrierUnsafe(gc_.getPointerBase()), nullptr, true);
   }
 
   void acceptSym(SymbolID sym, const char *name) override {

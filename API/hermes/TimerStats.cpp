@@ -7,14 +7,142 @@
 
 #include "TimerStats.h"
 
-#include <hermes/VM/RuntimeStats.h>
+#include <hermes/Support/OSCompat.h>
+#include <hermes/Support/PerfSection.h>
 #include <jsi/decorator.h>
-
-namespace vm = hermes::vm;
 
 namespace facebook {
 namespace hermes {
 namespace {
+
+/// RuntimeStats contains statistics which may be manipulated by users of
+/// Runtime.
+class RuntimeStats {
+  /// A Statistic tracks duration in wall and CPU time and a count.  All times
+  /// are in seconds.
+  struct Statistic {
+    double wallDuration{0};
+    double cpuDuration{0};
+    uint64_t count{0};
+  };
+
+  /// An RAII-style class for updating a Statistic.
+  class RAIITimer {
+    friend RuntimeStats;
+    /// RAII class for delimiting the code region tracked by this timer for the
+    /// purpose of capturing tracing profiles.
+    ::hermes::PerfSection perfSection_;
+
+    /// The RuntimeStats we are updating. This is stored so we can manipulate
+    /// its timerStack and statistics.
+    RuntimeStats &runtimeStats_;
+
+    /// The particular statistic we are updating.
+    Statistic &stat_;
+
+    /// The parent timer. This link forms a stack. At the point the stats are
+    /// collected, all existing RAIITimers are flushed so that pending data can
+    /// be collected.
+    RAIITimer *const parent_;
+
+    /// The initial value of the wall time.
+    std::chrono::steady_clock::time_point wallTimeStart_;
+
+    /// The initial value of the CPU time.
+    std::chrono::microseconds cpuTimeStart_;
+
+    explicit RAIITimer(
+        const char *name,
+        RuntimeStats &runtimeStats,
+        Statistic &stat)
+        : perfSection_(name),
+          runtimeStats_(runtimeStats),
+          stat_(stat),
+          parent_(runtimeStats.timerStack_),
+          wallTimeStart_(std::chrono::steady_clock::now()),
+          cpuTimeStart_(::hermes::oscompat::thread_cpu_time()) {
+      runtimeStats.timerStack_ = this;
+      stat_.count += 1;
+      if (!parent_)
+        runtimeStats_.total_.count += 1;
+    }
+
+    /// Flush the timer to the referenced statistic, resetting the start times.
+    /// Note that 'count' is incremented when the RAIITimer is created and so is
+    /// unaffected. This is invoked when the timer is destroyed, but also
+    /// invoked when data is collected to include any aggregate data.
+    void flush() {
+      auto currentCPUTime = ::hermes::oscompat::thread_cpu_time();
+      auto currentWallTime = std::chrono::steady_clock::now();
+      auto wallDiff =
+          std::chrono::duration<double>(currentWallTime - wallTimeStart_)
+              .count();
+      auto cpuDiff =
+          std::chrono::duration<double>(currentCPUTime - cpuTimeStart_).count();
+      auto update = [wallDiff, cpuDiff](Statistic &stat) {
+        stat.wallDuration += wallDiff;
+        stat.cpuDuration += cpuDiff;
+      };
+      update(stat_);
+      // If this is the initial entrypoint to the runtime, also increase the
+      // total stats.
+      if (!parent_)
+        update(runtimeStats_.total_);
+      wallTimeStart_ = currentWallTime;
+      cpuTimeStart_ = currentCPUTime;
+    }
+
+   public:
+    ~RAIITimer() {
+      flush();
+      assert(
+          runtimeStats_.timerStack_ == this &&
+          "Destroyed RAIITimer is not at top of stack");
+      runtimeStats_.timerStack_ = parent_;
+    }
+  };
+
+  /// Measure of outgoing calls through HostFunctions and HostObjects.
+  Statistic outgoing_;
+
+  /// Measure of incoming calls through JSI.
+  Statistic incoming_;
+
+  /// Measure of total time spent in Hermes.
+  Statistic total_;
+
+  /// The topmost RAIITimer in the stack.
+  RAIITimer *timerStack_{nullptr};
+
+ public:
+  RAIITimer incomingTimer(const char *name) {
+    return RAIITimer(name, *this, incoming_);
+  }
+  RAIITimer outgoingTimer(const char *name) {
+    return RAIITimer(name, *this, outgoing_);
+  }
+
+  double getRuntimeDuration() const {
+    return incoming_.wallDuration - outgoing_.wallDuration;
+  }
+  double getRuntimeCPUDuration() const {
+    return incoming_.cpuDuration - outgoing_.cpuDuration;
+  }
+  double getTotalDuration() const {
+    return total_.wallDuration;
+  }
+  double getTotalCPUDuration() const {
+    return total_.cpuDuration;
+  }
+
+  /// Flush all timers pending in our timer stack.
+  void flushPendingTimers() {
+    for (auto cursor = timerStack_; cursor != nullptr;
+         cursor = cursor->parent_) {
+      cursor->flush();
+    }
+  }
+};
 
 class TimedHostObject final : public jsi::DecoratedHostObject {
  public:
@@ -23,14 +151,13 @@ class TimedHostObject final : public jsi::DecoratedHostObject {
   TimedHostObject(
       jsi::Runtime &rt,
       std::shared_ptr<HostObject> plainHO,
-      ::hermes::vm::instrumentation::RuntimeStats &rts)
+      RuntimeStats &rts)
       : DHO(rt, std::move(plainHO)), rts_(rts) {}
 
   /// @name jsi::DecoratedHostObject methods.
   /// @{
   jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
-    const vm::instrumentation::RAIITimer timer{
-        "HostObject.get", rts_, rts_.hostFunction};
+    auto timer = rts_.outgoingTimer("HostObject.get");
     return DHO::get(rt, name);
   }
 
@@ -38,20 +165,18 @@ class TimedHostObject final : public jsi::DecoratedHostObject {
       jsi::Runtime &rt,
       const jsi::PropNameID &name,
       const jsi::Value &value) override {
-    const vm::instrumentation::RAIITimer timer{
-        "HostObject.set", rts_, rts_.hostFunction};
+    auto timer = rts_.outgoingTimer("HostObject.set");
     return DHO::set(rt, name, value);
   }
 
   std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
-    const vm::instrumentation::RAIITimer timer{
-        "HostObject.getHostPropertyNames", rts_, rts_.hostFunction};
+    auto timer = rts_.outgoingTimer("HostObject.getHostPropertyNames");
     return DHO::getPropertyNames(rt);
   }
   /// @}
 
  private:
-  ::hermes::vm::instrumentation::RuntimeStats &rts_;
+  RuntimeStats &rts_;
 };
 
 class TimedHostFunction final : public jsi::DecoratedHostFunction {
@@ -61,20 +186,19 @@ class TimedHostFunction final : public jsi::DecoratedHostFunction {
   TimedHostFunction(
       jsi::Runtime &rt,
       jsi::HostFunctionType plainHF,
-      ::hermes::vm::instrumentation::RuntimeStats &rts)
+      RuntimeStats &rts)
       : DHF(rt, std::move(plainHF)), rts_(rts) {}
   jsi::Value operator()(
       jsi::Runtime &rt,
       const jsi::Value &thisVal,
       const jsi::Value *args,
       size_t count) {
-    const vm::instrumentation::RAIITimer timer{
-        "Host Function", rts_, rts_.hostFunction};
+    auto timer = rts_.outgoingTimer("HostFunction");
     return DHF::operator()(rt, thisVal, args, count);
   }
 
  private:
-  ::hermes::vm::instrumentation::RuntimeStats &rts_;
+  RuntimeStats &rts_;
 };
 
 class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
@@ -101,10 +225,16 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
         name, paramCount, TimedHostFunction{*this, std::move(func), rts_});
   }
 
+  jsi::Value evaluateJavaScript(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      const std::string &sourceURL) override {
+    auto timer = rts_.incomingTimer("evaluateJavaScript");
+    return RD::evaluateJavaScript(buffer, sourceURL);
+  }
+
   jsi::Value evaluatePreparedJavaScript(
       const std::shared_ptr<const jsi::PreparedJavaScript> &js) override {
-    const vm::instrumentation::RAIITimer timer{
-        "Evaluate JS", rts_, rts_.evaluateJS};
+    auto timer = rts_.incomingTimer("evaluatePreparedJavaScript");
     return RD::evaluatePreparedJavaScript(js);
   }
 
@@ -113,8 +243,7 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::Value &jsThis,
       const jsi::Value *args,
       size_t count) override {
-    const vm::instrumentation::RAIITimer timer{
-        "Incoming Function", rts_, rts_.incomingFunction};
+    auto timer = rts_.incomingTimer("call");
     return RD::call(func, jsThis, args, count);
   }
 
@@ -122,21 +251,19 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::Function &func,
       const jsi::Value *args,
       size_t count) override {
-    const vm::instrumentation::RAIITimer timer{
-        "Incoming Function: Call As Constructor", rts_, rts_.incomingFunction};
+    auto timer = rts_.incomingTimer("callAsConstructor");
     return RD::callAsConstructor(func, args, count);
+  }
+
+  bool drainMicrotasks(int maxMicrotasksHint) override {
+    auto timer = rts_.incomingTimer("drainMicrotasks");
+    return RD::drainMicrotasks(maxMicrotasksHint);
   }
   /// @}
 
  private:
-  ::hermes::vm::instrumentation::RuntimeStats rts_{false};
+  RuntimeStats rts_{};
   std::unique_ptr<jsi::Runtime> runtime_;
-
-  template <double ::vm::instrumentation::RuntimeStats::Statistic::*FieldPtr>
-  double computeRuntimeWith() const {
-    return rts_.evaluateJS.*FieldPtr - rts_.hostFunction.*FieldPtr +
-        rts_.incomingFunction.*FieldPtr;
-  };
 
   // Creates the C++ handler for JSITimerInternal.getTimes().
   jsi::HostFunctionType getInternalTimerInternalGetTimesHandler() {
@@ -149,17 +276,12 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
       // date.
       rts_.flushPendingTimers();
 
+      ret.setProperty(*this, "jsi_runtimeDuration", rts_.getRuntimeDuration());
+      ret.setProperty(*this, "jsi_totalDuration", rts_.getTotalDuration());
       ret.setProperty(
-          *this,
-          "jsi_runtimeDuration",
-          computeRuntimeWith<
-              &::vm::instrumentation::RuntimeStats::Statistic::wallDuration>());
-
+          *this, "jsi_runtimeCPUDuration", rts_.getRuntimeCPUDuration());
       ret.setProperty(
-          *this,
-          "jsi_runtimeCPUDuration",
-          computeRuntimeWith<
-              &::vm::instrumentation::RuntimeStats::Statistic::cpuDuration>());
+          *this, "jsi_totalCPUDuration", rts_.getTotalCPUDuration());
 
       return ret;
     };

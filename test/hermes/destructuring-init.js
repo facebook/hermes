@@ -22,3 +22,11 @@ print(def.name);
 var [foo = function() {}, bar = function() {}] = [];
 print(foo.name, bar.name);
 // CHECK-NEXT: foo bar
+
+var {[undefined]: x = 1, ...x} = 1;
+print(typeof(x));
+// CHECK-NEXT: object
+
+var {[null]: y = 1, ...y} = 1;
+print(typeof(y));
+// CHECK-NEXT: object

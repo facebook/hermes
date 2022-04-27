@@ -8,7 +8,12 @@
 #ifndef HERMES_VM_WEAKREFSLOT_H
 #define HERMES_VM_WEAKREFSLOT_H
 
+#include "hermes/VM/CompressedPointer.h"
+#include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCConcurrency.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/PointerBase.h"
+#include "hermes/VM/WeakRoot.h"
 
 namespace hermes {
 namespace vm {
@@ -27,41 +32,48 @@ class WeakRefSlot {
 
   // Mutator methods.
 
-  WeakRefSlot(HermesValue v) {
-    reset(v);
+  WeakRefSlot(CompressedPointer ptr) {
+    reset(ptr);
   }
 
+  /// Return true if this slot stores a non-null pointer to something.
   bool hasValue() const {
-    // An empty value means the pointer has been cleared, and a native value
-    // means it is free.
-    // Don't use state_ here since that can be modified concurrently by the GC.
-    assert(!value_.isNativeValue() && "Should never query a free WeakRef");
-    return !value_.isEmpty();
+    // This assert should be predicated on kConcurrentGC being false, because it
+    // is not safe to access the state in a concurrent GC
+    assert(
+        (kConcurrentGC || (state_ != Free)) &&
+        "Should never query a free WeakRef");
+    return value_.root != CompressedPointer(nullptr);
   }
 
-  /// Return the object as a HermesValue.
-  inline const HermesValue value() const;
+  /// Return the object as a GCCell *, with a read barrier
+  inline GCCell *get(PointerBase &base, GC &gc) const;
+
+  /// Same as get, but without a read barrier
+  inline GCCell *getNoBarrierUnsafe(PointerBase &base) const;
+
+  CompressedPointer getNoBarrierUnsafe() const {
+    assert(hasValue() && "tried to access collected referent");
+    return value_.root.getNoBarrierUnsafe();
+  }
+
+  void markWeakRoots(WeakRootAcceptor &acceptor) {
+    if (state_ != State::Free) {
+      acceptor.acceptWeak(value_.root);
+    }
+  }
 
   // GC methods to update slot when referent moves/dies.
 
-  /// Return true if this slot stores a non-null pointer to something. For any
-  /// slot reachable by the mutator, that something is a GCCell.
-  bool hasPointer() const {
-    return value_.isPointer();
-  }
-
-  /// Return the pointer to a GCCell, whether or not this slot is marked.
-  inline GCCell *getPointer() const;
-
   /// Update the stored pointer (because the object moved).
-  void setPointer(void *newPtr) {
+  void setPointer(CompressedPointer ptr) {
     // Cannot check state() here because it can race with marking code.
-    value_ = value_.updatePointer(newPtr);
+    value_.root = ptr;
   }
 
   /// Clear the pointer (because the object died).
   void clearPointer() {
-    value_ = HermesValue::encodeEmptyValue();
+    value_.root = CompressedPointer(nullptr);
   }
 
   // GC methods to recycle slots.
@@ -83,7 +95,7 @@ class WeakRefSlot {
   void free(WeakRefSlot *nextFree) {
     assert(state() == Unmarked && "cannot free a reachable slot");
     state_ = Free;
-    value_ = HermesValue::encodeNativePointer(nextFree);
+    value_.nextFree = nextFree;
     assert(state() == Free);
   }
 
@@ -91,15 +103,14 @@ class WeakRefSlot {
     // nextFree is only called during a STW pause, so it's fine to access both
     // state and value here.
     assert(state() == Free);
-    return value_.getNativePointer<WeakRefSlot>();
+    return value_.nextFree;
   }
 
   /// Re-initialize a freed slot.
-  void reset(HermesValue v) {
+  void reset(CompressedPointer ptr) {
     static_assert(Unmarked == 0, "unmarked state should not need tagging");
     state_ = Unmarked;
-    assert(v.isPointer() && "Only pointers are currently supported");
-    value_ = v;
+    value_.root = ptr;
     assert(state() == Unmarked && "initial state should be unmarked");
   }
 
@@ -107,9 +118,14 @@ class WeakRefSlot {
   // value_ and state_ are read and written by different threads. We rely on
   // them being independent words so that they can be used without
   // synchronization.
-  PinnedHermesValue value_;
+  union WeakRootOrIndex {
+    WeakRoot<GCCell> root;
+    WeakRefSlot *nextFree;
+    WeakRootOrIndex() {}
+  } value_;
   State state_;
 };
+
 using WeakSlotState = WeakRefSlot::State;
 
 } // namespace vm

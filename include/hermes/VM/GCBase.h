@@ -19,6 +19,7 @@
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCExecTrace.h"
 #include "hermes/VM/GCPointer.h"
@@ -939,7 +940,7 @@ class GCBase {
     return true;
   }
 
-  virtual WeakRefSlot *allocWeakSlot(HermesValue init) = 0;
+  virtual WeakRefSlot *allocWeakSlot(CompressedPointer ptr) = 0;
 
 #ifndef NDEBUG
   /// \name Debug APIs
@@ -1334,6 +1335,11 @@ class GCBase {
   /// initialization, using the context provided then (on this heap).
   void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     gcCallbacks_.markWeakRoots(acceptor, markLongLived);
+    acceptor.beginRootSection(RootAcceptor::Section::WeakRefSlots);
+    for (auto &slot : weakSlots_) {
+      slot.markWeakRoots(acceptor);
+    }
+    acceptor.endRootSection();
   }
 
   /// Print the cumulative statistics.

@@ -44,7 +44,7 @@ struct TestHarness {
   void triggerFreshHeap() {
     // When `sanitizeHandles` is enabled, every allocation will cause the heap
     // to move.
-    DummyObject::create(runtime->getHeap());
+    DummyObject::create(runtime->getHeap(), *runtime);
   }
 
   void testHandleMoves(Handle<DummyObject> h) {
@@ -63,7 +63,8 @@ TEST(GCSanitizeHandlesTest, MovesRoots) {
   DummyRuntime &runtime = *TH.runtime;
   GCScope gcScope(runtime);
 
-  auto dummy = runtime.makeHandle(DummyObject::create(runtime.getHeap()));
+  auto dummy =
+      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
   TH.testHandleMoves(dummy);
 }
 
@@ -74,8 +75,9 @@ TEST(GCSanitizeHandlesTest, MovesNonRoots) {
   DummyRuntime &runtime = *TH.runtime;
   GCScope gcScope(runtime);
 
-  auto dummy = runtime.makeHandle(DummyObject::create(runtime.getHeap()));
-  auto *dummy2 = DummyObject::create(runtime.getHeap());
+  auto dummy =
+      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
+  auto *dummy2 = DummyObject::create(runtime.getHeap(), runtime);
   dummy->setPointer(runtime.getHeap(), dummy2);
 
   auto *before = dummy->other.get(runtime);
@@ -94,7 +96,7 @@ TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
   GCScope gcScope(runtime);
 
   Handle<DummyObject> dummy =
-      runtime.makeHandle(DummyObject::create(runtime.getHeap()));
+      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
   runtime.collect();
   TH.testHandleMoves(dummy);
 }
