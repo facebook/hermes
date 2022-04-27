@@ -60,7 +60,7 @@ impl<W: Write> Compiler<W> {
         out!(self, "#include \"runtime/FNRuntime.h\"\n");
         self.gen_context();
         out!(self, "int main(){{\n");
-        self.gen_ast(node, LexicalScopeId::GLOBAL_SCOPE_ID, &lock);
+        self.gen_ast(node, LexicalScopeId::GLOBAL_SCOPE_ID, lock);
         out!(self, "return 0;\n}}")
     }
 
@@ -384,7 +384,7 @@ impl<W: Write> Compiler<W> {
 fn read_stdin() -> anyhow::Result<NullTerminatedBuf> {
     let stdin = std::io::stdin();
     let mut handle = stdin.lock();
-    Ok(NullTerminatedBuf::from_reader(&mut handle).context("stdin")?)
+    NullTerminatedBuf::from_reader(&mut handle).context("stdin")
 }
 
 fn run() -> anyhow::Result<()> {
@@ -415,11 +415,8 @@ fn run() -> anyhow::Result<()> {
 }
 
 fn main() {
-    match run() {
-        Err(e) => {
-            eprintln!("{:#}", e);
-            exit(1);
-        }
-        _ => (),
+    if let Err(e) = run() {
+        eprintln!("{:#}", e);
+        exit(1);
     }
 }
