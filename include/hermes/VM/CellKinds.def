@@ -59,6 +59,7 @@ CELL_CLASS(DecoratedObject, "DecoratedObject")
 CELL_KIND(HostObject)
 
 CELL_CLASS(JSError, "Error")
+CELL_CLASS(JSCallSite, "CallSite")
 CELL_CLASS(Arguments, "Arguments")
 CELL_CLASS(JSArray, "Array")
 CELL_CLASS(JSArrayBuffer, "ArrayBuffer")

@@ -14,165 +14,79 @@
 
 namespace hermes {
 namespace vm {
-namespace {
-/// A helper class with all the fields stored in a CallSite. It is populated by
-/// callSiteFromSelfHandle below.
-struct JSCallSiteInfo {
-  Handle<JSError> error;
-  size_t stackFrameIndex;
+const ObjectVTable JSCallSite::vt{
+    VTable(
+        CellKind::JSCallSiteKind,
+        cellSize<JSCallSite>(),
+        nullptr,
+        nullptr,
+        nullptr),
+    JSCallSite::_getOwnIndexedRangeImpl,
+    JSCallSite::_haveOwnIndexedImpl,
+    JSCallSite::_getOwnIndexedPropertyFlagsImpl,
+    JSCallSite::_getOwnIndexedImpl,
+    JSCallSite::_setOwnIndexedImpl,
+    JSCallSite::_deleteOwnIndexedImpl,
+    JSCallSite::_checkAllOwnIndexedImpl,
 };
 
-/// Raises a TypeError when an incompatible receiver is used for any of the
-/// CallSite methods below.
-static ExecutionStatus raiseIncompatibleReceiverError(Runtime &runtime) {
-  return runtime.raiseTypeError(
-      "CallSite method called on an incompatible receiver");
+void JSCallSiteBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSCallSite::numOverlapSlots<JSCallSite>());
+  JSObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSCallSite *>(cell);
+  mb.setVTable(&JSCallSite::vt);
+  mb.addField("error", &self->error_);
 }
 
-/// Looks up property \p iProp in \p selfHandle raising a type error if one
-/// isn't found.
-/// \return A pseudo-handle to \p iProp.
-static CallResult<PseudoHandle<>> getCallSiteProp(
+JSCallSite::JSCallSite(
     Runtime &runtime,
-    Handle<JSObject> selfHandle,
-    Predefined::IProp iProp) {
-  NamedPropertyDescriptor desc;
-  bool exists = JSObject::getOwnNamedDescriptor(
-      selfHandle, runtime, Predefined::getSymbolID(iProp), desc);
-  if (!exists)
-    return raiseIncompatibleReceiverError(runtime);
-
-  auto sv = JSObject::getNamedSlotValueUnsafe(*selfHandle, runtime, desc);
-  return createPseudoHandle(sv.unboxToHV(runtime));
-}
-
-/// Extracts the CallSite information from \p selfHandle. Raises TypeError if
-/// any CallSite property isn't found.
-static CallResult<JSCallSiteInfo> callSiteFromSelfHandle(
-    Runtime &runtime,
-    Handle<> selfHandle) {
-  auto selfObjHandle = Handle<JSObject>::dyn_vmcast(selfHandle);
-  if (LLVM_UNLIKELY(!selfObjHandle)) {
-    return raiseIncompatibleReceiverError(runtime);
-  }
-
-  auto errorRes = getCallSiteProp(
-      runtime, selfObjHandle, Predefined::InternalPropertyCallSiteError);
-  if (LLVM_UNLIKELY(errorRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  auto error = runtime.makeHandle<JSError>(std::move(*errorRes));
-
-  auto frameIndexRes = getCallSiteProp(
-      runtime,
-      selfObjHandle,
-      Predefined::InternalPropertyCallSiteStackFrameIndex);
-  if (LLVM_UNLIKELY(frameIndexRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const size_t frameIndex = frameIndexRes->getHermesValue().getNumber();
-
-  return JSCallSiteInfo{std::move(error), frameIndex};
-}
-
-/// \return a reference to the stack frame into which this CallSite object is
-/// a view.
-CallResult<const StackTraceInfo *> getStackTraceInfo(
-    Runtime &runtime,
-    Handle<> selfHandle) {
-  auto callSiteRes = callSiteFromSelfHandle(runtime, selfHandle);
-  if (LLVM_UNLIKELY(callSiteRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTrace *stacktrace = callSiteRes->error->getStackTrace();
+    Handle<JSObject> parent,
+    Handle<HiddenClass> clazz,
+    Handle<JSError> error,
+    size_t stackFrameIndex)
+    : JSObject(runtime, *parent, *clazz),
+      error_(runtime, *error, runtime.getHeap()),
+      stackFrameIndex_(stackFrameIndex) {
   assert(
-      stacktrace &&
-      "The Error associated with this CallSite has already released its "
-      "stack trace vector");
-
-  // Returning a pointer to stacktrace elements is safe because:
-  //   1. stacktrace's ownership is managed (indirectly) by selfHandle (i.e.,
-  //      the CallSite object); and
-  //   2. stacktrace is not modified after it is created.
-  return &stacktrace->at(callSiteRes->stackFrameIndex);
+      error_.getNonNull(runtime)->getStackTrace() &&
+      "Error passed to CallSite must have a stack trace");
+  assert(
+      stackFrameIndex < error_.getNonNull(runtime)->getStackTrace()->size() &&
+      "Stack frame index out of bounds");
 }
-
-Handle<JSObject> createJSCallSite(Runtime &runtime) {
-  auto parentHandle = Handle<JSObject>::vmcast(&runtime.callSitePrototype);
-  auto *cell = runtime.makeAFixed<JSObject>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, JSObject::numOverlapSlots<JSObject>()),
-      GCPointerBase::NoBarriers());
-  return JSObjectInit::initToHandle(runtime, cell);
-}
-} // namespace
 
 CallResult<HermesValue> JSCallSite::create(
     Runtime &runtime,
     Handle<JSError> errorHandle,
     uint32_t stackFrameIndex) {
-  Handle<JSObject> selfHandle = createJSCallSite(runtime);
+  auto jsCallSiteProto = Handle<JSObject>::vmcast(&runtime.callSitePrototype);
 
-  assert(
-      errorHandle->getStackTrace() &&
-      "Error passed to CallSite must have a stack trace");
-  assert(
-      stackFrameIndex < errorHandle->getStackTrace()->size() &&
-      "Stack frame index out of bounds");
+  auto *jsCallSite = runtime.makeAFixed<JSCallSite>(
+      runtime,
+      jsCallSiteProto,
+      runtime.getHiddenClassForPrototype(
+          *jsCallSiteProto, numOverlapSlots<JSCallSite>()),
+      errorHandle,
+      stackFrameIndex);
 
-  auto addCallSiteProp = [&](Predefined::IProp iProp, Handle<> value) {
-    auto res = JSObject::defineNewOwnProperty(
-        selfHandle,
-        runtime,
-        Predefined::getSymbolID(iProp),
-        PropertyFlags::defaultNewNamedPropertyFlags(),
-        value);
-    (void)res;
-    assert(
-        res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
-  };
-
-  addCallSiteProp(Predefined::InternalPropertyCallSiteError, errorHandle);
-  auto frameIndexHV = HermesValue::encodeNumberValue(stackFrameIndex);
-  addCallSiteProp(
-      Predefined::InternalPropertyCallSiteStackFrameIndex,
-      runtime.makeHandle(frameIndexHV));
-
-  assert(
-      callSiteFromSelfHandle(runtime, selfHandle) !=
-          ExecutionStatus::EXCEPTION &&
-      "JSCallSite should **be** a CallSite by now");
-  return selfHandle.getHermesValue();
+  return JSObjectInit::initToHermesValue(runtime, jsCallSite);
 }
 
 CallResult<HermesValue> JSCallSite::getFunctionName(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto callSiteRes = callSiteFromSelfHandle(runtime, selfHandle);
-  if (LLVM_UNLIKELY(callSiteRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+    Handle<JSCallSite> selfHandle) {
+  Handle<JSError> error = runtime.makeHandle(selfHandle->error_);
 
   auto functionName = JSError::getFunctionNameAtIndex(
-      runtime, callSiteRes->error, callSiteRes->stackFrameIndex);
+      runtime, error, selfHandle->stackFrameIndex_);
   return functionName ? functionName.getHermesValue()
                       : HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::getFileName(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto stiRes = getStackTraceInfo(runtime, selfHandle);
-  if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTraceInfo *sti = *stiRes;
+    Handle<JSCallSite> selfHandle) {
+  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
@@ -205,13 +119,8 @@ CallResult<HermesValue> JSCallSite::getFileName(
 
 CallResult<HermesValue> JSCallSite::getLineNumber(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto stiRes = getStackTraceInfo(runtime, selfHandle);
-  if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTraceInfo *sti = *stiRes;
+    Handle<JSCallSite> selfHandle) {
+  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
@@ -230,13 +139,8 @@ CallResult<HermesValue> JSCallSite::getLineNumber(
 
 CallResult<HermesValue> JSCallSite::getColumnNumber(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto stiRes = getStackTraceInfo(runtime, selfHandle);
-  if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTraceInfo *sti = *stiRes;
+    Handle<JSCallSite> selfHandle) {
+  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
@@ -249,13 +153,8 @@ CallResult<HermesValue> JSCallSite::getColumnNumber(
 
 CallResult<HermesValue> JSCallSite::getBytecodeAddress(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto stiRes = getStackTraceInfo(runtime, selfHandle);
-  if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTraceInfo *sti = *stiRes;
+    Handle<JSCallSite> selfHandle) {
+  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   if (sti->codeBlock) {
     return HermesValue::encodeNumberValue(
         sti->bytecodeOffset + sti->codeBlock->getVirtualOffset());
@@ -265,108 +164,91 @@ CallResult<HermesValue> JSCallSite::getBytecodeAddress(
 
 CallResult<HermesValue> JSCallSite::isNative(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  auto stiRes = getStackTraceInfo(runtime, selfHandle);
-  if (LLVM_UNLIKELY(stiRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  const StackTraceInfo *sti = *stiRes;
+    Handle<JSCallSite> selfHandle) {
+  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   return HermesValue::encodeBoolValue(!sti->codeBlock);
 }
 
-namespace {
-/// Ensures that \p selfHandle is a CallSite (raising a TypeError if not) before
-/// returning the default value.
-CallResult<HermesValue> HandleUnimplemented(
-    Runtime &runtime,
-    Handle<> selfHandle,
-    HermesValue (*createReturnHV)()) {
-  if (LLVM_UNLIKELY(
-          callSiteFromSelfHandle(runtime, selfHandle) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return (*createReturnHV)();
-}
-} // namespace
-
 CallResult<HermesValue> JSCallSite::getThis(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeUndefinedValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue> JSCallSite::getTypeName(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::getFunction(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeUndefinedValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue> JSCallSite::getMethodName(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::getEvalOrigin(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::isToplevel(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::isEval(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::isConstructor(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
 }
 
 CallResult<HermesValue> JSCallSite::isAsync(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, [] { return HermesValue::encodeBoolValue(false); });
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeBoolValue(false);
 }
 
 CallResult<HermesValue> JSCallSite::isPromiseAll(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, [] { return HermesValue::encodeBoolValue(false); });
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeBoolValue(false);
 }
 
 CallResult<HermesValue> JSCallSite::getPromiseIndex(
     Runtime &runtime,
-    Handle<> selfHandle) {
-  return HandleUnimplemented(
-      runtime, selfHandle, &HermesValue::encodeNullValue);
+    Handle<JSCallSite> selfHandle) {
+  return HermesValue::encodeNullValue();
+}
+
+const StackTraceInfo *JSCallSite::getStackTraceInfo(
+    Runtime &runtime,
+    Handle<JSCallSite> selfHandle) {
+  JSError *error = selfHandle->error_.getNonNull(runtime);
+  const StackTrace *stacktrace = error->getStackTrace();
+  assert(
+      stacktrace &&
+      "The Error associated with this CallSite has already released its "
+      "stack trace vector");
+  // Returning a pointer to stacktrace elements is safe because:
+  //   1. stacktrace's ownership is managed (indirectly) by selfHandle (i.e.,
+  //      the CallSite object); and
+  //   2. stacktrace is not modified after it is created.
+  return &stacktrace->at(selfHandle->stackFrameIndex_);
 }
 
 } // namespace vm

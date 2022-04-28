@@ -152,89 +152,120 @@ void populateCallSitePrototype(Runtime &runtime) {
       dpf);
 }
 
+namespace {
+template <auto Fn>
+static CallResult<HermesValue> ensureJSCallSiteAndCall(
+    Handle<> self,
+    Runtime &runtime) {
+  if (auto jsCallSiteSelf = Handle<JSCallSite>::dyn_vmcast(self)) {
+    return (*Fn)(runtime, jsCallSiteSelf);
+  }
+
+  return runtime.raiseTypeError(
+      "CallSite method called on an incompatible receiver");
+}
+} // namespace
+
 CallResult<HermesValue>
 callSitePrototypeGetFunctionName(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getFunctionName(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getFunctionName>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetFileName(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getFileName(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getFileName>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetLineNumber(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getLineNumber(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getLineNumber>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetColumnNumber(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getColumnNumber(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getColumnNumber>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetBytecodeAddress(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getBytecodeAddress(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getBytecodeAddress>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsNative(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isNative(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isNative>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetThis(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getThis(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getThis>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetTypeName(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getTypeName(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getTypeName>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetFunction(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getFunction(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getFunction>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetMethodName(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getMethodName(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getMethodName>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetEvalOrigin(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getEvalOrigin(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getEvalOrigin>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsToplevel(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isToplevel(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isToplevel>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsEval(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isEval(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isEval>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsConstructor(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isConstructor(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isConstructor>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsAsync(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isAsync(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isAsync>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeIsPromiseAll(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::isPromiseAll(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::isPromiseAll>(
+      args.getThisHandle(), runtime);
 }
 
 CallResult<HermesValue>
 callSitePrototypeGetPromiseIndex(void *, Runtime &runtime, NativeArgs args) {
-  return JSCallSite::getPromiseIndex(runtime, args.getThisHandle());
+  return ensureJSCallSiteAndCall<&JSCallSite::getPromiseIndex>(
+      args.getThisHandle(), runtime);
 }
 
 } // namespace vm
