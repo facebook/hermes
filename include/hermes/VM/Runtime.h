@@ -1688,16 +1688,41 @@ class NoAllocScope {
 #ifdef NDEBUG
   explicit NoAllocScope(Runtime &runtime) {}
   explicit NoAllocScope(GC &gc) {}
+  NoAllocScope(const NoAllocScope &) = default;
+  NoAllocScope(NoAllocScope &&) = default;
+  NoAllocScope &operator=(const NoAllocScope &) = default;
+  NoAllocScope &operator=(NoAllocScope &&rhs) = default;
+
   void release() {}
 #else
   explicit NoAllocScope(Runtime &runtime) : NoAllocScope(runtime.getHeap()) {}
-  explicit NoAllocScope(GC &gc) : noAllocLevel_(&gc.noAllocLevel_) {
-    ++*noAllocLevel_;
+  explicit NoAllocScope(GC &gc) : NoAllocScope(&gc.noAllocLevel_) {}
+  NoAllocScope(const NoAllocScope &other) : NoAllocScope(other.noAllocLevel_) {}
+  NoAllocScope(NoAllocScope &&other) : noAllocLevel_(other.noAllocLevel_) {
+    // not a release operation as this inherits the counter from other.
+    other.noAllocLevel_ = nullptr;
   }
 
   ~NoAllocScope() {
     if (noAllocLevel_)
       release();
+  }
+
+  NoAllocScope &operator=(NoAllocScope &&rhs) {
+    if (noAllocLevel_) {
+      release();
+    }
+
+    // N.B.: to account for cases when this == &rhs, first copy rhs.noAllocLevel
+    // to a temporary, then null it out.
+    auto ptr = rhs.noAllocLevel_;
+    rhs.noAllocLevel_ = nullptr;
+    noAllocLevel_ = ptr;
+    return *this;
+  }
+
+  NoAllocScope &operator=(const NoAllocScope &other) {
+    return *this = NoAllocScope(other.noAllocLevel_);
   }
 
   /// End this scope early. May only be called once.
@@ -1709,8 +1734,16 @@ class NoAllocScope {
   }
 
  private:
+  explicit NoAllocScope(uint32_t *noAllocLevel) : noAllocLevel_(noAllocLevel) {
+    assert(
+        noAllocLevel_ && "constructing NoAllocScope with moved/release object");
+    ++*noAllocLevel_;
+  }
   uint32_t *noAllocLevel_;
 #endif
+
+ private:
+  NoAllocScope() = delete;
 };
 
 //===----------------------------------------------------------------------===//
