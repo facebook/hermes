@@ -17,6 +17,7 @@ import type {
   EnumStringMember,
   FunctionParameter,
   FunctionTypeParam,
+  JSXAttribute,
   ObjectTypeCallProperty,
   ObjectTypeIndexer,
   ObjectTypeInternalSlot,
@@ -41,6 +42,7 @@ export type RemoveNodeMutation = $ReadOnly<{
     | EnumStringMember
     | FunctionParameter
     | FunctionTypeParam
+    | JSXAttribute
     | ObjectTypeCallProperty
     | ObjectTypeIndexer
     | ObjectTypeInternalSlot
@@ -125,6 +127,10 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
       case 'FunctionTypeParam':
         assertParent('FunctionTypeAnnotation');
         return 'params';
+
+      case 'JSXAttribute':
+        assertParent('JSXOpeningElement');
+        return 'attributes';
 
       case 'ObjectTypeCallProperty':
         assertParent('ObjectTypeAnnotation');
