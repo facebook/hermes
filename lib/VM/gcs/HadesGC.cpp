@@ -2089,12 +2089,6 @@ void HadesGC::weakRefReadBarrier(GCCell *value) {
   // During sweeping there's no special handling either.
 }
 
-void HadesGC::weakRefReadBarrier(HermesValue value) {
-  // For now, WeakRefs must be pointers. If they are extended in the future,
-  // this barrier should handle both pointers and symbols.
-  weakRefReadBarrier(static_cast<GCCell *>(value.getPointer()));
-}
-
 bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }

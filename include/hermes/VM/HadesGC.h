@@ -273,7 +273,6 @@ class HadesGC final : public GCBase {
       uint32_t numHVs);
 
   void weakRefReadBarrier(GCCell *value);
-  void weakRefReadBarrier(HermesValue value);
 
   /// \}
 

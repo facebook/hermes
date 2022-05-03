@@ -168,8 +168,7 @@ class GCCell;
 ///   A weak ref is about to be read. Executes a read barrier so the GC can
 ///   take action such as extending the lifetime of the reference. The
 ///   HermesValue version does nothing if the value isn't a pointer.
-///     void weakRefReadBarrier(void *value);
-///     void weakRefReadBarrier(HermesValue value);
+///     void weakRefReadBarrier(GCCell *value);
 ///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
@@ -1036,7 +1035,6 @@ class GCBase {
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
-  void weakRefReadBarrier(HermesValue value);
 #endif
 
 #ifndef NDEBUG

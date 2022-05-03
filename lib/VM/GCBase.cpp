@@ -936,7 +936,6 @@ GCBASE_BARRIER_2(
     const GCSmallHermesValue *,
     uint32_t);
 GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
-GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 
 #undef GCBASE_BARRIER_1
 #undef GCBASE_BARRIER_2
