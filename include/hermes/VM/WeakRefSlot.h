@@ -50,7 +50,11 @@ class WeakRefSlot {
   inline GCCell *get(PointerBase &base, GC &gc) const;
 
   /// Same as get, but without a read barrier
-  inline GCCell *getNoBarrierUnsafe(PointerBase &base) const;
+  GCCell *getNoBarrierUnsafe(PointerBase &base) const {
+    // Cannot check state() here because it can race with marking code.
+    assert(hasValue() && "tried to access collected referent");
+    return value_.root.getNonNullNoBarrierUnsafe(base);
+  }
 
   CompressedPointer getNoBarrierUnsafe() const {
     assert(hasValue() && "tried to access collected referent");

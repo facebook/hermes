@@ -14,12 +14,21 @@
 namespace hermes {
 namespace vm {
 
-void *WeakRootBase::get(PointerBase &base, GC &gc) const {
+GCCell *WeakRootBase::get(PointerBase &base, GC &gc) const {
   if (!*this)
     return nullptr;
+  return getNonNull(base, gc);
+}
+
+GCCell *WeakRootBase::getNonNull(PointerBase &base, GC &gc) const {
   GCCell *ptr = CompressedPointer::getNonNull(base);
   gc.weakRefReadBarrier(ptr);
   return ptr;
+}
+
+template <typename T>
+T *WeakRoot<T>::getNonNull(PointerBase &base, GC &gc) const {
+  return static_cast<T *>(WeakRootBase::getNonNull(base, gc));
 }
 
 template <typename T>
