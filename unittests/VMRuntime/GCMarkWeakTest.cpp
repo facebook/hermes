@@ -60,7 +60,7 @@ TEST(GCMarkWeakTest, MarkWeak) {
 
     WeakRefLock lk{gc.weakRefMutex()};
     ASSERT_TRUE(t->weak->isValid());
-    EXPECT_EQ(*t, getNoHandle(*t->weak, rt, gc));
+    EXPECT_EQ(*t, t->weak->getNoBarrierUnsafe(rt));
     // Exactly one call to _markWeakImpl
     EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
     EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());

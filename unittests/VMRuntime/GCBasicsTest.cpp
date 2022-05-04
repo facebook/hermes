@@ -228,8 +228,8 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wr2.isValid());
 
-  ASSERT_EQ(a1, getNoHandle(wr1, rt, gc));
-  ASSERT_EQ(*a2, getNoHandle(wr2, rt, gc));
+  ASSERT_EQ(a1, wr1.getNoBarrierUnsafe(rt));
+  ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
 
   /// Use the MarkWeakCallback of DummyObject as a hack to update these
   /// WeakRefs.
@@ -254,7 +254,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // Though the slot is empty, it's still reachable, so must not be freed yet.
   ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
   ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(*a2, getNoHandle(wr2, rt, gc));
+  ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
 
   // Make the slot unreachable and test that it is freed.
   mtx.unlock();
@@ -272,7 +272,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   WeakRef<ArrayStorage> wr3{rt, gc, a3};
 
   ASSERT_TRUE(wr3.isValid());
-  ASSERT_EQ(a3, getNoHandle(wr3, rt, gc));
+  ASSERT_EQ(a3, wr3.getNoBarrierUnsafe(rt));
 #undef LOCK
 #undef UNLOCK
 }

@@ -87,55 +87,32 @@ class WeakRef : public WeakRefBase {
     return slot_ == other.slot_;
   }
 
-  /// \return the stored value.
-  /// The weak ref may be invalid, in which case an "empty" value is returned.
-  /// This is an unsafe function since the referenced object may be freed any
-  /// time that GC occurs.
-  OptValue<T *> unsafeGetOptional(Runtime &runtime) const {
-    return unsafeGetOptional(runtime, runtime.getHeap());
-  }
-
-  OptValue<T *> unsafeGetOptional(PointerBase &base, GC &gc) const {
+  /// \return the stored value if the referent is live, otherwise nullptr.
+  T *get(Runtime &runtime) const {
     if (!isValid()) {
-      return llvh::None;
+      return nullptr;
     }
-    GCCell *value = slot_->get(base, gc);
+    GCCell *value = slot_->get(runtime, runtime.getHeap());
     return static_cast<T *>(value);
   }
 
-  /// Same as \c unsafeGetOptional, but without a read barrier to the GC.
+  /// Same as \c get, but without a read barrier to the GC.
   /// Do not use this unless it is within a signal handler or in the GC itself.
   /// If you call this in normal VM operations, the pointer might be garbage
   /// collected from underneath you at some time in the future, even if it's
   /// placed in a handle.
-  OptValue<T *> unsafeGetOptionalNoReadBarrier(PointerBase &base) const {
+  T *getNoBarrierUnsafe(PointerBase &base) const {
     if (!isValid()) {
-      return llvh::None;
+      return nullptr;
     }
     return static_cast<T *>(slot_->getNoBarrierUnsafe(base));
   }
 
-  llvh::Optional<Handle<T>> get(Runtime &runtime) const {
-    if (auto optValue = unsafeGetOptional(runtime)) {
-      return runtime.makeHandle<T>(optValue.getValue());
-    }
-    return llvh::None;
-  }
   /// Clear the slot to which the WeakRef refers.
   void clear() {
     unsafeGetSlot()->clearPointer();
   }
 };
-
-/// Only enabled if T is non-HV.
-/// Defined as a free function to avoid template errors.
-template <typename T>
-inline T *getNoHandle(const WeakRef<T> &wr, PointerBase &base, GC &gc) {
-  if (auto optVal = wr.unsafeGetOptional(base, gc)) {
-    return optVal.getValue();
-  }
-  return nullptr;
-}
 
 } // namespace vm
 } // namespace hermes

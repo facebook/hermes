@@ -165,10 +165,7 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 
 JSObject *detail::WeakRefKey::getObjectInGC(GC &gc) const {
   assert(gc.calledByGC() && "Should only be used by the GC implementation.");
-  const auto ptrOpt = ref.unsafeGetOptionalNoReadBarrier(gc.getPointerBase());
-  if (!ptrOpt)
-    return nullptr;
-  return *ptrOpt;
+  return ref.getNoBarrierUnsafe(gc.getPointerBase());
 }
 
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
