@@ -293,7 +293,7 @@ fn test_replace_var_decls() {
                         result.push(builder::Builder::VariableDeclaration(
                             builder::VariableDeclaration::from_template(
                                 template::VariableDeclaration {
-                                    metadata: Default::default(),
+                                    metadata: (*decl.range()).into(),
                                     kind: *kind,
                                     declarations: vec![decl],
                                 },
@@ -318,20 +318,19 @@ fn test_replace_var_decls() {
         match transformed.node(&gc) {
             Node::Program(Program { body, .. }) => {
                 assert_eq!(body.len(), 2, "Program is {:#?}", transformed.node(&gc));
+                let x_decl = node_cast!(Node::VariableDeclaration, body[0]).declarations[0];
                 assert_eq!(
                     gc.ctx().str(
                         node_cast!(
                             Node::Identifier,
-                            node_cast!(
-                                Node::VariableDeclarator,
-                                node_cast!(Node::VariableDeclaration, body[0]).declarations[0]
-                            )
-                            .id
+                            node_cast!(Node::VariableDeclarator, x_decl).id
                         )
                         .name
                     ),
                     "x"
                 );
+                assert_eq!(x_decl.range().start.line, 1);
+                assert_eq!(x_decl.range().start.col, 5);
                 assert_eq!(
                     gc.ctx().str(
                         node_cast!(

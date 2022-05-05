@@ -144,6 +144,24 @@ impl Default for TemplateMetadata<'_> {
     }
 }
 
+impl<'a> From<&NodeMetadata<'a>> for TemplateMetadata<'a> {
+    fn from(metadata: &NodeMetadata<'a>) -> Self {
+        Self {
+            phantom: Default::default(),
+            range: metadata.range,
+        }
+    }
+}
+
+impl<'a> From<SourceRange> for TemplateMetadata<'a> {
+    fn from(range: SourceRange) -> Self {
+        Self {
+            phantom: Default::default(),
+            range,
+        }
+    }
+}
+
 /// JS identifier represented as valid UTF-8.
 pub type NodeLabel = Atom;
 
