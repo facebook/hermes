@@ -753,7 +753,7 @@ impl<W: Write> GenJS<'_, W> {
             }
             Node::StringLiteral(StringLiteral { metadata: _, value }) => {
                 out_token!(self, node, "\"");
-                self.print_escaped_string_literal(value, '"');
+                self.print_escaped_string_literal(ctx, *value, '"');
                 out!(self, "\"");
             }
             Node::NumericLiteral(NumericLiteral { metadata: _, value }) => {
@@ -2077,9 +2077,10 @@ impl<W: Write> GenJS<'_, W> {
                 value,
                 raw,
             }) => {
-                let quote = raw.str[0] as u8 as char;
+                let s = ctx.str_u16(*raw);
+                let quote = s[0] as u8 as char;
                 out_token!(self, node, "{}", quote);
-                self.print_escaped_string_literal(value, quote);
+                self.print_escaped_string_literal(ctx, *value, quote);
                 out!(self, "{}", quote);
             }
             Node::NumberLiteralTypeAnnotation(NumberLiteralTypeAnnotation {
@@ -3167,8 +3168,14 @@ impl<W: Write> GenJS<'_, W> {
         }
     }
 
-    fn print_escaped_string_literal(&mut self, value: &NodeString, esc: char) {
-        for &c in &value.str {
+    fn print_escaped_string_literal<'gc>(
+        &mut self,
+        ctx: &'gc GCLock,
+        value: NodeString,
+        esc: char,
+    ) {
+        let str = ctx.str_u16(value);
+        for &c in str {
             if c <= u8::MAX as u16 {
                 match char::from(c as u8) {
                     '\\' => {

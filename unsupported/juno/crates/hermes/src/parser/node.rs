@@ -76,7 +76,7 @@ pub struct NodeLabelOpt {
 }
 
 #[repr(transparent)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct NodeString {
     ptr: *const UniqueString,
 }

@@ -30,11 +30,22 @@ struct Inner {
     /// Since strings are never removed or modified, the lifetime of the key
     /// is effectively static.
     map: HashMap<&'static str, NumIndex>,
+
+    /// Strings are added here and never removed or mutated.
+    strings_u16: Vec<Vec<u16>>,
+    /// Maps from a reference inside [`Inner::strings_u16`] to the index in [`Inner::strings_u16`].
+    /// Since strings are never removed or modified, the lifetime of the key
+    /// is effectively static.
+    map_u16: HashMap<&'static [u16], NumIndex>,
 }
 
 /// This represents a unique string index in the table.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Atom(NumIndex);
+
+/// This represents a unique string index in the table.
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct AtomU16(NumIndex);
 
 thread_local! {
     /// Stores the active table used for debug formatting.
@@ -53,6 +64,26 @@ impl std::fmt::Debug for Atom {
             let p = debug_table.get();
             if let Some(r) = unsafe { p.as_ref() } {
                 if let Some(value) = r.try_str(*self) {
+                    t.field(&value);
+                }
+            }
+        });
+        t.finish()
+    }
+}
+
+// An implementation of Debug which optionally obtains the Atom value from the
+// active debug map.
+impl std::fmt::Debug for AtomU16 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut t = f.debug_tuple("Atom");
+        t.field(&self.0);
+
+        // If the debug table is set and the atom is valid in it, add the value
+        DEBUG_TABLE.with(|debug_table| {
+            let p = debug_table.get();
+            if let Some(r) = unsafe { p.as_ref() } {
+                if let Some(value) = r.try_str_u16(*self) {
                     t.field(&value);
                 }
             }
@@ -104,6 +135,46 @@ impl Inner {
             None
         }
     }
+
+    /// Add a string to the table and return its atom index. The same
+    /// string always returns the same index.
+    fn add_atom_u16<V: Into<Vec<u16>> + AsRef<[u16]>>(&mut self, value: V) -> AtomU16 {
+        if let Some(index) = self.map_u16.get(value.as_ref()) {
+            return AtomU16(*index);
+        }
+        self.add_u16(value.into())
+    }
+
+    /// Perform the actual addition of the owned string.
+    fn add_u16(&mut self, owned: Vec<u16>) -> AtomU16 {
+        // Remember the index of the new element.
+        let index = self.strings_u16.len();
+        assert!(index < INVALID_ATOM.0 as usize, "More than 4GB atoms?");
+
+        // Obtain a reference to the existing string on the heap. That reference
+        // is valid while `self` is valid.
+        let key: *const [u16] = owned.as_slice();
+
+        // Push the new string.
+        self.strings_u16.push(owned);
+
+        self.map_u16.insert(unsafe { &*key }, index as NumIndex);
+        AtomU16(index as NumIndex)
+    }
+
+    /// Return the contents of the specified atom.
+    #[inline]
+    fn str_u16(&self, ident: AtomU16) -> &[u16] {
+        self.strings_u16[ident.0 as usize].as_slice()
+    }
+
+    fn try_str_u16(&self, ident: AtomU16) -> Option<&[u16]> {
+        if (ident.0 as usize) < self.strings_u16.len() {
+            Some(self.str_u16(ident))
+        } else {
+            None
+        }
+    }
 }
 
 impl AtomTable {
@@ -127,6 +198,23 @@ impl AtomTable {
     #[inline]
     pub fn try_str(&self, ident: Atom) -> Option<&str> {
         unsafe { &*self.0.get() }.try_str(ident)
+    }
+
+    /// Add a string to the table and return its atom index. The same
+    /// string always returns the same index.
+    pub fn atom_u16<V: Into<Vec<u16>> + AsRef<[u16]>>(&self, value: V) -> AtomU16 {
+        unsafe { &mut *self.0.get() }.add_atom_u16(value)
+    }
+
+    /// Return the contents of the specified atom.
+    #[inline]
+    pub fn str_u16(&self, ident: AtomU16) -> &[u16] {
+        unsafe { &*self.0.get() }.str_u16(ident)
+    }
+
+    #[inline]
+    pub fn try_str_u16(&self, ident: AtomU16) -> Option<&[u16]> {
+        unsafe { &*self.0.get() }.try_str_u16(ident)
     }
 
     /// Execute the callback in a context where this table is used for debug
@@ -159,6 +247,14 @@ impl std::ops::Index<Atom> for AtomTable {
 
     fn index(&self, index: Atom) -> &Self::Output {
         self.str(index)
+    }
+}
+
+impl std::ops::Index<AtomU16> for AtomTable {
+    type Output = [u16];
+
+    fn index(&self, index: AtomU16) -> &Self::Output {
+        self.str_u16(index)
     }
 }
 

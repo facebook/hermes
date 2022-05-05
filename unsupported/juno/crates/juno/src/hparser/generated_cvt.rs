@@ -275,7 +275,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::ExpressionStatement => {
           let expression = cvt_node_ptr(cvt, gc, hermes_get_ExpressionStatement_expression(n));
-          let directive = cvt_string_opt(hermes_get_ExpressionStatement_directive(n));
+          let directive = cvt.cvt_string_opt(gc, hermes_get_ExpressionStatement_directive(n));
           let mut template = ast::template::ExpressionStatement {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   expression,
@@ -327,7 +327,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::BooleanLiteral::build_template(gc, template)
         }
         NodeKind::StringLiteral => {
-          let value = cvt_string(hermes_get_StringLiteral_value(n));
+          let value = cvt.cvt_string(gc, hermes_get_StringLiteral_value(n));
           let mut template = ast::template::StringLiteral {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
@@ -604,7 +604,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::Directive::build_template(gc, template)
         }
         NodeKind::DirectiveLiteral => {
-          let value = cvt_string(hermes_get_DirectiveLiteral_value(n));
+          let value = cvt.cvt_string(gc, hermes_get_DirectiveLiteral_value(n));
           let mut template = ast::template::DirectiveLiteral {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
@@ -713,7 +713,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::TemplateElement => {
           let tail = hermes_get_TemplateElement_tail(n);
-          let cooked = cvt_string_opt(hermes_get_TemplateElement_cooked(n));
+          let cooked = cvt.cvt_string_opt(gc, hermes_get_TemplateElement_cooked(n));
           let raw = cvt.cvt_label(gc, hermes_get_TemplateElement_raw(n));
           let mut template = ast::template::TemplateElement {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
@@ -1108,7 +1108,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::JSXSpreadAttribute::build_template(gc, template)
         }
         NodeKind::JSXStringLiteral => {
-          let value = cvt_string(hermes_get_JSXStringLiteral_value(n));
+          let value = cvt.cvt_string(gc, hermes_get_JSXStringLiteral_value(n));
           let raw = cvt.cvt_label(gc, hermes_get_JSXStringLiteral_raw(n));
           let mut template = ast::template::JSXStringLiteral {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
@@ -1119,7 +1119,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::JSXStringLiteral::build_template(gc, template)
         }
         NodeKind::JSXText => {
-          let value = cvt_string(hermes_get_JSXText_value(n));
+          let value = cvt.cvt_string(gc, hermes_get_JSXText_value(n));
           let raw = cvt.cvt_label(gc, hermes_get_JSXText_raw(n));
           let mut template = ast::template::JSXText {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
@@ -1198,8 +1198,8 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           ast::builder::NumberTypeAnnotation::build_template(gc, template)
         }
         NodeKind::StringLiteralTypeAnnotation => {
-          let value = cvt_string(hermes_get_StringLiteralTypeAnnotation_value(n));
-          let raw = cvt_string(hermes_get_StringLiteralTypeAnnotation_raw(n));
+          let value = cvt.cvt_string(gc, hermes_get_StringLiteralTypeAnnotation_value(n));
+          let raw = cvt.cvt_string(gc, hermes_get_StringLiteralTypeAnnotation_raw(n));
           let mut template = ast::template::StringLiteralTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,

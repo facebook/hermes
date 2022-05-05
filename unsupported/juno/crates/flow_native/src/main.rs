@@ -377,7 +377,7 @@ impl<W: Write> Compiler<W> {
                 out!(self, "FNValue::encodeBool({value})")
             }
             Node::StringLiteral(StringLiteral { value, .. }) => {
-                let val_str = String::from_utf16_lossy(&value.str);
+                let val_str = String::from_utf16_lossy(lock.str_u16(*value));
                 out!(self, "FNValue::encodeString(new FNString{{\"{val_str}\"}})")
             }
             _ => unimplemented!("Unimplemented AST node: {:?}", node.variant()),

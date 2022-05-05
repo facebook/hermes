@@ -139,8 +139,11 @@ impl<'gc> DumpChild<'gc> for ExportKind {
 }
 
 impl<'gc> DumpChild<'gc> for NodeString {
-    fn dump<W: Write>(&self, _ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
-        emitter.emit_string_literal(&self.str);
+    fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
+        emitter.emit_string(&format!(
+            "u{:?}",
+            String::from_utf16_lossy(ctx.str_u16(*self))
+        ))
     }
 }
 

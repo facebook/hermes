@@ -401,7 +401,8 @@ static void genConvert() {
       bool close = true;
       switch (fld.type) {
         case FieldType::NodeString:
-          llvh::outs() << "cvt_string" << (fld.optional ? "_opt" : "") << "(";
+          llvh::outs() << "cvt.cvt_string" << (fld.optional ? "_opt" : "")
+                       << "(gc, ";
           break;
         case FieldType::NodeLabel:
           if ((cls.name == "UnaryExpression" && fld.name == "operator") ||

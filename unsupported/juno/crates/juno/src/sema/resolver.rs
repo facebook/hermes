@@ -390,7 +390,7 @@ impl<'gc> Resolver<'gc, '_> {
     fn visit_program(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
         self.in_new_function(lock, node, |pself| {
             // Search for "use strict".
-            if find_use_strict(&node_cast!(Node::Program, node).body).is_some() {
+            if find_use_strict(lock, &node_cast!(Node::Program, node).body).is_some() {
                 pself
                     .sem
                     .function_mut(pself.function_context().func_id)
@@ -449,7 +449,7 @@ impl<'gc> Resolver<'gc, '_> {
 
                 pself.in_new_scope(lock, node, |pself| {
                     // Search for "use strict".
-                    if find_use_strict(&node_cast!(Node::Module, node).body).is_some() {
+                    if find_use_strict(lock, &node_cast!(Node::Module, node).body).is_some() {
                         pself
                             .sem
                             .function_mut(pself.function_context().func_id)
@@ -510,7 +510,7 @@ impl<'gc> Resolver<'gc, '_> {
             let body = node.function_like_body();
             // Search for "use strict".
             let use_strict = match body {
-                Node::BlockStatement(b) => find_use_strict(&b.body),
+                Node::BlockStatement(b) => find_use_strict(lock, &b.body),
                 _ => None,
             };
             // Set the strictness if we have to.
@@ -1453,7 +1453,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 } = self.mode
                 {
                     // Resolve `import`.
-                    let target = String::from_utf16_lossy(&value.str);
+                    let target = String::from_utf16_lossy(lock.str_u16(*value));
                     match dependency_resolver.resolve_dependency(
                         lock,
                         self.file_id,
@@ -1507,7 +1507,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                         if let Some(Node::StringLiteral(ast::StringLiteral { value, .. })) =
                             arguments.head()
                         {
-                            let target = String::from_utf16_lossy(&value.str);
+                            let target = String::from_utf16_lossy(lock.str_u16(*value));
                             match dependency_resolver.resolve_dependency(
                                 lock,
                                 self.file_id,
@@ -1562,7 +1562,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
 /// string literal).
 /// \return the node containing "use strict" or nullptr.
 #[allow(clippy::ptr_arg)]
-fn find_use_strict<'gc>(body: &'gc NodeList<'gc>) -> Option<&'gc Node<'gc>> {
+fn find_use_strict<'gc>(lock: &'gc GCLock, body: &'gc NodeList<'gc>) -> Option<&'gc Node<'gc>> {
     /// "use strict" encoded as UTF-16.
     static USE_STRICT_UTF16: [u16; 10] = [
         'u' as u16, 's' as u16, 'e' as u16, ' ' as u16, 's' as u16, 't' as u16, 'r' as u16,
@@ -1575,7 +1575,7 @@ fn find_use_strict<'gc>(body: &'gc NodeList<'gc>) -> Option<&'gc Node<'gc>> {
             Node::ExpressionStatement(ast::ExpressionStatement {
                 directive: Some(d), ..
             }) => {
-                if d.str == USE_STRICT_UTF16 {
+                if lock.str_u16(*d) == USE_STRICT_UTF16 {
                     return Some(node);
                 }
             }

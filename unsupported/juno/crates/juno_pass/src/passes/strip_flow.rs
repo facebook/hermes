@@ -229,12 +229,12 @@ fn transform_enum<'gc>(gc: &'gc GCLock<'_, '_>, n: &'gc EnumDeclaration<'gc>) ->
                     gc,
                     template::StringLiteral {
                         metadata: Default::default(),
-                        value: NodeString {
-                            str: (match m.id {
-                                Node::Identifier(id) => gc.str(id.name).encode_utf16().collect(),
-                                _ => unreachable!(),
-                            }),
-                        },
+                        value: gc.atom_u16(match m.id {
+                            Node::Identifier(id) => {
+                                gc.str(id.name).encode_utf16().collect::<Vec<u16>>()
+                            }
+                            _ => unreachable!(),
+                        }),
                     },
                 ),
                 _ => unreachable!(),
@@ -324,15 +324,13 @@ fn transform_enum<'gc>(gc: &'gc GCLock<'_, '_>, n: &'gc EnumDeclaration<'gc>) ->
                                                         gc,
                                                         template::StringLiteral {
                                                             metadata: Default::default(),
-                                                            value: NodeString {
-                                                                str: (match m.id {
-                                                                    Node::Identifier(id) => gc
-                                                                        .str(id.name)
-                                                                        .encode_utf16()
-                                                                        .collect(),
-                                                                    _ => unreachable!(),
-                                                                }),
-                                                            },
+                                                            value: gc.atom_u16(match m.id {
+                                                                Node::Identifier(id) => gc
+                                                                    .str(id.name)
+                                                                    .encode_utf16()
+                                                                    .collect::<Vec<u16>>(),
+                                                                _ => unreachable!(),
+                                                            }),
                                                         },
                                                     )],
                                                 ),
@@ -369,9 +367,8 @@ fn transform_enum<'gc>(gc: &'gc GCLock<'_, '_>, n: &'gc EnumDeclaration<'gc>) ->
                     gc,
                     template::StringLiteral {
                         metadata: Default::default(),
-                        value: NodeString {
-                            str: "flow-enums-runtime".encode_utf16().collect(),
-                        },
+                        value: gc
+                            .atom_u16("flow-enums-runtime".encode_utf16().collect::<Vec<u16>>()),
                     },
                 )],
             ),

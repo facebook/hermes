@@ -8,7 +8,7 @@
 //! Garbage-collected Storage structures for AST nodes.
 
 use crate::{Node, Path, SourceManager, Visitor};
-use juno_support::atom_table::{Atom, AtomTable};
+use juno_support::atom_table::{Atom, AtomTable, AtomU16};
 use juno_support::Deque;
 use libc::c_void;
 use memoffset::offset_of;
@@ -282,10 +282,22 @@ impl<'ast> Context<'ast> {
         self.atom_tab.atom(value)
     }
 
+    /// Add a string to the identifier table.
+    #[inline]
+    pub fn atom_u16<V: Into<Vec<u16>> + AsRef<[u16]>>(&self, value: V) -> AtomU16 {
+        self.atom_tab.atom_u16(value)
+    }
+
     /// Obtain the contents of an atom from the atom table.
     #[inline]
     pub fn str(&self, index: Atom) -> &str {
         self.atom_tab.str(index)
+    }
+
+    /// Obtain the contents of an atom from the atom table.
+    #[inline]
+    pub fn str_u16(&self, index: AtomU16) -> &[u16] {
+        self.atom_tab.str_u16(index)
     }
 
     /// Return an immutable reference to SourceManager
@@ -504,10 +516,22 @@ impl<'ast, 'ctx> GCLock<'ast, 'ctx> {
         self.ctx.atom(value)
     }
 
+    /// Add a string to the identifier table.
+    #[inline]
+    pub fn atom_u16<V: Into<Vec<u16>> + AsRef<[u16]>>(&self, value: V) -> AtomU16 {
+        self.ctx.atom_u16(value)
+    }
+
     /// Obtain the contents of an atom from the atom table.
     #[inline]
     pub fn str(&self, index: Atom) -> &str {
         self.ctx.str(index)
+    }
+
+    /// Obtain the contents of an atom from the atom table.
+    #[inline]
+    pub fn str_u16(&self, index: AtomU16) -> &[u16] {
+        self.ctx.str_u16(index)
     }
 
     /// Return an immutable reference to SourceManager.

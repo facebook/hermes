@@ -84,9 +84,7 @@ fn test_literals() {
                 &gc,
                 template::StringLiteral {
                     metadata: Default::default(),
-                    value: juno::ast::NodeString {
-                        str: vec!['A' as u16, 0x1234u16, '\t' as u16],
-                    },
+                    value: gc.atom_u16(vec!['A' as u16, 0x1234u16, '\t' as u16]),
                 },
             ),
         )

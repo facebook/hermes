@@ -27,9 +27,9 @@
 //! Visitor patterns are provided by [`Visitor`] and [`VisitorMut`].
 
 use context::NodeListElement;
-use juno_support::atom_table::Atom;
+use juno_support::atom_table::{Atom, AtomU16};
 use juno_support::define_str_enum;
-use std::{fmt, marker::PhantomData};
+use std::marker::PhantomData;
 use thiserror::Error;
 
 #[macro_use]
@@ -276,18 +276,7 @@ impl<'a> Iterator for NodeListIterator<'a> {
 /// JS string literals don't have to contain valid UTF-8,
 /// so we wrap a `Vec<u16>`, which allows us to represent UTF-16 characters
 /// without being subject to Rust's restrictions on [`String`].
-#[derive(Clone)]
-pub struct NodeString {
-    pub str: Vec<u16>,
-}
-
-impl fmt::Debug for NodeString {
-    /// Format the NodeString as a `u""` string to make it more readable
-    /// when debugging.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "u{:?}", String::from_utf16_lossy(&self.str))
-    }
-}
+pub type NodeString = AtomU16;
 
 #[derive(Debug, Copy, Clone, Error)]
 #[error("Invalid string property for AST node")]
@@ -560,13 +549,13 @@ impl NodeChild<'_> for NodeString {
 impl<'gc> NodeChild<'gc> for &NodeString {
     type Out = NodeString;
     fn duplicate(self) -> Self::Out {
-        self.clone()
+        *self
     }
 }
 impl NodeChild<'_> for &Option<NodeString> {
     type Out = Option<NodeString>;
     fn duplicate(self) -> Self::Out {
-        self.clone()
+        *self
     }
 }
 
@@ -760,19 +749,6 @@ impl<'gc> NodeChild<'gc> for NodeList<'gc> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-
-    #[test]
-    fn test_string_literal() {
-        assert_eq!(
-            "u\"ABC\"",
-            format!(
-                "{:?}",
-                NodeString {
-                    str: vec!['A' as u16, 'B' as u16, 'C' as u16],
-                }
-            )
-        );
-    }
 
     #[test]
     fn test_node_ref() {
