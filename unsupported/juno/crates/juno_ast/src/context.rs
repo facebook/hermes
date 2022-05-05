@@ -9,6 +9,7 @@
 
 use crate::{Node, Path, SourceManager, Visitor};
 use juno_support::atom_table::{Atom, AtomTable};
+use juno_support::Deque;
 use libc::c_void;
 use memoffset::offset_of;
 use std::hash::{Hash, Hasher};
@@ -91,7 +92,7 @@ pub struct Context<'ast> {
     /// List of all the nodes stored in this context.
     /// Each element is a "chunk" of nodes.
     /// None of the chunks are ever resized after allocation.
-    nodes: UnsafeCell<Vec<Vec<StorageEntry<'ast>>>>,
+    nodes: UnsafeCell<Deque<StorageEntry<'ast>>>,
 
     /// Free list for AST nodes.
     free_nodes: UnsafeCell<Vec<NonNull<StorageEntry<'ast>>>>,
@@ -101,10 +102,6 @@ pub struct Context<'ast> {
     /// Placed separately to guard against `Context` moving, though relying on that behavior is
     /// technically unsafe.
     noderc_count: Pin<Box<NodeRcCounter>>,
-
-    /// Capacity at which to allocate the next chunk.
-    /// Doubles every chunk until reaching [`MAX_CHUNK_CAPACITY`].
-    next_chunk_capacity: Cell<usize>,
 
     /// All identifiers are kept here.
     atom_tab: AtomTable,
@@ -123,9 +120,6 @@ pub struct Context<'ast> {
     pub warn_undefined: bool,
 }
 
-const MIN_CHUNK_CAPACITY: usize = 1 << 10;
-const MAX_CHUNK_CAPACITY: usize = MIN_CHUNK_CAPACITY * (1 << 10);
-
 impl Default for Context<'_> {
     fn default() -> Self {
         Self::new()
@@ -137,7 +131,7 @@ impl<'ast> Context<'ast> {
     pub fn new() -> Self {
         static NEXT_ID: AtomicU32 = AtomicU32::new(FREE_ENTRY + 1);
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let result = Self {
+        Self {
             id,
             nodes: Default::default(),
             free_nodes: Default::default(),
@@ -147,19 +141,16 @@ impl<'ast> Context<'ast> {
             })),
             atom_tab: Default::default(),
             source_mgr: Default::default(),
-            next_chunk_capacity: Cell::new(MIN_CHUNK_CAPACITY),
             markbit_marked: true,
             strict_mode: false,
             warn_undefined: false,
-        };
-        result.new_chunk();
-        result
+        }
     }
 
     /// Allocate a new `Node` in this `Context`.
     pub(crate) fn alloc<'s>(&'s self, n: Node<'_>) -> &'s Node<'s> {
         let free = unsafe { &mut *self.free_nodes.get() };
-        let nodes: &mut Vec<Vec<StorageEntry>> = unsafe { &mut *self.nodes.get() };
+        let nodes: &mut Deque<StorageEntry> = unsafe { &mut *self.nodes.get() };
         // Transmutation is safe here, because `Node`s can only be allocated through
         // this path and only one GCLock can be made available at a time per thread.
         let node: Node<'ast> = unsafe { std::mem::transmute(n) };
@@ -175,33 +166,15 @@ impl<'ast> Context<'ast> {
             entry.inner = node;
             entry
         } else {
-            let chunk = nodes.last().unwrap();
-            if chunk.len() >= chunk.capacity() {
-                self.new_chunk();
-            }
-            let chunk = nodes.last_mut().unwrap();
-            let entry = StorageEntry {
+            let entry: &StorageEntry = nodes.push(StorageEntry {
                 ctx_id_markbit: Cell::new(self.id),
                 count: Cell::new(0),
                 inner: node,
-            };
+            });
             entry.set_markbit(!self.markbit_marked);
-            chunk.push(entry);
-            chunk.last().unwrap()
+            entry
         };
         &entry.inner
-    }
-
-    /// Allocate a new chunk in the node storage.
-    fn new_chunk(&self) {
-        let nodes = unsafe { &mut *self.nodes.get() };
-        let capacity = self.next_chunk_capacity.get();
-        nodes.push(Vec::with_capacity(capacity));
-
-        // Double the capacity if there's room.
-        if capacity < MAX_CHUNK_CAPACITY {
-            self.next_chunk_capacity.set(capacity * 2);
-        }
     }
 
     /// Return the atom table.
@@ -247,21 +220,19 @@ impl<'ast> Context<'ast> {
 
         // Begin by collecting all the roots: entries with non-zero refcount.
         let mut roots: Vec<&StorageEntry> = vec![];
-        for chunk in nodes.iter() {
-            for entry in chunk.iter() {
-                if entry.is_free() {
-                    continue;
-                }
-                debug_assert!(
-                    entry.markbit() != self.markbit_marked,
-                    "Entry marked before start of GC: {:?}\nentry.markbit()={}\nmarkbit_marked={}",
-                    &entry,
-                    entry.markbit(),
-                    self.markbit_marked,
-                );
-                if entry.count.get() > 0 {
-                    roots.push(entry);
-                }
+        for entry in nodes.iter() {
+            if entry.is_free() {
+                continue;
+            }
+            debug_assert!(
+                entry.markbit() != self.markbit_marked,
+                "Entry marked before start of GC: {:?}\nentry.markbit()={}\nmarkbit_marked={}",
+                &entry,
+                entry.markbit(),
+                self.markbit_marked,
+            );
+            if entry.count.get() > 0 {
+                roots.push(entry);
             }
         }
 
@@ -293,24 +264,22 @@ impl<'ast> Context<'ast> {
             }
         }
 
-        for chunk in nodes.iter_mut() {
-            for entry in chunk.iter_mut() {
-                if entry.is_free() {
-                    // Skip free entries.
-                    continue;
-                }
-                if entry.count.get() > 0 {
-                    // Keep referenced entries alive.
-                    continue;
-                }
-                if entry.markbit() == self.markbit_marked {
-                    // Keep marked entries alive.
-                    continue;
-                }
-                // Passed all checks, this entry is free.
-                entry.ctx_id_markbit.set(FREE_ENTRY);
-                free_nodes.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
+        for entry in nodes.iter_mut() {
+            if entry.is_free() {
+                // Skip free entries.
+                continue;
             }
+            if entry.count.get() > 0 {
+                // Keep referenced entries alive.
+                continue;
+            }
+            if entry.markbit() == self.markbit_marked {
+                // Keep marked entries alive.
+                continue;
+            }
+            // Passed all checks, this entry is free.
+            entry.ctx_id_markbit.set(FREE_ENTRY);
+            free_nodes.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
         }
 
         self.markbit_marked = !self.markbit_marked;
@@ -330,14 +299,12 @@ impl Drop for Context<'_> {
             {
                 // In debug mode, provide more information on which node was leaked.
                 let nodes = unsafe { &*self.nodes.get() };
-                for chunk in nodes {
-                    for entry in chunk {
-                        assert!(
-                            entry.count.get() == 0,
-                            "NodeRc must not outlive Context: {:#?}\n",
-                            &entry.inner
-                        );
-                    }
+                for entry in nodes.iter() {
+                    assert!(
+                        entry.count.get() == 0,
+                        "NodeRc must not outlive Context: {:#?}\n",
+                        &entry.inner
+                    );
                 }
             }
             // In release mode, just panic immediately.
