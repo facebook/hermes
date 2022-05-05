@@ -93,8 +93,8 @@ pub struct Context<'ast> {
     /// None of the chunks are ever resized after allocation.
     nodes: UnsafeCell<Vec<Vec<StorageEntry<'ast>>>>,
 
-    /// First element of the free list if there is one.
-    free: UnsafeCell<Vec<NonNull<StorageEntry<'ast>>>>,
+    /// Free list for AST nodes.
+    free_nodes: UnsafeCell<Vec<NonNull<StorageEntry<'ast>>>>,
 
     /// `NodeRc` count stored in a `Box` to ensure that `NodeRc`s can also point to it
     /// and decrement the count on drop.
@@ -140,7 +140,7 @@ impl<'ast> Context<'ast> {
         let result = Self {
             id,
             nodes: Default::default(),
-            free: Default::default(),
+            free_nodes: Default::default(),
             noderc_count: Pin::new(Box::new(NodeRcCounter {
                 ctx_id: id,
                 count: Cell::new(0),
@@ -158,7 +158,7 @@ impl<'ast> Context<'ast> {
 
     /// Allocate a new `Node` in this `Context`.
     pub(crate) fn alloc<'s>(&'s self, n: Node<'_>) -> &'s Node<'s> {
-        let free = unsafe { &mut *self.free.get() };
+        let free = unsafe { &mut *self.free_nodes.get() };
         let nodes: &mut Vec<Vec<StorageEntry>> = unsafe { &mut *self.nodes.get() };
         // Transmutation is safe here, because `Node`s can only be allocated through
         // this path and only one GCLock can be made available at a time per thread.
@@ -243,7 +243,7 @@ impl<'ast> Context<'ast> {
 
     pub fn gc(&mut self) {
         let nodes = unsafe { &mut *self.nodes.get() };
-        let free = unsafe { &mut *self.free.get() };
+        let free_nodes = unsafe { &mut *self.free_nodes.get() };
 
         // Begin by collecting all the roots: entries with non-zero refcount.
         let mut roots: Vec<&StorageEntry> = vec![];
@@ -309,7 +309,7 @@ impl<'ast> Context<'ast> {
                 }
                 // Passed all checks, this entry is free.
                 entry.ctx_id_markbit.set(FREE_ENTRY);
-                free.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
+                free_nodes.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
             }
         }
 
