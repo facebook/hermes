@@ -21,10 +21,7 @@ describe('Private properties', () => {
 
     // Private property brand checks are not supported
     expect(() => parse(`#private in foo`)).toThrow(
-      new SyntaxError(`\
-invalid expression (1:0)
-#private in foo
-^`),
+      new SyntaxError('Private properties are not supported (1:0)'),
     );
 
     // Private property definitions are not supported

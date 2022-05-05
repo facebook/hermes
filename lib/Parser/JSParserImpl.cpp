@@ -3985,15 +3985,44 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     }
   };
 
+  /// Parse a private identifier, which can only be used as LHS in an `in`.
+  /// If it's not in a valid position, report an error.
+  const auto consumePrivateIdentifier = [this, &stack]() -> ESTree::Node * {
+    assert(check(TokenKind::private_identifier));
+    ESTree::Node *name = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::PrivateNameNode(setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::IdentifierNode(
+                tok_->getPrivateIdentifier(), nullptr, false))));
+    advance();
+    unsigned prevPrec = stack.empty() ? 0 : getPrecedence(stack.back().opKind);
+    // Check the precedence of the previous operator on the stack if it exists.
+    // If prevPrec is higher precedence than `in`, the private name will end
+    // up as the RHS in an invalid binary expression, so report an error.
+    if (!check(TokenKind::rw_in) || prevPrec >= getPrecedence(TokenKind::rw_in))
+      error(
+          name->getSourceRange(),
+          "Private name can only be used as left-hand side of `in` expression");
+    return name;
+  };
+
   // Decide whether to recognize "in" as a binary operator.
   const TokenKind exceptKind =
       !param.has(ParamIn) ? TokenKind::rw_in : TokenKind::none;
 
   SMLoc topExprStartLoc = tok_->getStartLoc();
-  auto optExpr = parseUnaryExpression();
-  if (!optExpr)
-    return None;
-  ESTree::NodePtr topExpr = optExpr.getValue();
+  ESTree::Node *topExpr = nullptr;
+  if (LLVM_UNLIKELY(check(TokenKind::private_identifier))) {
+    topExpr = consumePrivateIdentifier();
+  } else {
+    auto optExpr = parseUnaryExpression();
+    if (!optExpr)
+      return None;
+    topExpr = optExpr.getValue();
+  }
   SMLoc topExprEndLoc = getPrevTokenEndLoc();
 
   // While the current token is a binary operator.
@@ -4041,10 +4070,14 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     } else
 #endif
     {
-      auto optRightExpr = parseUnaryExpression();
-      if (!optRightExpr)
-        return None;
-      topExpr = optRightExpr.getValue();
+      if (LLVM_UNLIKELY(check(TokenKind::private_identifier))) {
+        topExpr = consumePrivateIdentifier();
+      } else {
+        auto optRightExpr = parseUnaryExpression();
+        if (!optRightExpr)
+          return None;
+        topExpr = optRightExpr.getValue();
+      }
     }
 
     topExprEndLoc = getPrevTokenEndLoc();
