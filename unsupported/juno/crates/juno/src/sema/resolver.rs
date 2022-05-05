@@ -988,6 +988,40 @@ impl<'gc> Resolver<'gc, '_> {
         true
     }
 
+    /// Ensure that the specified node is a valid target for an assignment, in
+    /// other words it is an l-value, a Pattern (checked recursively) or an Empty
+    /// (used by elision).
+    fn validate_assignment_target(&self, lock: &GCLock, node: &Node) {
+        match node {
+            Node::Empty(_) => {}
+            Node::AssignmentPattern(ast::AssignmentPattern { left, .. }) => {
+                self.validate_assignment_target(lock, left)
+            }
+            Node::ArrayPattern(ast::ArrayPattern { elements, .. }) => {
+                for element in elements.iter() {
+                    self.validate_assignment_target(lock, element)
+                }
+            }
+            Node::Property(ast::Property { value, .. }) => {
+                self.validate_assignment_target(lock, value)
+            }
+            Node::ObjectPattern(ast::ObjectPattern { properties, .. }) => {
+                for property in properties.iter() {
+                    self.validate_assignment_target(lock, property)
+                }
+            }
+            Node::RestElement(ast::RestElement { argument, .. }) => {
+                self.validate_assignment_target(lock, argument)
+            }
+            _ => {
+                if !self.is_lvalue(node) {
+                    lock.sm()
+                        .error(*node.range(), "invalid assignment left-hand side");
+                }
+            }
+        };
+    }
+
     /// Extract the list of declared identifiers in a declaration node and return
     /// the declaration kind of the node. Function declarations are always returned
     /// as DeclKind::ScopedFunction, so they can be distinguished.
@@ -1144,6 +1178,20 @@ impl<'gc> Resolver<'gc, '_> {
         }
     }
 
+    /// Return true if the `node` is an LValue: a member expression or an identifier which is a
+    /// valid LValue.
+    fn is_lvalue(&self, node: &Node) -> bool {
+        match node {
+            Node::MemberExpression(_) => true,
+
+            Node::Identifier(id) if id.name == self.kw.ident_arguments => false,
+            Node::Identifier(id) if id.name == self.kw.ident_eval => !self.function_strict_mode(),
+            Node::Identifier(_) => true,
+
+            _ => false,
+        }
+    }
+
     fn promote_scoped_func_decls(&mut self, lock: &'gc GCLock, func_node: &'gc Node<'gc>) {
         debug_assert!(func_node.is_function_like());
         if self.function_context().decls.scoped_func_decls().is_empty() {
@@ -1174,6 +1222,21 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
             Node::ArrowFunctionExpression(_) => self.visit_function_like(lock, node),
 
             Node::Identifier(ident) => self.visit_identifier(lock, ident, node, path.unwrap()),
+
+            Node::AssignmentExpression(asgn) => {
+                self.validate_assignment_target(lock, asgn.left);
+                node.visit_children(lock, self);
+            }
+
+            Node::UpdateExpression(update) => {
+                if !self.is_lvalue(update.argument) {
+                    lock.sm().error(
+                        *update.argument.range(),
+                        "invalid operand in update operation",
+                    );
+                }
+                node.visit_children(lock, self);
+            }
 
             Node::BlockStatement(_) => self.visit_block_statement(lock, node, path.unwrap()),
 
