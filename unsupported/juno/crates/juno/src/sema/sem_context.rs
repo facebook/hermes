@@ -226,6 +226,8 @@ pub struct FunctionInfo {
     pub strict: bool,
     /// All lexical scopes in this function. The first one is the function scope.
     pub scopes: Vec<LexicalScopeId>,
+    /// True if this function is an arrow function.
+    pub arrow: bool,
     /// The implicitly declared "arguments" object. It is declared only if it is used.
     pub arguments_decl: Option<DeclId>,
     /// How many labels have been allocated in this function so far.
@@ -309,12 +311,14 @@ impl SemContext {
         parent_function: Option<FunctionInfoId>,
         parent_scope: Option<LexicalScopeId>,
         strict: bool,
+        arrow: bool,
     ) -> (FunctionInfoId, &FunctionInfo) {
         self.funcs.0.push(FunctionInfo {
             parent_function,
             parent_scope,
             strict,
             scopes: Default::default(),
+            arrow,
             arguments_decl: Default::default(),
             num_labels: 0,
         });
@@ -465,25 +469,47 @@ impl SemContext {
         self.function(func).arguments_decl
     }
     /// Return or create the special arguments declaration in the specified
-    /// function.
+    /// function. If `func` is an arrow function, find the closest ancestor that is not an arrow
+    /// function and use that function's `arguments`.
     /// - `name`: the object doesn't have access to the atom table, so it has
     ///   to be passed in.
     pub(super) fn func_arguments_decl(&mut self, func: FunctionInfoId, name: Atom) -> DeclId {
-        if let Some(d) = self.function(func).arguments_decl {
+        let mut arguments_func = func;
+        while self.function(arguments_func).arrow {
+            match self.function(arguments_func).parent_function {
+                None => break,
+                Some(parent) => arguments_func = parent,
+            };
+        }
+
+        if let Some(d) = self.function(arguments_func).arguments_decl {
             return d;
         }
 
-        let decl = self.new_decl_special(
-            *self
-                .function(func)
-                .scopes
-                .first()
-                .expect("Function must contain a scope"),
-            name,
-            DeclKind::Var,
-            Special::Arguments,
-        );
-        self.function_mut(func).arguments_decl = Some(decl);
+        let decl = if Some(arguments_func) == self.global_function_id() {
+            // `arguments` must simply be treated as a global property in top level contexts.
+            self.new_decl(
+                *self
+                    .function(arguments_func)
+                    .scopes
+                    .first()
+                    .expect("Function must contain a scope"),
+                name,
+                DeclKind::UndeclaredGlobalProperty,
+            )
+        } else {
+            self.new_decl_special(
+                *self
+                    .function(arguments_func)
+                    .scopes
+                    .first()
+                    .expect("Function must contain a scope"),
+                name,
+                DeclKind::Var,
+                Special::Arguments,
+            )
+        };
+        self.function_mut(arguments_func).arguments_decl = Some(decl);
 
         decl
     }

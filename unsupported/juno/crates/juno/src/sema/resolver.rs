@@ -219,9 +219,12 @@ impl<'gc> Resolver<'gc, '_> {
         };
 
         // Create the function.
-        let (func_id, _) = self
-            .sem
-            .new_function(parent_func_id, self.current_scope, strict);
+        let (func_id, _) = self.sem.new_function(
+            parent_func_id,
+            self.current_scope,
+            strict,
+            matches!(root, Node::ArrowFunctionExpression(_)),
+        );
 
         // Create the function context.
         self.func_stack.push(FunctionContext {
