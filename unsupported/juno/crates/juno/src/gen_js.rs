@@ -377,17 +377,24 @@ impl<W: Write> GenJS<'_, W> {
                     && type_parameters.is_none()
                     && return_type.is_none()
                     && predicate.is_none()
-                    && node_isa!(Node::Identifier, params[0])
-                    && node_cast!(Node::Identifier, params[0])
-                        .type_annotation
-                        .is_none()
-                    && !node_cast!(Node::Identifier, params[0]).optional
+                    && matches!(
+                        params.head().unwrap(),
+                        Node::Identifier(Identifier {
+                            type_annotation: None,
+                            optional: false,
+                            ..
+                        })
+                    )
                     && (*expression || self.pretty == Pretty::No)
                 {
                     if need_sep {
                         out!(self, " ");
                     }
-                    params[0].visit(ctx, self, Some(Path::new(node, NodeField::params)));
+                    params.head().unwrap().visit(
+                        ctx,
+                        self,
+                        Some(Path::new(node, NodeField::params)),
+                    );
                 } else {
                     out!(self, "(");
                     for (i, param) in params.iter().enumerate() {
@@ -619,7 +626,7 @@ impl<W: Write> GenJS<'_, W> {
                 self.space(ForceSpace::No);
                 out!(self, "{{");
                 self.newline();
-                for case in cases {
+                for case in cases.iter() {
                     case.visit(ctx, self, Some(Path::new(node, NodeField::cases)));
                     self.newline();
                 }
@@ -789,7 +796,7 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     self.print_child(
                         ctx,
-                        Some(*expr),
+                        Some(expr),
                         Path::new(node, NodeField::expressions),
                         if i == 1 {
                             ChildPos::Left
@@ -822,7 +829,7 @@ impl<W: Write> GenJS<'_, W> {
                     } else {
                         self.print_comma_expression(
                             ctx,
-                            *elem,
+                            elem,
                             Path::new(node, NodeField::elements),
                         );
                     }
@@ -866,7 +873,7 @@ impl<W: Write> GenJS<'_, W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, *arg, Path::new(node, NodeField::arguments));
+                    self.print_comma_expression(ctx, arg, Path::new(node, NodeField::arguments));
                 }
                 out!(self, ")");
             }
@@ -943,7 +950,7 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     self.print_child(
                         ctx,
-                        Some(*arg),
+                        Some(arg),
                         Path::new(node, NodeField::arguments),
                         ChildPos::Anywhere,
                     );
@@ -977,7 +984,7 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     self.print_child(
                         ctx,
-                        Some(*arg),
+                        Some(arg),
                         Path::new(node, NodeField::arguments),
                         ChildPos::Anywhere,
                     );
@@ -1296,7 +1303,7 @@ impl<W: Write> GenJS<'_, W> {
             }) => {
                 out_token!(self, node, "`");
                 let mut it_expr = expressions.iter();
-                for quasi in quasis {
+                for quasi in quasis.iter() {
                     if let Node::TemplateElement(TemplateElement {
                         metadata: _,
                         raw,
@@ -1476,7 +1483,7 @@ impl<W: Write> GenJS<'_, W> {
                 body,
             }) => {
                 if !decorators.is_empty() {
-                    for decorator in decorators {
+                    for decorator in decorators.iter() {
                         decorator.visit(ctx, self, Some(Path::new(node, NodeField::decorators)));
                         self.force_newline();
                     }
@@ -1527,7 +1534,7 @@ impl<W: Write> GenJS<'_, W> {
                     out!(self, "{{");
                     self.inc_indent();
                     self.newline();
-                    for prop in body {
+                    for prop in body.iter() {
                         prop.visit(ctx, self, Some(Path::new(node, NodeField::body)));
                         self.newline();
                     }
@@ -1946,7 +1953,7 @@ impl<W: Write> GenJS<'_, W> {
             }) => {
                 out!(self, "<");
                 name.visit(ctx, self, Some(Path::new(node, NodeField::name)));
-                for attr in attributes {
+                for attr in attributes.iter() {
                     self.space(ForceSpace::Yes);
                     attr.visit(ctx, self, Some(Path::new(node, NodeField::attributes)));
                 }
@@ -2016,7 +2023,7 @@ impl<W: Write> GenJS<'_, W> {
             }) => {
                 opening_element.visit(ctx, self, Some(Path::new(node, NodeField::opening_element)));
                 if let Some(closing_element) = closing_element {
-                    for child in children {
+                    for child in *children {
                         child.visit(ctx, self, Some(Path::new(node, NodeField::children)));
                     }
                     closing_element.visit(
@@ -2037,7 +2044,7 @@ impl<W: Write> GenJS<'_, W> {
                     self,
                     Some(Path::new(node, NodeField::opening_fragment)),
                 );
-                for child in children {
+                for child in *children {
                     child.visit(ctx, self, Some(Path::new(node, NodeField::children)));
                 }
                 closing_fragment.visit(
@@ -2242,7 +2249,7 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     self.print_child(
                         ctx,
-                        Some(*ty),
+                        Some(ty),
                         Path::new(node, NodeField::types),
                         ChildPos::Anywhere,
                     );
@@ -2257,7 +2264,7 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     self.print_child(
                         ctx,
-                        Some(*ty),
+                        Some(ty),
                         Path::new(node, NodeField::types),
                         ChildPos::Anywhere,
                     );
@@ -2650,7 +2657,7 @@ impl<W: Write> GenJS<'_, W> {
 
                 let mut need_comma = false;
 
-                for prop in properties {
+                for prop in *properties {
                     if need_comma {
                         self.comma();
                     }
@@ -2658,7 +2665,7 @@ impl<W: Write> GenJS<'_, W> {
                     self.newline();
                     need_comma = true;
                 }
-                for prop in indexers {
+                for prop in *indexers {
                     if need_comma {
                         self.comma();
                     }
@@ -2666,7 +2673,7 @@ impl<W: Write> GenJS<'_, W> {
                     self.newline();
                     need_comma = true;
                 }
-                for prop in call_properties {
+                for prop in *call_properties {
                     if need_comma {
                         self.comma();
                     }
@@ -2674,7 +2681,7 @@ impl<W: Write> GenJS<'_, W> {
                     self.newline();
                     need_comma = true;
                 }
-                for prop in internal_slots {
+                for prop in *internal_slots {
                     if need_comma {
                         self.comma();
                     }
@@ -3207,7 +3214,7 @@ impl<W: Write> GenJS<'_, W> {
         }
     }
 
-    fn visit_props<'gc>(&mut self, ctx: &'gc GCLock, props: &[&'gc Node<'gc>], path: Path<'gc>) {
+    fn visit_props<'gc>(&mut self, ctx: &'gc GCLock, props: &'gc NodeList<'gc>, path: Path<'gc>) {
         out!(self, "{{");
         for (i, prop) in props.iter().enumerate() {
             if i > 0 {
@@ -3222,7 +3229,7 @@ impl<W: Write> GenJS<'_, W> {
     fn visit_func_params_body<'gc>(
         &mut self,
         ctx: &'gc GCLock,
-        params: &[&'gc Node<'gc>],
+        params: &'gc NodeList<'gc>,
         type_parameters: Option<&'gc Node<'gc>>,
         return_type: Option<&'gc Node<'gc>>,
         predicate: Option<&'gc Node<'gc>>,
@@ -3256,7 +3263,7 @@ impl<W: Write> GenJS<'_, W> {
     fn visit_func_type_params<'gc>(
         &mut self,
         ctx: &'gc GCLock,
-        params: &[&'gc Node<'gc>],
+        params: &'gc NodeList<'gc>,
         this: Option<&'gc Node<'gc>>,
         rest: Option<&'gc Node<'gc>>,
         type_parameters: Option<&'gc Node<'gc>>,
@@ -3313,7 +3320,7 @@ impl<W: Write> GenJS<'_, W> {
         decl: &str,
         id: &'gc Node<'gc>,
         type_parameters: Option<&'gc Node<'gc>>,
-        extends: &[&'gc Node<'gc>],
+        extends: &'gc NodeList<'gc>,
         body: &'gc Node<'gc>,
         node: &'gc Node<'gc>,
     ) {
@@ -3341,7 +3348,7 @@ impl<W: Write> GenJS<'_, W> {
         &mut self,
         ctx: &'gc GCLock,
         kind: &str,
-        members: &[&'gc Node<'gc>],
+        members: &'gc NodeList<'gc>,
         explicit_type: bool,
         has_unknown_members: bool,
         node: &'gc Node<'gc>,
@@ -3422,12 +3429,12 @@ impl<W: Write> GenJS<'_, W> {
         }
     }
 
-    fn visit_stmt_list<'gc>(&mut self, ctx: &'gc GCLock, list: &[&'gc Node<'gc>], path: Path<'gc>) {
+    fn visit_stmt_list<'gc>(&mut self, ctx: &'gc GCLock, list: &NodeList<'gc>, path: Path<'gc>) {
         for (i, stmt) in list.iter().enumerate() {
             if i > 0 {
                 self.newline();
             }
-            self.visit_stmt_in_block(ctx, *stmt, path);
+            self.visit_stmt_in_block(ctx, stmt, path);
         }
     }
 
@@ -3806,7 +3813,7 @@ impl<W: Write> GenJS<'_, W> {
     }
 
     /// Add an "@" and some information tagging an identifier with its declaration ID.
-    fn annotate_identifier(&mut self, lock: &GCLock, node: &Node) {
+    fn annotate_identifier<'gc>(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
         if let Annotation::Sem(sem) = &self.annotation {
             match sem.ident_decl(&NodeRc::from_node(lock, node)) {
                 Some(Resolution::Decl(decl_id)) => {

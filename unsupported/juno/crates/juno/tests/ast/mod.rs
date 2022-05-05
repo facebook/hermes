@@ -63,6 +63,69 @@ fn test_node_clone_outlives_context() {
 }
 
 #[test]
+fn test_list_empty() {
+    let mut ctx = Context::new();
+    let gc = GCLock::new(&mut ctx);
+    let ast = builder::Program::build_template(
+        &gc,
+        template::Program {
+            metadata: Default::default(),
+            body: NodeList::new(&gc),
+        },
+    );
+    match ast {
+        Node::Program(Program { body, .. }) => {
+            assert!(body.is_empty());
+            assert_eq!(body.len(), 0);
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn test_list_elements() {
+    let mut ctx = Context::new();
+    let gc = GCLock::new(&mut ctx);
+    let ast = builder::Program::build_template(
+        &gc,
+        template::Program {
+            metadata: Default::default(),
+            body: NodeList::from_iter(
+                &gc,
+                [
+                    builder::NullLiteral::build_template(
+                        &gc,
+                        template::NullLiteral {
+                            metadata: Default::default(),
+                        },
+                    ),
+                    builder::BooleanLiteral::build_template(
+                        &gc,
+                        template::BooleanLiteral {
+                            metadata: Default::default(),
+                            value: false,
+                        },
+                    ),
+                ],
+            ),
+        },
+    );
+    match ast {
+        Node::Program(Program { body, .. }) => {
+            assert!(!body.is_empty());
+            assert_eq!(body.len(), 2);
+            let mut it = body.iter();
+            assert!(matches!(it.next(), Some(Node::NullLiteral(_))));
+            assert!(matches!(
+                it.next(),
+                Some(Node::BooleanLiteral(BooleanLiteral { value: false, .. }))
+            ));
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
 #[allow(clippy::float_cmp)]
 fn test_visit() {
     let mut ctx = Context::new();
@@ -74,36 +137,39 @@ fn test_visit() {
                 &gc,
                 template::BlockStatement {
                     metadata: Default::default(),
-                    body: vec![
-                        builder::ExpressionStatement::build_template(
-                            &gc,
-                            template::ExpressionStatement {
-                                metadata: Default::default(),
-                                expression: builder::NumericLiteral::build_template(
-                                    &gc,
-                                    template::NumericLiteral {
-                                        metadata: Default::default(),
-                                        value: 1.0,
-                                    },
-                                ),
-                                directive: None,
-                            },
-                        ),
-                        builder::ExpressionStatement::build_template(
-                            &gc,
-                            template::ExpressionStatement {
-                                metadata: Default::default(),
-                                expression: builder::NumericLiteral::build_template(
-                                    &gc,
-                                    template::NumericLiteral {
-                                        metadata: Default::default(),
-                                        value: 2.0,
-                                    },
-                                ),
-                                directive: None,
-                            },
-                        ),
-                    ],
+                    body: NodeList::from_iter(
+                        &gc,
+                        [
+                            builder::ExpressionStatement::build_template(
+                                &gc,
+                                template::ExpressionStatement {
+                                    metadata: Default::default(),
+                                    expression: builder::NumericLiteral::build_template(
+                                        &gc,
+                                        template::NumericLiteral {
+                                            metadata: Default::default(),
+                                            value: 1.0,
+                                        },
+                                    ),
+                                    directive: None,
+                                },
+                            ),
+                            builder::ExpressionStatement::build_template(
+                                &gc,
+                                template::ExpressionStatement {
+                                    metadata: Default::default(),
+                                    expression: builder::NumericLiteral::build_template(
+                                        &gc,
+                                        template::NumericLiteral {
+                                            metadata: Default::default(),
+                                            value: 2.0,
+                                        },
+                                    ),
+                                    directive: None,
+                                },
+                            ),
+                        ],
+                    ),
                 },
             ),
         )
@@ -289,13 +355,13 @@ fn test_replace_var_decls() {
                 }) if declarations.len() > 1 => {
                     assert_eq!(path.unwrap().field, NodeField::body);
                     let mut result: Vec<builder::Builder> = Vec::new();
-                    for decl in declarations {
+                    for decl in *declarations {
                         result.push(builder::Builder::VariableDeclaration(
                             builder::VariableDeclaration::from_template(
                                 template::VariableDeclaration {
                                     metadata: (*decl.range()).into(),
                                     kind: *kind,
-                                    declarations: vec![decl],
+                                    declarations: NodeList::from_iter(lock, [decl]),
                                 },
                             ),
                         ));
@@ -318,7 +384,10 @@ fn test_replace_var_decls() {
         match transformed.node(&gc) {
             Node::Program(Program { body, .. }) => {
                 assert_eq!(body.len(), 2, "Program is {:#?}", transformed.node(&gc));
-                let x_decl = node_cast!(Node::VariableDeclaration, body[0]).declarations[0];
+                let x_decl = node_cast!(Node::VariableDeclaration, body.head().unwrap())
+                    .declarations
+                    .head()
+                    .unwrap();
                 assert_eq!(
                     gc.ctx().str(
                         node_cast!(
@@ -337,7 +406,10 @@ fn test_replace_var_decls() {
                             Node::Identifier,
                             node_cast!(
                                 Node::VariableDeclarator,
-                                node_cast!(Node::VariableDeclaration, body[1]).declarations[0]
+                                node_cast!(Node::VariableDeclaration, body.iter().nth(1).unwrap())
+                                    .declarations
+                                    .head()
+                                    .unwrap()
                             )
                             .id
                         )

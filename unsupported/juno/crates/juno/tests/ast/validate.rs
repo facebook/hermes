@@ -116,19 +116,22 @@ fn test_error() {
                 &gc,
                 template::BlockStatement {
                     metadata: Default::default(),
-                    body: vec![builder::ReturnStatement::build_template(
+                    body: NodeList::from_iter(
                         &gc,
-                        template::ReturnStatement {
-                            metadata: Default::default(),
-                            argument: Some(builder::ReturnStatement::build_template(
-                                &gc,
-                                template::ReturnStatement {
-                                    metadata: Default::default(),
-                                    argument: None,
-                                },
-                            )),
-                        },
-                    )],
+                        [builder::ReturnStatement::build_template(
+                            &gc,
+                            template::ReturnStatement {
+                                metadata: Default::default(),
+                                argument: Some(builder::ReturnStatement::build_template(
+                                    &gc,
+                                    template::ReturnStatement {
+                                        metadata: Default::default(),
+                                        argument: None,
+                                    },
+                                )),
+                            },
+                        )],
+                    ),
                 },
             ),
         )
@@ -137,7 +140,9 @@ fn test_error() {
     let bad_ret: NodeRc = {
         let gc = GCLock::new(&mut ctx);
         match ast.node(&gc) {
-            Node::BlockStatement(BlockStatement { body, .. }) => NodeRc::from_node(&gc, body[0]),
+            Node::BlockStatement(BlockStatement { body, .. }) => {
+                NodeRc::from_node(&gc, body.head().unwrap())
+            }
             _ => {
                 unreachable!("bad match");
             }

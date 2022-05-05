@@ -56,7 +56,7 @@ impl<W: Write> Compiler<W> {
         comp.gen_program(ast.node(&lock), &lock)
     }
 
-    fn gen_program(&mut self, node: &ast::Node, lock: &ast::GCLock) {
+    fn gen_program<'gc>(&mut self, node: &'gc ast::Node<'gc>, lock: &'gc ast::GCLock) {
         out!(self, "#include \"runtime/FNRuntime.h\"\n");
         self.gen_context();
         out!(self, "int main(){{\n");
@@ -89,12 +89,12 @@ impl<W: Write> Compiler<W> {
         }
     }
 
-    fn gen_member_prop(
+    fn gen_member_prop<'gc>(
         &mut self,
-        property: &ast::Node,
+        property: &'gc ast::Node<'gc>,
         computed: bool,
         scope: LexicalScopeId,
-        lock: &ast::GCLock,
+        lock: &'gc ast::GCLock,
     ) {
         use ast::*;
         if computed {
@@ -106,12 +106,12 @@ impl<W: Write> Compiler<W> {
         }
     }
 
-    fn gen_function_exp(
+    fn gen_function_exp<'gc>(
         &mut self,
-        params: &ast::NodeList,
-        block: &ast::Node,
+        params: &'gc ast::NodeList<'gc>,
+        block: &'gc ast::Node<'gc>,
         scope: LexicalScopeId,
-        lock: &ast::GCLock,
+        lock: &'gc ast::GCLock,
     ) {
         use ast::*;
         out!(
@@ -135,19 +135,24 @@ impl<W: Write> Compiler<W> {
             out!(self, "=param{i};\n")
         }
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
-        for exp in body {
+        for exp in body.iter() {
             self.gen_ast(exp, fn_scope, lock);
             out!(self, ";\n");
         }
         out!(self, "}}), scope{scope}}})");
     }
 
-    fn gen_ast(&mut self, node: &ast::Node, scope: LexicalScopeId, lock: &ast::GCLock) {
+    fn gen_ast<'gc>(
+        &mut self,
+        node: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) {
         use ast::*;
         match node {
             Node::Program(Program { body, .. }) => {
                 out!(self, "Scope{scope} *scope{scope}=new Scope{scope}();\n");
-                for exp in body {
+                for exp in body.iter() {
                     self.gen_ast(exp, scope, lock);
                     out!(self, ";")
                 }
@@ -163,13 +168,13 @@ impl<W: Write> Compiler<W> {
                     );
                     out!(self, "scope{new_scope}->parent = scope{scope};\n");
                 }
-                for exp in body {
+                for exp in body.iter() {
                     self.gen_ast(exp, inner_scope, lock)
                 }
                 out!(self, "}}\n");
             }
             Node::VariableDeclaration(VariableDeclaration { declarations, .. }) => {
-                for decl in declarations {
+                for decl in declarations.iter() {
                     self.gen_ast(decl, scope, lock)
                 }
             }
@@ -211,7 +216,7 @@ impl<W: Write> Compiler<W> {
             }
             Node::ObjectExpression(ObjectExpression { properties, .. }) => {
                 out!(self, "({{FNObject *tmp=new FNObject();\n");
-                for prop in properties {
+                for prop in properties.iter() {
                     let Property {
                         key,
                         value,
@@ -246,7 +251,7 @@ impl<W: Write> Compiler<W> {
                 self.param_list_for_arg_count(arguments.len());
                 out!(self, ")>(tmp->func)(");
                 out!(self, "tmp->env");
-                for arg in arguments {
+                for arg in arguments.iter() {
                     out!(self, ", ");
                     self.gen_ast(arg, scope, lock)
                 }

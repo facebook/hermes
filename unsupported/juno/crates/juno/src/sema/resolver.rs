@@ -185,7 +185,7 @@ impl<'gc> Resolver<'gc, '_> {
     }
 
     /// Return `true` if the `callee` is the `require` function.
-    fn is_require(&mut self, lock: &GCLock, node: &'gc ast::CallExpression) -> bool {
+    fn is_require(&mut self, lock: &'gc GCLock, node: &'gc ast::CallExpression<'gc>) -> bool {
         debug_assert!(
             matches!(self.mode, ResolverMode::Module { .. }),
             "is_require must only be called in module mode"
@@ -252,8 +252,8 @@ impl<'gc> Resolver<'gc, '_> {
     /// `scope_node` - the AST node to associate the scope with.
     fn in_new_scope<R, F: FnOnce(&mut Self) -> R>(
         &mut self,
-        lock: &GCLock,
-        scope_node: &Node,
+        lock: &'gc GCLock,
+        scope_node: &'gc Node<'gc>,
         f: F,
     ) -> R {
         // New biding table scope.
@@ -292,7 +292,7 @@ impl<'gc> Resolver<'gc, '_> {
     /// Reports an error if the label is already defined.
     fn with_new_label<R, F: FnOnce(&mut Self) -> R>(
         &mut self,
-        lock: &GCLock,
+        lock: &'gc GCLock,
         identifier: Option<&'gc Node<'gc>>,
         statement: &'gc Node<'gc>,
         f: F,
@@ -421,12 +421,12 @@ impl<'gc> Resolver<'gc, '_> {
             template::FunctionDeclaration {
                 metadata: Default::default(),
                 id: None,
-                params: vec![],
+                params: NodeList::new(lock),
                 body: builder::BlockStatement::build_template(
                     lock,
                     template::BlockStatement {
                         metadata: Default::default(),
-                        body: vec![],
+                        body: NodeList::new(lock),
                     },
                 ),
                 type_parameters: None,
@@ -604,7 +604,7 @@ impl<'gc> Resolver<'gc, '_> {
                 // Visit the parameters before we have hoisted the body declarations.
                 {
                     pself.validating_formal_params = true;
-                    for &param in node.function_like_params() {
+                    for param in node.function_like_params() {
                         param.visit(lock, pself, Some(Path::new(node, NodeField::param)));
                     }
                     pself.validating_formal_params = false;
@@ -635,7 +635,8 @@ impl<'gc> Resolver<'gc, '_> {
         self.with_new_label(lock, None, node, |pself| {
             // Ensure the initializer is valid.
             if let Node::VariableDeclaration(vd) = left {
-                let declarator = node_cast!(Node::VariableDeclarator, vd.declarations[0]);
+                let declarator =
+                    node_cast!(Node::VariableDeclarator, vd.declarations.head().unwrap());
                 if let Some(init) = declarator.init {
                     if init.is_pattern() {
                         lock.sm().error(
@@ -696,7 +697,13 @@ impl<'gc> Resolver<'gc, '_> {
         }
     }
 
-    fn visit_identifier(&mut self, lock: &GCLock, ident: &'gc Identifier, node: &Node, path: Path) {
+    fn visit_identifier(
+        &mut self,
+        lock: &'gc GCLock,
+        ident: &'gc Identifier<'gc>,
+        node: &'gc Node<'gc>,
+        path: Path<'gc>,
+    ) {
         match path.parent {
             // { identifier: ... }
             Node::Property(ast::Property {
@@ -753,9 +760,9 @@ impl<'gc> Resolver<'gc, '_> {
     /// If the identifier is unresolvable, returns `None`.
     fn check_identifier_resolved(
         &mut self,
-        lock: &GCLock,
-        ident: &'gc Identifier,
-        node: &Node,
+        lock: &'gc GCLock,
+        ident: &'gc Identifier<'gc>,
+        node: &'gc Node<'gc>,
     ) -> Option<DeclId> {
         let ptr = NodeRc::from_node(lock, node);
         if let Some(Resolution::Decl(decl)) = self.sem.ident_decl(&ptr) {
@@ -774,9 +781,9 @@ impl<'gc> Resolver<'gc, '_> {
 
     fn resolve_identifier(
         &mut self,
-        lock: &GCLock,
-        ident: &'gc Identifier,
-        node: &Node,
+        lock: &'gc GCLock,
+        ident: &'gc Identifier<'gc>,
+        node: &'gc Node<'gc>,
         in_typeof: bool,
     ) {
         let decl = self.check_identifier_resolved(lock, ident, node);
@@ -829,7 +836,7 @@ impl<'gc> Resolver<'gc, '_> {
 
     /// Declare all declarations optionally associated with `scope_node` by
     /// [`DeclCollector`] in the current scope.
-    fn process_collected_declarations(&mut self, lock: &GCLock, scope_node: &Node) {
+    fn process_collected_declarations(&mut self, lock: &'gc GCLock, scope_node: &'gc Node<'gc>) {
         if let Some(scope_decls) = self
             .function_context()
             .decls
@@ -841,7 +848,7 @@ impl<'gc> Resolver<'gc, '_> {
 
     /// Declare all declarations from `scope_decls` in the current scope by
     /// calling [`Self::validate_and_declare_identifier()`].
-    fn process_declarations(&mut self, lock: &GCLock, scope_decls: &[&'gc Node<'gc>]) {
+    fn process_declarations(&mut self, lock: &'gc GCLock, scope_decls: &[&'gc Node<'gc>]) {
         for &decl in scope_decls {
             let mut idents = SmallVec::<[&Node; 4]>::new();
             let decl_kind = self.extract_idents_from_decl(lock, decl, &mut idents);
@@ -861,7 +868,7 @@ impl<'gc> Resolver<'gc, '_> {
     ///     declarations.
     fn validate_and_declare_identifier(
         &mut self,
-        lock: &GCLock,
+        lock: &'gc GCLock,
         decl_kind: DeclKind,
         id_node: &'gc Node<'gc>,
     ) {
@@ -991,7 +998,7 @@ impl<'gc> Resolver<'gc, '_> {
     /// Return true if valid, otherwise generate an error and return false.
     fn validate_declaration_name(
         &self,
-        lock: &GCLock,
+        lock: &'gc GCLock,
         decl_kind: DeclKind,
         ident: &Identifier,
     ) -> bool {
@@ -1072,13 +1079,13 @@ impl<'gc> Resolver<'gc, '_> {
     /// as DeclKind::ScopedFunction, so they can be distinguished.
     fn extract_idents_from_decl<A: smallvec::Array<Item = &'gc Node<'gc>>>(
         &self,
-        lock: &GCLock,
+        lock: &'gc GCLock,
         decl: &'gc Node<'gc>,
         idents: &mut SmallVec<A>,
     ) -> DeclKind {
         match decl {
             Node::VariableDeclaration(n) => {
-                for &declarator in &n.declarations {
+                for declarator in n.declarations {
                     Self::extract_declared_idents_from_id(
                         lock,
                         Some(node_cast!(Node::VariableDeclarator, declarator).id),
@@ -1114,7 +1121,7 @@ impl<'gc> Resolver<'gc, '_> {
                 DeclKind::Class
             }
             Node::ImportDeclaration(n) => {
-                for &spec in &n.specifiers {
+                for spec in n.specifiers {
                     match spec {
                         Node::ImportSpecifier(nn) => {
                             Self::extract_declared_idents_from_id(lock, Some(nn.local), idents);
@@ -1149,7 +1156,7 @@ impl<'gc> Resolver<'gc, '_> {
     /// Normally that is just a single identifier, but it can be more in case of
     /// destructuring.
     fn extract_declared_idents_from_id<A: smallvec::Array<Item = &'gc Node<'gc>>>(
-        lock: &GCLock,
+        lock: &'gc GCLock,
         node_opt: Option<&'gc Node<'gc>>,
         idents: &mut SmallVec<A>,
     ) {
@@ -1168,7 +1175,7 @@ impl<'gc> Resolver<'gc, '_> {
                 Self::extract_declared_idents_from_id(lock, Some(n.left), idents);
             }
             Node::ArrayPattern(n) => {
-                for &elem in &n.elements {
+                for elem in n.elements {
                     Self::extract_declared_idents_from_id(lock, Some(elem), idents);
                 }
             }
@@ -1176,7 +1183,7 @@ impl<'gc> Resolver<'gc, '_> {
                 Self::extract_declared_idents_from_id(lock, Some(n.argument), idents);
             }
             Node::ObjectPattern(n) => {
-                for &prop in &n.properties {
+                for prop in n.properties {
                     match prop {
                         Node::Property(nn) => {
                             Self::extract_declared_idents_from_id(lock, Some(nn.value), idents);
@@ -1301,7 +1308,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                         {
                             pself.process_declarations(lock, &decls);
                         }
-                        for case in &switch.cases {
+                        for case in switch.cases {
                             case.visit(lock, pself, Some(Path::new(node, NodeField::cases)));
                         }
                     });
@@ -1497,7 +1504,8 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 {
                     if self.is_require(lock, call) {
                         // Resolve `require()` call.
-                        if let Node::StringLiteral(ast::StringLiteral { value, .. }) = arguments[0]
+                        if let Some(Node::StringLiteral(ast::StringLiteral { value, .. })) =
+                            arguments.head()
                         {
                             let target = String::from_utf16_lossy(&value.str);
                             match dependency_resolver.resolve_dependency(
@@ -1554,7 +1562,7 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
 /// string literal).
 /// \return the node containing "use strict" or nullptr.
 #[allow(clippy::ptr_arg)]
-fn find_use_strict<'gc>(body: &NodeList<'gc>) -> Option<&'gc Node<'gc>> {
+fn find_use_strict<'gc>(body: &'gc NodeList<'gc>) -> Option<&'gc Node<'gc>> {
     /// "use strict" encoded as UTF-16.
     static USE_STRICT_UTF16: [u16; 10] = [
         'u' as u16, 's' as u16, 'e' as u16, ' ' as u16, 's' as u16, 't' as u16, 'r' as u16,
@@ -1562,7 +1570,7 @@ fn find_use_strict<'gc>(body: &NodeList<'gc>) -> Option<&'gc Node<'gc>> {
     ];
 
     // Scan until we encounter a non-directive.
-    for &node in body {
+    for node in *body {
         match node {
             Node::ExpressionStatement(ast::ExpressionStatement {
                 directive: Some(d), ..
@@ -1748,13 +1756,13 @@ impl<'a, 'gc, 'mode> ScopedFunctionPromoter<'a, 'gc, 'mode> {
     /// Return the declaration kind of the node.
     /// Function declarations are always returned as `ScopedFunction`, so they can be distinguished.
     fn extract_declared_idents<A: smallvec::Array<Item = &'gc Node<'gc>>>(
-        lock: &GCLock,
+        lock: &'gc GCLock,
         node: &'gc Node<'gc>,
         idents: &mut SmallVec<A>,
     ) -> DeclKind {
         match node {
             Node::VariableDeclaration(decl) => {
-                for &declarator in &decl.declarations {
+                for declarator in decl.declarations {
                     Resolver::extract_declared_idents_from_id(
                         lock,
                         Some(node_cast!(Node::VariableDeclarator, declarator).id),
@@ -1776,7 +1784,7 @@ impl<'a, 'gc, 'mode> ScopedFunctionPromoter<'a, 'gc, 'mode> {
                 DeclKind::Class
             }
             Node::ImportDeclaration(decl) => {
-                for &spec in &decl.specifiers {
+                for spec in decl.specifiers {
                     match spec {
                         Node::ImportSpecifier(spec) => {
                             Resolver::extract_declared_idents_from_id(

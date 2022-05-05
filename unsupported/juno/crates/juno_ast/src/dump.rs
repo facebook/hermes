@@ -162,7 +162,7 @@ impl<'gc> DumpChild<'gc> for &'gc Node<'gc> {
 impl<'gc> DumpChild<'gc> for NodeList<'gc> {
     fn dump<W: Write>(&self, ctx: &'gc GCLock, emitter: &mut JSONEmitter<W>) {
         emitter.open_array();
-        for &elem in self {
+        for elem in self.iter() {
             dump_node(ctx, elem, emitter);
         }
         emitter.close_array();

@@ -26,6 +26,7 @@
 //!
 //! Visitor patterns are provided by [`Visitor`] and [`VisitorMut`].
 
+use context::NodeListElement;
 use juno_support::atom_table::Atom;
 use juno_support::define_str_enum;
 use std::{fmt, marker::PhantomData};
@@ -165,8 +166,112 @@ impl<'a> From<SourceRange> for TemplateMetadata<'a> {
 /// JS identifier represented as valid UTF-8.
 pub type NodeLabel = Atom;
 
-/// A list of nodes owned by a path.
-pub type NodeList<'a> = Vec<&'a Node<'a>>;
+/// An ordered list of nodes used as a property in the AST.
+///
+/// Implemented as a linked list internally to avoid extra overhead that would exist if it were
+/// to allocate a `Vec` or some other structure that required allocating on the native heap.
+///
+/// Because this is just a pointer to the head of the list, it implements `Copy` much like any other
+/// pointer/reference, allowing to user to handle it much like `&Node` in many cases.
+#[derive(Debug, Copy, Clone)]
+pub struct NodeList<'a> {
+    /// If non-null, pointer to the first element of the list.
+    /// If null, the list is empty.
+    head: *const NodeListElement<'a>,
+}
+
+impl<'a> NodeList<'a> {
+    /// Create a new empty list.
+    /// Guaranteed to be fast, performs no allocations.
+    pub fn new<'gc>(_: &'gc GCLock) -> NodeList<'gc> {
+        NodeList {
+            head: std::ptr::null(),
+        }
+    }
+
+    /// Connect the provided pre-existing nodes into a `NodeList` via iteration.
+    /// `NodeList` doesn't implement `FromIterator` directly due to the `GCLock` requirement.
+    pub fn from_iter<'gc, I: IntoIterator<Item = &'gc Node<'gc>>>(
+        lock: &'gc GCLock<'_, '_>,
+        nodes: I,
+    ) -> NodeList<'gc> {
+        let mut it = nodes.into_iter();
+        match it.next() {
+            Some(first) => {
+                // At least one element in the list.
+                // Allocate the `NodeListElement`s in the context.
+                let head_elem: &'gc NodeListElement<'gc> = lock.append_list_element(None, first);
+                let mut prev_elem = head_elem;
+                // Exhaust the rest of the iterator.
+                for next in it {
+                    let next_elem = lock.append_list_element(Some(prev_elem), next);
+                    prev_elem = next_elem;
+                }
+                NodeList { head: head_elem }
+            }
+            _ => {
+                // No elements, return the empty `NodeList`.
+                Self::new(lock)
+            }
+        }
+    }
+
+    pub fn iter(self) -> NodeListIterator<'a> {
+        NodeListIterator { ptr: self.head }
+    }
+
+    /// Whether this `NodeList` has no elements.
+    /// Cost: `O(1)`
+    pub fn is_empty(&self) -> bool {
+        self.head.is_null()
+    }
+
+    /// Return the first element of the list if it exists, else `None`.
+    pub fn head(&self) -> Option<&'a Node<'a>> {
+        self.iter().next()
+    }
+
+    /// Return the length of the list.
+    /// Cost: `O(n)` where `n` is the length of the list.
+    /// Use [`Self::is_empty`] instead if you just want to check whether it's empty.
+    pub fn len(&self) -> usize {
+        self.iter().count()
+    }
+}
+
+impl<'a> IntoIterator for NodeList<'a> {
+    type Item = &'a Node<'a>;
+
+    type IntoIter = NodeListIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Iterator for `Node`s in the `NodeList`.
+pub struct NodeListIterator<'a> {
+    /// The upcoming element in the iteration order.
+    /// `null` if the iteration is complete (`next` will return `None`).
+    ptr: *const NodeListElement<'a>,
+}
+
+impl<'a> Iterator for NodeListIterator<'a> {
+    type Item = &'a Node<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.ptr.is_null() {
+            None
+        } else {
+            unsafe {
+                let result = &*self.ptr;
+                self.ptr = result.next.get();
+                debug_assert!(!result.inner.is_null(), "NodeList node must not be null");
+                Some(&*result.inner)
+            }
+        }
+    }
+}
 
 /// JS string literals don't have to contain valid UTF-8,
 /// so we wrap a `Vec<u16>`, which allows us to represent UTF-16 characters
@@ -362,6 +467,10 @@ where
     /// Can't provide a default implementation here because associated type default definitions
     /// (for `Out`) are unstable.
     fn duplicate(self) -> Self::Out;
+
+    /// If this NodeChild is a list, visit the elements and call `cb` with each `NodeListElement`
+    /// in this AST node only (non-recursive).
+    fn mark_list<CB: Fn(&NodeListElement)>(self, _lock: &'gc GCLock, _cb: CB) {}
 }
 
 impl NodeChild<'_> for f64 {
@@ -576,44 +685,39 @@ impl<'gc> NodeChild<'gc> for &'gc Node<'gc> {
     }
 }
 
-impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
+impl<'gc> NodeChild<'gc> for NodeList<'gc> {
     type Out = NodeList<'gc>;
 
     fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
-        for child in self {
-            visitor.call(ctx, *child, Some(path));
+        for child in self.iter() {
+            visitor.call(ctx, child, Some(path));
         }
     }
 
-    fn visit_child_mut<V: VisitorMut<'gc>>(
+    fn visit_child_mut<'ast, 'ctx, V: VisitorMut<'gc>>(
         self,
-        ctx: &'gc GCLock,
+        ctx: &'gc GCLock<'ast, 'ctx>,
         visitor: &mut V,
         path: Path<'gc>,
     ) -> TransformResult<Self::Out> {
         use TransformResult::*;
         let mut index = 0;
-        let len = self.len();
+        let mut it: NodeListIterator<'gc> = self.iter();
         // Assume no copies to start.
-        while index < len {
-            let node = visitor.call(ctx, self[index], Some(path));
+        while let Some(elem) = it.next() {
+            let node = visitor.call(ctx, elem, Some(path));
             if let Unchanged = node {
                 index += 1;
                 continue;
             }
             // First change found, either removed or changed node.
-            let mut result: Self::Out = vec![];
             // Fill in the elements we skippped.
-            for elem in self.iter().take(index) {
-                result.push(elem);
-            }
+            let mut result = self.iter().take(index).collect::<Vec<&Node>>();
             // If the node was changed or expanded, push it.
             match node {
                 Changed(new_node) => result.push(new_node),
                 Expanded(new_nodes) => {
-                    for node in new_nodes {
-                        result.push(node);
-                    }
+                    result.extend(new_nodes);
                 }
                 Removed => {}
                 Unchanged => {
@@ -622,62 +726,33 @@ impl<'gc> NodeChild<'gc> for &NodeList<'gc> {
             };
             index += 1;
             // Fill the rest of the elements.
-            while index < len {
-                match visitor.call(ctx, self[index], Some(path)) {
-                    Unchanged => result.push(self[index]),
+            for elem in it.by_ref() {
+                match visitor.call(ctx, elem, Some(path)) {
+                    Unchanged => result.push(elem),
                     Removed => {}
                     Changed(new_node) => result.push(new_node),
                     Expanded(new_nodes) => {
-                        for node in new_nodes {
-                            result.push(node);
-                        }
+                        result.extend(new_nodes);
                     }
                 }
                 index += 1;
             }
-            return Changed(result);
+            return Changed(NodeList::from_iter(ctx, result));
         }
         Unchanged
     }
 
     fn duplicate(self) -> Self::Out {
-        self.clone()
+        NodeList { head: self.head }
     }
-}
 
-impl<'gc> NodeChild<'gc> for &Option<NodeList<'gc>> {
-    type Out = Option<NodeList<'gc>>;
-
-    fn visit_child<V: Visitor<'gc>>(self, ctx: &'gc GCLock, visitor: &mut V, path: Path<'gc>) {
-        if let Some(list) = self {
-            for child in list {
-                visitor.call(ctx, *child, Some(path));
-            }
+    fn mark_list<CB: Fn(&NodeListElement)>(self, _lock: &'gc GCLock, cb: CB) {
+        let mut cur = self.head;
+        while !cur.is_null() {
+            let elem = unsafe { &*cur };
+            cb(elem);
+            cur = elem.next.get();
         }
-    }
-
-    fn visit_child_mut<V: VisitorMut<'gc>>(
-        self,
-        ctx: &'gc GCLock,
-        visitor: &mut V,
-        path: Path<'gc>,
-    ) -> TransformResult<Self::Out> {
-        use TransformResult::*;
-        match self.as_ref() {
-            None => Unchanged,
-            Some(inner) => match inner.visit_child_mut(ctx, visitor, path) {
-                Unchanged => Unchanged,
-                Removed => Changed(None),
-                Changed(new_node) => Changed(Some(new_node)),
-                Expanded(_) => {
-                    unreachable!("NodeList::visit_child_mut cannot return Expanded");
-                }
-            },
-        }
-    }
-
-    fn duplicate(self) -> Self::Out {
-        self.clone()
     }
 }
 

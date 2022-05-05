@@ -48,7 +48,7 @@ impl<'gc> DeclCollector<'gc> {
     }
 
     /// Return the optional ScopeDecls for an AST node.
-    pub fn scope_decls_for_node(&self, node: &Node) -> Option<Rc<ScopeDecls<'gc>>> {
+    pub fn scope_decls_for_node(&self, node: &'gc Node<'gc>) -> Option<Rc<ScopeDecls<'gc>>> {
         self.scopes.get(&NodePtr::from(node)).cloned()
     }
     /// Set the ScopeDecls for a given AST node.

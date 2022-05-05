@@ -192,11 +192,11 @@ pub unsafe fn cvt_node_list<'gc, 'ast: 'gc>(
     ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodeListRef,
 ) -> ast::NodeList<'gc> {
-    let mut res = ast::NodeList::new();
-    for node in n.iter() {
-        res.push(cvt_node_ptr(cvt, ctx, NodePtr::new(node)));
-    }
-    res
+    ast::NodeList::from_iter(
+        ctx,
+        n.iter()
+            .map(|node| cvt_node_ptr(cvt, ctx, NodePtr::new(node))),
+    )
 }
 
 pub unsafe fn cvt_node_list_opt<'gc, 'ast: 'gc>(

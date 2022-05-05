@@ -68,6 +68,46 @@ impl<'ctx> StorageEntry<'ctx> {
     }
 }
 
+/// A single entry in the NodeList storage.
+/// These are also immutable from the user's perspective, like `Node`s,
+/// but they are temporarily mutated here during construction only, in order to append elements.
+#[derive(Debug)]
+pub(crate) struct NodeListElement<'ctx> {
+    /// ID of the context to which this entry belongs.
+    /// Top bit is used as a mark bit, and flips meaning every time a GC happens.
+    /// If this field is `0`, then this entry is free.
+    ctx_id_markbit: Cell<u32>,
+
+    /// Actual node stored in this entry.
+    /// Must not be null, because empty lists are represented as null pointers in the [`NodeList`].
+    pub inner: *const Node<'ctx>,
+
+    /// Pointer to the next element in the NodeList.
+    /// Stored in a `Cell` to allow for simple appends.
+    pub next: Cell<*const NodeListElement<'ctx>>,
+}
+
+impl<'ctx> NodeListElement<'ctx> {
+    #[inline]
+    fn set_markbit(&self, bit: bool) {
+        let id = self.ctx_id_markbit.get();
+        if bit {
+            self.ctx_id_markbit.set(id | 1 << 31);
+        } else {
+            self.ctx_id_markbit.set(id & !(1 << 31));
+        }
+    }
+
+    #[inline]
+    fn markbit(&self) -> bool {
+        (self.ctx_id_markbit.get() >> 31) != 0
+    }
+
+    fn is_free(&self) -> bool {
+        self.ctx_id_markbit.get() == FREE_ENTRY
+    }
+}
+
 /// Structure pointed to by `Context` and `NodeRc` to facilitate panicking if there are
 /// outstanding `NodeRc` when the `Context` is dropped.
 #[derive(Debug)]
@@ -96,6 +136,13 @@ pub struct Context<'ast> {
 
     /// Free list for AST nodes.
     free_nodes: UnsafeCell<Vec<NonNull<StorageEntry<'ast>>>>,
+
+    /// Every `NodeListElement` allocated in this context.
+    /// These store the links in the linked lists.
+    list_elements: UnsafeCell<Deque<NodeListElement<'ast>>>,
+
+    /// Free list for `NodeListElement`s.
+    free_list_elements: UnsafeCell<Vec<NonNull<NodeListElement<'ast>>>>,
 
     /// `NodeRc` count stored in a `Box` to ensure that `NodeRc`s can also point to it
     /// and decrement the count on drop.
@@ -135,6 +182,8 @@ impl<'ast> Context<'ast> {
             id,
             nodes: Default::default(),
             free_nodes: Default::default(),
+            list_elements: Default::default(),
+            free_list_elements: Default::default(),
             noderc_count: Pin::new(Box::new(NodeRcCounter {
                 ctx_id: id,
                 count: Cell::new(0),
@@ -150,12 +199,10 @@ impl<'ast> Context<'ast> {
     /// Allocate a new `Node` in this `Context`.
     pub(crate) fn alloc<'s>(&'s self, n: Node<'_>) -> &'s Node<'s> {
         let free = unsafe { &mut *self.free_nodes.get() };
-        let nodes: &mut Deque<StorageEntry> = unsafe { &mut *self.nodes.get() };
-        // Transmutation is safe here, because `Node`s can only be allocated through
-        // this path and only one GCLock can be made available at a time per thread.
-        let node: Node<'ast> = unsafe { std::mem::transmute(n) };
-        let entry = if let Some(mut entry) = free.pop() {
-            let entry = unsafe { entry.as_mut() };
+        let nodes: &mut Deque<StorageEntry<'ast>> = unsafe { &mut *self.nodes.get() };
+        let node = unsafe { std::mem::transmute(n) };
+        let entry: &StorageEntry<'ast> = if let Some(mut entry) = free.pop() {
+            let entry: &mut StorageEntry<'ast> = unsafe { entry.as_mut() };
             debug_assert!(
                 entry.ctx_id_markbit.get() == FREE_ENTRY,
                 "Incorrect context ID"
@@ -174,7 +221,54 @@ impl<'ast> Context<'ast> {
             entry.set_markbit(!self.markbit_marked);
             entry
         };
-        &entry.inner
+        // Transmute here to handle the fact that Cell<> is invariant over its type,
+        // meaning the lifetime doesn't automatically narrow from `'ast` to `'s`.
+        unsafe { std::mem::transmute(&entry.inner) }
+    }
+
+    /// Allocate a list element in the context with the provided previous element if it exists.
+    /// `prev` will be updated to point to `node` as its next element.
+    pub(crate) fn append_list_element<'a>(
+        &'a self,
+        prev: Option<&'a NodeListElement<'a>>,
+        node: &'a Node<'a>,
+    ) -> &'a NodeListElement<'a> {
+        let elements: &mut Deque<NodeListElement<'ast>> = unsafe { &mut *self.list_elements.get() };
+        let free = unsafe { &mut *self.free_list_elements.get() };
+        // Transmutation is safe here, because `Node`s can only be allocated through
+        // this path and only one GCLock can be made available at a time per thread.
+        let node: &'ast Node<'ast> = unsafe { std::mem::transmute(node) };
+        let prev: Option<&'ast NodeListElement<'ast>> = unsafe { std::mem::transmute(prev) };
+        let entry = if let Some(mut entry) = free.pop() {
+            let entry: &mut NodeListElement<'ast> = unsafe { entry.as_mut() };
+            debug_assert!(
+                entry.ctx_id_markbit.get() == FREE_ENTRY,
+                "Incorrect context ID"
+            );
+            entry.ctx_id_markbit.set(self.id);
+            entry.set_markbit(!self.markbit_marked);
+            entry.inner = node;
+            if let Some(prev) = prev {
+                entry.next.set(std::ptr::null());
+                prev.next.set(entry as *const _);
+            }
+            entry
+        } else {
+            let entry = elements.push(NodeListElement {
+                ctx_id_markbit: Cell::new(self.id),
+                inner: node,
+                next: Cell::new(std::ptr::null()),
+            });
+            entry.set_markbit(!self.markbit_marked);
+            if let Some(prev) = prev {
+                prev.next.set(entry as *const _);
+            }
+            entry
+        };
+        debug_assert!(!entry.is_free(), "Entry must not be free");
+        // Transmute here to handle the fact that Cell<> is invariant over its type,
+        // meaning the lifetime doesn't automatically narrow from `'ast` to `'s`.
+        unsafe { std::mem::transmute(entry) }
     }
 
     /// Return the atom table.
@@ -218,49 +312,66 @@ impl<'ast> Context<'ast> {
         let nodes = unsafe { &mut *self.nodes.get() };
         let free_nodes = unsafe { &mut *self.free_nodes.get() };
 
-        // Begin by collecting all the roots: entries with non-zero refcount.
-        let mut roots: Vec<&StorageEntry> = vec![];
-        for entry in nodes.iter() {
-            if entry.is_free() {
-                continue;
-            }
-            debug_assert!(
-                entry.markbit() != self.markbit_marked,
-                "Entry marked before start of GC: {:?}\nentry.markbit()={}\nmarkbit_marked={}",
-                &entry,
-                entry.markbit(),
-                self.markbit_marked,
-            );
-            if entry.count.get() > 0 {
-                roots.push(entry);
-            }
-        }
+        let list_elements = unsafe { &mut *self.list_elements.get() };
+        let free_list_elements = unsafe { &mut *self.free_list_elements.get() };
 
-        struct Marker {
-            markbit_marked: bool,
-        }
-
-        impl<'gc> Visitor<'gc> for Marker {
-            fn call(&mut self, gc: &'gc GCLock, node: &'gc Node<'gc>, _path: Option<Path<'gc>>) {
-                let entry = unsafe { StorageEntry::from_node(node) };
-                if entry.markbit() == self.markbit_marked {
-                    // Stop visiting early if we've already marked this part,
-                    // because we must have also marked all the children.
-                    return;
-                }
-                entry.set_markbit(self.markbit_marked);
-                node.visit_children(gc, self);
-            }
-        }
-
-        // Use a visitor to mark every node reachable from roots.
-        let mut marker = Marker {
-            markbit_marked: self.markbit_marked,
-        };
         {
-            let gc = GCLock::new(self);
-            for root in &roots {
-                root.inner.visit(&gc, &mut marker, None);
+            // Begin by collecting all the roots: entries with non-zero refcount.
+            let mut roots: Vec<&StorageEntry> = vec![];
+            for entry in nodes.iter() {
+                if entry.is_free() {
+                    continue;
+                }
+                debug_assert!(
+                    entry.markbit() != self.markbit_marked,
+                    "Entry marked before start of GC: \
+                        {:?}\nentry.markbit()={}\nmarkbit_marked={}",
+                    &entry,
+                    entry.markbit(),
+                    self.markbit_marked,
+                );
+                if entry.count.get() > 0 {
+                    // Transmuting the lifetime here because we have to store the roots from
+                    // across accesses to `nodes`, meaning we must translate
+                    // from `'ast` to the lifetime of this scope.
+                    roots.push(unsafe { std::mem::transmute(entry) });
+                }
+            }
+
+            struct Marker {
+                markbit_marked: bool,
+            }
+
+            impl<'gc> Visitor<'gc> for Marker {
+                fn call(
+                    &mut self,
+                    gc: &'gc GCLock,
+                    node: &'gc Node<'gc>,
+                    _path: Option<Path<'gc>>,
+                ) {
+                    let entry = unsafe { StorageEntry::from_node(node) };
+                    if entry.markbit() == self.markbit_marked {
+                        // Stop visiting early if we've already marked this part,
+                        // because we must have also marked all the children.
+                        return;
+                    }
+                    entry.set_markbit(self.markbit_marked);
+                    node.mark_lists(gc, |elem| {
+                        elem.set_markbit(self.markbit_marked);
+                    });
+                    node.visit_children(gc, self);
+                }
+            }
+
+            // Use a visitor to mark every node reachable from roots.
+            let mut marker = Marker {
+                markbit_marked: self.markbit_marked,
+            };
+            {
+                let gc: GCLock = GCLock::new(self);
+                for root in roots {
+                    root.inner.visit(&gc, &mut marker, None);
+                }
             }
         }
 
@@ -280,6 +391,21 @@ impl<'ast> Context<'ast> {
             // Passed all checks, this entry is free.
             entry.ctx_id_markbit.set(FREE_ENTRY);
             free_nodes.push(unsafe { NonNull::new_unchecked(entry as *mut StorageEntry) });
+        }
+
+        for element in list_elements.iter_mut() {
+            if element.is_free() {
+                // Skip free entries.
+                continue;
+            }
+            if element.markbit() == self.markbit_marked {
+                // Keep marked entries alive.
+                continue;
+            }
+            // Passed all checks, this element is free.
+            element.ctx_id_markbit.set(FREE_ENTRY);
+            free_list_elements
+                .push(unsafe { NonNull::new_unchecked(element as *mut NodeListElement) });
         }
 
         self.markbit_marked = !self.markbit_marked;
@@ -352,8 +478,19 @@ impl<'ast, 'ctx> GCLock<'ast, 'ctx> {
 
     /// Allocate a node in the `ctx`.
     #[inline]
-    pub(crate) fn alloc(&self, n: Node) -> &Node {
+    pub(crate) fn alloc<'s>(&'s self, n: Node<'s>) -> &'s Node<'s> {
         self.ctx.alloc(n)
+    }
+
+    /// Append `node` to the `prev` element if provided, else create the element as the first
+    /// element in the `NodeList`.
+    #[inline]
+    pub(crate) fn append_list_element<'s>(
+        &'s self,
+        prev: Option<&'s NodeListElement<'s>>,
+        n: &'s Node<'s>,
+    ) -> &'s NodeListElement<'s> {
+        self.ctx.append_list_element(prev, n)
     }
 
     /// Return a reference to the owning Context.

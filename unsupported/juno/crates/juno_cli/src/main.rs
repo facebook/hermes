@@ -354,7 +354,7 @@ fn script_to_module<'gc>(
                 phantom: Default::default(),
                 range: program.metadata.range,
             },
-            body: program.body.clone(),
+            body: program.body,
         },
     )
 }

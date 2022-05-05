@@ -119,7 +119,7 @@ impl<'gc> ValidChild<'gc> for NodeList<'gc> {
         node: &'gc Node<'gc>,
         constraints: &[NodeVariant],
     ) -> Result<(), ValidationError> {
-        'elems: for elem in self {
+        'elems: for elem in self.iter() {
             for &constraint in constraints {
                 if instanceof(elem.variant(), constraint) {
                     // Found a valid constraint for this element,

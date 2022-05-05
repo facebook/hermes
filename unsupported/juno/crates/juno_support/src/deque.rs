@@ -18,11 +18,11 @@ pub struct Deque<T> {
 
 /// Minimum chunk capacity in the deque.
 /// May be made configurable in the future.
-const MIN_CHUNK_CAPACITY: usize = 1 << 12;
+const MIN_CHUNK_CAPACITY: usize = 1 << 10;
 
 /// Maximum chunk capacity in the deque.
 /// May be made configurable in the future.
-const MAX_CHUNK_CAPACITY: usize = MIN_CHUNK_CAPACITY * (1 << 12);
+const MAX_CHUNK_CAPACITY: usize = MIN_CHUNK_CAPACITY * (1 << 10);
 
 impl<T> Default for Deque<T> {
     fn default() -> Self {

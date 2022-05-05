@@ -92,12 +92,33 @@ macro_rules! gen_nodekind_enum {
                 }
             }
 
+            /// Visit the list fields of `self` and call `cb` with each `NodeListElement`
+            /// in this AST node only (non-recursive).
+            pub(crate) fn mark_lists<'ast: 'gc, CB: Fn(&NodeListElement)>(
+                &'gc self,
+                ctx: &'gc GCLock<'ast, '_>,
+                cb: CB,
+            ) {
+                match self {
+                    $(
+                        Node::$kind($kind {
+                            $($($field,)*)?
+                            ..
+                        }) => {
+                            $($(
+                                $field.mark_list(ctx, &cb);
+                            )*)?
+                        }
+                    ),*
+                }
+            }
+
             /// Visit the child fields of this node.
             /// `self` is the *original* parent of the children to visit.
             /// Will only allocate a new node if one of the children was changed.
-            pub fn visit_children_mut<'ast: 'gc, V: VisitorMut<'gc>>(
+            pub fn visit_children_mut< V: VisitorMut<'gc>>(
                 &'gc self,
-                ctx: &'gc GCLock<'ast, '_>,
+                ctx: &'gc GCLock,
                 visitor: &mut V,
             ) -> TransformResult<&'gc Node<'gc>> {
                 let builder = builder::Builder::from_node(self);
@@ -454,7 +475,7 @@ nodekind_defs! { gen_nodekind_enum }
 
 impl<'gc> Node<'gc> {
     /// Shallow equality comparison.
-    pub fn ptr_eq(&self, other: &'_ Node<'_>) -> bool {
+    pub fn ptr_eq(&self, other: &'gc Node<'gc>) -> bool {
         std::ptr::eq(self, other)
     }
 
@@ -472,7 +493,7 @@ impl<'gc> Node<'gc> {
                 | Node::FunctionDeclaration(..)
         )
     }
-    pub fn function_like_id(&self) -> Option<&Node> {
+    pub fn function_like_id(&self) -> Option<&'gc Node<'gc>> {
         match self {
             Node::FunctionExpression(FunctionExpression { id, .. })
             | Node::ArrowFunctionExpression(ArrowFunctionExpression { id, .. })
@@ -480,15 +501,15 @@ impl<'gc> Node<'gc> {
             _ => self.function_like_panic(),
         }
     }
-    pub fn function_like_params(&self) -> &NodeList {
+    pub fn function_like_params(&self) -> NodeList<'gc> {
         match self {
             Node::FunctionExpression(FunctionExpression { params, .. })
             | Node::ArrowFunctionExpression(ArrowFunctionExpression { params, .. })
-            | Node::FunctionDeclaration(FunctionDeclaration { params, .. }) => params,
+            | Node::FunctionDeclaration(FunctionDeclaration { params, .. }) => *params,
             _ => self.function_like_panic(),
         }
     }
-    pub fn function_like_body(&self) -> &Node {
+    pub fn function_like_body(&self) -> &'gc Node<'gc> {
         match self {
             Node::FunctionExpression(FunctionExpression { body, .. })
             | Node::ArrowFunctionExpression(ArrowFunctionExpression { body, .. })
