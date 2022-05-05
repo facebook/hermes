@@ -631,6 +631,42 @@ impl<'gc> Resolver<'gc, '_> {
         });
     }
 
+    fn visit_for_in_of(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>, left: &'gc Node<'gc>) {
+        self.with_new_label(lock, None, node, |pself| {
+            // Ensure the initializer is valid.
+            if let Node::VariableDeclaration(vd) = left {
+                let declarator = node_cast!(Node::VariableDeclarator, vd.declarations[0]);
+                if let Some(init) = declarator.init {
+                    if init.is_pattern() {
+                        lock.sm().error(
+                            *init.range(),
+                            "destructuring declaration cannot be initialized in for-in/for-of loop",
+                        );
+                    } else if !(matches!(node, Node::ForInStatement(_))
+                        && !pself.function_strict_mode()
+                        && vd.kind == ast::VariableDeclarationKind::Var)
+                    {
+                        lock.sm().error(
+                            *init.range(),
+                            "for-in/for-of variable declaration may not be initialized",
+                        );
+                    }
+                }
+            } else {
+                pself.validate_assignment_target(lock, left);
+            }
+            // Only create a lexical scope if there are declarations in it.
+            if let Some(decls) = pself.function_context().decls.scope_decls_for_node(node) {
+                pself.in_new_scope(lock, node, |pself| {
+                    pself.process_declarations(lock, decls.as_slice());
+                    node.visit_children(lock, pself);
+                });
+            } else {
+                node.visit_children(lock, pself);
+            }
+        });
+    }
+
     fn visit_function_expression(
         &mut self,
         lock: &'gc GCLock,
@@ -1261,7 +1297,12 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 });
             }
 
-            Node::ForStatement(_) | Node::ForInStatement(_) | Node::ForOfStatement(_) => {
+            Node::ForInStatement(ast::ForInStatement { left, .. })
+            | Node::ForOfStatement(ast::ForOfStatement { left, .. }) => {
+                self.visit_for_in_of(lock, node, left)
+            }
+
+            Node::ForStatement(_) => {
                 self.with_new_label(lock, None, node, |pself| {
                     // Only create a lexical scope if there are declarations in it.
                     if let Some(decls) = pself.function_context().decls.scope_decls_for_node(node) {

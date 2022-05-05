@@ -506,6 +506,15 @@ impl<'gc> Node<'gc> {
                 | Node::ForStatement(_)
         )
     }
+    pub fn is_pattern(&self) -> bool {
+        matches!(
+            self,
+            Node::ObjectPattern(..)
+                | Node::ArrayPattern(..)
+                | Node::AssignmentPattern(..)
+                | Node::RestElement(..)
+        )
+    }
 }
 
 #[macro_export]
