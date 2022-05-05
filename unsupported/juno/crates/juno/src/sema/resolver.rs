@@ -784,8 +784,8 @@ impl<'gc> Resolver<'gc, '_> {
     ) {
         let decl = self.check_identifier_resolved(lock, ident, node);
 
-        // Is this "arguments"?
-        if ident.name == self.kw.ident_arguments {
+        // Is this "arguments" in a function?
+        if ident.name == self.kw.ident_arguments && !self.function_context().func_id.is_global() {
             if decl.is_none() || !self.decl_in_cur_function(decl.unwrap()) {
                 let args_decl = self
                     .sem
@@ -875,6 +875,18 @@ impl<'gc> Resolver<'gc, '_> {
         }
 
         let mut prev_binding = self.binding_table.value(ident.name);
+
+        // Redeclaration of `arguments` in non-strict mode is allowed at the function level,
+        // so we don't need to declare a new variable.
+        // We do need to check that this isn't the global function, because `arguments` is a valid
+        // variable name in the global function in non-strict mode.
+        if !self.function_strict_mode()
+            && ident.name == self.kw.ident_arguments
+            && decl_kind.is_var_like()
+            && !self.function_context().func_id.is_global()
+        {
+            return;
+        }
 
         let mut decl_id = None;
 
@@ -1220,7 +1232,9 @@ impl<'gc> Resolver<'gc, '_> {
         match node {
             Node::MemberExpression(_) => true,
 
-            Node::Identifier(id) if id.name == self.kw.ident_arguments => false,
+            Node::Identifier(id) if id.name == self.kw.ident_arguments => {
+                !self.function_strict_mode()
+            }
             Node::Identifier(id) if id.name == self.kw.ident_eval => !self.function_strict_mode(),
             Node::Identifier(_) => true,
 
