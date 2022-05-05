@@ -1274,6 +1274,14 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 }
             }
 
+            Node::WithStatement(ast::WithStatement { body, .. }) => {
+                node.visit_children(lock, self);
+                // Run the Unresolver to avoid resolving to variables past the depth of the `with`.
+                // Pass `depth + 1` because variables declared in this scope also cannot be trusted.
+                let depth = self.sem.scope(self.current_scope.unwrap()).depth;
+                Unresolver::new(self, depth + 1).run(lock, body);
+            }
+
             Node::CatchClause(ast::CatchClause { param, body, .. }) => {
                 self.in_new_scope(lock, node, |pself| {
                     if let Some(id_node @ Node::Identifier(_)) = param {
@@ -1676,7 +1684,8 @@ impl<'gc> Visitor<'gc> for ScopedFunctionPromoter<'_, 'gc, '_> {
             | Node::BlockStatement(_)
             | Node::ForStatement(_)
             | Node::ForInStatement(_)
-            | Node::ForOfStatement(_) => {
+            | Node::ForOfStatement(_)
+            | Node::WithStatement(_) => {
                 self.visit_scope(lock, node);
                 node.visit_children(lock, self);
             }
