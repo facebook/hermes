@@ -1510,6 +1510,27 @@ impl<'gc> Visitor<'gc> for Resolver<'gc, '_> {
                 }
             }
 
+            Node::YieldExpression(_) => {
+                match self.function_context().node {
+                    Node::Program(_) => {
+                        lock.sm()
+                            .error(*node.range(), "'yield' not in a generator function");
+                    }
+                    Node::FunctionExpression(ast::FunctionExpression {
+                        generator: false, ..
+                    })
+                    | Node::FunctionDeclaration(ast::FunctionDeclaration {
+                        generator: false,
+                        ..
+                    }) => {
+                        lock.sm()
+                            .error(*node.range(), "'yield' not in a generator function");
+                    }
+                    _ => {}
+                }
+                node.visit_children(lock, self);
+            }
+
             _ => {
                 node.visit_children(lock, self);
             }
