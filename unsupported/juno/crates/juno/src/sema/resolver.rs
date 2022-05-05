@@ -732,10 +732,7 @@ impl<'gc> Resolver<'gc, '_> {
         if let Node::FunctionDeclaration(_)
         | Node::FunctionExpression(_)
         | Node::ArrowFunctionExpression(_)
-        | Node::CatchClause(_)
-        | Node::ForStatement(_)
-        | Node::ForInStatement(_)
-        | Node::ForOfStatement(_) = path.parent
+        | Node::CatchClause(_) = path.parent
         {
             return node.visit_children(lock, self);
         }
