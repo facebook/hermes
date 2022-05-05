@@ -97,6 +97,8 @@ fn test_literals() {
     );
 
     test_roundtrip("1");
+    test_roundtrip("1n");
+    test_roundtrip("11298379123162378326187361n");
     test_roundtrip("\"abc\"");
     test_roundtrip(r#" "\ud800" "#);
     test_roundtrip(r#" "\ud83d\udcd5" "#);
@@ -484,6 +486,7 @@ fn test_types() {
     test_roundtrip_flow("type A = \"foo\"");
     test_roundtrip_flow("type A = 'foo'");
     test_roundtrip_flow("type A = 3");
+    test_roundtrip_flow("type A = 3n");
     test_roundtrip_flow("type A = boolean");
     test_roundtrip_flow("type A = true | false");
     test_roundtrip_flow("type A = symbol");

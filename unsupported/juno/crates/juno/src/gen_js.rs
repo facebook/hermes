@@ -752,6 +752,13 @@ impl<W: Write> GenJS<'_, W> {
             Node::NumericLiteral(NumericLiteral { metadata: _, value }) => {
                 out_token!(self, node, "{}", convert::number_to_string(*value));
             }
+            Node::BigIntLiteral(BigIntLiteral {
+                metadata: _,
+                bigint,
+            }) => {
+                self.add_segment(node);
+                self.write_utf8(ctx.str(*bigint));
+            }
             Node::RegExpLiteral(RegExpLiteral {
                 metadata: _,
                 pattern,
@@ -2074,6 +2081,10 @@ impl<W: Write> GenJS<'_, W> {
                 ..
             }) => {
                 out_token!(self, node, "{}", convert::number_to_string(*value));
+            }
+            Node::BigIntLiteralTypeAnnotation(BigIntLiteralTypeAnnotation { metadata: _, raw }) => {
+                self.add_segment(node);
+                self.write_utf8(ctx.str(*raw));
             }
             Node::BooleanTypeAnnotation(_) => {
                 out_token!(self, node, "boolean");
