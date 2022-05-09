@@ -256,7 +256,7 @@ impl<'gc> Resolver<'gc, '_> {
         scope_node: &'gc Node<'gc>,
         f: F,
     ) -> R {
-        // New biding table scope.
+        // New binding table scope.
         self.binding_table.push_scope();
         // New lexical scope.
         let prev_scope = self.current_scope;
@@ -447,17 +447,20 @@ impl<'gc> Resolver<'gc, '_> {
                     pself.declare_known_globals(lock, *global.range());
                 }
 
-                pself.in_new_scope(lock, node, |pself| {
-                    // Search for "use strict".
-                    if find_use_strict(lock, &node_cast!(Node::Module, node).body).is_some() {
-                        pself
-                            .sem
-                            .function_mut(pself.function_context().func_id)
-                            .strict = true;
-                    }
+                // Create the module scope as a function.
+                pself.in_new_function(lock, node, |pself| {
+                    pself.in_new_scope(lock, node, |pself| {
+                        // Search for "use strict".
+                        if find_use_strict(lock, &node_cast!(Node::Module, node).body).is_some() {
+                            pself
+                                .sem
+                                .function_mut(pself.function_context().func_id)
+                                .strict = true;
+                        }
 
-                    pself.process_collected_declarations(lock, node);
-                    node.visit_children(lock, pself);
+                        pself.process_collected_declarations(lock, node);
+                        node.visit_children(lock, pself);
+                    })
                 });
             })
         });
