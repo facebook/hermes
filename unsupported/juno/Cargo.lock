@@ -108,6 +108,7 @@ dependencies = [
  "juno",
  "juno_pass",
  "juno_support",
+ "lit",
  "toml",
 ]
 

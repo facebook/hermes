@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %fnc < %s
+
 function fn1(param1){
     var var1 = 1;
     function fn2(param2){

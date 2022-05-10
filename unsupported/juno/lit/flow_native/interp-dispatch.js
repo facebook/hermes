@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %fnc < %s
+
 function bench (lc, fc) {
     var n, fact;
     var res = 0;

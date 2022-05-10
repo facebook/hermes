@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %fnc < %s
+
 var a = {x: 1, ["y"]: 2, z: 3, f: function (){return 4;}}
 a.b = 5;
 a["c"] = 6;
