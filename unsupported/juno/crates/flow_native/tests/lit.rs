@@ -14,15 +14,18 @@ fn run_lit_tests() {
     Command::new(lit)
         .arg("-sv")
         .arg("--param")
-        .arg("test_exec_root=../../target/lit/juno")
+        .arg("test_exec_root=../../target/lit/flow_native")
         .arg("--param")
         .arg(format!(
-            "juno={}",
-            assert_cmd::cargo::cargo_bin("juno").to_str().unwrap()
+            "fnc={}",
+            assert_cmd::cargo::cargo_bin("fnc").to_str().unwrap()
         ))
         .arg("--param")
         .arg(format!("FileCheck={}", lit::filecheck_path()))
-        .arg(format!("{}/../../lit/juno", env!("CARGO_MANIFEST_DIR")))
+        .arg(format!(
+            "{}/../../lit/flow_native",
+            env!("CARGO_MANIFEST_DIR")
+        ))
         .assert()
         .success();
 }

@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %fnc < %s
+
 var a = true;
 var b = 0;
 if(a){

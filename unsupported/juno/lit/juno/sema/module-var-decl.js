@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-var a = {x: 1, ["y"]: 2, z: 3, f: function (){return 4;}}
-a.b = 5;
-a["c"] = 6;
-var b = "z";
-var res = a.c + a.b + a["x"] + a.y + a.z + a.f() + a[b];
+// RUN: %juno %s %s | %FileCheck %s --match-full-lines
+
+var x = 5;
+
+// CHECK-LABEL: Module: {{.*}}/module-var-decl.js
+// CHECK: 1 declarations
+// CHECK: Decl#0 'x' Var NotSpecial

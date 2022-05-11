@@ -36,13 +36,13 @@ std::unique_ptr<HermesRuntime> makeRuntime(bool withEnableSampleProfiling) {
 }
 
 TEST(SamplingProfilerPosixHermesAPITest, ReregistrationIsAnError) {
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       makeRuntime(withSamplingProfilerEnabled)->registerForProfiling(),
       "re-registering HermesVMs for profiling is not allowed");
 }
 
 TEST(SamplingProfilerPosixHermesAPITest, DeregisteringUnregisteredIsAnError) {
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       makeRuntime(withSamplingProfilerDisabled)->unregisterForProfiling(),
       "unregistering HermesVM not registered for profiling is not allowed");
 }
@@ -50,7 +50,7 @@ TEST(SamplingProfilerPosixHermesAPITest, DeregisteringUnregisteredIsAnError) {
 TEST(
     SamplingProfilerPosixHermesAPITest,
     DeregisteringInDifferentThreadIsAnError) {
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       [] {
         auto rt = makeRuntime(withSamplingProfilerEnabled);
         std::thread([&] { rt->unregisterForProfiling(); }).join();

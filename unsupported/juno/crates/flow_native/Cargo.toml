@@ -19,3 +19,4 @@ anyhow = "1.0"
 [dev-dependencies]
 assert_cmd = "0.12"
 toml = "=0.5.7"
+lit = { path = "../lit" }
