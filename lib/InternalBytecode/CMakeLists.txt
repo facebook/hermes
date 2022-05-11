@@ -72,7 +72,7 @@ add_custom_command(
 # in the InternalBytecode.cpp as C/C++ hex literal to initialize a byte array.
 add_custom_command(
   OUTPUT InternalBytecode.inc
-  COMMAND ${PYTHON_EXECUTABLE} xxd.py ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
+  COMMAND ${Python_EXECUTABLE} xxd.py ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
   DEPENDS xxd.py InternalBytecode.hbc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
