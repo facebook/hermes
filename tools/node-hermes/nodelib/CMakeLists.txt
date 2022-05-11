@@ -53,7 +53,7 @@ endforeach()
 # Adds js function wrappers around each of the js files in this directory
 add_custom_command(
   OUTPUT WrappedNode.js
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/AddWrappers.py ${CMAKE_CURRENT_BINARY_DIR}/WrappedNode.js ${node_bytecode_sources_native_path}
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/AddWrappers.py ${CMAKE_CURRENT_BINARY_DIR}/WrappedNode.js ${node_bytecode_sources_native_path}
   DEPENDS ${node_bytecode_sources} ${CMAKE_CURRENT_SOURCE_DIR}/AddWrappers.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
@@ -72,7 +72,7 @@ add_custom_command(
 # in the NodeBytecode.cpp as C/C++ hex literal to initialize a byte array.
 add_custom_command(
   OUTPUT NodeBytecode.inc
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalBytecode/xxd.py ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.inc
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalBytecode/xxd.py ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.inc
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalBytecode/xxd.py NodeBytecode.hbc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM

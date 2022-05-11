@@ -78,8 +78,8 @@ if(NOT DEFINED HERMES_RELEASE_VERSION)
   set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
 endif()
 
-include(FindPythonInterp)
-if (NOT PYTHONINTERP_FOUND)
+find_package(Python COMPONENTS Interpreter)
+if (NOT Python_Interpreter_FOUND)
   message(FATAL_ERROR "Unable to find Python interpreter, required for builds and testing.
 Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
 endif()

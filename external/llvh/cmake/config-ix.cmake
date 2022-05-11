@@ -596,7 +596,7 @@ function(find_python_module module)
   string(TOUPPER ${module_name} module_upper)
   set(FOUND_VAR PY_${module_upper}_FOUND)
 
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import ${module}"
+  execute_process(COMMAND "${Python_EXECUTABLE}" "-c" "import ${module}"
     RESULT_VARIABLE status
     ERROR_QUIET)
 
