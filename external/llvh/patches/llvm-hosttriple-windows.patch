@@ -1,5 +1,4 @@
 diff --git a/external/llvh/cmake/modules/GetHostTriple.cmake b/external/llvh/cmake/modules/GetHostTriple.cmake
-index 7b842450b..0485480c1 100644
 --- a/external/llvh/cmake/modules/GetHostTriple.cmake
 +++ b/external/llvh/cmake/modules/GetHostTriple.cmake
 @@ -14,6 +14,9 @@ function( get_host_triple var )
