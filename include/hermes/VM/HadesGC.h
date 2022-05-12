@@ -34,10 +34,6 @@
 namespace hermes {
 namespace vm {
 
-class WeakRefBase;
-template <class T>
-class WeakRef;
-
 /// A GC with a young and old generation, that does concurrent marking and
 /// sweeping of the old generation.
 ///
@@ -1000,10 +996,6 @@ class HadesGC final : public GCBase {
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
 
-  /// Update all of the weak references and invalidate the ones that point to
-  /// dead objects.
-  void updateWeakReferencesForYoungGen();
-
   /// Update all of the weak references, invalidate the ones that point to
   /// dead objects, and free the ones that were not marked at all.
   void updateWeakReferencesForOldGen();
@@ -1012,9 +1004,6 @@ class HadesGC final : public GCBase {
   /// by only their values. In between marking and sweeping, this function is
   /// called to handle that special case.
   void completeWeakMapMarking(MarkAcceptor &acceptor);
-
-  /// Sets all weak references to unmarked in preparation for a collection.
-  void resetWeakReferences();
 
   /// Return the total number of bytes that are in use by the JS heap.
   uint64_t allocatedBytes() const;
