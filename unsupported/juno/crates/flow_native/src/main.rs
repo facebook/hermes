@@ -89,6 +89,21 @@ impl<W: Write> Compiler<W> {
         }
     }
 
+    fn init_scope<'gc>(
+        &mut self,
+        node: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) -> LexicalScopeId {
+        if let Some(new_scope) = self.sem.node_scope(NodeRc::from_node(lock, node)) {
+            out!(self, "Scope{0} *scope{0} = new Scope{0}();\n", new_scope);
+            out!(self, "scope{}->parent = scope{};\n", new_scope, scope);
+            new_scope
+        } else {
+            scope
+        }
+    }
+
     fn gen_member_prop<'gc>(
         &mut self,
         property: &'gc ast::Node<'gc>,
@@ -160,15 +175,7 @@ impl<W: Write> Compiler<W> {
             }
             Node::BlockStatement(BlockStatement { body, .. }) => {
                 out!(self, "{{\n");
-                let mut inner_scope = scope;
-                if let Some(new_scope) = self.sem.node_scope(NodeRc::from_node(lock, node)) {
-                    inner_scope = new_scope;
-                    out!(
-                        self,
-                        "Scope{new_scope} *scope{new_scope} = new Scope{new_scope}();\n"
-                    );
-                    out!(self, "scope{new_scope}->parent = scope{scope};\n");
-                }
+                let inner_scope = self.init_scope(node, scope, lock);
                 for exp in body.iter() {
                     self.gen_ast(exp, inner_scope, lock)
                 }
@@ -290,6 +297,33 @@ impl<W: Write> Compiler<W> {
                 out!(self, ".getBool()){{\n");
                 self.gen_ast(body, scope, lock);
                 out!(self, "\n}}");
+            }
+            Node::ForStatement(ForStatement {
+                init,
+                test,
+                update,
+                body,
+                ..
+            }) => {
+                out!(self, "{{");
+                let inner_scope = self.init_scope(node, scope, lock);
+                out!(self, "for(");
+                if let Some(init) = init {
+                    self.gen_ast(init, inner_scope, lock);
+                }
+                out!(self, ";");
+                if let Some(test) = test {
+                    self.gen_ast(test, inner_scope, lock);
+                    out!(self, ".getBool()")
+                }
+                out!(self, ";");
+                if let Some(update) = update {
+                    self.gen_ast(update, inner_scope, lock);
+                }
+                out!(self, "){{");
+                self.gen_ast(body, inner_scope, lock);
+                out!(self, "}}");
+                out!(self, "}}")
             }
             Node::IfStatement(IfStatement {
                 test,
