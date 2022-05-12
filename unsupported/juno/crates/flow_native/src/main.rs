@@ -8,8 +8,8 @@
 use anyhow::{self, Context};
 use juno::ast::{self, node_cast, NodeRc};
 use juno::hparser::{self, ParserDialect};
-use juno::sema;
 use juno::sema::{LexicalScopeId, Resolution, SemContext};
+use juno::{resolve_dependency, sema};
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
 use std::fmt;
@@ -60,7 +60,8 @@ impl<W: Write> Compiler<W> {
         out!(self, "#include \"runtime/FNRuntime.h\"\n");
         self.gen_context();
         out!(self, "int main(){{\n");
-        self.gen_ast(node, LexicalScopeId::GLOBAL_SCOPE_ID, lock);
+        let node_scope = self.sem.node_scope(NodeRc::from_node(lock, node));
+        self.gen_ast(node, node_scope.unwrap(), lock);
         out!(self, "return 0;\n}}")
     }
 
@@ -166,7 +167,7 @@ impl<W: Write> Compiler<W> {
     ) {
         use ast::*;
         match node {
-            Node::Program(Program { body, .. }) => {
+            Node::Module(Module { body, .. }) => {
                 out!(self, "Scope{scope} *scope{scope}=new Scope{scope}();\n");
                 for exp in body.iter() {
                     self.gen_ast(exp, scope, lock);
@@ -450,11 +451,22 @@ fn run() -> anyhow::Result<()> {
 
     // Convert to Juno AST.
     let (ast, sem) = {
+        let resolver = resolve_dependency::DefaultResolver::new(ctx.sm());
         let lock = ast::GCLock::new(&mut ctx);
-        let node = parsed.to_ast(&lock, file_id).unwrap();
+        let program = &node_cast!(ast::Node::Program, parsed.to_ast(&lock, file_id).unwrap());
+        let module = ast::builder::Module::build_template(
+            &lock,
+            ast::template::Module {
+                metadata: ast::TemplateMetadata {
+                    phantom: Default::default(),
+                    range: program.metadata.range,
+                },
+                body: program.body.clone(),
+            },
+        );
         (
-            NodeRc::from_node(&lock, node),
-            sema::resolve_program(&lock, SourceId(0), node),
+            NodeRc::from_node(&lock, module),
+            sema::resolve_module(&lock, module, SourceId(0), &resolver),
         )
     };
     Compiler::compile(BufWriter::new(stdout()), ctx, ast, Rc::new(sem));
