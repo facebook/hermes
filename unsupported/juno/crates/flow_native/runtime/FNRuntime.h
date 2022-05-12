@@ -5,9 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifndef FNRUNTIME_H
+#define FNRUNTIME_H
+
 #include <cassert>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 struct FNValue;
 
@@ -16,10 +20,19 @@ struct FNString {
 };
 struct FNObject {
   std::unordered_map<std::string, FNValue> props;
+
+  FNValue &getByVal(FNValue key);
 };
-struct FNClosure {
+struct FNClosure : public FNObject {
+  explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {}
+
   void (*func)(void);
   void *env;
+};
+struct FNArray : public FNObject {
+  explicit FNArray(std::vector<FNValue> arr) : arr(arr) {}
+
+  std::vector<FNValue> arr;
 };
 
 enum class FNType {
@@ -138,3 +151,5 @@ class FNValue {
     return ret;
   }
 };
+
+#endif // FNRUNTIME_H

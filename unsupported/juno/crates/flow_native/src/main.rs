@@ -98,11 +98,12 @@ impl<W: Write> Compiler<W> {
     ) {
         use ast::*;
         if computed {
+            out!(self, "->getByVal(");
             self.gen_ast(property, scope, lock);
-            out!(self, ".getString()->str")
+            out!(self, ")");
         } else {
             let Identifier { name, .. } = node_cast!(Node::Identifier, property);
-            out!(self, "\"{}\"", lock.str(*name))
+            out!(self, "->props[\"{}\"]", lock.str(*name))
         }
     }
 
@@ -223,13 +224,21 @@ impl<W: Write> Compiler<W> {
                         computed,
                         ..
                     } = node_cast!(Node::Property, prop);
-                    out!(self, "tmp->props[");
+                    out!(self, "tmp");
                     self.gen_member_prop(key, *computed, scope, lock);
-                    out!(self, "]=");
+                    out!(self, "=");
                     self.gen_ast(value, scope, lock);
                     out!(self, ";\n");
                 }
                 out!(self, "FNValue::encodeObject(tmp);}})");
+            }
+            Node::ArrayExpression(ArrayExpression { elements, .. }) => {
+                out!(self, "FNValue::encodeObject(new FNArray({{");
+                for elem in elements.iter() {
+                    self.gen_ast(elem, scope, lock);
+                    out!(self, ",");
+                }
+                out!(self, "}}))");
             }
             Node::MemberExpression(MemberExpression {
                 object,
@@ -238,9 +247,8 @@ impl<W: Write> Compiler<W> {
                 ..
             }) => {
                 self.gen_ast(object, scope, lock);
-                out!(self, ".getObject()->props[");
+                out!(self, ".getObject()");
                 self.gen_member_prop(property, *computed, scope, lock);
-                out!(self, "]");
             }
             Node::CallExpression(CallExpression {
                 callee, arguments, ..
