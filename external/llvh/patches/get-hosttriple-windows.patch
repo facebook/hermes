@@ -1,0 +1,23 @@
+diff --git a/external/llvh/cmake/modules/GetHostTriple.cmake b/external/llvh/cmake/modules/GetHostTriple.cmake
+--- a/external/llvh/cmake/modules/GetHostTriple.cmake
++++ b/external/llvh/cmake/modules/GetHostTriple.cmake
+@@ -14,16 +14,9 @@ function( get_host_triple var )
+     else()
+       set( value "i686-pc-windows-gnu" )
+     endif()
+-  elseif( CMAKE_HOST_WIN32 )
+-    set( ABI_NORM "" )
+-    if( ANDROID_ABI STREQUAL "armeabi-v7a" )
+-      set( ABI_NORM "arm" )
+-    elseif( ANDROID_ABI STREQUAL "arm64-v8a" )
+-      set( ABI_NORM "arm64" )
+-    else()
+-      set( ABI_NORM "${ANDROID_ABI}" )
+-    endif()
+-    set( value "${ABI_NORM}-unknown-linux-gnu" )
++  elseif(CMAKE_HOST_WIN32)
++    message(WARNING "LLVM_HOST_TRIPLET can't be  computed on Windows host with this build toolchain")
++    set( value "unknown-unknown-unknown" )
+   else( MSVC )
+     set(config_guess ${LLVM_MAIN_SRC_DIR}/cmake/config.guess)
+     execute_process(COMMAND sh ${config_guess}
