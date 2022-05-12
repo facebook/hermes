@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <cassert>
 #include <string>
 #include <unordered_map>
 
@@ -31,7 +32,10 @@ enum class FNType {
   Object,
   Closure
 };
-struct FNValue {
+
+// WARNING: This implementation is TEMPORARY and purely for development
+// purposes. It will mostly be deleted once we have real type checking.
+class FNValue {
   FNType tag;
   union {
     double num;
@@ -40,6 +44,58 @@ struct FNValue {
     FNObject *obj;
     FNClosure *closure;
   } value;
+
+ public:
+  bool isUndefined() const {
+    return tag == FNType::Undefined;
+  }
+  bool isNull() const {
+    return tag == FNType::Null;
+  }
+  bool isNumber() const {
+    return tag == FNType::Number;
+  }
+  bool isBool() const {
+    return tag == FNType::Bool;
+  }
+  bool isString() const {
+    return tag == FNType::String;
+  }
+  bool isSymbol() const {
+    return tag == FNType::Symbol;
+  }
+  bool isObject() const {
+    return tag == FNType::Object;
+  }
+  bool isClosure() const {
+    return tag == FNType::Closure;
+  }
+
+  double &getNumberRef() {
+    assert(isNumber());
+    return value.num;
+  }
+
+  double getNumber() const {
+    assert(isNumber());
+    return value.num;
+  }
+  bool getBool() const {
+    assert(isBool());
+    return value.b;
+  }
+  FNString *getString() const {
+    assert(isString());
+    return value.str;
+  }
+  FNObject *getObject() const {
+    assert(isObject());
+    return value.obj;
+  }
+  FNClosure *getClosure() const {
+    assert(isClosure());
+    return value.closure;
+  }
 
   static FNValue encodeUndefined() {
     FNValue ret;

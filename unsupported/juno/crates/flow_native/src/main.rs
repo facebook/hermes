@@ -99,7 +99,7 @@ impl<W: Write> Compiler<W> {
         use ast::*;
         if computed {
             self.gen_ast(property, scope, lock);
-            out!(self, ".value.str->str")
+            out!(self, ".getString()->str")
         } else {
             let Identifier { name, .. } = node_cast!(Node::Identifier, property);
             out!(self, "\"{}\"", lock.str(*name))
@@ -238,7 +238,7 @@ impl<W: Write> Compiler<W> {
                 ..
             }) => {
                 self.gen_ast(object, scope, lock);
-                out!(self, ".value.obj->props[");
+                out!(self, ".getObject()->props[");
                 self.gen_member_prop(property, *computed, scope, lock);
                 out!(self, "]");
             }
@@ -247,7 +247,7 @@ impl<W: Write> Compiler<W> {
             }) => {
                 out!(self, "({{FNClosure *tmp=");
                 self.gen_ast(callee, scope, lock);
-                out!(self, ".value.closure;\nreinterpret_cast<FNValue (*)(");
+                out!(self, ".getClosure();\nreinterpret_cast<FNValue (*)(");
                 self.param_list_for_arg_count(arguments.len());
                 out!(self, ")>(tmp->func)(");
                 out!(self, "tmp->env");
@@ -279,7 +279,7 @@ impl<W: Write> Compiler<W> {
             Node::WhileStatement(WhileStatement { test, body, .. }) => {
                 out!(self, "while(");
                 self.gen_ast(test, scope, lock);
-                out!(self, ".value.b){{\n");
+                out!(self, ".getBool()){{\n");
                 self.gen_ast(body, scope, lock);
                 out!(self, "\n}}");
             }
@@ -291,7 +291,7 @@ impl<W: Write> Compiler<W> {
             }) => {
                 out!(self, "if(");
                 self.gen_ast(test, scope, lock);
-                out!(self, ".value.b){{\n");
+                out!(self, ".getBool()){{\n");
                 self.gen_ast(consequent, scope, lock);
                 out!(self, "\n}}\nelse{{\n");
                 if let Some(alt) = alternate {
@@ -311,7 +311,7 @@ impl<W: Write> Compiler<W> {
                     | AssignmentExpressionOperator::MinusAssign
                     | AssignmentExpressionOperator::ModAssign
                     | AssignmentExpressionOperator::DivAssign
-                    | AssignmentExpressionOperator::MultAssign => ".value.num",
+                    | AssignmentExpressionOperator::MultAssign => ".getNumberRef()",
                     _ => panic!("Unsupported assignment"),
                 };
                 self.gen_ast(left, scope, lock);
@@ -349,9 +349,9 @@ impl<W: Write> Compiler<W> {
                 };
                 out!(self, "FNValue::encode{res_type}(");
                 self.gen_ast(left, scope, lock);
-                out!(self, ".value.num{op_str}");
+                out!(self, ".getNumber(){op_str}");
                 self.gen_ast(right, scope, lock);
-                out!(self, ".value.num)");
+                out!(self, ".getNumber())");
             }
             Node::UpdateExpression(UpdateExpression {
                 operator,
@@ -364,7 +364,7 @@ impl<W: Write> Compiler<W> {
                     out!(self, "{}", operator.as_str());
                 }
                 self.gen_ast(argument, scope, lock);
-                out!(self, ".value.num");
+                out!(self, ".getNumberRef()");
                 if !*prefix {
                     out!(self, "{}", operator.as_str());
                 }
