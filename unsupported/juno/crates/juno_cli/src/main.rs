@@ -574,11 +574,13 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
         let sem = if *opt.sema {
             let lock = ast::GCLock::new(&mut ctx);
             let sem = sema::resolve_program(&lock, js_module.id, js_module.ast.node(&lock));
-            println!(
-                "{} error(s), {} warning(s)",
-                lock.sm().num_errors(),
-                lock.sm().num_warnings()
-            );
+            if lock.sm().num_errors() != 0 || lock.sm().num_warnings() != 0 {
+                eprintln!(
+                    "{} error(s), {} warning(s)",
+                    lock.sm().num_errors(),
+                    lock.sm().num_warnings()
+                );
+            }
             if lock.sm().num_errors() != 0 {
                 return Ok(TransformStatus::Error);
             }
@@ -600,9 +602,9 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
             timer.mark("Gen");
         }
     } else {
-        println!("{} modules", js_modules.len());
-
+        // Show information about semantic resolution for all modules if requested.
         if *opt.sema {
+            println!("{} modules", js_modules.len());
             let mut sems = Vec::new();
             let resolver = resolve_dependency::DefaultResolver::new(ctx.sm());
             for module in js_modules.into_values() {
