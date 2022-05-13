@@ -151,10 +151,10 @@ pub struct Context<'ast> {
     noderc_count: Pin<Box<NodeRcCounter>>,
 
     /// All identifiers are kept here.
-    atom_tab: AtomTable,
+    pub atom_table: AtomTable,
 
     /// Source manager of this context.
-    source_mgr: SourceManager,
+    pub source_mgr: SourceManager,
 
     /// `true` if `1` indicates an entry is marked, `false` if `0` indicates an entry is marked.
     /// Flipped every time GC occurs.
@@ -188,7 +188,7 @@ impl<'ast> Context<'ast> {
                 ctx_id: id,
                 count: Cell::new(0),
             })),
-            atom_tab: Default::default(),
+            atom_table: Default::default(),
             source_mgr: Default::default(),
             markbit_marked: true,
             strict_mode: false,
@@ -273,31 +273,31 @@ impl<'ast> Context<'ast> {
 
     /// Return the atom table.
     pub fn atom_table(&self) -> &AtomTable {
-        &self.atom_tab
+        &self.atom_table
     }
 
     /// Add a string to the identifier table.
     #[inline]
     pub fn atom<V: Into<String> + AsRef<str>>(&self, value: V) -> Atom {
-        self.atom_tab.atom(value)
+        self.atom_table.atom(value)
     }
 
     /// Add a string to the identifier table.
     #[inline]
     pub fn atom_u16<V: Into<Vec<u16>> + AsRef<[u16]>>(&self, value: V) -> AtomU16 {
-        self.atom_tab.atom_u16(value)
+        self.atom_table.atom_u16(value)
     }
 
     /// Obtain the contents of an atom from the atom table.
     #[inline]
     pub fn str(&self, index: Atom) -> &str {
-        self.atom_tab.str(index)
+        self.atom_table.str(index)
     }
 
     /// Obtain the contents of an atom from the atom table.
     #[inline]
     pub fn str_u16(&self, index: AtomU16) -> &[u16] {
-        self.atom_tab.str_u16(index)
+        self.atom_table.str_u16(index)
     }
 
     /// Return an immutable reference to SourceManager
@@ -458,7 +458,7 @@ impl HeapSize for Context<'_> {
         result += list_elements.heap_size();
         result += free_list_elements.heap_size();
         result += std::mem::size_of::<NodeRcCounter>();
-        result += self.atom_tab.heap_size();
+        result += self.atom_table.heap_size();
         result += self.source_mgr.heap_size();
         result
     }
