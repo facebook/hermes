@@ -14,3 +14,4 @@ if(a){
 } else{
   b = 5;
 }
+print(b);

@@ -8,7 +8,7 @@
 use anyhow::{self, Context};
 use juno::ast::{self, node_cast, NodeRc};
 use juno::hparser::{self, ParserDialect};
-use juno::sema::{LexicalScopeId, Resolution, SemContext};
+use juno::sema::{DeclKind, LexicalScopeId, Resolution, SemContext};
 use juno::{resolve_dependency, sema};
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
@@ -278,13 +278,22 @@ impl<W: Write> Compiler<W> {
                     Some(Resolution::Decl(decl)) => decl,
                     _ => panic!("Unresolved variable"),
                 };
-                let decl_scope = self.sem.decl(decl_id).scope;
-                let diff: u32 = self.sem.scope(scope).depth - self.sem.scope(decl_scope).depth;
-                out!(self, "scope{scope}->");
-                for _ in 0..diff {
-                    out!(self, "parent->");
+                let decl = self.sem.decl(decl_id);
+                match decl.kind {
+                    DeclKind::UndeclaredGlobalProperty | DeclKind::GlobalProperty => {
+                        out!(self, "global()");
+                        self.gen_member_prop(node, false, scope, lock)
+                    }
+                    _ => {
+                        let diff: u32 =
+                            self.sem.scope(scope).depth - self.sem.scope(decl.scope).depth;
+                        out!(self, "scope{scope}->");
+                        for _ in 0..diff {
+                            out!(self, "parent->");
+                        }
+                        out!(self, "var{decl_id}")
+                    }
                 }
-                out!(self, "var{decl_id}")
             }
             Node::ExpressionStatement(ExpressionStatement {
                 expression: exp, ..
@@ -447,7 +456,7 @@ impl<W: Write> Compiler<W> {
             }
             Node::StringLiteral(StringLiteral { value, .. }) => {
                 let val_str = String::from_utf16_lossy(lock.str_u16(*value));
-                out!(self, "FNValue::encodeString(new FNString{{\"{val_str}\"}})")
+                out!(self, "FNValue::encodeString(new FNString{{{:?}}})", val_str)
             }
             _ => unimplemented!("Unimplemented AST node: {:?}", node.variant()),
         }

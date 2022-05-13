@@ -19,3 +19,35 @@ FNValue &FNObject::getByVal(FNValue key) {
     arr.resize(n + 1, FNValue::encodeUndefined());
   return arr[n];
 }
+
+static FNValue print(void *, FNValue arg) {
+  if (arg.isUndefined())
+    printf("undefined");
+  else if (arg.isNull())
+    printf("null");
+  else if (arg.isNumber())
+    printf("%f", arg.getNumber());
+  else if (arg.isBool())
+    printf("%s", arg.getBool() ? "true" : "false");
+  else if (arg.isString())
+    printf("%s", arg.getString()->str.c_str());
+  else if (arg.isObject())
+    printf("[Object]");
+  else if (arg.isClosure())
+    printf("[Closure]");
+  return FNValue::encodeUndefined();
+}
+
+static FNObject *createGlobalObject() {
+  auto *global = new FNObject();
+  auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
+  global->props["print"] = FNValue::encodeClosure(printClosure);
+  return global;
+}
+
+// Use a per-process global object for now, but we will need to support multiple
+// instances in the same process eventually.
+FNObject *global() {
+  static FNObject *global = createGlobalObject();
+  return global;
+}

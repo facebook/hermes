@@ -20,4 +20,4 @@ function bench (lc, fc) {
     return res;
 }
 
-bench(4e6, 100)
+print(bench(4e6, 100));

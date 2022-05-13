@@ -7,16 +7,10 @@
 
 // RUN: %fnc < %s
 
-function thrower(){
-  throw 11;
-}
-
-var x = 31;
-
-try {
-  thrower();
-} catch (e){
-  let y = e + 3;
-  x += y;
-}
-print(x);
+print("Hello world\n");
+print(10 + 10);
+print("\n");
+print({});
+print("\n");
+print(function(){});
+print("\n");

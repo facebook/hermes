@@ -20,4 +20,4 @@ function fn1(param1){
     return fn2;
 }
 
-fn1(4)(5)(6);
+print(fn1(4)(5)(6));

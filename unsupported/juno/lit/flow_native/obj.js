@@ -12,3 +12,4 @@ a.b = 5;
 a["c"] = 6;
 var b = "z";
 var res = a.c + a.b + a["x"] + a.y + a.z + a.f() + a[b];
+print(res);

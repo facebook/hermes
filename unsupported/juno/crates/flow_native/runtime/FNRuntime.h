@@ -152,4 +152,6 @@ class FNValue {
   }
 };
 
+FNObject *global();
+
 #endif // FNRUNTIME_H
