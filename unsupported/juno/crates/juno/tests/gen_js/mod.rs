@@ -205,6 +205,7 @@ fn test_calls() {
     test_roundtrip("f(...x)");
     test_roundtrip("new f();");
     test_roundtrip("new f(1);");
+    test_roundtrip("new f(...x)");
     test_roundtrip("new(a.b);");
     test_roundtrip("new(a.b());");
     test_roundtrip("new(a.b())();");

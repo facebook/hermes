@@ -878,7 +878,12 @@ impl<W: Write> GenJS<'_, W> {
                     if i > 0 {
                         self.comma();
                     }
-                    self.print_comma_expression(ctx, arg, Path::new(node, NodeField::arguments));
+                    self.print_child(
+                        ctx,
+                        Some(arg),
+                        Path::new(node, NodeField::arguments),
+                        ChildPos::Anywhere,
+                    );
                 }
                 out!(self, ")");
             }
@@ -3598,6 +3603,10 @@ impl<W: Write> GenJS<'_, W> {
             // `new foo().bar` (which gets `bar` on `new foo()`)
             if child_pos == ChildPos::Left && contains_call(ctx, child) {
                 return NeedParens::Yes;
+            }
+            // It's illegal to place parens around spread arguments.
+            if matches!(child, Node::SpreadElement(_)) {
+                return NeedParens::No;
             }
         } else if matches!(path.parent, Node::ExpressionStatement(_)) {
             // Expression statement like (function () {} + 1) needs parens.
