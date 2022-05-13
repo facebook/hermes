@@ -2346,7 +2346,7 @@ impl<W: Write> GenJS<'_, W> {
                 right,
             }) => {
                 if matches!(&node, Node::DeclareTypeAlias(_)) {
-                    out_token!(self, node, "declare type");
+                    out_token!(self, node, "declare type ");
                 } else {
                     out_token!(self, node, "type ");
                 }
@@ -2428,6 +2428,12 @@ impl<W: Write> GenJS<'_, W> {
                 impltype,
                 supertype,
             }) => {
+                if matches!(path,
+                    Some(path) if !matches!(path.parent, Node::DeclareExportDeclaration(_)))
+                    || path.is_none()
+                {
+                    out!(self, "declare ");
+                }
                 out_token!(self, node, "opaque type ");
                 id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
@@ -2442,12 +2448,12 @@ impl<W: Write> GenJS<'_, W> {
                     self.space(ForceSpace::No);
                     supertype.visit(ctx, self, Some(Path::new(node, NodeField::supertype)));
                 }
-                if self.pretty == Pretty::Yes {
-                    out!(self, " = ");
-                } else {
-                    out!(self, "=");
-                }
                 if let Some(impltype) = impltype {
+                    if self.pretty == Pretty::Yes {
+                        out!(self, " = ");
+                    } else {
+                        out!(self, "=");
+                    }
                     impltype.visit(ctx, self, Some(Path::new(node, NodeField::impltype)));
                 }
             }
@@ -2564,6 +2570,7 @@ impl<W: Write> GenJS<'_, W> {
                     if !matches!(path.parent, Node::DeclareExportDeclaration(_)) {
                         out!(self, "declare ");
                     }
+                    out!(self, "var ");
                 }
                 id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
             }

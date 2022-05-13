@@ -502,6 +502,16 @@ fn test_types() {
 }
 
 #[test]
+fn test_declare() {
+    test_roundtrip_flow("declare function foo(): number;");
+    test_roundtrip_flow("declare var x : number;");
+    test_roundtrip_flow("declare export var x: number;");
+    test_roundtrip_flow("declare opaque type x;");
+    test_roundtrip_flow("declare export opaque type x: y;");
+    test_roundtrip_flow("declare type x = number;");
+}
+
+#[test]
 fn test_enum() {
     test_roundtrip_flow("enum Foo {}");
     test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B'}");
