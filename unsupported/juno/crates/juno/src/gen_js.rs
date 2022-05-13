@@ -829,14 +829,18 @@ impl<W: Write> GenJS<'_, W> {
                     if i > 0 {
                         self.comma();
                     }
-                    if let Node::SpreadElement(_) = elem {
-                        elem.visit(ctx, self, Some(Path::new(node, NodeField::elements)));
-                    } else {
-                        self.print_comma_expression(
-                            ctx,
-                            elem,
-                            Path::new(node, NodeField::elements),
-                        );
+                    match elem {
+                        Node::SpreadElement(_) => {
+                            elem.visit(ctx, self, Some(Path::new(node, NodeField::elements)));
+                        }
+                        Node::Empty(_) => {}
+                        _ => {
+                            self.print_comma_expression(
+                                ctx,
+                                elem,
+                                Path::new(node, NodeField::elements),
+                            );
+                        }
                     }
                 }
                 if *trailing_comma {

@@ -328,6 +328,7 @@ fn test_objects() {
 #[test]
 fn test_arrays() {
     test_roundtrip("([])");
+    test_roundtrip("var x = [, 1, , 3]");
     test_roundtrip("var x = [1, 2, 3, ...from]");
     test_roundtrip("var x = [1, 2, 3, ...from, 4, 5, 6]");
 }
