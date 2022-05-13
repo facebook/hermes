@@ -227,6 +227,11 @@ impl<W: Write> GenJS<'_, W> {
             sourcemap: SourceMapBuilder::new(None),
             error: None,
         };
+        for i in 0..ctx.sm().num_sources() {
+            gen_js
+                .sourcemap
+                .add_source(ctx.sm().source_name(SourceId(i as u32)));
+        }
         root.visit(ctx, &mut gen_js, None);
         gen_js.force_newline();
         gen_js.flush_cur_token();
