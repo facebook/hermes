@@ -20,6 +20,7 @@ use sourcemap::SourceMap;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
+use std::ops::DerefMut;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
@@ -381,7 +382,7 @@ fn gen_output(
     input_map: &Option<SourceMap>,
 ) -> anyhow::Result<bool> {
     let output_path = &*opt.output_path;
-    let out: Box<dyn Write> = if output_path == Path::new("-") {
+    let mut out: Box<dyn Write> = if output_path == Path::new("-") {
         Box::new(std::io::stdout())
     } else {
         Box::new(File::create(output_path).with_context(|| output_path.display().to_string())?)
@@ -420,7 +421,7 @@ fn gen_output(
         }
         Gen::Js | Gen::ResolvedJs => {
             let generated_map = gen_js::generate(
-                out,
+                out.deref_mut(),
                 ctx,
                 &final_ast,
                 if !*opt.pretty {
@@ -438,12 +439,13 @@ fn gen_output(
                 // only to replace the existing one.
                 let mut path = output_path.clone().into_os_string();
                 path.push(".map");
-                let sourcemap_file = File::create(PathBuf::from(path))?;
+                let sourcemap_file = File::create(PathBuf::from(&path))?;
                 let merged_map = match input_map {
                     None => generated_map,
                     Some(input_map) => merge_sourcemaps(input_map, &generated_map),
                 };
                 merged_map.to_writer(sourcemap_file)?;
+                write!(out, "\n//# sourceMappingURL={}", path.to_str().unwrap())?;
             }
             Ok(true)
         }
