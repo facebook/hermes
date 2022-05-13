@@ -3648,6 +3648,12 @@ impl<W: Write> GenJS<'_, W> {
         {
             // It's illegal to place parens around spread arguments.
             return NeedParens::No;
+        } else if matches!(path.parent, Node::AssignmentExpression(_))
+            && matches!(child, Node::ObjectPattern(_) | Node::ArrayPattern(_))
+            && child_pos == ChildPos::Left
+        {
+            // Avoid parentheses for destructuring patterns.
+            return NeedParens::No;
         }
 
         let (child_prec, _child_assoc) = self.get_precedence(child);
