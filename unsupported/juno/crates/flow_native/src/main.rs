@@ -342,6 +342,32 @@ impl<W: Write> Compiler<W> {
                 }
                 out!(self, "\n}}");
             }
+            Node::TryStatement(TryStatement { block, handler, .. }) => {
+                out!(self, "try {{");
+                self.gen_ast(block, scope, lock);
+                out!(self, "}} catch (FNValue ex){{");
+                let handler = if let Some(handler) = handler {
+                    handler
+                } else {
+                    todo!("finally is not implemented");
+                };
+                let CatchClause { param, body, .. } = node_cast!(Node::CatchClause, handler);
+                let new_scope = self.init_scope(handler, scope, lock);
+                let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, body);
+                if let Some(param) = param {
+                    self.gen_ast(param, new_scope, lock);
+                    out!(self, "=ex;");
+                }
+                for stm in body.iter() {
+                    self.gen_ast(stm, new_scope, lock);
+                    out!(self, ";");
+                }
+                out!(self, "}}");
+            }
+            Node::ThrowStatement(ThrowStatement { argument, .. }) => {
+                out!(self, "throw ");
+                self.gen_ast(argument, scope, lock);
+            }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
                 right,
