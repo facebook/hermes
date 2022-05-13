@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::HeapSize;
 use std::cell::{Cell, UnsafeCell};
 use std::collections::HashMap;
 use std::fmt::Formatter;
@@ -37,6 +38,15 @@ struct Inner {
     /// Since strings are never removed or modified, the lifetime of the key
     /// is effectively static.
     map_u16: HashMap<&'static [u16], NumIndex>,
+}
+
+impl HeapSize for Inner {
+    fn heap_size(&self) -> usize {
+        self.strings.heap_size()
+            + self.map.heap_size()
+            + self.strings_u16.heap_size()
+            + self.map_u16.heap_size()
+    }
 }
 
 /// This represents a unique string index in the table.
@@ -239,6 +249,12 @@ impl AtomTable {
     /// The table must not be destroyed or moved while it is set.
     pub unsafe fn unsafe_set_debug_context(ptr: *const Self) -> *const Self {
         DEBUG_TABLE.with(|debug_table| debug_table.replace(ptr))
+    }
+}
+
+impl HeapSize for AtomTable {
+    fn heap_size(&self) -> usize {
+        unsafe { &*self.0.get() }.heap_size()
     }
 }
 

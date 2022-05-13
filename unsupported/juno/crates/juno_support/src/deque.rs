@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use crate::HeapSize;
+
 /// Append-only deque which ensures the elements pushed into it never move.
 /// Allocates chunks in doubling capacities.
 #[derive(Debug)]
@@ -56,6 +58,19 @@ impl<T> Deque<T> {
         chunk.last().unwrap()
     }
 
+    /// Return the number of elements that have been appended to the deque.
+    pub fn len(&self) -> usize {
+        let mut result = 0;
+        for chunk in &self.storage {
+            result += chunk.len();
+        }
+        result
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.storage.is_empty()
+    }
+
     /// Iterator over every element of the deque.
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.storage.iter().flatten()
@@ -75,6 +90,16 @@ impl<T> Deque<T> {
         if capacity < MAX_CHUNK_CAPACITY {
             self.next_chunk_capacity = capacity * 2;
         }
+    }
+}
+
+impl<T> HeapSize for Deque<T> {
+    fn heap_size(&self) -> usize {
+        let mut result = 0;
+        for chunk in &self.storage {
+            result += chunk.heap_size();
+        }
+        result
     }
 }
 

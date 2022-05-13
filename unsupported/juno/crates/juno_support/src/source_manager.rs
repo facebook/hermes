@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::NullTerminatedBuf;
+use crate::{HeapSize, NullTerminatedBuf};
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -191,6 +191,12 @@ impl SourceManager {
             range.start.col,
             msg.into()
         );
+    }
+}
+
+impl HeapSize for SourceManager {
+    fn heap_size(&self) -> usize {
+        self.sources.heap_size() + self.filenames.heap_size()
     }
 }
 

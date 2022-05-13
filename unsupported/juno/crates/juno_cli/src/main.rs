@@ -14,8 +14,8 @@ use juno::sourcemap::merge_sourcemaps;
 use juno::{gen_js, resolve_dependency, sema};
 use juno_pass::PassManager;
 use juno_support::source_manager::SourceId;
-use juno_support::NullTerminatedBuf;
 use juno_support::{fetchurl, Timer};
+use juno_support::{HeapSize, NullTerminatedBuf};
 use sourcemap::SourceMap;
 use std::collections::HashMap;
 use std::fs::File;
@@ -98,6 +98,9 @@ struct Options {
 
     /// Measure and print times.
     xtime: Opt<bool>,
+
+    /// Measure and print memory.
+    xmem: Opt<bool>,
 }
 
 impl Options {
@@ -284,6 +287,15 @@ impl Options {
                 OptDesc {
                     long: Some("Xtime"),
                     desc: Some("Measure and print times."),
+                    hidden: Hidden::Yes,
+                    ..Default::default()
+                },
+            ),
+            xmem: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("Xmem"),
+                    desc: Some("Measure and print memory usage."),
                     hidden: Hidden::Yes,
                     ..Default::default()
                 },
@@ -619,6 +631,13 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
             drop(sems);
             timer.mark("Drop Sema");
         }
+    }
+
+    // Optionally print memory usage.
+    if *opt.xmem {
+        println!("Context size:  {} MB", ctx.heap_size() / 1_000_000);
+        println!("Storage size:  {} MB", ctx.storage_size() / 1_000_000);
+        println!("# nodes:       {}", ctx.num_nodes());
     }
 
     // Drop the AST. We are doing it explicitly just to measure the time.

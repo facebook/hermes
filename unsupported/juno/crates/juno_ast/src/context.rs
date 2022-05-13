@@ -9,7 +9,7 @@
 
 use crate::{Node, Path, SourceManager, Visitor};
 use juno_support::atom_table::{Atom, AtomTable, AtomU16};
-use juno_support::Deque;
+use juno_support::{Deque, HeapSize};
 use libc::c_void;
 use memoffset::offset_of;
 use std::hash::{Hash, Hasher};
@@ -421,6 +421,46 @@ impl<'ast> Context<'ast> {
         }
 
         self.markbit_marked = !self.markbit_marked;
+    }
+
+    /// Returns the number of node slots which have been allocated.
+    /// Includes nodes currently in use as well as nodes in the free list.
+    pub fn num_nodes(&self) -> usize {
+        let nodes = unsafe { &*self.nodes.get() };
+        nodes.len()
+    }
+
+    /// Returns the approximate size of just the AST storages in bytes.
+    /// Includes the allocated nodes, lists, as well as free lists for both.
+    pub fn storage_size(&self) -> usize {
+        let nodes = unsafe { &*self.nodes.get() };
+        let free_nodes = unsafe { &*self.free_nodes.get() };
+        let list_elements = unsafe { &*self.list_elements.get() };
+        let free_list_elements = unsafe { &*self.free_list_elements.get() };
+        let mut result = 0;
+        result += nodes.heap_size();
+        result += free_nodes.heap_size();
+        result += list_elements.heap_size();
+        result += free_list_elements.heap_size();
+        result
+    }
+}
+
+impl HeapSize for Context<'_> {
+    fn heap_size(&self) -> usize {
+        let nodes = unsafe { &*self.nodes.get() };
+        let free_nodes = unsafe { &*self.free_nodes.get() };
+        let list_elements = unsafe { &*self.list_elements.get() };
+        let free_list_elements = unsafe { &*self.free_list_elements.get() };
+        let mut result = 0;
+        result += nodes.heap_size();
+        result += free_nodes.heap_size();
+        result += list_elements.heap_size();
+        result += free_list_elements.heap_size();
+        result += std::mem::size_of::<NodeRcCounter>();
+        result += self.atom_tab.heap_size();
+        result += self.source_mgr.heap_size();
+        result
     }
 }
 
