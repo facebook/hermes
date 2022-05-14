@@ -6,8 +6,6 @@
  */
 
 #[macro_use]
-mod addr;
-#[macro_use]
 mod jsvalue;
 mod completion_record;
 mod environment_record;

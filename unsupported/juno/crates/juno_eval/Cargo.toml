@@ -7,4 +7,5 @@ license = "MIT"
 
 [dependencies]
 juno_ast = { path = "../juno_ast" }
+juno_support = { path = "../juno_support" }
 num = "0.4.0"

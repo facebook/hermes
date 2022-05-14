@@ -200,6 +200,7 @@ name = "juno_eval"
 version = "0.1.0"
 dependencies = [
  "juno_ast",
+ "juno_support",
  "num",
 ]
 

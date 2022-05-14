@@ -8,37 +8,9 @@
 use crate::ast::NodeRc;
 use juno_ast::{node_cast, GCLock, Node};
 use juno_support::atom_table::Atom;
+use juno_support::declare_opaque_id;
 use juno_support::source_manager::SourceId;
 use std::collections::HashMap;
-use std::fmt::Display;
-use std::num::NonZeroU32;
-
-macro_rules! declare_opaque_id {
-    ($name:ident) => {
-        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-        pub struct $name(NonZeroU32);
-        impl $name {
-            #[inline]
-            fn new(v: usize) -> Self {
-                debug_assert!(v < u32::MAX as usize);
-                unsafe { Self::new_unchecked(v) }
-            }
-            #[inline]
-            const unsafe fn new_unchecked(v: usize) -> Self {
-                Self(NonZeroU32::new_unchecked((v + 1) as u32))
-            }
-            fn as_usize(self) -> usize {
-                (self.0.get() - 1) as usize
-            }
-        }
-        impl Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.as_usize())?;
-                Ok(())
-            }
-        }
-    };
-}
 
 declare_opaque_id!(DeclId);
 declare_opaque_id!(LexicalScopeId);

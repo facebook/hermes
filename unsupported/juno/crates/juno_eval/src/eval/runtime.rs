@@ -14,6 +14,7 @@ use super::operations::*;
 use super::script::*;
 use crate::eval::jsvalue::{JSString, JSSymbol, JSValue};
 use juno_ast::NodeRc;
+use juno_support::declare_opaque_id;
 use std::fmt::Display;
 
 pub type Realm = ();

@@ -10,6 +10,7 @@ use super::function::*;
 use super::operations::*;
 use super::runtime::*;
 use crate::eval::jsvalue::JSValue;
+use juno_support::declare_opaque_id;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 

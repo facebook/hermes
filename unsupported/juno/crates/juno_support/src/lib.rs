@@ -22,6 +22,10 @@ pub use heap_size::HeapSize;
 #[allow(unused_macros)]
 pub mod str_enum;
 
+#[macro_use]
+#[allow(unused_macros)]
+pub mod opaque_id;
+
 pub mod atom_table;
 pub mod case;
 pub mod convert;
