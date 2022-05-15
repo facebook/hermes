@@ -21,26 +21,26 @@ from os.path import basename, isdir, isfile, join, splitext
 try:
     import testsuite.esprima_test_runner as esprima
     from testsuite.testsuite_skiplist import (
-        SKIP_LIST,
         HANDLESAN_SKIP_LIST,
+        INTL_TESTS,
         LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
-        UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
-        INTL_TESTS,
+        SKIP_LIST,
+        UNSUPPORTED_FEATURES,
     )
 except ImportError:
     import esprima_test_runner as esprima
 
     # Hacky way to handle non-buck builds that call the file immediately.
     from testsuite_skiplist import (
-        SKIP_LIST,
         HANDLESAN_SKIP_LIST,
+        INTL_TESTS,
         LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
-        UNSUPPORTED_FEATURES,
         PERMANENT_UNSUPPORTED_FEATURES,
-        INTL_TESTS,
+        SKIP_LIST,
+        UNSUPPORTED_FEATURES,
     )
 
 
