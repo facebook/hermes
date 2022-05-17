@@ -3,8 +3,11 @@ on:
   workflow_dispatch:
     inputs:
       rnVersion:
-        description: 'The RN version that triggered this tagging'
+        description: "The RN version that triggered this tagging"
         required: true
+      targetSha:
+        description: "The SHA you want to tag. If not specified it will tag the HEAD of main"
+        required: false
 
 jobs:
   publish:
@@ -15,6 +18,12 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
 
+      - name: Get the target SHA
+        id: targetSha
+        run: echo "::set-output name=targetSha::$(if [ -z "$TARGET_SHA" ]; then echo $GITHUB_SHA; else echo $TARGET_SHA; fi)"
+        env:
+          TARGET_SHA: ${{ github.event.inputs.targetSha }}
+
       - name: Create tag
         uses: actions/github-script@v5
         with:
@@ -22,6 +31,6 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/hermes-${{ steps.date.outputs.date }}-RNv${{ github.event.inputs.rnVersion }}-${{ github.sha }}',
-              sha: context.sha
+              ref: 'refs/tags/hermes-${{ steps.date.outputs.date }}-RNv${{ github.event.inputs.rnVersion }}-${{ steps.targetSha.outputs.targetSha }}',
+              sha: '${{ steps.targetSha.outputs.targetSha }}'
             })
