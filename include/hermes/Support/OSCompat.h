@@ -190,6 +190,10 @@ std::vector<bool> sched_getaffinity();
 /// or -1 on error.
 int sched_getcpu();
 
+/// \return a monotonically increasing count of time, where the unit depends on
+/// the implementation.
+uint64_t cpu_cycle_counter();
+
 #ifdef _WINDOWS
 
 #define STDIN_FILENO 0

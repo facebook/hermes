@@ -704,6 +704,21 @@ int sched_getcpu() {
 }
 #endif
 
+uint64_t cpu_cycle_counter() {
+#if defined(__aarch64__)
+  // Clang's builtin causes SIGILL on some 64-bit ARM environments.
+  uint64_t cnt;
+  __asm __volatile("mrs %0, cntvct_el0" : "=&r"(cnt));
+  return cnt;
+#elif __has_builtin(__builtin_readcyclecounter)
+  return __builtin_readcyclecounter();
+#else
+  timespec t;
+  clock_gettime(CLOCK_MONOTONIC, &t);
+  return t.tv_sec * 1000LL * 1000LL * 1000LL + t.tv_nsec;
+#endif
+}
+
 bool set_env(const char *name, const char *value) {
   // Enforce the contract of this function that value must not be empty
   assert(*value != '\0' && "value cannot be empty string");

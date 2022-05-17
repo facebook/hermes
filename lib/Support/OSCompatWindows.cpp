@@ -19,6 +19,7 @@
 #define NOMINMAX // do not define min/max macros
 #include <windows.h>
 
+#include <intrin.h>
 #include <io.h>
 #include <psapi.h>
 
@@ -405,6 +406,18 @@ std::vector<bool> sched_getaffinity() {
 int sched_getcpu() {
   // Not yet supported.
   return -1;
+}
+
+uint64_t cpu_cycle_counter() {
+#if defined(_MSC_VER)
+  return __rdtsc();
+#elif __has_builtin(__builtin_readcyclecounter)
+  return __builtin_readcyclecounter();
+#else
+  LARGE_INTEGER cnt;
+  QueryPerformanceCounter(&cnt);
+  return cnt;
+#endif
 }
 
 bool set_env(const char *name, const char *value) {
