@@ -18,6 +18,7 @@ import type {
   FunctionParameter,
   FunctionTypeParam,
   JSXAttribute,
+  ImportDeclaration,
   ObjectTypeCallProperty,
   ObjectTypeIndexer,
   ObjectTypeInternalSlot,
@@ -43,6 +44,7 @@ export type RemoveNodeMutation = $ReadOnly<{
     | FunctionParameter
     | FunctionTypeParam
     | JSXAttribute
+    | ImportDeclaration
     | ObjectTypeCallProperty
     | ObjectTypeIndexer
     | ObjectTypeInternalSlot
@@ -131,6 +133,10 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
       case 'JSXAttribute':
         assertParent('JSXOpeningElement');
         return 'attributes';
+
+      case 'ImportDeclaration':
+        assertParent('Program');
+        return 'body';
 
       case 'ObjectTypeCallProperty':
         assertParent('ObjectTypeAnnotation');
