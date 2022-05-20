@@ -43,17 +43,42 @@ impl<W: Write> Writer<W> {
     }
 }
 
+/// A type used to represent the result of an intermediate computation stored in
+/// a temporary variable in C++. It implements Display to print the name of that
+/// variable.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+struct ValueId(usize);
+impl fmt::Display for ValueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "t{}", self.0)
+    }
+}
+
 struct Compiler<W: Write> {
     writer: Writer<W>,
     sem: Rc<SemContext>,
+    /// The number of ValueIds that have been created so far. This is also used
+    /// to give a unique index to each one.
+    num_values: usize,
 }
 
 impl<W: Write> Compiler<W> {
     pub fn compile(out: BufWriter<W>, mut ctx: ast::Context, ast: NodeRc, sem: Rc<SemContext>) {
         let lock = ast::GCLock::new(&mut ctx);
         let writer = Writer { out };
-        let mut comp = Compiler { writer, sem };
+        let mut comp = Compiler {
+            writer,
+            sem,
+            num_values: 0,
+        };
         comp.gen_program(ast.node(&lock), &lock)
+    }
+
+    /// Returns a newly created unique ValueId.
+    fn new_value(&mut self) -> ValueId {
+        let result = ValueId(self.num_values);
+        self.num_values += 1;
+        result
     }
 
     fn gen_program<'gc>(&mut self, node: &'gc ast::Node<'gc>, lock: &'gc ast::GCLock) {
