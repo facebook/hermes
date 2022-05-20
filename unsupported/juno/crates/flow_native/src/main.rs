@@ -64,8 +64,8 @@ impl<W: Write> Compiler<W> {
         let scope = self.sem.node_scope(NodeRc::from_node(lock, node)).unwrap();
         let Module { body, .. } = node_cast!(Node::Module, node);
         out!(self, "Scope{0} *scope{0}=new Scope{0}();\n", scope);
-        for stm in body.iter() {
-            self.gen_ast(stm, scope, lock);
+        for stmt in body.iter() {
+            self.gen_stmt(stmt, scope, lock);
             out!(self, ";")
         }
         out!(self, "return 0;\n}}")
@@ -121,7 +121,7 @@ impl<W: Write> Compiler<W> {
         use ast::*;
         if computed {
             out!(self, "->getByVal(");
-            self.gen_ast(property, scope, lock);
+            self.gen_expr(property, scope, lock);
             out!(self, ")");
         } else {
             let Identifier { name, .. } = node_cast!(Node::Identifier, property);
@@ -154,18 +154,18 @@ impl<W: Write> Compiler<W> {
         );
         out!(self, "scope{fn_scope}->parent = scope{scope};\n");
         for (i, param) in params.iter().enumerate() {
-            self.gen_ast(param, fn_scope, lock);
+            self.gen_expr(param, fn_scope, lock);
             out!(self, "=param{i};\n")
         }
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
-        for exp in body.iter() {
-            self.gen_ast(exp, fn_scope, lock);
+        for stmt in body.iter() {
+            self.gen_stmt(stmt, fn_scope, lock);
             out!(self, ";\n");
         }
         out!(self, "}}), scope{scope}}})");
     }
 
-    fn gen_ast<'gc>(
+    fn gen_expr<'gc>(
         &mut self,
         node: &'gc ast::Node<'gc>,
         scope: LexicalScopeId,
@@ -173,54 +173,8 @@ impl<W: Write> Compiler<W> {
     ) {
         use ast::*;
         match node {
-            Node::BlockStatement(BlockStatement { body, .. }) => {
-                out!(self, "{{\n");
-                let inner_scope = self.init_scope(node, scope, lock);
-                for exp in body.iter() {
-                    self.gen_ast(exp, inner_scope, lock)
-                }
-                out!(self, "}}\n");
-            }
-            Node::VariableDeclaration(VariableDeclaration { declarations, .. }) => {
-                for decl in declarations.iter() {
-                    self.gen_ast(decl, scope, lock)
-                }
-            }
-            Node::VariableDeclarator(VariableDeclarator {
-                init: init_opt,
-                id: ident,
-                ..
-            }) => {
-                if let Some(init) = init_opt {
-                    self.gen_ast(ident, scope, lock);
-                    out!(self, "=");
-                    self.gen_ast(init, scope, lock)
-                }
-            }
-            Node::FunctionDeclaration(FunctionDeclaration {
-                id: ident_opt,
-                params,
-                body,
-                ..
-            }) => {
-                out!(self, "(");
-                if let Some(ident) = ident_opt {
-                    self.gen_ast(ident, scope, lock);
-                    out!(self, "=");
-                }
-                self.gen_function_exp(params, body, scope, lock);
-                out!(self, ")");
-            }
             Node::FunctionExpression(FunctionExpression { params, body, .. }) => {
                 self.gen_function_exp(params, body, scope, lock)
-            }
-            Node::ReturnStatement(ReturnStatement { argument, .. }) => {
-                out!(self, "return ");
-                match argument {
-                    Some(node) => self.gen_ast(node, scope, lock),
-                    None => out!(self, "FNValue::encodeUndefined()"),
-                };
-                out!(self, ";");
             }
             Node::ObjectExpression(ObjectExpression { properties, .. }) => {
                 out!(self, "({{FNObject *tmp=new FNObject();\n");
@@ -234,7 +188,7 @@ impl<W: Write> Compiler<W> {
                     out!(self, "tmp");
                     self.gen_member_prop(key, *computed, scope, lock);
                     out!(self, "=");
-                    self.gen_ast(value, scope, lock);
+                    self.gen_expr(value, scope, lock);
                     out!(self, ";\n");
                 }
                 out!(self, "FNValue::encodeObject(tmp);}})");
@@ -242,7 +196,7 @@ impl<W: Write> Compiler<W> {
             Node::ArrayExpression(ArrayExpression { elements, .. }) => {
                 out!(self, "FNValue::encodeObject(new FNArray({{");
                 for elem in elements.iter() {
-                    self.gen_ast(elem, scope, lock);
+                    self.gen_expr(elem, scope, lock);
                     out!(self, ",");
                 }
                 out!(self, "}}))");
@@ -253,7 +207,7 @@ impl<W: Write> Compiler<W> {
                 computed,
                 ..
             }) => {
-                self.gen_ast(object, scope, lock);
+                self.gen_expr(object, scope, lock);
                 out!(self, ".getObject()");
                 self.gen_member_prop(property, *computed, scope, lock);
             }
@@ -261,14 +215,14 @@ impl<W: Write> Compiler<W> {
                 callee, arguments, ..
             }) => {
                 out!(self, "({{FNClosure *tmp=");
-                self.gen_ast(callee, scope, lock);
+                self.gen_expr(callee, scope, lock);
                 out!(self, ".getClosure();\nreinterpret_cast<FNValue (*)(");
                 self.param_list_for_arg_count(arguments.len());
                 out!(self, ")>(tmp->func)(");
                 out!(self, "tmp->env");
                 for arg in arguments.iter() {
                     out!(self, ", ");
-                    self.gen_ast(arg, scope, lock)
+                    self.gen_expr(arg, scope, lock)
                 }
                 out!(self, ");}})");
             }
@@ -294,88 +248,6 @@ impl<W: Write> Compiler<W> {
                     }
                 }
             }
-            Node::ExpressionStatement(ExpressionStatement {
-                expression: exp, ..
-            }) => {
-                self.gen_ast(exp, scope, lock);
-                out!(self, ";")
-            }
-            Node::WhileStatement(WhileStatement { test, body, .. }) => {
-                out!(self, "while(");
-                self.gen_ast(test, scope, lock);
-                out!(self, ".getBool()){{\n");
-                self.gen_ast(body, scope, lock);
-                out!(self, "\n}}");
-            }
-            Node::ForStatement(ForStatement {
-                init,
-                test,
-                update,
-                body,
-                ..
-            }) => {
-                out!(self, "{{");
-                let inner_scope = self.init_scope(node, scope, lock);
-                out!(self, "for(");
-                if let Some(init) = init {
-                    self.gen_ast(init, inner_scope, lock);
-                }
-                out!(self, ";");
-                if let Some(test) = test {
-                    self.gen_ast(test, inner_scope, lock);
-                    out!(self, ".getBool()")
-                }
-                out!(self, ";");
-                if let Some(update) = update {
-                    self.gen_ast(update, inner_scope, lock);
-                }
-                out!(self, "){{");
-                self.gen_ast(body, inner_scope, lock);
-                out!(self, "}}");
-                out!(self, "}}")
-            }
-            Node::IfStatement(IfStatement {
-                test,
-                consequent,
-                alternate,
-                ..
-            }) => {
-                out!(self, "if(");
-                self.gen_ast(test, scope, lock);
-                out!(self, ".getBool()){{\n");
-                self.gen_ast(consequent, scope, lock);
-                out!(self, "\n}}\nelse{{\n");
-                if let Some(alt) = alternate {
-                    self.gen_ast(alt, scope, lock)
-                }
-                out!(self, "\n}}");
-            }
-            Node::TryStatement(TryStatement { block, handler, .. }) => {
-                out!(self, "try {{");
-                self.gen_ast(block, scope, lock);
-                out!(self, "}} catch (FNValue ex){{");
-                let handler = if let Some(handler) = handler {
-                    handler
-                } else {
-                    todo!("finally is not implemented");
-                };
-                let CatchClause { param, body, .. } = node_cast!(Node::CatchClause, handler);
-                let new_scope = self.init_scope(handler, scope, lock);
-                let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, body);
-                if let Some(param) = param {
-                    self.gen_ast(param, new_scope, lock);
-                    out!(self, "=ex;");
-                }
-                for stm in body.iter() {
-                    self.gen_ast(stm, new_scope, lock);
-                    out!(self, ";");
-                }
-                out!(self, "}}");
-            }
-            Node::ThrowStatement(ThrowStatement { argument, .. }) => {
-                out!(self, "throw ");
-                self.gen_ast(argument, scope, lock);
-            }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
                 right,
@@ -391,9 +263,9 @@ impl<W: Write> Compiler<W> {
                     | AssignmentExpressionOperator::MultAssign => ".getNumberRef()",
                     _ => panic!("Unsupported assignment"),
                 };
-                self.gen_ast(left, scope, lock);
+                self.gen_expr(left, scope, lock);
                 out!(self, "{type_str}{}", op.as_str());
-                self.gen_ast(right, scope, lock);
+                self.gen_expr(right, scope, lock);
                 out!(self, "{type_str}");
             }
             Node::BinaryExpression(BinaryExpression {
@@ -425,9 +297,9 @@ impl<W: Write> Compiler<W> {
                     _ => panic!("Unsupported operator"),
                 };
                 out!(self, "FNValue::encode{res_type}(");
-                self.gen_ast(left, scope, lock);
+                self.gen_expr(left, scope, lock);
                 out!(self, ".getNumber(){op_str}");
-                self.gen_ast(right, scope, lock);
+                self.gen_expr(right, scope, lock);
                 out!(self, ".getNumber())");
             }
             Node::UpdateExpression(UpdateExpression {
@@ -440,7 +312,7 @@ impl<W: Write> Compiler<W> {
                 if *prefix {
                     out!(self, "{}", operator.as_str());
                 }
-                self.gen_ast(argument, scope, lock);
+                self.gen_expr(argument, scope, lock);
                 out!(self, ".getNumberRef()");
                 if !*prefix {
                     out!(self, "{}", operator.as_str());
@@ -457,7 +329,148 @@ impl<W: Write> Compiler<W> {
                 let val_str = String::from_utf16_lossy(lock.str_u16(*value));
                 out!(self, "FNValue::encodeString(new FNString{{{:?}}})", val_str)
             }
-            _ => unimplemented!("Unimplemented AST node: {:?}", node.variant()),
+            _ => unimplemented!("Unimplemented expression: {:?}", node.variant()),
+        }
+    }
+
+    fn gen_stmt<'gc>(
+        &mut self,
+        node: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) {
+        use ast::*;
+        match node {
+            Node::BlockStatement(BlockStatement { body, .. }) => {
+                out!(self, "{{\n");
+                let inner_scope = self.init_scope(node, scope, lock);
+                for exp in body.iter() {
+                    self.gen_stmt(exp, inner_scope, lock)
+                }
+                out!(self, "}}\n");
+            }
+            Node::VariableDeclaration(VariableDeclaration { declarations, .. }) => {
+                for decl in declarations.iter() {
+                    self.gen_stmt(decl, scope, lock)
+                }
+            }
+            Node::VariableDeclarator(VariableDeclarator {
+                init: init_opt,
+                id: ident,
+                ..
+            }) => {
+                if let Some(init) = init_opt {
+                    self.gen_expr(ident, scope, lock);
+                    out!(self, "=");
+                    self.gen_expr(init, scope, lock)
+                }
+            }
+            Node::FunctionDeclaration(FunctionDeclaration {
+                id: ident_opt,
+                params,
+                body,
+                ..
+            }) => {
+                out!(self, "(");
+                if let Some(ident) = ident_opt {
+                    self.gen_expr(ident, scope, lock);
+                    out!(self, "=");
+                }
+                self.gen_function_exp(params, body, scope, lock);
+                out!(self, ")");
+            }
+
+            Node::ReturnStatement(ReturnStatement { argument, .. }) => {
+                out!(self, "return ");
+                match argument {
+                    Some(node) => self.gen_expr(node, scope, lock),
+                    None => out!(self, "FNValue::encodeUndefined()"),
+                };
+                out!(self, ";");
+            }
+            Node::ExpressionStatement(ExpressionStatement {
+                expression: exp, ..
+            }) => {
+                self.gen_expr(exp, scope, lock);
+                out!(self, ";")
+            }
+            Node::WhileStatement(WhileStatement { test, body, .. }) => {
+                out!(self, "while(");
+                self.gen_expr(test, scope, lock);
+                out!(self, ".getBool()){{\n");
+                self.gen_stmt(body, scope, lock);
+                out!(self, "\n}}");
+            }
+            Node::ForStatement(ForStatement {
+                init,
+                test,
+                update,
+                body,
+                ..
+            }) => {
+                out!(self, "{{");
+                let inner_scope = self.init_scope(node, scope, lock);
+                out!(self, "for(");
+                if let Some(init) = init {
+                    self.gen_stmt(init, inner_scope, lock);
+                }
+                out!(self, ";");
+                if let Some(test) = test {
+                    self.gen_expr(test, inner_scope, lock);
+                    out!(self, ".getBool()")
+                }
+                out!(self, ";");
+                if let Some(update) = update {
+                    self.gen_expr(update, inner_scope, lock);
+                }
+                out!(self, "){{");
+                self.gen_stmt(body, inner_scope, lock);
+                out!(self, "}}");
+                out!(self, "}}")
+            }
+            Node::IfStatement(IfStatement {
+                test,
+                consequent,
+                alternate,
+                ..
+            }) => {
+                out!(self, "if(");
+                self.gen_expr(test, scope, lock);
+                out!(self, ".getBool()){{\n");
+                self.gen_stmt(consequent, scope, lock);
+                out!(self, "\n}}\nelse{{\n");
+                if let Some(alt) = alternate {
+                    self.gen_stmt(alt, scope, lock)
+                }
+                out!(self, "\n}}");
+            }
+            Node::TryStatement(TryStatement { block, handler, .. }) => {
+                out!(self, "try {{");
+                self.gen_stmt(block, scope, lock);
+                out!(self, "}} catch (FNValue ex){{");
+                let handler = if let Some(handler) = handler {
+                    handler
+                } else {
+                    todo!("finally is not implemented");
+                };
+                let CatchClause { param, body, .. } = node_cast!(Node::CatchClause, handler);
+                let new_scope = self.init_scope(handler, scope, lock);
+                let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, body);
+                if let Some(param) = param {
+                    self.gen_expr(param, new_scope, lock);
+                    out!(self, "=ex;");
+                }
+                for stmt in body.iter() {
+                    self.gen_stmt(stmt, new_scope, lock);
+                    out!(self, ";");
+                }
+                out!(self, "}}");
+            }
+            Node::ThrowStatement(ThrowStatement { argument, .. }) => {
+                out!(self, "throw ");
+                self.gen_expr(argument, scope, lock);
+            }
+            _ => unimplemented!("Unimplemented statement: {:?}", node.variant()),
         }
     }
 }
