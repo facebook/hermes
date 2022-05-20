@@ -57,11 +57,17 @@ impl<W: Write> Compiler<W> {
     }
 
     fn gen_program<'gc>(&mut self, node: &'gc ast::Node<'gc>, lock: &'gc ast::GCLock) {
+        use ast::*;
         out!(self, "#include \"runtime/FNRuntime.h\"\n");
         self.gen_context();
         out!(self, "int main(){{\n");
-        let node_scope = self.sem.node_scope(NodeRc::from_node(lock, node));
-        self.gen_ast(node, node_scope.unwrap(), lock);
+        let scope = self.sem.node_scope(NodeRc::from_node(lock, node)).unwrap();
+        let Module { body, .. } = node_cast!(Node::Module, node);
+        out!(self, "Scope{0} *scope{0}=new Scope{0}();\n", scope);
+        for stm in body.iter() {
+            self.gen_ast(stm, scope, lock);
+            out!(self, ";")
+        }
         out!(self, "return 0;\n}}")
     }
 
@@ -167,13 +173,6 @@ impl<W: Write> Compiler<W> {
     ) {
         use ast::*;
         match node {
-            Node::Module(Module { body, .. }) => {
-                out!(self, "Scope{scope} *scope{scope}=new Scope{scope}();\n");
-                for exp in body.iter() {
-                    self.gen_ast(exp, scope, lock);
-                    out!(self, ";")
-                }
-            }
             Node::BlockStatement(BlockStatement { body, .. }) => {
                 out!(self, "{{\n");
                 let inner_scope = self.init_scope(node, scope, lock);
@@ -496,7 +495,7 @@ fn run() -> anyhow::Result<()> {
                     phantom: Default::default(),
                     range: program.metadata.range,
                 },
-                body: program.body.clone(),
+                body: program.body,
             },
         );
         (
