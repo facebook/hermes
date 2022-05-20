@@ -477,6 +477,9 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
         builder.createBranchInst(thisBlock);
 
         phi->updateEntry(i, reifiedValue, newBlock);
+        // Update all other PHI nodes in thisBlock that currently reference
+        // previousBlock so they instead reference newBlock.
+        updateIncomingPhiValues(thisBlock, previousBlock, newBlock);
 
         auto *branch = previousBlock->getTerminator();
         for (int j = 0, m = branch->getNumOperands(); j < m; j++)
