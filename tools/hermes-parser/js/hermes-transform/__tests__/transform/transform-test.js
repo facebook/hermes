@@ -602,7 +602,7 @@ if (true) call();
           },
         })),
       ).toThrowErrorMatchingInlineSnapshot(
-        `"Expected to find the target \\"ExpressionStatement\\" on the \\"IfStatement.alternate\\", but found a different node. This likely means that you attempted to mutate around the target after it was deleted/replaced."`,
+        `"Attempted to insert before a deleted ExpressionStatement node. This likely means that you attempted to mutate around the target after it was deleted/replaced."`,
       );
     });
 
