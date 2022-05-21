@@ -632,7 +632,6 @@ class IRBuilder {
       list.push_back(A);
     }
 
-    // Restore insertion point when the object is destroyed.
     ~InstructionDestroyer() {
       for (auto *I : list) {
         I->eraseFromParent();
