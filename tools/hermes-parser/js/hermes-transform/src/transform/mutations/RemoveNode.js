@@ -256,7 +256,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
     const idx = arr.indexOf(node);
     if (idx === -1) {
       throw new InvalidRemovalError(
-        `Could not find target in array of \`${parent.type}.${key}\`.`,
+        `Could not find target in array of \`${node.parent.type}.${key}\`.`,
       );
     }
     return idx;
