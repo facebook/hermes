@@ -102,7 +102,7 @@ fn test_literals() {
     };
     assert_eq!(
         do_gen(&mut ctx, &string, gen_js::Pretty::Yes).trim(),
-        r#""A\u1234\t""#,
+        r#"'A\u1234\t'"#,
     );
 
     test_roundtrip("1");

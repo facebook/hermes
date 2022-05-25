@@ -23,7 +23,7 @@ function foo() {
 }
 
 // CHECK-LABEL: function foo@global() {
-// CHECK-NEXT:   "use strict";
+// CHECK-NEXT:   'use strict';
 // CHECK-NEXT:   let x@D1;
 // CHECK-NEXT:   var y@D2;
 // CHECK-NEXT:   {

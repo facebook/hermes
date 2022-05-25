@@ -90,6 +90,9 @@ struct Options {
     /// The doc block contains every comment prior to the first non-directive token in the file.
     emit_doc_block: Opt<bool>,
 
+    /// Whether to use double quotes on string literals.
+    double_quote_strings: Opt<bool>,
+
     /// Whether to run the parsed AST.
     run: Opt<bool>,
 
@@ -255,6 +258,16 @@ impl Options {
                     long: Some("emit-doc-block"),
                     desc: Some(
                         "Pass through the doc block from the original files when generating JS",
+                    ),
+                    ..Default::default()
+                },
+            ),
+            double_quote_strings: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("double-quote-strings"),
+                    desc: Some(
+                        "When generating JS, use double quotes as the string literal delimiters",
                     ),
                     ..Default::default()
                 },
@@ -470,6 +483,11 @@ fn gen_output(
                     },
                     force_async_arrow_space: *opt.force_async_arrow_space,
                     doc_block: js_module.doc_block.clone(),
+                    quote: if *opt.double_quote_strings {
+                        gen_js::QuoteChar::Double
+                    } else {
+                        gen_js::QuoteChar::Single
+                    },
                 },
             )?;
             if *opt.sourcemap {

@@ -30,6 +30,9 @@ pub struct Opt<'s> {
 
     /// If `Some`, doc block to print at the top of the file.
     pub doc_block: Option<Rc<String>>,
+
+    /// Delimiter to use for string literals.
+    pub quote: QuoteChar,
 }
 
 impl Default for Opt<'_> {
@@ -39,6 +42,7 @@ impl Default for Opt<'_> {
             annotation: Annotation::No,
             force_async_arrow_space: true,
             doc_block: None,
+            quote: QuoteChar::Single,
         }
     }
 }
@@ -56,6 +60,24 @@ impl Opt<'_> {
 pub enum Pretty {
     No,
     Yes,
+}
+
+/// Delimiter to use for string literals.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum QuoteChar {
+    Single,
+    Double,
+}
+
+impl QuoteChar {
+    /// The character representation of the quote.
+    #[inline]
+    fn as_char(self) -> char {
+        match self {
+            Self::Single => '\'',
+            Self::Double => '"',
+        }
+    }
 }
 
 /// Generate JS for `root` and print it to `out`.
@@ -804,9 +826,9 @@ impl<W: Write> GenJS<'_, W> {
                 out_token!(self, node, "null");
             }
             Node::StringLiteral(StringLiteral { metadata: _, value }) => {
-                out_token!(self, node, "\"");
-                self.print_escaped_string_literal(ctx, *value, '"');
-                out!(self, "\"");
+                out_token!(self, node, "{}", self.opt.quote.as_char());
+                self.print_escaped_string_literal(ctx, *value, self.opt.quote.as_char());
+                out!(self, "{}", self.opt.quote.as_char());
             }
             Node::NumericLiteral(NumericLiteral { metadata: _, value }) => {
                 out_token!(self, node, "{}", convert::number_to_string(*value));

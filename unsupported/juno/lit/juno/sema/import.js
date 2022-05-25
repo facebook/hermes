@@ -12,7 +12,7 @@ import b from "foo";
 a;
 b;
 
-// CHECK-LABEL: import * as a@D0 from "foo";
-// CHECK-NEXT: import b@D1 from "foo";
+// CHECK-LABEL: import * as a@D0 from 'foo';
+// CHECK-NEXT: import b@D1 from 'foo';
 // CHECK-NEXT: a@D0;
 // CHECK-NEXT: b@D1;
