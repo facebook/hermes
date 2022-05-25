@@ -165,7 +165,16 @@ fn test_literals() {
     validate_src("({x: y});").unwrap();
     validate_src("({x: y, ...z});").unwrap();
     validate_src("[]").unwrap();
+    validate_src("[x,y,,z]").unwrap();
     validate_src("[x, y, ...z]").unwrap();
+}
+
+#[test]
+fn test_patterns() {
+    validate_src("[x] = y;").unwrap();
+    validate_src("[x.y , , ...z] = y;").unwrap();
+    validate_src("({x} = y)").unwrap();
+    validate_src("({x: y} = y)").unwrap();
 }
 
 #[test]
@@ -187,8 +196,10 @@ fn test_jsx() {
 #[test]
 fn test_flow() {
     validate_src_flow("function foo(a: number): number { return a; }").unwrap();
+    validate_src_flow("function foo(a: number): number %checks { return a; }").unwrap();
+    validate_src_flow("function foo(a: number): number %checks(a[1]) { return a; }").unwrap();
     validate_src_flow(
-        "class A extends B {
+        "class A<T> extends B<T> {
             foo: number;
             +bar: string;
     }",

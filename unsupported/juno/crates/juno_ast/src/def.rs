@@ -44,7 +44,7 @@ macro_rules! nodekind_defs {
                 body: &'a Node<'a>[BlockStatement],
                 type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
                 return_type: Option<&'a Node<'a>>[TypeAnnotation],
-                predicate: Option<&'a Node<'a>>[InferredPredicate, DeclaredPredicate],
+                predicate: Option<&'a Node<'a>>[FlowPredicate],
                 generator: bool,
                 is_async: bool,
             },
@@ -54,7 +54,7 @@ macro_rules! nodekind_defs {
                 body: &'a Node<'a>[Expression, BlockStatement],
                 type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
                 return_type: Option<&'a Node<'a>>[TypeAnnotation],
-                predicate: Option<&'a Node<'a>>[InferredPredicate, DeclaredPredicate],
+                predicate: Option<&'a Node<'a>>[FlowPredicate],
                 expression: bool,
                 is_async: bool,
             },
@@ -211,12 +211,12 @@ macro_rules! nodekind_defs {
                 prefix: bool,
             },
             MemberExpression[LVal] {
-                object: &'a Node<'a>[Expression],
+                object: &'a Node<'a>[Super, Expression],
                 property: &'a Node<'a>[Expression],
                 computed: bool,
             },
             OptionalMemberExpression[Expression] {
-                object: &'a Node<'a>[Expression],
+                object: &'a Node<'a>[Super, Expression],
                 property: &'a Node<'a>[Expression],
                 computed: bool,
                 optional: bool,
@@ -237,7 +237,7 @@ macro_rules! nodekind_defs {
                 operator: BinaryExpressionOperator,
             },
             Directive[Statement] {
-                value: &'a Node<'a>,
+                value: &'a Node<'a>[StringLiteral],
             },
             DirectiveLiteral[Literal] {
                 value: NodeString,
@@ -304,7 +304,7 @@ macro_rules! nodekind_defs {
                 id: Option<&'a Node<'a>>[Identifier],
                 type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
                 super_class: Option<&'a Node<'a>>[Expression],
-                super_type_parameters: Option<&'a Node<'a>>[TypeParameterDeclaration],
+                super_type_parameters: Option<&'a Node<'a>>[TypeParameterInstantiation],
                 implements: NodeList<'a>[ClassImplements],
                 decorators: NodeList<'a>,
                 body: &'a Node<'a>[ClassBody],
@@ -384,7 +384,7 @@ macro_rules! nodekind_defs {
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
             },
             ArrayPattern[Pattern] {
-                elements: NodeList<'a>[Pattern, RestElement],
+                elements: NodeList<'a>[Empty, Pattern, MemberExpression, RestElement],
                 type_annotation: Option<&'a Node<'a>>[TypeAnnotation],
             },
             RestElement[Pattern] {
@@ -662,7 +662,7 @@ macro_rules! nodekind_defs {
             },
             InferredPredicate[FlowPredicate],
             DeclaredPredicate[FlowPredicate] {
-                value: &'a Node<'a>[Flow],
+                value: &'a Node<'a>[Flow, Expression],
             },
             EnumDeclaration[Declaration] {
                 id: &'a Node<'a>[Identifier],
