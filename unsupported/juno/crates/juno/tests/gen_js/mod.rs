@@ -186,6 +186,8 @@ fn test_functions() {
     test_roundtrip("(x) => 3");
     test_roundtrip("(x,y) => 3");
     test_roundtrip("x => {3}");
+    test_roundtrip("x => ({y: 10})");
+    test_roundtrip("x => ({y: 10}[z])");
     test_roundtrip("async x => {3}");
     test_roundtrip("async (x,y) => {3}");
     test_roundtrip("(x => 1) + (y => 1)");

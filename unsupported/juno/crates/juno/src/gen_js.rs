@@ -3640,7 +3640,11 @@ impl<W: Write> GenJS<'_, W> {
         if matches!(path.parent, Node::ArrowFunctionExpression(_)) {
             // (x) => ({x: 10}) needs parens to avoid confusing it with a block and a
             // labelled statement.
-            if child_pos == ChildPos::Right && matches!(child, Node::ObjectExpression(_)) {
+            if child_pos == ChildPos::Right
+                && self.expr_starts_with(ctx, child, Some(path), |n| {
+                    matches!(n, Node::ObjectExpression(_))
+                })
+            {
                 return NeedParens::Yes;
             }
         } else if matches!(path.parent, Node::ForStatement(_)) {
