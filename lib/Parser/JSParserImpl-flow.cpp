@@ -2426,8 +2426,7 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
   assert(check(TokenKind::rw_enum));
   SMLoc start = advance().Start;
 
-  auto optIdent = parseBindingIdentifier(Param{});
-  if (!optIdent) {
+  if (!check(TokenKind::identifier)) {
     errorExpected(
         TokenKind::identifier,
         "in enum declaration",
@@ -2435,7 +2434,12 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
         start);
     return None;
   }
-  ESTree::Node *id = *optIdent;
+  ESTree::Node *id = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance(JSLexer::GrammarContext::Type);
 
   OptValue<EnumKind> optKind = llvh::None;
   Optional<SMLoc> explicitTypeStart = None;
