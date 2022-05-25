@@ -2573,10 +2573,17 @@ impl<W: Write> GenJS<'_, W> {
                 id,
                 predicate,
             }) => {
+                if matches!(path,
+                    Some(path) if !matches!(path.parent, Node::DeclareExportDeclaration(_)))
+                    || path.is_none()
+                {
+                    out_token!(self, node, "declare function ");
+                } else {
+                    out_token!(self, node, "function ");
+                }
                 // This AST type uses the Identifier/TypeAnnotation
                 // pairing to put a name on a function header-looking construct,
                 // so we have to do some deep matching to get it to come out right.
-                out_token!(self, node, "declare function ");
                 match id {
                     Node::Identifier(Identifier {
                         metadata: _,

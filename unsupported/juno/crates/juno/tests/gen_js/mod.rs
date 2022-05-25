@@ -578,6 +578,7 @@ fn test_declare() {
     test_roundtrip_flow("declare export class A extends B {}");
     test_roundtrip_flow("declare module A {}");
     test_roundtrip_flow("declare module.exports: number;");
+    test_roundtrip_flow("declare export function foo(): number;");
 }
 
 #[test]
