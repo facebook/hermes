@@ -100,6 +100,11 @@ export function parseBabel(source: string): mixed {
     plugins: [
       'bigInt',
       'dynamicImport',
+      'classPrivateMethods',
+      'classPrivateProperties',
+      'privateIn',
+
+      // from WWW config
       'jsx',
       ['flow', {enums: true}],
       'objectRestSpread',

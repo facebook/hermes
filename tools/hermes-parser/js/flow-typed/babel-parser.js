@@ -9,6 +9,56 @@
  */
 
 declare module '@babel/parser' {
+  declare type ParserPlugin =
+    | 'asyncGenerators'
+    | 'bigInt'
+    | 'classPrivateMethods'
+    | 'classPrivateProperties'
+    | 'classProperties'
+    | 'decorators'
+    | 'decorators-legacy'
+    | 'doExpressions'
+    | 'dynamicImport'
+    | 'estree'
+    | 'exportDefaultFrom'
+    | 'exportNamespaceFrom' // deprecated
+    | 'flow'
+    | 'flowComments'
+    | 'functionBind'
+    | 'functionSent'
+    | 'importMeta'
+    | 'jsx'
+    | 'logicalAssignment'
+    | 'moduleAttributes'
+    | 'nullishCoalescingOperator'
+    | 'numericSeparator'
+    | 'objectRestSpread'
+    | 'optionalCatchBinding'
+    | 'optionalChaining'
+    | 'partialApplication'
+    | 'pipelineOperator'
+    | 'placeholders'
+    | 'privateIn'
+    | 'throwExpressions'
+    | 'topLevelAwait'
+    | 'typescript'
+    | 'v8intrinsic'
+    | ParserPluginWithOptions;
+  declare type ParserPluginWithOptions =
+    | ['decorators', DecoratorsPluginOptions]
+    | ['pipelineOperator', PipelineOperatorPluginOptions]
+    | ['flow', FlowPluginOptions];
+  declare type DecoratorsPluginOptions = {
+    decoratorsBeforeExport?: boolean,
+  };
+  declare type PipelineOperatorPluginOptions = {
+    proposal: 'minimal' | 'smart',
+  };
+  declare type FlowPluginOptions = {
+    all?: boolean,
+    enums?: boolean,
+  };
+
   declare export function parse(
     input: string,
     // https://github.com/babel/babel/blob/1daded57126ba172eef3664c08829b83a1112cc9/packages/babel-parser/src/options.js
@@ -53,7 +103,7 @@ declare module '@babel/parser' {
       /**
        * An array of plugins to enable
        */
-      plugins?: $ReadOnlyArray<string | [string, $ReadOnly<{[string]: any}>]>,
+      plugins?: $ReadOnlyArray<ParserPlugin>,
       strictMode?: ?boolean,
       /**
        * Nodes have their start and end characters offsets recorded in

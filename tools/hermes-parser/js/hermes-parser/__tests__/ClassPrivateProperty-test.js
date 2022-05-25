@@ -16,9 +16,8 @@ import {
   expectBabelAlignment,
   expectEspreeAlignment,
 } from '../__test_utils__/alignment-utils';
-import {parse, parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot} from '../__test_utils__/parse';
 
-const PRIVATE_ERROR_MESSAGE = 'Private properties are not supported';
 describe('Private properties', () => {
   describe('Property Definition', () => {
     const testCase: AlignmentCase = {
@@ -27,13 +26,8 @@ describe('Private properties', () => {
           #private;
         }
       `,
-      espree: {
-        expectToFail: false,
-      },
-      babel: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
-      },
+      espree: {expectToFail: false},
+      babel: {expectToFail: false},
     };
 
     test('ESTree', () => {
@@ -81,10 +75,6 @@ describe('Private properties', () => {
     });
 
     test('Babel', () => {
-      // Private property uses are not supported
-      expect(() => parse(testCase.code, {babel: true})).toThrow(
-        new SyntaxError('Private properties are not supported (3:10)'),
-      );
       expectBabelAlignment(testCase);
     });
   });
@@ -99,13 +89,8 @@ describe('Private properties', () => {
           }
         }
       `,
-      espree: {
-        expectToFail: false,
-      },
-      babel: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
-      },
+      espree: {expectToFail: false},
+      babel: {expectToFail: false},
     };
 
     test('ESTree', () => {
@@ -200,10 +185,6 @@ describe('Private properties', () => {
     });
 
     test('Babel', () => {
-      // Private property uses are not supported
-      expect(() => parse(testCase.code, {babel: true})).toThrow(
-        new SyntaxError('Private properties are not supported (3:10)'),
-      );
       expectBabelAlignment(testCase);
     });
   });
@@ -218,12 +199,11 @@ describe('Private properties', () => {
           }
         }
       `,
-      espree: {
-        expectToFail: false,
-      },
+      espree: {expectToFail: false},
       babel: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+        // the version of babel we test against does not support private brand checks
+        expectToFail: 'babel-exception',
+        expectedExceptionMessage: 'Unexpected token (5:12)',
       },
     };
 
@@ -318,10 +298,6 @@ describe('Private properties', () => {
     });
 
     test('Babel', () => {
-      // Private property uses are not supported
-      expect(() => parse(testCase.code, {babel: true})).toThrow(
-        new SyntaxError('Private properties are not supported (3:10)'),
-      );
       expectBabelAlignment(testCase);
     });
   });

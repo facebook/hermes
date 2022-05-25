@@ -78,6 +78,7 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'JSXStringLiteral':
         return this.mapJSXStringLiteral(node);
       case 'PrivateName':
+        return this.mapPrivateName(node);
       case 'ClassPrivateProperty':
         return this.mapPrivateProperty(node);
       case 'FunctionDeclaration':
@@ -91,12 +92,6 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       default:
         return this.mapNodeDefault(node);
     }
-  }
-
-  mapPrivateProperty(node: HermesNode): HermesNode {
-    throw new SyntaxError(
-      this.formatError(node, 'Private properties are not supported'),
-    );
   }
 
   mapProgram(node: HermesNode): HermesNode {
@@ -418,6 +413,37 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   mapBigIntLiteral(node: HermesNode): HermesNode {
     const bigint = node.bigint.replace(/n$/, '').replace(/_/, '');
     node.value = typeof BigInt === 'function' ? BigInt(bigint) : null;
+    return node;
+  }
+
+  mapPrivateProperty(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+    node.key = {
+      type: 'PrivateName',
+      id: {
+        ...node.key,
+        // babel doesn't include the hash in the identifier
+        start: node.key.start + 1,
+        loc: {
+          ...node.key.loc,
+          start: {
+            ...node.key.loc.start,
+            column: node.key.loc.start.column + 1,
+          },
+        },
+      },
+      start: node.key.start,
+      end: node.key.end,
+      loc: node.key.loc,
+    };
+
+    return node;
+  }
+
+  mapPrivateName(node: HermesNode): HermesNode {
+    // babel doesn't include the hash in the identifier
+    node.id.start += 1;
+    node.id.loc.start.column += 1;
     return node;
   }
 }
