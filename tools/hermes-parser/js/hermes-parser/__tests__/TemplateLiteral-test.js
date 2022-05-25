@@ -10,28 +10,40 @@
 
 'use strict';
 
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
+
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parse} from '../__test_utils__/parse';
 import {loc} from '../__test_utils__/loc';
 
 describe('TemplateLiteral', () => {
-  const source = '`a ${b} c`';
+  const testCase: AlignmentCase = {
+    code: `
+      \`a \${b} c\`
+    `,
+    espree: {expectToFail: false},
+    babel: {expectToFail: false},
+  };
 
   test('ESTree', () => {
     // ESTree template literals with source locations
-    expect(parse(source)).toMatchObject({
+    expect(parse(testCase.code)).toMatchObject({
       type: 'Program',
       body: [
         {
           type: 'ExpressionStatement',
           expression: {
             type: 'TemplateLiteral',
-            loc: loc(1, 0, 1, 10),
-            range: [0, 10],
+            loc: loc(2, 6, 2, 16),
+            range: [7, 17],
             quasis: [
               {
                 type: 'TemplateElement',
-                loc: loc(1, 0, 1, 5),
-                range: [0, 5],
+                loc: loc(2, 6, 2, 11),
+                range: [7, 12],
                 tail: false,
                 value: {
                   cooked: 'a ',
@@ -40,8 +52,8 @@ describe('TemplateLiteral', () => {
               },
               {
                 type: 'TemplateElement',
-                loc: loc(1, 6, 1, 10),
-                range: [6, 10],
+                loc: loc(2, 12, 2, 16),
+                range: [13, 17],
                 tail: true,
                 value: {
                   cooked: ' c',
@@ -52,8 +64,8 @@ describe('TemplateLiteral', () => {
             expressions: [
               {
                 type: 'Identifier',
-                loc: loc(1, 5, 1, 6),
-                range: [5, 6],
+                loc: loc(2, 11, 2, 12),
+                range: [12, 13],
                 name: 'b',
               },
             ],
@@ -61,11 +73,12 @@ describe('TemplateLiteral', () => {
         },
       ],
     });
+    expectEspreeAlignment(testCase);
   });
 
   test('Babel', () => {
     // Babel template literals with source locations
-    expect(parse(source, {babel: true})).toMatchObject({
+    expect(parse(testCase.code, {babel: true})).toMatchObject({
       type: 'File',
       program: {
         type: 'Program',
@@ -74,15 +87,15 @@ describe('TemplateLiteral', () => {
             type: 'ExpressionStatement',
             expression: {
               type: 'TemplateLiteral',
-              loc: loc(1, 0, 1, 10),
-              start: 0,
-              end: 10,
+              loc: loc(2, 6, 2, 16),
+              start: 7,
+              end: 17,
               quasis: [
                 {
                   type: 'TemplateElement',
-                  loc: loc(1, 1, 1, 3),
-                  start: 1,
-                  end: 3,
+                  loc: loc(2, 7, 2, 9),
+                  start: 8,
+                  end: 10,
                   tail: false,
                   value: {
                     cooked: 'a ',
@@ -91,9 +104,9 @@ describe('TemplateLiteral', () => {
                 },
                 {
                   type: 'TemplateElement',
-                  loc: loc(1, 7, 1, 9),
-                  start: 7,
-                  end: 9,
+                  loc: loc(2, 13, 2, 15),
+                  start: 14,
+                  end: 16,
                   tail: true,
                   value: {
                     cooked: ' c',
@@ -104,9 +117,9 @@ describe('TemplateLiteral', () => {
               expressions: [
                 {
                   type: 'Identifier',
-                  loc: loc(1, 5, 1, 6),
-                  start: 5,
-                  end: 6,
+                  loc: loc(2, 11, 2, 12),
+                  start: 12,
+                  end: 13,
                   name: 'b',
                 },
               ],
@@ -115,5 +128,6 @@ describe('TemplateLiteral', () => {
         ],
       },
     });
+    expectBabelAlignment(testCase);
   });
 });

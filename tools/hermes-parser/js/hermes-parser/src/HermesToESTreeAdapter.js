@@ -45,6 +45,9 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     };
 
     node.range = [loc.rangeStart, loc.rangeEnd];
+
+    delete node.start;
+    delete node.end;
   }
 
   mapNode(node: HermesNode): HermesNode {
@@ -86,6 +89,12 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapPrivateProperty(node);
       case 'Property':
         return this.mapProperty(node);
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression':
+        return this.mapFunction(node);
+      case 'MemberExpression':
+        return this.mapMemberExpression(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -228,6 +237,29 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       node.type = 'Line';
     }
 
+    return node;
+  }
+
+  mapFunction(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+
+    switch (node.type) {
+      case 'FunctionDeclaration':
+      case 'FunctionExpression':
+        node.expression = false;
+        return node;
+
+      case 'ArrowFunctionExpression':
+        node.expression = node.body.type !== 'BlockStatement';
+        return node;
+    }
+
+    return node;
+  }
+
+  mapMemberExpression(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+    node.optional = false;
     return node;
   }
 }

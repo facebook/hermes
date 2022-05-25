@@ -10,23 +10,121 @@
 
 'use strict';
 
-import {parse} from '../__test_utils__/parse';
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
 
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
+import {parse, parseForSnapshot} from '../__test_utils__/parse';
+
+const PRIVATE_ERROR_MESSAGE = 'Private properties are not supported';
 describe('Private properties', () => {
-  test('ESTree', () => {
-    // Private property uses are not supported
-    expect(() => parse(`foo.#private`)).toThrow(
-      new SyntaxError('Private properties are not supported (1:4)'),
-    );
+  describe('Property Definition', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        class Foo {
+          #private;
+        }
+      `,
+      espree: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+      babel: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+    };
 
-    // Private property brand checks are not supported
-    expect(() => parse(`#private in foo`)).toThrow(
-      new SyntaxError('Private properties are not supported (1:0)'),
-    );
+    test('ESTree', () => {
+      // Private property uses are not supported
+      expect(() => parseForSnapshot(testCase.code)).toThrow(
+        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
+      );
+      expectEspreeAlignment(testCase);
+    });
 
-    // Private property definitions are not supported
-    expect(() => parse(`class C { #private }`)).toThrow(
-      new SyntaxError('Private properties are not supported (1:10)'),
-    );
+    test('Babel', () => {
+      // Private property uses are not supported
+      expect(() => parse(testCase.code, {babel: true})).toThrow(
+        new SyntaxError('Private properties are not supported (3:10)'),
+      );
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('Member Expression', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        class Foo {
+          #private;
+          constructor() {
+            foo.#private;
+          }
+        }
+      `,
+      espree: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+      babel: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+    };
+
+    test('ESTree', () => {
+      // Private property uses are not supported
+      expect(() => parseForSnapshot(testCase.code)).toThrow(
+        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
+      );
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      // Private property uses are not supported
+      expect(() => parse(testCase.code, {babel: true})).toThrow(
+        new SyntaxError('Private properties are not supported (3:10)'),
+      );
+      expectBabelAlignment(testCase);
+    });
+  });
+
+  describe('Brand Check', () => {
+    const testCase: AlignmentCase = {
+      code: `
+        class Foo {
+          #private;
+          constructor() {
+            #private in foo;
+          }
+        }
+      `,
+      espree: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+      babel: {
+        expectToFail: 'hermes-exception',
+        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+      },
+    };
+
+    test('ESTree', () => {
+      // Private property uses are not supported
+      expect(() => parseForSnapshot(testCase.code)).toThrow(
+        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
+      );
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      // Private property uses are not supported
+      expect(() => parse(testCase.code, {babel: true})).toThrow(
+        new SyntaxError('Private properties are not supported (3:10)'),
+      );
+      expectBabelAlignment(testCase);
+    });
   });
 });

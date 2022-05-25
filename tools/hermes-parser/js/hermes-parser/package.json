@@ -12,6 +12,8 @@
     "hermes-estree": "0.7.0"
   },
   "devDependencies": {
+    "@babel/parser": "7.7.4",
+    "espree": "9.3.2",
     "hermes-transform": "0.7.0"
   },
   "files": [

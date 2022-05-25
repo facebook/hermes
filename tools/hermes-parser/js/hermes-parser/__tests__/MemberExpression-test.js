@@ -10,16 +10,26 @@
 
 'use strict';
 
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
+
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('MemberExpression', () => {
   describe('Non-computed', () => {
-    const source = `
-      x.y;
-    `;
+    const testCase: AlignmentCase = {
+      code: `
+        x.y;
+      `,
+      espree: {expectToFail: false},
+      babel: {expectToFail: false},
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -32,6 +42,7 @@ describe('MemberExpression', () => {
                   "type": "Identifier",
                   "typeAnnotation": null,
                 },
+                "optional": false,
                 "property": Object {
                   "name": "y",
                   "optional": false,
@@ -46,16 +57,25 @@ describe('MemberExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 
   describe('Computed', () => {
-    const source = `
-      x['y'];
-    `;
+    const testCase: AlignmentCase = {
+      code: `
+        x['y'];
+      `,
+      espree: {expectToFail: false},
+      babel: {expectToFail: false},
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -68,6 +88,7 @@ describe('MemberExpression', () => {
                   "type": "Identifier",
                   "typeAnnotation": null,
                 },
+                "optional": false,
                 "property": Object {
                   "literalType": "string",
                   "raw": "'y'",
@@ -82,22 +103,34 @@ describe('MemberExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 });
 
 describe('OptionalMemberExpression', () => {
   describe('Non-computed', () => {
-    const source = `
-      one?.two;
-      one?.two.three;
-      one.two?.three;
-      one.two?.three.four;
-      one.two?.three?.four;
-    `;
+    const testCase: AlignmentCase = {
+      code: `
+        one?.two;
+        one?.two.three;
+        one.two?.three;
+        one.two?.three.four;
+        one.two?.three?.four;
+      `,
+      espree: {
+        // TODO - ESTree spec is now ChainExpression + MemberExpression
+        expectToFail: 'ast-diff',
+      },
+      babel: {expectToFail: false},
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -165,6 +198,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "Identifier",
                     "typeAnnotation": null,
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "two",
                     "optional": false,
@@ -198,6 +232,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -240,6 +275,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -272,21 +308,33 @@ describe('OptionalMemberExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 
   describe('Computed', () => {
-    const source = `
-      one?.[2];
-      one?.[2][3];
-      one[2]?.[3];
-      one[2]?.[3];
-      one[2]?.[3][4];
-      one[2]?.[3]?.[4];
-    `;
+    const testCase: AlignmentCase = {
+      code: `
+        one?.[2];
+        one?.[2][3];
+        one[2]?.[3];
+        one[2]?.[3];
+        one[2]?.[3][4];
+        one[2]?.[3]?.[4];
+      `,
+      espree: {
+        // TODO - ESTree spec is now ChainExpression + MemberExpression
+        expectToFail: 'ast-diff',
+      },
+      babel: {expectToFail: false},
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -354,6 +402,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "Identifier",
                     "typeAnnotation": null,
                   },
+                  "optional": false,
                   "property": Object {
                     "literalType": "numeric",
                     "raw": "2",
@@ -385,6 +434,7 @@ describe('OptionalMemberExpression', () => {
                     "type": "Identifier",
                     "typeAnnotation": null,
                   },
+                  "optional": false,
                   "property": Object {
                     "literalType": "numeric",
                     "raw": "2",
@@ -418,6 +468,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "literalType": "numeric",
                       "raw": "2",
@@ -460,6 +511,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "literalType": "numeric",
                       "raw": "2",
@@ -492,6 +544,11 @@ describe('OptionalMemberExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 
@@ -499,17 +556,24 @@ describe('OptionalMemberExpression', () => {
   // short-circuit the optional chain
   describe('With parentheses', () => {
     describe('Non-computed', () => {
-      const source = `
-        (one?.two);
-        (one?.two).three;
-        (one.two?.three);
-        (one.two?.three).four;
-        (one.two?.three?.four);
-        (one.two?.three?.four).five;
-      `;
+      const testCase: AlignmentCase = {
+        code: `
+          (one?.two);
+          (one?.two).three;
+          (one.two?.three);
+          (one.two?.three).four;
+          (one.two?.three?.four);
+          (one.two?.three?.four).five;
+        `,
+        espree: {
+          // TODO - ESTree spec is now ChainExpression + MemberExpression
+          expectToFail: 'ast-diff',
+        },
+        babel: {expectToFail: false},
+      };
 
       test('ESTree', () => {
-        expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+        expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
           Object {
             "body": Array [
               Object {
@@ -554,6 +618,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "three",
                     "optional": false,
@@ -576,6 +641,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -609,6 +675,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -626,6 +693,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "four",
                     "optional": false,
@@ -650,6 +718,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -694,6 +763,7 @@ describe('OptionalMemberExpression', () => {
                           "type": "Identifier",
                           "typeAnnotation": null,
                         },
+                        "optional": false,
                         "property": Object {
                           "name": "two",
                           "optional": false,
@@ -720,6 +790,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "five",
                     "optional": false,
@@ -734,21 +805,33 @@ describe('OptionalMemberExpression', () => {
             "type": "Program",
           }
         `);
+        expectEspreeAlignment(testCase);
+      });
+
+      test('Babel', () => {
+        expectBabelAlignment(testCase);
       });
     });
 
     describe('Computed', () => {
-      const source = `
-      (one?.[2]);
-      (one?.[2])[3];
-      (one[2]?.[3]);
-      (one[2]?.[3])[4];
-      (one[2]?.[3]?.[4]);
-      (one[2]?.[3]?.[4])[5];
-      `;
+      const testCase: AlignmentCase = {
+        code: `
+          (one?.[2]);
+          (one?.[2])[3];
+          (one[2]?.[3]);
+          (one[2]?.[3])[4];
+          (one[2]?.[3]?.[4]);
+          (one[2]?.[3]?.[4])[5];
+        `,
+        espree: {
+          // TODO - ESTree spec is now ChainExpression + MemberExpression
+          expectToFail: 'ast-diff',
+        },
+        babel: {expectToFail: false},
+      };
 
       test('ESTree', () => {
-        expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+        expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
           Object {
             "body": Array [
               Object {
@@ -793,6 +876,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "literalType": "numeric",
                     "raw": "3",
@@ -815,6 +899,7 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "literalType": "numeric",
                       "raw": "2",
@@ -848,6 +933,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "literalType": "numeric",
                         "raw": "2",
@@ -865,6 +951,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "literalType": "numeric",
                     "raw": "4",
@@ -889,6 +976,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "literalType": "numeric",
                         "raw": "2",
@@ -933,6 +1021,7 @@ describe('OptionalMemberExpression', () => {
                           "type": "Identifier",
                           "typeAnnotation": null,
                         },
+                        "optional": false,
                         "property": Object {
                           "literalType": "numeric",
                           "raw": "2",
@@ -959,6 +1048,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "literalType": "numeric",
                     "raw": "5",
@@ -973,6 +1063,11 @@ describe('OptionalMemberExpression', () => {
             "type": "Program",
           }
         `);
+        expectEspreeAlignment(testCase);
+      });
+
+      test('Babel', () => {
+        expectBabelAlignment(testCase);
       });
     });
   });

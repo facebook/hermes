@@ -21,6 +21,8 @@ import type {HermesNode} from './HermesAST';
 
 import HermesASTAdapter from './HermesASTAdapter';
 
+declare var BigInt: ?(value: $FlowFixMe) => mixed;
+
 export default class HermesToBabelAdapter extends HermesASTAdapter {
   fixSourceLocation(node: HermesNode): void {
     const loc = node.loc;
@@ -84,6 +86,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       case 'IndexedAccessType':
       case 'OptionalIndexedAccessType':
         return this.mapUnsupportedTypeAnnotation(node);
+      case 'BigIntLiteral':
+        return this.mapBigIntLiteral(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -251,13 +255,14 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         predicate,
       } = value;
 
-      return {
+      const newNode: HermesNode = {
         type: 'ObjectMethod',
         loc: node.loc,
         start: node.start,
         end: node.end,
         // Non getter or setter methods have `kind = method`
         kind: node.kind === 'init' ? 'method' : node.kind,
+        method: node.kind === 'init' ? true : false,
         computed: node.computed,
         key,
         id,
@@ -269,6 +274,11 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         typeParameters,
         predicate,
       };
+      if (node.kind !== 'init') {
+        // babel emits an empty variance property on accessors for some reason
+        newNode.variance = null;
+      }
+      return newNode;
     } else {
       // Non-method property nodes should be renamed to ObjectProperty
       node.type = 'ObjectProperty';
@@ -322,6 +332,18 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     if (annotation != null) {
       restElement.typeAnnotation = annotation;
       restElement.argument.typeAnnotation = null;
+      // Unfortunately there's no way for us to recover the end location of
+      // the argument for the general case
+      if (restElement.argument.type === 'Identifier') {
+        restElement.argument.end =
+          restElement.argument.start + restElement.argument.name.length;
+        restElement.argument.loc.end = {
+          ...restElement.argument.loc.start,
+          column:
+            restElement.argument.loc.start.column +
+            restElement.argument.name.length,
+        };
+      }
     }
 
     return restElement;
@@ -337,9 +359,15 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       end: node.end,
       callee: {
         type: 'Import',
-        loc: node.loc,
+        loc: {
+          ...node.loc,
+          end: {
+            ...node.loc.start,
+            column: node.loc.start.column + 'import'.length,
+          },
+        },
         start: node.start,
-        end: node.end,
+        end: node.start + 'import'.length,
       },
       arguments: [this.mapNode(node.source)],
     };
@@ -379,5 +407,11 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
       start: node.start,
       end: node.end,
     };
+  }
+
+  mapBigIntLiteral(node: HermesNode): HermesNode {
+    const bigint = node.bigint.replace(/n$/, '').replace(/_/, '');
+    node.value = typeof BigInt === 'function' ? BigInt(bigint) : null;
+    return node;
   }
 }

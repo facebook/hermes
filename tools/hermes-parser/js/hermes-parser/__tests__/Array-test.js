@@ -10,12 +10,23 @@
 
 'use strict';
 
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
+
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parse, parseForSnapshot} from '../__test_utils__/parse';
 
+const testCase: AlignmentCase = {
+  code: 'const [a,,b] = [1,,2];',
+  espree: {expectToFail: false},
+  babel: {expectToFail: false},
+};
+
 describe('Array', () => {
-  const source = 'const [a,,b] = [1,,2];';
   test('ESTree', () => {
-    expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
       Object {
         "body": Array [
           Object {
@@ -69,11 +80,12 @@ describe('Array', () => {
         "type": "Program",
       }
     `);
+    expectEspreeAlignment(testCase);
   });
 
   test('Babel', () => {
     // Babel AST array nodes
-    expect(parse(source, {babel: true})).toMatchObject({
+    expect(parse(testCase.code, {babel: true})).toMatchObject({
       type: 'File',
       program: {
         type: 'Program',
@@ -117,5 +129,6 @@ describe('Array', () => {
         ],
       },
     });
+    expectBabelAlignment(testCase);
   });
 });

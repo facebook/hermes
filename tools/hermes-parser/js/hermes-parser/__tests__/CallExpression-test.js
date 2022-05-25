@@ -10,17 +10,32 @@
 
 'use strict';
 
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
+
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parseForSnapshot} from '../__test_utils__/parse';
 
 describe('CallExpression', () => {
-  const source = `
-    one();
-    two()();
-    three.four();
-  `;
+  const testCase: AlignmentCase = {
+    code: `
+      one();
+      two()();
+      three.four();
+    `,
+    espree: {
+      // TODO - ESTree spec is now ChainExpression + CallExpression
+      expectToFail: 'ast-diff',
+    },
+    babel: {
+      expectToFail: false,
+    },
+  };
 
   test('ESTree', () => {
-    expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
       Object {
         "body": Array [
           Object {
@@ -70,6 +85,7 @@ describe('CallExpression', () => {
                   "type": "Identifier",
                   "typeAnnotation": null,
                 },
+                "optional": false,
                 "property": Object {
                   "name": "four",
                   "optional": false,
@@ -87,6 +103,11 @@ describe('CallExpression', () => {
         "type": "Program",
       }
     `);
+    expectEspreeAlignment(testCase);
+  });
+
+  test('Babel', () => {
+    expectBabelAlignment(testCase);
   });
 });
 
@@ -94,22 +115,31 @@ describe('CallExpression', () => {
 // short-circuit the optional chain
 describe('OptionalCallExpression', () => {
   describe('Without parentheses', () => {
-    const source = `
-      one?.fn();
-      one?.two.fn();
-      one.two?.fn();
-      one.two?.three.fn();
-      one.two?.three?.fn();
+    const testCase: AlignmentCase = {
+      code: `
+        one?.fn();
+        one?.two.fn();
+        one.two?.fn();
+        one.two?.three.fn();
+        one.two?.three?.fn();
 
-      one?.();
-      one?.()();
-      one?.()?.();
+        one?.();
+        one?.()();
+        one?.()?.();
 
-      one?.().two;
-    `;
+        one?.().two;
+      `,
+      espree: {
+        // TODO - ESTree spec is now ChainExpression + CallExpression
+        expectToFail: 'ast-diff',
+      },
+      babel: {
+        expectToFail: false,
+      },
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -191,6 +221,7 @@ describe('OptionalCallExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -230,6 +261,7 @@ describe('OptionalCallExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -278,6 +310,7 @@ describe('OptionalCallExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -401,28 +434,42 @@ describe('OptionalCallExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 
   // This is a special case to test because of the way parentheses
   // short-circuit the optional chain
   describe('With parentheses', () => {
-    const source = `
-      (one?.fn());
-      (one?.two).fn();
-      (one.two?.fn());
-      (one.two?.three).fn();
-      (one.two?.three?.fn());
+    const testCase: AlignmentCase = {
+      code: `
+        (one?.fn());
+        (one?.two).fn();
+        (one.two?.fn());
+        (one.two?.three).fn();
+        (one.two?.three?.fn());
 
-      (one?.());
-      (one?.())();
-      (one?.())?.();
+        (one?.());
+        (one?.())();
+        (one?.())?.();
 
-      (one?.()).two;
-    `;
+        (one?.()).two;
+      `,
+      espree: {
+        // TODO - ESTree spec is now ChainExpression + CallExpression
+        expectToFail: 'ast-diff',
+      },
+      babel: {
+        expectToFail: false,
+      },
+    };
 
     test('ESTree', () => {
-      expect(parseForSnapshot(source)).toMatchInlineSnapshot(`
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
         Object {
           "body": Array [
             Object {
@@ -475,6 +522,7 @@ describe('OptionalCallExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "fn",
                     "optional": false,
@@ -502,6 +550,7 @@ describe('OptionalCallExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -541,6 +590,7 @@ describe('OptionalCallExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -558,6 +608,7 @@ describe('OptionalCallExpression', () => {
                     },
                     "type": "OptionalMemberExpression",
                   },
+                  "optional": false,
                   "property": Object {
                     "name": "fn",
                     "optional": false,
@@ -587,6 +638,7 @@ describe('OptionalCallExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
+                      "optional": false,
                       "property": Object {
                         "name": "two",
                         "optional": false,
@@ -694,6 +746,7 @@ describe('OptionalCallExpression', () => {
                   "type": "OptionalCallExpression",
                   "typeArguments": null,
                 },
+                "optional": false,
                 "property": Object {
                   "name": "two",
                   "optional": false,
@@ -708,6 +761,11 @@ describe('OptionalCallExpression', () => {
           "type": "Program",
         }
       `);
+      expectEspreeAlignment(testCase);
+    });
+
+    test('Babel', () => {
+      expectBabelAlignment(testCase);
     });
   });
 });

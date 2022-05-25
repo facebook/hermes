@@ -589,11 +589,15 @@ export interface MemberExpressionWithComputedName
   extends BaseMemberExpressionWithComputedName {
   +type: 'MemberExpression';
   +computed: true;
+  // TODO - when we update to the cannonical ESTree optional chaining repo, this will just be boolean
+  +optional: false;
 }
 export interface MemberExpressionWithNonComputedName
   extends BaseMemberExpressionWithNonComputedName {
   +type: 'MemberExpression';
   +computed: false;
+  // TODO - when we update to the cannonical ESTree optional chaining repo, this will just be boolean
+  +optional: false;
 }
 
 export type ChainElement = CallExpression | MemberExpression;

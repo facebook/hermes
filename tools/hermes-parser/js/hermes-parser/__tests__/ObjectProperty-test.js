@@ -10,22 +10,32 @@
 
 'use strict';
 
+import type {AlignmentCase} from '../__test_utils__/alignment-utils';
+
+import {
+  expectBabelAlignment,
+  expectEspreeAlignment,
+} from '../__test_utils__/alignment-utils';
 import {parse, parseForSnapshot} from '../__test_utils__/parse';
 
 describe('Object properties', () => {
-  const source = `
-    ({
-      prop1: 1,
-      prop2: function() {},
-      prop3() {},
-      async prop4() {},
-      get prop5() {},
-      set prop6(x) {},
-    })
-  `;
+  const testCase: AlignmentCase = {
+    code: `
+      ({
+        prop1: 1,
+        prop2: function() {},
+        prop3() {},
+        async prop4() {},
+        get prop5() {},
+        set prop6(x) {},
+      })
+    `,
+    espree: {expectToFail: false},
+    babel: {expectToFail: false},
+  };
 
   test('ESTree', () => {
-    expect(parseForSnapshot(source, {preserveRange: true}))
+    expect(parseForSnapshot(testCase.code, {preserveRange: true}))
       .toMatchInlineSnapshot(`
       Object {
         "body": Array [
@@ -39,8 +49,8 @@ describe('Object properties', () => {
                     "name": "prop1",
                     "optional": false,
                     "range": Array [
-                      14,
-                      19,
+                      18,
+                      23,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -48,16 +58,16 @@ describe('Object properties', () => {
                   "kind": "init",
                   "method": false,
                   "range": Array [
-                    14,
-                    22,
+                    18,
+                    26,
                   ],
                   "shorthand": false,
                   "type": "Property",
                   "value": Object {
                     "literalType": "numeric",
                     "range": Array [
-                      21,
-                      22,
+                      25,
+                      26,
                     ],
                     "raw": "1",
                     "type": "Literal",
@@ -70,8 +80,8 @@ describe('Object properties', () => {
                     "name": "prop2",
                     "optional": false,
                     "range": Array [
-                      30,
-                      35,
+                      36,
+                      41,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -79,8 +89,8 @@ describe('Object properties', () => {
                   "kind": "init",
                   "method": false,
                   "range": Array [
-                    30,
-                    50,
+                    36,
+                    56,
                   ],
                   "shorthand": false,
                   "type": "Property",
@@ -89,18 +99,19 @@ describe('Object properties', () => {
                     "body": Object {
                       "body": Array [],
                       "range": Array [
-                        48,
-                        50,
+                        54,
+                        56,
                       ],
                       "type": "BlockStatement",
                     },
+                    "expression": false,
                     "generator": false,
                     "id": null,
                     "params": Array [],
                     "predicate": null,
                     "range": Array [
-                      35,
-                      50,
+                      41,
+                      56,
                     ],
                     "returnType": null,
                     "type": "FunctionExpression",
@@ -113,8 +124,8 @@ describe('Object properties', () => {
                     "name": "prop3",
                     "optional": false,
                     "range": Array [
-                      58,
-                      63,
+                      66,
+                      71,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -122,8 +133,8 @@ describe('Object properties', () => {
                   "kind": "init",
                   "method": true,
                   "range": Array [
-                    58,
-                    68,
+                    66,
+                    76,
                   ],
                   "shorthand": false,
                   "type": "Property",
@@ -132,18 +143,19 @@ describe('Object properties', () => {
                     "body": Object {
                       "body": Array [],
                       "range": Array [
-                        66,
-                        68,
+                        74,
+                        76,
                       ],
                       "type": "BlockStatement",
                     },
+                    "expression": false,
                     "generator": false,
                     "id": null,
                     "params": Array [],
                     "predicate": null,
                     "range": Array [
-                      63,
-                      68,
+                      71,
+                      76,
                     ],
                     "returnType": null,
                     "type": "FunctionExpression",
@@ -156,8 +168,8 @@ describe('Object properties', () => {
                     "name": "prop4",
                     "optional": false,
                     "range": Array [
-                      82,
-                      87,
+                      92,
+                      97,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -165,8 +177,8 @@ describe('Object properties', () => {
                   "kind": "init",
                   "method": true,
                   "range": Array [
-                    76,
-                    92,
+                    86,
+                    102,
                   ],
                   "shorthand": false,
                   "type": "Property",
@@ -175,18 +187,19 @@ describe('Object properties', () => {
                     "body": Object {
                       "body": Array [],
                       "range": Array [
-                        90,
-                        92,
+                        100,
+                        102,
                       ],
                       "type": "BlockStatement",
                     },
+                    "expression": false,
                     "generator": false,
                     "id": null,
                     "params": Array [],
                     "predicate": null,
                     "range": Array [
-                      87,
-                      92,
+                      97,
+                      102,
                     ],
                     "returnType": null,
                     "type": "FunctionExpression",
@@ -199,8 +212,8 @@ describe('Object properties', () => {
                     "name": "prop5",
                     "optional": false,
                     "range": Array [
-                      104,
-                      109,
+                      116,
+                      121,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -208,8 +221,8 @@ describe('Object properties', () => {
                   "kind": "get",
                   "method": false,
                   "range": Array [
-                    100,
-                    114,
+                    112,
+                    126,
                   ],
                   "shorthand": false,
                   "type": "Property",
@@ -218,18 +231,19 @@ describe('Object properties', () => {
                     "body": Object {
                       "body": Array [],
                       "range": Array [
-                        112,
-                        114,
+                        124,
+                        126,
                       ],
                       "type": "BlockStatement",
                     },
+                    "expression": false,
                     "generator": false,
                     "id": null,
                     "params": Array [],
                     "predicate": null,
                     "range": Array [
-                      109,
-                      114,
+                      121,
+                      126,
                     ],
                     "returnType": null,
                     "type": "FunctionExpression",
@@ -242,8 +256,8 @@ describe('Object properties', () => {
                     "name": "prop6",
                     "optional": false,
                     "range": Array [
-                      126,
-                      131,
+                      140,
+                      145,
                     ],
                     "type": "Identifier",
                     "typeAnnotation": null,
@@ -251,8 +265,8 @@ describe('Object properties', () => {
                   "kind": "set",
                   "method": false,
                   "range": Array [
-                    122,
-                    137,
+                    136,
+                    151,
                   ],
                   "shorthand": false,
                   "type": "Property",
@@ -261,11 +275,12 @@ describe('Object properties', () => {
                     "body": Object {
                       "body": Array [],
                       "range": Array [
-                        135,
-                        137,
+                        149,
+                        151,
                       ],
                       "type": "BlockStatement",
                     },
+                    "expression": false,
                     "generator": false,
                     "id": null,
                     "params": Array [
@@ -273,8 +288,8 @@ describe('Object properties', () => {
                         "name": "x",
                         "optional": false,
                         "range": Array [
-                          132,
-                          133,
+                          146,
+                          147,
                         ],
                         "type": "Identifier",
                         "typeAnnotation": null,
@@ -282,8 +297,8 @@ describe('Object properties', () => {
                     ],
                     "predicate": null,
                     "range": Array [
-                      131,
-                      137,
+                      145,
+                      151,
                     ],
                     "returnType": null,
                     "type": "FunctionExpression",
@@ -292,14 +307,14 @@ describe('Object properties', () => {
                 },
               ],
               "range": Array [
-                6,
-                144,
+                8,
+                160,
               ],
               "type": "ObjectExpression",
             },
             "range": Array [
-              5,
-              145,
+              7,
+              161,
             ],
             "type": "ExpressionStatement",
           },
@@ -307,10 +322,11 @@ describe('Object properties', () => {
         "type": "Program",
       }
     `);
+    expectEspreeAlignment(testCase);
   });
 
   test('Babel', () => {
-    expect(parse(source, {babel: true})).toMatchObject({
+    expect(parse(testCase.code, {babel: true})).toMatchObject({
       type: 'File',
       program: {
         type: 'Program',
@@ -432,5 +448,6 @@ describe('Object properties', () => {
         ],
       },
     });
+    expectBabelAlignment(testCase);
   });
 });
