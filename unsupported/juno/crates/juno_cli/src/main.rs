@@ -249,8 +249,17 @@ impl Options {
                     values: Some(&[
                         ("js", ParserDialect::JavaScript, "JavaScript"),
                         ("flow", ParserDialect::Flow, "Flow"),
-                        ("flow-unambiguous", ParserDialect::Flow, "Flow unambiguous"),
-                        ("ts", ParserDialect::Flow, "TypeScript"),
+                        (
+                            "flow-unambiguous",
+                            ParserDialect::FlowUnambiguous,
+                            "Flow unambiguous",
+                        ),
+                        (
+                            "flow-detect",
+                            ParserDialect::FlowDetect,
+                            "Detect @flow pragma, otherwise only parse unambiguous Flow",
+                        ),
+                        ("ts", ParserDialect::TypeScript, "TypeScript"),
                     ]),
                     init: Some(ParserDialect::JavaScript),
                     category: input_cat,

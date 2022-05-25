@@ -349,6 +349,10 @@ enum class ParserDialect : uint8_t {
   /// containing two comparisons, even though it could otherwise be interpreted
   /// as a call expression with Flow type arguments.
   FlowUnambiguous,
+  /// Look for the '@flow' pragma in the first comment in the JS file.
+  /// If it exists, then parse all Flow type syntax, otherwise only parse
+  /// Flow type syntax according to the FlowUnambiguous mode.
+  FlowDetect,
   /// Parse TypeScript.
   TypeScript,
 };
@@ -508,6 +512,13 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
   parserCtx->context_.setStrictMode(flags.strictMode);
   parserCtx->context_.setParseJSX(flags.enableJSX);
 
+  if (len == 0 || source[len - 1] != 0) {
+    parserCtx->addError("Input is not zero terminated");
+    return parserCtx.release();
+  }
+
+  parserCtx->setInputBuffer(StringRef(source, len));
+
   parserCtx->context_.setParseTS(false);
   parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::NONE);
   switch (flags.dialect) {
@@ -519,17 +530,17 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
     case ParserDialect::FlowUnambiguous:
       parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::UNAMBIGUOUS);
       break;
+    case ParserDialect::FlowDetect:
+      parserCtx->context_.setParseFlow(
+          parser::hasFlowPragma(parserCtx->context_, parserCtx->getBufferId())
+              ? ParseFlowSetting::ALL
+              : ParseFlowSetting::UNAMBIGUOUS);
+      break;
     case ParserDialect::TypeScript:
       parserCtx->context_.setParseTS(true);
       break;
   }
 
-  if (len == 0 || source[len - 1] != 0) {
-    parserCtx->addError("Input is not zero terminated");
-    return parserCtx.release();
-  }
-
-  parserCtx->setInputBuffer(StringRef(source, len));
   parser::JSParser parser(
       parserCtx->context_, parserCtx->bufId_, hermes::parser::FullParse);
   auto ast = parser.parse();

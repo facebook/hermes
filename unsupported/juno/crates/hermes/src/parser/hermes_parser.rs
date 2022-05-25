@@ -28,6 +28,10 @@ pub enum ParserDialect {
     /// containing two comparisons, even though it could otherwise be interpreted
     /// as a call expression with Flow type arguments.
     FlowUnambiguous,
+    /// Look for the '@flow' pragma in the first comment in the JS file.
+    /// If it exists, then parse all Flow type syntax, otherwise only parse
+    /// Flow type syntax according to the FlowUnambiguous mode.
+    FlowDetect,
     /// Parse TypeScript.
     TypeScript,
 }
