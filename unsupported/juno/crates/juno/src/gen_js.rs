@@ -3377,7 +3377,6 @@ impl<W: Write> GenJS<'_, W> {
                     unimplemented!("Malformed AST: Need to handle error");
                 }
             }
-            this.visit(ctx, self, Some(Path::new(node, NodeField::this)));
             need_comma = true;
         }
         for param in params.iter() {

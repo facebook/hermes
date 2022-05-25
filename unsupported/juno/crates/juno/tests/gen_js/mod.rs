@@ -607,6 +607,14 @@ fn test_predicate() {
 }
 
 #[test]
+fn test_this_param() {
+    test_roundtrip_flow("function foo(this: number): number {}");
+    test_roundtrip_flow("function foo(this: number, x: number): number {}");
+    test_roundtrip_flow("declare function foo(this: number): number;");
+    test_roundtrip_flow("declare function foo(this: number, x: number): number;");
+}
+
+#[test]
 fn test_jsx() {
     test_roundtrip_jsx("<foo />");
     test_roundtrip_jsx("<foo></foo>");
