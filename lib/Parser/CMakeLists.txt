@@ -14,6 +14,7 @@ add_hermes_library(hermesParser
         JSParserImpl-jsx.cpp
         JSParserImpl-ts.cpp
         JSParserImpl.h
+        FlowHelpers.cpp
         rust-api.cpp
         LINK_LIBS hermesSupport hermesAST dtoa
 )

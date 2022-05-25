@@ -14,6 +14,7 @@
  * consumer for that file.
  */
 
+#include "hermes/Parser/FlowHelpers.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
