@@ -250,6 +250,9 @@ fn test_statements() {
         }",
     );
     test_roundtrip("do {fn();} while (1)");
+    test_roundtrip("do fn(); while (1)");
+    test_roundtrip("do x, y, z; while (1)");
+    test_roundtrip("do if (x) y; while (1)");
     test_roundtrip("debugger");
     test_roundtrip("{fn(); fn();}");
     test_roundtrip("for (;;) { break; }");

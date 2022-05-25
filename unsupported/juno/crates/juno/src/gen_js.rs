@@ -510,7 +510,7 @@ impl<W: Write> GenJS<'_, W> {
                 body,
                 test,
             }) => {
-                out!(self, "do");
+                out!(self, "do ");
                 let block = self.visit_stmt_or_block(
                     ctx,
                     *body,
@@ -520,7 +520,6 @@ impl<W: Write> GenJS<'_, W> {
                 if block {
                     self.space(ForceSpace::No);
                 } else {
-                    out!(self, ";");
                     self.newline();
                 }
                 out!(self, "while");
