@@ -510,15 +510,56 @@ fn test_types() {
     test_roundtrip_flow("type A = 3n");
     test_roundtrip_flow("type A = boolean");
     test_roundtrip_flow("type A = true | false");
+    test_roundtrip_flow("type A = true & false");
+    test_roundtrip_flow("type A = (X | Y) & Z");
+    test_roundtrip_flow("type A = X | Y & Z");
+    test_roundtrip_flow("type A = X<Y, Z>");
+    test_roundtrip_flow("type A = X<Y>");
+    test_roundtrip_flow("type A<X: Y, Z> = T");
     test_roundtrip_flow("type A = symbol");
     test_roundtrip_flow("type A = mixed");
     test_roundtrip_flow("type A = any");
     test_roundtrip_flow("type A = void");
+    test_roundtrip_flow("type A = null");
     test_roundtrip_flow("type A = number => number");
+    test_roundtrip_flow("type A = X.Y");
+    test_roundtrip_flow("type A = X.Y<Z>");
+    test_roundtrip_flow("type A = typeof X");
+    test_roundtrip_flow("type A = [number, string]");
+    test_roundtrip_flow("type A = []");
+    test_roundtrip_flow("type A = number[]");
+    test_roundtrip_flow("type A = number[string]");
+    test_roundtrip_flow("type A = number?.[string]");
+    test_roundtrip_flow("type A = [number, string][]");
     test_roundtrip_flow("type A = (foo: number) => number");
+    test_roundtrip_flow("type A = (foo?: number) => number");
+    test_roundtrip_flow("type A = (foo?: ?number) => number");
     test_roundtrip_flow("type A = (number, string) => number");
     test_roundtrip_flow("type A = (?number) => number");
     test_roundtrip_flow("type A = ?(number, string) => number");
+    test_roundtrip_flow("type A = (this: number, number, string) => number");
+    test_roundtrip_flow("interface A { }");
+    test_roundtrip_flow("interface A extends B { }");
+    test_roundtrip_flow("interface A extends B, C, D { }");
+    test_roundtrip_flow("type A = { x: number }");
+    test_roundtrip_flow("type A = {| x: number |}");
+    test_roundtrip_flow(
+        "
+        type A = {
+            a?: number,
+            b: ?string,
+            +[c]: string,
+            (d?: number): number;
+            [[e]]: number,
+            [[f]]?: number,
+            [[g]](a: T): number,
+            ...h,
+            static (i?: number): number;
+            +proto: number,
+            ...
+        };
+        ",
+    );
 }
 
 #[test]
@@ -529,18 +570,36 @@ fn test_declare() {
     test_roundtrip_flow("declare opaque type x;");
     test_roundtrip_flow("declare export opaque type x: y;");
     test_roundtrip_flow("declare type x = number;");
+    test_roundtrip_flow("declare interface Foo {}");
+    test_roundtrip_flow("declare class A extends B {}");
+    test_roundtrip_flow("declare class A extends B mixins C, D implements E {}");
+    test_roundtrip_flow("declare export class A extends B {}");
+    test_roundtrip_flow("declare module A {}");
+    test_roundtrip_flow("declare module.exports: number;");
 }
 
 #[test]
 fn test_enum() {
     test_roundtrip_flow("enum Foo {}");
     test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B'}");
+    test_roundtrip_flow("enum Foo : string {A, B, C}");
+    test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B', ...}");
 }
 
 #[test]
 fn test_typecast() {
     test_roundtrip_flow("async function foo() { return (x: any); }");
     test_roundtrip_flow("var x = (y: number | number => string)");
+}
+
+#[test]
+fn test_predicate() {
+    test_roundtrip_flow("function foo(): %checks {}");
+    test_roundtrip_flow("function foo(): number %checks {}");
+    test_roundtrip_flow("function foo(): number %checks(bar) {}");
+    test_roundtrip_flow("((x): %checks => 3)");
+    test_roundtrip_flow("((x): number %checks => 3)");
+    test_roundtrip_flow("((x): number %checks(bar) => 3)");
 }
 
 #[test]

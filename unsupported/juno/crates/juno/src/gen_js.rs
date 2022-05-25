@@ -456,8 +456,10 @@ impl<W: Write> GenJS<'_, W> {
                     }
                     out!(self, ")");
                 }
-                if let Some(return_type) = return_type {
+                if return_type.is_some() || predicate.is_some() {
                     out!(self, ":");
+                }
+                if let Some(return_type) = return_type {
                     self.space(ForceSpace::No);
                     self.print_child(
                         ctx,
@@ -2214,7 +2216,6 @@ impl<W: Write> GenJS<'_, W> {
                             unimplemented!("Malformed AST: Need to handle error");
                         }
                     }
-                    this.visit(ctx, self, Some(Path::new(node, NodeField::this)));
                     need_comma = true;
                 }
                 for param in params.iter() {
@@ -2520,7 +2521,16 @@ impl<W: Write> GenJS<'_, W> {
                 mixins,
                 body,
             }) => {
-                out_token!(self, node, "declare class ");
+                match path {
+                    Some(path) if !matches!(path.parent, Node::DeclareExportDeclaration(_)) => {
+                        out!(self, "declare ");
+                    }
+                    None => {
+                        out!(self, "declare ");
+                    }
+                    _ => {}
+                };
+                out_token!(self, node, "class ");
                 id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(
@@ -2848,10 +2858,10 @@ impl<W: Write> GenJS<'_, W> {
                 }
                 out!(self, "[[");
                 id.visit(ctx, self, Some(Path::new(node, NodeField::id)));
+                out!(self, "]]");
                 if *optional {
                     out!(self, "?");
                 }
-                out!(self, "]]");
                 if *method {
                     match value {
                         Node::FunctionTypeAnnotation(FunctionTypeAnnotation {
@@ -3320,8 +3330,10 @@ impl<W: Write> GenJS<'_, W> {
             param.visit(ctx, self, Some(Path::new(node, NodeField::param)));
         }
         out!(self, ")");
-        if let Some(return_type) = return_type {
+        if return_type.is_some() || predicate.is_some() {
             out!(self, ":");
+        }
+        if let Some(return_type) = return_type {
             self.space(ForceSpace::No);
             return_type.visit(ctx, self, Some(Path::new(node, NodeField::return_type)));
         }
@@ -3404,7 +3416,7 @@ impl<W: Write> GenJS<'_, W> {
         }
         self.space(ForceSpace::No);
         if !extends.is_empty() {
-            out!(self, "extends ");
+            out!(self, " extends ");
             for (i, extend) in extends.iter().enumerate() {
                 if i > 0 {
                     self.comma();
@@ -4043,6 +4055,15 @@ fn stmt_skip_semi<'gc>(ctx: &'gc GCLock, node: Option<&'gc Node<'gc>>) -> bool {
             | Node::ForOfStatement(_)
             | Node::IfStatement(_)
             | Node::WithStatement(_) => true,
+            Node::InterfaceDeclaration(_)
+            | Node::DeclareInterface(_)
+            | Node::DeclareClass(_)
+            | Node::DeclareModule(_) => true,
+            Node::DeclareExportDeclaration(DeclareExportDeclaration {
+                declaration,
+                source: None,
+                ..
+            }) => stmt_skip_semi(ctx, *declaration),
             Node::SwitchStatement(_) => true,
             Node::LabeledStatement(LabeledStatement { body, .. }) => {
                 stmt_skip_semi(ctx, Some(*body))
