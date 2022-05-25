@@ -581,9 +581,11 @@ fn test_declare() {
 #[test]
 fn test_enum() {
     test_roundtrip_flow("enum Foo {}");
-    test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B'}");
-    test_roundtrip_flow("enum Foo : string {A, B, C}");
-    test_roundtrip_flow("enum Foo : string {A = 'A', B = 'B', ...}");
+    test_roundtrip_flow("enum Foo of string {A = 'A', B = 'B'}");
+    test_roundtrip_flow("enum Foo of string {A, B, C}");
+    test_roundtrip_flow("enum Foo of string {A = 'A', B = 'B', ...}");
+    test_roundtrip_flow("enum Foo of number {A = 1}");
+    test_roundtrip_flow("enum Foo of boolean {A = true}");
 }
 
 #[test]

@@ -3439,10 +3439,9 @@ impl<W: Write> GenJS<'_, W> {
         node: &'gc Node<'gc>,
     ) {
         if explicit_type {
-            out!(self, ":");
-            self.space(ForceSpace::No);
-            out!(self, "{}", kind);
+            out!(self, " of {}", kind);
         }
+        self.space(ForceSpace::No);
         out!(self, "{{");
         self.inc_indent();
         self.newline();
