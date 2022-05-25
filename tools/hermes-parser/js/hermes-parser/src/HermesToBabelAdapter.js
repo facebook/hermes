@@ -93,6 +93,12 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     }
   }
 
+  mapPrivateProperty(node: HermesNode): HermesNode {
+    throw new SyntaxError(
+      this.formatError(node, 'Private properties are not supported'),
+    );
+  }
+
   mapProgram(node: HermesNode): HermesNode {
     // Visit child nodes and convert to directives
     const {comments, ...program} = this.mapNodeWithDirectives(node);

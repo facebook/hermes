@@ -36,6 +36,11 @@ const NODES_TO_REMOVE = new Set([
   'JSXStringLiteral',
   // don't know what this is for...
   'Metadata',
+  // ESTree spec now uses PropertyDefinition
+  'ClassProperty',
+  'ClassPrivateProperty',
+  // ESTree spec now uses PrivateIdentifier
+  'PrivateName',
 ]);
 
 const rawJSON: ESTreeJSON = JSON.parse(
@@ -59,6 +64,23 @@ const cleanedJSON = rawJSON
       base: 'Base',
       arguments: [],
     },
+
+    // These are added by us to align with ESTree
+    {
+      ...nullthrows(rawJSON.find(n => n.name === 'ClassProperty')),
+      name: 'PropertyDefinition',
+    },
+    {
+      name: 'PrivateIdentifier',
+      base: 'Base',
+      arguments: [
+        {
+          type: 'NodeLabel',
+          name: 'name',
+          optional: false,
+        },
+      ],
+    },
   ])
   .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -69,3 +91,10 @@ const formattedContents = execSync('prettier --parser=json', {
 
 mkdirp.sync(OUTPUT_DIR);
 fs.writeFileSync(OUTPUT_FILE, formattedContents);
+
+function nullthrows<T>(arg: ?T): T {
+  if (arg == null) {
+    throw new Error('unexpected null');
+  }
+  return arg;
+}

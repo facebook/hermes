@@ -120,6 +120,7 @@ export interface Program extends BaseNode {
 // Because this file declares global types - we can't clash with it
 export type ESNode =
   | Identifier
+  | PrivateIdentifier
   | Literal
   | Program
   | AFunction
@@ -139,6 +140,7 @@ export type ESNode =
   | ClassBody
   | AClass
   | MethodDefinition
+  | PropertyDefinition
   | ModuleDeclaration
   | ModuleSpecifier
   | ImportAttribute
@@ -153,9 +155,6 @@ export type ESNode =
   | ObjectTypeIndexer
   | ObjectTypeSpreadProperty
   | InterfaceExtends
-  | ClassProperty
-  | ClassPrivateProperty
-  | PrivateName
   | ClassImplements
   | Decorator
   | TypeParameterDeclaration
@@ -525,10 +524,8 @@ export interface UnaryExpression extends BaseNode {
 export interface BinaryExpression extends BaseNode {
   +type: 'BinaryExpression';
   +operator: BinaryOperator;
-  +left: Expression;
+  +left: Expression | PrivateIdentifier;
   +right: Expression;
-  // once private brand checks are supported: `#x in this`
-  // | PrivateName;
 }
 
 export interface AssignmentExpression extends BaseNode {
@@ -579,7 +576,7 @@ interface BaseMemberExpressionWithComputedName extends BaseNode {
 }
 interface BaseMemberExpressionWithNonComputedName extends BaseNode {
   +object: Expression | Super;
-  +property: Identifier | PrivateName;
+  +property: Identifier | PrivateIdentifier;
   +computed: false;
 }
 export type MemberExpression =
@@ -626,6 +623,11 @@ export interface Identifier extends BaseNode {
   +typeAnnotation: TypeAnnotation | null;
   // only applies to function arguments
   +optional: boolean;
+}
+
+export interface PrivateIdentifier extends BaseNode {
+  +type: 'PrivateIdentifier';
+  +name: string;
 }
 
 export type Literal =
@@ -821,13 +823,18 @@ interface BaseClass extends BaseNode {
   +decorators: $ReadOnlyArray<Decorator>;
 }
 
-export type ClassMember =
-  | ClassProperty
-  | ClassPrivateProperty
-  | MethodDefinition;
+export type PropertyName =
+  | ClassPropertyNameComputed
+  | ClassPropertyNameNonComputed;
+export type ClassPropertyNameComputed = Expression;
+export type ClassPropertyNameNonComputed =
+  | PrivateIdentifier
+  | Identifier
+  | StringLiteral;
+
+export type ClassMember = PropertyDefinition | MethodDefinition;
 export type ClassMemberWithNonComputedName =
-  | ClassPropertyWithNonComputedName
-  | ClassPrivateProperty
+  | PropertyDefinitionWithNonComputedName
   | MethodDefinitionConstructor
   | MethodDefinitionWithNonComputedName;
 export interface ClassBody extends BaseNode {
@@ -851,7 +858,7 @@ export interface MethodDefinitionConstructor extends MethodDefinitionBase {
 }
 export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
   +type: 'MethodDefinition';
-  +key: Expression;
+  +key: ClassPropertyNameComputed;
   +kind: 'method' | 'get' | 'set';
   +computed: true;
   +static: boolean;
@@ -859,10 +866,36 @@ export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
 export interface MethodDefinitionWithNonComputedName
   extends MethodDefinitionBase {
   +type: 'MethodDefinition';
-  +key: Identifier;
+  +key: ClassPropertyNameNonComputed;
   +kind: 'method' | 'get' | 'set';
   +computed: false;
   +static: boolean;
+}
+
+// `PropertyDefinition` is the new standard for all class properties
+export type PropertyDefinition =
+  | PropertyDefinitionWithComputedName
+  | PropertyDefinitionWithNonComputedName;
+interface PropertyDefinitionBase extends BaseNode {
+  +value: null | Expression;
+  +typeAnnotation: null | TypeAnnotationType;
+  +static: boolean;
+  +variance: null | Variance;
+  +declare: boolean;
+  // hermes always emit this as false
+  +optional: false;
+}
+export interface PropertyDefinitionWithComputedName
+  extends PropertyDefinitionBase {
+  +type: 'PropertyDefinition';
+  +key: ClassPropertyNameComputed;
+  +computed: true;
+}
+export interface PropertyDefinitionWithNonComputedName
+  extends PropertyDefinitionBase {
+  +type: 'PropertyDefinition';
+  +key: ClassPropertyNameNonComputed;
+  +computed: false;
 }
 
 export interface ClassDeclaration extends BaseClass {
@@ -1547,42 +1580,6 @@ export interface OptionalMemberExpressionWithNonComputedName
 export interface ExportNamespaceSpecifier extends BaseNode {
   +type: 'ExportNamespaceSpecifier';
   +exported: Identifier;
-}
-
-// `PropertyDefinition` is the new standard for all class properties
-export type ClassProperty =
-  | ClassPropertyWithComputedName
-  | ClassPropertyWithNonComputedName;
-interface ClassPropertyBase extends BaseNode {
-  +value: null | Expression;
-  +typeAnnotation: null | TypeAnnotationType;
-  +static: boolean;
-  +variance: null | Variance;
-  +declare: boolean;
-  // hermes always emit this as false
-  +optional: false;
-}
-export interface ClassPropertyWithComputedName extends ClassPropertyBase {
-  +type: 'ClassProperty';
-  +key: Expression;
-  +computed: true;
-}
-export interface ClassPropertyWithNonComputedName extends ClassPropertyBase {
-  +type: 'ClassProperty';
-  +key: Identifier;
-  +computed: false;
-}
-export interface ClassPrivateProperty extends ClassPropertyBase {
-  +type: 'ClassPrivateProperty';
-  +key: Identifier;
-  // this is never emitted, but it makes it easier to do lookups with the `ClassMember` type
-  +computed?: void;
-}
-
-// `PrivateIdentifier` is the new standard for #private identifiers
-export interface PrivateName extends BaseNode {
-  +type: 'PrivateName';
-  +id: Identifier;
 }
 
 export {};

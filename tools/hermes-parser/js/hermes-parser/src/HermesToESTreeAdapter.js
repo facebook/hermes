@@ -84,15 +84,17 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapExportNamedDeclaration(node);
       case 'ExportAllDeclaration':
         return this.mapExportAllDeclaration(node);
-      case 'PrivateName':
-      case 'ClassPrivateProperty':
-        return this.mapPrivateProperty(node);
       case 'Property':
         return this.mapProperty(node);
       case 'FunctionDeclaration':
       case 'FunctionExpression':
       case 'ArrowFunctionExpression':
         return this.mapFunction(node);
+      case 'PrivateName':
+        return this.mapPrivateName(node);
+      case 'ClassProperty':
+      case 'ClassPrivateProperty':
+        return this.mapClassProperty(node);
       case 'MemberExpression':
         return this.mapMemberExpression(node);
       default:
@@ -261,5 +263,40 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     const node = this.mapNodeDefault(nodeUnprocessed);
     node.optional = false;
     return node;
+  }
+
+  mapClassProperty(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+
+    const key = (() => {
+      if (node.type === 'ClassPrivateProperty') {
+        const key = this.mapNodeDefault(node.key);
+        return {
+          type: 'PrivateIdentifier',
+          name: key.name,
+          range: key.range,
+          loc: key.loc,
+        };
+      }
+
+      return node.key;
+    })();
+
+    return {
+      ...node,
+      computed: node.type === 'ClassPrivateProperty' ? false : node.computed,
+      key,
+      type: 'PropertyDefinition',
+    };
+  }
+
+  mapPrivateName(node: HermesNode): HermesNode {
+    return {
+      type: 'PrivateIdentifier',
+      name: node.id.name,
+      // estree the location refers to the entire string including the hash token
+      range: node.range,
+      loc: node.loc,
+    };
   }
 }

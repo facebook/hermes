@@ -58,7 +58,7 @@ import type {
   OpaqueType,
   OptionalCallExpression,
   OptionalMemberExpression,
-  PrivateName,
+  PrivateIdentifier,
   Program,
   Property,
   SwitchStatement,
@@ -627,7 +627,7 @@ class Referencer extends Visitor {
     this.visitMemberExpression(node);
   }
 
-  PrivateName(_: PrivateName): void {
+  PrivateIdentifier(_: PrivateIdentifier): void {
     // private names can only reference class properties
   }
 

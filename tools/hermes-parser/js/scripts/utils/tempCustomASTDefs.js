@@ -31,60 +31,44 @@ const NODE_LIST = 'NodeList';
  */
 export default ({
   File: {
-    builder: ['program'],
-    visitor: {program: NODE},
+    program: NODE,
   },
   ObjectProperty: {
-    builder: ['key', 'value', 'computed', 'shorthand'],
-    visitor: {
-      key: NODE,
-      value: NODE,
-    },
+    key: NODE,
+    value: NODE,
   },
   ObjectMethod: {
-    builder: [
-      'kind',
-      'key',
-      'params',
-      'body',
-      'computed',
-      'generator',
-      'async',
-    ],
-    visitor: {
-      key: NODE,
-      params: NODE_LIST,
-      body: NODE,
-      returnType: NODE,
-      typeParameters: NODE_LIST,
-    },
+    key: NODE,
+    params: NODE_LIST,
+    body: NODE,
+    returnType: NODE,
+    typeParameters: NODE_LIST,
   },
   ClassMethod: {
-    builder: [
-      'kind',
-      'key',
-      'params',
-      'body',
-      'computed',
-      'static',
-      'generator',
-      'async',
-    ],
-    visitor: {
-      key: NODE,
-      params: NODE_LIST,
-      body: NODE,
-      returnType: NODE,
-      typeParameters: NODE_LIST,
-    },
+    key: NODE,
+    params: NODE_LIST,
+    body: NODE,
+    returnType: NODE,
+    typeParameters: NODE_LIST,
   },
-  Import: {
-    builder: [],
-    visitor: {},
+  Import: {},
+
+  // to help with the conversion from Hermes -> ESTree
+  ClassProperty: {
+    key: NODE,
+    value: NODE,
+    variance: NODE,
+    typeAnnotation: NODE,
+  },
+  ClassPrivateProperty: {
+    key: NODE,
+    value: NODE,
+    variance: NODE,
+    typeAnnotation: NODE,
+  },
+  PrivateName: {
+    id: NODE,
   },
 }: $ReadOnly<{
-  [string]: $ReadOnly<{
-    builder: $ReadOnlyArray<string>,
-    visitor: $ReadOnly<{[string]: AstType}>,
-  }>,
+  [string]: $ReadOnly<{[string]: AstType}>,
 }>);

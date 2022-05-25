@@ -28,8 +28,7 @@ describe('Private properties', () => {
         }
       `,
       espree: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+        expectToFail: false,
       },
       babel: {
         expectToFail: 'hermes-exception',
@@ -38,10 +37,46 @@ describe('Private properties', () => {
     };
 
     test('ESTree', () => {
-      // Private property uses are not supported
-      expect(() => parseForSnapshot(testCase.code)).toThrow(
-        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
-      );
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        Object {
+          "body": Array [
+            Object {
+              "body": Object {
+                "body": Array [
+                  Object {
+                    "computed": false,
+                    "declare": false,
+                    "key": Object {
+                      "name": "private",
+                      "type": "PrivateIdentifier",
+                    },
+                    "optional": false,
+                    "static": false,
+                    "type": "PropertyDefinition",
+                    "typeAnnotation": null,
+                    "value": null,
+                    "variance": null,
+                  },
+                ],
+                "type": "ClassBody",
+              },
+              "decorators": Array [],
+              "id": Object {
+                "name": "Foo",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "implements": Array [],
+              "superClass": null,
+              "superTypeParameters": null,
+              "type": "ClassDeclaration",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
       expectEspreeAlignment(testCase);
     });
 
@@ -65,8 +100,7 @@ describe('Private properties', () => {
         }
       `,
       espree: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+        expectToFail: false,
       },
       babel: {
         expectToFail: 'hermes-exception',
@@ -75,10 +109,93 @@ describe('Private properties', () => {
     };
 
     test('ESTree', () => {
-      // Private property uses are not supported
-      expect(() => parseForSnapshot(testCase.code)).toThrow(
-        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
-      );
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        Object {
+          "body": Array [
+            Object {
+              "body": Object {
+                "body": Array [
+                  Object {
+                    "computed": false,
+                    "declare": false,
+                    "key": Object {
+                      "name": "private",
+                      "type": "PrivateIdentifier",
+                    },
+                    "optional": false,
+                    "static": false,
+                    "type": "PropertyDefinition",
+                    "typeAnnotation": null,
+                    "value": null,
+                    "variance": null,
+                  },
+                  Object {
+                    "computed": false,
+                    "key": Object {
+                      "name": "constructor",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "kind": "constructor",
+                    "static": false,
+                    "type": "MethodDefinition",
+                    "value": Object {
+                      "async": false,
+                      "body": Object {
+                        "body": Array [
+                          Object {
+                            "directive": null,
+                            "expression": Object {
+                              "computed": false,
+                              "object": Object {
+                                "name": "foo",
+                                "optional": false,
+                                "type": "Identifier",
+                                "typeAnnotation": null,
+                              },
+                              "optional": false,
+                              "property": Object {
+                                "name": "private",
+                                "type": "PrivateIdentifier",
+                              },
+                              "type": "MemberExpression",
+                            },
+                            "type": "ExpressionStatement",
+                          },
+                        ],
+                        "type": "BlockStatement",
+                      },
+                      "expression": false,
+                      "generator": false,
+                      "id": null,
+                      "params": Array [],
+                      "predicate": null,
+                      "returnType": null,
+                      "type": "FunctionExpression",
+                      "typeParameters": null,
+                    },
+                  },
+                ],
+                "type": "ClassBody",
+              },
+              "decorators": Array [],
+              "id": Object {
+                "name": "Foo",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "implements": Array [],
+              "superClass": null,
+              "superTypeParameters": null,
+              "type": "ClassDeclaration",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
       expectEspreeAlignment(testCase);
     });
 
@@ -102,8 +219,7 @@ describe('Private properties', () => {
         }
       `,
       espree: {
-        expectToFail: 'hermes-exception',
-        expectedExceptionMessage: PRIVATE_ERROR_MESSAGE,
+        expectToFail: false,
       },
       babel: {
         expectToFail: 'hermes-exception',
@@ -112,10 +228,92 @@ describe('Private properties', () => {
     };
 
     test('ESTree', () => {
-      // Private property uses are not supported
-      expect(() => parseForSnapshot(testCase.code)).toThrow(
-        new SyntaxError(`${PRIVATE_ERROR_MESSAGE} (3:10)`),
-      );
+      expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+        Object {
+          "body": Array [
+            Object {
+              "body": Object {
+                "body": Array [
+                  Object {
+                    "computed": false,
+                    "declare": false,
+                    "key": Object {
+                      "name": "private",
+                      "type": "PrivateIdentifier",
+                    },
+                    "optional": false,
+                    "static": false,
+                    "type": "PropertyDefinition",
+                    "typeAnnotation": null,
+                    "value": null,
+                    "variance": null,
+                  },
+                  Object {
+                    "computed": false,
+                    "key": Object {
+                      "name": "constructor",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "kind": "constructor",
+                    "static": false,
+                    "type": "MethodDefinition",
+                    "value": Object {
+                      "async": false,
+                      "body": Object {
+                        "body": Array [
+                          Object {
+                            "directive": null,
+                            "expression": Object {
+                              "left": Object {
+                                "name": "private",
+                                "type": "PrivateIdentifier",
+                              },
+                              "operator": "in",
+                              "right": Object {
+                                "name": "foo",
+                                "optional": false,
+                                "type": "Identifier",
+                                "typeAnnotation": null,
+                              },
+                              "type": "BinaryExpression",
+                            },
+                            "type": "ExpressionStatement",
+                          },
+                        ],
+                        "type": "BlockStatement",
+                      },
+                      "expression": false,
+                      "generator": false,
+                      "id": null,
+                      "params": Array [],
+                      "predicate": null,
+                      "returnType": null,
+                      "type": "FunctionExpression",
+                      "typeParameters": null,
+                    },
+                  },
+                ],
+                "type": "ClassBody",
+              },
+              "decorators": Array [],
+              "id": Object {
+                "name": "Foo",
+                "optional": false,
+                "type": "Identifier",
+                "typeAnnotation": null,
+              },
+              "implements": Array [],
+              "superClass": null,
+              "superTypeParameters": null,
+              "type": "ClassDeclaration",
+              "typeParameters": null,
+            },
+          ],
+          "type": "Program",
+        }
+      `);
       expectEspreeAlignment(testCase);
     });
 

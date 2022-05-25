@@ -11,13 +11,13 @@
 'use strict';
 
 import type {
+  ClassBody,
   ClassDeclaration,
   ClassExpression,
   ESNode,
-  ClassProperty,
   Identifier,
   MethodDefinition,
-  ClassBody,
+  PropertyDefinition,
 } from 'hermes-estree';
 import type {Referencer} from './Referencer';
 
@@ -93,25 +93,25 @@ class ClassVisitor extends Visitor {
     this._referencer.close(node);
   }
 
-  visitPropertyDefinition(node: ClassProperty): void {
+  visitPropertyDefinition(node: PropertyDefinition): void {
     this.visitProperty(node);
     this.visitType(node.typeAnnotation);
   }
 
-  visitProperty(node: ClassProperty): void {
+  visitProperty(node: PropertyDefinition): void {
     if (node.computed) {
       this._referencer.visit(node.key);
     }
 
     if (node.value) {
       const value = node.value;
-      if (node.type === 'ClassProperty') {
+      if (node.type === 'PropertyDefinition') {
         this._referencer.scopeManager.nestClassFieldInitializerScope(value);
       }
 
       this._referencer.visit(value);
 
-      if (node.type === 'ClassProperty') {
+      if (node.type === 'PropertyDefinition') {
         this._referencer.close(value);
       }
     }
@@ -142,7 +142,7 @@ class ClassVisitor extends Visitor {
     this.visitChildren(node);
   }
 
-  ClassProperty(node: ClassProperty): void {
+  PropertyDefinition(node: PropertyDefinition): void {
     this.visitPropertyDefinition(node);
   }
 

@@ -9,7 +9,7 @@
  */
 
 import type {
-  ClassProperty,
+  PropertyDefinition,
   EnumDefaultedMember,
   FunctionTypeParam,
   Identifier,
@@ -24,9 +24,9 @@ import {MutationContext} from '../../../src/transform/MutationContext';
 import {parseAndGetAstAndNode} from './test-utils';
 
 describe('RemoveNode', () => {
-  it('ClassProperty', () => {
-    const {ast, target} = parseAndGetAstAndNode<ClassProperty>(
-      'ClassProperty',
+  it('PropertyDefinition', () => {
+    const {ast, target} = parseAndGetAstAndNode<PropertyDefinition>(
+      'PropertyDefinition',
       'class Foo { prop = 1; method() {} }',
     );
     const mutation = createRemoveNodeMutation(target);

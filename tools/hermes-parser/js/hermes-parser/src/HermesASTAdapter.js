@@ -166,12 +166,6 @@ export default class HermesASTAdapter {
     return this.mapNodeDefault(node);
   }
 
-  mapPrivateProperty(node: HermesNode): HermesNode {
-    throw new SyntaxError(
-      this.formatError(node, 'Private properties are not supported'),
-    );
-  }
-
   formatError(node: HermesNode, message: string): string {
     return `${message} (${node.loc.start.line}:${node.loc.start.column})`;
   }

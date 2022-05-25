@@ -18,7 +18,7 @@ import {
 } from '../__test_utils__/alignment-utils';
 import {parseForSnapshot} from '../__test_utils__/parse';
 
-describe('ClassProperty', () => {
+describe('PropertyDefinition', () => {
   const testCase: AlignmentCase = {
     code: `
       class C {
@@ -28,8 +28,7 @@ describe('ClassProperty', () => {
       }
     `,
     espree: {
-      // TODO - ESTree spec is now `PropertyDefinition`
-      expectToFail: 'ast-diff',
+      expectToFail: false,
     },
     babel: {
       expectToFail: false,
@@ -54,7 +53,7 @@ describe('ClassProperty', () => {
                   },
                   "optional": false,
                   "static": false,
-                  "type": "ClassProperty",
+                  "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": null,
                   "variance": null,
@@ -70,7 +69,7 @@ describe('ClassProperty', () => {
                   },
                   "optional": false,
                   "static": false,
-                  "type": "ClassProperty",
+                  "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": Object {
                     "literalType": "numeric",
@@ -91,7 +90,7 @@ describe('ClassProperty', () => {
                   },
                   "optional": false,
                   "static": true,
-                  "type": "ClassProperty",
+                  "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": Object {
                     "literalType": "numeric",
@@ -164,7 +163,7 @@ describe('ClassProperty', () => {
                       },
                       "optional": false,
                       "static": false,
-                      "type": "ClassProperty",
+                      "type": "PropertyDefinition",
                       "typeAnnotation": Object {
                         "type": "TypeAnnotation",
                         "typeAnnotation": Object {
@@ -251,7 +250,7 @@ describe('ClassProperty', () => {
                       },
                       "optional": false,
                       "static": false,
-                      "type": "ClassProperty",
+                      "type": "PropertyDefinition",
                       "typeAnnotation": Object {
                         "type": "TypeAnnotation",
                         "typeAnnotation": Object {

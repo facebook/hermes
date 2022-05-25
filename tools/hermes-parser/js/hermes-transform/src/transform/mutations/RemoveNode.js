@@ -106,8 +106,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
 
     switch (node.type) {
       // ClassMember
-      case 'ClassProperty':
-      case 'ClassPrivateProperty':
+      case 'PropertyDefinition':
       case 'MethodDefinition':
         assertParent('ClassBody');
         return 'body';

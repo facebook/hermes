@@ -17,14 +17,13 @@ import {
   isBlockComment,
   isClassDeclaration,
   isClassExpression,
-  isClassPrivateProperty,
-  isClassProperty,
   isFunctionDeclaration,
   isFunctionExpression,
   isLineComment,
   isLiteral,
   isMemberExpression,
   isMethodDefinition,
+  isPropertyDefinition,
   isProperty,
 } from './generated/predicates';
 
@@ -34,18 +33,14 @@ export function isClass(node: ESNode): boolean %checks {
   return isClassDeclaration(node) || isClassExpression(node);
 }
 
-export function isClassPropertyWithNonComputedName(
+export function isPropertyDefinitionWithNonComputedName(
   node: ESNode,
 ): boolean %checks {
-  return isClassProperty(node) && node.computed === false;
+  return isPropertyDefinition(node) && node.computed === false;
 }
 
 export function isClassMember(node: ESNode): boolean %checks {
-  return (
-    isClassProperty(node) ||
-    isClassPrivateProperty(node) ||
-    isMethodDefinition(node)
-  );
+  return isPropertyDefinition(node) || isMethodDefinition(node);
 }
 
 export function isClassMemberWithNonComputedName(

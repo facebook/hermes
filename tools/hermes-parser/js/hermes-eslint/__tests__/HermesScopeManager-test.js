@@ -454,7 +454,7 @@ describe('Identifiers not mistakenly treated as references', () => {
     );
   });
 
-  test('ClassProperty', () => {
+  test('PropertyDefinition', () => {
     verifyHasReferences(
       `
         import Foo from 'Foo';
@@ -1351,8 +1351,8 @@ describe('Flow specific properties visited on non-Flow nodes', () => {
   });
 });
 
-describe('ClassProperty', () => {
-  it('ClassProperty', () => {
+describe('PropertyDefinition', () => {
+  it('PropertyDefinition', () => {
     verifyHasScopes(
       `
         import Foo from 'Foo';

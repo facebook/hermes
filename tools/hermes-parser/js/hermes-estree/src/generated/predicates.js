@@ -33,12 +33,8 @@ export function isClassExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ClassExpression';
 }
 
-export function isClassProperty(node: ESNode | Token): boolean %checks {
-  return node.type === 'ClassProperty';
-}
-
-export function isClassPrivateProperty(node: ESNode | Token): boolean %checks {
-  return node.type === 'ClassPrivateProperty';
+export function isPropertyDefinition(node: ESNode | Token): boolean %checks {
+  return node.type === 'PropertyDefinition';
 }
 
 export function isFunctionDeclaration(node: ESNode | Token): boolean %checks {

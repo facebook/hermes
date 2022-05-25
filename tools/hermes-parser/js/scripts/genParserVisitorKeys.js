@@ -16,7 +16,7 @@ import {
 } from './utils/scriptUtils';
 import tempCustomASTDefs from './utils/tempCustomASTDefs';
 
-const visitorKeys: {[string]: {[string]: 'Node' | 'NodeList'}} =
+const visitorKeys: {[string]: $ReadOnly<{[string]: 'Node' | 'NodeList'}>} =
   // $FlowExpectedError[incompatible-type]
   Object.create(null);
 for (const node of HermesESTreeJSON) {
@@ -40,8 +40,7 @@ for (const node of HermesESTreeJSON) {
 
 // custom temp defs
 for (let typeName of Object.keys(tempCustomASTDefs)) {
-  const visitors = tempCustomASTDefs[typeName].visitor;
-  visitorKeys[typeName] = {...visitors};
+  visitorKeys[typeName] = tempCustomASTDefs[typeName];
 }
 
 const visitorKeysFileContents = `\

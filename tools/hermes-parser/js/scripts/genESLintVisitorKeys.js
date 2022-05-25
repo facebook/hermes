@@ -33,11 +33,8 @@ visitorKeys['WhileStatement'] = ['test', 'body'];
 visitorKeys['VariableDeclarator'] = ['id', 'init'];
 
 // hermes-parser uses babel's optional chaining representation, which does not emit this node
+// TODO - remove this once we migrate
 visitorKeys['ChainExpression'] = ['expression'];
-
-// TODO - remove this once we migrate from old-school babel-style AST spec for properties
-//        this exists to allow `SimpleTraverser` to traverse the ESTree spec for the alignment tests
-visitorKeys['PropertyDefinition'] = visitorKeys['ClassProperty'];
 
 // correct the "literal" types
 // the base defs declare each literal as a separate node, but ESTree treats them as a single node
