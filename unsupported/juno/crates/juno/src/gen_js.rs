@@ -1604,14 +1604,14 @@ impl<W: Write> GenJS<'_, W> {
                 variance,
                 type_annotation,
             }) => {
-                if let Some(variance) = variance {
-                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
+                if *declare {
+                    out!(self, "declare ");
                 }
                 if *is_static {
                     out!(self, "static ");
                 }
-                if *declare {
-                    out!(self, "declare ");
+                if let Some(variance) = variance {
+                    variance.visit(ctx, self, Some(Path::new(node, NodeField::variance)));
                 }
                 if *computed {
                     out!(self, "[");

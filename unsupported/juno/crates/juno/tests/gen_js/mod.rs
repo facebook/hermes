@@ -443,6 +443,10 @@ fn test_classes() {
             declare prop4;
             #prop5;
             #prop5: ?number = null;
+            declare +prop6;
+            static +prop7;
+            static +[prop8];
+            declare static +prop9;
             foo<T>() {}
         }",
     );
