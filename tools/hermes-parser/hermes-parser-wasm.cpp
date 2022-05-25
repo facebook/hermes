@@ -50,8 +50,13 @@ extern "C" ParseResult *hermesParse(
       llvh::MemoryBuffer::getMemBuffer(llvh::StringRef{source, sourceSize - 1});
   int fileBufId = sm.addNewSourceBuffer(std::move(fileBuf));
 
-  auto parseFlowSetting =
-      detectFlow && !parser::hasFlowPragma(*context, fileBufId)
+  const auto hasFlowPragma = [](Context &context, uint32_t fileBufId) -> bool {
+    std::vector<parser::StoredComment> comments =
+        parser::getCommentsInDocBlock(context, fileBufId);
+    return parser::hasFlowPragma(comments);
+  };
+
+  auto parseFlowSetting = detectFlow && !hasFlowPragma(*context, fileBufId)
       ? ParseFlowSetting::UNAMBIGUOUS
       : ParseFlowSetting::ALL;
   context->setParseFlow(parseFlowSetting);

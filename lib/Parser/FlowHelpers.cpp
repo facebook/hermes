@@ -14,7 +14,9 @@
 namespace hermes {
 namespace parser {
 
-bool hasFlowPragma(Context &context, uint32_t bufferId) {
+std::vector<StoredComment> getCommentsInDocBlock(
+    Context &context,
+    uint32_t bufferId) {
   // Use a SaveAndSuppressMessages to avoid accumulating extra error messages.
   SourceErrorManager::SaveAndSuppressMessages saveAndSupress{
       &context.getSourceErrorManager()};
@@ -41,9 +43,15 @@ bool hasFlowPragma(Context &context, uint32_t bufferId) {
     numComments = lexer.getStoredComments().size();
   }
 
+  // Only return the first `numComments` comments, which comprise the docblock.
+  std::vector<StoredComment> result = lexer.moveStoredComments();
+  result.erase(result.begin() + numComments, result.end());
+  return result;
+}
+
+bool hasFlowPragma(llvh::ArrayRef<StoredComment> comments) {
   // A flow pragma has the form @flow followed by a word boundary
-  auto comments = lexer.getStoredComments().take_front(numComments);
-  for (auto comment : comments) {
+  for (auto &comment : comments) {
     if (comment.getKind() == parser::StoredComment::Kind::Hashbang) {
       continue;
     }
@@ -71,6 +79,15 @@ bool hasFlowPragma(Context &context, uint32_t bufferId) {
   }
 
   return false;
+}
+
+std::string getDocBlock(llvh::ArrayRef<StoredComment> comments) {
+  std::string result{};
+  for (const auto &comment : comments) {
+    result += comment.getFullString();
+    result.push_back('\n');
+  }
+  return result;
 }
 
 } // namespace parser

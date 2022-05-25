@@ -317,6 +317,14 @@ class StoredComment {
     return StringRef{start, (size_t)(end - start)};
   }
 
+  /// \return the comment with delimiters (//, /*, */, #!) included,
+  /// as a StringRef which points into the source buffer.
+  StringRef getFullString() const {
+    return StringRef{
+        range_.Start.getPointer(),
+        (size_t)(range_.End.getPointer() - range_.Start.getPointer())};
+  }
+
   SMRange getSourceRange() const {
     return range_;
   }
@@ -618,6 +626,14 @@ class JSLexer {
   /// \return a pointer to the end of the buffer.
   const char *getBufferEnd() const {
     return bufferEnd_;
+  }
+
+  /// \return any stored comments to this point, moving them out of storage
+  /// in the lexer and clearing the storage.
+  std::vector<StoredComment> moveStoredComments() {
+    std::vector<StoredComment> result{};
+    std::swap(result, commentStorage_);
+    return result;
   }
 
   /// \return any stored comments to this point.

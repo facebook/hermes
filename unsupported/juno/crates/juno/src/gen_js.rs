@@ -14,6 +14,7 @@ use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
 use std::{
     fmt,
     io::{self, BufWriter, Write},
+    rc::Rc,
 };
 
 /// Options for JS generation.
@@ -23,6 +24,9 @@ pub struct Opt<'s> {
 
     /// How to annotate the generated source.
     pub annotation: Annotation<'s>,
+
+    /// If `Some`, doc block to print at the top of the file.
+    pub doc_block: Option<Rc<String>>,
 }
 
 impl Default for Opt<'_> {
@@ -30,6 +34,7 @@ impl Default for Opt<'_> {
         Opt {
             pretty: Pretty::Yes,
             annotation: Annotation::No,
+            doc_block: None,
         }
     }
 }
@@ -250,8 +255,21 @@ impl<W: Write> GenJS<'_, W> {
                 .sourcemap
                 .add_source(ctx.sm().source_name(SourceId(i as u32)));
         }
+
+        if let Some(doc_block) = gen_js.opt.doc_block.clone() {
+            let mut buf = [0u8; 4];
+            for c in doc_block.chars() {
+                if c == '\n' {
+                    gen_js.force_newline_without_indent();
+                } else {
+                    gen_js.write_char(c, &mut buf);
+                }
+            }
+        }
+
         root.visit(ctx, &mut gen_js, None);
         gen_js.force_newline();
+
         gen_js.flush_cur_token();
         match gen_js.error {
             None => gen_js

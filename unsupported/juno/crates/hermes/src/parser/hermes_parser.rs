@@ -46,6 +46,8 @@ pub struct ParserFlags {
     pub enable_jsx: bool,
     /// Dialect control.
     pub dialect: ParserDialect,
+    /// Store doc-comment block at the top of the file.
+    pub store_doc_block: bool,
 }
 
 impl Default for ParserFlags {
@@ -54,6 +56,7 @@ impl Default for ParserFlags {
             strict_mode: false,
             enable_jsx: false,
             dialect: ParserDialect::JavaScript,
+            store_doc_block: false,
         }
     }
 }
@@ -216,6 +219,8 @@ extern "C" {
         kind: MagicCommentKind,
     ) -> DataRef<'a, u8>;
     fn hermes_get_node_name(node: NodePtr) -> DataRef<'static, u8>;
+    /// Return the doc block for the file if `storeDocBlock` was provided at parse time.
+    fn hermes_parser_get_doc_block<'a>(parser_ctx: *const ParserContext) -> DataRef<'a, u8>;
 }
 
 pub struct HermesParser<'a> {
@@ -254,6 +259,16 @@ impl HermesParser<'_> {
     /// Return true if there was at least one parser error. That implies that there is no AST.
     pub fn has_errors(&self) -> bool {
         self.first_error_index().is_some()
+    }
+
+    /// Return the doc block at the top of the file if it exists.
+    pub fn get_doc_block(&self) -> Option<&str> {
+        let result = unsafe { hermes_parser_get_doc_block(self.parser_ctx) };
+        if result.is_empty() {
+            None
+        } else {
+            Some(unsafe { std::str::from_utf8_unchecked(result.as_slice()) })
+        }
     }
 
     /// Return a slice containing all parser messages.

@@ -517,6 +517,7 @@ fn run() -> anyhow::Result<()> {
             strict_mode: ctx.strict_mode(),
             enable_jsx: false,
             dialect: ParserDialect::JavaScript,
+            store_doc_block: false,
         },
         &buf,
     );

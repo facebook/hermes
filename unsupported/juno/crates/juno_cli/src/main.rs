@@ -23,6 +23,7 @@ use std::io::Write;
 use std::ops::DerefMut;
 use std::path::{Path, PathBuf};
 use std::process::exit;
+use std::rc::Rc;
 use std::str::FromStr;
 use url::{self, Url};
 
@@ -81,6 +82,10 @@ struct Options {
 
     /// Whether to run strip flow types.
     strip_flow: Opt<bool>,
+
+    /// Whether to emit the doc block when generating JS.
+    /// The doc block contains every comment prior to the first non-directive token in the file.
+    emit_doc_block: Opt<bool>,
 
     /// Whether to run the parsed AST.
     run: Opt<bool>,
@@ -230,6 +235,16 @@ impl Options {
                 OptDesc {
                     long: Some("strip-flow"),
                     desc: Some("Strip flow types"),
+                    ..Default::default()
+                },
+            ),
+            emit_doc_block: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("emit-doc-block"),
+                    desc: Some(
+                        "Pass through the doc block from the original files when generating JS",
+                    ),
                     ..Default::default()
                 },
             ),
@@ -387,8 +402,7 @@ fn gen_output(
     opt: &Options,
     ctx: &mut ast::Context,
     sem: Option<&SemContext>,
-    root: NodeRc,
-    input_map: &Option<SourceMap>,
+    js_module: &ParsedJSModule,
 ) -> anyhow::Result<bool> {
     let output_path = &*opt.output_path;
     let mut out: Box<dyn Write> = if output_path == Path::new("-") {
@@ -398,9 +412,9 @@ fn gen_output(
     };
 
     let final_ast = if *opt.strip_flow {
-        PassManager::strip_flow().run(ctx, root)
+        PassManager::strip_flow().run(ctx, js_module.ast.clone())
     } else {
-        root
+        js_module.ast.clone()
     };
 
     let final_ast = if *opt.optimize {
@@ -443,6 +457,7 @@ fn gen_output(
                         Some(sem) if *opt.gen == Gen::ResolvedJs => gen_js::Annotation::Sem(sem),
                         _ => gen_js::Annotation::No,
                     },
+                    doc_block: js_module.doc_block.clone(),
                 },
             )?;
             if *opt.sourcemap {
@@ -451,7 +466,7 @@ fn gen_output(
                 let mut path = output_path.clone().into_os_string();
                 path.push(".map");
                 let sourcemap_file = File::create(PathBuf::from(&path))?;
-                let merged_map = match input_map {
+                let merged_map = match &js_module.source_map {
                     None => generated_map,
                     Some(input_map) => merge_sourcemaps(input_map, &generated_map),
                 };
@@ -491,6 +506,8 @@ struct ParsedJSModule {
     /// AST node, may be either `Program` or `Module`.
     ast: NodeRc,
     source_map: Option<SourceMap>,
+    /// Doc block for the file if it exists.
+    doc_block: Option<Rc<String>>,
 }
 
 fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
@@ -525,6 +542,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 strict_mode: ctx.strict_mode(),
                 enable_jsx: *opt.jsx,
                 dialect: *opt.dialect,
+                store_doc_block: *opt.emit_doc_block,
             },
             &buf,
         );
@@ -558,6 +576,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 }
             }
         };
+        let doc_block = parsed.get_doc_block().map(|s| Rc::new(s.to_string()));
         // We don't need the original parser anymore.
         drop(parsed);
         timer.mark("Cvt");
@@ -576,6 +595,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                 id: file_id,
                 ast,
                 source_map,
+                doc_block,
             },
         );
     }
@@ -603,13 +623,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
         };
 
         // Generate output.
-        if gen_output(
-            opt,
-            &mut ctx,
-            sem.as_ref(),
-            js_module.ast,
-            &js_module.source_map,
-        )? {
+        if gen_output(opt, &mut ctx, sem.as_ref(), &js_module)? {
             timer.mark("Gen");
         }
     } else {
@@ -636,7 +650,7 @@ fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
                     }
                 }
                 // Generate output.
-                if gen_output(opt, &mut ctx, Some(&sem), module.ast, &module.source_map)? {
+                if gen_output(opt, &mut ctx, Some(&sem), &module)? {
                     timer.mark("Gen");
                 }
                 sems.push(sem);

@@ -38,6 +38,11 @@ impl<'parser> ParsedJS<'parser> {
         self.parser.has_errors()
     }
 
+    /// Return the doc block at the top of the file if it exists.
+    pub fn get_doc_block(&self) -> Option<&str> {
+        self.parser.get_doc_block()
+    }
+
     /// Return the last magic comment of the specified type (each comment overrides the previous
     /// one, so only the last is recorded).
     pub fn magic_comment(&self, kind: MagicCommentKind) -> Option<&str> {

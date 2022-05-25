@@ -66,6 +66,7 @@ fn test_roundtrip_flow(src1: &str) {
             strict_mode: false,
             enable_jsx: false,
             dialect: hparser::ParserDialect::Flow,
+            store_doc_block: false,
         },
         src1,
     );
@@ -77,6 +78,7 @@ fn test_roundtrip_jsx(src1: &str) {
             strict_mode: false,
             enable_jsx: true,
             dialect: hparser::ParserDialect::JavaScript,
+            store_doc_block: false,
         },
         src1,
     )
