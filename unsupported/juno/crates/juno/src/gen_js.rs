@@ -16,6 +16,30 @@ use std::{
     io::{self, BufWriter, Write},
 };
 
+/// Options for JS generation.
+pub struct Opt<'s> {
+    /// Whether to pretty-print the generated JS.
+    pub pretty: Pretty,
+
+    /// How to annotate the generated source.
+    pub annotation: Annotation<'s>,
+}
+
+impl Default for Opt<'_> {
+    fn default() -> Self {
+        Opt {
+            pretty: Pretty::Yes,
+            annotation: Annotation::No,
+        }
+    }
+}
+
+impl Opt<'_> {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
 /// Whether to pretty-print the generated JS.
 /// Does not do full formatting of the source, but does add indentation and
 /// some extra spaces to make source more readable.
@@ -31,11 +55,10 @@ pub fn generate<W: Write>(
     out: W,
     ctx: &mut Context,
     root: &NodeRc,
-    pretty: Pretty,
-    annotation: Annotation,
+    opt: Opt,
 ) -> io::Result<SourceMap> {
     let gc = GCLock::new(ctx);
-    GenJS::gen_root(out, &gc, root.node(&gc), pretty, annotation)
+    GenJS::gen_root(out, &gc, root.node(&gc), opt)
 }
 
 /// Associativity direction.
@@ -159,11 +182,8 @@ struct GenJS<'s, W: Write> {
     /// Where to write the generated JS.
     out: BufWriter<W>,
 
-    /// How to annotate the generated source.
-    annotation: Annotation<'s>,
-
-    /// Whether to pretty print the output JS.
-    pretty: Pretty,
+    /// Options for generating JS.
+    opt: Opt<'s>,
 
     /// Size of the indentation step.
     /// May be configurable in the future.
@@ -208,17 +228,15 @@ impl<W: Write> GenJS<'_, W> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
     /// otherwise return `Ok(())`.
-    fn gen_root<'s, 'gc>(
+    fn gen_root<'gc>(
         writer: W,
         ctx: &'gc GCLock,
         root: &'gc Node<'gc>,
-        pretty: Pretty,
-        annotation: Annotation<'s>,
+        opt: Opt,
     ) -> io::Result<SourceMap> {
         let mut gen_js = GenJS {
             out: BufWriter::new(writer),
-            annotation,
-            pretty,
+            opt,
             indent_step: 2,
             indent: 0,
             position: SourceLoc { line: 1, col: 1 },
@@ -390,7 +408,7 @@ impl<W: Write> GenJS<'_, W> {
                             ..
                         })
                     )
-                    && (*expression || self.pretty == Pretty::No)
+                    && (*expression || self.opt.pretty == Pretty::No)
                 {
                     if need_sep {
                         out!(self, " ");
@@ -1301,7 +1319,7 @@ impl<W: Write> GenJS<'_, W> {
                     out!(
                         self,
                         "{}",
-                        match self.pretty {
+                        match self.opt.pretty {
                             Pretty::Yes => " = ",
                             Pretty::No => "=",
                         }
@@ -2187,7 +2205,7 @@ impl<W: Write> GenJS<'_, W> {
                     rest.visit(ctx, self, Some(Path::new(node, NodeField::rest)));
                 }
                 out!(self, ")");
-                if self.pretty == Pretty::Yes {
+                if self.opt.pretty == Pretty::Yes {
                     out!(self, " => ");
                 } else {
                     out!(self, "=>");
@@ -2367,7 +2385,7 @@ impl<W: Write> GenJS<'_, W> {
                         Some(Path::new(node, NodeField::type_parameters)),
                     );
                 }
-                if self.pretty == Pretty::Yes {
+                if self.opt.pretty == Pretty::Yes {
                     out!(self, " = ");
                 } else {
                     out!(self, "=");
@@ -2395,7 +2413,7 @@ impl<W: Write> GenJS<'_, W> {
                     self.space(ForceSpace::No);
                     supertype.visit(ctx, self, Some(Path::new(node, NodeField::supertype)));
                 }
-                if self.pretty == Pretty::Yes {
+                if self.opt.pretty == Pretty::Yes {
                     out!(self, " = ");
                 } else {
                     out!(self, "=");
@@ -2458,7 +2476,7 @@ impl<W: Write> GenJS<'_, W> {
                     supertype.visit(ctx, self, Some(Path::new(node, NodeField::supertype)));
                 }
                 if let Some(impltype) = impltype {
-                    if self.pretty == Pretty::Yes {
+                    if self.opt.pretty == Pretty::Yes {
                         out!(self, " = ");
                     } else {
                         out!(self, "=");
@@ -3070,7 +3088,7 @@ impl<W: Write> GenJS<'_, W> {
                 out!(
                     self,
                     "{}",
-                    match self.pretty {
+                    match self.opt.pretty {
                         Pretty::Yes => " = ",
                         Pretty::No => "=",
                     }
@@ -3099,7 +3117,7 @@ impl<W: Write> GenJS<'_, W> {
         out!(
             self,
             "{}",
-            match self.pretty {
+            match self.opt.pretty {
                 Pretty::No => ",",
                 Pretty::Yes => ", ",
             }
@@ -3108,14 +3126,14 @@ impl<W: Write> GenJS<'_, W> {
 
     /// Print a ' ' if forced by ForceSpace::Yes or pretty mode.
     fn space(&mut self, force: ForceSpace) {
-        if self.pretty == Pretty::Yes || force == ForceSpace::Yes {
+        if self.opt.pretty == Pretty::Yes || force == ForceSpace::Yes {
             out!(self, " ");
         }
     }
 
     /// Print a newline and indent if pretty.
     fn newline(&mut self) {
-        if self.pretty == Pretty::Yes {
+        if self.opt.pretty == Pretty::Yes {
             self.force_newline();
         }
     }
@@ -3513,7 +3531,7 @@ impl<W: Write> GenJS<'_, W> {
             }) => {
                 // `new foo()` has higher precedence than `new foo`. In pretty mode we
                 // always append the `()`, but otherwise we must check the number of args.
-                if self.pretty == Pretty::Yes || !arguments.is_empty() {
+                if self.opt.pretty == Pretty::Yes || !arguments.is_empty() {
                     (MEMBER, Assoc::Ltr)
                 } else {
                     (NEW_NO_ARGS, Assoc::Ltr)
@@ -3638,7 +3656,7 @@ impl<W: Write> GenJS<'_, W> {
             // +(+x) or +(++x)
             // a-(-x) or a-(--x) or a-(-5)
             // a+(+x) or a+(++x)
-            return if self.pretty == Pretty::Yes {
+            return if self.opt.pretty == Pretty::Yes {
                 NeedParens::Yes
             } else {
                 NeedParens::Space
@@ -3852,7 +3870,7 @@ impl<W: Write> GenJS<'_, W> {
 
     /// Add an "@" and some information tagging an identifier with its declaration ID.
     fn annotate_identifier<'gc>(&mut self, lock: &'gc GCLock, node: &'gc Node<'gc>) {
-        if let Annotation::Sem(sem) = &self.annotation {
+        if let Annotation::Sem(sem) = &self.opt.annotation {
             match sem.ident_decl(&NodeRc::from_node(lock, node)) {
                 Some(Resolution::Decl(decl_id)) => {
                     match sem.decl(decl_id).kind {

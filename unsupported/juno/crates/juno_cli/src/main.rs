@@ -424,14 +424,16 @@ fn gen_output(
                 out.deref_mut(),
                 ctx,
                 &final_ast,
-                if !*opt.pretty {
-                    gen_js::Pretty::No
-                } else {
-                    gen_js::Pretty::Yes
-                },
-                match sem {
-                    Some(sem) if *opt.gen == Gen::ResolvedJs => gen_js::Annotation::Sem(sem),
-                    _ => gen_js::Annotation::No,
+                gen_js::Opt {
+                    pretty: if *opt.pretty {
+                        gen_js::Pretty::Yes
+                    } else {
+                        gen_js::Pretty::No
+                    },
+                    annotation: match sem {
+                        Some(sem) if *opt.gen == Gen::ResolvedJs => gen_js::Annotation::Sem(sem),
+                        _ => gen_js::Annotation::No,
+                    },
                 },
             )?;
             if *opt.sourcemap {
