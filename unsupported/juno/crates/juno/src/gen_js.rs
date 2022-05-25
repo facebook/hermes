@@ -1439,7 +1439,6 @@ impl<W: Write> GenJS<'_, W> {
                             if *generator {
                                 out!(self, "*");
                                 need_sep = false;
-                                self.space(ForceSpace::No);
                             }
                         }
                         _ => unreachable!(),
