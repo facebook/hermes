@@ -83,6 +83,9 @@ struct Options {
     /// Whether to run strip flow types.
     strip_flow: Opt<bool>,
 
+    /// Whether to force a space after the `async` keyword in arrow functions.
+    force_async_arrow_space: Opt<bool>,
+
     /// Whether to emit the doc block when generating JS.
     /// The doc block contains every comment prior to the first non-directive token in the file.
     emit_doc_block: Opt<bool>,
@@ -235,6 +238,14 @@ impl Options {
                 OptDesc {
                     long: Some("strip-flow"),
                     desc: Some("Strip flow types"),
+                    ..Default::default()
+                },
+            ),
+            force_async_arrow_space: Opt::new_bool(
+                cl,
+                OptDesc {
+                    long: Some("force-async-arrow-space"),
+                    desc: Some("Force a space after the `async` keyword in arrow functions."),
                     ..Default::default()
                 },
             ),
@@ -457,6 +468,7 @@ fn gen_output(
                         Some(sem) if *opt.gen == Gen::ResolvedJs => gen_js::Annotation::Sem(sem),
                         _ => gen_js::Annotation::No,
                     },
+                    force_async_arrow_space: *opt.force_async_arrow_space,
                     doc_block: js_module.doc_block.clone(),
                 },
             )?;

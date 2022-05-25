@@ -25,6 +25,9 @@ pub struct Opt<'s> {
     /// How to annotate the generated source.
     pub annotation: Annotation<'s>,
 
+    /// Whether to force a space after the `async` keyword in arrow functions.
+    pub force_async_arrow_space: bool,
+
     /// If `Some`, doc block to print at the top of the file.
     pub doc_block: Option<Rc<String>>,
 }
@@ -34,6 +37,7 @@ impl Default for Opt<'_> {
         Opt {
             pretty: Pretty::Yes,
             annotation: Annotation::No,
+            force_async_arrow_space: true,
             doc_block: None,
         }
     }
@@ -402,7 +406,13 @@ impl<W: Write> GenJS<'_, W> {
                 let mut need_sep = false;
                 if *is_async {
                     out!(self, "async");
-                    need_sep = true;
+                    if self.opt.force_async_arrow_space || self.opt.pretty == Pretty::Yes {
+                        // Force a space to work with certain transforms that match on `async`
+                        // followed by whitespace to detect async functions.
+                        self.space(ForceSpace::Yes);
+                    } else {
+                        need_sep = true;
+                    }
                 }
                 if let Some(type_parameters) = type_parameters {
                     type_parameters.visit(
