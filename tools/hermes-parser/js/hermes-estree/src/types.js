@@ -220,7 +220,9 @@ export type Statement =
   | TypeAlias
   | OpaqueType
   | InterfaceDeclaration
-  | Declaration
+  | FunctionDeclaration
+  | VariableDeclaration
+  | ClassDeclaration
   | DeclareTypeAlias
   | DeclareOpaqueType
   | DeclareInterface
@@ -345,11 +347,6 @@ export interface ForOfStatement extends BaseForXStatement {
 export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
 }
-
-export type Declaration =
-  | FunctionDeclaration
-  | VariableDeclaration
-  | ClassDeclaration;
 
 export interface FunctionDeclaration extends BaseFunction {
   +type: 'FunctionDeclaration';
@@ -970,9 +967,18 @@ export interface ImportNamespaceSpecifier extends BaseNode {
   +local: Identifier;
 }
 
+export type DefaultDeclaration = FunctionDeclaration | ClassDeclaration;
+export type NamedDeclaration =
+  | DefaultDeclaration
+  | VariableDeclaration
+  | TypeAlias
+  | OpaqueType
+  | InterfaceDeclaration
+  | EnumDeclaration;
+
 export interface ExportNamedDeclaration extends BaseNode {
   +type: 'ExportNamedDeclaration';
-  +declaration?: Declaration | null;
+  +declaration?: NamedDeclaration | null;
   +specifiers: $ReadOnlyArray<ExportSpecifier | ExportNamespaceSpecifier>;
   +source?: Literal | null;
   +exportKind: 'value' | 'type';
@@ -986,7 +992,7 @@ export interface ExportSpecifier extends BaseNode {
 
 export interface ExportDefaultDeclaration extends BaseNode {
   +type: 'ExportDefaultDeclaration';
-  +declaration: Declaration | Expression;
+  +declaration: DefaultDeclaration | Expression;
 }
 
 export interface ExportAllDeclaration extends BaseNode {
