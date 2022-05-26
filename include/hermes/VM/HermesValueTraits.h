@@ -70,6 +70,7 @@ HERMES_VM_GCOBJECT(JSProxy);
 HERMES_VM_GCOBJECT(JSCallableProxy);
 HERMES_VM_GCOBJECT(DecoratedObject);
 HERMES_VM_GCOBJECT(HostObject);
+HERMES_VM_GCOBJECT(NativeState);
 
 namespace testhelpers {
 struct DummyObject;

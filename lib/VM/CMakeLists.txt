@@ -42,6 +42,7 @@ set(source_files
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
+  NativeState.cpp
   Operations.cpp
   PredefinedStringIDs.cpp
   PrimitiveBox.cpp
