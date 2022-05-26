@@ -44,6 +44,10 @@ const NODES_TO_REMOVE = new Set([
   // ESTree spec now uses ChainExpression
   'OptionalMemberExpression',
   'OptionalCallExpression',
+  // We add properties to this
+  'ExportAllDeclaration',
+  // ESTree spec now uses ExportAllDeclaration
+  'ExportNamespaceSpecifier',
 ]);
 
 const rawJSON: ESTreeJSON = JSON.parse(
@@ -95,6 +99,22 @@ const cleanedJSON = rawJSON
         },
       ],
     },
+    (() => {
+      const oldNode = nullthrows(
+        rawJSON.find(n => n.name === 'ExportAllDeclaration'),
+      );
+      return {
+        ...oldNode,
+        arguments: [
+          {
+            type: 'NodePtr',
+            name: 'exported',
+            optional: true,
+          },
+          ...oldNode.arguments,
+        ],
+      };
+    })(),
   ])
   .sort((a, b) => a.name.localeCompare(b.name));
 

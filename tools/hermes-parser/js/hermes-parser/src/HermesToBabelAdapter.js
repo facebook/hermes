@@ -69,6 +69,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapExportDefaultDeclaration(node);
       case 'ExportNamedDeclaration':
         return this.mapExportNamedDeclaration(node);
+      case 'ExportNamespaceSpecifier':
+        return this.mapExportNamespaceSpecifier(node);
       case 'ExportAllDeclaration':
         return this.mapExportAllDeclaration(node);
       case 'RestElement':
@@ -444,6 +446,27 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
     // babel doesn't include the hash in the identifier
     node.id.start += 1;
     node.id.loc.start.column += 1;
+    return node;
+  }
+
+  mapExportNamespaceSpecifier(nodeUnprocessed: HermesNode): HermesNode {
+    const node = this.mapNodeDefault(nodeUnprocessed);
+
+    // the hermes AST emits the location as the location of the entire export
+    // but babel emits the location as *just* the "* as id" bit
+
+    // the end will always align with the end of the identifier (ezpz)
+    // but the start will align with the "*" token - which we can't recover from just the AST
+    // so we just fudge the start location a bit to get it "good enough"
+    // it will be wrong if the AST is anything like "export      * as x from 'y'"... but oh well
+    node.start = node.start + 'export '.length;
+    node.loc.start.column = node.loc.start.column + 'export '.length;
+    node.end = node.exported.end;
+    node.loc.end = {
+      column: node.exported.loc.end.column,
+      line: node.exported.loc.end.line,
+    };
+
     return node;
   }
 }

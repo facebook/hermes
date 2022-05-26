@@ -35,7 +35,6 @@ import type {
   ExportAllDeclaration,
   ExportDefaultDeclaration,
   ExportNamedDeclaration,
-  ExportNamespaceSpecifier,
   ForInStatement,
   ForOfStatement,
   ForStatement,
@@ -480,10 +479,6 @@ class Referencer extends Visitor {
     } else {
       ExportVisitor.visit(this, node);
     }
-  }
-
-  ExportNamespaceSpecifier(_: ExportNamespaceSpecifier): void {
-    // this defines no local variables
   }
 
   ForInStatement(node: ForInStatement): void {

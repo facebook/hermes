@@ -401,4 +401,34 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       loc: node.loc,
     };
   }
+
+  mapExportNamedDeclaration(nodeUnprocessed: HermesNode): HermesNode {
+    const node = super.mapExportNamedDeclaration(nodeUnprocessed);
+
+    const namespaceSpecifier = node.specifiers.find(
+      spec => spec.type === 'ExportNamespaceSpecifier',
+    );
+    if (namespaceSpecifier != null) {
+      if (node.specifiers.length !== 1) {
+        // this should already a hermes parser error - but let's be absolutely sure we're aligned with the spec
+        throw new Error('Cannot use an export all with any other specifiers');
+      }
+      return {
+        type: 'ExportAllDeclaration',
+        source: node.source,
+        exportKind: node.exportKind ?? 'value',
+        exported: namespaceSpecifier.exported,
+        range: node.range,
+        loc: node.loc,
+      };
+    }
+
+    return node;
+  }
+
+  mapExportAllDeclaration(nodeUnprocessed: HermesNode): HermesNode {
+    const node = super.mapExportAllDeclaration(nodeUnprocessed);
+    node.exported = node.exported ?? null;
+    return node;
+  }
 }

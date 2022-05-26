@@ -916,8 +916,7 @@ export type ModuleSpecifier =
   | ImportSpecifier
   | ImportDefaultSpecifier
   | ImportNamespaceSpecifier
-  | ExportSpecifier
-  | ExportNamespaceSpecifier;
+  | ExportSpecifier;
 
 export interface ImportDeclaration extends BaseNode {
   +type: 'ImportDeclaration';
@@ -970,7 +969,7 @@ export type NamedDeclaration =
 export interface ExportNamedDeclaration extends BaseNode {
   +type: 'ExportNamedDeclaration';
   +declaration?: NamedDeclaration | null;
-  +specifiers: $ReadOnlyArray<ExportSpecifier | ExportNamespaceSpecifier>;
+  +specifiers: $ReadOnlyArray<ExportSpecifier>;
   +source?: Literal | null;
   +exportKind: 'value' | 'type';
 }
@@ -990,8 +989,7 @@ export interface ExportAllDeclaration extends BaseNode {
   +type: 'ExportAllDeclaration';
   +source: Literal;
   +exportKind: 'value' | 'type';
-  // uncomment this when hermes stops using ExportNamespaceSpecifier
-  // +exported: Identifier;
+  +exported?: Identifier | null;
 }
 
 export interface AwaitExpression extends BaseNode {
@@ -1551,11 +1549,5 @@ export interface JSXSpreadChild extends BaseNode {
 /******************************************************
  * Deprecated spec nodes awaiting migration by Hermes *
  ******************************************************/
-
-// `ExportAllDeclaration` is the new standard for `export * as y from 'z'`
-export interface ExportNamespaceSpecifier extends BaseNode {
-  +type: 'ExportNamespaceSpecifier';
-  +exported: Identifier;
-}
 
 export {};
