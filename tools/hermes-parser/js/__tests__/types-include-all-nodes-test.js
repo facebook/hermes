@@ -104,7 +104,6 @@ const typesThatShouldBeSkipped = new Set([
   'PropertyDefinition',
   'MethodDefinition',
   'MemberExpression',
-  'OptionalMemberExpression',
   'Property',
 ]);
 const propertiesThatShouldBeSkipped = new Map([

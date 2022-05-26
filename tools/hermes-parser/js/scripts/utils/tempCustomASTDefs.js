@@ -69,6 +69,15 @@ export default ({
   PrivateName: {
     id: NODE,
   },
+  OptionalCallExpression: {
+    callee: NODE,
+    typeArguments: NODE,
+    arguments: NODE_LIST,
+  },
+  OptionalMemberExpression: {
+    object: NODE,
+    property: NODE,
+  },
 }: $ReadOnly<{
   [string]: $ReadOnly<{[string]: AstType}>,
 }>);

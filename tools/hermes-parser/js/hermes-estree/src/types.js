@@ -382,10 +382,8 @@ export type Expression =
   | AssignmentExpression
   | LogicalExpression
   | MemberExpression
-  | OptionalMemberExpression
   | ConditionalExpression
   | CallExpression
-  | OptionalCallExpression
   | NewExpression
   | SequenceExpression
   | TemplateLiteral
@@ -560,38 +558,31 @@ interface BaseCallExpression extends BaseNode {
 }
 export interface CallExpression extends BaseCallExpression {
   +type: 'CallExpression';
+  +optional: boolean;
 }
 
 export interface NewExpression extends BaseCallExpression {
   +type: 'NewExpression';
 }
 
-interface BaseMemberExpressionWithComputedName extends BaseNode {
-  +object: Expression | Super;
-  +property: Expression;
-  +computed: true;
-}
-interface BaseMemberExpressionWithNonComputedName extends BaseNode {
-  +object: Expression | Super;
-  +property: Identifier | PrivateIdentifier;
-  +computed: false;
-}
 export type MemberExpression =
   | MemberExpressionWithComputedName
   | MemberExpressionWithNonComputedName;
-export interface MemberExpressionWithComputedName
-  extends BaseMemberExpressionWithComputedName {
+export interface MemberExpressionWithComputedName extends BaseNode {
   +type: 'MemberExpression';
   +computed: true;
-  // TODO - when we update to the cannonical ESTree optional chaining repo, this will just be boolean
-  +optional: false;
+  +object: Expression | Super;
+  +property: Expression;
+  +computed: true;
+  +optional: boolean;
 }
-export interface MemberExpressionWithNonComputedName
-  extends BaseMemberExpressionWithNonComputedName {
+export interface MemberExpressionWithNonComputedName extends BaseNode {
   +type: 'MemberExpression';
   +computed: false;
-  // TODO - when we update to the cannonical ESTree optional chaining repo, this will just be boolean
-  +optional: false;
+  +object: Expression | Super;
+  +property: Identifier | PrivateIdentifier;
+  +computed: false;
+  +optional: boolean;
 }
 
 export type ChainElement = CallExpression | MemberExpression;
@@ -1560,27 +1551,6 @@ export interface JSXSpreadChild extends BaseNode {
 /******************************************************
  * Deprecated spec nodes awaiting migration by Hermes *
  ******************************************************/
-
-// `ChainExpression` is the new standard for optional chaining
-export interface OptionalCallExpression extends BaseCallExpression {
-  +type: 'OptionalCallExpression';
-  +optional: boolean;
-}
-export type OptionalMemberExpression =
-  | OptionalMemberExpressionWithComputedName
-  | OptionalMemberExpressionWithNonComputedName;
-export interface OptionalMemberExpressionWithComputedName
-  extends BaseMemberExpressionWithComputedName {
-  +type: 'OptionalMemberExpression';
-  +optional: boolean;
-  +computed: true;
-}
-export interface OptionalMemberExpressionWithNonComputedName
-  extends BaseMemberExpressionWithNonComputedName {
-  +type: 'OptionalMemberExpression';
-  +optional: boolean;
-  +computed: false;
-}
 
 // `ExportAllDeclaration` is the new standard for `export * as y from 'z'`
 export interface ExportNamespaceSpecifier extends BaseNode {

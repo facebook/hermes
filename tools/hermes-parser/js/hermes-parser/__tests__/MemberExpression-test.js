@@ -122,10 +122,7 @@ describe('OptionalMemberExpression', () => {
         one.two?.three.four;
         one.two?.three?.four;
       `,
-      espree: {
-        // TODO - ESTree spec is now ChainExpression + MemberExpression
-        expectToFail: 'ast-diff',
-      },
+      espree: {expectToFail: false},
       babel: {expectToFail: false},
     };
 
@@ -136,29 +133,7 @@ describe('OptionalMemberExpression', () => {
             Object {
               "directive": null,
               "expression": Object {
-                "computed": false,
-                "object": Object {
-                  "name": "one",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "optional": true,
-                "property": Object {
-                  "name": "two",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "type": "OptionalMemberExpression",
-              },
-              "type": "ExpressionStatement",
-            },
-            Object {
-              "directive": null,
-              "expression": Object {
-                "computed": false,
-                "object": Object {
+                "expression": Object {
                   "computed": false,
                   "object": Object {
                     "name": "one",
@@ -167,38 +142,6 @@ describe('OptionalMemberExpression', () => {
                     "typeAnnotation": null,
                   },
                   "optional": true,
-                  "property": Object {
-                    "name": "two",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "OptionalMemberExpression",
-                },
-                "optional": false,
-                "property": Object {
-                  "name": "three",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "type": "OptionalMemberExpression",
-              },
-              "type": "ExpressionStatement",
-            },
-            Object {
-              "directive": null,
-              "expression": Object {
-                "computed": false,
-                "object": Object {
-                  "computed": false,
-                  "object": Object {
-                    "name": "one",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": false,
                   "property": Object {
                     "name": "two",
                     "optional": false,
@@ -207,22 +150,49 @@ describe('OptionalMemberExpression', () => {
                   },
                   "type": "MemberExpression",
                 },
-                "optional": true,
-                "property": Object {
-                  "name": "three",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
             Object {
               "directive": null,
               "expression": Object {
-                "computed": false,
-                "object": Object {
+                "expression": Object {
+                  "computed": false,
+                  "object": Object {
+                    "computed": false,
+                    "object": Object {
+                      "name": "one",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "name": "two",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "type": "MemberExpression",
+                  },
+                  "optional": false,
+                  "property": Object {
+                    "name": "three",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "MemberExpression",
+                },
+                "type": "ChainExpression",
+              },
+              "type": "ExpressionStatement",
+            },
+            Object {
+              "directive": null,
+              "expression": Object {
+                "expression": Object {
                   "computed": false,
                   "object": Object {
                     "computed": false,
@@ -248,36 +218,85 @@ describe('OptionalMemberExpression', () => {
                     "type": "Identifier",
                     "typeAnnotation": null,
                   },
-                  "type": "OptionalMemberExpression",
+                  "type": "MemberExpression",
                 },
-                "optional": false,
-                "property": Object {
-                  "name": "four",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
             Object {
               "directive": null,
               "expression": Object {
-                "computed": false,
-                "object": Object {
+                "expression": Object {
                   "computed": false,
                   "object": Object {
                     "computed": false,
                     "object": Object {
-                      "name": "one",
+                      "computed": false,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": false,
+                      "property": Object {
+                        "name": "two",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "name": "three",
                       "optional": false,
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
+                    "type": "MemberExpression",
+                  },
+                  "optional": false,
+                  "property": Object {
+                    "name": "four",
                     "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "MemberExpression",
+                },
+                "type": "ChainExpression",
+              },
+              "type": "ExpressionStatement",
+            },
+            Object {
+              "directive": null,
+              "expression": Object {
+                "expression": Object {
+                  "computed": false,
+                  "object": Object {
+                    "computed": false,
+                    "object": Object {
+                      "computed": false,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": false,
+                      "property": Object {
+                        "name": "two",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
                     "property": Object {
-                      "name": "two",
+                      "name": "three",
                       "optional": false,
                       "type": "Identifier",
                       "typeAnnotation": null,
@@ -286,21 +305,14 @@ describe('OptionalMemberExpression', () => {
                   },
                   "optional": true,
                   "property": Object {
-                    "name": "three",
+                    "name": "four",
                     "optional": false,
                     "type": "Identifier",
                     "typeAnnotation": null,
                   },
-                  "type": "OptionalMemberExpression",
+                  "type": "MemberExpression",
                 },
-                "optional": true,
-                "property": Object {
-                  "name": "four",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
@@ -326,10 +338,7 @@ describe('OptionalMemberExpression', () => {
         one[2]?.[3][4];
         one[2]?.[3]?.[4];
       `,
-      espree: {
-        // TODO - ESTree spec is now ChainExpression + MemberExpression
-        expectToFail: 'ast-diff',
-      },
+      espree: {expectToFail: false},
       babel: {expectToFail: false},
     };
 
@@ -340,29 +349,7 @@ describe('OptionalMemberExpression', () => {
             Object {
               "directive": null,
               "expression": Object {
-                "computed": true,
-                "object": Object {
-                  "name": "one",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "optional": true,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "2",
-                  "type": "Literal",
-                  "value": 2,
-                },
-                "type": "OptionalMemberExpression",
-              },
-              "type": "ExpressionStatement",
-            },
-            Object {
-              "directive": null,
-              "expression": Object {
-                "computed": true,
-                "object": Object {
+                "expression": Object {
                   "computed": true,
                   "object": Object {
                     "name": "one",
@@ -377,88 +364,51 @@ describe('OptionalMemberExpression', () => {
                     "type": "Literal",
                     "value": 2,
                   },
-                  "type": "OptionalMemberExpression",
+                  "type": "MemberExpression",
                 },
-                "optional": false,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "3",
-                  "type": "Literal",
-                  "value": 3,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
             Object {
               "directive": null,
               "expression": Object {
-                "computed": true,
-                "object": Object {
+                "expression": Object {
                   "computed": true,
                   "object": Object {
-                    "name": "one",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
+                    "computed": true,
+                    "object": Object {
+                      "name": "one",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "literalType": "numeric",
+                      "raw": "2",
+                      "type": "Literal",
+                      "value": 2,
+                    },
+                    "type": "MemberExpression",
                   },
                   "optional": false,
                   "property": Object {
                     "literalType": "numeric",
-                    "raw": "2",
+                    "raw": "3",
                     "type": "Literal",
-                    "value": 2,
+                    "value": 3,
                   },
                   "type": "MemberExpression",
                 },
-                "optional": true,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "3",
-                  "type": "Literal",
-                  "value": 3,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
             Object {
               "directive": null,
               "expression": Object {
-                "computed": true,
-                "object": Object {
-                  "computed": true,
-                  "object": Object {
-                    "name": "one",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": false,
-                  "property": Object {
-                    "literalType": "numeric",
-                    "raw": "2",
-                    "type": "Literal",
-                    "value": 2,
-                  },
-                  "type": "MemberExpression",
-                },
-                "optional": true,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "3",
-                  "type": "Literal",
-                  "value": 3,
-                },
-                "type": "OptionalMemberExpression",
-              },
-              "type": "ExpressionStatement",
-            },
-            Object {
-              "directive": null,
-              "expression": Object {
-                "computed": true,
-                "object": Object {
+                "expression": Object {
                   "computed": true,
                   "object": Object {
                     "computed": true,
@@ -484,24 +434,16 @@ describe('OptionalMemberExpression', () => {
                     "type": "Literal",
                     "value": 3,
                   },
-                  "type": "OptionalMemberExpression",
+                  "type": "MemberExpression",
                 },
-                "optional": false,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "4",
-                  "type": "Literal",
-                  "value": 4,
-                },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
             Object {
               "directive": null,
               "expression": Object {
-                "computed": true,
-                "object": Object {
+                "expression": Object {
                   "computed": true,
                   "object": Object {
                     "computed": true,
@@ -527,16 +469,101 @@ describe('OptionalMemberExpression', () => {
                     "type": "Literal",
                     "value": 3,
                   },
-                  "type": "OptionalMemberExpression",
+                  "type": "MemberExpression",
                 },
-                "optional": true,
-                "property": Object {
-                  "literalType": "numeric",
-                  "raw": "4",
-                  "type": "Literal",
-                  "value": 4,
+                "type": "ChainExpression",
+              },
+              "type": "ExpressionStatement",
+            },
+            Object {
+              "directive": null,
+              "expression": Object {
+                "expression": Object {
+                  "computed": true,
+                  "object": Object {
+                    "computed": true,
+                    "object": Object {
+                      "computed": true,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": false,
+                      "property": Object {
+                        "literalType": "numeric",
+                        "raw": "2",
+                        "type": "Literal",
+                        "value": 2,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "literalType": "numeric",
+                      "raw": "3",
+                      "type": "Literal",
+                      "value": 3,
+                    },
+                    "type": "MemberExpression",
+                  },
+                  "optional": false,
+                  "property": Object {
+                    "literalType": "numeric",
+                    "raw": "4",
+                    "type": "Literal",
+                    "value": 4,
+                  },
+                  "type": "MemberExpression",
                 },
-                "type": "OptionalMemberExpression",
+                "type": "ChainExpression",
+              },
+              "type": "ExpressionStatement",
+            },
+            Object {
+              "directive": null,
+              "expression": Object {
+                "expression": Object {
+                  "computed": true,
+                  "object": Object {
+                    "computed": true,
+                    "object": Object {
+                      "computed": true,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": false,
+                      "property": Object {
+                        "literalType": "numeric",
+                        "raw": "2",
+                        "type": "Literal",
+                        "value": 2,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "literalType": "numeric",
+                      "raw": "3",
+                      "type": "Literal",
+                      "value": 3,
+                    },
+                    "type": "MemberExpression",
+                  },
+                  "optional": true,
+                  "property": Object {
+                    "literalType": "numeric",
+                    "raw": "4",
+                    "type": "Literal",
+                    "value": 4,
+                  },
+                  "type": "MemberExpression",
+                },
+                "type": "ChainExpression",
               },
               "type": "ExpressionStatement",
             },
@@ -565,10 +592,7 @@ describe('OptionalMemberExpression', () => {
           (one.two?.three?.four);
           (one.two?.three?.four).five;
         `,
-        espree: {
-          // TODO - ESTree spec is now ChainExpression + MemberExpression
-          expectToFail: 'ast-diff',
-        },
+        espree: {expectToFail: false},
         babel: {expectToFail: false},
       };
 
@@ -579,29 +603,7 @@ describe('OptionalMemberExpression', () => {
               Object {
                 "directive": null,
                 "expression": Object {
-                  "computed": false,
-                  "object": Object {
-                    "name": "one",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": true,
-                  "property": Object {
-                    "name": "two",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "OptionalMemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": false,
-                  "object": Object {
+                  "expression": Object {
                     "computed": false,
                     "object": Object {
                       "name": "one",
@@ -610,38 +612,6 @@ describe('OptionalMemberExpression', () => {
                       "typeAnnotation": null,
                     },
                     "optional": true,
-                    "property": Object {
-                      "name": "two",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "type": "OptionalMemberExpression",
-                  },
-                  "optional": false,
-                  "property": Object {
-                    "name": "three",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "MemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": false,
-                  "object": Object {
-                    "computed": false,
-                    "object": Object {
-                      "name": "one",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "optional": false,
                     "property": Object {
                       "name": "two",
                       "optional": false,
@@ -650,14 +620,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "MemberExpression",
                   },
-                  "optional": true,
-                  "property": Object {
-                    "name": "three",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "OptionalMemberExpression",
+                  "type": "ChainExpression",
                 },
                 "type": "ExpressionStatement",
               },
@@ -666,6 +629,40 @@ describe('OptionalMemberExpression', () => {
                 "expression": Object {
                   "computed": false,
                   "object": Object {
+                    "expression": Object {
+                      "computed": false,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "name": "two",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
+                  },
+                  "optional": false,
+                  "property": Object {
+                    "name": "three",
+                    "optional": false,
+                    "type": "Identifier",
+                    "typeAnnotation": null,
+                  },
+                  "type": "MemberExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "expression": Object {
                     "computed": false,
                     "object": Object {
                       "computed": false,
@@ -691,7 +688,46 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
-                    "type": "OptionalMemberExpression",
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "computed": false,
+                  "object": Object {
+                    "expression": Object {
+                      "computed": false,
+                      "object": Object {
+                        "computed": false,
+                        "object": Object {
+                          "name": "one",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "optional": false,
+                        "property": Object {
+                          "name": "two",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "name": "three",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
                   },
                   "optional": false,
                   "property": Object {
@@ -707,51 +743,7 @@ describe('OptionalMemberExpression', () => {
               Object {
                 "directive": null,
                 "expression": Object {
-                  "computed": false,
-                  "object": Object {
-                    "computed": false,
-                    "object": Object {
-                      "computed": false,
-                      "object": Object {
-                        "name": "one",
-                        "optional": false,
-                        "type": "Identifier",
-                        "typeAnnotation": null,
-                      },
-                      "optional": false,
-                      "property": Object {
-                        "name": "two",
-                        "optional": false,
-                        "type": "Identifier",
-                        "typeAnnotation": null,
-                      },
-                      "type": "MemberExpression",
-                    },
-                    "optional": true,
-                    "property": Object {
-                      "name": "three",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "type": "OptionalMemberExpression",
-                  },
-                  "optional": true,
-                  "property": Object {
-                    "name": "four",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "OptionalMemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": false,
-                  "object": Object {
+                  "expression": Object {
                     "computed": false,
                     "object": Object {
                       "computed": false,
@@ -779,7 +771,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Identifier",
                         "typeAnnotation": null,
                       },
-                      "type": "OptionalMemberExpression",
+                      "type": "MemberExpression",
                     },
                     "optional": true,
                     "property": Object {
@@ -788,7 +780,57 @@ describe('OptionalMemberExpression', () => {
                       "type": "Identifier",
                       "typeAnnotation": null,
                     },
-                    "type": "OptionalMemberExpression",
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "computed": false,
+                  "object": Object {
+                    "expression": Object {
+                      "computed": false,
+                      "object": Object {
+                        "computed": false,
+                        "object": Object {
+                          "computed": false,
+                          "object": Object {
+                            "name": "one",
+                            "optional": false,
+                            "type": "Identifier",
+                            "typeAnnotation": null,
+                          },
+                          "optional": false,
+                          "property": Object {
+                            "name": "two",
+                            "optional": false,
+                            "type": "Identifier",
+                            "typeAnnotation": null,
+                          },
+                          "type": "MemberExpression",
+                        },
+                        "optional": true,
+                        "property": Object {
+                          "name": "three",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "name": "four",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
                   },
                   "optional": false,
                   "property": Object {
@@ -798,6 +840,128 @@ describe('OptionalMemberExpression', () => {
                     "typeAnnotation": null,
                   },
                   "type": "MemberExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+            ],
+            "type": "Program",
+          }
+        `);
+        expectEspreeAlignment(testCase);
+      });
+
+      test('Babel', () => {
+        expectBabelAlignment(testCase);
+      });
+    });
+
+    describe('Tricky short-circuiting case', () => {
+      const testCase: AlignmentCase = {
+        code: `
+          (one?.two)?.three?.four
+          one?.two?.three?.four
+        `,
+        espree: {
+          // unfortunately the hermes AST doesn't let us differentiate between
+          // these two code cases, so we can't create the proper ESTree AST here :(
+          expectToFail: 'ast-diff',
+        },
+        babel: {expectToFail: false},
+      };
+
+      test('ESTree', () => {
+        expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+          Object {
+            "body": Array [
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "expression": Object {
+                    "computed": false,
+                    "object": Object {
+                      "computed": false,
+                      "object": Object {
+                        "computed": false,
+                        "object": Object {
+                          "name": "one",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "optional": true,
+                        "property": Object {
+                          "name": "two",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "name": "three",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "name": "four",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "expression": Object {
+                    "computed": false,
+                    "object": Object {
+                      "computed": false,
+                      "object": Object {
+                        "computed": false,
+                        "object": Object {
+                          "name": "one",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "optional": true,
+                        "property": Object {
+                          "name": "two",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "name": "three",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "optional": true,
+                    "property": Object {
+                      "name": "four",
+                      "optional": false,
+                      "type": "Identifier",
+                      "typeAnnotation": null,
+                    },
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
                 },
                 "type": "ExpressionStatement",
               },
@@ -823,10 +987,7 @@ describe('OptionalMemberExpression', () => {
           (one[2]?.[3]?.[4]);
           (one[2]?.[3]?.[4])[5];
         `,
-        espree: {
-          // TODO - ESTree spec is now ChainExpression + MemberExpression
-          expectToFail: 'ast-diff',
-        },
+        espree: {expectToFail: false},
         babel: {expectToFail: false},
       };
 
@@ -837,29 +998,7 @@ describe('OptionalMemberExpression', () => {
               Object {
                 "directive": null,
                 "expression": Object {
-                  "computed": true,
-                  "object": Object {
-                    "name": "one",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": true,
-                  "property": Object {
-                    "literalType": "numeric",
-                    "raw": "2",
-                    "type": "Literal",
-                    "value": 2,
-                  },
-                  "type": "OptionalMemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": true,
-                  "object": Object {
+                  "expression": Object {
                     "computed": true,
                     "object": Object {
                       "name": "one",
@@ -868,38 +1007,6 @@ describe('OptionalMemberExpression', () => {
                       "typeAnnotation": null,
                     },
                     "optional": true,
-                    "property": Object {
-                      "literalType": "numeric",
-                      "raw": "2",
-                      "type": "Literal",
-                      "value": 2,
-                    },
-                    "type": "OptionalMemberExpression",
-                  },
-                  "optional": false,
-                  "property": Object {
-                    "literalType": "numeric",
-                    "raw": "3",
-                    "type": "Literal",
-                    "value": 3,
-                  },
-                  "type": "MemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": true,
-                  "object": Object {
-                    "computed": true,
-                    "object": Object {
-                      "name": "one",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "optional": false,
                     "property": Object {
                       "literalType": "numeric",
                       "raw": "2",
@@ -908,14 +1015,7 @@ describe('OptionalMemberExpression', () => {
                     },
                     "type": "MemberExpression",
                   },
-                  "optional": true,
-                  "property": Object {
-                    "literalType": "numeric",
-                    "raw": "3",
-                    "type": "Literal",
-                    "value": 3,
-                  },
-                  "type": "OptionalMemberExpression",
+                  "type": "ChainExpression",
                 },
                 "type": "ExpressionStatement",
               },
@@ -924,6 +1024,40 @@ describe('OptionalMemberExpression', () => {
                 "expression": Object {
                   "computed": true,
                   "object": Object {
+                    "expression": Object {
+                      "computed": true,
+                      "object": Object {
+                        "name": "one",
+                        "optional": false,
+                        "type": "Identifier",
+                        "typeAnnotation": null,
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "literalType": "numeric",
+                        "raw": "2",
+                        "type": "Literal",
+                        "value": 2,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
+                  },
+                  "optional": false,
+                  "property": Object {
+                    "literalType": "numeric",
+                    "raw": "3",
+                    "type": "Literal",
+                    "value": 3,
+                  },
+                  "type": "MemberExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "expression": Object {
                     "computed": true,
                     "object": Object {
                       "computed": true,
@@ -949,7 +1083,46 @@ describe('OptionalMemberExpression', () => {
                       "type": "Literal",
                       "value": 3,
                     },
-                    "type": "OptionalMemberExpression",
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "computed": true,
+                  "object": Object {
+                    "expression": Object {
+                      "computed": true,
+                      "object": Object {
+                        "computed": true,
+                        "object": Object {
+                          "name": "one",
+                          "optional": false,
+                          "type": "Identifier",
+                          "typeAnnotation": null,
+                        },
+                        "optional": false,
+                        "property": Object {
+                          "literalType": "numeric",
+                          "raw": "2",
+                          "type": "Literal",
+                          "value": 2,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "literalType": "numeric",
+                        "raw": "3",
+                        "type": "Literal",
+                        "value": 3,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
                   },
                   "optional": false,
                   "property": Object {
@@ -965,51 +1138,7 @@ describe('OptionalMemberExpression', () => {
               Object {
                 "directive": null,
                 "expression": Object {
-                  "computed": true,
-                  "object": Object {
-                    "computed": true,
-                    "object": Object {
-                      "computed": true,
-                      "object": Object {
-                        "name": "one",
-                        "optional": false,
-                        "type": "Identifier",
-                        "typeAnnotation": null,
-                      },
-                      "optional": false,
-                      "property": Object {
-                        "literalType": "numeric",
-                        "raw": "2",
-                        "type": "Literal",
-                        "value": 2,
-                      },
-                      "type": "MemberExpression",
-                    },
-                    "optional": true,
-                    "property": Object {
-                      "literalType": "numeric",
-                      "raw": "3",
-                      "type": "Literal",
-                      "value": 3,
-                    },
-                    "type": "OptionalMemberExpression",
-                  },
-                  "optional": true,
-                  "property": Object {
-                    "literalType": "numeric",
-                    "raw": "4",
-                    "type": "Literal",
-                    "value": 4,
-                  },
-                  "type": "OptionalMemberExpression",
-                },
-                "type": "ExpressionStatement",
-              },
-              Object {
-                "directive": null,
-                "expression": Object {
-                  "computed": true,
-                  "object": Object {
+                  "expression": Object {
                     "computed": true,
                     "object": Object {
                       "computed": true,
@@ -1037,7 +1166,7 @@ describe('OptionalMemberExpression', () => {
                         "type": "Literal",
                         "value": 3,
                       },
-                      "type": "OptionalMemberExpression",
+                      "type": "MemberExpression",
                     },
                     "optional": true,
                     "property": Object {
@@ -1046,7 +1175,57 @@ describe('OptionalMemberExpression', () => {
                       "type": "Literal",
                       "value": 4,
                     },
-                    "type": "OptionalMemberExpression",
+                    "type": "MemberExpression",
+                  },
+                  "type": "ChainExpression",
+                },
+                "type": "ExpressionStatement",
+              },
+              Object {
+                "directive": null,
+                "expression": Object {
+                  "computed": true,
+                  "object": Object {
+                    "expression": Object {
+                      "computed": true,
+                      "object": Object {
+                        "computed": true,
+                        "object": Object {
+                          "computed": true,
+                          "object": Object {
+                            "name": "one",
+                            "optional": false,
+                            "type": "Identifier",
+                            "typeAnnotation": null,
+                          },
+                          "optional": false,
+                          "property": Object {
+                            "literalType": "numeric",
+                            "raw": "2",
+                            "type": "Literal",
+                            "value": 2,
+                          },
+                          "type": "MemberExpression",
+                        },
+                        "optional": true,
+                        "property": Object {
+                          "literalType": "numeric",
+                          "raw": "3",
+                          "type": "Literal",
+                          "value": 3,
+                        },
+                        "type": "MemberExpression",
+                      },
+                      "optional": true,
+                      "property": Object {
+                        "literalType": "numeric",
+                        "raw": "4",
+                        "type": "Literal",
+                        "value": 4,
+                      },
+                      "type": "MemberExpression",
+                    },
+                    "type": "ChainExpression",
                   },
                   "optional": false,
                   "property": Object {

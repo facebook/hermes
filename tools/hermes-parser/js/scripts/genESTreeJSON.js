@@ -41,6 +41,9 @@ const NODES_TO_REMOVE = new Set([
   'ClassPrivateProperty',
   // ESTree spec now uses PrivateIdentifier
   'PrivateName',
+  // ESTree spec now uses ChainExpression
+  'OptionalMemberExpression',
+  'OptionalCallExpression',
 ]);
 
 const rawJSON: ESTreeJSON = JSON.parse(
@@ -77,6 +80,17 @@ const cleanedJSON = rawJSON
         {
           type: 'NodeLabel',
           name: 'name',
+          optional: false,
+        },
+      ],
+    },
+    {
+      name: 'ChainExpression',
+      base: 'Base',
+      arguments: [
+        {
+          type: 'NodePtr',
+          name: 'expression',
           optional: false,
         },
       ],

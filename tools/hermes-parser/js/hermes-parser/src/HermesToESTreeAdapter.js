@@ -96,7 +96,10 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'ClassPrivateProperty':
         return this.mapClassProperty(node);
       case 'MemberExpression':
-        return this.mapMemberExpression(node);
+      case 'OptionalMemberExpression':
+      case 'CallExpression':
+      case 'OptionalCallExpression':
+        return this.mapChainExpression(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -259,10 +262,109 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     return node;
   }
 
-  mapMemberExpression(nodeUnprocessed: HermesNode): HermesNode {
+  mapChainExpression(nodeUnprocessed: HermesNode): HermesNode {
+    /*
+    NOTE - In the below comments `MemberExpression` and `CallExpression`
+           are completely interchangable. For terseness we just reference
+           one each time.
+    */
+
+    /*
+    Hermes uses the old babel-style AST:
+    ```
+    (one?.two).three?.four;
+    ^^^^^^^^^^^^^^^^^^^^^^ OptionalMemberExpression
+    ^^^^^^^^^^^^^^^^ MemberExpression
+     ^^^^^^^^ OptionalMemberExpression
+    ```
+
+    We need to convert it to the ESTree representation:
+    ```
+    (one?.two).three?.four;
+    ^^^^^^^^^^^^^^^^^^^^^^ ChainExpression
+    ^^^^^^^^^^^^^^^^^^^^^^ MemberExpression[optional = true]
+    ^^^^^^^^^^^^^^^^ MemberExpression[optional = false]
+     ^^^^^^^^ ChainExpression
+     ^^^^^^^^ MemberExpression[optional = true]
+    ```
+
+    We do this by converting the AST and its children (depth first), and then unwrapping
+    the resulting AST as appropriate.
+
+    Put another way:
+    1) traverse to the leaf
+    2) if the current node is an `OptionalMemberExpression`:
+      a) if the `.object` is a `ChainExpression`:
+        i)   unwrap the child (`node.object = child.expression`)
+      b) convert this node to a `MemberExpression[optional = true]`
+      c) wrap this node (`node = ChainExpression[expression = node]`)
+    3) if the current node is a `MembedExpression`:
+      a) convert this node to a `MemberExpression[optional = true]`
+    */
+
     const node = this.mapNodeDefault(nodeUnprocessed);
-    node.optional = false;
-    return node;
+
+    const {child, childKey, isOptional} = ((): {
+      child: HermesNode,
+      childKey: string,
+      isOptional: boolean,
+    } => {
+      const isOptional: boolean = node.optional === true;
+      if (node.type.endsWith('MemberExpression')) {
+        return {
+          child: node.object,
+          childKey: 'object',
+          isOptional,
+        };
+      } else if (node.type.endsWith('CallExpression')) {
+        return {
+          child: node.callee,
+          childKey: 'callee',
+          isOptional,
+        };
+      } else {
+        return {
+          child: node.expression,
+          childKey: 'expression',
+          isOptional: false,
+        };
+      }
+    })();
+
+    const isChildUnwrappable =
+      child.type === 'ChainExpression' &&
+      // (x?.y).z is semantically different to `x?.y.z`.
+      // In the un-parenthesised case `.z` is only executed if and only if `x?.y` returns a non-nullish value.
+      // In the parenthesised case, `.z` is **always** executed, regardless of the return of `x?.y`.
+      // As such the AST is different between the two cases.
+      //
+      // In the hermes AST - any member part of a non-short-circuited optional chain is represented with `OptionalMemberExpression`
+      // so if we see a `MemberExpression`, then we know we've hit a parenthesis boundary.
+      node.type !== 'MemberExpression' &&
+      node.type !== 'CallExpression';
+
+    if (node.type.startsWith('Optional')) {
+      node.type = node.type.replace('Optional', '');
+      node.optional = isOptional;
+    } else {
+      node.optional = false;
+    }
+
+    if (!isChildUnwrappable && !isOptional) {
+      return node;
+    }
+
+    if (isChildUnwrappable) {
+      const newChild = child.expression;
+      node[childKey] = newChild;
+    }
+
+    return {
+      type: 'ChainExpression',
+      expression: node,
+      loc: node.loc,
+      range: node.range,
+    };
   }
 
   mapClassProperty(nodeUnprocessed: HermesNode): HermesNode {

@@ -56,8 +56,6 @@ import type {
   MetaProperty,
   NewExpression,
   OpaqueType,
-  OptionalCallExpression,
-  OptionalMemberExpression,
   PrivateIdentifier,
   Program,
   Property,
@@ -195,11 +193,6 @@ class Referencer extends Visitor {
   ///////////////////
   // Visit helpers //
   ///////////////////
-
-  visitCallExpression(node: CallExpression | OptionalCallExpression): void {
-    this.visitChildren(node, ['typeArguments']);
-    this.visitType(node.typeArguments);
-  }
 
   visitClass(node: ClassDeclaration | ClassExpression): void {
     ClassVisitor.visit(this, node);
@@ -346,23 +339,6 @@ class Referencer extends Visitor {
     this.close(node);
   }
 
-  visitMemberExpression(
-    node: MemberExpression | OptionalMemberExpression,
-  ): void {
-    this.visit(node.object);
-    if (node.computed === true) {
-      this.visit(node.property);
-    }
-  }
-
-  visitProperty(node: Property): void {
-    if (node.computed) {
-      this.visit(node.key);
-    }
-
-    this.visit(node.value);
-  }
-
   visitType: (?ESNode) => void = (node): void => {
     if (!node) {
       return;
@@ -436,7 +412,8 @@ class Referencer extends Visitor {
   }
 
   CallExpression(node: CallExpression): void {
-    this.visitCallExpression(node);
+    this.visitChildren(node, ['typeArguments']);
+    this.visitType(node.typeArguments);
   }
 
   CatchClause(node: CatchClause): void {
@@ -607,7 +584,10 @@ class Referencer extends Visitor {
   }
 
   MemberExpression(node: MemberExpression): void {
-    this.visitMemberExpression(node);
+    this.visit(node.object);
+    if (node.computed === true) {
+      this.visit(node.property);
+    }
   }
 
   MetaProperty(_: MetaProperty): void {
@@ -617,14 +597,6 @@ class Referencer extends Visitor {
   NewExpression(node: NewExpression): void {
     this.visitChildren(node, ['typeArguments']);
     this.visitType(node.typeArguments);
-  }
-
-  OptionalCallExpression(node: OptionalCallExpression): void {
-    this.visitCallExpression(node);
-  }
-
-  OptionalMemberExpression(node: MemberExpression): void {
-    this.visitMemberExpression(node);
   }
 
   PrivateIdentifier(_: PrivateIdentifier): void {
@@ -656,7 +628,11 @@ class Referencer extends Visitor {
   }
 
   Property(node: Property): void {
-    this.visitProperty(node);
+    if (node.computed) {
+      this.visit(node.key);
+    }
+
+    this.visit(node.value);
   }
 
   SwitchStatement(node: SwitchStatement): void {

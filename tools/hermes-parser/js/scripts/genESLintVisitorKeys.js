@@ -32,10 +32,6 @@ visitorKeys['ConditionalExpression'] = ['test', 'consequent', 'alternate'];
 visitorKeys['WhileStatement'] = ['test', 'body'];
 visitorKeys['VariableDeclarator'] = ['id', 'init'];
 
-// hermes-parser uses babel's optional chaining representation, which does not emit this node
-// TODO - remove this once we migrate
-visitorKeys['ChainExpression'] = ['expression'];
-
 // correct the "literal" types
 // the base defs declare each literal as a separate node, but ESTree treats them as a single node
 visitorKeys['Literal'] = [];
