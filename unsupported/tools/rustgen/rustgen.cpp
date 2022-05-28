@@ -455,7 +455,12 @@ static void genConvert() {
 
     llvh::outs()
         << "          };\n" // kind
-           "          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());\n"
+           "          template.metadata.range.end = "
+           // Empty source range would result in out of bounds on the left
+           // side if we subtracted 1 from the end, so we just copy the start
+           // location.
+           "if nr.source_range.is_empty() { template.metadata.range.start } "
+           "else { cvt.cvt_smloc(nr.source_range.end.pred()) };\n"
         << "          ast::builder::" << cls.name
         << "::build_template(gc, template)\n"
         << "        }\n"; // match block

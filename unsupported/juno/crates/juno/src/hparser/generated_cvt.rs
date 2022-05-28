@@ -28,14 +28,14 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           let mut template = ast::template::Empty {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Empty::build_template(gc, template)
         }
         NodeKind::Metadata => {
           let mut template = ast::template::Metadata {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Metadata::build_template(gc, template)
         }
         NodeKind::Program => {
@@ -44,7 +44,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Program::build_template(gc, template)
         }
         NodeKind::FunctionExpression => {
@@ -67,7 +67,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   generator,
                   is_async,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::FunctionExpression::build_template(gc, template)
         }
         NodeKind::ArrowFunctionExpression => {
@@ -90,7 +90,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   expression,
                   is_async,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ArrowFunctionExpression::build_template(gc, template)
         }
         NodeKind::FunctionDeclaration => {
@@ -113,7 +113,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   generator,
                   is_async,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::FunctionDeclaration::build_template(gc, template)
         }
         NodeKind::WhileStatement => {
@@ -124,7 +124,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   body,
                   test,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::WhileStatement::build_template(gc, template)
         }
         NodeKind::DoWhileStatement => {
@@ -135,7 +135,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   body,
                   test,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DoWhileStatement::build_template(gc, template)
         }
         NodeKind::ForInStatement => {
@@ -148,7 +148,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   right,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ForInStatement::build_template(gc, template)
         }
         NodeKind::ForOfStatement => {
@@ -163,7 +163,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   body,
                   is_await,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ForOfStatement::build_template(gc, template)
         }
         NodeKind::ForStatement => {
@@ -178,21 +178,21 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   update,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ForStatement::build_template(gc, template)
         }
         NodeKind::DebuggerStatement => {
           let mut template = ast::template::DebuggerStatement {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DebuggerStatement::build_template(gc, template)
         }
         NodeKind::EmptyStatement => {
           let mut template = ast::template::EmptyStatement {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EmptyStatement::build_template(gc, template)
         }
         NodeKind::BlockStatement => {
@@ -201,7 +201,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BlockStatement::build_template(gc, template)
         }
         NodeKind::BreakStatement => {
@@ -210,7 +210,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   label,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BreakStatement::build_template(gc, template)
         }
         NodeKind::ContinueStatement => {
@@ -219,7 +219,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   label,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ContinueStatement::build_template(gc, template)
         }
         NodeKind::ThrowStatement => {
@@ -228,7 +228,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ThrowStatement::build_template(gc, template)
         }
         NodeKind::ReturnStatement => {
@@ -237,7 +237,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ReturnStatement::build_template(gc, template)
         }
         NodeKind::WithStatement => {
@@ -248,7 +248,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   object,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::WithStatement::build_template(gc, template)
         }
         NodeKind::SwitchStatement => {
@@ -259,7 +259,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   discriminant,
                   cases,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::SwitchStatement::build_template(gc, template)
         }
         NodeKind::LabeledStatement => {
@@ -270,7 +270,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   label,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::LabeledStatement::build_template(gc, template)
         }
         NodeKind::ExpressionStatement => {
@@ -281,7 +281,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   expression,
                   directive,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExpressionStatement::build_template(gc, template)
         }
         NodeKind::TryStatement => {
@@ -294,7 +294,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   handler,
                   finalizer,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TryStatement::build_template(gc, template)
         }
         NodeKind::IfStatement => {
@@ -307,14 +307,14 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   consequent,
                   alternate,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::IfStatement::build_template(gc, template)
         }
         NodeKind::NullLiteral => {
           let mut template = ast::template::NullLiteral {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NullLiteral::build_template(gc, template)
         }
         NodeKind::BooleanLiteral => {
@@ -323,7 +323,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BooleanLiteral::build_template(gc, template)
         }
         NodeKind::StringLiteral => {
@@ -332,7 +332,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::StringLiteral::build_template(gc, template)
         }
         NodeKind::NumericLiteral => {
@@ -341,7 +341,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NumericLiteral::build_template(gc, template)
         }
         NodeKind::RegExpLiteral => {
@@ -352,7 +352,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   pattern,
                   flags,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::RegExpLiteral::build_template(gc, template)
         }
         NodeKind::BigIntLiteral => {
@@ -361,21 +361,21 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   bigint,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BigIntLiteral::build_template(gc, template)
         }
         NodeKind::ThisExpression => {
           let mut template = ast::template::ThisExpression {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ThisExpression::build_template(gc, template)
         }
         NodeKind::Super => {
           let mut template = ast::template::Super {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Super::build_template(gc, template)
         }
         NodeKind::SequenceExpression => {
@@ -384,7 +384,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   expressions,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::SequenceExpression::build_template(gc, template)
         }
         NodeKind::ObjectExpression => {
@@ -393,7 +393,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   properties,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectExpression::build_template(gc, template)
         }
         NodeKind::ArrayExpression => {
@@ -404,7 +404,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   elements,
                   trailing_comma,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ArrayExpression::build_template(gc, template)
         }
         NodeKind::SpreadElement => {
@@ -413,7 +413,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::SpreadElement::build_template(gc, template)
         }
         NodeKind::NewExpression => {
@@ -426,7 +426,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_arguments,
                   arguments,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NewExpression::build_template(gc, template)
         }
         NodeKind::YieldExpression => {
@@ -437,7 +437,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   argument,
                   delegate,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::YieldExpression::build_template(gc, template)
         }
         NodeKind::AwaitExpression => {
@@ -446,7 +446,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AwaitExpression::build_template(gc, template)
         }
         NodeKind::ImportExpression => {
@@ -457,7 +457,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   source,
                   attributes,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportExpression::build_template(gc, template)
         }
         NodeKind::CallExpression => {
@@ -470,7 +470,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_arguments,
                   arguments,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::CallExpression::build_template(gc, template)
         }
         NodeKind::OptionalCallExpression => {
@@ -485,7 +485,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   arguments,
                   optional,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::OptionalCallExpression::build_template(gc, template)
         }
         NodeKind::AssignmentExpression => {
@@ -498,7 +498,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   left,
                   right,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AssignmentExpression::build_template(gc, template)
         }
         NodeKind::UnaryExpression => {
@@ -511,7 +511,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   argument,
                   prefix,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::UnaryExpression::build_template(gc, template)
         }
         NodeKind::UpdateExpression => {
@@ -524,7 +524,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   argument,
                   prefix,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::UpdateExpression::build_template(gc, template)
         }
         NodeKind::MemberExpression => {
@@ -537,7 +537,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   property,
                   computed,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MemberExpression::build_template(gc, template)
         }
         NodeKind::OptionalMemberExpression => {
@@ -552,7 +552,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   computed,
                   optional,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::OptionalMemberExpression::build_template(gc, template)
         }
         NodeKind::LogicalExpression => {
@@ -565,7 +565,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   right,
                   operator,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::LogicalExpression::build_template(gc, template)
         }
         NodeKind::ConditionalExpression => {
@@ -578,7 +578,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   alternate,
                   consequent,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ConditionalExpression::build_template(gc, template)
         }
         NodeKind::BinaryExpression => {
@@ -591,7 +591,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   right,
                   operator,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BinaryExpression::build_template(gc, template)
         }
         NodeKind::Directive => {
@@ -600,7 +600,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Directive::build_template(gc, template)
         }
         NodeKind::DirectiveLiteral => {
@@ -609,7 +609,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DirectiveLiteral::build_template(gc, template)
         }
         NodeKind::Identifier => {
@@ -622,7 +622,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_annotation,
                   optional,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Identifier::build_template(gc, template)
         }
         NodeKind::PrivateName => {
@@ -631,7 +631,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   id,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::PrivateName::build_template(gc, template)
         }
         NodeKind::MetaProperty => {
@@ -642,7 +642,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   meta,
                   property,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MetaProperty::build_template(gc, template)
         }
         NodeKind::SwitchCase => {
@@ -653,7 +653,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   test,
                   consequent,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::SwitchCase::build_template(gc, template)
         }
         NodeKind::CatchClause => {
@@ -664,7 +664,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   param,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::CatchClause::build_template(gc, template)
         }
         NodeKind::VariableDeclarator => {
@@ -675,7 +675,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   init,
                   id,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::VariableDeclarator::build_template(gc, template)
         }
         NodeKind::VariableDeclaration => {
@@ -686,7 +686,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   kind,
                   declarations,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::VariableDeclaration::build_template(gc, template)
         }
         NodeKind::TemplateLiteral => {
@@ -697,7 +697,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   quasis,
                   expressions,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TemplateLiteral::build_template(gc, template)
         }
         NodeKind::TaggedTemplateExpression => {
@@ -708,7 +708,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   tag,
                   quasi,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TaggedTemplateExpression::build_template(gc, template)
         }
         NodeKind::TemplateElement => {
@@ -721,7 +721,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   cooked,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TemplateElement::build_template(gc, template)
         }
         NodeKind::Property => {
@@ -740,7 +740,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   method,
                   shorthand,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Property::build_template(gc, template)
         }
         NodeKind::ClassDeclaration => {
@@ -761,7 +761,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   decorators,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassDeclaration::build_template(gc, template)
         }
         NodeKind::ClassExpression => {
@@ -782,7 +782,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   decorators,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassExpression::build_template(gc, template)
         }
         NodeKind::ClassBody => {
@@ -791,7 +791,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassBody::build_template(gc, template)
         }
         NodeKind::ClassProperty => {
@@ -814,7 +814,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   variance,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassProperty::build_template(gc, template)
         }
         NodeKind::ClassPrivateProperty => {
@@ -835,7 +835,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   variance,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassPrivateProperty::build_template(gc, template)
         }
         NodeKind::MethodDefinition => {
@@ -852,7 +852,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   computed,
                   is_static,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MethodDefinition::build_template(gc, template)
         }
         NodeKind::ImportDeclaration => {
@@ -867,7 +867,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   assertions,
                   import_kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportDeclaration::build_template(gc, template)
         }
         NodeKind::ImportSpecifier => {
@@ -880,7 +880,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   local,
                   import_kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportSpecifier::build_template(gc, template)
         }
         NodeKind::ImportDefaultSpecifier => {
@@ -889,7 +889,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   local,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportDefaultSpecifier::build_template(gc, template)
         }
         NodeKind::ImportNamespaceSpecifier => {
@@ -898,7 +898,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   local,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportNamespaceSpecifier::build_template(gc, template)
         }
         NodeKind::ImportAttribute => {
@@ -909,7 +909,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   key,
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ImportAttribute::build_template(gc, template)
         }
         NodeKind::ExportNamedDeclaration => {
@@ -924,7 +924,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   source,
                   export_kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExportNamedDeclaration::build_template(gc, template)
         }
         NodeKind::ExportSpecifier => {
@@ -935,7 +935,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   exported,
                   local,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExportSpecifier::build_template(gc, template)
         }
         NodeKind::ExportNamespaceSpecifier => {
@@ -944,7 +944,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   exported,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExportNamespaceSpecifier::build_template(gc, template)
         }
         NodeKind::ExportDefaultDeclaration => {
@@ -953,7 +953,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   declaration,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExportDefaultDeclaration::build_template(gc, template)
         }
         NodeKind::ExportAllDeclaration => {
@@ -964,7 +964,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   source,
                   export_kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExportAllDeclaration::build_template(gc, template)
         }
         NodeKind::ObjectPattern => {
@@ -975,7 +975,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   properties,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectPattern::build_template(gc, template)
         }
         NodeKind::ArrayPattern => {
@@ -986,7 +986,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   elements,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ArrayPattern::build_template(gc, template)
         }
         NodeKind::RestElement => {
@@ -995,7 +995,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::RestElement::build_template(gc, template)
         }
         NodeKind::AssignmentPattern => {
@@ -1006,7 +1006,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   left,
                   right,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AssignmentPattern::build_template(gc, template)
         }
         NodeKind::JSXIdentifier => {
@@ -1015,7 +1015,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   name,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXIdentifier::build_template(gc, template)
         }
         NodeKind::JSXMemberExpression => {
@@ -1026,7 +1026,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   object,
                   property,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXMemberExpression::build_template(gc, template)
         }
         NodeKind::JSXNamespacedName => {
@@ -1037,14 +1037,14 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   namespace,
                   name,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXNamespacedName::build_template(gc, template)
         }
         NodeKind::JSXEmptyExpression => {
           let mut template = ast::template::JSXEmptyExpression {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXEmptyExpression::build_template(gc, template)
         }
         NodeKind::JSXExpressionContainer => {
@@ -1053,7 +1053,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   expression,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXExpressionContainer::build_template(gc, template)
         }
         NodeKind::JSXSpreadChild => {
@@ -1062,7 +1062,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   expression,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXSpreadChild::build_template(gc, template)
         }
         NodeKind::JSXOpeningElement => {
@@ -1075,7 +1075,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   attributes,
                   self_closing,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXOpeningElement::build_template(gc, template)
         }
         NodeKind::JSXClosingElement => {
@@ -1084,7 +1084,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   name,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXClosingElement::build_template(gc, template)
         }
         NodeKind::JSXAttribute => {
@@ -1095,7 +1095,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   name,
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXAttribute::build_template(gc, template)
         }
         NodeKind::JSXSpreadAttribute => {
@@ -1104,7 +1104,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXSpreadAttribute::build_template(gc, template)
         }
         NodeKind::JSXStringLiteral => {
@@ -1115,7 +1115,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXStringLiteral::build_template(gc, template)
         }
         NodeKind::JSXText => {
@@ -1126,7 +1126,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXText::build_template(gc, template)
         }
         NodeKind::JSXElement => {
@@ -1139,7 +1139,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   children,
                   closing_element,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXElement::build_template(gc, template)
         }
         NodeKind::JSXFragment => {
@@ -1152,49 +1152,49 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   children,
                   closing_fragment,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXFragment::build_template(gc, template)
         }
         NodeKind::JSXOpeningFragment => {
           let mut template = ast::template::JSXOpeningFragment {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXOpeningFragment::build_template(gc, template)
         }
         NodeKind::JSXClosingFragment => {
           let mut template = ast::template::JSXClosingFragment {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::JSXClosingFragment::build_template(gc, template)
         }
         NodeKind::ExistsTypeAnnotation => {
           let mut template = ast::template::ExistsTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ExistsTypeAnnotation::build_template(gc, template)
         }
         NodeKind::EmptyTypeAnnotation => {
           let mut template = ast::template::EmptyTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EmptyTypeAnnotation::build_template(gc, template)
         }
         NodeKind::StringTypeAnnotation => {
           let mut template = ast::template::StringTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::StringTypeAnnotation::build_template(gc, template)
         }
         NodeKind::NumberTypeAnnotation => {
           let mut template = ast::template::NumberTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NumberTypeAnnotation::build_template(gc, template)
         }
         NodeKind::StringLiteralTypeAnnotation => {
@@ -1205,7 +1205,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::StringLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::NumberLiteralTypeAnnotation => {
@@ -1216,7 +1216,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NumberLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::BigIntLiteralTypeAnnotation => {
@@ -1225,14 +1225,14 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BigIntLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::BooleanTypeAnnotation => {
           let mut template = ast::template::BooleanTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BooleanTypeAnnotation::build_template(gc, template)
         }
         NodeKind::BooleanLiteralTypeAnnotation => {
@@ -1243,42 +1243,42 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   raw,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BooleanLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::NullLiteralTypeAnnotation => {
           let mut template = ast::template::NullLiteralTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NullLiteralTypeAnnotation::build_template(gc, template)
         }
         NodeKind::SymbolTypeAnnotation => {
           let mut template = ast::template::SymbolTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::SymbolTypeAnnotation::build_template(gc, template)
         }
         NodeKind::AnyTypeAnnotation => {
           let mut template = ast::template::AnyTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AnyTypeAnnotation::build_template(gc, template)
         }
         NodeKind::MixedTypeAnnotation => {
           let mut template = ast::template::MixedTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MixedTypeAnnotation::build_template(gc, template)
         }
         NodeKind::VoidTypeAnnotation => {
           let mut template = ast::template::VoidTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::VoidTypeAnnotation::build_template(gc, template)
         }
         NodeKind::FunctionTypeAnnotation => {
@@ -1295,7 +1295,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   rest,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::FunctionTypeAnnotation::build_template(gc, template)
         }
         NodeKind::FunctionTypeParam => {
@@ -1308,7 +1308,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_annotation,
                   optional,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::FunctionTypeParam::build_template(gc, template)
         }
         NodeKind::NullableTypeAnnotation => {
@@ -1317,7 +1317,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::NullableTypeAnnotation::build_template(gc, template)
         }
         NodeKind::QualifiedTypeIdentifier => {
@@ -1328,7 +1328,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   qualification,
                   id,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::QualifiedTypeIdentifier::build_template(gc, template)
         }
         NodeKind::TypeofTypeAnnotation => {
@@ -1337,7 +1337,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeofTypeAnnotation::build_template(gc, template)
         }
         NodeKind::TupleTypeAnnotation => {
@@ -1346,7 +1346,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TupleTypeAnnotation::build_template(gc, template)
         }
         NodeKind::ArrayTypeAnnotation => {
@@ -1355,7 +1355,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   element_type,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ArrayTypeAnnotation::build_template(gc, template)
         }
         NodeKind::UnionTypeAnnotation => {
@@ -1364,7 +1364,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::UnionTypeAnnotation::build_template(gc, template)
         }
         NodeKind::IntersectionTypeAnnotation => {
@@ -1373,7 +1373,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::IntersectionTypeAnnotation::build_template(gc, template)
         }
         NodeKind::GenericTypeAnnotation => {
@@ -1384,7 +1384,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::GenericTypeAnnotation::build_template(gc, template)
         }
         NodeKind::IndexedAccessType => {
@@ -1395,7 +1395,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   object_type,
                   index_type,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::IndexedAccessType::build_template(gc, template)
         }
         NodeKind::OptionalIndexedAccessType => {
@@ -1408,7 +1408,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   index_type,
                   optional,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::OptionalIndexedAccessType::build_template(gc, template)
         }
         NodeKind::InterfaceTypeAnnotation => {
@@ -1419,7 +1419,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   extends,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::InterfaceTypeAnnotation::build_template(gc, template)
         }
         NodeKind::TypeAlias => {
@@ -1432,7 +1432,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_parameters,
                   right,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeAlias::build_template(gc, template)
         }
         NodeKind::OpaqueType => {
@@ -1447,7 +1447,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   impltype,
                   supertype,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::OpaqueType::build_template(gc, template)
         }
         NodeKind::InterfaceDeclaration => {
@@ -1462,7 +1462,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   extends,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::InterfaceDeclaration::build_template(gc, template)
         }
         NodeKind::DeclareTypeAlias => {
@@ -1475,7 +1475,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_parameters,
                   right,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareTypeAlias::build_template(gc, template)
         }
         NodeKind::DeclareOpaqueType => {
@@ -1490,7 +1490,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   impltype,
                   supertype,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareOpaqueType::build_template(gc, template)
         }
         NodeKind::DeclareInterface => {
@@ -1505,7 +1505,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   extends,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareInterface::build_template(gc, template)
         }
         NodeKind::DeclareClass => {
@@ -1524,7 +1524,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   mixins,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareClass::build_template(gc, template)
         }
         NodeKind::DeclareFunction => {
@@ -1535,7 +1535,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   predicate,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareFunction::build_template(gc, template)
         }
         NodeKind::DeclareVariable => {
@@ -1544,7 +1544,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   id,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareVariable::build_template(gc, template)
         }
         NodeKind::DeclareExportDeclaration => {
@@ -1559,7 +1559,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   source,
                   default,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareExportDeclaration::build_template(gc, template)
         }
         NodeKind::DeclareExportAllDeclaration => {
@@ -1568,7 +1568,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   source,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareExportAllDeclaration::build_template(gc, template)
         }
         NodeKind::DeclareModule => {
@@ -1581,7 +1581,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   body,
                   kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareModule::build_template(gc, template)
         }
         NodeKind::DeclareModuleExports => {
@@ -1590,7 +1590,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclareModuleExports::build_template(gc, template)
         }
         NodeKind::InterfaceExtends => {
@@ -1601,7 +1601,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::InterfaceExtends::build_template(gc, template)
         }
         NodeKind::ClassImplements => {
@@ -1612,7 +1612,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ClassImplements::build_template(gc, template)
         }
         NodeKind::TypeAnnotation => {
@@ -1621,7 +1621,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeAnnotation::build_template(gc, template)
         }
         NodeKind::ObjectTypeAnnotation => {
@@ -1640,7 +1640,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   inexact,
                   exact,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeAnnotation::build_template(gc, template)
         }
         NodeKind::ObjectTypeProperty => {
@@ -1663,7 +1663,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   variance,
                   kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeProperty::build_template(gc, template)
         }
         NodeKind::ObjectTypeSpreadProperty => {
@@ -1672,7 +1672,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   argument,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeSpreadProperty::build_template(gc, template)
         }
         NodeKind::ObjectTypeInternalSlot => {
@@ -1689,7 +1689,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   is_static,
                   method,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeInternalSlot::build_template(gc, template)
         }
         NodeKind::ObjectTypeCallProperty => {
@@ -1700,7 +1700,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   value,
                   is_static,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeCallProperty::build_template(gc, template)
         }
         NodeKind::ObjectTypeIndexer => {
@@ -1717,7 +1717,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   is_static,
                   variance,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::ObjectTypeIndexer::build_template(gc, template)
         }
         NodeKind::Variance => {
@@ -1726,7 +1726,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   kind,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::Variance::build_template(gc, template)
         }
         NodeKind::TypeParameterDeclaration => {
@@ -1735,7 +1735,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   params,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeParameterDeclaration::build_template(gc, template)
         }
         NodeKind::TypeParameter => {
@@ -1750,7 +1750,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   variance,
                   default,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeParameter::build_template(gc, template)
         }
         NodeKind::TypeParameterInstantiation => {
@@ -1759,7 +1759,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   params,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeParameterInstantiation::build_template(gc, template)
         }
         NodeKind::TypeCastExpression => {
@@ -1770,14 +1770,14 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   expression,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypeCastExpression::build_template(gc, template)
         }
         NodeKind::InferredPredicate => {
           let mut template = ast::template::InferredPredicate {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::InferredPredicate::build_template(gc, template)
         }
         NodeKind::DeclaredPredicate => {
@@ -1786,7 +1786,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   value,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::DeclaredPredicate::build_template(gc, template)
         }
         NodeKind::EnumDeclaration => {
@@ -1797,7 +1797,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumDeclaration::build_template(gc, template)
         }
         NodeKind::EnumStringBody => {
@@ -1810,7 +1810,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   explicit_type,
                   has_unknown_members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumStringBody::build_template(gc, template)
         }
         NodeKind::EnumNumberBody => {
@@ -1823,7 +1823,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   explicit_type,
                   has_unknown_members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumNumberBody::build_template(gc, template)
         }
         NodeKind::EnumBooleanBody => {
@@ -1836,7 +1836,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   explicit_type,
                   has_unknown_members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumBooleanBody::build_template(gc, template)
         }
         NodeKind::EnumSymbolBody => {
@@ -1847,7 +1847,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   members,
                   has_unknown_members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumSymbolBody::build_template(gc, template)
         }
         NodeKind::EnumDefaultedMember => {
@@ -1856,7 +1856,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   id,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumDefaultedMember::build_template(gc, template)
         }
         NodeKind::EnumStringMember => {
@@ -1867,7 +1867,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   init,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumStringMember::build_template(gc, template)
         }
         NodeKind::EnumNumberMember => {
@@ -1878,7 +1878,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   init,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumNumberMember::build_template(gc, template)
         }
         NodeKind::EnumBooleanMember => {
@@ -1889,7 +1889,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   init,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumBooleanMember::build_template(gc, template)
         }
         NodeKind::TSTypeAnnotation => {
@@ -1898,56 +1898,56 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeAnnotation::build_template(gc, template)
         }
         NodeKind::TSAnyKeyword => {
           let mut template = ast::template::TSAnyKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSAnyKeyword::build_template(gc, template)
         }
         NodeKind::TSNumberKeyword => {
           let mut template = ast::template::TSNumberKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSNumberKeyword::build_template(gc, template)
         }
         NodeKind::TSBooleanKeyword => {
           let mut template = ast::template::TSBooleanKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSBooleanKeyword::build_template(gc, template)
         }
         NodeKind::TSStringKeyword => {
           let mut template = ast::template::TSStringKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSStringKeyword::build_template(gc, template)
         }
         NodeKind::TSSymbolKeyword => {
           let mut template = ast::template::TSSymbolKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSSymbolKeyword::build_template(gc, template)
         }
         NodeKind::TSVoidKeyword => {
           let mut template = ast::template::TSVoidKeyword {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSVoidKeyword::build_template(gc, template)
         }
         NodeKind::TSThisType => {
           let mut template = ast::template::TSThisType {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSThisType::build_template(gc, template)
         }
         NodeKind::TSLiteralType => {
@@ -1956,7 +1956,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   literal,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSLiteralType::build_template(gc, template)
         }
         NodeKind::TSIndexedAccessType => {
@@ -1967,7 +1967,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   object_type,
                   index_type,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSIndexedAccessType::build_template(gc, template)
         }
         NodeKind::TSArrayType => {
@@ -1976,7 +1976,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   element_type,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSArrayType::build_template(gc, template)
         }
         NodeKind::TSTypeReference => {
@@ -1987,7 +1987,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_name,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeReference::build_template(gc, template)
         }
         NodeKind::TSQualifiedName => {
@@ -1998,7 +1998,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   left,
                   right,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSQualifiedName::build_template(gc, template)
         }
         NodeKind::TSFunctionType => {
@@ -2011,7 +2011,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   return_type,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSFunctionType::build_template(gc, template)
         }
         NodeKind::TSConstructorType => {
@@ -2024,7 +2024,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   return_type,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSConstructorType::build_template(gc, template)
         }
         NodeKind::TSTypePredicate => {
@@ -2035,7 +2035,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   parameter_name,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypePredicate::build_template(gc, template)
         }
         NodeKind::TSTupleType => {
@@ -2044,7 +2044,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   element_types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTupleType::build_template(gc, template)
         }
         NodeKind::TSTypeAssertion => {
@@ -2055,7 +2055,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_annotation,
                   expression,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeAssertion::build_template(gc, template)
         }
         NodeKind::TSAsExpression => {
@@ -2066,7 +2066,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   expression,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSAsExpression::build_template(gc, template)
         }
         NodeKind::TSParameterProperty => {
@@ -2083,7 +2083,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   is_static,
                   export,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSParameterProperty::build_template(gc, template)
         }
         NodeKind::TSTypeAliasDeclaration => {
@@ -2096,7 +2096,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   type_parameters,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeAliasDeclaration::build_template(gc, template)
         }
         NodeKind::TSInterfaceDeclaration => {
@@ -2111,7 +2111,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   extends,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSInterfaceDeclaration::build_template(gc, template)
         }
         NodeKind::TSInterfaceHeritage => {
@@ -2122,7 +2122,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   expression,
                   type_parameters,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSInterfaceHeritage::build_template(gc, template)
         }
         NodeKind::TSInterfaceBody => {
@@ -2131,7 +2131,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSInterfaceBody::build_template(gc, template)
         }
         NodeKind::TSEnumDeclaration => {
@@ -2142,7 +2142,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSEnumDeclaration::build_template(gc, template)
         }
         NodeKind::TSEnumMember => {
@@ -2153,7 +2153,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   initializer,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSEnumMember::build_template(gc, template)
         }
         NodeKind::TSModuleDeclaration => {
@@ -2164,7 +2164,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSModuleDeclaration::build_template(gc, template)
         }
         NodeKind::TSModuleBlock => {
@@ -2173,7 +2173,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   body,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSModuleBlock::build_template(gc, template)
         }
         NodeKind::TSModuleMember => {
@@ -2184,7 +2184,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   id,
                   initializer,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSModuleMember::build_template(gc, template)
         }
         NodeKind::TSTypeParameterDeclaration => {
@@ -2193,7 +2193,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   params,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeParameterDeclaration::build_template(gc, template)
         }
         NodeKind::TSTypeParameter => {
@@ -2206,7 +2206,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   constraint,
                   default,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeParameter::build_template(gc, template)
         }
         NodeKind::TSTypeParameterInstantiation => {
@@ -2215,7 +2215,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   params,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeParameterInstantiation::build_template(gc, template)
         }
         NodeKind::TSUnionType => {
@@ -2224,7 +2224,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSUnionType::build_template(gc, template)
         }
         NodeKind::TSIntersectionType => {
@@ -2233,7 +2233,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSIntersectionType::build_template(gc, template)
         }
         NodeKind::TSTypeQuery => {
@@ -2242,7 +2242,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   expr_name,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeQuery::build_template(gc, template)
         }
         NodeKind::TSConditionalType => {
@@ -2257,7 +2257,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   true_type,
                   false_t_ype,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSConditionalType::build_template(gc, template)
         }
         NodeKind::TSTypeLiteral => {
@@ -2266,7 +2266,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   members,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSTypeLiteral::build_template(gc, template)
         }
         NodeKind::TSPropertySignature => {
@@ -2289,7 +2289,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   is_static,
                   export,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSPropertySignature::build_template(gc, template)
         }
         NodeKind::TSMethodSignature => {
@@ -2304,7 +2304,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   return_type,
                   computed,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSMethodSignature::build_template(gc, template)
         }
         NodeKind::TSIndexSignature => {
@@ -2315,7 +2315,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   parameters,
                   type_annotation,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSIndexSignature::build_template(gc, template)
         }
         NodeKind::TSCallSignatureDeclaration => {
@@ -2326,7 +2326,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   params,
                   return_type,
           };
-          template.metadata.range.end = cvt.cvt_smloc(nr.source_range.end.pred());
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TSCallSignatureDeclaration::build_template(gc, template)
         }
         _ => {

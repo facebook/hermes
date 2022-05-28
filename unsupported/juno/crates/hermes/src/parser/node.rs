@@ -39,6 +39,12 @@ pub struct SMRange {
     pub end: SMLoc,
 }
 
+impl SMRange {
+    pub fn is_empty(self) -> bool {
+        self.start.ptr == self.end.ptr
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StringRef {

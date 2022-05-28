@@ -125,10 +125,19 @@ impl<'parser> Converter<'parser> {
             return self.line_cache.make_source_loc(index);
         }
 
-        let line_coord = self
+        let mut line_coord = self
             .hparser
             .find_line(loc)
             .expect("Location from Hermes parser cannot be found");
+
+        if line_coord.line_ref.is_empty() {
+            // If the `line_ref` is empty, extend the ref by 1 byte to include the null
+            // terminator, allowing any accesses to be able to assign a source location
+            // if the original AST nodes pointed to the EOF token in the file.
+            // This means that, e.g., the `try_offset_from` call below will work because the
+            // `line_ref` has information at offset `0`.
+            line_coord.line_ref = unsafe { line_coord.line_ref.extend_by_1() }
+        }
 
         // Populate the cache.
         self.line_cache = FindLineCache {

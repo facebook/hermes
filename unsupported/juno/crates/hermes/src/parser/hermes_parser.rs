@@ -90,6 +90,21 @@ impl<'a, T> DataRef<'a, T> {
         }
     }
 
+    /// Returns a new `DataRef` which is one byte longer than this one.
+    ///
+    /// # Safety
+    ///
+    /// This is only safe when the user is certain that one more byte past
+    /// the end of the `DataRef` is still valid memory, such as when we know the `data` is
+    /// null-terminated.
+    pub unsafe fn extend_by_1(&self) -> Self {
+        Self {
+            data: self.data,
+            length: self.length + 1,
+            _marker: self._marker,
+        }
+    }
+
     // Note that the Clippy warning is bogus since we aren't deferencing a pointer.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn try_offset_from(&self, ptr: *const T) -> Option<usize> {
