@@ -7,7 +7,6 @@
 
 #include <hermes/SynthTrace.h>
 
-#include <hermes/Parser/JSONParser.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
@@ -22,7 +21,6 @@
 
 using namespace facebook::hermes::tracing;
 using namespace facebook::hermes;
-using namespace ::hermes::parser;
 namespace jsi = facebook::jsi;
 
 namespace {
@@ -264,69 +262,62 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
 
   rt->flushAndDisableTrace();
 
-  JSONFactory::Allocator alloc;
-  JSONFactory jsonFactory{alloc};
-  hermes::SourceErrorManager sm;
-  JSONParser parser{jsonFactory, result, sm};
-  auto optTrace = parser.parse();
-  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+  auto optTrace = rt->global()
+                      .getPropertyAsObject(*rt, "JSON")
+                      .getPropertyAsFunction(*rt, "parse")
+                      .call(*rt, result)
+                      .asObject(*rt);
 
-  JSONObject *root = llvh::cast<JSONObject>(optTrace.getValue());
   EXPECT_EQ(
       SynthTrace::synthVersion(),
-      llvh::cast<JSONNumber>(root->at("version"))->getValue());
-  EXPECT_EQ(
-      globalObjID, llvh::cast<JSONNumber>(root->at("globalObjID"))->getValue());
+      optTrace.getProperty(*rt, "version").asNumber());
+  EXPECT_EQ(globalObjID, optTrace.getProperty(*rt, "globalObjID").asNumber());
 
-  JSONObject *rtConfig = llvh::cast<JSONObject>(root->at("runtimeConfig"));
+  auto rtConfig = optTrace.getPropertyAsObject(*rt, "runtimeConfig");
 
-  JSONObject *gcConfig = llvh::cast<JSONObject>(rtConfig->at("gcConfig"));
+  auto gcConfig = rtConfig.getPropertyAsObject(*rt, "gcConfig");
   EXPECT_EQ(
       conf.getGCConfig().getMinHeapSize(),
-      llvh::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
+      gcConfig.getProperty(*rt, "minHeapSize").asNumber());
   EXPECT_EQ(
       conf.getGCConfig().getInitHeapSize(),
-      llvh::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
+      gcConfig.getProperty(*rt, "initHeapSize").asNumber());
   EXPECT_EQ(
       conf.getGCConfig().getMaxHeapSize(),
-      llvh::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
+      gcConfig.getProperty(*rt, "maxHeapSize").asNumber());
   EXPECT_EQ(
       conf.getGCConfig().getOccupancyTarget(),
-      llvh::cast<JSONNumber>(gcConfig->at("occupancyTarget"))->getValue());
+      gcConfig.getProperty(*rt, "occupancyTarget").asNumber());
   EXPECT_EQ(
       conf.getGCConfig().getEffectiveOOMThreshold(),
-      llvh::cast<JSONNumber>(gcConfig->at("effectiveOOMThreshold"))
-          ->getValue());
+      gcConfig.getProperty(*rt, "effectiveOOMThreshold").asNumber());
   EXPECT_EQ(
       conf.getGCConfig().getShouldReleaseUnused(),
       SynthTrace::releaseUnusedFromName(
-          llvh::cast<JSONString>(gcConfig->at("shouldReleaseUnused"))
-              ->c_str()));
+          gcConfig.getProperty(*rt, "shouldReleaseUnused")
+              .asString(*rt)
+              .utf8(*rt)
+              .c_str()));
   EXPECT_EQ(
       conf.getGCConfig().getName(),
-      llvh::cast<JSONString>(gcConfig->at("name"))->str());
+      gcConfig.getProperty(*rt, "name").asString(*rt).utf8(*rt));
   EXPECT_EQ(
       conf.getGCConfig().getAllocInYoung(),
-      llvh::cast<JSONBoolean>(gcConfig->at("allocInYoung"))->getValue());
+      gcConfig.getProperty(*rt, "allocInYoung").asBool());
 
   EXPECT_EQ(
       conf.getMaxNumRegisters(),
-      llvh::cast<JSONNumber>(rtConfig->at("maxNumRegisters"))->getValue());
+      rtConfig.getProperty(*rt, "maxNumRegisters").asNumber());
   EXPECT_EQ(
-      conf.getES6Promise(),
-      llvh::cast<JSONBoolean>(rtConfig->at("ES6Promise"))->getValue());
-  EXPECT_EQ(
-      conf.getES6Proxy(),
-      llvh::cast<JSONBoolean>(rtConfig->at("ES6Proxy"))->getValue());
-  EXPECT_EQ(
-      conf.getIntl(),
-      llvh::cast<JSONBoolean>(rtConfig->at("Intl"))->getValue());
+      conf.getES6Promise(), rtConfig.getProperty(*rt, "ES6Promise").asBool());
+  EXPECT_EQ(conf.getES6Proxy(), rtConfig.getProperty(*rt, "ES6Proxy").asBool());
+  EXPECT_EQ(conf.getIntl(), rtConfig.getProperty(*rt, "Intl").asBool());
   EXPECT_EQ(
       conf.getEnableSampledStats(),
-      llvh::cast<JSONBoolean>(rtConfig->at("enableSampledStats"))->getValue());
+      rtConfig.getProperty(*rt, "enableSampledStats").asBool());
   EXPECT_EQ(
       conf.getVMExperimentFlags(),
-      llvh::cast<JSONNumber>(rtConfig->at("vmExperimentFlags"))->getValue());
+      rtConfig.getProperty(*rt, "vmExperimentFlags").asNumber());
 }
 
 TEST_F(SynthTraceSerializationTest, FullTrace) {
@@ -351,49 +342,57 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
   rt->flushAndDisableTrace();
 
-  JSONFactory::Allocator alloc;
-  JSONFactory jsonFactory{alloc};
-  hermes::SourceErrorManager sm;
-  JSONParser parser{jsonFactory, result, sm};
-  auto optTrace = parser.parse();
-  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+  auto optTrace = rt->global()
+                      .getPropertyAsObject(*rt, "JSON")
+                      .getPropertyAsFunction(*rt, "parse")
+                      .call(*rt, result)
+                      .asObject(*rt);
 
-  // Too verbose to check every key, so let llvh::cast do the checks.
-  JSONObject *root = llvh::cast<JSONObject>(optTrace.getValue());
-
-  JSONObject *environment = llvh::cast<JSONObject>(root->at("env"));
-  EXPECT_TRUE(llvh::isa<JSONNumber>(environment->at("mathRandomSeed")));
-  EXPECT_EQ(
-      0, llvh::cast<JSONArray>(environment->at("callsToDateNow"))->size());
-  EXPECT_EQ(
-      0, llvh::cast<JSONArray>(environment->at("callsToNewDate"))->size());
+  auto environment = optTrace.getPropertyAsObject(*rt, "env");
+  EXPECT_TRUE(environment.getProperty(*rt, "mathRandomSeed").isNumber());
   EXPECT_EQ(
       0,
-      llvh::cast<JSONArray>(environment->at("callsToDateAsFunction"))->size());
-
-  JSONArray *records = llvh::cast<JSONArray>(root->at("trace"));
-
-  const JSONObject *record = llvh::cast<JSONObject>(records->at(0));
+      environment.getPropertyAsObject(*rt, "callsToDateNow")
+          .asArray(*rt)
+          .size(*rt));
   EXPECT_EQ(
-      "CreateObjectRecord", llvh::cast<JSONString>(record->at("type"))->str());
-  EXPECT_TRUE(llvh::isa<JSONNumber>(record->at("time")));
-  EXPECT_EQ(objID, llvh::cast<JSONNumber>(record->at("objID"))->getValue());
+      0,
+      environment.getPropertyAsObject(*rt, "callsToNewDate")
+          .asArray(*rt)
+          .size(*rt));
+  EXPECT_EQ(
+      0,
+      environment.getPropertyAsObject(*rt, "callsToDateAsFunction")
+          .asArray(*rt)
+          .size(*rt));
+
+  auto records = optTrace.getPropertyAsObject(*rt, "trace").asArray(*rt);
+
+  auto record = records.getValueAtIndex(*rt, 0).asObject(*rt);
+  EXPECT_EQ(
+      "CreateObjectRecord",
+      record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
+  EXPECT_TRUE(record.getProperty(*rt, "time").isNumber());
+  EXPECT_EQ(objID, record.getProperty(*rt, "objID").asNumber());
 
   // The obj.getProperty(*rt, "a") creates a string primitive for "a".
-  record = llvh::cast<JSONObject>(records->at(1));
+  record = records.getValueAtIndex(*rt, 1).asObject(*rt);
   EXPECT_EQ(
-      "CreateStringRecord", llvh::cast<JSONString>(record->at("type"))->str());
-  EXPECT_TRUE(llvh::isa<JSONNumber>(record->at("time")));
-  EXPECT_TRUE(llvh::isa<JSONNumber>(record->at("objID")));
-  auto stringID = llvh::cast<JSONNumber>(record->at("objID"))->getValue();
+      "CreateStringRecord",
+      record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
+  EXPECT_TRUE(record.getProperty(*rt, "time").isNumber());
+  EXPECT_TRUE(record.getProperty(*rt, "objID").isNumber());
+  auto stringID = record.getProperty(*rt, "objID").asNumber();
 
-  record = llvh::cast<JSONObject>(records->at(2));
+  record = records.getValueAtIndex(*rt, 2).asObject(*rt);
   EXPECT_EQ(
-      "GetPropertyRecord", llvh::cast<JSONString>(record->at("type"))->str());
-  EXPECT_TRUE(llvh::isa<JSONNumber>(record->at("time")));
-  EXPECT_EQ(objID, llvh::cast<JSONNumber>(record->at("objID"))->getValue());
-  EXPECT_EQ(stringID, llvh::cast<JSONNumber>(record->at("propID"))->getValue());
-  EXPECT_EQ("undefined:", llvh::cast<JSONString>(record->at("value"))->str());
+      "GetPropertyRecord",
+      record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
+  EXPECT_TRUE(record.getProperty(*rt, "time").isNumber());
+  EXPECT_EQ(objID, record.getProperty(*rt, "objID").asNumber());
+  EXPECT_EQ(stringID, record.getProperty(*rt, "propID").asNumber());
+  EXPECT_EQ(
+      "undefined:", record.getProperty(*rt, "value").asString(*rt).utf8(*rt));
 }
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
@@ -423,31 +422,29 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
 
   rt->flushAndDisableTrace();
 
-  JSONFactory::Allocator alloc;
-  JSONFactory jsonFactory{alloc};
-  hermes::SourceErrorManager sm;
-  JSONParser parser{jsonFactory, result, sm};
-  auto optTrace = parser.parse();
-  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+  auto optTrace = rt->global()
+                      .getPropertyAsObject(*rt, "JSON")
+                      .getPropertyAsFunction(*rt, "parse")
+                      .call(*rt, result)
+                      .asObject(*rt);
 
-  // Too verbose to check every key, so let llvh::cast do the checks.
-  JSONObject *root = llvh::cast<JSONObject>(optTrace.getValue());
-
-  JSONObject *environment = llvh::cast<JSONObject>(root->at("env"));
-  EXPECT_TRUE(llvh::isa<JSONNumber>(environment->at("mathRandomSeed")));
-  JSONArray *callsToDateNow =
-      llvh::cast<JSONArray>(environment->at("callsToDateNow"));
-  JSONArray *callsToNewDate =
-      llvh::cast<JSONArray>(environment->at("callsToNewDate"));
-  JSONArray *callsToDateAsFunction =
-      llvh::cast<JSONArray>(environment->at("callsToDateAsFunction"));
-  EXPECT_EQ(1, callsToDateNow->size());
-  EXPECT_EQ(dateNow, llvh::cast<JSONNumber>(callsToDateNow->at(0))->getValue());
-  EXPECT_EQ(1, callsToNewDate->size());
-  EXPECT_EQ(newDate, llvh::cast<JSONNumber>(callsToNewDate->at(0))->getValue());
-  EXPECT_EQ(1, callsToDateAsFunction->size());
+  auto environment = optTrace.getPropertyAsObject(*rt, "env");
+  EXPECT_TRUE(environment.getProperty(*rt, "mathRandomSeed").isNumber());
+  auto callsToDateNow =
+      environment.getPropertyAsObject(*rt, "callsToDateNow").asArray(*rt);
+  auto callsToNewDate =
+      environment.getPropertyAsObject(*rt, "callsToNewDate").asArray(*rt);
+  auto callsToDateAsFunction =
+      environment.getPropertyAsObject(*rt, "callsToDateAsFunction")
+          .asArray(*rt);
+  EXPECT_EQ(1, callsToDateNow.size(*rt));
+  EXPECT_EQ(dateNow, callsToDateNow.getValueAtIndex(*rt, 0).asNumber());
+  EXPECT_EQ(1, callsToNewDate.size(*rt));
+  EXPECT_EQ(newDate, callsToNewDate.getValueAtIndex(*rt, 0).asNumber());
+  EXPECT_EQ(1, callsToDateAsFunction.size(*rt));
   EXPECT_EQ(
-      dateAsFunc, llvh::cast<JSONString>(callsToDateAsFunction->at(0))->str());
+      dateAsFunc,
+      callsToDateAsFunction.getValueAtIndex(*rt, 0).asString(*rt).utf8(*rt));
   // Ignore the elements inside the trace, those are tested elsewhere.
 }
 
