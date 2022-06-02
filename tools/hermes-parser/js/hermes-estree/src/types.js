@@ -105,6 +105,26 @@ export interface Position {
   +column: number;
 }
 
+// note: this is only ever present on Program.interpreter, never in the body
+interface InterpreterDirective extends BaseNode {
+  type: 'InterpreterDirective';
+  value: string;
+}
+
+export type DocblockDirectives = $ReadOnly<{
+  // some well-known tags
+  flow?: $ReadOnlyArray<string> | void,
+  format?: $ReadOnlyArray<string> | void,
+  noflow?: $ReadOnlyArray<string> | void,
+  noformat?: $ReadOnlyArray<string> | void,
+  [string]: $ReadOnlyArray<string> | void,
+}>;
+
+export type DocblockMetadata = $ReadOnly<{
+  directives: DocblockDirectives,
+  comment: BlockComment,
+}>;
+
 export interface Program extends BaseNode {
   +type: 'Program';
   +sourceType: 'script' | 'module';
@@ -112,6 +132,8 @@ export interface Program extends BaseNode {
   +tokens: $ReadOnlyArray<Token>;
   +comments: $ReadOnlyArray<Comment>;
   +loc: SourceLocation;
+  +interpreter: null | InterpreterDirective;
+  +docblock: null | DocblockMetadata;
   // program is the only node without a parent - but typing it as such is _super_ annoying and difficult
   +parent: ESNode;
 }

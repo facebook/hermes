@@ -120,4 +120,152 @@ describe('Comments', () => {
       comments: [{type: 'CommentLine', value: ' Line comment'}],
     });
   });
+
+  describe('ESTree > Extracts the docblock onto the program node', () => {
+    const DOCBLOCK_COMMENT = {
+      type: 'Block',
+      value: 'Block comment',
+      loc: {
+        start: {
+          line: 1,
+          column: 0,
+        },
+        end: {
+          line: 1,
+          column: 17,
+        },
+      },
+      range: [0, 17],
+    };
+
+    test('with docblock and body node', () => {
+      const source = '/*Block comment*/ 1; // Line comment';
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [{type: 'ExpressionStatement'}],
+        comments: [
+          DOCBLOCK_COMMENT,
+          {
+            type: 'Line',
+            value: ' Line comment',
+          },
+        ],
+        docblock: {
+          directives: {},
+          comment: DOCBLOCK_COMMENT,
+        },
+      });
+    });
+
+    test('with dockblock and no body node', () => {
+      const source = '/*Block comment*/ // Line comment';
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [],
+        comments: [
+          DOCBLOCK_COMMENT,
+          {
+            type: 'Line',
+            value: ' Line comment',
+          },
+        ],
+        docblock: {
+          directives: {},
+          comment: DOCBLOCK_COMMENT,
+        },
+      });
+    });
+
+    test('with no dockblock', () => {
+      const source = '1; // Line comment';
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [{type: 'ExpressionStatement'}],
+        comments: [
+          {
+            type: 'Line',
+            value: ' Line comment',
+          },
+        ],
+        docblock: null,
+      });
+    });
+
+    test('with block comment AFTER the body node', () => {
+      const source = '1; /*Block comment*/';
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [{type: 'ExpressionStatement'}],
+        comments: [
+          {
+            type: 'Block',
+            value: 'Block comment',
+          },
+        ],
+        docblock: null,
+      });
+    });
+
+    test('with docblock, body node, and interpreter directive', () => {
+      const source = `#! interpreter comment
+/*Block comment*/ 1; // Line comment`;
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [{type: 'ExpressionStatement'}],
+        comments: [
+          {
+            type: 'Block',
+            value: 'Block comment',
+          },
+          {
+            type: 'Line',
+            value: ' Line comment',
+          },
+        ],
+        docblock: {
+          directives: {},
+          comment: {
+            type: 'Block',
+            value: 'Block comment',
+          },
+        },
+      });
+    });
+
+    test('it extracts directives from the docblock', () => {
+      const source = `
+        /**
+         * @foo foo-value
+         * @bar bar-value
+         * @multiple one
+         * @multiple two
+         * @empty
+         *
+         * @multiline one
+         * two
+         * three
+         */
+      `;
+      expect(parse(source).docblock?.directives).toMatchInlineSnapshot(`
+        Object {
+          "bar": Array [
+            "bar-value",
+          ],
+          "empty": Array [
+            "",
+          ],
+          "foo": Array [
+            "foo-value",
+          ],
+          "multiline": Array [
+            "one two three",
+          ],
+          "multiple": Array [
+            "one",
+            "two",
+          ],
+        }
+      `);
+    });
+  });
 });

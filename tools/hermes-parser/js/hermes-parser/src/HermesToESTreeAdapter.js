@@ -21,6 +21,7 @@ import type {HermesNode} from './HermesAST';
 import type {ParserOptions} from './ParserOptions';
 
 import HermesASTAdapter from './HermesASTAdapter';
+import {getModuleDocblock} from './getModuleDocblock';
 
 declare var BigInt: ?(value: $FlowFixMe) => mixed;
 
@@ -108,6 +109,8 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   mapProgram(node: HermesNode): HermesNode {
     node = this.mapNodeDefault(node);
     node.sourceType = this.getSourceType();
+
+    node.docblock = getModuleDocblock(node);
 
     return node;
   }
