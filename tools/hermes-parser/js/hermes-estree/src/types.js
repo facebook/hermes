@@ -516,12 +516,23 @@ export interface UnaryExpression extends BaseNode {
   +argument: Expression;
 }
 
-export interface BinaryExpression extends BaseNode {
+export interface BinaryExpressionWithoutIn extends BaseNode {
   +type: 'BinaryExpression';
-  +operator: BinaryOperator;
+  +operator: BinaryOperatorWithoutIn;
+  +left: Expression;
+  +right: Expression;
+}
+
+// Private brand checks (#foo in bar) are a special case
+// other binary expressions do not allow PrivateIdentifier in the left
+export interface BinaryExpressionIn extends BaseNode {
+  +type: 'BinaryExpression';
+  +operator: 'in';
   +left: Expression | PrivateIdentifier;
   +right: Expression;
 }
+
+export type BinaryExpression = BinaryExpressionWithoutIn | BinaryExpressionIn;
 
 export interface AssignmentExpression extends BaseNode {
   +type: 'AssignmentExpression';
@@ -682,7 +693,7 @@ export type UnaryOperator =
   | 'void'
   | 'delete';
 
-export type BinaryOperator =
+export type BinaryOperatorWithoutIn =
   | '=='
   | '!='
   | '==='
@@ -703,8 +714,9 @@ export type BinaryOperator =
   | '|'
   | '^'
   | '&'
-  | 'in'
   | 'instanceof';
+
+export type BinaryOperator = BinaryOperatorWithoutIn | 'in';
 
 export type LogicalOperator = '||' | '&&' | '??';
 
@@ -1411,7 +1423,7 @@ export interface DeclareExportDeclaration extends BaseNode {
   +type: 'DeclareExportDeclaration';
   +specifiers: $ReadOnlyArray<ExportSpecifier>;
   +declaration:
-    | TypeAnnotationType
+    | TypeAlias
     | DeclareClass
     | DeclareFunction
     | DeclareOpaqueType

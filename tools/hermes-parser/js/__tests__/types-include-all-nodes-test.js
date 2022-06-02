@@ -105,6 +105,7 @@ const typesThatShouldBeSkipped = new Set([
   'MethodDefinition',
   'MemberExpression',
   'Property',
+  'BinaryExpression',
 ]);
 const propertiesThatShouldBeSkipped = new Map([
   [
