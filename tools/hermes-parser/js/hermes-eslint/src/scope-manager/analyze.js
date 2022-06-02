@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {ESNode} from 'hermes-estree';
+import type {Program} from 'hermes-estree';
 
 import visitorKeys from '../HermesESLintVisitorKeys';
 import {Referencer} from './referencer';
@@ -27,6 +27,9 @@ type AnalyzeOptions = $ReadOnly<{
   /**
    * The identifier that's used for JSX Element creation (after transpilation).
    * This should not be a member expression - just the root identifier (i.e. use "React" instead of "React.createElement").
+   *
+   * To use the new global JSX transform function, you can explicitly set this to `null`.
+   *
    * Defaults to `"React"`.
    */
   jsxPragma: string | null,
@@ -43,6 +46,14 @@ type AnalyzeOptions = $ReadOnly<{
    * The source type of the script.
    */
   sourceType: 'script' | 'module',
+
+  /**
+   * Ignore <fbt /> JSX elements when adding references to the module-level `React` variable.
+   * FBT is JSX that's transformed to non-JSX and thus references differently
+   *
+   * https://facebook.github.io/fbt/
+   */
+  fbt: boolean,
 }>;
 type PartialAnalyzeOptions = $ReadOnly<$Partial<AnalyzeOptions>>;
 
@@ -51,13 +62,67 @@ const DEFAULT_OPTIONS: AnalyzeOptions = {
   jsxPragma: 'React',
   jsxFragmentName: null,
   sourceType: 'module',
+  fbt: true,
 };
+
+const JS_IDENTIFIER_REGEX = /^[_$a-zA-Z][_$a-zA-Z0-9]*$/;
+function extractIdentifier(directive: ?$ReadOnlyArray<string>): ?string {
+  // handle `@\jsx Foo.bar` -> we want to extract `Foo`, not `Foo.bar`
+  const foundPragma = directive?.[0].split('.')[0];
+  if (foundPragma != null && JS_IDENTIFIER_REGEX.test(foundPragma)) {
+    return foundPragma;
+  }
+
+  return null;
+}
+
+function getJsxPragma(
+  ast: Program,
+  providedOptions?: PartialAnalyzeOptions,
+): string | null {
+  // search for a pragma comment in the docblock only
+  // we do this for speed and simplicity
+  if (ast.docblock) {
+    const foundPragma = extractIdentifier(ast.docblock.directives.jsx);
+    if (foundPragma != null) {
+      return foundPragma;
+    }
+  }
+
+  if (
+    providedOptions &&
+    // intentionally differentiate between null and undefined
+    // -- null      = don't reference JSX pragma
+    // -- undefined = not set, use default
+    // eslint-disable-next-line eqeqeq
+    providedOptions.jsxPragma === null
+  ) {
+    return null;
+  }
+
+  return providedOptions?.jsxPragma ?? DEFAULT_OPTIONS.jsxPragma;
+}
+function getJsxFragmentPragma(
+  ast: Program,
+  providedOptions?: PartialAnalyzeOptions,
+): string | null {
+  // search for a pragma comment in the docblock only
+  // we do this for speed and simplicity
+  if (ast.docblock) {
+    const foundPragma = extractIdentifier(ast.docblock.directives.jsxFrag);
+    if (foundPragma != null) {
+      return foundPragma;
+    }
+  }
+
+  return providedOptions?.jsxFragmentName ?? DEFAULT_OPTIONS.jsxFragmentName;
+}
 
 /**
  * Takes an AST and returns the analyzed scopes.
  */
 function analyze(
-  tree: ESNode,
+  ast: Program,
   providedOptions?: PartialAnalyzeOptions,
 ): ScopeManager {
   const scopeManager = new ScopeManager({
@@ -67,17 +132,14 @@ function analyze(
   const referencer = new Referencer(
     {
       childVisitorKeys: visitorKeys,
-      jsxPragma:
-        providedOptions?.jsxPragma === undefined
-          ? DEFAULT_OPTIONS.jsxPragma
-          : providedOptions.jsxPragma,
-      jsxFragmentName:
-        providedOptions?.jsxFragmentName ?? DEFAULT_OPTIONS.jsxFragmentName,
+      fbtSupport: providedOptions?.fbt ?? DEFAULT_OPTIONS.fbt,
+      jsxPragma: getJsxPragma(ast, providedOptions),
+      jsxFragmentName: getJsxFragmentPragma(ast, providedOptions),
     },
     scopeManager,
   );
 
-  referencer.visit(tree);
+  referencer.visit(ast);
 
   return scopeManager;
 }

@@ -50,6 +50,7 @@ import type {
   JSXIdentifier,
   JSXMemberExpression,
   JSXOpeningElement,
+  JSXTagNameExpression,
   LabeledStatement,
   MemberExpression,
   MetaProperty,
@@ -87,8 +88,25 @@ import {
   VariableDefinition,
 } from '../definition';
 
+function getJsxName(name: JSXTagNameExpression): string {
+  switch (name.type) {
+    case 'JSXIdentifier':
+      return name.name;
+
+    case 'JSXNamespacedName':
+      return getJsxName(name.namespace);
+
+    case 'JSXMemberExpression':
+      return getJsxName(name.object);
+
+    default:
+      throw new Error(`Unexpected JSX tag name ${name.type}`);
+  }
+}
+
 type ReferencerOptions = $ReadOnly<{
   ...VisitorOptions,
+  fbtSupport: boolean | null,
   jsxPragma: string | null,
   jsxFragmentName: string | null,
 }>;
@@ -97,18 +115,26 @@ type ReferencerOptions = $ReadOnly<{
 class Referencer extends Visitor {
   +_jsxPragma: string | null;
   +_jsxFragmentName: string | null;
+  +_fbtSupport: boolean | null;
   _hasReferencedJsxFactory = false;
   _hasReferencedJsxFragmentFactory = false;
+
   +scopeManager: ScopeManager;
 
   constructor(
-    {childVisitorKeys, jsxFragmentName, jsxPragma}: ReferencerOptions,
+    {
+      childVisitorKeys,
+      fbtSupport,
+      jsxFragmentName,
+      jsxPragma,
+    }: ReferencerOptions,
     scopeManager: ScopeManager,
   ) {
     super({childVisitorKeys});
     this.scopeManager = scopeManager;
     this._jsxPragma = jsxPragma;
     this._jsxFragmentName = jsxFragmentName;
+    this._fbtSupport = fbtSupport;
   }
 
   currentScope: {
@@ -557,18 +583,35 @@ class Referencer extends Visitor {
   }
 
   JSXOpeningElement(node: JSXOpeningElement): void {
-    this._referenceJsxPragma();
-    if (node.name.type === 'JSXIdentifier') {
-      const name = node.name.name;
-      if (name[0].toUpperCase() === name[0]) {
-        // lower cased component names are always treated as "intrinsic" names, and are converted to a string,
-        // not a variable by JSX transforms:
-        // <div /> => React.createElement("div", null)
-        this.visit(node.name);
-      }
-    } else {
-      this.visit(node.name);
+    const rootName = getJsxName(node.name);
+    if (rootName !== 'fbt' || this._fbtSupport !== true) {
+      // <fbt /> does not reference the jsxPragma, but instead references the fbt import
+      this._referenceJsxPragma();
     }
+
+    switch (node.name.type) {
+      case 'JSXIdentifier':
+        if (
+          rootName[0].toUpperCase() === rootName[0] ||
+          (rootName === 'fbt' && this._fbtSupport === true)
+        ) {
+          // lower cased component names are always treated as "intrinsic" names, and are converted to a string,
+          // not a variable by JSX transforms:
+          // <div /> => React.createElement("div", null)
+          this.visit(node.name);
+        }
+        break;
+
+      case 'JSXMemberExpression':
+      case 'JSXNamespacedName':
+        // special case for <this.Foo /> - we don't want to create an unclosed
+        // and impossible-to-resolve reference to a variable called `this`.
+        if (rootName !== 'this') {
+          this.visit(node.name);
+        }
+        break;
+    }
+
     for (const attr of node.attributes) {
       this.visit(attr);
     }
