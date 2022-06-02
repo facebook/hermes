@@ -175,7 +175,17 @@ class TypeVisitor extends Visitor {
 
   DeclareExportDeclaration(node: DeclareExportDeclaration): void {
     if (node.declaration) {
-      this.visit(node.declaration);
+      const declaration = node.declaration;
+      this.visit(declaration);
+
+      // `declare export` variables are to be considered used by default
+      // non-`declare` exported names are handled natively by ESLint's rule
+      // as this is flow-specific syntax, we just handle it here for portability
+      for (const variable of this._referencer.scopeManager.getDeclaredVariables(
+        declaration,
+      )) {
+        variable.eslintUsed = true;
+      }
     } else {
       for (const specifier of node.specifiers) {
         // can only reference values

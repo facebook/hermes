@@ -33,6 +33,7 @@ export function verifyHasScopes(
       name: string,
       type: ?DefinitionTypeType,
       referenceCount: ?number,
+      eslintUsed?: boolean,
     }>,
   }>,
   parserOptions?: ParseForESLintOptions,
@@ -84,6 +85,10 @@ export function verifyHasScopes(
       if (expectedVariable.type != null) {
         expect(actualVariable.defs).toHaveLength(1);
         expect(actualVariable.defs[0].type).toEqual(expectedVariable.type);
+      }
+
+      if (expectedVariable.eslintUsed != null) {
+        expect(actualVariable.eslintUsed).toBe(expectedVariable.eslintUsed);
       }
     }
   }
