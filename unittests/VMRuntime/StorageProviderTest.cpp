@@ -263,11 +263,11 @@ TEST(StorageProviderTest, VirtualMemoryFreed) {
   SetVALimit limit{10 * MB};
 
   for (size_t i = 0; i < 20; i++) {
-    std::shared_ptr sp = StorageProvider::mmapProvider();
+    std::shared_ptr<StorageProvider> sp = StorageProvider::mmapProvider();
     StorageGuard sg{sp, *sp->newStorage()};
   }
   for (size_t i = 0; i < 20; i++) {
-    std::shared_ptr sp =
+    std::shared_ptr<StorageProvider> sp =
         StorageProvider::contiguousVAProvider(AlignedStorage::size());
     StorageGuard sg{sp, *sp->newStorage()};
   }
