@@ -50,6 +50,9 @@ class ContiguousVAStorageProvider final : public StorageProvider {
     level_ = start_ = static_cast<char *>(*result);
     oscompat::vm_name(start_, size_, kFreeRegionName);
   }
+  ~ContiguousVAStorageProvider() override {
+    oscompat::vm_free_aligned(start_, size_);
+  }
 
   llvh::ErrorOr<void *> newStorageImpl(const char *name) override {
     void *storage;

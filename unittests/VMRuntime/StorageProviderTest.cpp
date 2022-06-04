@@ -259,6 +259,20 @@ TEST(StorageProviderTest, FailsDueToLimitLowerThanMin) {
   ASSERT_FALSE(result);
 }
 
+TEST(StorageProviderTest, VirtualMemoryFreed) {
+  SetVALimit limit{10 * MB};
+
+  for (size_t i = 0; i < 20; i++) {
+    std::shared_ptr sp = StorageProvider::mmapProvider();
+    StorageGuard sg{sp, *sp->newStorage()};
+  }
+  for (size_t i = 0; i < 20; i++) {
+    std::shared_ptr sp =
+        StorageProvider::contiguousVAProvider(AlignedStorage::size());
+    StorageGuard sg{sp, *sp->newStorage()};
+  }
+}
+
 #endif
 
 } // namespace
