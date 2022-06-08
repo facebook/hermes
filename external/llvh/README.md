@@ -9,7 +9,7 @@ with exceptions disabled: `GTEST_HAS_EXCEPTIONS` isn't defined to the correct
 value.
 Pulled in this fix: https://github.com/google/googletest/commit/3498a1ac52deb83f30b8170c78bfba9dc6227198
 from googletest-1.10.0 into googletest-1.8.0.
-It only modifies `./utils/unittest/googletest/include/gtest/internal/gtest-port.h`
+It only modifies `./utils/unittest/googletest/include/gtest/internal/gtest-port.h`.
 
 
 ## LIT patches
