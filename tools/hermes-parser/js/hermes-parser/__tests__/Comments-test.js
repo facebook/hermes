@@ -240,10 +240,6 @@ describe('Comments', () => {
          * @multiple one
          * @multiple two
          * @empty
-         *
-         * @multiline one
-         * two
-         * three
          */
       `;
       expect(parse(source).docblock?.directives).toMatchInlineSnapshot(`
@@ -256,9 +252,6 @@ describe('Comments', () => {
           ],
           "foo": Array [
             "foo-value",
-          ],
-          "multiline": Array [
-            "one two three",
           ],
           "multiple": Array [
             "one",
