@@ -900,7 +900,7 @@ export type PropertyDefinition =
   | PropertyDefinitionWithNonComputedName;
 interface PropertyDefinitionBase extends BaseNode {
   +value: null | Expression;
-  +typeAnnotation: null | TypeAnnotationType;
+  +typeAnnotation: null | TypeAnnotation;
   +static: boolean;
   +variance: null | Variance;
   +declare: boolean;
