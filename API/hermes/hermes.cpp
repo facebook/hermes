@@ -231,9 +231,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
-          for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
+          for (auto it = hermesValues_.begin(); it != hermesValues_.end();) {
             if (it->get() == 0) {
-              it = hermesValues_->erase(it);
+              it = hermesValues_.erase(it);
             } else {
               acceptor.accept(const_cast<vm::PinnedHermesValue &>(it->phv));
               ++it;
@@ -242,10 +242,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
         });
     runtime_.addCustomWeakRootsFunction(
         [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
-          for (auto it = weakHermesValues_->begin();
-               it != weakHermesValues_->end();) {
+          for (auto it = weakHermesValues_.begin();
+               it != weakHermesValues_.end();) {
             if (it->get() == 0) {
-              it = weakHermesValues_->erase(it);
+              it = weakHermesValues_.erase(it);
             } else {
               acceptor.acceptWeak(it->wr);
               ++it;
@@ -260,7 +260,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               "ManagedValues",
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::JSIHermesValueList),
-              hermesValues_->size() * sizeof(HermesPointerValue),
+              hermesValues_.size() * sizeof(HermesPointerValue),
               0);
           snap.beginNode();
           snap.endNode(
@@ -269,7 +269,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::
                       JSIWeakHermesValueList),
-              weakHermesValues_->size() * sizeof(WeakRefPointerValue),
+              weakHermesValues_.size() * sizeof(WeakRefPointerValue),
               0);
         },
         [](vm::HeapSnapshot &snap) {
@@ -375,13 +375,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
   T add(::hermes::vm::HermesValue hv) {
     static_assert(
         std::is_base_of<jsi::Pointer, T>::value, "this type cannot be added");
-    hermesValues_->emplace_front(hv);
-    return make<T>(&(hermesValues_->front()));
+    return make<T>(&hermesValues_.add(hv));
   }
 
   jsi::WeakObject addWeak(::hermes::vm::WeakRoot<vm::JSObject> wr) {
-    weakHermesValues_->emplace_front(wr);
-    return make<jsi::WeakObject>(&(weakHermesValues_->front()));
+    return make<jsi::WeakObject>(&weakHermesValues_.add(wr));
   }
 
   // overriden from jsi::Instrumentation
@@ -926,7 +924,30 @@ class HermesRuntimeImpl final : public HermesRuntime,
   };
 
   template <typename T>
-  struct ManagedValues {
+  class ManagedValues {
+   public:
+    using iterator = typename std::list<T>::iterator;
+
+    template <typename... Args>
+    T &add(Args &&...args) {
+      values_.emplace_front(std::forward<Args>(args)...);
+      return values_.front();
+    }
+
+    iterator begin() {
+      return values_.begin();
+    }
+    iterator end() {
+      return values_.end();
+    }
+    iterator erase(iterator it) {
+      return values_.erase(it);
+    }
+
+    size_t size() const {
+      return values_.size();
+    }
+
 #ifdef ASSERT_ON_DANGLING_VM_REFS
     // If we have active HermesValuePointers when deconstructing, these will
     // now be dangling. We deliberately allocate and immediately leak heap
@@ -937,9 +958,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // for too long.
     ~ManagedValues() {
       bool anyDangling = false;
-      for (auto it = values.begin(); it != values.end();) {
+      for (auto it = begin(); it != end();) {
         if (it->get() == 0) {
-          it = values.erase(it);
+          it = erase(it);
         } else {
           anyDangling = true;
           it->markDangling();
@@ -948,20 +969,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
       }
       if (anyDangling) {
         // This is the deliberate memory leak described above.
-        new std::list<T>(std::move(values));
+        new std::list<T>(std::move(values_));
       }
     }
 #endif
 
-    std::list<T> *operator->() {
-      return &values;
-    }
-
-    const std::list<T> *operator->() const {
-      return &values;
-    }
-
-    std::list<T> values;
+   private:
+    std::list<T> values_;
   };
 
  protected:
@@ -1295,7 +1309,7 @@ jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
 }
 
 size_t HermesRuntime::rootsListLength() const {
-  return impl(this)->hermesValues_->size();
+  return impl(this)->hermesValues_.size();
 }
 
 namespace {
@@ -2056,9 +2070,8 @@ bool HermesRuntimeImpl::instanceOf(
 }
 
 jsi::Runtime::ScopeState *HermesRuntimeImpl::pushScope() {
-  hermesValues_->emplace_front(
-      vm::HermesValue::encodeNativeUInt32(kSentinelNativeValue));
-  return reinterpret_cast<ScopeState *>(&hermesValues_->front());
+  return reinterpret_cast<ScopeState *>(&hermesValues_.add(
+      vm::HermesValue::encodeNativeUInt32(kSentinelNativeValue)));
 }
 
 void HermesRuntimeImpl::popScope(ScopeState *prv) {
@@ -2066,11 +2079,11 @@ void HermesRuntimeImpl::popScope(ScopeState *prv) {
   assert(sentinel->phv.isNativeValue());
   assert(sentinel->phv.getNativeUInt32() == kSentinelNativeValue);
 
-  for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
+  for (auto it = hermesValues_.begin(); it != hermesValues_.end();) {
     auto &value = *it;
 
     if (&value == sentinel) {
-      hermesValues_->erase(it);
+      hermesValues_.erase(it);
       return;
     }
 
@@ -2081,7 +2094,7 @@ void HermesRuntimeImpl::popScope(ScopeState *prv) {
     }
 
     if (value.get() == 0) {
-      it = hermesValues_->erase(it);
+      it = hermesValues_.erase(it);
     } else {
       ++it;
     }
