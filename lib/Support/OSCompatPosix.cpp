@@ -109,17 +109,10 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
-#ifndef NDEBUG
-  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return make_error_code(OOMError::TestVMLimitReached);
-  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
-    totalVMAllocLimit -= sz;
-  }
-#endif // !NDEBUG
-
-  void *result = mmap(
-      nullptr, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+static llvh::ErrorOr<void *>
+vm_mmap(void *addr, size_t sz, int prot, int flags) {
+  assert(sz % page_size_real() == 0);
+  void *result = mmap(addr, sz, prot, flags, -1, 0);
   if (result == MAP_FAILED) {
     // Since mmap is a POSIX API, even on MacOS, errno should use the POSIX
     // generic_category.
@@ -128,10 +121,64 @@ static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
   return result;
 }
 
+/// Check \p sz does not cross totalVMAllocLimit, and create a new mapping.
+static llvh::ErrorOr<void *> vm_mmap(size_t sz, int prot, int flags) {
+#ifndef NDEBUG
+  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
+    return make_error_code(OOMError::TestVMLimitReached);
+  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
+    totalVMAllocLimit -= sz;
+  }
+#endif // !NDEBUG
+
+  return vm_mmap(nullptr, sz, prot, flags);
+}
+
+static void vm_munmap(void *addr, size_t sz) {
+  auto ret = munmap(addr, sz);
+  assert(!ret && "Failed to free memory region.");
+  (void)ret;
+
+#ifndef NDEBUG
+  if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit) && addr) {
+    totalVMAllocLimit += sz;
+  }
+#endif
+}
+
 static char *alignAlloc(void *p, size_t alignment) {
   return reinterpret_cast<char *>(
       llvh::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
+
+static llvh::ErrorOr<void *>
+vm_mmap_aligned(size_t sz, size_t alignment, int prot, int flags) {
+  assert(sz > 0 && sz % page_size() == 0);
+  assert(alignment > 0 && alignment % page_size() == 0);
+
+  // Allocate a larger section to ensure that it contains  a subsection that
+  // satisfies the request. Use *real* page size here since that's what vm_mmap
+  // guarantees.
+  const size_t excessSize = sz + alignment - page_size_real();
+  auto result = vm_mmap(excessSize, prot, flags);
+  if (!result)
+    return result;
+
+  void *raw = *result;
+  char *aligned = alignAlloc(raw, alignment);
+  size_t excessAtFront = aligned - static_cast<char *>(raw);
+  size_t excessAtBack = excessSize - excessAtFront - sz;
+
+  if (excessAtFront)
+    vm_munmap(raw, excessAtFront);
+  if (excessAtBack)
+    vm_munmap(aligned + sz, excessAtBack);
+
+  return aligned;
+}
+
+static constexpr int kVMAllocateFlags = MAP_PRIVATE | MAP_ANONYMOUS;
+static constexpr int kVMAllocateProt = PROT_READ | PROT_WRITE;
 
 llvh::ErrorOr<void *> vm_allocate(size_t sz) {
   assert(sz % page_size() == 0);
@@ -140,7 +187,7 @@ llvh::ErrorOr<void *> vm_allocate(size_t sz) {
     return vm_allocate_aligned(sz, testPgSz);
   }
 #endif // !NDEBUG
-  return vm_allocate_impl(sz);
+  return vm_mmap(sz, kVMAllocateProt, kVMAllocateFlags);
 }
 
 llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
@@ -151,7 +198,7 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   // and see if the memory happens to be aligned.
   // While this may be unlikely on the first allocation request,
   // subsequent allocation requests have a good chance.
-  auto result = vm_allocate_impl(sz);
+  auto result = vm_mmap(sz, kVMAllocateProt, kVMAllocateFlags);
   if (!result) {
     return result;
   }
@@ -160,41 +207,14 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
     return mem;
   }
 
-  // Free the oppotunistic allocation.
-  oscompat::vm_free(mem, sz);
+  // Free the opportunistic allocation.
+  vm_munmap(mem, sz);
 
-  // This time, allocate a larger section to ensure that it contains
-  // a subsection that satisfies the request.
-  // Use *real* page size here since that's what vm_allocate_impl guarantees.
-  const size_t excessSize = sz + alignment - page_size_real();
-  result = vm_allocate_impl(excessSize);
-  if (!result)
-    return result;
-
-  void *raw = *result;
-  char *aligned = alignAlloc(raw, alignment);
-  size_t excessAtFront = aligned - static_cast<char *>(raw);
-  size_t excessAtBack = excessSize - excessAtFront - sz;
-
-  if (excessAtFront)
-    oscompat::vm_free(raw, excessAtFront);
-  if (excessAtBack)
-    oscompat::vm_free(aligned + sz, excessAtBack);
-
-  return aligned;
+  return vm_mmap_aligned(sz, alignment, kVMAllocateProt, kVMAllocateFlags);
 }
 
 void vm_free(void *p, size_t sz) {
-  auto ret = munmap(p, sz);
-
-  assert(!ret && "Failed to free memory region.");
-  (void)ret;
-
-#ifndef NDEBUG
-  if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit) && p) {
-    totalVMAllocLimit += sz;
-  }
-#endif
+  vm_munmap(p, sz);
 }
 
 void vm_free_aligned(void *p, size_t sz) {
