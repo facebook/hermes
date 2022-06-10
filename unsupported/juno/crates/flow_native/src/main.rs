@@ -395,16 +395,6 @@ impl<W: Write> Compiler<W> {
                 }
                 out!(self, "}}))");
             }
-            Node::MemberExpression(MemberExpression {
-                object,
-                property,
-                computed,
-                ..
-            }) => {
-                self.gen_expr(object, scope, lock);
-                out!(self, ".getObject()");
-                self.gen_member_prop(property, *computed, scope, lock);
-            }
             Node::CallExpression(CallExpression {
                 callee, arguments, ..
             }) => {
@@ -420,21 +410,12 @@ impl<W: Write> Compiler<W> {
                 }
                 out!(self, ");}})");
             }
-            Node::Identifier(..) => {
-                let decl_id = match self.sem.ident_decl(&NodeRc::from_node(lock, node)) {
-                    Some(Resolution::Decl(decl)) => decl,
-                    _ => panic!("Unresolved variable"),
-                };
-                let decl = self.sem.decl(decl_id);
-                match decl.kind {
-                    DeclKind::UndeclaredGlobalProperty | DeclKind::GlobalProperty => {
-                        out!(self, "global()");
-                        self.gen_member_prop(node, false, scope, lock)
-                    }
-                    _ => {
-                        self.gen_var(decl_id, scope);
-                    }
-                }
+            Node::MemberExpression(..) | Node::Identifier(..) => {
+                // Generate an LRef for the expression and load from it.
+                out!(self, "({{");
+                let lref = self.new_lref(node, scope, lock);
+                let result = self.gen_load(lref);
+                out!(self, "{};}})", result);
             }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
