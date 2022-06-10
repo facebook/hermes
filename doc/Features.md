@@ -31,12 +31,18 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 
 ### In Progress
 
-- `let` and `const` (block scoped variables, with support for the temporal dead zone)
-- Classes and method definitions
+- WeakRef
+- BigInt
 - ES modules (`import` and `export`)
 - `Intl` API glue has been added to enable community contribution of a complete, spec-compliant implementation on multiple platforms
 - Async function (`async` and `await`).
 - `Symbol.prototype.description` (it's not fully spec-conformant yet. `Symbol().description` should be `undefined` but it's currently `''`).
+
+### Planned
+- RegExp match indices and named capture groups
+- Expanded Intl functionality (e.g., DisplayNames, ListFormat, PluralRules, RelativeTimeFormat, and Locale)
+- `let` and `const` (block scoped variables, with support for the temporal dead zone)
+- Classes and method definitions
 
 ### Excluded From Support
 
