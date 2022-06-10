@@ -91,7 +91,7 @@ impl<W: Write> Compiler<W> {
 
     fn gen_program<'gc>(&mut self, node: &'gc ast::Node<'gc>, lock: &'gc ast::GCLock) {
         use ast::*;
-        out!(self, "#include \"runtime/FNRuntime.h\"\n");
+        out!(self, "#include \"FNRuntime.h\"\n");
         self.gen_context();
         out!(self, "int main(){{\n");
         let scope = self.sem.node_scope(NodeRc::from_node(lock, node)).unwrap();

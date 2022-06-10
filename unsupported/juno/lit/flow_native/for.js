@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %fnc < %s
+// RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
 var arr = [1,3,5,7,9];
 
@@ -14,3 +14,4 @@ for (let i = 0; i < 5; i++){
   sum += arr[i];
 }
 print(sum);
+// CHECK: 25.000000

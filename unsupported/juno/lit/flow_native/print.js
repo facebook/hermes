@@ -5,12 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %fnc < %s
+// RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
 print("Hello world\n");
+// CHECK: Hello world
 print(10 + 10);
 print("\n");
+// CHECK-NEXT: 20.000000
 print({});
 print("\n");
+// CHECK-NEXT: [Object]
 print(function(){});
 print("\n");
+// CHECK-NEXT: [Closure]

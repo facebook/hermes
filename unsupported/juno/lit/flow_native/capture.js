@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %fnc < %s
+// RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
 function fn1(param1){
     var var1 = 1;
@@ -21,3 +21,4 @@ function fn1(param1){
 }
 
 print(fn1(4)(5)(6));
+// CHECK: 21.000000

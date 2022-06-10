@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %fnc < %s
+// RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
 function bench (lc, fc) {
     var n, fact;
@@ -21,3 +21,4 @@ function bench (lc, fc) {
 }
 
 print(bench(4e6, 100));
+// CHECK: 373304861765286933565920470441822466257223788178678581982964159733362287969947809641457290407594073428410904372057793030326145493814704070178859617284533689933365248.000000

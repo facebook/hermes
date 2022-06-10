@@ -9,6 +9,7 @@ use assert_cmd::Command;
 use std::env;
 
 #[test]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn run_lit_tests() {
     let lit = lit::lit_path();
     Command::new(lit)
@@ -22,6 +23,8 @@ fn run_lit_tests() {
         ))
         .arg("--param")
         .arg(format!("FileCheck={}", lit::filecheck_path()))
+        .arg("--param")
+        .arg(format!("fn_dir={}", env!("CARGO_MANIFEST_DIR")))
         .arg(format!(
             "{}/../../lit/flow_native",
             env!("CARGO_MANIFEST_DIR")

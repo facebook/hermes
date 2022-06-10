@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %fnc < %s
+// RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
 function thrower(){
   throw 11;
@@ -20,3 +20,4 @@ try {
   x += y;
 }
 print(x);
+// CHECK: 45.000000
