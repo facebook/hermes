@@ -60,8 +60,32 @@ export function getModuleDocblock(
       return null;
     }
 
-    const firstComment = program.comments[0];
-    if (firstComment.type !== 'Block') {
+    const firstComment = (() => {
+      const first = program.comments[0];
+      if (first.type === 'Block') {
+        return first;
+      }
+
+      if (program.comments.length === 1) {
+        return null;
+      }
+
+      // ESLint will always strip out the shebang comment from the code before passing it to the parser
+      // https://github.com/eslint/eslint/blob/21d647904dc30f9484b22acdd9243a6d0ecfba38/lib/linter/linter.js#L779
+      // this means that we're forced to parse it as a line comment :(
+      // this hacks around it by selecting the second comment in this case
+      const second = program.comments[1];
+      if (
+        first.type === 'Line' &&
+        first.range[0] === 0 &&
+        second.type === 'Block'
+      ) {
+        return second;
+      }
+
+      return null;
+    })();
+    if (firstComment == null) {
       return null;
     }
 

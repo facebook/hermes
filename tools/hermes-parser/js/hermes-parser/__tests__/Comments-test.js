@@ -260,5 +260,37 @@ describe('Comments', () => {
         }
       `);
     });
+
+    it('handles the case where eslint converts a shebang to a line comment', () => {
+      const source = `\
+#!scripts/third-party/node
+/*Block comment*/`.replace(
+        // https://github.com/eslint/eslint/blob/dd58cd4afa6ced9016c091fc99a702c97a3e44f0/lib/shared/ast-utils.js#L13
+        /^#!([^\r\n]+)/,
+        // https://github.com/eslint/eslint/blob/21d647904dc30f9484b22acdd9243a6d0ecfba38/lib/linter/linter.js#L779
+        (_, captured) => `//${captured}`,
+      );
+      expect(parse(source)).toMatchObject({
+        type: 'Program',
+        body: [],
+        comments: [
+          {
+            type: 'Line',
+            value: 'scripts/third-party/node',
+          },
+          {
+            type: 'Block',
+            value: 'Block comment',
+          },
+        ],
+        docblock: {
+          directives: {},
+          comment: {
+            type: 'Block',
+            value: 'Block comment',
+          },
+        },
+      });
+    });
   });
 });
