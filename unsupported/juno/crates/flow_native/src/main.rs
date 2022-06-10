@@ -240,6 +240,31 @@ impl<W: Write> Compiler<W> {
         out!(self, "var{}", decl_id);
     }
 
+    fn gen_loop<'gc>(
+        &mut self,
+        test: Option<&'gc ast::Node<'gc>>,
+        update: Option<&'gc ast::Node<'gc>>,
+        body: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) {
+        out!(self, "while(true){{");
+        // The test may correspond to multiple lines of C++, so it needs to be
+        // emitted separately in the body of the loop.
+        if let Some(test) = test {
+            let test_val = self.new_value();
+            out!(self, "FNValue {}=", test_val);
+            self.gen_expr(test, scope, lock);
+            out!(self, ";if(!{}.getBool()) break;", test_val);
+        }
+        self.gen_stmt(body, scope, lock);
+        if let Some(update) = update {
+            self.gen_expr(update, scope, lock);
+            out!(self, ";");
+        }
+        out!(self, "}}");
+    }
+
     /// Returns an LRef for the given AST node. For object property accesses, it
     /// evaluates the object and key expressions and stores their values to
     /// ensure that they are only evaluated once.
@@ -555,11 +580,7 @@ impl<W: Write> Compiler<W> {
                 out!(self, ";")
             }
             Node::WhileStatement(WhileStatement { test, body, .. }) => {
-                out!(self, "while(");
-                self.gen_expr(test, scope, lock);
-                out!(self, ".getBool()){{\n");
-                self.gen_stmt(body, scope, lock);
-                out!(self, "\n}}");
+                self.gen_loop(Some(test), None, body, scope, lock);
             }
             Node::ForStatement(ForStatement {
                 init,
@@ -570,23 +591,12 @@ impl<W: Write> Compiler<W> {
             }) => {
                 out!(self, "{{");
                 let inner_scope = self.init_scope(node, scope, lock);
-                out!(self, "for(");
                 if let Some(init) = init {
                     self.gen_stmt(init, inner_scope, lock);
+                    out!(self, ";");
                 }
-                out!(self, ";");
-                if let Some(test) = test {
-                    self.gen_expr(test, inner_scope, lock);
-                    out!(self, ".getBool()")
-                }
-                out!(self, ";");
-                if let Some(update) = update {
-                    self.gen_expr(update, inner_scope, lock);
-                }
-                out!(self, "){{");
-                self.gen_stmt(body, inner_scope, lock);
+                self.gen_loop(*test, *update, body, inner_scope, lock);
                 out!(self, "}}");
-                out!(self, "}}")
             }
             Node::IfStatement(IfStatement {
                 test,
