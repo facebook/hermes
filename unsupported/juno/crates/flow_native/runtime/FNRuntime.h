@@ -51,13 +51,15 @@ enum class FNType {
 // purposes. It will mostly be deleted once we have real type checking.
 class FNValue {
   FNType tag;
-  union {
-    double num;
-    bool b;
-    FNString *str;
-    FNObject *obj;
-    FNClosure *closure;
-  } value;
+  uint64_t value;
+
+  static_assert(
+      sizeof(value) >= sizeof(uintptr_t),
+      "Value must be able to fit a pointer.");
+
+  void *getPointer() const {
+    return reinterpret_cast<FNString *>(static_cast<uintptr_t>(value));
+  }
 
  public:
   bool isUndefined() const {
@@ -87,63 +89,71 @@ class FNValue {
 
   double getNumber() const {
     assert(isNumber());
-    return value.num;
+    double num;
+    memcpy(&num, &value, sizeof(double));
+    return num;
   }
   bool getBool() const {
     assert(isBool());
-    return value.b;
+    return value;
   }
   FNString *getString() const {
     assert(isString());
-    return value.str;
+    return reinterpret_cast<FNString *>(value);
   }
   FNObject *getObject() const {
     assert(isObject());
-    return value.obj;
+    return reinterpret_cast<FNObject *>(value);
   }
   FNClosure *getClosure() const {
     assert(isClosure());
-    return value.closure;
+    return reinterpret_cast<FNClosure *>(value);
   }
 
   static FNValue encodeUndefined() {
     FNValue ret;
     ret.tag = FNType::Undefined;
+    // Explicitly initialize value so we can reliably test for equality.
+    ret.value = 0;
     return ret;
   }
   static FNValue encodeNull() {
     FNValue ret;
     ret.tag = FNType::Null;
+    // Explicitly initialize value so we can reliably test for equality.
+    ret.value = 0;
     return ret;
   }
   static FNValue encodeNumber(double num) {
     FNValue ret;
     ret.tag = FNType::Number;
-    ret.value.num = num;
+    uint64_t bits;
+    memcpy(&bits, &num, sizeof(double));
+    ret.value = bits;
     return ret;
   }
   static FNValue encodeBool(bool b) {
     FNValue ret;
     ret.tag = FNType::Bool;
-    ret.value.b = b;
+    ret.value = b;
     return ret;
   }
   static FNValue encodeString(FNString *str) {
     FNValue ret;
     ret.tag = FNType::String;
-    ret.value.str = str;
+    ret.value = reinterpret_cast<uint64_t>(str);
     return ret;
   }
   static FNValue encodeObject(FNObject *obj) {
     FNValue ret;
     ret.tag = FNType::Object;
-    ret.value.obj = obj;
+    ret.value = reinterpret_cast<uint64_t>(obj);
     return ret;
   }
   static FNValue encodeClosure(FNClosure *closure) {
     FNValue ret;
     ret.tag = FNType::Closure;
-    ret.value.closure = closure;
+    ret.value = reinterpret_cast<uint64_t>(closure);
     return ret;
   }
 };
