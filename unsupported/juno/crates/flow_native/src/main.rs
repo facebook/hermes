@@ -442,19 +442,42 @@ impl<W: Write> Compiler<W> {
                 operator: op,
                 ..
             }) => {
-                let type_str = match op {
-                    AssignmentExpressionOperator::Assign => "",
-                    AssignmentExpressionOperator::PlusAssign
-                    | AssignmentExpressionOperator::MinusAssign
-                    | AssignmentExpressionOperator::ModAssign
-                    | AssignmentExpressionOperator::DivAssign
-                    | AssignmentExpressionOperator::MultAssign => ".getNumberRef()",
-                    _ => panic!("Unsupported assignment"),
+                out!(self, "({{");
+                let lref = self.new_lref(left, scope, lock);
+                let new_val = self.new_value();
+                // Helper to apply the given mathematical operator to the left
+                // and right sides.
+                let mut update_op = |op: &str| {
+                    let old_val = self.gen_load(lref);
+                    out!(
+                        self,
+                        "FNValue {}=FNValue::encodeNumber({}.getNumber(){}",
+                        new_val,
+                        old_val,
+                        op
+                    );
+                    self.gen_expr(right, scope, lock);
+                    out!(self, ".getNumber());");
                 };
-                self.gen_expr(left, scope, lock);
-                out!(self, "{type_str}{}", op.as_str());
-                self.gen_expr(right, scope, lock);
-                out!(self, "{type_str}");
+                // Determine the updated value based on the operator.
+                match op {
+                    AssignmentExpressionOperator::Assign => {
+                        out!(self, "FNValue {}=", new_val);
+                        self.gen_expr(right, scope, lock);
+                        out!(self, ";");
+                    }
+                    AssignmentExpressionOperator::PlusAssign => update_op("+"),
+                    AssignmentExpressionOperator::MinusAssign => update_op("-"),
+                    AssignmentExpressionOperator::ModAssign => update_op("%"),
+                    AssignmentExpressionOperator::DivAssign => update_op("/"),
+                    AssignmentExpressionOperator::MultAssign => update_op("*"),
+                    _ => panic!("Unsupported assignment: {:?}", op),
+                };
+                // Store the updated value and return it as the result of this
+                // expression.
+                self.gen_store(lref, new_val);
+                out!(self, "{};", new_val);
+                out!(self, "}})");
             }
             Node::BinaryExpression(BinaryExpression {
                 left,
@@ -496,16 +519,31 @@ impl<W: Write> Compiler<W> {
                 prefix,
                 ..
             }) => {
-                out!(self, "FNValue::encodeNumber(");
+                out!(self, "({{");
+                let lref = self.new_lref(argument, scope, lock);
+                let old_val = self.gen_load(lref);
+                let new_val = self.new_value();
+                let op = match operator {
+                    UpdateExpressionOperator::Increment => "+1",
+                    UpdateExpressionOperator::Decrement => "-1",
+                };
+                // Calculate the new value using the operator being applied.
+                out!(
+                    self,
+                    "FNValue {}=FNValue::encodeNumber({}.getNumber(){});",
+                    new_val,
+                    old_val,
+                    op
+                );
+                // Store the updated value and return the old or new value,
+                // depending on whether this is a postfix or prefix operator.
+                self.gen_store(lref, new_val);
                 if *prefix {
-                    out!(self, "{}", operator.as_str());
+                    out!(self, "{};", new_val);
+                } else {
+                    out!(self, "{};", old_val);
                 }
-                self.gen_expr(argument, scope, lock);
-                out!(self, ".getNumberRef()");
-                if !*prefix {
-                    out!(self, "{}", operator.as_str());
-                }
-                out!(self, ")");
+                out!(self, "}})");
             }
             Node::NumericLiteral(NumericLiteral { value, .. }) => {
                 out!(self, "FNValue::encodeNumber({value})")

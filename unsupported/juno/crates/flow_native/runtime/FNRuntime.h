@@ -85,11 +85,6 @@ class FNValue {
     return tag == FNType::Closure;
   }
 
-  double &getNumberRef() {
-    assert(isNumber());
-    return value.num;
-  }
-
   double getNumber() const {
     assert(isNumber());
     return value.num;

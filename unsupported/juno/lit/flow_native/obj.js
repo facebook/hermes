@@ -10,6 +10,8 @@
 var a = {x: 1, ["y"]: 2, z: 3, f: function (){return 4;}}
 a.b = 5;
 a["c"] = 6;
+a.x *= 5;
+a.z += 2;
 var b = "z";
 var res = a.c + a.b + a["x"] + a.y + a.z + a.f() + a[b];
 print(res);
