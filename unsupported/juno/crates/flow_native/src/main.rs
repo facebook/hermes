@@ -144,24 +144,6 @@ impl<W: Write> Compiler<W> {
         }
     }
 
-    fn gen_member_prop<'gc>(
-        &mut self,
-        property: &'gc ast::Node<'gc>,
-        computed: bool,
-        scope: LexicalScopeId,
-        lock: &'gc ast::GCLock,
-    ) {
-        use ast::*;
-        if computed {
-            out!(self, "->getByVal(");
-            self.gen_expr(property, scope, lock);
-            out!(self, ")");
-        } else {
-            let Identifier { name, .. } = node_cast!(Node::Identifier, property);
-            out!(self, "->props[\"{}\"]", lock.str(*name))
-        }
-    }
-
     fn gen_function_exp<'gc>(
         &mut self,
         params: &'gc ast::NodeList<'gc>,
@@ -371,7 +353,12 @@ impl<W: Write> Compiler<W> {
                 self.gen_function_exp(params, body, scope, lock)
             }
             Node::ObjectExpression(ObjectExpression { properties, .. }) => {
-                out!(self, "({{FNObject *tmp=new FNObject();\n");
+                let object = self.new_value();
+                // Allocate a new object.
+                out!(self, "({{FNObject *{}=new FNObject();\n", object);
+
+                // Add each property and its corresponding value to the new
+                // object.
                 for prop in properties.iter() {
                     let Property {
                         key,
@@ -379,13 +366,13 @@ impl<W: Write> Compiler<W> {
                         computed,
                         ..
                     } = node_cast!(Node::Property, prop);
-                    out!(self, "tmp");
-                    self.gen_member_prop(key, *computed, scope, lock);
-                    out!(self, "=");
+                    let key = self.gen_prop(*computed, key, scope, lock);
+                    let val_id = self.new_value();
+                    out!(self, "FNValue {}=", val_id);
                     self.gen_expr(value, scope, lock);
-                    out!(self, ";\n");
+                    out!(self, ";{}->putByVal({}, {});", object, key, val_id);
                 }
-                out!(self, "FNValue::encodeObject(tmp);}})");
+                out!(self, "FNValue::encodeObject({});}})", object);
             }
             Node::ArrayExpression(ArrayExpression { elements, .. }) => {
                 out!(self, "FNValue::encodeObject(new FNArray({{");

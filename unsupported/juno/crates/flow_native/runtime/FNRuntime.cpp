@@ -7,17 +7,19 @@
 
 #include "FNRuntime.h"
 
-// This is a TEMPORARY implementation that will insert elements if they don't
-// already exist. The behaviour will change once the compiler distinguishes
-// lvalues.
-FNValue &FNObject::getByVal(FNValue key) {
-  if (key.isString())
-    return props[key.getString()->str];
-  auto &arr = static_cast<FNArray *>(this)->arr;
-  double n = key.getNumber();
-  if (arr.size() <= n)
-    arr.resize(n + 1, FNValue::encodeUndefined());
-  return arr[n];
+FNValue FNObject::getByVal(FNValue key) {
+  if (key.isString()) {
+    auto it = props.find(key.getString()->str);
+    if (it == props.end())
+      return FNValue::encodeUndefined();
+    return it->second;
+  } else {
+    auto &arr = static_cast<FNArray *>(this)->arr;
+    double n = key.getNumber();
+    if (arr.size() <= n)
+      return FNValue::encodeUndefined();
+    return arr[n];
+  }
 }
 
 void FNObject::putByVal(FNValue key, FNValue val) {

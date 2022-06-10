@@ -21,7 +21,7 @@ struct FNString {
 struct FNObject {
   std::unordered_map<std::string, FNValue> props;
 
-  FNValue &getByVal(FNValue key);
+  FNValue getByVal(FNValue key);
   void putByVal(FNValue key, FNValue val);
 };
 struct FNClosure : public FNObject {
