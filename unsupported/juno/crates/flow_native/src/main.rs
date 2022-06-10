@@ -186,9 +186,12 @@ impl<W: Write> Compiler<W> {
             "Scope{fn_scope} *scope{fn_scope} = new Scope{fn_scope}();\n"
         );
         out!(self, "scope{fn_scope}->parent = scope{scope};\n");
+        // Store each parameter into its location in the current scope.
         for (i, param) in params.iter().enumerate() {
-            self.gen_expr(param, fn_scope, lock);
-            out!(self, "=param{i};\n")
+            let lref = self.new_lref(param, fn_scope, lock);
+            let val = self.new_value();
+            out!(self, "FNValue {}=param{};", val, i);
+            self.gen_store(lref, val);
         }
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
         for stmt in body.iter() {
@@ -545,9 +548,13 @@ impl<W: Write> Compiler<W> {
                 ..
             }) => {
                 if let Some(init) = init_opt {
-                    self.gen_expr(ident, scope, lock);
-                    out!(self, "=");
-                    self.gen_expr(init, scope, lock)
+                    // Initialize the variable with init.
+                    let lref = self.new_lref(ident, scope, lock);
+                    let init_id = self.new_value();
+                    out!(self, "FNValue {}=", init_id);
+                    self.gen_expr(init, scope, lock);
+                    out!(self, ";");
+                    self.gen_store(lref, init_id);
                 }
             }
             Node::FunctionDeclaration(FunctionDeclaration {
@@ -556,13 +563,17 @@ impl<W: Write> Compiler<W> {
                 body,
                 ..
             }) => {
-                out!(self, "(");
-                if let Some(ident) = ident_opt {
-                    self.gen_expr(ident, scope, lock);
-                    out!(self, "=");
-                }
+                // Evaluate the function as a value.
+                let fn_id = self.new_value();
+                out!(self, "FNValue {}=", fn_id);
                 self.gen_function_exp(params, body, scope, lock);
-                out!(self, ")");
+                out!(self, ";");
+                if let Some(ident) = ident_opt {
+                    // Initialize the identifier for the function with the
+                    // generated value.
+                    let lref = self.new_lref(ident, scope, lock);
+                    self.gen_store(lref, fn_id);
+                }
             }
 
             Node::ReturnStatement(ReturnStatement { argument, .. }) => {
@@ -627,8 +638,11 @@ impl<W: Write> Compiler<W> {
                 let new_scope = self.init_scope(handler, scope, lock);
                 let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, body);
                 if let Some(param) = param {
-                    self.gen_expr(param, new_scope, lock);
-                    out!(self, "=ex;");
+                    // Initialize the catch parameter with the caught exception.
+                    let lref = self.new_lref(param, new_scope, lock);
+                    let ex_val = self.new_value();
+                    out!(self, "FNValue {}=ex;", ex_val);
+                    self.gen_store(lref, ex_val);
                 }
                 for stmt in body.iter() {
                     self.gen_stmt(stmt, new_scope, lock);
