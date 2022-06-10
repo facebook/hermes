@@ -79,6 +79,25 @@ void vm_free(void *p, size_t sz);
 /// \p vm_allocate_aligned.
 void vm_free_aligned(void *p, size_t sz);
 
+/// Similar to vm_allocate_aligned, but regions of memory must be explicitly
+/// committed with \p vm_commit before they are used. This can be used to
+/// reserve large contiguous address spaces without failing due to overcommit.
+llvh::ErrorOr<void *> vm_reserve_aligned(size_t sz, size_t alignment);
+
+/// Similar to \p vm_free, but for memory regions returned by
+/// \p vm_reserve_aligned.
+void vm_release_aligned(void *p, size_t sz);
+
+/// Commit a region of memory so that it can be used. \p sz must be page aligned
+/// and \p p must be a page aligned pointer in a region returned by
+/// \p vm_reserve_aligned. The pages will be zero-filled on demand.
+llvh::ErrorOr<void *> vm_commit(void *p, size_t sz);
+
+/// Uncommit a region of memory once it is no longer in use. \p sz must be page
+/// aligned and \p p must be a page aligned pointer in a region returned by
+/// \p vm_reserve_aligned.
+void vm_uncommit(void *p, size_t sz);
+
 /// Mark the \p sz byte region of memory starting at \p p as being a good
 /// candidate for huge pages.
 /// \pre sz must be a multiple of oscompat::page_size().

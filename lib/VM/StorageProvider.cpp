@@ -44,14 +44,14 @@ class ContiguousVAStorageProvider final : public StorageProvider {
  public:
   ContiguousVAStorageProvider(size_t size)
       : size_(llvh::alignTo<AlignedStorage::size()>(size)) {
-    auto result = oscompat::vm_allocate_aligned(size_, AlignedStorage::size());
+    auto result = oscompat::vm_reserve_aligned(size_, AlignedStorage::size());
     if (!result)
       hermes_fatal("Contiguous storage allocation failed.", result.getError());
     level_ = start_ = static_cast<char *>(*result);
     oscompat::vm_name(start_, size_, kFreeRegionName);
   }
   ~ContiguousVAStorageProvider() override {
-    oscompat::vm_free_aligned(start_, size_);
+    oscompat::vm_release_aligned(start_, size_);
   }
 
   llvh::ErrorOr<void *> newStorageImpl(const char *name) override {
@@ -64,8 +64,11 @@ class ContiguousVAStorageProvider final : public StorageProvider {
     } else {
       return make_error_code(OOMError::MaxStorageReached);
     }
-    oscompat::vm_name(storage, AlignedStorage::size(), name);
-    return storage;
+    auto res = oscompat::vm_commit(storage, AlignedStorage::size());
+    if (res) {
+      oscompat::vm_name(storage, AlignedStorage::size(), name);
+    }
+    return res;
   }
 
   void deleteStorageImpl(void *storage) override {
@@ -74,7 +77,7 @@ class ContiguousVAStorageProvider final : public StorageProvider {
         "Storage not aligned");
     assert(storage >= start_ && storage < level_ && "Storage not in region");
     oscompat::vm_name(storage, AlignedStorage::size(), kFreeRegionName);
-    oscompat::vm_unused(storage, AlignedStorage::size());
+    oscompat::vm_uncommit(storage, AlignedStorage::size());
     freelist_.push_back(storage);
   }
 

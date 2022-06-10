@@ -221,6 +221,28 @@ void vm_free_aligned(void *p, size_t sz) {
   vm_free(p, sz);
 }
 
+static constexpr int kVMReserveProt = PROT_NONE;
+static constexpr int kVMReserveFlags =
+    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+
+llvh::ErrorOr<void *> vm_reserve_aligned(size_t sz, size_t alignment) {
+  return vm_mmap_aligned(sz, alignment, kVMReserveProt, kVMReserveFlags);
+}
+
+void vm_release_aligned(void *p, size_t sz) {
+  vm_munmap(p, sz);
+}
+
+llvh::ErrorOr<void *> vm_commit(void *p, size_t sz) {
+  return vm_mmap(p, sz, kVMAllocateProt, kVMAllocateFlags | MAP_FIXED);
+}
+
+void vm_uncommit(void *p, size_t sz) {
+  auto res = vm_mmap(p, sz, kVMReserveProt, kVMReserveFlags | MAP_FIXED);
+  (void)res;
+  assert(res && "uncommit failed");
+}
+
 void vm_hugepage(void *p, size_t sz) {
   assert(
       reinterpret_cast<uintptr_t>(p) % page_size() == 0 &&

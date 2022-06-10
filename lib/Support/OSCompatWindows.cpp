@@ -89,9 +89,6 @@ vm_allocate_impl(void *addr, size_t sz, DWORD flags) {
 static llvh::ErrorOr<void *> vm_allocate_impl(size_t sz) {
   // Default flags are to reserve and commit.
 
-  // TODO(T40416012) introduce explicit "commit" in OSCompat abstraction of
-  // virtual memory
-
   // In POSIX, a mem page implicitly transitions from "reserved" state to
   // "committed" state on access. However, on Windows, accessing
   // "reserved" but not "committed" page results in an access violation.
@@ -241,6 +238,19 @@ void vm_free_aligned(void *p, size_t sz) {
   }
 #endif
 }
+
+// TODO(T40416012): Implement these functions for Windows.
+llvh::ErrorOr<void *> vm_reserve_aligned(size_t sz, size_t alignment) {
+  return vm_allocate_aligned(sz, alignment);
+}
+void vm_release_aligned(void *p, size_t sz) {
+  vm_free_aligned(p, sz);
+}
+
+llvh::ErrorOr<void *> vm_commit(void *p, size_t) {
+  return p;
+}
+void vm_uncommit(void *, size_t) {}
 
 void vm_hugepage(void *p, size_t sz) {
   assert(
