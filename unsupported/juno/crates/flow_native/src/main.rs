@@ -8,7 +8,7 @@
 use anyhow::{self, Context};
 use juno::ast::{self, node_cast, NodeRc};
 use juno::hparser::{self, ParserDialect};
-use juno::sema::{DeclKind, LexicalScopeId, Resolution, SemContext};
+use juno::sema::{DeclId, DeclKind, LexicalScopeId, Resolution, SemContext};
 use juno::{resolve_dependency, sema};
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
@@ -52,6 +52,14 @@ impl fmt::Display for ValueId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "t{}", self.0)
     }
+}
+
+/// Represents an expression that can be on the left side of an assignment. The
+/// LRef can be stored to and loaded from to implement update operators.
+#[derive(Clone, Copy, Debug)]
+enum LRef {
+    Member { object: ValueId, property: ValueId },
+    Var(ValueId),
 }
 
 struct Compiler<W: Write> {
@@ -190,6 +198,139 @@ impl<W: Write> Compiler<W> {
         out!(self, "}}), scope{scope}}})");
     }
 
+    /// Returns a value corresponding to an AST node for a property key. The
+    /// value can be used with getByVal/putByVal to access the property.
+    fn gen_prop<'gc>(
+        &mut self,
+        computed: bool,
+        node: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) -> ValueId {
+        use ast::*;
+        let prop_id = self.new_value();
+        out!(self, "FNValue {}=", prop_id);
+        if computed {
+            // If this is a computed property, then the value to be used as the
+            // key is just the result of evaluating the node.
+            self.gen_expr(node, scope, lock);
+        } else {
+            // Otherwise, the node must be an identifier, which is equivalent to
+            // accessing the object with a string value.
+            let Identifier { name, .. } = node_cast!(Node::Identifier, node);
+            out!(
+                self,
+                "FNValue::encodeString(new FNString{{\"{}\"}})",
+                lock.str(*name)
+            );
+        }
+        out!(self, ";");
+        prop_id
+    }
+
+    /// Emit the code needed to access the variable declared by decl_id from the
+    /// current scope.
+    fn gen_var(&mut self, decl_id: DeclId, scope: LexicalScopeId) {
+        let decl = self.sem.decl(decl_id);
+        let diff: u32 = self.sem.scope(scope).depth - self.sem.scope(decl.scope).depth;
+        out!(self, "scope{}->", scope);
+        for _ in 0..diff {
+            out!(self, "parent->");
+        }
+        out!(self, "var{}", decl_id);
+    }
+
+    /// Returns an LRef for the given AST node. For object property accesses, it
+    /// evaluates the object and key expressions and stores their values to
+    /// ensure that they are only evaluated once.
+    fn new_lref<'gc>(
+        &mut self,
+        node: &'gc ast::Node<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) -> LRef {
+        use ast::*;
+        match node {
+            Node::MemberExpression(MemberExpression {
+                object,
+                property,
+                computed,
+                ..
+            }) => {
+                // Evaluate the object and property expressions and store them,
+                // so they are only evaluated once.
+                let obj_id = self.new_value();
+                out!(self, "FNObject *{}=", obj_id);
+                self.gen_expr(object, scope, lock);
+                out!(self, ".getObject();");
+                let prop_id = self.gen_prop(*computed, property, scope, lock);
+                LRef::Member {
+                    object: obj_id,
+                    property: prop_id,
+                }
+            }
+            Node::Identifier(Identifier { name, .. }) => {
+                let decl_id = match self.sem.ident_decl(&NodeRc::from_node(lock, node)) {
+                    Some(Resolution::Decl(decl)) => decl,
+                    _ => panic!("Unresolved variable: {}", lock.str(*name)),
+                };
+                let decl = self.sem.decl(decl_id);
+                match decl.kind {
+                    DeclKind::UndeclaredGlobalProperty | DeclKind::GlobalProperty => {
+                        // Global properties are just member expressions where
+                        // the object is the global object.
+                        let object = self.new_value();
+                        out!(self, "FNObject *{}=global();", object);
+                        let property = self.gen_prop(false, node, scope, lock);
+                        LRef::Member { object, property }
+                    }
+                    _ => {
+                        // For local variables, store a pointer to their
+                        // location, so they can be easily updated.
+                        let var_id = self.new_value();
+                        out!(self, "FNValue *{} = &", var_id);
+                        self.gen_var(decl_id, scope);
+                        out!(self, ";");
+                        LRef::Var(var_id)
+                    }
+                }
+            }
+            _ => unimplemented!("Unimplemented lvalue: {:?}", node.variant()),
+        }
+    }
+
+    /// Returns a value corresponding to the result of loading from the lref.
+    fn gen_load(&mut self, lref: LRef) -> ValueId {
+        let res = self.new_value();
+        match lref {
+            LRef::Var(var_id) => {
+                out!(self, "FNValue {} = *{};", res, var_id);
+            }
+            LRef::Member { object, property } => {
+                out!(
+                    self,
+                    "FNValue {} = {}->getByVal({});",
+                    res,
+                    object,
+                    property
+                );
+            }
+        }
+        res
+    }
+
+    /// Stores a value to the lref.
+    fn gen_store(&mut self, lref: LRef, value: ValueId) {
+        match lref {
+            LRef::Var(var) => {
+                out!(self, "*{} = {};", var, value);
+            }
+            LRef::Member { object, property } => {
+                out!(self, "{}->putByVal({}, {});", object, property, value);
+            }
+        }
+    }
+
     fn gen_expr<'gc>(
         &mut self,
         node: &'gc ast::Node<'gc>,
@@ -263,13 +404,7 @@ impl<W: Write> Compiler<W> {
                         self.gen_member_prop(node, false, scope, lock)
                     }
                     _ => {
-                        let diff: u32 =
-                            self.sem.scope(scope).depth - self.sem.scope(decl.scope).depth;
-                        out!(self, "scope{scope}->");
-                        for _ in 0..diff {
-                            out!(self, "parent->");
-                        }
-                        out!(self, "var{decl_id}")
+                        self.gen_var(decl_id, scope);
                     }
                 }
             }

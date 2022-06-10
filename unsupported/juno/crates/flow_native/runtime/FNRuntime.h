@@ -22,6 +22,7 @@ struct FNObject {
   std::unordered_map<std::string, FNValue> props;
 
   FNValue &getByVal(FNValue key);
+  void putByVal(FNValue key, FNValue val);
 };
 struct FNClosure : public FNObject {
   explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {}

@@ -20,6 +20,18 @@ FNValue &FNObject::getByVal(FNValue key) {
   return arr[n];
 }
 
+void FNObject::putByVal(FNValue key, FNValue val) {
+  if (key.isString())
+    props[key.getString()->str] = val;
+  else {
+    auto &arr = static_cast<FNArray *>(this)->arr;
+    double n = key.getNumber();
+    if (arr.size() <= n)
+      arr.resize(n + 1, FNValue::encodeUndefined());
+    arr[n] = val;
+  }
+}
+
 static FNValue print(void *, FNValue arg) {
   if (arg.isUndefined())
     printf("undefined");
