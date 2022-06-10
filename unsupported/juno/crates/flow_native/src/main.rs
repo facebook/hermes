@@ -99,7 +99,6 @@ impl<W: Write> Compiler<W> {
         out!(self, "Scope{0} *scope{0}=new Scope{0}();\n", scope);
         for stmt in body.iter() {
             self.gen_stmt(stmt, scope, lock);
-            out!(self, ";")
         }
         out!(self, "return 0;\n}}")
     }
@@ -150,11 +149,13 @@ impl<W: Write> Compiler<W> {
         block: &'gc ast::Node<'gc>,
         scope: LexicalScopeId,
         lock: &'gc ast::GCLock,
-    ) {
+    ) -> ValueId {
         use ast::*;
+        let result = self.new_value();
         out!(
             self,
-            "FNValue::encodeClosure(new FNClosure{{(void(*)(void))(+[]("
+            "FNValue {}=FNValue::encodeClosure(new FNClosure{{(void(*)(void))(+[](",
+            result
         );
         self.param_list_for_arg_count(params.len());
         out!(self, "){{");
@@ -178,9 +179,9 @@ impl<W: Write> Compiler<W> {
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
         for stmt in body.iter() {
             self.gen_stmt(stmt, fn_scope, lock);
-            out!(self, ";\n");
         }
-        out!(self, "}}), scope{scope}}})");
+        out!(self, "}}), scope{scope}}});");
+        result
     }
 
     /// Returns a value corresponding to an AST node for a property key. The
@@ -193,24 +194,23 @@ impl<W: Write> Compiler<W> {
         lock: &'gc ast::GCLock,
     ) -> ValueId {
         use ast::*;
-        let prop_id = self.new_value();
-        out!(self, "FNValue {}=", prop_id);
         if computed {
             // If this is a computed property, then the value to be used as the
             // key is just the result of evaluating the node.
-            self.gen_expr(node, scope, lock);
+            self.gen_expr(node, scope, lock)
         } else {
             // Otherwise, the node must be an identifier, which is equivalent to
             // accessing the object with a string value.
             let Identifier { name, .. } = node_cast!(Node::Identifier, node);
+            let result = self.new_value();
             out!(
                 self,
-                "FNValue::encodeString(new FNString{{\"{}\"}})",
+                "FNValue {}=FNValue::encodeString(new FNString{{\"{}\"}});",
+                result,
                 lock.str(*name)
             );
+            result
         }
-        out!(self, ";");
-        prop_id
     }
 
     /// Emit the code needed to access the variable declared by decl_id from the
@@ -237,15 +237,12 @@ impl<W: Write> Compiler<W> {
         // The test may correspond to multiple lines of C++, so it needs to be
         // emitted separately in the body of the loop.
         if let Some(test) = test {
-            let test_val = self.new_value();
-            out!(self, "FNValue {}=", test_val);
-            self.gen_expr(test, scope, lock);
-            out!(self, ";if(!{}.getBool()) break;", test_val);
+            let test = self.gen_expr(test, scope, lock);
+            out!(self, "if(!{}.getBool()) break;", test)
         }
         self.gen_stmt(body, scope, lock);
         if let Some(update) = update {
             self.gen_expr(update, scope, lock);
-            out!(self, ";");
         }
         out!(self, "}}");
     }
@@ -269,15 +266,11 @@ impl<W: Write> Compiler<W> {
             }) => {
                 // Evaluate the object and property expressions and store them,
                 // so they are only evaluated once.
-                let obj_id = self.new_value();
-                out!(self, "FNObject *{}=", obj_id);
-                self.gen_expr(object, scope, lock);
-                out!(self, ".getObject();");
-                let prop_id = self.gen_prop(*computed, property, scope, lock);
-                LRef::Member {
-                    object: obj_id,
-                    property: prop_id,
-                }
+                let obj_val = self.gen_expr(object, scope, lock);
+                let object = self.new_value();
+                out!(self, "FNObject *{}={}.getObject();", object, obj_val);
+                let property = self.gen_prop(*computed, property, scope, lock);
+                LRef::Member { object, property }
             }
             Node::Identifier(Identifier { name, .. }) => {
                 let decl_id = match self.sem.ident_decl(&NodeRc::from_node(lock, node)) {
@@ -346,7 +339,7 @@ impl<W: Write> Compiler<W> {
         node: &'gc ast::Node<'gc>,
         scope: LexicalScopeId,
         lock: &'gc ast::GCLock,
-    ) {
+    ) -> ValueId {
         use ast::*;
         match node {
             Node::FunctionExpression(FunctionExpression { params, body, .. }) => {
@@ -355,7 +348,7 @@ impl<W: Write> Compiler<W> {
             Node::ObjectExpression(ObjectExpression { properties, .. }) => {
                 let object = self.new_value();
                 // Allocate a new object.
-                out!(self, "({{FNObject *{}=new FNObject();\n", object);
+                out!(self, "FNObject *{}=new FNObject();\n", object);
 
                 // Add each property and its corresponding value to the new
                 // object.
@@ -367,42 +360,68 @@ impl<W: Write> Compiler<W> {
                         ..
                     } = node_cast!(Node::Property, prop);
                     let key = self.gen_prop(*computed, key, scope, lock);
-                    let val_id = self.new_value();
-                    out!(self, "FNValue {}=", val_id);
-                    self.gen_expr(value, scope, lock);
-                    out!(self, ";{}->putByVal({}, {});", object, key, val_id);
+                    let value = self.gen_expr(value, scope, lock);
+                    out!(self, "{}->putByVal({}, {});", object, key, value);
                 }
-                out!(self, "FNValue::encodeObject({});}})", object);
+                let result = self.new_value();
+                out!(
+                    self,
+                    "FNValue {}=FNValue::encodeObject({});",
+                    result,
+                    object
+                );
+                result
             }
             Node::ArrayExpression(ArrayExpression { elements, .. }) => {
-                out!(self, "FNValue::encodeObject(new FNArray({{");
-                for elem in elements.iter() {
-                    self.gen_expr(elem, scope, lock);
-                    out!(self, ",");
+                let result = self.new_value();
+                // Evaluate each element to get a list of ValueIds.
+                let elements: Vec<ValueId> = elements
+                    .iter()
+                    .map(|elem| self.gen_expr(elem, scope, lock))
+                    .collect();
+                // Create a new array, and use the list of values as the
+                // initializer.
+                out!(
+                    self,
+                    "FNValue {}=FNValue::encodeObject(new FNArray({{",
+                    result
+                );
+                for elem in elements {
+                    out!(self, "{},", elem);
                 }
-                out!(self, "}}))");
+                out!(self, "}}));");
+                result
             }
             Node::CallExpression(CallExpression {
                 callee, arguments, ..
             }) => {
-                out!(self, "({{FNClosure *tmp=");
-                self.gen_expr(callee, scope, lock);
-                out!(self, ".getClosure();\nreinterpret_cast<FNValue (*)(");
+                let callee = self.gen_expr(callee, scope, lock);
+                // Evaluate each argument to get a list of ValueIds.
+                let arguments: Vec<ValueId> = arguments
+                    .iter()
+                    .map(|arg| self.gen_expr(arg, scope, lock))
+                    .collect();
+                let result = self.new_value();
+                // Cast the function pointer based on the number of arguments.
+                out!(self, "FNValue {}=reinterpret_cast<FNValue (*)(", result);
                 self.param_list_for_arg_count(arguments.len());
-                out!(self, ")>(tmp->func)(");
-                out!(self, "tmp->env");
-                for arg in arguments.iter() {
-                    out!(self, ", ");
-                    self.gen_expr(arg, scope, lock)
+                // Pass in the closure's environment as the first argument.
+                out!(
+                    self,
+                    ")>({0}.getClosure()->func)({0}.getClosure()->env",
+                    callee
+                );
+                // Pass in the list of arguments.
+                for arg in arguments {
+                    out!(self, ",{}", arg);
                 }
-                out!(self, ");}})");
+                out!(self, ");");
+                result
             }
             Node::MemberExpression(..) | Node::Identifier(..) => {
                 // Generate an LRef for the expression and load from it.
-                out!(self, "({{");
                 let lref = self.new_lref(node, scope, lock);
-                let result = self.gen_load(lref);
-                out!(self, "{};}})", result);
+                self.gen_load(lref)
             }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
@@ -410,30 +429,26 @@ impl<W: Write> Compiler<W> {
                 operator: op,
                 ..
             }) => {
-                out!(self, "({{");
                 let lref = self.new_lref(left, scope, lock);
-                let new_val = self.new_value();
+                let right = self.gen_expr(right, scope, lock);
                 // Helper to apply the given mathematical operator to the left
                 // and right sides.
                 let mut update_op = |op: &str| {
                     let old_val = self.gen_load(lref);
+                    let new_val = self.new_value();
                     out!(
                         self,
-                        "FNValue {}=FNValue::encodeNumber({}.getNumber(){}",
+                        "FNValue {}=FNValue::encodeNumber({}.getNumber(){}{}.getNumber());",
                         new_val,
                         old_val,
-                        op
+                        op,
+                        right
                     );
-                    self.gen_expr(right, scope, lock);
-                    out!(self, ".getNumber());");
+                    new_val
                 };
                 // Determine the updated value based on the operator.
-                match op {
-                    AssignmentExpressionOperator::Assign => {
-                        out!(self, "FNValue {}=", new_val);
-                        self.gen_expr(right, scope, lock);
-                        out!(self, ";");
-                    }
+                let new_val = match op {
+                    AssignmentExpressionOperator::Assign => right,
                     AssignmentExpressionOperator::PlusAssign => update_op("+"),
                     AssignmentExpressionOperator::MinusAssign => update_op("-"),
                     AssignmentExpressionOperator::ModAssign => update_op("%"),
@@ -444,8 +459,7 @@ impl<W: Write> Compiler<W> {
                 // Store the updated value and return it as the result of this
                 // expression.
                 self.gen_store(lref, new_val);
-                out!(self, "{};", new_val);
-                out!(self, "}})");
+                new_val
             }
             Node::BinaryExpression(BinaryExpression {
                 left,
@@ -453,11 +467,15 @@ impl<W: Write> Compiler<W> {
                 operator: op,
                 ..
             }) => {
+                let left = self.gen_expr(left, scope, lock);
+                let right = self.gen_expr(right, scope, lock);
+                // Determine the C++ operator corresponding to this operation.
                 let op_str = match op {
                     BinaryExpressionOperator::StrictEquals => "==",
                     BinaryExpressionOperator::StrictNotEquals => "!=",
                     _ => op.as_str(),
                 };
+                // Determine the type of the result.
                 let res_type = match op {
                     BinaryExpressionOperator::LooseEquals
                     | BinaryExpressionOperator::StrictEquals
@@ -475,11 +493,19 @@ impl<W: Write> Compiler<W> {
                     | BinaryExpressionOperator::Mod => "Number",
                     _ => panic!("Unsupported operator"),
                 };
-                out!(self, "FNValue::encode{res_type}(");
-                self.gen_expr(left, scope, lock);
-                out!(self, ".getNumber(){op_str}");
-                self.gen_expr(right, scope, lock);
-                out!(self, ".getNumber())");
+                let result = self.new_value();
+                // Apply the operator, assuming both arguments are numbers, and
+                // create a value of type res_type.
+                out!(
+                    self,
+                    "FNValue {}=FNValue::encode{}({}.getNumber(){}{}.getNumber());",
+                    result,
+                    res_type,
+                    left,
+                    op_str,
+                    right
+                );
+                result
             }
             Node::UpdateExpression(UpdateExpression {
                 operator,
@@ -487,7 +513,6 @@ impl<W: Write> Compiler<W> {
                 prefix,
                 ..
             }) => {
-                out!(self, "({{");
                 let lref = self.new_lref(argument, scope, lock);
                 let old_val = self.gen_load(lref);
                 let new_val = self.new_value();
@@ -506,22 +531,28 @@ impl<W: Write> Compiler<W> {
                 // Store the updated value and return the old or new value,
                 // depending on whether this is a postfix or prefix operator.
                 self.gen_store(lref, new_val);
-                if *prefix {
-                    out!(self, "{};", new_val);
-                } else {
-                    out!(self, "{};", old_val);
-                }
-                out!(self, "}})");
+                if *prefix { new_val } else { old_val }
             }
             Node::NumericLiteral(NumericLiteral { value, .. }) => {
-                out!(self, "FNValue::encodeNumber({value})")
+                let result = self.new_value();
+                out!(self, "FNValue {}=FNValue::encodeNumber({});", result, value);
+                result
             }
             Node::BooleanLiteral(BooleanLiteral { value, .. }) => {
-                out!(self, "FNValue::encodeBool({value})")
+                let result = self.new_value();
+                out!(self, "FNValue {}=FNValue::encodeBool({});", result, value);
+                result
             }
             Node::StringLiteral(StringLiteral { value, .. }) => {
                 let val_str = String::from_utf16_lossy(lock.str_u16(*value));
-                out!(self, "FNValue::encodeString(new FNString{{{:?}}})", val_str)
+                let result = self.new_value();
+                out!(
+                    self,
+                    "FNValue {}=FNValue::encodeString(new FNString{{{:?}}});",
+                    result,
+                    val_str
+                );
+                result
             }
             _ => unimplemented!("Unimplemented expression: {:?}", node.variant()),
         }
@@ -556,11 +587,8 @@ impl<W: Write> Compiler<W> {
                 if let Some(init) = init_opt {
                     // Initialize the variable with init.
                     let lref = self.new_lref(ident, scope, lock);
-                    let init_id = self.new_value();
-                    out!(self, "FNValue {}=", init_id);
-                    self.gen_expr(init, scope, lock);
-                    out!(self, ";");
-                    self.gen_store(lref, init_id);
+                    let init = self.gen_expr(init, scope, lock);
+                    self.gen_store(lref, init);
                 }
             }
             Node::FunctionDeclaration(FunctionDeclaration {
@@ -570,10 +598,7 @@ impl<W: Write> Compiler<W> {
                 ..
             }) => {
                 // Evaluate the function as a value.
-                let fn_id = self.new_value();
-                out!(self, "FNValue {}=", fn_id);
-                self.gen_function_exp(params, body, scope, lock);
-                out!(self, ";");
+                let fn_id = self.gen_function_exp(params, body, scope, lock);
                 if let Some(ident) = ident_opt {
                     // Initialize the identifier for the function with the
                     // generated value.
@@ -582,19 +607,17 @@ impl<W: Write> Compiler<W> {
                 }
             }
 
-            Node::ReturnStatement(ReturnStatement { argument, .. }) => {
-                out!(self, "return ");
-                match argument {
-                    Some(node) => self.gen_expr(node, scope, lock),
-                    None => out!(self, "FNValue::encodeUndefined()"),
-                };
-                out!(self, ";");
-            }
+            Node::ReturnStatement(ReturnStatement { argument, .. }) => match argument {
+                Some(argument) => {
+                    let argument = self.gen_expr(argument, scope, lock);
+                    out!(self, "return {};", argument);
+                }
+                None => out!(self, "return FNValue::encodeUndefined()"),
+            },
             Node::ExpressionStatement(ExpressionStatement {
                 expression: exp, ..
             }) => {
                 self.gen_expr(exp, scope, lock);
-                out!(self, ";")
             }
             Node::WhileStatement(WhileStatement { test, body, .. }) => {
                 self.gen_loop(Some(test), None, body, scope, lock);
@@ -610,7 +633,6 @@ impl<W: Write> Compiler<W> {
                 let inner_scope = self.init_scope(node, scope, lock);
                 if let Some(init) = init {
                     self.gen_stmt(init, inner_scope, lock);
-                    out!(self, ";");
                 }
                 self.gen_loop(*test, *update, body, inner_scope, lock);
                 out!(self, "}}");
@@ -621,9 +643,8 @@ impl<W: Write> Compiler<W> {
                 alternate,
                 ..
             }) => {
-                out!(self, "if(");
-                self.gen_expr(test, scope, lock);
-                out!(self, ".getBool()){{\n");
+                let test = self.gen_expr(test, scope, lock);
+                out!(self, "if({}.getBool()){{", test);
                 self.gen_stmt(consequent, scope, lock);
                 out!(self, "\n}}\nelse{{\n");
                 if let Some(alt) = alternate {
@@ -652,13 +673,12 @@ impl<W: Write> Compiler<W> {
                 }
                 for stmt in body.iter() {
                     self.gen_stmt(stmt, new_scope, lock);
-                    out!(self, ";");
                 }
                 out!(self, "}}");
             }
             Node::ThrowStatement(ThrowStatement { argument, .. }) => {
-                out!(self, "throw ");
-                self.gen_expr(argument, scope, lock);
+                let argument = self.gen_expr(argument, scope, lock);
+                out!(self, "throw {};", argument);
             }
             _ => unimplemented!("Unimplemented statement: {:?}", node.variant()),
         }
