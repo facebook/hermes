@@ -1231,4 +1231,23 @@ y; // EOL comment
       });
     });
   });
+
+  it('should not crash on optional chaining', () => {
+    const code = `\
+x?.y;
+x?.();
+`;
+    const result = transform(code, context => ({
+      Program(node) {
+        context.addTrailingInlineComments(
+          node.body[0],
+          t.LineComment({value: 'test'}),
+        );
+      },
+    }));
+    expect(result).toBe(`\
+x?.y; //test
+x?.();
+`);
+  });
 });

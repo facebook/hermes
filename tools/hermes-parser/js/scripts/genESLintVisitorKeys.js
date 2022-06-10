@@ -32,6 +32,10 @@ visitorKeys['ConditionalExpression'] = ['test', 'consequent', 'alternate'];
 visitorKeys['WhileStatement'] = ['test', 'body'];
 visitorKeys['VariableDeclarator'] = ['id', 'init'];
 
+// these remain as a work around for prettier requiring us to use the old, deprecated AST for formatting
+visitorKeys['OptionalMemberExpression'] = visitorKeys['MemberExpression'];
+visitorKeys['OptionalCallExpression'] = visitorKeys['CallExpression'];
+
 // correct the "literal" types
 // the base defs declare each literal as a separate node, but ESTree treats them as a single node
 visitorKeys['Literal'] = [];
