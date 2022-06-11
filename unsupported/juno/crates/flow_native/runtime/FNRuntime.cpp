@@ -34,7 +34,7 @@ void FNObject::putByVal(FNValue key, FNValue val) {
   }
 }
 
-static FNValue print(void *, FNValue arg) {
+static FNValue print(void *, FNValue, FNValue arg) {
   if (arg.isUndefined())
     printf("undefined");
   else if (arg.isNull())

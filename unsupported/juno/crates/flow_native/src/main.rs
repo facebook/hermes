@@ -122,7 +122,7 @@ impl<W: Write> Compiler<W> {
     }
 
     fn param_list_for_arg_count(&mut self, count: usize) {
-        out!(self, "void *parent_scope");
+        out!(self, "void *parent_scope, FNValue js_this");
         for i in 0..count {
             out!(self, ", FNValue param{}", i)
         }
@@ -395,7 +395,36 @@ impl<W: Write> Compiler<W> {
             Node::CallExpression(CallExpression {
                 callee, arguments, ..
             }) => {
-                let callee = self.gen_expr(callee, scope, lock);
+                let (callee, this) = match callee {
+                    Node::MemberExpression(MemberExpression {
+                        object,
+                        property,
+                        computed,
+                        ..
+                    }) => {
+                        // For member expressions, the this parameter is the
+                        // object being accessed.
+                        let object = self.gen_expr(object, scope, lock);
+                        let property = self.gen_prop(*computed, property, scope, lock);
+                        let callee = self.new_value();
+                        out!(
+                            self,
+                            "FNValue {}={}.getObject()->getByVal({});",
+                            callee,
+                            object,
+                            property
+                        );
+                        (callee, object)
+                    }
+                    _ => {
+                        // For all other types of calls, the this parameter
+                        // is undefined.
+                        let undefined = self.new_value();
+                        out!(self, "FNValue {}=FNValue::encodeUndefined();", undefined);
+                        let callee = self.gen_expr(callee, scope, lock);
+                        (callee, undefined)
+                    }
+                };
                 // Evaluate each argument to get a list of ValueIds.
                 let arguments: Vec<ValueId> = arguments
                     .iter()
@@ -408,8 +437,9 @@ impl<W: Write> Compiler<W> {
                 // Pass in the closure's environment as the first argument.
                 out!(
                     self,
-                    ")>({0}.getClosure()->func)({0}.getClosure()->env",
-                    callee
+                    ")>({0}.getClosure()->func)({0}.getClosure()->env,{1}",
+                    callee,
+                    this
                 );
                 // Pass in the list of arguments.
                 for arg in arguments {
@@ -554,6 +584,11 @@ impl<W: Write> Compiler<W> {
                 // depending on whether this is a postfix or prefix operator.
                 self.gen_store(lref, new_val);
                 if *prefix { new_val } else { old_val }
+            }
+            Node::ThisExpression(..) => {
+                let result = self.new_value();
+                out!(self, "FNValue {}=js_this;", result);
+                result
             }
             Node::NumericLiteral(NumericLiteral { value, .. }) => {
                 let result = self.new_value();
