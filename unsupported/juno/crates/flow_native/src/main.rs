@@ -554,6 +554,11 @@ impl<W: Write> Compiler<W> {
                 );
                 result
             }
+            Node::NullLiteral(..) => {
+                let res = self.new_value();
+                out!(self, "FNValue {}=FNValue::encodeNull();", res);
+                res
+            }
             _ => unimplemented!("Unimplemented expression: {:?}", node.variant()),
         }
     }

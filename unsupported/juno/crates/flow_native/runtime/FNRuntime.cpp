@@ -56,6 +56,7 @@ static FNObject *createGlobalObject() {
   auto *global = new FNObject();
   auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
   global->props["print"] = FNValue::encodeClosure(printClosure);
+  global->props["undefined"] = FNValue::encodeUndefined();
   return global;
 }
 
