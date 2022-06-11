@@ -156,6 +156,10 @@ class FNValue {
     ret.value = reinterpret_cast<uint64_t>(closure);
     return ret;
   }
+
+  static bool isEqual(FNValue a, FNValue b) {
+    return a.tag == b.tag && a.value == b.value;
+  }
 };
 
 FNObject *global();

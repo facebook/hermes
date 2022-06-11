@@ -469,42 +469,64 @@ impl<W: Write> Compiler<W> {
             }) => {
                 let left = self.gen_expr(left, scope, lock);
                 let right = self.gen_expr(right, scope, lock);
-                // Determine the C++ operator corresponding to this operation.
-                let op_str = match op {
-                    BinaryExpressionOperator::StrictEquals => "==",
-                    BinaryExpressionOperator::StrictNotEquals => "!=",
-                    _ => op.as_str(),
-                };
-                // Determine the type of the result.
-                let res_type = match op {
+                let result = self.new_value();
+                out!(self, "FNValue {}=", result);
+                match op {
                     BinaryExpressionOperator::LooseEquals
-                    | BinaryExpressionOperator::StrictEquals
-                    | BinaryExpressionOperator::StrictNotEquals
-                    | BinaryExpressionOperator::Less
+                    | BinaryExpressionOperator::StrictEquals => {
+                        // The isEqual helper just compares the tag and value on
+                        // both sides to ensure they are eequal.
+                        out!(
+                            self,
+                            "FNValue::encodeBool(FNValue::isEqual({},{}));",
+                            left,
+                            right
+                        );
+                    }
+                    BinaryExpressionOperator::LooseNotEquals
+                    | BinaryExpressionOperator::StrictNotEquals => {
+                        out!(
+                            self,
+                            "FNValue::encodeBool(!FNValue::isEqual({},{}));",
+                            left,
+                            right
+                        );
+                    }
+                    BinaryExpressionOperator::Less
                     | BinaryExpressionOperator::LessEquals
                     | BinaryExpressionOperator::Greater
-                    | BinaryExpressionOperator::GreaterEquals => "Bool",
+                    | BinaryExpressionOperator::GreaterEquals => {
+                        // Infer the operands to be doubles and compare them
+                        // accordingly.
+                        out!(
+                            self,
+                            "FNValue::encodeBool({}.getNumber(){}{}.getNumber());",
+                            left,
+                            op.as_str(),
+                            right
+                        );
+                    }
                     BinaryExpressionOperator::LShift
                     | BinaryExpressionOperator::RShift
                     | BinaryExpressionOperator::Plus
                     | BinaryExpressionOperator::Minus
                     | BinaryExpressionOperator::Mult
                     | BinaryExpressionOperator::Div
-                    | BinaryExpressionOperator::Mod => "Number",
-                    _ => panic!("Unsupported operator"),
-                };
-                let result = self.new_value();
-                // Apply the operator, assuming both arguments are numbers, and
-                // create a value of type res_type.
-                out!(
-                    self,
-                    "FNValue {}=FNValue::encode{}({}.getNumber(){}{}.getNumber());",
-                    result,
-                    res_type,
-                    left,
-                    op_str,
-                    right
-                );
+                    | BinaryExpressionOperator::Mod => {
+                        // Infer the operands to be doubles and directly apply
+                        // the operator on them as a C++ operator. We may want
+                        // to implement each operator separately later to
+                        // control the semantics more precisely.
+                        out!(
+                            self,
+                            "FNValue::encodeNumber({}.getNumber(){}{}.getNumber());",
+                            left,
+                            op.as_str(),
+                            right
+                        );
+                    }
+                    _ => panic!("Unsupported operator: {:?}", op),
+                }
                 result
             }
             Node::UpdateExpression(UpdateExpression {
