@@ -34,6 +34,35 @@ void FNObject::putByVal(FNValue key, FNValue val) {
   }
 }
 
+static const FNString kUndefinedStr{"undefined"};
+static const FNString kObjectStr{"object"};
+static const FNString kBooleanStr{"boolean"};
+static const FNString kFunctionStr{"function"};
+static const FNString kStringStr{"string"};
+static const FNString kNumberStr{"number"};
+static const FNString kSymbolStr{"symbol"};
+
+const FNString *FNValue::typeOf(FNValue v) {
+  switch (v.tag) {
+    case FNType::Undefined:
+      return &kUndefinedStr;
+    case FNType::Null:
+      return &kObjectStr;
+    case FNType::Object:
+      return &kObjectStr;
+    case FNType::Bool:
+      return &kBooleanStr;
+    case FNType::Closure:
+      return &kFunctionStr;
+    case FNType::String:
+      return &kStringStr;
+    case FNType::Number:
+      return &kNumberStr;
+    case FNType::Symbol:
+      return &kSymbolStr;
+  }
+}
+
 static FNValue print(void *, FNValue, FNValue arg) {
   if (arg.isUndefined())
     printf("undefined");

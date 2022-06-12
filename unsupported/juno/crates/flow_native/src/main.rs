@@ -559,6 +559,44 @@ impl<W: Write> Compiler<W> {
                 }
                 result
             }
+            Node::UnaryExpression(UnaryExpression {
+                operator, argument, ..
+            }) => {
+                let argument = self.gen_expr(argument, scope, lock);
+                let result = self.new_value();
+                match operator {
+                    UnaryExpressionOperator::Plus => out!(
+                        self,
+                        "FNValue {}=FNValue::encodeNumber({}.getNumber());",
+                        result,
+                        argument
+                    ),
+                    UnaryExpressionOperator::Minus => out!(
+                        self,
+                        "FNValue {}=FNValue::encodeNumber(-{}.getNumber());",
+                        result,
+                        argument
+                    ),
+                    UnaryExpressionOperator::Not => {
+                        out!(
+                            self,
+                            "FNValue {}=FNValue::encodeBool(!{}.getBool());",
+                            result,
+                            argument
+                        );
+                    }
+                    UnaryExpressionOperator::Typeof => {
+                        out!(
+                            self,
+                            "FNValue {}=FNValue::encodeString(FNValue::typeOf({}));",
+                            result,
+                            argument
+                        );
+                    }
+                    _ => panic!("Unsupported operator: {:?}", operator),
+                }
+                result
+            }
             Node::UpdateExpression(UpdateExpression {
                 operator,
                 argument,

@@ -94,12 +94,12 @@ class FNValue {
     return num;
   }
   bool getBool() const {
-    assert(isBool());
+    assert(isBool() || isNumber() || isUndefined() || isNull());
     return value;
   }
-  FNString *getString() const {
+  const FNString *getString() const {
     assert(isString());
-    return reinterpret_cast<FNString *>(value);
+    return reinterpret_cast<const FNString *>(value);
   }
   FNObject *getObject() const {
     assert(isObject());
@@ -138,7 +138,7 @@ class FNValue {
     ret.value = b;
     return ret;
   }
-  static FNValue encodeString(FNString *str) {
+  static FNValue encodeString(const FNString *str) {
     FNValue ret;
     ret.tag = FNType::String;
     ret.value = reinterpret_cast<uint64_t>(str);
@@ -160,6 +160,8 @@ class FNValue {
   static bool isEqual(FNValue a, FNValue b) {
     return a.tag == b.tag && a.value == b.value;
   }
+
+  static const FNString *typeOf(FNValue v);
 };
 
 FNObject *global();

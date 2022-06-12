@@ -7,24 +7,16 @@
 
 // RUN: %fn_dir/run_fnc.sh %fnc %s %t && %t | %FileCheck %s --match-full-lines
 
-function println(x){
-  print(x);
+var x = [5, undefined, null, "foo", {}, function(){}]
+
+for(var i = 0; i < 6; i++){
+  print(typeof x[i]);
   print("\n");
 }
 
-var a = true;
-var b = 0;
-if(a){
-  b = 10;
-} else{
-  b = 5;
-}
-println(b);
-// CHECK: 10.000000
-
-var x = undefined;
-if(!x) {
-  b = 42;
-}
-println(-b);
-// CHECK-NEXT: -42.000000
+// CHECK: number
+// CHECK-NEXT: undefined
+// CHECK-NEXT: object
+// CHECK-NEXT: string
+// CHECK-NEXT: object
+// CHECK-NEXT: function
