@@ -6,6 +6,7 @@
  */
 
 #define DEBUG_TYPE "vm"
+
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/VM/Callable.h"

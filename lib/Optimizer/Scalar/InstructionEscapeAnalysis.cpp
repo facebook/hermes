@@ -13,8 +13,6 @@
 
 #include <utility>
 
-using llvh::dyn_cast;
-
 namespace hermes {
 
 // Iterate through the range, keeping track of instruction uses in a hash map.

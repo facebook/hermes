@@ -9,8 +9,6 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
-#include "llvh/Support/Debug.h"
-
 namespace hermes {
 namespace vm {
 

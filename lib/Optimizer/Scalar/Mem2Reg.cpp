@@ -24,7 +24,6 @@
 
 using namespace hermes;
 using llvh::dbgs;
-using llvh::isa;
 using llvh::SmallPtrSet;
 using llvh::SmallVector;
 using llvh::SmallVectorImpl;

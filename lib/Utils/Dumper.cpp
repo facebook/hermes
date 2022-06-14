@@ -27,10 +27,8 @@
 
 using namespace hermes;
 
-using llvh::cast;
 using llvh::dyn_cast;
 using llvh::isa;
-using llvh::raw_ostream;
 
 namespace hermes {
 

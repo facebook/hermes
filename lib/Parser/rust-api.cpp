@@ -25,10 +25,6 @@
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #endif
 
-using llvh::cast;
-using llvh::dyn_cast;
-using llvh::isa;
-
 using namespace hermes;
 using namespace hermes::ESTree;
 

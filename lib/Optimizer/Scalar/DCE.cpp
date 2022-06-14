@@ -21,7 +21,6 @@
 
 using namespace hermes;
 using llvh::dbgs;
-using llvh::isa;
 
 STATISTIC(NumDCE, "Number of instructions DCE'd");
 STATISTIC(NumFuncDCE, "Number of functions DCE'd");

@@ -54,8 +54,6 @@
 
 #define DEBUG_TYPE "hermes"
 
-using llvh::ArrayRef;
-using llvh::cast;
 using llvh::dyn_cast;
 using llvh::Optional;
 using llvh::raw_fd_ostream;

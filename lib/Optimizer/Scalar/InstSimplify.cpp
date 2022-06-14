@@ -17,11 +17,8 @@
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/DenseSet.h"
-#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvh::dbgs;
-using llvh::isa;
 
 STATISTIC(NumSimp, "Number of instructions simplified");
 

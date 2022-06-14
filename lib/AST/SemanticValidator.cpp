@@ -13,14 +13,10 @@
 #include "llvh/ADT/SmallSet.h"
 #include "llvh/Support/SaveAndRestore.h"
 
-using llvh::cast;
 using llvh::cast_or_null;
 using llvh::dyn_cast;
-using llvh::dyn_cast_or_null;
 using llvh::isa;
 using llvh::SaveAndRestore;
-
-using namespace hermes::ESTree;
 
 namespace hermes {
 namespace sem {

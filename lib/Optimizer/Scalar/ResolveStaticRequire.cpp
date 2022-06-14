@@ -23,8 +23,6 @@ STATISTIC(NumRequireCallsResolved, "Number of require() calls resolved");
 
 namespace hermes {
 
-using llvh::dyn_cast;
-
 namespace {
 
 class ResolveStaticRequireImpl {

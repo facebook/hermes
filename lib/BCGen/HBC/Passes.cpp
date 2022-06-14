@@ -8,7 +8,6 @@
 #include "hermes/BCGen/HBC/Passes.h"
 
 #include "hermes/BCGen/BCOpt.h"
-#include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"

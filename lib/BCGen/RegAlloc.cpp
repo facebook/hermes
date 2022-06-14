@@ -22,11 +22,7 @@
 
 using namespace hermes;
 
-using llvh::cast;
 using llvh::dbgs;
-using llvh::dyn_cast;
-using llvh::dyn_cast_or_null;
-using llvh::isa;
 
 raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   if (!reg.isValid()) {

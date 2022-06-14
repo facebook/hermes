@@ -22,7 +22,6 @@
 using namespace hermes;
 
 using llvh::dbgs;
-using llvh::isa;
 using llvh::Optional;
 using llvh::outs;
 

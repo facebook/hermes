@@ -18,7 +18,6 @@
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/STLExtras.h"
-#include "llvh/Support/Debug.h"
 #include "llvh/Support/RecyclingAllocator.h"
 
 STATISTIC(NumTDZFrameDedup, "Number of TDZ frame checks eliminated");
@@ -27,9 +26,6 @@ STATISTIC(NumTDZOtherDedup, "Number of TDZ other checks eliminated");
 STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
 namespace hermes {
-
-using llvh::dbgs;
-using llvh::isa;
 
 namespace {
 

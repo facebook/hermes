@@ -22,7 +22,6 @@
 
 using namespace hermes;
 using llvh::dbgs;
-using llvh::isa;
 using llvh::SmallPtrSetImpl;
 
 STATISTIC(NumTI, "Number of instructions type inferred");

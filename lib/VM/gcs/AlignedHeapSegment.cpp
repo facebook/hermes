@@ -19,8 +19,6 @@
 #include <cassert>
 #include <cstring>
 
-using namespace hermes;
-
 namespace hermes {
 namespace vm {
 

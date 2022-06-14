@@ -18,8 +18,6 @@ JSONNull JSONNull::instance_{};
 JSONBoolean JSONBoolean::true_{true};
 JSONBoolean JSONBoolean::false_{false};
 
-using Allocator = BacktrackingBumpPtrAllocator;
-
 const char *JSONKindToString(JSONKind kind) {
   switch (kind) {
     case JSONKind::Object:

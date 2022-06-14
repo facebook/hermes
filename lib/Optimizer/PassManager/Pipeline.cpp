@@ -13,17 +13,11 @@
 #include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/Optimizer/Scalar/StackPromotion.h"
 #include "hermes/Optimizer/Scalar/TypeInference.h"
-#include "hermes/Optimizer/Wasm/EmitWasmIntrinsics.h"
-#include "hermes/Optimizer/Wasm/WasmSimplify.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "pipeline"
-
-using namespace hermes;
-using llvh::dbgs;
-using llvh::raw_ostream;
 
 bool hermes::runCustomOptimizationPasses(
     Module &M,

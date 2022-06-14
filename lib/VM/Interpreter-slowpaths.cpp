@@ -16,8 +16,6 @@
 
 #include "Interpreter-internal.h"
 
-using namespace hermes::inst;
-
 namespace hermes {
 namespace vm {
 

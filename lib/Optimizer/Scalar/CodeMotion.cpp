@@ -14,13 +14,10 @@
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/DenseMap.h"
-#include "llvh/Support/Debug.h"
 
 #include <algorithm>
 
 using namespace hermes;
-using llvh::dbgs;
-using llvh::isa;
 
 STATISTIC(NumCM, "Number of instructions moved");
 STATISTIC(NumHoistedCond, "Number of instructions hoisted from conditionals");

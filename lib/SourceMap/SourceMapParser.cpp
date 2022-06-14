@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <memory>
 
-using namespace hermes;
 using namespace hermes::parser;
 
 namespace hermes {

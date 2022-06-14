@@ -11,7 +11,6 @@
 
 #include "hermes/Support/Semaphore.h"
 
-#include <assert.h>
 #include <cstdio>
 #include <string>
 

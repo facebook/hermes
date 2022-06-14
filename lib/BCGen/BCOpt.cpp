@@ -12,18 +12,11 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 
-#include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bcopt"
 
 using namespace hermes;
-
-using llvh::cast;
-using llvh::dbgs;
-using llvh::dyn_cast;
-using llvh::dyn_cast_or_null;
-using llvh::isa;
 
 bool MovElimination::runOnFunction(Function *F) {
   bool changed = false;

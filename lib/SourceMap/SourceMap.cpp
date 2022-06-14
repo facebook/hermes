@@ -7,8 +7,6 @@
 
 #include "hermes/SourceMap/SourceMap.h"
 
-using namespace hermes;
-
 namespace hermes {
 
 /// Query source map text location for \p line and \p column.

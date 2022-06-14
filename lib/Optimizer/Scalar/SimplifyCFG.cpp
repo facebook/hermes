@@ -16,11 +16,8 @@
 
 #include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/ADT/SmallVector.h"
-#include "llvh/Support/Debug.h"
 
 using namespace hermes;
-using llvh::dbgs;
-using llvh::isa;
 
 STATISTIC(NumUnreachableBlock, "Number of unreachable blocks eliminated");
 STATISTIC(NumSB, "Number of static branches simplified");

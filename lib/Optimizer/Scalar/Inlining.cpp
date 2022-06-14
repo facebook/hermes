@@ -15,10 +15,6 @@
 
 #include "llvh/Support/Debug.h"
 
-using llvh::cast;
-using llvh::dyn_cast;
-using llvh::isa;
-
 STATISTIC(NumInlinedCalls, "Number of inlined calls");
 
 namespace hermes {

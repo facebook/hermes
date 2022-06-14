@@ -17,8 +17,6 @@
 
 #define INCLUDE_ALL_INSTRS
 
-using llvh::cast;
-
 using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {

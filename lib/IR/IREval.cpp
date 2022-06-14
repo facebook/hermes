@@ -12,7 +12,6 @@
 #include "llvh/ADT/SmallString.h"
 
 using namespace hermes;
-using llvh::isa;
 using llvh::SmallString;
 
 namespace {

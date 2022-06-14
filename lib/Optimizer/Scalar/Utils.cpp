@@ -14,8 +14,6 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 
-#include "llvh/Support/Debug.h"
-
 using namespace hermes;
 
 Value *hermes::isStoreOnceVariable(Variable *V) {

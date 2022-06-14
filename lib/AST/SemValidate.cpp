@@ -11,8 +11,6 @@
 
 #include "SemanticValidator.h"
 
-using namespace hermes::ESTree;
-
 namespace hermes {
 namespace sem {
 

@@ -30,7 +30,6 @@
 #include <stdexcept>
 #include <system_error>
 
-using llvh::dbgs;
 using llvh::format;
 
 namespace hermes {

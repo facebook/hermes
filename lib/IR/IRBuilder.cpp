@@ -14,10 +14,6 @@
 
 using namespace hermes;
 
-using llvh::cast;
-using llvh::dyn_cast;
-using llvh::isa;
-
 BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
   assert(Parent && "Invalid insertion point");
   return new BasicBlock(Parent);

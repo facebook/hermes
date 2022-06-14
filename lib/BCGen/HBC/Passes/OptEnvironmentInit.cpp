@@ -18,8 +18,6 @@ STATISTIC(
     NumStoreUndefinedRemoved,
     "Number of store undefined instructions removed");
 
-using llvh::dyn_cast;
-
 namespace hermes {
 namespace hbc {
 

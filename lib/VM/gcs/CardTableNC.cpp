@@ -11,7 +11,6 @@
 
 #include "hermes/Support/OSCompat.h"
 
-#include <string.h>
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

@@ -16,10 +16,6 @@
 namespace hermes {
 namespace vm {
 
-using llvh::ConversionResult;
-using llvh::UTF16;
-using llvh::UTF8;
-
 UTF16Ref createUTF16Ref(const char16_t *str) {
   return UTF16Ref(str, utf16_traits::length(str));
 }

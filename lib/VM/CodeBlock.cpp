@@ -26,8 +26,6 @@ namespace hermes {
 namespace vm {
 
 using namespace hermes::inst;
-using llvh::ArrayRef;
-using llvh::StringRef;
 using SLP = SerializedLiteralParser;
 
 #ifdef HERMES_SLOW_DEBUG

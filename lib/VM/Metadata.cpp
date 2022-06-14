@@ -13,7 +13,6 @@ namespace hermes {
 namespace vm {
 
 using std::size_t;
-using std::uintptr_t;
 using ArrayData = Metadata::ArrayData;
 using ArrayType = ArrayData::ArrayType;
 

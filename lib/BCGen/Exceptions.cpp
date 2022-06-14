@@ -12,7 +12,6 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 
-#include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
 using namespace hermes;

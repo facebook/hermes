@@ -21,7 +21,6 @@
 
 using namespace hermes;
 using llvh::dbgs;
-using llvh::isa;
 
 STATISTIC(NumSP, "Number of stack allocations promoted");
 STATISTIC(NumOpsPostponed, "Number of stack ops removed or postponed");

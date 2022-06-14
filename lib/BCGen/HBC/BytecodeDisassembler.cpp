@@ -28,8 +28,6 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
 namespace hermes {
 namespace hbc {
 
-using param_t = int64_t;
-
 /// Check if the zero based \p operandIndex in instruction \p opCode is a
 /// string table ID.
 static bool isOperandStringID(OpCode opCode, unsigned operandIndex) {

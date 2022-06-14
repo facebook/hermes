@@ -13,8 +13,6 @@
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringSwitch.h"
 
-using llvh::Twine;
-
 namespace hermes {
 namespace parser {
 

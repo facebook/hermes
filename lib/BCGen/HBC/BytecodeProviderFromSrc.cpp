@@ -120,8 +120,6 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
     const std::function<void(Module &)> &runOptimizationPasses) {
-  using llvh::Twine;
-
   assert(
       buffer->data()[buffer->size()] == 0 &&
       "The input buffer must be null terminated");

@@ -6,7 +6,6 @@
  */
 
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
-#include "assert.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 

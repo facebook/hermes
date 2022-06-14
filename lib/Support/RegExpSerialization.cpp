@@ -328,7 +328,6 @@ llvh::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     StringRef pattern,
     StringRef flags,
     llvh::StringRef *outError) {
-  using namespace regex;
   using namespace regex::constants;
 
   // We have to match the way strings are constructed by StringTable, which is

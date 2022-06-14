@@ -13,8 +13,6 @@
 
 using namespace hermes;
 
-using llvh::isa;
-
 /// Auxiliary method to figure out the Functions that a given CallInst may
 /// be calling. Returns true if we have a complete set, false if there are
 /// unknown callees.

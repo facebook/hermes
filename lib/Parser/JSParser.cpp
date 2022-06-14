@@ -9,10 +9,6 @@
 
 #include "JSParserImpl.h"
 
-using llvh::cast;
-using llvh::dyn_cast;
-using llvh::isa;
-
 namespace hermes {
 namespace parser {
 

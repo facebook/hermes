@@ -10,7 +10,6 @@
 
 #include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
-#include "llvh/Support/SaveAndRestore.h"
 namespace hermes {
 namespace regex {
 

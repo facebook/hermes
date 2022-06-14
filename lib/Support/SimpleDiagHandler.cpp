@@ -9,8 +9,6 @@
 
 #include "llvh/ADT/Twine.h"
 
-using llvh::Twine;
-
 namespace hermes {
 
 void SimpleDiagHandler::installInto(hermes::SourceErrorManager &sm) {

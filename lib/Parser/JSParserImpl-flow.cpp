@@ -9,7 +9,6 @@
 
 #include "llvh/Support/SaveAndRestore.h"
 
-using llvh::cast;
 using llvh::dyn_cast;
 using llvh::isa;
 

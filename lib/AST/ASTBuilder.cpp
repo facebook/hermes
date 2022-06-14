@@ -13,17 +13,14 @@
 
 using namespace hermes;
 
-using llvh::cast;
 using llvh::dyn_cast;
 using llvh::dyn_cast_or_null;
 using llvh::isa;
 using llvh::None;
-using llvh::StringRef;
 using parser::JSONArray;
 using parser::JSONBoolean;
 using parser::JSONNumber;
 using parser::JSONObject;
-using parser::JSONScalar;
 using parser::JSONString;
 using parser::JSONValue;
 

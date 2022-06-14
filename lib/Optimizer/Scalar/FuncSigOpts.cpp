@@ -25,7 +25,6 @@ STATISTIC(NumArgsOpt, "Number of arguments optimized");
 
 using namespace hermes;
 using llvh::dbgs;
-using llvh::isa;
 
 /// \returns True if the function access arguments not through the formal
 /// parameters.

@@ -23,9 +23,6 @@
 
 using namespace hermes;
 
-using llvh::cast;
-using llvh::dyn_cast;
-
 // Make sure the ValueKinds.def tree is consistent with the class hierarchy.
 #define QUOTE(X) #X
 #define DEF_VALUE(CLASS, PARENT)                                           \
