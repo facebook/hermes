@@ -355,7 +355,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
   // Estimate the capacity of the output array.  This estimate is only
   // reasonable for the non-symbol case.
-  uint32_t capacity = okFlags.getIncludeNonSymbols()
+  const uint32_t capacity = okFlags.getIncludeNonSymbols()
       ? (selfHandle->clazz_.getNonNull(runtime)->getNumProperties() +
          range.second - range.first)
       : 0;
@@ -401,7 +401,6 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       if ((hostObjectSymbolCount = (**hostSymbolsRes)->getEndIndex()) != 0) {
         Handle<JSArray> hostSymbols = *hostSymbolsRes;
         hostObjectSymbols = std::move(hostSymbols);
-        capacity += hostObjectSymbolCount;
       }
     }
 
