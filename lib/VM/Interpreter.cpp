@@ -2281,7 +2281,6 @@ tailCall:
       // NOTE: it is safe to use OnREG(GetById) here because all instructions
       // have the same layout: opcode, registers, non-register operands, i.e.
       // they only differ in the width of the last "identifier" field.
-      CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
       if (LLVM_LIKELY(O2REG(GetById).isObject())) {
         auto *obj = vmcast<JSObject>(O2REG(GetById));
         auto cacheIdx = ip->iGetById.op3;
@@ -2574,7 +2573,6 @@ tailCall:
     }
 
       CASE(GetByVal) {
-        CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
         if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
           CAPTURE_IP(
               resPH = JSObject::getComputed_RJS(
