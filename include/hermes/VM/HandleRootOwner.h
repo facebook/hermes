@@ -144,6 +144,13 @@ class HandleRootOwner {
   /// The top-most GC scope.
   GCScope *topGCScope_{};
 
+#ifndef NDEBUG
+  /// The number of reasons why no handle allocation is allowed right now.
+  uint32_t noHandleLevel_{0};
+
+  friend class NoHandleScope;
+#endif
+
   /// Allocate storage for a new PinnedHermesValue in the specified GCScope and
   /// initialize it with \p value.
   static PinnedHermesValue *newPinnedHermesValue(
@@ -431,6 +438,7 @@ class GCScope : public GCScopeDebugBase {
     assert(
         getHandleCountDbg() < handlesLimit_ &&
         "Too many handles allocated in GCScope");
+    assert(runtime_.noHandleLevel_ == 0 && "No handles allowed right now.");
 
     setHandleCountDbg(getHandleCountDbg() + 1);
 #ifdef HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES

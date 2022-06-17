@@ -1681,70 +1681,96 @@ class ScopedNativeCallFrame {
   }
 };
 
-/// RAII class to temporarily disallow allocation.
-/// Enforced by the GC in slow debug mode only.
+#ifdef NDEBUG
+
+/// NoAllocScope and NoHandleScope have no impact in release mode (except that
+/// if they are embedded into another struct/class, they will still use space!)
 class NoAllocScope {
  public:
-#ifdef NDEBUG
   explicit NoAllocScope(Runtime &runtime) {}
   explicit NoAllocScope(GC &gc) {}
   NoAllocScope(const NoAllocScope &) = default;
   NoAllocScope(NoAllocScope &&) = default;
   NoAllocScope &operator=(const NoAllocScope &) = default;
   NoAllocScope &operator=(NoAllocScope &&rhs) = default;
-
   void release() {}
-#else
-  explicit NoAllocScope(Runtime &runtime) : NoAllocScope(runtime.getHeap()) {}
-  explicit NoAllocScope(GC &gc) : NoAllocScope(&gc.noAllocLevel_) {}
-  NoAllocScope(const NoAllocScope &other) : NoAllocScope(other.noAllocLevel_) {}
-  NoAllocScope(NoAllocScope &&other) : noAllocLevel_(other.noAllocLevel_) {
-    // not a release operation as this inherits the counter from other.
-    other.noAllocLevel_ = nullptr;
-  }
-
-  ~NoAllocScope() {
-    if (noAllocLevel_)
-      release();
-  }
-
-  NoAllocScope &operator=(NoAllocScope &&rhs) {
-    if (noAllocLevel_) {
-      release();
-    }
-
-    // N.B.: to account for cases when this == &rhs, first copy rhs.noAllocLevel
-    // to a temporary, then null it out.
-    auto ptr = rhs.noAllocLevel_;
-    rhs.noAllocLevel_ = nullptr;
-    noAllocLevel_ = ptr;
-    return *this;
-  }
-
-  NoAllocScope &operator=(const NoAllocScope &other) {
-    return *this = NoAllocScope(other.noAllocLevel_);
-  }
-
-  /// End this scope early. May only be called once.
-  void release() {
-    assert(noAllocLevel_ && "already released");
-    assert(*noAllocLevel_ > 0 && "unbalanced no alloc");
-    --*noAllocLevel_;
-    noAllocLevel_ = nullptr;
-  }
-
- private:
-  explicit NoAllocScope(uint32_t *noAllocLevel) : noAllocLevel_(noAllocLevel) {
-    assert(
-        noAllocLevel_ && "constructing NoAllocScope with moved/release object");
-    ++*noAllocLevel_;
-  }
-  uint32_t *noAllocLevel_;
-#endif
 
  private:
   NoAllocScope() = delete;
 };
+using NoHandleScope = NoAllocScope;
+
+#else
+
+/// RAII class to temporarily disallow allocation of something.
+class BaseNoScope {
+ public:
+  explicit BaseNoScope(uint32_t *level) : level_(level) {
+    assert(level_ && "constructing BaseNoScope with moved/release object");
+    ++*level_;
+  }
+
+  BaseNoScope(const BaseNoScope &other) : BaseNoScope(other.level_) {}
+  BaseNoScope(BaseNoScope &&other) : level_(other.level_) {
+    // not a release operation as this inherits the counter from other.
+    other.level_ = nullptr;
+  }
+
+  ~BaseNoScope() {
+    if (level_)
+      release();
+  }
+
+  BaseNoScope &operator=(BaseNoScope &&rhs) {
+    if (level_) {
+      release();
+    }
+
+    // N.B.: to account for cases when this == &rhs, first copy rhs.level_
+    // to a temporary, then null it out.
+    auto ptr = rhs.level_;
+    rhs.level_ = nullptr;
+    level_ = ptr;
+    return *this;
+  }
+
+  BaseNoScope &operator=(const BaseNoScope &other) {
+    return *this = BaseNoScope(other.level_);
+  }
+
+  /// End this scope early. May only be called once.
+  void release() {
+    assert(level_ && "already released");
+    assert(*level_ > 0 && "unbalanced no alloc");
+    --*level_;
+    level_ = nullptr;
+  }
+
+ protected:
+  uint32_t *level_;
+
+ private:
+  BaseNoScope() = delete;
+};
+
+/// RAII class to temporarily disallow handle creation.
+class NoHandleScope : public BaseNoScope {
+ public:
+  explicit NoHandleScope(Runtime &runtime)
+      : BaseNoScope(&runtime.noHandleLevel_) {}
+  using BaseNoScope::BaseNoScope;
+  using BaseNoScope::operator=;
+};
+
+/// RAII class to temporarily disallow allocating cells in the JS heap.
+class NoAllocScope : public BaseNoScope {
+ public:
+  explicit NoAllocScope(Runtime &runtime) : NoAllocScope(runtime.getHeap()) {}
+  explicit NoAllocScope(GC &gc) : BaseNoScope(&gc.noAllocLevel_) {}
+  using BaseNoScope::BaseNoScope;
+  using BaseNoScope::operator=;
+};
+#endif
 
 //===----------------------------------------------------------------------===//
 // Runtime inline methods.

@@ -61,9 +61,7 @@ CallResult<HermesValue> localesToJS(
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   for (auto &locale : *result) {
-    // No handles are allocated in this loop, so I don't need a flush,
-    // but I can't use NoAllocScope to verify, because string
-    // allocations cause it to assert.
+    NoHandleScope scope{runtime};
     CallResult<HermesValue> nameRes =
         StringPrimitive::createEfficient(runtime, std::move(locale));
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
