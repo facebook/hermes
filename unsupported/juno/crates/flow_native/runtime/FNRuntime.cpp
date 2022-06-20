@@ -150,3 +150,21 @@ int32_t truncateToInt32SlowPath(double d) {
     return exp > -53 ? sign * (int64_t)(m >> -exp) : 0;
   }
 }
+
+void *fnMalloc(size_t sz) {
+  static constexpr size_t blockSize = 10 * 1024;
+
+  static char *level = nullptr;
+  static char *end = nullptr;
+
+  while (true) {
+    if (end - level > sz)
+      return std::exchange(level, level + sz);
+
+    if (sz > blockSize)
+      return malloc(sz);
+
+    level = (char *)malloc(blockSize);
+    end = level + blockSize;
+  }
+}

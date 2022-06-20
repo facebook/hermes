@@ -145,8 +145,14 @@ class FNValue {
   static const FNString *typeOf(FNValue v);
 };
 
+void *fnMalloc(size_t);
+
 struct FNString {
   std::string str;
+
+  void *operator new(size_t sz) {
+    return fnMalloc(sz);
+  }
 };
 struct FNObject {
   std::unordered_map<std::string, FNValue> props;
@@ -154,10 +160,17 @@ struct FNObject {
 
   FNValue getByVal(FNValue key);
   void putByVal(FNValue key, FNValue val);
+
+  void *operator new(size_t sz) {
+    return fnMalloc(sz);
+  }
 };
 struct FNClosure : public FNObject {
   explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {
     props["prototype"] = FNValue::encodeObject(new FNObject());
+  }
+  void *operator new(size_t sz) {
+    return fnMalloc(sz);
   }
 
   void (*func)(void);
@@ -165,6 +178,9 @@ struct FNClosure : public FNObject {
 };
 struct FNArray : public FNObject {
   explicit FNArray(std::vector<FNValue> arr) : arr(std::move(arr)) {}
+  void *operator new(size_t sz) {
+    return fnMalloc(sz);
+  }
 
   std::vector<FNValue> arr;
 };
