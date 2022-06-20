@@ -618,9 +618,30 @@ impl<W: Write> Compiler<W> {
                             right
                         );
                     }
-                    BinaryExpressionOperator::LShift
-                    | BinaryExpressionOperator::RShift
-                    | BinaryExpressionOperator::Plus
+                    BinaryExpressionOperator::LShift => out!(
+                        self,
+                        "FNValue::encodeNumber(truncateToInt32({}.getNumber()) << (truncateToInt32({}.getNumber()) & 0x1f));",
+                        left,
+                        right
+                    ),
+                    BinaryExpressionOperator::RShift => out!(
+                        self,
+                        "FNValue::encodeNumber(truncateToInt32({}.getNumber()) >> (truncateToInt32({}.getNumber()) & 0x1f));",
+                        left,
+                        right
+                    ),
+                    BinaryExpressionOperator::BitAnd
+                    | BinaryExpressionOperator::BitOr
+                    | BinaryExpressionOperator::BitXor => {
+                        out!(
+                            self,
+                            "FNValue::encodeNumber(truncateToInt32({}.getNumber()){}truncateToInt32({}.getNumber()));",
+                            left,
+                            op.as_str(),
+                            right
+                        );
+                    }
+                    BinaryExpressionOperator::Plus
                     | BinaryExpressionOperator::Minus
                     | BinaryExpressionOperator::Mult
                     | BinaryExpressionOperator::Div
@@ -656,6 +677,12 @@ impl<W: Write> Compiler<W> {
                     UnaryExpressionOperator::Minus => out!(
                         self,
                         "FNValue {}=FNValue::encodeNumber(-{}.getNumber());",
+                        result,
+                        argument
+                    ),
+                    UnaryExpressionOperator::BitNot => out!(
+                        self,
+                        "FNValue {}=FNValue::encodeNumber(~truncateToInt32({}.getNumber()));",
                         result,
                         argument
                     ),

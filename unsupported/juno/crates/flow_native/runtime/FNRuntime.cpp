@@ -99,3 +99,39 @@ FNObject *global() {
   static FNObject *global = createGlobalObject();
   return global;
 }
+
+int32_t truncateToInt32SlowPath(double d) {
+  uint64_t bits;
+  memcpy(&bits, &d, sizeof(double));
+  int exp = (int)(bits >> 52) & 0x7FF;
+  // A negative sign is turned into 2, a positive into 0. Subtracting from 1
+  // gives us what we need.
+  int sign = 1 - ((int)((int64_t)bits >> 62) & 2);
+  uint64_t m = bits & 0xFFFFFFFFFFFFFul;
+
+  // Check for a denormalized exponent. We can bail early in that case.
+  if (!exp)
+    return 0;
+
+  // Subtract the IEEE bias (1023). Additionally, move the decimal point to
+  // the right of the mantissa by further decreasing the exponent by 52.
+  exp -= 1023 + 52;
+  // Add the implied leading 1 bit.
+  m |= 1ull << 52;
+
+  // The sign of the exponent tells us which way to shift.
+  if (exp >= 0) {
+    // Check if the shift would push all bits out. Additionally this catches
+    // Infinity and NaN.
+    // Cast to int64 here to avoid UB for the case where sign is negative one
+    // and m << exp is exactly INT32_MIN, since a 32-bit signed int cannot hold
+    // the resulting INT32_MAX + 1. When it is returned, it will be correctly
+    // set to INT32_MIN.
+    return exp <= 31 ? sign * (int64_t)(m << exp) : 0;
+  } else {
+    // Check if the shift would push out the entire mantissa.
+    // We need to use int64_t here in case we are multiplying
+    // -1 and 2147483648.
+    return exp > -53 ? sign * (int64_t)(m >> -exp) : 0;
+  }
+}

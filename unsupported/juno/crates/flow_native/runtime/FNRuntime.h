@@ -171,4 +171,23 @@ struct FNArray : public FNObject {
 
 FNObject *global();
 
+int32_t truncateToInt32SlowPath(double d);
+
+/// Convert a double to a 32-bit integer according to ES5.1 section 9.5.
+/// It can also be used for converting to an unsigned integer, which has the
+/// same bit pattern.
+/// NaN and Infinity are always converted to 0. The rest of the numbers are
+/// converted to a (conceptually) infinite-width integer and the low 32 bits of
+/// the integer are then returned.
+int32_t truncateToInt32(double d);
+inline int32_t truncateToInt32(double d) {
+  // Check of the value can be converted to integer without loss. We want to
+  // use the widest available integer because this conversion will be much
+  // faster than the bit-twiddling slow path.
+  intmax_t fast = (intmax_t)d;
+  if (fast == d)
+    return (int32_t)fast;
+  return truncateToInt32SlowPath(d);
+}
+
 #endif // FNRUNTIME_H
