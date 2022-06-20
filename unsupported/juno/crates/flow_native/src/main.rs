@@ -96,7 +96,7 @@ impl<W: Write> Compiler<W> {
         out!(self, "int main(){{\n");
         let scope = self.sem.node_scope(NodeRc::from_node(lock, node)).unwrap();
         let Module { body, .. } = node_cast!(Node::Module, node);
-        out!(self, "Scope{0} *scope{0}=new Scope{0}();\n", scope);
+        self.create_scope(scope);
         for stmt in body.iter() {
             self.gen_stmt(stmt, scope, lock);
         }
@@ -160,6 +160,9 @@ impl<W: Write> Compiler<W> {
         result
     }
 
+    fn create_scope<'gc>(&mut self, scope: LexicalScopeId) {
+        out!(self, "Scope{0} *scope{0} = new Scope{0}();\n", scope);
+    }
     fn init_scope<'gc>(
         &mut self,
         node: &'gc ast::Node<'gc>,
@@ -167,7 +170,7 @@ impl<W: Write> Compiler<W> {
         lock: &'gc ast::GCLock,
     ) -> LexicalScopeId {
         if let Some(new_scope) = self.sem.node_scope(NodeRc::from_node(lock, node)) {
-            out!(self, "Scope{0} *scope{0} = new Scope{0}();\n", new_scope);
+            self.create_scope(new_scope);
             out!(self, "scope{}->parent = scope{};\n", new_scope, scope);
             new_scope
         } else {
@@ -191,16 +194,11 @@ impl<W: Write> Compiler<W> {
         );
         self.param_list_for_arg_count(params.len());
         out!(self, "){{");
-        let fn_scope = self.sem.node_scope(NodeRc::from_node(lock, block)).unwrap();
         out!(
             self,
             "\nScope{scope} *scope{scope} = (Scope{scope}*)parent_scope;"
         );
-        out!(
-            self,
-            "Scope{fn_scope} *scope{fn_scope} = new Scope{fn_scope}();\n"
-        );
-        out!(self, "scope{fn_scope}->parent = scope{scope};\n");
+        let fn_scope = self.init_scope(block, scope, lock);
         // Store each parameter into its location in the current scope.
         for (i, param) in params.iter().enumerate() {
             let lref = self.new_lref(param, fn_scope, lock);
