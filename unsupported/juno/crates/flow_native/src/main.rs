@@ -248,9 +248,24 @@ impl<W: Write> Compiler<W> {
     /// Emit the code needed to access the variable declared by decl_id from the
     /// current scope.
     fn gen_var(&mut self, decl_id: DeclId, scope: LexicalScopeId) {
-        let decl = self.sem.decl(decl_id);
-        let diff: u32 = self.sem.scope(scope).depth - self.sem.scope(decl.scope).depth;
-        out!(self, "scope{}->", scope);
+        // Get information about the scope where the variable was declared.
+        let decl_scope = self.sem.decl(decl_id).scope;
+        let decl_depth = self.sem.scope(decl_scope).depth;
+
+        // Get information about the function level scope.
+        let func = self.sem.scope(scope).parent_function;
+        let func_scope = self.sem.function(func).scopes[0];
+        let func_depth = self.sem.scope(func_scope).depth;
+
+        // If the variable was declared in the current function, then we can directly access its
+        // scope. Otherwise, we can start traversing scopes from the function scope.
+        let use_scope = if decl_depth >= func_depth {
+            decl_scope
+        } else {
+            func_scope
+        };
+        let diff: u32 = self.sem.scope(use_scope).depth - decl_depth;
+        out!(self, "scope{}->", use_scope);
         for _ in 0..diff {
             out!(self, "parent->");
         }
