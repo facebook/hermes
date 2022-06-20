@@ -57,15 +57,18 @@ void unset_test_vm_allocate_limit();
 
 // Allocates a virtual memory region of the given size (required to be
 // a multiple of page_size()), and returns a pointer to the start.
+// Optionally specify a page-aligned hint for where to place the mapping.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvh::ErrorOr<void *> vm_allocate(size_t sz);
+llvh::ErrorOr<void *> vm_allocate(size_t sz, void *hint = nullptr);
 
 // Allocates a virtual memory region of the given size and alignment (both
 // must be multiples of page_size()), and returns a pointer to the start.
+// Optionally specify a page-aligned hint for where to place the mapping.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
+llvh::ErrorOr<void *>
+vm_allocate_aligned(size_t sz, size_t alignment, void *hint = nullptr);
 
 /// Free a virtual memory region allocated by \p vm_allocate.
 /// \p p must point to the base address that was returned by \p vm_allocate.
@@ -82,7 +85,8 @@ void vm_free_aligned(void *p, size_t sz);
 /// Similar to vm_allocate_aligned, but regions of memory must be explicitly
 /// committed with \p vm_commit before they are used. This can be used to
 /// reserve large contiguous address spaces without failing due to overcommit.
-llvh::ErrorOr<void *> vm_reserve_aligned(size_t sz, size_t alignment);
+llvh::ErrorOr<void *>
+vm_reserve_aligned(size_t sz, size_t alignment, void *hint = nullptr);
 
 /// Similar to \p vm_free, but for memory regions returned by
 /// \p vm_reserve_aligned.

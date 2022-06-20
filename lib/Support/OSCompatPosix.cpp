@@ -110,8 +110,17 @@ void unset_test_vm_allocate_limit() {
 #endif // !NDEBUG
 
 static llvh::ErrorOr<void *>
-vm_mmap(void *addr, size_t sz, int prot, int flags) {
+vm_mmap(void *addr, size_t sz, int prot, int flags, bool checkDebugLimit) {
   assert(sz % page_size_real() == 0);
+#ifndef NDEBUG
+  if (checkDebugLimit) {
+    if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
+      return make_error_code(OOMError::TestVMLimitReached);
+    } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
+      totalVMAllocLimit -= sz;
+    }
+  }
+#endif // !NDEBUG
   void *result = mmap(addr, sz, prot, flags, -1, 0);
   if (result == MAP_FAILED) {
     // Since mmap is a POSIX API, even on MacOS, errno should use the POSIX
@@ -119,19 +128,6 @@ vm_mmap(void *addr, size_t sz, int prot, int flags) {
     return std::error_code(errno, std::generic_category());
   }
   return result;
-}
-
-/// Check \p sz does not cross totalVMAllocLimit, and create a new mapping.
-static llvh::ErrorOr<void *> vm_mmap(size_t sz, int prot, int flags) {
-#ifndef NDEBUG
-  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return make_error_code(OOMError::TestVMLimitReached);
-  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
-    totalVMAllocLimit -= sz;
-  }
-#endif // !NDEBUG
-
-  return vm_mmap(nullptr, sz, prot, flags);
 }
 
 static void vm_munmap(void *addr, size_t sz) {
@@ -152,7 +148,7 @@ static char *alignAlloc(void *p, size_t alignment) {
 }
 
 static llvh::ErrorOr<void *>
-vm_mmap_aligned(size_t sz, size_t alignment, int prot, int flags) {
+vm_mmap_aligned(void *addr, size_t sz, size_t alignment, int prot, int flags) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
@@ -160,7 +156,7 @@ vm_mmap_aligned(size_t sz, size_t alignment, int prot, int flags) {
   // satisfies the request. Use *real* page size here since that's what vm_mmap
   // guarantees.
   const size_t excessSize = sz + alignment - page_size_real();
-  auto result = vm_mmap(excessSize, prot, flags);
+  auto result = vm_mmap(addr, excessSize, prot, flags, true);
   if (!result)
     return result;
 
@@ -180,17 +176,18 @@ vm_mmap_aligned(size_t sz, size_t alignment, int prot, int flags) {
 static constexpr int kVMAllocateFlags = MAP_PRIVATE | MAP_ANONYMOUS;
 static constexpr int kVMAllocateProt = PROT_READ | PROT_WRITE;
 
-llvh::ErrorOr<void *> vm_allocate(size_t sz) {
+llvh::ErrorOr<void *> vm_allocate(size_t sz, void *hint) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
     return vm_allocate_aligned(sz, testPgSz);
   }
 #endif // !NDEBUG
-  return vm_mmap(sz, kVMAllocateProt, kVMAllocateFlags);
+  return vm_mmap(hint, sz, kVMAllocateProt, kVMAllocateFlags, true);
 }
 
-llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
+llvh::ErrorOr<void *>
+vm_allocate_aligned(size_t sz, size_t alignment, void *hint) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
@@ -198,7 +195,7 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   // and see if the memory happens to be aligned.
   // While this may be unlikely on the first allocation request,
   // subsequent allocation requests have a good chance.
-  auto result = vm_mmap(sz, kVMAllocateProt, kVMAllocateFlags);
+  auto result = vm_mmap(hint, sz, kVMAllocateProt, kVMAllocateFlags, true);
   if (!result) {
     return result;
   }
@@ -210,7 +207,8 @@ llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   // Free the opportunistic allocation.
   vm_munmap(mem, sz);
 
-  return vm_mmap_aligned(sz, alignment, kVMAllocateProt, kVMAllocateFlags);
+  return vm_mmap_aligned(
+      hint, sz, alignment, kVMAllocateProt, kVMAllocateFlags);
 }
 
 void vm_free(void *p, size_t sz) {
@@ -225,8 +223,9 @@ static constexpr int kVMReserveProt = PROT_NONE;
 static constexpr int kVMReserveFlags =
     MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 
-llvh::ErrorOr<void *> vm_reserve_aligned(size_t sz, size_t alignment) {
-  return vm_mmap_aligned(sz, alignment, kVMReserveProt, kVMReserveFlags);
+llvh::ErrorOr<void *>
+vm_reserve_aligned(size_t sz, size_t alignment, void *hint) {
+  return vm_mmap_aligned(hint, sz, alignment, kVMReserveProt, kVMReserveFlags);
 }
 
 void vm_release_aligned(void *p, size_t sz) {
@@ -234,11 +233,11 @@ void vm_release_aligned(void *p, size_t sz) {
 }
 
 llvh::ErrorOr<void *> vm_commit(void *p, size_t sz) {
-  return vm_mmap(p, sz, kVMAllocateProt, kVMAllocateFlags | MAP_FIXED);
+  return vm_mmap(p, sz, kVMAllocateProt, kVMAllocateFlags | MAP_FIXED, false);
 }
 
 void vm_uncommit(void *p, size_t sz) {
-  auto res = vm_mmap(p, sz, kVMReserveProt, kVMReserveFlags | MAP_FIXED);
+  auto res = vm_mmap(p, sz, kVMReserveProt, kVMReserveFlags | MAP_FIXED, false);
   (void)res;
   assert(res && "uncommit failed");
 }
