@@ -529,6 +529,50 @@ impl<W: Write> Compiler<W> {
                 self.gen_store(lref, new_val);
                 new_val
             }
+            Node::LogicalExpression(LogicalExpression {
+                left,
+                right,
+                operator,
+                ..
+            }) => {
+                let left = self.gen_expr(left, scope, lock);
+                let result = self.new_value();
+                out!(self, "FNValue {};", result);
+                match operator {
+                    LogicalExpressionOperator::And => {
+                        out!(self, "{}=FNValue::encodeBool(false);", result);
+                        out!(self, "if({}.getBool()){{", left);
+                        let right = self.gen_expr(right, scope, lock);
+                        out!(
+                            self,
+                            "if({}.getBool()) {}=FNValue::encodeBool(true);",
+                            right,
+                            result
+                        );
+                        out!(self, "}}");
+                    }
+                    LogicalExpressionOperator::Or => {
+                        out!(self, "{}=FNValue::encodeBool(true);", result);
+                        out!(self, "if(!{}.getBool()){{", left);
+                        let right = self.gen_expr(right, scope, lock);
+                        out!(
+                            self,
+                            "if(!{}.getBool()) {}=FNValue::encodeBool(false);",
+                            right,
+                            result
+                        );
+                        out!(self, "}}");
+                    }
+                    LogicalExpressionOperator::NullishCoalesce => {
+                        out!(self, "{}={};", result, left);
+                        out!(self, "if({0}.isNull() || {0}.isUndefined()){{", left);
+                        let right = self.gen_expr(right, scope, lock);
+                        out!(self, "{}={};}}", result, right);
+                        out!(self, "");
+                    }
+                }
+                result
+            }
             Node::BinaryExpression(BinaryExpression {
                 left,
                 right,
