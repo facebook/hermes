@@ -128,6 +128,38 @@ impl<W: Write> Compiler<W> {
         }
     }
 
+    fn gen_call<'gc>(
+        &mut self,
+        callee: ValueId,
+        this: ValueId,
+        arguments: &'gc ast::NodeList<'gc>,
+        scope: LexicalScopeId,
+        lock: &'gc ast::GCLock,
+    ) -> ValueId {
+        // Evaluate each argument to get a list of ValueIds.
+        let arguments: Vec<ValueId> = arguments
+            .iter()
+            .map(|arg| self.gen_expr(arg, scope, lock))
+            .collect();
+        let result = self.new_value();
+        // Cast the function pointer based on the number of arguments.
+        out!(self, "FNValue {}=reinterpret_cast<FNValue (*)(", result);
+        self.param_list_for_arg_count(arguments.len());
+        // Pass in the closure's environment as the first argument.
+        out!(
+            self,
+            ")>({0}.getClosure()->func)({0}.getClosure()->env,{1}",
+            callee,
+            this
+        );
+        // Pass in the list of arguments.
+        for arg in arguments {
+            out!(self, ",{}", arg);
+        }
+        out!(self, ");");
+        result
+    }
+
     fn init_scope<'gc>(
         &mut self,
         node: &'gc ast::Node<'gc>,
@@ -425,27 +457,33 @@ impl<W: Write> Compiler<W> {
                         (callee, undefined)
                     }
                 };
-                // Evaluate each argument to get a list of ValueIds.
-                let arguments: Vec<ValueId> = arguments
-                    .iter()
-                    .map(|arg| self.gen_expr(arg, scope, lock))
-                    .collect();
-                let result = self.new_value();
-                // Cast the function pointer based on the number of arguments.
-                out!(self, "FNValue {}=reinterpret_cast<FNValue (*)(", result);
-                self.param_list_for_arg_count(arguments.len());
-                // Pass in the closure's environment as the first argument.
+                self.gen_call(callee, this, arguments, scope, lock)
+            }
+            Node::NewExpression(NewExpression {
+                callee, arguments, ..
+            }) => {
+                let callee = self.gen_expr(callee, scope, lock);
+                let new_obj = self.new_value();
+                // Create the new object and set its prototype.
+                out!(self, "FNObject* {}=new FNObject();", new_obj,);
                 out!(
                     self,
-                    ")>({0}.getClosure()->func)({0}.getClosure()->env,{1}",
-                    callee,
+                    "{}->parent={}.getClosure()->getByVal(FNValue::encodeString(new FNString{{\"prototype\"}})).getObject();",
+                    new_obj,
+                    callee
+                );
+                let this = self.new_value();
+                out!(self, "FNValue {}=FNValue::encodeObject({});", this, new_obj);
+                // Call the function, using the new object as its "this" parameter.
+                let ret = self.gen_call(callee, this, arguments, scope, lock);
+                let result = self.new_value();
+                out!(
+                    self,
+                    "FNValue {0}={1}.isObject()?{1}:{2};",
+                    result,
+                    ret,
                     this
                 );
-                // Pass in the list of arguments.
-                for arg in arguments {
-                    out!(self, ",{}", arg);
-                }
-                out!(self, ");");
                 result
             }
             Node::MemberExpression(..) | Node::Identifier(..) => {

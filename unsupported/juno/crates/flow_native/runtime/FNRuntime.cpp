@@ -9,10 +9,14 @@
 
 FNValue FNObject::getByVal(FNValue key) {
   if (key.isString()) {
-    auto it = props.find(key.getString()->str);
-    if (it == props.end())
-      return FNValue::encodeUndefined();
-    return it->second;
+    auto *cur = this;
+    do {
+      auto it = cur->props.find(key.getString()->str);
+      if (it != cur->props.end())
+        return it->second;
+      cur = cur->parent;
+    } while (cur);
+    return FNValue::encodeUndefined();
   } else {
     auto &arr = static_cast<FNArray *>(this)->arr;
     double n = key.getNumber();

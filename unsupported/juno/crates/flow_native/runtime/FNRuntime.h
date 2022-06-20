@@ -13,28 +13,9 @@
 #include <unordered_map>
 #include <vector>
 
-struct FNValue;
-
-struct FNString {
-  std::string str;
-};
-struct FNObject {
-  std::unordered_map<std::string, FNValue> props;
-
-  FNValue getByVal(FNValue key);
-  void putByVal(FNValue key, FNValue val);
-};
-struct FNClosure : public FNObject {
-  explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {}
-
-  void (*func)(void);
-  void *env;
-};
-struct FNArray : public FNObject {
-  explicit FNArray(std::vector<FNValue> arr) : arr(arr) {}
-
-  std::vector<FNValue> arr;
-};
+struct FNString;
+struct FNObject;
+struct FNClosure;
 
 enum class FNType {
   Undefined,
@@ -102,7 +83,7 @@ class FNValue {
     return reinterpret_cast<const FNString *>(value);
   }
   FNObject *getObject() const {
-    assert(isObject());
+    assert(isObject() || isClosure());
     return reinterpret_cast<FNObject *>(value);
   }
   FNClosure *getClosure() const {
@@ -162,6 +143,30 @@ class FNValue {
   }
 
   static const FNString *typeOf(FNValue v);
+};
+
+struct FNString {
+  std::string str;
+};
+struct FNObject {
+  std::unordered_map<std::string, FNValue> props;
+  FNObject *parent{};
+
+  FNValue getByVal(FNValue key);
+  void putByVal(FNValue key, FNValue val);
+};
+struct FNClosure : public FNObject {
+  explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {
+    props["prototype"] = FNValue::encodeObject(new FNObject());
+  }
+
+  void (*func)(void);
+  void *env;
+};
+struct FNArray : public FNObject {
+  explicit FNArray(std::vector<FNValue> arr) : arr(std::move(arr)) {}
+
+  std::vector<FNValue> arr;
 };
 
 FNObject *global();
