@@ -87,10 +87,19 @@ static FNValue print(void *, FNValue, FNValue arg) {
   return FNValue::encodeUndefined();
 }
 
+static FNValue arrayConstructor(void *, FNValue, FNValue size) {
+  auto *arr = new FNArray({});
+  arr->arr.resize(size.getNumber(), FNValue::encodeUndefined());
+  return FNValue::encodeObject(arr);
+}
+
 static FNObject *createGlobalObject() {
   auto *global = new FNObject();
   auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
   global->props["print"] = FNValue::encodeClosure(printClosure);
+  auto *arrayConstructorClosure =
+      new FNClosure((void (*)(void))arrayConstructor, nullptr);
+  global->props["Array"] = FNValue::encodeClosure(arrayConstructorClosure);
   global->props["undefined"] = FNValue::encodeUndefined();
   global->props["Infinity"] =
       FNValue::encodeNumber(std::numeric_limits<double>::infinity());
