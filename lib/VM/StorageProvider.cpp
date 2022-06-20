@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <limits>
+#include <random>
 #include <stack>
 
 namespace hermes {
@@ -34,6 +35,17 @@ char *alignAlloc(void *p) {
       llvh::alignTo(reinterpret_cast<uintptr_t>(p), AlignedStorage::size()));
 }
 
+void *getMmapHint() {
+  uintptr_t addr = std::random_device()();
+  if constexpr (sizeof(uintptr_t) >= 8) {
+    // std::random_device() yields an unsigned int, so combine two.
+    addr = (addr << 32) | std::random_device()();
+    // Don't use the entire address space, to prevent too much fragmentation.
+    addr &= std::numeric_limits<uintptr_t>::max() >> 18;
+  }
+  return alignAlloc(reinterpret_cast<void *>(addr));
+}
+
 class VMAllocateStorageProvider final : public StorageProvider {
  public:
   llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
@@ -44,7 +56,8 @@ class ContiguousVAStorageProvider final : public StorageProvider {
  public:
   ContiguousVAStorageProvider(size_t size)
       : size_(llvh::alignTo<AlignedStorage::size()>(size)) {
-    auto result = oscompat::vm_reserve_aligned(size_, AlignedStorage::size());
+    auto result = oscompat::vm_reserve_aligned(
+        size_, AlignedStorage::size(), getMmapHint());
     if (!result)
       hermes_fatal("Contiguous storage allocation failed.", result.getError());
     level_ = start_ = static_cast<char *>(*result);
@@ -106,7 +119,7 @@ llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
   assert(AlignedStorage::size() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
   auto result = oscompat::vm_allocate_aligned(
-      AlignedStorage::size(), AlignedStorage::size());
+      AlignedStorage::size(), AlignedStorage::size(), getMmapHint());
   if (!result) {
     return result;
   }
@@ -203,7 +216,7 @@ vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment) {
   // Store the result for the case where all attempts fail.
   llvh::ErrorOr<void *> result{std::error_code{}};
   while (sz >= minSz) {
-    result = oscompat::vm_allocate_aligned(sz, alignment);
+    result = oscompat::vm_allocate_aligned(sz, alignment, getMmapHint());
     if (result) {
       assert(
           sz == llvh::alignTo(sz, alignment) &&
