@@ -8,10 +8,11 @@
 use anyhow::{self, Context};
 use juno::ast::{self, node_cast, NodeRc};
 use juno::hparser::{self, ParserDialect};
-use juno::sema::{DeclId, DeclKind, LexicalScopeId, Resolution, SemContext};
+use juno::sema::{DeclId, DeclKind, FunctionInfoId, LexicalScopeId, Resolution, SemContext};
 use juno::{resolve_dependency, sema};
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
+use std::collections::HashSet;
 use std::fmt;
 
 use std::io::{stdout, BufWriter, Write};
@@ -43,6 +44,54 @@ impl<W: Write> Writer<W> {
     }
 }
 
+struct FindEscapes {
+    sem: Rc<SemContext>,
+    escaped_decls: HashSet<DeclId>,
+    cur_fun: FunctionInfoId,
+}
+
+impl<'gc> ast::Visitor<'gc> for FindEscapes {
+    fn call(
+        &mut self,
+        lock: &'gc ast::GCLock,
+        node: &'gc ast::Node<'gc>,
+        _path: Option<ast::Path>,
+    ) {
+        use ast::*;
+
+        match node {
+            Node::FunctionExpression(FunctionExpression { body, .. })
+            | Node::FunctionDeclaration(FunctionDeclaration { body, .. }) => {
+                let scope_id = self.sem.node_scope(NodeRc::from_node(lock, body)).unwrap();
+                self.cur_fun = self.sem.scope(scope_id).parent_function;
+                node.visit_children(lock, self);
+            }
+            Node::Identifier(..) => {
+                // Check if this resolves to an actual variable, as opposed to being an identifier
+                // in a non-computed member expression, or object literal.
+                let ident_decl = self.sem.ident_decl(&NodeRc::from_node(lock, node));
+                if let Some(Resolution::Decl(decl_id)) = ident_decl {
+                    let decl = self.sem.decl(decl_id);
+                    match decl.kind {
+                        DeclKind::UndeclaredGlobalProperty | DeclKind::GlobalProperty => {}
+                        _ => {
+                            // This is a local variable in some function. If it is being accessed
+                            // outside that function, then it escapes.
+                            let decl_fn = self.sem.scope(decl.scope).parent_function;
+                            if decl_fn != self.cur_fun {
+                                self.escaped_decls.insert(decl_id);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {
+                node.visit_children(lock, self);
+            }
+        };
+    }
+}
+
 /// A type used to represent the result of an intermediate computation stored in
 /// a temporary variable in C++. It implements Display to print the name of that
 /// variable.
@@ -68,16 +117,35 @@ struct Compiler<W: Write> {
     /// The number of ValueIds that have been created so far. This is also used
     /// to give a unique index to each one.
     num_values: usize,
+    escaped_decls: HashSet<DeclId>,
 }
 
 impl<W: Write> Compiler<W> {
+    fn find_escapes<'gc>(
+        sem: Rc<SemContext>,
+        node: &'gc ast::Node<'gc>,
+        lock: &'gc ast::GCLock,
+    ) -> HashSet<DeclId> {
+        let top_scope_id = sem.node_scope(NodeRc::from_node(lock, node)).unwrap();
+        let top_fn_id = sem.scope(top_scope_id).parent_function;
+        let mut find_escapes = FindEscapes {
+            sem,
+            escaped_decls: HashSet::new(),
+            cur_fun: top_fn_id,
+        };
+        node.visit_children(lock, &mut find_escapes);
+        find_escapes.escaped_decls
+    }
+
     pub fn compile(out: BufWriter<W>, mut ctx: ast::Context, ast: NodeRc, sem: Rc<SemContext>) {
         let lock = ast::GCLock::new(&mut ctx);
         let writer = Writer { out };
+        let escaped_decls = Self::find_escapes(Rc::clone(&sem), ast.node(&lock), &lock);
         let mut comp = Compiler {
             writer,
             sem,
             num_values: 0,
+            escaped_decls,
         };
         comp.gen_program(ast.node(&lock), &lock)
     }
