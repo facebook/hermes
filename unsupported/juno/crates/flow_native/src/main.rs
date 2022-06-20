@@ -183,7 +183,9 @@ impl<W: Write> Compiler<W> {
                 out!(self, "Scope{} *parent;\n", parent);
             }
             for decl in &scope.decls {
-                out!(self, "FNValue var{}=FNValue::encodeUndefined();\n", decl)
+                if self.escaped_decls.contains(decl) {
+                    out!(self, "FNValue var{}=FNValue::encodeUndefined();\n", decl);
+                }
             }
             out!(self, "}};\n");
         }
@@ -230,6 +232,12 @@ impl<W: Write> Compiler<W> {
 
     fn create_scope<'gc>(&mut self, scope: LexicalScopeId) {
         out!(self, "Scope{0} *scope{0} = new Scope{0}();\n", scope);
+        let scope = self.sem.scope(scope);
+        for decl in &scope.decls {
+            if !self.escaped_decls.contains(decl) {
+                out!(self, "FNValue v{} = FNValue::encodeUndefined();\n", decl);
+            }
+        }
     }
     fn init_scope<'gc>(
         &mut self,
@@ -314,6 +322,13 @@ impl<W: Write> Compiler<W> {
     /// Emit the code needed to access the variable declared by decl_id from the
     /// current scope.
     fn gen_var(&mut self, decl_id: DeclId, scope: LexicalScopeId) {
+        // If the variable does not escape, access it locally. Otherwise, traverse the scope chain
+        // to resolve the variable.
+        if !self.escaped_decls.contains(&decl_id) {
+            out!(self, "v{}", decl_id);
+            return;
+        }
+
         // Get information about the scope where the variable was declared.
         let decl_scope = self.sem.decl(decl_id).scope;
         let decl_depth = self.sem.scope(decl_scope).depth;
