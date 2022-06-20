@@ -60,8 +60,9 @@ CallResult<HermesValue> localesToJS(
   Handle<JSArray> array = *arrayRes;
   MutableHandle<> name{runtime};
   uint64_t index = 0;
+  GCScopeMarkerRAII marker{runtime};
   for (auto &locale : *result) {
-    NoHandleScope scope{runtime};
+    marker.flush();
     CallResult<HermesValue> nameRes =
         StringPrimitive::createEfficient(runtime, std::move(locale));
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
