@@ -7,6 +7,8 @@
 
 #include "FNRuntime.h"
 
+#include <limits>
+
 FNValue FNObject::getByVal(FNValue key) {
   if (key.isString()) {
     auto *cur = this;
@@ -90,6 +92,10 @@ static FNObject *createGlobalObject() {
   auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
   global->props["print"] = FNValue::encodeClosure(printClosure);
   global->props["undefined"] = FNValue::encodeUndefined();
+  global->props["Infinity"] =
+      FNValue::encodeNumber(std::numeric_limits<double>::infinity());
+  global->props["NaN"] =
+      FNValue::encodeNumber(std::numeric_limits<double>::quiet_NaN());
   return global;
 }
 

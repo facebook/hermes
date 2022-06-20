@@ -641,11 +641,18 @@ impl<W: Write> Compiler<W> {
                             right
                         );
                     }
+                    BinaryExpressionOperator::Mod => {
+                        out!(
+                            self,
+                            "FNValue::encodeNumber(std::fmod({}.getNumber(),{}.getNumber()));",
+                            left,
+                            right
+                        );
+                    }
                     BinaryExpressionOperator::Plus
                     | BinaryExpressionOperator::Minus
                     | BinaryExpressionOperator::Mult
-                    | BinaryExpressionOperator::Div
-                    | BinaryExpressionOperator::Mod => {
+                    | BinaryExpressionOperator::Div => {
                         // Infer the operands to be doubles and directly apply
                         // the operator on them as a C++ operator. We may want
                         // to implement each operator separately later to
