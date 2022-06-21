@@ -1499,6 +1499,29 @@ class Runtime : public HandleRootOwner,
   std::unique_ptr<StackTracesTree> stackTracesTree_;
 };
 
+/// An encrypted/obfuscated native pointer. The key is held by GCBase.
+template <typename T>
+class XorPtr {
+  uintptr_t bits_{0};
+
+ public:
+  XorPtr(Runtime &runtime, T *ptr) {
+    set(runtime, ptr);
+  }
+  void set(Runtime &runtime, T *ptr) {
+    set(runtime.getHeap(), ptr);
+  }
+  void set(GC &gc, T *ptr) {
+    bits_ = reinterpret_cast<uintptr_t>(ptr) ^ gc.pointerEncryptionKey_;
+  }
+  T *get(Runtime &runtime) {
+    return get(runtime.getHeap());
+  }
+  T *get(GC &gc) {
+    return reinterpret_cast<T *>(bits_ ^ gc.pointerEncryptionKey_);
+  }
+};
+
 /// An RAII class for automatically tracking the native call frame depth.
 class ScopedNativeDepthTracker {
   Runtime &runtime_;

@@ -1554,6 +1554,12 @@ class GCBase {
   }
 #endif
 
+  template <typename T>
+  friend class XorPtr;
+
+  /// Randomly generated key used to obfuscate pointers in XorPtr.
+  uintptr_t pointerEncryptionKey_;
+
   /// Callback called if it's not null when the Live Data Tripwire is
   /// triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;

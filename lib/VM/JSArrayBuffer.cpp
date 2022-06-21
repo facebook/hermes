@@ -74,12 +74,14 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     return ExecutionStatus::EXCEPTION;
   }
   if (srcSize != 0) {
-    JSArrayBuffer::copyDataBlockBytes(*arr, 0, *src, srcOffset, srcSize);
+    JSArrayBuffer::copyDataBlockBytes(
+        runtime, *arr, 0, *src, srcOffset, srcSize);
   }
   return arr;
 }
 
 void JSArrayBuffer::copyDataBlockBytes(
+    Runtime &runtime,
     JSArrayBuffer *dst,
     size_type dstIndex,
     JSArrayBuffer *src,
@@ -91,7 +93,7 @@ void JSArrayBuffer::copyDataBlockBytes(
     return;
   }
   assert(
-      dst->getDataBlock() != src->getDataBlock() &&
+      dst->getDataBlock(runtime) != src->getDataBlock(runtime) &&
       "Cannot copy into the same block, must be different blocks");
   assert(
       srcIndex + count <= src->size() &&
@@ -100,7 +102,10 @@ void JSArrayBuffer::copyDataBlockBytes(
       dstIndex + count <= dst->size() &&
       "Cannot copy more data into a block than it has space for");
   // Copy from the other buffer.
-  memcpy(dst->getDataBlock() + dstIndex, src->getDataBlock() + srcIndex, count);
+  memcpy(
+      dst->getDataBlock(runtime) + dstIndex,
+      src->getDataBlock(runtime) + srcIndex,
+      count);
 }
 
 JSArrayBuffer::JSArrayBuffer(
@@ -108,16 +113,17 @@ JSArrayBuffer::JSArrayBuffer(
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
     : JSObject(runtime, *parent, *clazz),
-      data_(nullptr),
+      data_(runtime, nullptr),
       size_(0),
       attached_(false) {}
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
-  gc.getIDTracker().untrackNative(self->data_);
+  uint8_t *data = self->data_.get(gc);
+  gc.getIDTracker().untrackNative(data);
   gc.debitExternalMemory(self, self->size_);
-  free(self->data_);
+  free(data);
   self->~JSArrayBuffer();
 }
 
@@ -131,15 +137,14 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->data_) {
+  uint8_t *data = self->data_.get(gc);
+  if (!data) {
     return;
   }
   // While this is an internal edge, it is to a native node which is not
   // automatically added by the metadata.
   snap.addNamedEdge(
-      HeapSnapshot::EdgeType::Internal,
-      "backingStore",
-      gc.getNativeID(self->data_));
+      HeapSnapshot::EdgeType::Internal, "backingStore", gc.getNativeID(data));
   // The backing store just has numbers, so there's no edges to add here.
 }
 
@@ -148,7 +153,8 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->data_) {
+  uint8_t *data = self->data_.get(gc);
+  if (!data) {
     return;
   }
   // Add the native node before the JSArrayBuffer node.
@@ -156,16 +162,17 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
-      gc.getNativeID(self->data_),
+      gc.getNativeID(data),
       self->size_,
       0);
 }
 
 void JSArrayBuffer::detach(GC &gc) {
-  if (data_) {
+  uint8_t *data = data_.get(gc);
+  if (data) {
     gc.debitExternalMemory(this, size_);
-    free(data_);
-    data_ = nullptr;
+    free(data);
+    data_.set(gc, nullptr);
     size_ = 0;
   } else {
     assert(size_ == 0);
@@ -193,9 +200,10 @@ JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
 
   // Note that the result of calloc or malloc is immediately checked below, so
   // we don't use the checked versions.
-  data_ = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
-               : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
-  if (data_ == nullptr) {
+  auto data = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
+                   : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
+  data_.set(runtime, data);
+  if (!data) {
     // Failed to allocate.
     return runtime.raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");

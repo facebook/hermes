@@ -209,7 +209,8 @@ arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   // 23. Let fromBuf be the value of O’s [[ArrayBufferData]] internal slot.
   // 24. Let toBuf be the value of new’s [[ArrayBufferData]] internal slot.
   // 25. Perform CopyDataBlockBytes(toBuf, 0, fromBuf, first, newLen).
-  JSArrayBuffer::copyDataBlockBytes(*newBuf, 0, *self, first_int, newLen_int);
+  JSArrayBuffer::copyDataBlockBytes(
+      runtime, *newBuf, 0, *self, first_int, newLen_int);
   // 26. Return new.
   return newBuf.getHermesValue();
 }

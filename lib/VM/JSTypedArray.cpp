@@ -240,8 +240,8 @@ ExecutionStatus JSTypedArrayBase::setToCopyOfTypedArray(
     return ExecutionStatus::RETURNED;
   }
   assert(
-      dst->getBuffer(runtime)->getDataBlock() !=
-          src->getBuffer(runtime)->getDataBlock() &&
+      dst->getBuffer(runtime)->getDataBlock(runtime) !=
+          src->getBuffer(runtime)->getDataBlock(runtime) &&
       "Must call setToCopyOfTypedArray with two TypedArrays with different "
       "backing ArrayBuffers");
   if (dst->getKind() == src->getKind()) {
@@ -281,6 +281,7 @@ void JSTypedArrayBase::setToCopyOfBytes(
       dstIndex + count <= dst->getLength() &&
       "Cannot write that many elements to dest ");
   JSArrayBuffer::copyDataBlockBytes(
+      runtime,
       dst->getBuffer(runtime),
       dstIndex * dst->getByteWidth() + dst->getByteOffset(),
       src->getBuffer(runtime),

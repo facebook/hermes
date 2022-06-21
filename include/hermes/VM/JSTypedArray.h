@@ -85,11 +85,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  uint8_t *begin(PointerBase &base) {
-    return buffer_.getNonNull(base)->getDataBlock() + offset_;
+  uint8_t *begin(Runtime &runtime) {
+    return buffer_.getNonNull(runtime)->getDataBlock(runtime) + offset_;
   }
-  uint8_t *end(PointerBase &base) {
-    return begin(base) + getByteLength();
+  uint8_t *end(Runtime &runtime) {
+    return begin(runtime) + getByteLength();
   }
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
@@ -230,11 +230,11 @@ class JSTypedArray final : public JSTypedArrayBase {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
-  iterator begin(PointerBase &base) {
-    return reinterpret_cast<T *>(JSTypedArrayBase::begin(base));
+  iterator begin(Runtime &runtime) {
+    return reinterpret_cast<T *>(JSTypedArrayBase::begin(runtime));
   }
-  iterator end(PointerBase &base) {
-    return begin(base) + length_;
+  iterator end(Runtime &runtime) {
+    return begin(runtime) + length_;
   }
 
   /// Retrieve the \p i'th element of the buffer.

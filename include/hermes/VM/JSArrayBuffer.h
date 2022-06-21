@@ -48,6 +48,7 @@ class JSArrayBuffer final : public JSObject {
 
   /// ES7 6.2.6.2
   static void copyDataBlockBytes(
+      Runtime &runtime,
       JSArrayBuffer *dst,
       size_type dstIndex,
       JSArrayBuffer *src,
@@ -66,9 +67,9 @@ class JSArrayBuffer final : public JSObject {
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
-  uint8_t *getDataBlock() {
+  uint8_t *getDataBlock(Runtime &runtime) {
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
-    return data_;
+    return data_.get(runtime);
   }
 
   /// Get the size of this buffer.
@@ -95,7 +96,7 @@ class JSArrayBuffer final : public JSObject {
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 
  private:
-  uint8_t *data_;
+  XorPtr<uint8_t> data_;
   size_type size_;
   bool attached_;
 
