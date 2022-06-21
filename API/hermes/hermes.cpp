@@ -200,7 +200,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   static constexpr uint32_t kSentinelNativeValue = 0x6ef71fe1;
 
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
-      : rt_(::hermes::vm::Runtime::create(
+      : hermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
+        weakHermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
+        rt_(::hermes::vm::Runtime::create(
             runtimeConfig.rebuild()
                 .withRegisterStack(nullptr)
                 .withMaxNumRegisters(kMaxNumRegisters)
@@ -231,26 +233,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
-          for (auto it = hermesValues_.begin(); it != hermesValues_.end();) {
-            if (it->get() == 0) {
-              it = hermesValues_.erase(it);
-            } else {
-              acceptor.accept(const_cast<vm::PinnedHermesValue &>(it->phv));
-              ++it;
-            }
-          }
+          for (auto &val : hermesValues_)
+            if (val.get() > 0)
+              acceptor.accept(const_cast<vm::PinnedHermesValue &>(val.phv));
         });
     runtime_.addCustomWeakRootsFunction(
         [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
-          for (auto it = weakHermesValues_.begin();
-               it != weakHermesValues_.end();) {
-            if (it->get() == 0) {
-              it = weakHermesValues_.erase(it);
-            } else {
-              acceptor.acceptWeak(it->wr);
-              ++it;
-            }
-          }
+          for (auto &val : weakHermesValues_)
+            if (val.get() > 0)
+              acceptor.acceptWeak(val.wr);
         });
     runtime_.addCustomSnapshotFunction(
         [this](vm::HeapSnapshot &snap) {
@@ -930,6 +921,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
     template <typename... Args>
     T &add(Args &&...args) {
+      // If the size has hit the target size, collect unused values.
+      if (LLVM_UNLIKELY(size() >= targetSize_))
+        collect();
       values_.emplace_front(std::forward<Args>(args)...);
       return values_.front();
     }
@@ -948,6 +942,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return values_.size();
     }
 
+    explicit ManagedValues(double occupancyRatio)
+        : occupancyRatio_{occupancyRatio} {}
+
 #ifdef ASSERT_ON_DANGLING_VM_REFS
     // If we have active HermesValuePointers when deconstructing, these will
     // now be dangling. We deliberately allocate and immediately leak heap
@@ -957,17 +954,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // deferring the assert it's a bit easier to see what's holding the pointers
     // for too long.
     ~ManagedValues() {
-      bool anyDangling = false;
-      for (auto it = begin(); it != end();) {
-        if (it->get() == 0) {
-          it = erase(it);
-        } else {
-          anyDangling = true;
-          it->markDangling();
-          ++it;
-        }
-      }
-      if (anyDangling) {
+      collect();
+      if (!values_.empty()) {
+        for (auto &val : values_)
+          val.markDangling();
         // This is the deliberate memory leak described above.
         new std::list<T>(std::move(values_));
       }
@@ -975,6 +965,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
 #endif
 
    private:
+    void collect() {
+      values_.remove_if([](const T &t) { return t.get() == 0; });
+      targetSize_ = size() / occupancyRatio_;
+    }
+
+    double occupancyRatio_;
+    size_t targetSize_ = 0;
     std::list<T> values_;
   };
 
