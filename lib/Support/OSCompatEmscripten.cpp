@@ -87,7 +87,7 @@ static char *alignAlloc(void *p, size_t alignment) {
       llvh::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-llvh::ErrorOr<void *> vm_allocate(size_t sz) {
+llvh::ErrorOr<void *> vm_allocate(size_t sz, void * /* hint */) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
@@ -97,7 +97,8 @@ llvh::ErrorOr<void *> vm_allocate(size_t sz) {
   return vm_allocate_impl(sz);
 }
 
-llvh::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
+llvh::ErrorOr<void *>
+vm_allocate_aligned(size_t sz, size_t alignment, void * /* hint */) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
