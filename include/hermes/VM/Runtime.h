@@ -194,8 +194,8 @@ using CrashTrace = CrashTraceNoop;
 
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
-class Runtime : public HandleRootOwner,
-                public PointerBase,
+class Runtime : public PointerBase,
+                public HandleRootOwner,
                 private GCBase::GCCallbacks {
  public:
   static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig);

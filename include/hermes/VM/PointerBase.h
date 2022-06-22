@@ -160,7 +160,11 @@ inline void *PointerBase::basedToPointerNonNull(BasedPointer ptr) const {
   return reinterpret_cast<void *>(addr);
 }
 
-inline PointerBase::PointerBase() {}
+inline PointerBase::PointerBase() {
+  // The PointerBase must be segment aligned, so that the compressed pointer
+  // corresponding to the start of a segment is also segment aligned.
+  assert(llvh::alignmentAdjustment(this, AlignedStorage::size()) == 0);
+}
 
 inline void *PointerBase::basedToPointer(BasedPointer ptr) const {
   return ptr ? basedToPointerNonNull(ptr) : nullptr;
