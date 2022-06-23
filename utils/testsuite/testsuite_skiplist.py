@@ -1071,6 +1071,20 @@ SKIP_LIST = [
     "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
     "test262/test/intl402/DateTimeFormat/prototype/formatRange",
     "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
+    "test262/test/intl402/NumberFormat/prototype/format",
+    "test262/test/intl402/NumberFormat/prototype/formaToParts",
+    "test262/test/intl402/NumberFormat/subclassing.js",
+    "test262/test/intl402/NumberFormat/constructor-locales-hasproperty.js",
+    "test262/test/intl402/NumberFormat/constructor-unitDisplay.js",
+    "test262/test/intl402/NumberFormat/prototype/resolvedOptions/order.js",
+    # When strictly following spec, the currency check comes before unit check and the
+    # test will throw RangeError on currency validation before reaching the code which
+    # throws TypeError on seeing undefined unit. But, we have a part of option validation
+    # in C++ code which throws all TypeErrors, which results in the TypeError getting thrown.
+    "test262/test/intl402/NumberFormat/constructor-order.js",
+    "test262/test/intl402/NumberFormat/constructor-options-roundingMode-invalid.js",
+    "test262/test/intl402/NumberFormat/constructor-options-throwing-getters-rounding-mode.js",
+    "test262/test/intl402/NumberFormat/prototype/resolvedOptions/roundingMode.js",
     # Unicode 13.0
     "test262/test/language/identifiers/part-unicode-13.0.0-escaped.js",
     "test262/test/language/identifiers/part-unicode-13.0.0.js",
@@ -1852,7 +1866,6 @@ PERMANENT_SKIP_LIST = [
     "test262/test/intl402/ListFormat/",
     "test262/test/intl402/Locale/",
     "test262/test/intl402/Number/",
-    "test262/test/intl402/NumberFormat/",
     "test262/test/intl402/PluralRules/",
     "test262/test/intl402/Segmenter/",
     "test262/test/intl402/RelativeTimeFormat/",
