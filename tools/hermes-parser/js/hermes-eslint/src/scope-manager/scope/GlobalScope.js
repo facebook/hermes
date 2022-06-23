@@ -72,6 +72,7 @@ class GlobalScope extends ScopeBase<
       }
     }
 
+    // $FlowFixMe[incompatible-type] We know this value is an array at this point.
     this.__implicit.referencesLeftToResolve = this.__referencesLeftToResolve;
     return super.close(scopeManager);
   }

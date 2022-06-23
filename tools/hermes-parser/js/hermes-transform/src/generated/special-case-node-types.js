@@ -210,11 +210,13 @@ export function NumericLiteral({
 }
 
 export type NullLiteralProps = {};
-export function NullLiteral({
-  parent,
-}: {
-  +parent?: ESNode,
-} = {}): DetachedNode<NullLiteralType> {
+export function NullLiteral(
+  {
+    parent,
+  }: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<NullLiteralType> {
   return detachedProps<NullLiteralType>(parent, {
     type: 'Literal',
     value: null,

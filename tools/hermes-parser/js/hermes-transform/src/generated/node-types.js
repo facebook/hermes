@@ -69,11 +69,13 @@ export function ExpressionStatement({
 }
 
 export type NumberTypeAnnotationProps = {};
-export function NumberTypeAnnotation({
-  parent,
-}: {
-  +parent?: ESNode,
-} = {}): DetachedNode<NumberTypeAnnotationType> {
+export function NumberTypeAnnotation(
+  {
+    parent,
+  }: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<NumberTypeAnnotationType> {
   return detachedProps<NumberTypeAnnotationType>(parent, {
     type: 'NumberTypeAnnotation',
   });

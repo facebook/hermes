@@ -46,6 +46,7 @@ import {
   TypeParameterDefinition,
   VariableDefinition,
 } from '../definition';
+import type {TypeAnnotationType} from 'hermes-estree';
 
 class TypeVisitor extends Visitor {
   +_referencer: Referencer;
@@ -328,7 +329,7 @@ class TypeVisitor extends Visitor {
 
   TypeofTypeAnnotation(node: TypeofTypeAnnotation): void {
     const identifier = (() => {
-      let currentNode = node.argument;
+      let currentNode: TypeAnnotationType | Identifier = node.argument;
       while (currentNode.type !== 'Identifier') {
         switch (currentNode.type) {
           case 'GenericTypeAnnotation':

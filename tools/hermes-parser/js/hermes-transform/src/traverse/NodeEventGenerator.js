@@ -34,7 +34,7 @@ type ParsedSelector = $ReadOnly<{
 
 const ESQUERY_OPTIONS: ESQueryOptions = Object.freeze({
   visitorKeys: VisitorKeys,
-  fallback: node => {
+  fallback: (node: ESNode) => {
     throw new Error(`No visitor keys found for node type "${node.type}".`);
   },
 });

@@ -140,7 +140,7 @@ export function traverseWithContext<T = TraversalContextBase>(
       scopeManager.getDeclaredVariables(node),
 
     getBinding: (name: string) => {
-      let currentScope = getScope();
+      let currentScope: null | Scope = getScope();
 
       while (currentScope != null) {
         for (const variable of currentScope.variables) {

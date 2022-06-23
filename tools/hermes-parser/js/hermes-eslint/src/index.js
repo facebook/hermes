@@ -36,7 +36,9 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
   } catch (e) {
     // Format error location for ESLint
     if (e instanceof SyntaxError) {
+      // $FlowFixMe[prop-missing]
       e.lineNumber = e.loc.line;
+      // $FlowFixMe[prop-missing]
       e.column = e.loc.column;
     }
 

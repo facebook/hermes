@@ -8,12 +8,14 @@
  * @format
  */
 
+import type {TransformVisitor} from '../../src/transform/transform';
+
 import {transform as transformOriginal} from '../../src/transform/transform';
 import * as t from '../../src/generated/node-types';
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../../.prettierrc.json';
 
-function transform(code, visitors) {
+function transform(code: string, visitors: TransformVisitor) {
   return transformOriginal(code, visitors, prettierConfig);
 }
 

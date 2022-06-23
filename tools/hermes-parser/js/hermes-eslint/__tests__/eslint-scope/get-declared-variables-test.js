@@ -33,13 +33,19 @@
 */
 'use strict';
 
+import type {Program} from 'hermes-estree';
+
 // $FlowExpectedError[untyped-import]
 import {visit} from 'esrecurse';
 import {parse} from '../../src';
 import {analyze} from '../../src/scope-manager';
 
 describe('ScopeManager.prototype.getDeclaredVariables', () => {
-  function verify(ast, type, expectedNamesList) {
+  function verify(
+    ast: Program,
+    type: string,
+    expectedNamesList: Array<Array<string>>,
+  ) {
     const scopeManager = analyze(ast, {
       sourceType: 'module',
     });

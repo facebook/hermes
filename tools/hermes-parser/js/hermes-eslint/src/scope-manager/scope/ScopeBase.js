@@ -342,12 +342,12 @@ type VariableScope =
 
   _dynamicCloseRef = (ref: Reference, _?: ScopeManager): void => {
     // notify all names are through to global
-    let current = asScope(this);
+    let current: Scope | null = asScope(this);
 
-    do {
+    while (current) {
       current.through.push(ref);
       current = current.upper;
-    } while (current);
+    }
   };
 
   _globalCloseRef = (ref: Reference, scopeManager: ScopeManager): void => {

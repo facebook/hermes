@@ -10,6 +10,8 @@
 
 'use strict';
 
+import type {ScopeManager} from '../src/scope-manager/ScopeManager';
+
 import {parseForESLint} from '../src';
 import {DefinitionType, ScopeType} from '../src';
 import {verifyHasScopes} from '../__test_utils__/verifyHasScopes';
@@ -43,7 +45,11 @@ describe('Source type option', () => {
 });
 
 describe('Type and value references', () => {
-  function verifyValueAndTypeReferences(code, name, definitionType) {
+  function verifyValueAndTypeReferences(
+    code: string,
+    name: string,
+    definitionType: 'ClassName' | 'Enum',
+  ) {
     it(code, () => {
       const {scopeManager} = parseForESLint(code);
 
@@ -87,7 +93,7 @@ describe('Type and value references', () => {
 });
 
 describe('Type definitions', () => {
-  function verifyTypeDefinition(scopeManager) {
+  function verifyTypeDefinition(scopeManager: ScopeManager) {
     // Verify there is a module scope, variable, and reference
     expect(scopeManager.scopes).toHaveLength(2);
 
@@ -209,7 +215,10 @@ describe('QualifiedTypeIdentifier', () => {
 });
 
 describe('Identifiers not mistakenly treated as references', () => {
-  function verifyHasReferences(code, references) {
+  function verifyHasReferences(
+    code: string,
+    references: Array<{count: number, name: string}>,
+  ) {
     const {scopeManager} = parseForESLint(code);
 
     // Module scope should contain variables with the given reference counts

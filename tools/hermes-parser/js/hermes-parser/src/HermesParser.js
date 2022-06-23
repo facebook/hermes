@@ -67,7 +67,7 @@ const hermesParseResult_getPositionBufferSize = HermesParserWASM.cwrap(
 );
 
 // Copy a string into the WASM heap and null-terminate
-function copyToHeap(buffer, addr) {
+function copyToHeap(buffer: Buffer, addr: number) {
   HermesParserWASM.HEAP8.set(buffer, addr);
   HermesParserWASM.HEAP8[addr + buffer.length] = 0;
 }

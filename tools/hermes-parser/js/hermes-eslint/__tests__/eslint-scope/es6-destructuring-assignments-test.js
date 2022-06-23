@@ -46,17 +46,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -86,17 +86,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
-    let scope = scopeManager.globalScope;
+    let globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[2];
+    const scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('for');
     expect(scope.variables).toHaveLength(3);
     expect(scope.variables[0].name).toEqual('a');
@@ -126,20 +126,20 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(2);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(2);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -182,26 +182,26 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(2);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[0].from.type).toEqual(
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(2);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(globalScope.__implicit.referencesLeftToResolve[0].from.type).toEqual(
       'for',
     );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'array',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].from.type).toEqual(
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('array');
+    expect(globalScope.__implicit.referencesLeftToResolve[1].from.type).toEqual(
       'for',
     );
 
-    scope = scopeManager.scopes[2];
+    const scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('for');
     expect(scope.variables).toHaveLength(3);
     expect(scope.variables[0].name).toEqual('a');
@@ -252,23 +252,23 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(3);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'e',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[2].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(3);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('e');
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[2].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -335,32 +335,32 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(3); // [global, function, for]
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(3);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[0].from.type).toEqual(
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(3);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(globalScope.__implicit.referencesLeftToResolve[0].from.type).toEqual(
       'for',
     );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'e',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].from.type).toEqual(
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('e');
+    expect(globalScope.__implicit.referencesLeftToResolve[1].from.type).toEqual(
       'for',
     );
-    expect(scope.__implicit.referencesLeftToResolve[2].identifier.name).toEqual(
-      'array',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[2].from.type).toEqual(
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[2].identifier.name,
+    ).toEqual('array');
+    expect(globalScope.__implicit.referencesLeftToResolve[2].from.type).toEqual(
       'for',
     );
 
-    scope = scopeManager.scopes[2];
+    const scope = scopeManager.scopes[2];
     expect(scope.type).toEqual('for');
     expect(scope.variables).toHaveLength(3);
     expect(scope.variables[0].name).toEqual('a');
@@ -428,20 +428,20 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(2);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(2);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -485,20 +485,20 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(2);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'd',
-    );
-    expect(scope.__implicit.referencesLeftToResolve[1].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(2);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('d');
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[1].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(2);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -533,17 +533,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -573,17 +573,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -611,36 +611,38 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    scope = scopeManager.globalScope;
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    const globalScope2 = scopeManager.globalScope;
+    expect(globalScope2.type).toEqual('global');
+    expect(globalScope2.variables).toHaveLength(0);
+    expect(globalScope2.references).toHaveLength(0);
+    expect(globalScope2.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope2.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('function');
+    const scope2 = scopeManager.scopes[1];
+    expect(scope2.type).toEqual('function');
 
-    expect(scope.variables).toHaveLength(6);
+    expect(scope2.variables).toHaveLength(6);
     const expectedVariableNames = ['arguments', 'a', 'b', 'c', 'd', 'rest'];
 
     for (let index = 0; index < expectedVariableNames.length; index++) {
-      expect(scope.variables[index].name).toEqual(expectedVariableNames[index]);
+      expect(scope2.variables[index].name).toEqual(
+        expectedVariableNames[index],
+      );
     }
 
-    expect(scope.references).toHaveLength(6);
+    expect(scope2.references).toHaveLength(6);
     const expectedReferenceNames = ['a', 'b', 'c', 'd', 'rest'];
 
     for (let index = 0; index < expectedReferenceNames.length; index++) {
-      expect(scope.references[index].identifier.name).toEqual(
+      expect(scope2.references[index].identifier.name).toEqual(
         expectedReferenceNames[index],
       );
-      expect(scope.references[index].isWrite()).toBe(true);
+      expect(scope2.references[index].isWrite()).toBe(true);
     }
-    expect(scope.references[5].identifier.name).toEqual('array');
-    expect(scope.references[5].isWrite()).toBe(false);
+    expect(scope2.references[5].identifier.name).toEqual('array');
+    expect(scope2.references[5].isWrite()).toBe(false);
   });
 
   it('ObjectPattern in var', () => {
@@ -658,17 +660,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'object',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('object');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -704,17 +706,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'object',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('object');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(8);
     const expectedVariableNames = [
@@ -761,19 +763,19 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(4);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(4);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      globalScope.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['a', 'b', 'c', 'array']);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -801,17 +803,17 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(2);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -843,19 +845,19 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(4);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(4);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      globalScope.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['a', 'b', 'rest', 'array']);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -880,35 +882,35 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    scope = scopeManager.globalScope;
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(6);
+    const scope2 = scopeManager.globalScope;
+    expect(scope2.type).toEqual('global');
+    expect(scope2.variables).toHaveLength(0);
+    expect(scope2.references).toHaveLength(0);
+    expect(scope2.__implicit.referencesLeftToResolve).toHaveLength(6);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      scope2.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['a', 'b', 'c', 'd', 'rest', 'array']);
 
-    scope = scopeManager.scopes[1];
-    expect(scope.type).toEqual('function');
+    const scope3 = scopeManager.scopes[1];
+    expect(scope3.type).toEqual('function');
 
-    expect(scope.variables).toHaveLength(1);
-    expect(scope.variables[0].name).toEqual('arguments');
+    expect(scope3.variables).toHaveLength(1);
+    expect(scope3.variables[0].name).toEqual('arguments');
 
-    expect(scope.references).toHaveLength(6);
+    expect(scope3.references).toHaveLength(6);
     const expectedReferenceNames = ['a', 'b', 'c', 'd', 'rest'];
 
     for (let index = 0; index < expectedReferenceNames.length; index++) {
-      expect(scope.references[index].identifier.name).toEqual(
+      expect(scope3.references[index].identifier.name).toEqual(
         expectedReferenceNames[index],
       );
-      expect(scope.references[index].isWrite()).toBe(true);
-      expect(scope.references[index].resolved).toBeNull();
+      expect(scope3.references[index].isWrite()).toBe(true);
+      expect(scope3.references[index].resolved).toBeNull();
     }
-    expect(scope.references[5].identifier.name).toEqual('array');
-    expect(scope.references[5].isWrite()).toBe(false);
+    expect(scope3.references[5].identifier.name).toEqual('array');
+    expect(scope3.references[5].isWrite()).toBe(false);
   });
 
   it('SpreadElement with MemberExpression in AssignmentExpression', () => {
@@ -920,19 +922,19 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(4);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(4);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      globalScope.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['a', 'b', 'obj', 'array']);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -964,19 +966,19 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(4);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(4);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      globalScope.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['shorthand', 'value', 'world', 'object']);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -1009,19 +1011,19 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(8);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(8);
     expect(
-      scope.__implicit.referencesLeftToResolve.map(
+      globalScope.__implicit.referencesLeftToResolve.map(
         left => left.identifier.name,
       ),
     ).toEqual(['shorthand', 'a', 'b', 'c', 'd', 'e', 'world', 'object']);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(1);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -1054,18 +1056,18 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('array');
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(1);
+    expect(globalScope.references[0].identifier.name).toEqual('array');
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -1083,18 +1085,18 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('array');
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'array',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(1);
+    expect(globalScope.references[0].identifier.name).toEqual('array');
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('array');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(5);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -1127,18 +1129,18 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('object');
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'object',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(1);
+    expect(globalScope.references[0].identifier.name).toEqual('object');
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('object');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(4);
     expect(scope.variables[0].name).toEqual('arguments');
@@ -1162,18 +1164,18 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(1);
-    expect(scope.references[0].identifier.name).toEqual('object');
-    expect(scope.__implicit.referencesLeftToResolve).toHaveLength(1);
-    expect(scope.__implicit.referencesLeftToResolve[0].identifier.name).toEqual(
-      'object',
-    );
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(1);
+    expect(globalScope.references[0].identifier.name).toEqual('object');
+    expect(globalScope.__implicit.referencesLeftToResolve).toHaveLength(1);
+    expect(
+      globalScope.__implicit.referencesLeftToResolve[0].identifier.name,
+    ).toEqual('object');
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(8);
     const expectedVariableNames = [
@@ -1202,13 +1204,13 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(5);
     const expectedVariableNames = ['arguments', 'a', 'b', 'c', 'd'];
@@ -1242,13 +1244,13 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(5);
     const expectedVariableNames = ['arguments', 'a', 'b', 'c', 'd'];
@@ -1283,13 +1285,13 @@ describe('ES6 destructuring assignments', () => {
 
     expect(scopeManager.scopes).toHaveLength(2);
 
-    let scope = scopeManager.globalScope;
+    const globalScope = scopeManager.globalScope;
 
-    expect(scope.type).toEqual('global');
-    expect(scope.variables).toHaveLength(0);
-    expect(scope.references).toHaveLength(0);
+    expect(globalScope.type).toEqual('global');
+    expect(globalScope.variables).toHaveLength(0);
+    expect(globalScope.references).toHaveLength(0);
 
-    scope = scopeManager.scopes[1];
+    const scope = scopeManager.scopes[1];
     expect(scope.type).toEqual('function');
     expect(scope.variables).toHaveLength(5);
     const expectedVariableNames = ['arguments', 'a', 'b', 'c', 'd'];

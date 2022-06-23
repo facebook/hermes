@@ -54,7 +54,7 @@ export function ${node.name}({
   parent,
 }: {
   +parent?: ESNode,
-} = {}): DetachedNode<${node.name}Type> {
+} = {...null}): DetachedNode<${node.name}Type> {
   return detachedProps<${node.name}Type>(parent, {
     type: '${type}',
   });
