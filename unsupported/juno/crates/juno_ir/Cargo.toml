@@ -1,0 +1,6 @@
+[package]
+name = "juno_ir"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "MIT"

@@ -205,6 +205,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "juno_ir"
+version = "0.1.0"
+
+[[package]]
 name = "juno_pass"
 version = "0.1.0"
 dependencies = [
