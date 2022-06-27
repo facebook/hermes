@@ -295,14 +295,14 @@ jobs:
       - run:
           name: Run MacOS regression tests in debug mode
           command: |
-            cmake -S hermes -B build
-            cmake --build ./build -j 4
+            cmake -S hermes -B build -GXcode
+            cmake --build ./build
             cmake --build ./build --target check-hermes
       - run:
           name: Build Apple Intl
           command: |
-            cmake -S hermes -B build_intl -DHERMES_ENABLE_INTL=ON
-            cmake --build ./build_intl -j 4
+            cmake -S hermes -B build_intl -GXcode -DHERMES_ENABLE_INTL=ON
+            cmake --build ./build_intl
 
   windows:
     executor:
