@@ -10,3 +10,6 @@ mod pool;
 
 #[allow(dead_code)]
 mod uref;
+
+#[allow(dead_code)]
+mod value_list;
