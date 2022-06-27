@@ -1226,6 +1226,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       false,
       true);
 
+#ifndef __APPLE__
   defineMethod(
       runtime,
       prototype,
@@ -1233,6 +1234,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       nullptr,
       intlNumberFormatPrototypeFormatToParts,
       1);
+#endif
 
   defineMethod(
       runtime,

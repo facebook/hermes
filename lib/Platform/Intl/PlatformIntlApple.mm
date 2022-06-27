@@ -2432,12 +2432,7 @@ std::u16string NumberFormat::format(double number) noexcept {
 
 std::vector<std::unordered_map<std::u16string, std::u16string>>
 NumberFormat::formatToParts(double number) noexcept {
-  std::unordered_map<std::u16string, std::u16string> part;
-  part[u"type"] = u"integer";
-  // This isn't right, but I didn't want to do more work for a stub.
-  std::string s = std::to_string(number);
-  part[u"value"] = {s.begin(), s.end()};
-  return std::vector<std::unordered_map<std::u16string, std::u16string>>{part};
+  llvm_unreachable("formatToParts is unimplemented on Apple platforms");
 }
 
 } // namespace platform_intl
