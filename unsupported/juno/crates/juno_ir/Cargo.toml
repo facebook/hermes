@@ -4,3 +4,6 @@ version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
 license = "MIT"
+
+[dependencies]
+intrusive-collections = "0.9"

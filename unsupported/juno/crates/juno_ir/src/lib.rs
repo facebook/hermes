@@ -7,3 +7,6 @@
 
 #[allow(dead_code)]
 mod pool;
+
+#[allow(dead_code)]
+mod uref;
