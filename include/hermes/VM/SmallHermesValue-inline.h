@@ -117,9 +117,7 @@ double HermesValue32::getNumber(PointerBase &pb) const {
   // Always box values when Handle-SAN is on so we can catch any mistakes.
 #ifndef HERMESVM_SANITIZE_HANDLES
   const SmiType i = doubleToSmi(d);
-  if (LLVM_LIKELY(
-          llvh::DoubleToBits(d) == llvh::DoubleToBits(i) &&
-          llvh::isInt<kNumSmiBits>(i)))
+  if (LLVM_LIKELY(llvh::DoubleToBits(d) == llvh::DoubleToBits(i)))
     return fromTagAndValue(Tag::SmallInt, i);
 #endif
   return encodePointerImpl(
