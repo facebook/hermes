@@ -1,13 +1,14 @@
 # hermes-eslint
-A custom parser for [ESLint](https://eslint.org/) built from the Hermes engine's parser compiled to WebAssembly. The Hermes parser supports ES6, Flow, and JSX syntax, which are parsed into an ESTree AST and then analyzed to determine scope information in a format that can be consumed by ESLint.
+
+`hermes-eslint` is a custom parser for [ESLint](https://eslint.org/). It is the recommended parser for use for linting with Flow code.
 
 ## Usage
-The `hermes-eslint` package is a [custom parser](https://eslint.org/docs/developer-guide/working-with-custom-parsers) for ESLint. To use `hermes-eslint` as the parser for ESLint in your project you must specify `"hermes-eslint"` as the `"parser"` in your ESLint configuration file:
 
-**.eslintrc**
-```js
+To use `hermes-eslint` as the parser for ESLint in your project you must specify `"hermes-eslint"` as the `"parser"` in your `.eslintrc` configuration file:
+
+```json
 {
-  "parser": "hermes-parser"
+  "parser": "hermes-eslint"
 }
 ```
 
@@ -16,12 +17,48 @@ The ESLint documentation provides more information about [how to configure ESLin
 ### Options
 
 You may provide additional configuration for `hermes-eslint` by passing an object containing configuration options as the `"parserOptions"` in your ESLint configuration file. This object may contain the following properties:
-- **sourceType**: `"module"` or `"script"`, defaults to `"module"`
 
-**.eslintrc**
-```js
+```ts
+type ParserOptions = {
+  /**
+   * The identifier that's used for JSX Element creation (after transpilation).
+   * This should not be a member expression - just the root identifier (i.e. use "React" instead of "React.createElement").
+   *
+   * To use the new global JSX transform function, you can explicitly set this to `null`.
+   *
+   * Defaults to `"React"`.
+   */
+  jsxPragma?: string | null,
+
+  /**
+   * The identifier that's used for JSX fragment elements (after transpilation).
+   * If `null`, assumes transpilation will always use a member on `jsxFactory` (i.e. React.Fragment).
+   * This should not be a member expression - just the root identifier (i.e. use "h" instead of "h.Fragment").
+   *
+   * Defaults to `null`.
+   */
+  jsxFragmentName?: string | null,
+
+  /**
+   * The source type of the script.
+   *
+   * Defaults to `"module"`.
+   */
+  sourceType?: 'script' | 'module',
+
+  /**
+   * Ignore <fbt /> JSX elements when adding references to the module-level `React` variable.
+   * FBT is JSX that's transformed to non-JSX and thus references differently
+   *
+   * https://facebook.github.io/fbt/
+   */
+  fbt?: boolean,
+};
+```
+
+```json
 {
-  "parser": "hermes-parser",
+  "parser": "hermes-eslint",
   "parserOptions": {
     "sourceType": "module"
   }
