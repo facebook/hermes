@@ -494,7 +494,15 @@ ESPRIMA_TEST_STATUS_MAP = {
 
 
 def runTest(
-    filename, test_skiplist, workdir, binary_path, hvm, esprima_runner, lazy, test_intl
+    filename,
+    tests_home,
+    test_skiplist,
+    workdir,
+    binary_path,
+    hvm,
+    esprima_runner,
+    lazy,
+    test_intl,
 ):
     """
     Runs a single js test pointed by filename
@@ -573,8 +581,10 @@ def runTest(
     # Unsuccessful runs are ignored for simplicity.
     max_duration = 0
     for strictEnabled in strictModes:
+        tempdir = path.join(workdir, path.dirname(path.relpath(filename, tests_home)))
+        os.makedirs(tempdir, exist_ok=True)
         temp = tempfile.NamedTemporaryFile(
-            dir=workdir,
+            dir=tempdir,
             prefix=path.splitext(baseFileName)[0] + "-",
             suffix=".js",
             delete=False,
@@ -598,7 +608,7 @@ def runTest(
         else:
             errString = ""
             binfile = tempfile.NamedTemporaryFile(
-                dir=workdir,
+                dir=tempdir,
                 prefix=path.splitext(baseFileName)[0] + "-",
                 suffix=".hbc",
                 delete=False,
@@ -948,12 +958,12 @@ class _PersistentTemporaryDirectory:
 
     def __init__(self, suffix=None, prefix=None, dir=None):
         self.name = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-        print("persistent-directory: {}".format(self.name))
 
     def __enter__(self):
         return self.name
 
     def __exit__(self, ex_type, ex_value, ex_traceback):
+        print("Test workdir is", self.name)
         # re-raise exception. No need to clean up the temporary directory.
         return ex_value is None
 
@@ -989,12 +999,15 @@ def run(
     verbose = is_verbose
 
     onlyfiles = []
+    tests_home = None
     for p in paths:
         if path.isdir(p):
             for root, _dirnames, filenames in os.walk(p):
                 for filename in filenames:
                     onlyfiles.append(path.join(root, filename))
+            tests_home = p
         elif path.isfile(p):
+            tests_home = path.dirname(p)
             onlyfiles.append(p)
         else:
             print("Invalid path: " + p)
@@ -1054,7 +1067,16 @@ def run(
 
     with test_workdir(keep_tmp) as workdir:
         calls = makeCalls(
-            (test_skiplist, workdir, binary_path, hvm, esprima_runner, lazy, test_intl),
+            (
+                tests_home,
+                test_skiplist,
+                workdir,
+                binary_path,
+                hvm,
+                esprima_runner,
+                lazy,
+                test_intl,
+            ),
             onlyfiles,
             rangeLeft,
             rangeRight,
