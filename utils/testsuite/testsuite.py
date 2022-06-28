@@ -494,7 +494,7 @@ ESPRIMA_TEST_STATUS_MAP = {
 
 
 def runTest(
-    filename, test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl
+    filename, test_skiplist, workdir, binary_path, hvm, esprima_runner, lazy, test_intl
 ):
     """
     Runs a single js test pointed by filename
@@ -574,7 +574,10 @@ def runTest(
     max_duration = 0
     for strictEnabled in strictModes:
         temp = tempfile.NamedTemporaryFile(
-            prefix=path.splitext(baseFileName)[0] + "-", suffix=".js", delete=False
+            dir=workdir,
+            prefix=path.splitext(baseFileName)[0] + "-",
+            suffix=".js",
+            delete=False,
         )
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
@@ -595,7 +598,10 @@ def runTest(
         else:
             errString = ""
             binfile = tempfile.NamedTemporaryFile(
-                prefix=path.splitext(baseFileName)[0] + "-", suffix=".hbc", delete=False
+                dir=workdir,
+                prefix=path.splitext(baseFileName)[0] + "-",
+                suffix=".hbc",
+                delete=False,
             )
             binfile.close()
             fileToRun = binfile.name
@@ -743,11 +749,6 @@ def runTest(
                     else (TestFlag.EXECUTE_TIMEOUT, "", 0)
                 )
         max_duration = max(max_duration, time.time() - start)
-
-    if not keep_tmp:
-        os.unlink(temp.name)
-        if not lazy:
-            os.unlink(binfile.name)
 
     if skiplisted:
         # If the test was skiplisted, but it passed successfully, consider that
@@ -937,6 +938,34 @@ def get_arg_parser():
     return parser
 
 
+class _PersistentTemporaryDirectory:
+    """Creates a temporary directory that's not automativally deleted.
+
+    This is a drop in replacement for tempfile.TemporaryDirectory that does not
+    clean itself up automatically. Used when the user requests that we keep
+    temporary files.
+    """
+
+    def __init__(self, suffix=None, prefix=None, dir=None):
+        self.name = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+        print("persistent-directory: {}".format(self.name))
+
+    def __enter__(self):
+        return self.name
+
+    def __exit__(self, ex_type, ex_value, ex_traceback):
+        # re-raise exception. No need to clean up the temporary directory.
+        return ex_value is None
+
+
+def test_workdir(keep_tmp, **kwargs):
+    return (
+        tempfile.TemporaryDirectory(**kwargs)
+        if not keep_tmp
+        else (_PersistentTemporaryDirectory(**kwargs))
+    )
+
+
 def run(
     paths,
     chunk,
@@ -1023,15 +1052,17 @@ def run(
 
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
-    calls = makeCalls(
-        (test_skiplist, keep_tmp, binary_path, hvm, esprima_runner, lazy, test_intl),
-        onlyfiles,
-        rangeLeft,
-        rangeRight,
-    )
-    results, resultsHist, slowest_tests = testLoop(
-        calls, jobs, fail_fast, num_slowest_tests
-    )
+    with test_workdir(keep_tmp) as workdir:
+        calls = makeCalls(
+            (test_skiplist, workdir, binary_path, hvm, esprima_runner, lazy, test_intl),
+            onlyfiles,
+            rangeLeft,
+            rangeRight,
+        )
+
+        results, resultsHist, slowest_tests = testLoop(
+            calls, jobs, fail_fast, num_slowest_tests
+        )
 
     # Sort the results for easier reading of failed tests.
     results.sort(key=lambda f: f[1][0].value)
