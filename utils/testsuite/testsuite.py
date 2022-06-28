@@ -8,6 +8,7 @@ import argparse
 import enum
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -852,6 +853,13 @@ def get_arg_parser():
         help="Chunk ID (0, 1, 2), to only process 1/3 of all tests",
     )
     parser.add_argument(
+        "--nuke-workdir",
+        dest="nuke_workdir",
+        default=False,
+        action="store_true",
+        help="Removes the work directory specified with --workdir if it exists.",
+    )
+    parser.add_argument(
         "-f",
         "--fast-fail",
         dest="fail_fast",
@@ -859,11 +867,14 @@ def get_arg_parser():
         help="Exit script immediately when a test failed.",
     )
     parser.add_argument(
-        "-k",
-        "--keep-tmp",
-        dest="keep_tmp",
-        action="store_true",
-        help="Keep temporary files of successful tests.",
+        "-wd",
+        "--workdir",
+        dest="workdir",
+        default=None,
+        help=(
+            "Specifies work directory where the test files will be generated. "
+            "The work directory must not exist, unless -f is specified."
+        ),
     )
     parser.add_argument(
         "--test-skiplist",
@@ -947,30 +958,40 @@ def get_arg_parser():
 
 
 class _PersistentTemporaryDirectory:
-    """Creates a temporary directory that's not automativally deleted.
+    """Creates a work directory that's not automativally deleted.
 
     This is a drop in replacement for tempfile.TemporaryDirectory that does not
-    clean itself up automatically. Used when the user requests that we keep
-    temporary files.
+    clean itself up automatically. Used when the user specifies the work
+    directory, which must not exist.
     """
 
-    def __init__(self, suffix=None, prefix=None, dir=None):
-        self.name = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+    def __init__(self, workdir):
+        try:
+            os.makedirs(workdir, exist_ok=False)
+        except FileExistsError:
+            raise FileExistsError(
+                "Work directory {} exists. Please remove it and try again".format(
+                    workdir
+                )
+            )
+        self.name = workdir
 
     def __enter__(self):
         return self.name
 
     def __exit__(self, ex_type, ex_value, ex_traceback):
-        print("Test workdir is", self.name)
-        # re-raise exception. No need to clean up the temporary directory.
+        # re-raise exception.
         return ex_value is None
 
 
-def test_workdir(keep_tmp, **kwargs):
+def test_workdir(workdir, nuke_workdir, **kwargs):
+    if nuke_workdir and os.path.exists(workdir):
+        shutil.rmtree(workdir)
+
     return (
         tempfile.TemporaryDirectory(**kwargs)
-        if not keep_tmp
-        else (_PersistentTemporaryDirectory(**kwargs))
+        if not workdir
+        else (_PersistentTemporaryDirectory(workdir))
     )
 
 
@@ -986,7 +1007,8 @@ def run(
     source,
     test_skiplist,
     num_slowest_tests,
-    keep_tmp,
+    workdir,
+    nuke_workdir,
     show_all,
     lazy,
     test_intl,
@@ -1063,7 +1085,7 @@ def run(
 
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
-    with test_workdir(keep_tmp) as workdir:
+    with test_workdir(workdir, nuke_workdir) as workdir:
         calls = makeCalls(
             (
                 tests_home,
