@@ -582,13 +582,22 @@ def runTest(
     max_duration = 0
     for strictEnabled in strictModes:
         tempdir = path.join(workdir, path.dirname(path.relpath(filename, tests_home)))
+        tempfile_prefix = "{basename}{strict}{flags}-".format(
+            basename=path.splitext(baseFileName)[0],
+            strict=".strict" if strictEnabled else "",
+            flags=("." + ("_".join(sorted(flags)))) if flags else "",
+        )
         os.makedirs(tempdir, exist_ok=True)
         temp = tempfile.NamedTemporaryFile(
             dir=tempdir,
-            prefix=path.splitext(baseFileName)[0] + "-",
+            prefix=tempfile_prefix,
             suffix=".js",
             delete=False,
         )
+        # make sure the HBC filename matches the processed test name, including the
+        # temp hash -- which should make painfully obvious which HBC file matches
+        # which JS file
+        tempfile_prefix = temp.name + "-"
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
         if "testIntl.js" in includes:
@@ -609,7 +618,7 @@ def runTest(
             errString = ""
             binfile = tempfile.NamedTemporaryFile(
                 dir=tempdir,
-                prefix=path.splitext(baseFileName)[0] + "-",
+                prefix=tempfile_prefix,
                 suffix=".hbc",
                 delete=False,
             )
