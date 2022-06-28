@@ -1858,6 +1858,7 @@ struct NumberFormat::Impl {
       uint8_t mnfdDefault,
       uint8_t mxfdDefault,
       std::u16string_view notation) noexcept;
+  std::u16string format(double number) noexcept;
 };
 
 NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
@@ -2361,9 +2362,72 @@ Options NumberFormat::resolvedOptions() noexcept {
   return options;
 }
 
+// https://402.ecma-international.org/8.0/#sec-formatnumber
+std::u16string NumberFormat::Impl::format(double number) noexcept {
+  // NOTE: NSNumberFormatter has following limitations:
+  // - "scientific" notation is supprted, "engineering" and "compact" are not.
+  // - roundingType is not supported.
+  // - compactDisplay is not supported.
+  // - signDisplay is not supported.
+  // - NSNumberFormatter has maximumIntegerDigits, which is 42 by default
+  auto nsLocale =
+      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(locale)];
+  auto nf = [NSNumberFormatter new];
+  nf.locale = nsLocale;
+  if (style == u"decimal") {
+    nf.numberStyle = NSNumberFormatterDecimalStyle;
+    if (notation == u"scientific") {
+      nf.numberStyle = NSNumberFormatterScientificStyle;
+    }
+  } else if (style == u"currency") {
+    nf.numberStyle = NSNumberFormatterCurrencyStyle;
+    nf.currencyCode = u16StringToNSString(currency);
+    if (currencyDisplay == u"code") {
+      nf.numberStyle = NSNumberFormatterCurrencyISOCodeStyle;
+    } else if (currencyDisplay == u"symbol") {
+      nf.numberStyle = NSNumberFormatterCurrencyStyle;
+    } else if (currencyDisplay == u"narrowSymbol") {
+      nf.numberStyle = NSNumberFormatterCurrencyStyle;
+    } else if (currencyDisplay == u"name") {
+      nf.numberStyle = NSNumberFormatterCurrencyPluralStyle;
+    }
+    if (signDisplay != u"never" && currencySign == u"accounting") {
+      nf.numberStyle = NSNumberFormatterCurrencyAccountingStyle;
+    }
+  } else if (style == u"percent") {
+    nf.numberStyle = NSNumberFormatterPercentStyle;
+  } else if (style == u"unit") {
+    nf.numberStyle = NSNumberFormatterNoStyle;
+  }
+  nf.minimumIntegerDigits = minimumIntegerDigits;
+  nf.minimumFractionDigits = minimumFractionDigits;
+  nf.maximumFractionDigits = maximumFractionDigits;
+  nf.minimumSignificantDigits = minimumSignificantDigits;
+  if (maximumSignificantDigits > 0) {
+    nf.maximumSignificantDigits = maximumSignificantDigits;
+  }
+  nf.usesGroupingSeparator = useGrouping;
+  if (style == u"unit") {
+    auto mf = [NSMeasurementFormatter new];
+    mf.numberFormatter = nf;
+    mf.locale = nsLocale;
+    if (unitDisplay == u"short") {
+      mf.unitStyle = NSFormattingUnitStyleShort;
+    } else if (unitDisplay == u"narrow") {
+      mf.unitStyle = NSFormattingUnitStyleMedium;
+    } else if (unitDisplay == u"long") {
+      mf.unitStyle = NSFormattingUnitStyleLong;
+    }
+    auto u = [[NSUnit alloc] initWithSymbol:u16StringToNSString(unit)];
+    auto m = [[NSMeasurement alloc] initWithDoubleValue:number unit:u];
+    return nsStringToU16String([mf stringFromMeasurement:m]);
+  }
+  return nsStringToU16String(
+      [nf stringFromNumber:[NSNumber numberWithDouble:number]]);
+}
+
 std::u16string NumberFormat::format(double number) noexcept {
-  auto s = std::to_string(number);
-  return std::u16string(s.begin(), s.end());
+  return impl_->format(number);
 }
 
 std::vector<std::unordered_map<std::u16string, std::u16string>>
