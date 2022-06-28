@@ -33,6 +33,7 @@ def main():
         args.num_slowest_tests,
         args.workdir,
         args.nuke_workdir,
+        args.generate_test_only,
         args.show_all,
         args.lazy,
         args.test_intl,

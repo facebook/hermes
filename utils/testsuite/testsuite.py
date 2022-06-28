@@ -498,6 +498,7 @@ def runTest(
     filename,
     tests_home,
     test_skiplist,
+    generate_only,
     workdir,
     binary_path,
     hvm,
@@ -554,7 +555,36 @@ def runTest(
     shouldRun, skipReason, permanent, flags, strictModes = testShouldRun(
         filename, content
     )
-    if not shouldRun:
+
+    js_sources = []
+    for strictEnabled in strictModes:
+        tempdir = path.join(workdir, path.dirname(path.relpath(filename, tests_home)))
+        os.makedirs(tempdir, exist_ok=True)
+
+        js_source = path.join(
+            tempdir,
+            "{basename}{strict}{flags}.js".format(
+                basename=path.splitext(baseFileName)[0],
+                strict=".strict" if strictEnabled else "",
+                flags=("." + ("_".join(sorted(flags)))) if flags else "",
+            ),
+        )
+
+        source, includes = generateSource(content, strictEnabled, suite, flags)
+        source = source.encode("utf-8")
+        if "testIntl.js" in includes:
+            # No support for multiple Intl constructors in that file.
+            return (TestFlag.TEST_SKIPPED, "", 0)
+
+        with open(js_source, "wb") as f:
+            f.write(source)
+            js_sources.append(js_source)
+
+        printVerbose("\n==============")
+        printVerbose("Strict Mode: {}".format(str(strictEnabled)))
+        printVerbose("Temp js file name: " + js_source)
+
+    if generate_only or not shouldRun:
         skippedType = (
             TestFlag.TEST_SKIPPED
             if not permanent
@@ -581,32 +611,7 @@ def runTest(
     # Report the max duration of any successful run for the variants of a test.
     # Unsuccessful runs are ignored for simplicity.
     max_duration = 0
-    for strictEnabled in strictModes:
-        tempdir = path.join(workdir, path.dirname(path.relpath(filename, tests_home)))
-        os.makedirs(tempdir, exist_ok=True)
-
-        js_source = path.join(
-            tempdir,
-            "{basename}{strict}{flags}.js".format(
-                basename=path.splitext(baseFileName)[0],
-                strict=".strict" if strictEnabled else "",
-                flags=("." + ("_".join(sorted(flags)))) if flags else "",
-            ),
-        )
-
-        source, includes = generateSource(content, strictEnabled, suite, flags)
-        source = source.encode("utf-8")
-        if "testIntl.js" in includes:
-            # No support for multiple Intl constructors in that file.
-            return (TestFlag.TEST_SKIPPED, "", 0)
-
-        with open(js_source, "wb") as f:
-            f.write(source)
-
-        printVerbose("\n==============")
-        printVerbose("Strict Mode: {}".format(str(strictEnabled)))
-        printVerbose("Temp js file name: " + js_source)
-
+    for js_source in js_sources:
         if lazy:
             run_vm = True
             fileToRun = js_source
@@ -954,6 +959,14 @@ def get_arg_parser():
         action="store_true",
         help="Run supported Intl tests.",
     )
+    parser.add_argument(
+        "--generate-test-only",
+        "-g",
+        dest="generate_test_only",
+        default=False,
+        action="store_true",
+        help="Generate/pre-process test sources only",
+    )
     return parser
 
 
@@ -1009,6 +1022,7 @@ def run(
     num_slowest_tests,
     workdir,
     nuke_workdir,
+    generate_test_only,
     show_all,
     lazy,
     test_intl,
@@ -1090,6 +1104,7 @@ def run(
             (
                 tests_home,
                 test_skiplist,
+                generate_test_only,
                 workdir,
                 binary_path,
                 hvm,
