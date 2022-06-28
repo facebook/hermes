@@ -852,6 +852,10 @@ class Runtime : public PointerBase,
     return hasIntl_;
   }
 
+  bool hasArrayBuffer() const {
+    return hasArrayBuffer_;
+  }
+
   bool useJobQueue() const {
     return getVMExperimentFlags() & experiments::JobQueue;
   }
@@ -1116,6 +1120,9 @@ class Runtime : public PointerBase,
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;
+
+  /// Set to true if we should enable ArrayBuffer, DataView and typed arrays.
+  const bool hasArrayBuffer_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;

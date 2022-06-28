@@ -68,6 +68,10 @@ class JSArrayBuffer final : public JSObject {
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
   uint8_t *getDataBlock(Runtime &runtime) {
+    // This check should never fail, because all ways to illegally access
+    // ArrayBuffer should raise exceptions. It's here as a last line of defense.
+    if (!runtime.hasArrayBuffer())
+      hermes_fatal("Illegal access to ArrayBuffer");
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
     return data_.get(runtime);
   }
