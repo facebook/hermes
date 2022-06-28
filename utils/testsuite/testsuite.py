@@ -15,7 +15,7 @@ import textwrap
 import time
 from collections import namedtuple
 from multiprocessing import Pool, Value
-from os.path import basename, isdir, isfile, join, splitext
+from os import path
 
 
 try:
@@ -275,11 +275,11 @@ def generateSource(content, strict, suite, flags):
             if match:
                 includes.append(match.group(1))
             for i in includes:
-                filepath = join(suite, "harness", i)
+                filepath = path.join(suite, "harness", i)
                 with open(filepath, "rb") as f:
                     source += f.read().decode("utf-8") + "\n"
         if "mjsunit" in suite:
-            filepath = join(suite, "mjsunit.js")
+            filepath = path.join(suite, "mjsunit.js")
             with open(filepath, "rb") as f:
                 source += f.read().decode("utf-8") + "\n"
 
@@ -499,7 +499,7 @@ def runTest(
     """
     Runs a single js test pointed by filename
     """
-    baseFileName = basename(filename)
+    baseFileName = path.basename(filename)
     suite = getSuite(filename)
     skiplisted = fileInSkiplist(filename, SKIP_LIST + PERMANENT_SKIP_LIST)
 
@@ -529,7 +529,7 @@ def runTest(
     showStatus(filename)
 
     if "esprima" in suite or "flow" in suite:
-        hermes_path = os.path.join(binary_path, "hermes")
+        hermes_path = path.join(binary_path, "hermes")
         test_res = esprima_runner.run_test(suite, filename, hermes_path)
         if test_res[0] == esprima.TestStatus.TEST_PASSED and skiplisted:
             printVerbose("FAIL: A skiplisted test completed successfully")
@@ -574,7 +574,7 @@ def runTest(
     max_duration = 0
     for strictEnabled in strictModes:
         temp = tempfile.NamedTemporaryFile(
-            prefix=splitext(baseFileName)[0] + "-", suffix=".js", delete=False
+            prefix=path.splitext(baseFileName)[0] + "-", suffix=".js", delete=False
         )
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
@@ -595,7 +595,7 @@ def runTest(
         else:
             errString = ""
             binfile = tempfile.NamedTemporaryFile(
-                prefix=splitext(baseFileName)[0] + "-", suffix=".hbc", delete=False
+                prefix=path.splitext(baseFileName)[0] + "-", suffix=".hbc", delete=False
             )
             binfile.close()
             fileToRun = binfile.name
@@ -609,7 +609,7 @@ def runTest(
                 try:
                     printVerbose("Compiling: {} to {}".format(filename, binfile.name))
                     args = [
-                        os.path.join(binary_path, "hermesc"),
+                        path.join(binary_path, "hermesc"),
                         temp.name,
                         "-hermes-parser",
                         "-emit-binary",
@@ -675,9 +675,9 @@ def runTest(
                 printVerbose("Running with HBC VM: {}".format(filename))
                 # Run the hermes vm.
                 if lazy:
-                    binary = os.path.join(binary_path, "hermes")
+                    binary = path.join(binary_path, "hermes")
                 else:
-                    binary = os.path.join(binary_path, hvm)
+                    binary = path.join(binary_path, hvm)
                 disableHandleSanFlag = (
                     ["-gc-sanitize-handles=0"]
                     if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
@@ -960,15 +960,15 @@ def run(
     verbose = is_verbose
 
     onlyfiles = []
-    for path in paths:
-        if isdir(path):
-            for root, _dirnames, filenames in os.walk(path):
+    for p in paths:
+        if path.isdir(p):
+            for root, _dirnames, filenames in os.walk(p):
                 for filename in filenames:
-                    onlyfiles.append(os.path.join(root, filename))
-        elif isfile(path):
-            onlyfiles.append(path)
+                    onlyfiles.append(path.join(root, filename))
+        elif path.isfile(p):
+            onlyfiles.append(p)
         else:
-            print("Invalid path: " + path)
+            print("Invalid path: " + p)
             sys.exit(1)
 
     def isTest(f):
@@ -1013,12 +1013,12 @@ def run(
             print("Invalid chunk ID")
             sys.exit(1)
 
-    if not os.path.isfile(join(binary_path, "hermes")):
-        print("{} not found.".format(join(binary_path, "hermes")))
+    if not path.isfile(path.join(binary_path, "hermes")):
+        print("{} not found.".format(path.join(binary_path, "hermes")))
         sys.exit(1)
 
-    if not os.path.isfile(join(binary_path, hvm)):
-        print("{} not found.".format(join(binary_path, hvm)))
+    if not path.isfile(path.join(binary_path, hvm)):
+        print("{} not found.".format(path.join(binary_path, hvm)))
         sys.exit(1)
 
     esprima_runner = esprima.EsprimaTestRunner(verbose)
