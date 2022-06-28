@@ -62,9 +62,6 @@ BUILTIN_OBJECT(Array)
 // BUILTIN_METHOD(Array, from)
 BUILTIN_METHOD(Array, isArray)
 
-BUILTIN_OBJECT(ArrayBuffer)
-BUILTIN_METHOD(ArrayBuffer, isView)
-
 BUILTIN_OBJECT(Date)
 BUILTIN_METHOD(Date, UTC)
 BUILTIN_METHOD(Date, now)
