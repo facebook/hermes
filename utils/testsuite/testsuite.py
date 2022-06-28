@@ -582,48 +582,37 @@ def runTest(
     max_duration = 0
     for strictEnabled in strictModes:
         tempdir = path.join(workdir, path.dirname(path.relpath(filename, tests_home)))
-        tempfile_prefix = "{basename}{strict}{flags}-".format(
-            basename=path.splitext(baseFileName)[0],
-            strict=".strict" if strictEnabled else "",
-            flags=("." + ("_".join(sorted(flags)))) if flags else "",
-        )
         os.makedirs(tempdir, exist_ok=True)
-        temp = tempfile.NamedTemporaryFile(
-            dir=tempdir,
-            prefix=tempfile_prefix,
-            suffix=".js",
-            delete=False,
+
+        js_source = path.join(
+            tempdir,
+            "{basename}{strict}{flags}.js".format(
+                basename=path.splitext(baseFileName)[0],
+                strict=".strict" if strictEnabled else "",
+                flags=("." + ("_".join(sorted(flags)))) if flags else "",
+            ),
         )
-        # make sure the HBC filename matches the processed test name, including the
-        # temp hash -- which should make painfully obvious which HBC file matches
-        # which JS file
-        tempfile_prefix = temp.name + "-"
+
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
         if "testIntl.js" in includes:
             # No support for multiple Intl constructors in that file.
             return (TestFlag.TEST_SKIPPED, "", 0)
-        temp.write(source)
-        temp.close()
+
+        with open(js_source, "wb") as f:
+            f.write(source)
 
         printVerbose("\n==============")
         printVerbose("Strict Mode: {}".format(str(strictEnabled)))
-        printVerbose("Temp js file name: " + temp.name)
+        printVerbose("Temp js file name: " + js_source)
 
         if lazy:
             run_vm = True
-            fileToRun = temp.name
+            fileToRun = js_source
             start = time.time()
         else:
             errString = ""
-            binfile = tempfile.NamedTemporaryFile(
-                dir=tempdir,
-                prefix=tempfile_prefix,
-                suffix=".hbc",
-                delete=False,
-            )
-            binfile.close()
-            fileToRun = binfile.name
+            fileToRun = js_source + ".hbc"
             for optEnabled in (True, False):
                 printVerbose("\nRunning with Hermes...")
                 printVerbose("Optimization: {}".format(str(optEnabled)))
@@ -632,14 +621,14 @@ def runTest(
 
                 # Compile to bytecode with Hermes.
                 try:
-                    printVerbose("Compiling: {} to {}".format(filename, binfile.name))
+                    printVerbose(f"Compiling: {js_source} to {fileToRun}")
                     args = [
                         path.join(binary_path, "hermesc"),
-                        temp.name,
+                        js_source,
                         "-hermes-parser",
                         "-emit-binary",
                         "-out",
-                        binfile.name,
+                        fileToRun,
                     ] + extra_compile_flags
                     if optEnabled:
                         args.append("-O")
