@@ -328,7 +328,9 @@ export function getTransformContext(): TransformContextAdditions {
     shallowCloneNodeWithOverrides: ((
       node: ?ESNode,
       newProps?: $ReadOnly<{...}>,
-    ): ?DetachedNode<ESNode> => {
+    ): // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[prop-missing]
+    ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
       }
@@ -362,7 +364,9 @@ export function getTransformContext(): TransformContextAdditions {
     deepCloneNodeWithOverrides: ((
       node: ?ESNode,
       newProps?: $ReadOnly<{...}>,
-    ): ?DetachedNode<ESNode> => {
+    ): // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[prop-missing]
+    ?DetachedNode<ESNode> => {
       if (node == null) {
         return null;
       }

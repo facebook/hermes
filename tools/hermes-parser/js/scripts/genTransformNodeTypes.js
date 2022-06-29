@@ -24,6 +24,7 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'ArrowFunctionExpression',
   'BigIntLiteral',
   'BooleanLiteral',
+  'ClassDeclaration',
   'Identifier',
   'NullLiteral',
   'NumericLiteral',

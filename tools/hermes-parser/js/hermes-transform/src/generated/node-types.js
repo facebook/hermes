@@ -19,8 +19,10 @@
 import type {
   ESNode,
   BlockStatement as BlockStatementType,
+  CallExpression as CallExpressionType,
   ExpressionStatement as ExpressionStatementType,
   NumberTypeAnnotation as NumberTypeAnnotationType,
+  PropertyDefinition as PropertyDefinitionType,
   VariableDeclaration as VariableDeclarationType,
   VariableDeclarator as VariableDeclaratorType,
 } from 'hermes-estree';
@@ -43,6 +45,28 @@ export function BlockStatement({
 }): DetachedNode<BlockStatementType> {
   const node = detachedProps<BlockStatementType>(parent, {
     type: 'BlockStatement',
+    ...props,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export type CallExpressionProps = {
+  +callee: DetachedNode<CallExpressionType['callee']>,
+  +typeArguments?: ?DetachedNode<CallExpressionType['typeArguments']>,
+  +arguments: $ReadOnlyArray<
+    DetachedNode<CallExpressionType['arguments'][number]>,
+  >,
+};
+export function CallExpression({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<CallExpressionProps>,
+  +parent?: ESNode,
+}): DetachedNode<CallExpressionType> {
+  const node = detachedProps<CallExpressionType>(parent, {
+    type: 'CallExpression',
     ...props,
   });
   setParentPointersInDirectChildren(node);
@@ -79,6 +103,31 @@ export function NumberTypeAnnotation(
   return detachedProps<NumberTypeAnnotationType>(parent, {
     type: 'NumberTypeAnnotation',
   });
+}
+
+export type PropertyDefinitionProps = {
+  +key: DetachedNode<PropertyDefinitionType['key']>,
+  +value?: ?DetachedNode<PropertyDefinitionType['value']>,
+  +computed: PropertyDefinitionType['computed'],
+  +static: PropertyDefinitionType['static'],
+  +declare: PropertyDefinitionType['declare'],
+  +optional: PropertyDefinitionType['optional'],
+  +variance?: ?DetachedNode<PropertyDefinitionType['variance']>,
+  +typeAnnotation?: ?DetachedNode<PropertyDefinitionType['typeAnnotation']>,
+};
+export function PropertyDefinition({
+  parent,
+  ...props
+}: {
+  ...$ReadOnly<PropertyDefinitionProps>,
+  +parent?: ESNode,
+}): DetachedNode<PropertyDefinitionType> {
+  const node = detachedProps<PropertyDefinitionType>(parent, {
+    type: 'PropertyDefinition',
+    ...props,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
 }
 
 export type VariableDeclarationProps = {

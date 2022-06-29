@@ -65,11 +65,19 @@ export function setCommentsOnNode(
 export function addCommentsToNode(
   node: ESNode | DetachedNode<ESNode>,
   comments: $ReadOnlyArray<Comment>,
+  side?: 'leading' | 'trailing' = 'trailing',
 ): void {
-  // $FlowExpectedError - this property is secretly added by prettier.
+  // $FlowExpectedError[prop-missing] - this property is secretly added by prettier.
+  // $FlowExpectedError[cannot-write]
+  // $FlowExpectedError[incompatible-use]
   node.comments = node.comments ?? [];
-  // $FlowExpectedError
-  (node.comments: Array<Comment>).push(...comments);
+  if (side === 'leading') {
+    // $FlowExpectedError[incompatible-cast]
+    (node.comments: Array<Comment>).unshift(...comments);
+  } else {
+    // $FlowExpectedError[incompatible-cast]
+    (node.comments: Array<Comment>).push(...comments);
+  }
 }
 
 export function getCommentsForNode(
@@ -86,6 +94,18 @@ export function isLeadingComment(comment: Comment): boolean {
 export function isTrailingComment(comment: Comment): boolean {
   // $FlowExpectedError - this property is secretly added by prettier.
   return comment.trailing === true;
+}
+
+export function getLeadingCommentsForNode(
+  node: ESNode | DetachedNode<ESNode>,
+): $ReadOnlyArray<Comment> {
+  return getCommentsForNode(node).filter(isLeadingComment);
+}
+
+export function getTrailingCommentsForNode(
+  node: ESNode | DetachedNode<ESNode>,
+): $ReadOnlyArray<Comment> {
+  return getCommentsForNode(node).filter(isTrailingComment);
 }
 
 export function addComment(

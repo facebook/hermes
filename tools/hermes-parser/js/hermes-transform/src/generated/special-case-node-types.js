@@ -17,16 +17,17 @@ list in `scripts/genTransformNodeTypes` to ensure there's no duplicates
 import type {
   ESNode,
   ArrowFunctionExpression as ArrowFunctionExpressionType,
-  RegExpLiteral as RegExpLiteralType,
-  TemplateElement as TemplateElementType,
-  Identifier as IdentifierType,
   BigIntLiteral as BigIntLiteralType,
-  BooleanLiteral as BooleanLiteralType,
-  NumericLiteral as NumericLiteralType,
-  NullLiteral as NullLiteralType,
-  StringLiteral as StringLiteralType,
-  LineComment as LineCommentType,
   BlockComment as BlockCommentType,
+  BooleanLiteral as BooleanLiteralType,
+  ClassDeclaration as ClassDeclarationType,
+  Identifier as IdentifierType,
+  LineComment as LineCommentType,
+  NullLiteral as NullLiteralType,
+  NumericLiteral as NumericLiteralType,
+  RegExpLiteral as RegExpLiteralType,
+  StringLiteral as StringLiteralType,
+  TemplateElement as TemplateElementType,
 } from 'hermes-estree';
 import type {DetachedNode} from '../detachedNode';
 
@@ -62,6 +63,42 @@ export function ArrowFunctionExpression({
     id: null,
     // $FlowExpectedError[incompatible-use]
     expression: props.body.type !== 'BlockStatement',
+    ...props,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export type ClassDeclarationProps = {
+  +id?: ?DetachedNode<ClassDeclarationType['id']>,
+  +typeParameters?: ?DetachedNode<ClassDeclarationType['typeParameters']>,
+  +superClass?: ?DetachedNode<ClassDeclarationType['superClass']>,
+  +superTypeParameters?: ?DetachedNode<
+    ClassDeclarationType['superTypeParameters'],
+  >,
+  // make this optional as it's rarer that people would want to include them
+  +implements?: $ReadOnlyArray<
+    DetachedNode<ClassDeclarationType['implements'][number]>,
+  >,
+  // make this optional as it's rarer that people would want to include them
+  +decorators?: $ReadOnlyArray<
+    DetachedNode<ClassDeclarationType['decorators'][number]>,
+  >,
+  +body: DetachedNode<ClassDeclarationType['body']>,
+};
+export function ClassDeclaration({
+  parent,
+  decorators = [],
+  implements: implements_ = [],
+  ...props
+}: {
+  ...$ReadOnly<ClassDeclarationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ClassDeclarationType> {
+  const node = detachedProps<ClassDeclarationType>(parent, {
+    type: 'ClassDeclaration',
+    decorators: decorators,
+    implements: implements_,
     ...props,
   });
   setParentPointersInDirectChildren(node);

@@ -8,6 +8,10 @@
  * @format
  */
 
+import type {CallExpression} from 'hermes-estree';
+import type {CallExpressionProps} from './node-types';
+import type {DetachedNode} from '../detachedNode';
+
 /*
  * !!! THIS FILE WILL BE OVERWRITTEN BY CODEGEN !!!
  *
@@ -16,4 +20,13 @@
  * the transformation tests.
  */
 
-export type TransformCloneSignatures = {};
+type CallExpressionCloneSignature = ((
+  node: CallExpression,
+  newProps: $Partial<CallExpressionProps>,
+) => DetachedNode<CallExpression>) &
+  ((
+    node: ?CallExpression,
+    newProps: $Partial<CallExpressionProps>,
+  ) => DetachedNode<CallExpression> | null);
+
+export type TransformCloneSignatures = CallExpressionCloneSignature;
