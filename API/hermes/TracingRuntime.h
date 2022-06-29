@@ -157,7 +157,7 @@ class TracingHermesRuntime final : public TracingRuntime {
       std::function<std::string()> commitAction,
       std::function<void()> rollbackAction);
 
-  ~TracingHermesRuntime();
+  ~TracingHermesRuntime() override;
 
   SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));

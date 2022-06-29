@@ -156,7 +156,7 @@ class MallocGC final : public GCBase {
       std::shared_ptr<StorageProvider> provider,
       experiments::VMExperimentFlags vmExperimentFlags);
 
-  ~MallocGC();
+  ~MallocGC() override;
 
   /// Checks if a requested \p size can fit in the heap. If it can't, a
   /// collection occurs. If it still can't after the collection, OOM is

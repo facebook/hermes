@@ -29,7 +29,7 @@ class SourceMapTranslator final : public SourceErrorManager::ICoordTranslator {
   SourceMapTranslator(SourceErrorManager &sourceErrorManager)
       : sourceErrorManager_(sourceErrorManager) {}
 
-  ~SourceMapTranslator() = default;
+  ~SourceMapTranslator() override = default;
 
   /// Add new fileBufId => sourceMap mapping.
   /// \p fileBufId is the compiling js file corresponding to \p sourceMap.

@@ -67,7 +67,7 @@ class HadesGC final : public GCBase {
       std::shared_ptr<StorageProvider> provider,
       experiments::VMExperimentFlags vmExperimentFlags);
 
-  ~HadesGC();
+  ~HadesGC() override;
 
   static bool classof(const GCBase *gc) {
     return gc->getKind() == HeapKind::HadesGC;

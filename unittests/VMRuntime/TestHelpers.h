@@ -285,7 +285,7 @@ class DummyRuntime final : public HandleRootOwner,
   /// function.
   static std::unique_ptr<StorageProvider> defaultProvider();
 
-  ~DummyRuntime();
+  ~DummyRuntime() override;
 
   template <
       typename T,

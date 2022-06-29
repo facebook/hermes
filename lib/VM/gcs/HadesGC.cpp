@@ -404,7 +404,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
         copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
-  ~EvacAcceptor() {}
+  ~EvacAcceptor() override {}
 
   // TODO: Implement a purely CompressedPointer version of this. That will let
   // us avoid decompressing pointers altogether if they point outside the

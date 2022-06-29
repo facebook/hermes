@@ -483,7 +483,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return llvh::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());
   }
 
-  ~BCProviderFromBuffer() {
+  ~BCProviderFromBuffer() override {
     stopWarmup();
     delete debugInfo_;
   }

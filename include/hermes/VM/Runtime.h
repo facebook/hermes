@@ -200,7 +200,7 @@ class Runtime : public PointerBase,
  public:
   static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig);
 
-  ~Runtime();
+  ~Runtime() override;
 
   /// Add a custom function that will be executed at the start of every garbage
   /// collection to mark additional GC roots that may not be known to the

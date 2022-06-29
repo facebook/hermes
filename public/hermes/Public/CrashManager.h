@@ -97,7 +97,7 @@ class NopCrashManager final : public CrashManager {
   void unregisterCallback(CallbackKey /*key*/) override {}
   void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
 
-  ~NopCrashManager() {}
+  ~NopCrashManager() override {}
 };
 
 } // namespace vm

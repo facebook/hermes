@@ -279,7 +279,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
  public:
-  ~HermesRuntimeImpl() {
+  ~HermesRuntimeImpl() override {
 #ifdef HERMES_ENABLE_DEBUGGER
     // Deallocate the debugger so it frees any HermesPointerValues it may hold.
     // This must be done before we check hermesValues_ below.
