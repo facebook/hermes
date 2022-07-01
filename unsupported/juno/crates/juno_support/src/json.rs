@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::{
-    fmt,
-    io::{self, BufWriter, Write},
-};
+use std::fmt;
+use std::io::BufWriter;
+use std::io::Write;
+use std::io::{self};
 
 /// Whether to pretty-print the JSON.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

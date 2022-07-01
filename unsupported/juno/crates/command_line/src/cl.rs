@@ -6,7 +6,8 @@
  */
 
 use crate::opt::*;
-use crate::parser::{CommandLineIntent, Parser};
+use crate::parser::CommandLineIntent;
+use crate::parser::Parser;
 use std::fmt::Write;
 use std::process::exit;
 use std::rc::Rc;

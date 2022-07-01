@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno::{
-    ast::*,
-    hparser::{self, ParserDialect, ParserFlags},
-};
+use juno::ast::*;
+use juno::hparser::ParserDialect;
+use juno::hparser::ParserFlags;
+use juno::hparser::{self};
 
 fn validate_src_with_flags(
     flags: hparser::ParserFlags,

@@ -66,7 +66,8 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
+use std::fmt::Formatter;
 use std::hash::Hash;
 use std::ptr::null_mut;
 

@@ -6,20 +6,37 @@
  */
 
 use super::sem_context::*;
-use crate::ast::{
-    self, builder, node_cast, node_isa, template, GCLock, Identifier, Node, NodeField, NodeList,
-    NodePtr, NodeRc, NodeVariant, Path, TemplateMetadata, UnaryExpressionOperator,
-    VariableDeclarationKind, Visitor,
-};
-use crate::resolve_dependency::{DependencyKind, DependencyResolver};
-use crate::sema::decl_collector::{DeclCollector, ScopeDecls};
+use crate::ast::builder;
+use crate::ast::node_cast;
+use crate::ast::node_isa;
+use crate::ast::template;
+use crate::ast::GCLock;
+use crate::ast::Identifier;
+use crate::ast::Node;
+use crate::ast::NodeField;
+use crate::ast::NodeList;
+use crate::ast::NodePtr;
+use crate::ast::NodeRc;
+use crate::ast::NodeVariant;
+use crate::ast::Path;
+use crate::ast::TemplateMetadata;
+use crate::ast::UnaryExpressionOperator;
+use crate::ast::VariableDeclarationKind;
+use crate::ast::Visitor;
+use crate::ast::{self};
+use crate::resolve_dependency::DependencyKind;
+use crate::resolve_dependency::DependencyResolver;
+use crate::sema::decl_collector::DeclCollector;
+use crate::sema::decl_collector::ScopeDecls;
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
 use juno_support::atom_table::Atom;
-use juno_support::source_manager::{SourceId, SourceRange};
+use juno_support::source_manager::SourceId;
+use juno_support::source_manager::SourceRange;
 use juno_support::ScopedHashMap;
 use smallvec::SmallVec;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Debug)]

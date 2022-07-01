@@ -5,27 +5,46 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::{self, ensure, Context, Error};
-use command_line::{CommandLine, Hidden, Opt, OptDesc};
-use juno::ast::{self, node_cast, validate_tree, NodeRc, SourceRange};
-use juno::hparser::{self, MagicCommentKind, ParsedJS, ParserDialect};
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Error;
+use anyhow::{self};
+use command_line::CommandLine;
+use command_line::Hidden;
+use command_line::Opt;
+use command_line::OptDesc;
+use juno::ast::node_cast;
+use juno::ast::validate_tree;
+use juno::ast::NodeRc;
+use juno::ast::SourceRange;
+use juno::ast::{self};
+use juno::gen_js;
+use juno::hparser::MagicCommentKind;
+use juno::hparser::ParsedJS;
+use juno::hparser::ParserDialect;
+use juno::hparser::{self};
+use juno::resolve_dependency;
+use juno::sema;
 use juno::sema::SemContext;
 use juno::sourcemap::merge_sourcemaps;
-use juno::{gen_js, resolve_dependency, sema};
 use juno_pass::PassManager;
+use juno_support::fetchurl;
 use juno_support::source_manager::SourceId;
-use juno_support::{fetchurl, Timer};
-use juno_support::{HeapSize, NullTerminatedBuf};
+use juno_support::HeapSize;
+use juno_support::NullTerminatedBuf;
+use juno_support::Timer;
 use sourcemap::SourceMap;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::ops::DerefMut;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
 use std::str::FromStr;
-use url::{self, Url};
+use url::Url;
+use url::{self};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Gen {

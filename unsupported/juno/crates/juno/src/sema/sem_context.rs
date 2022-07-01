@@ -6,7 +6,9 @@
  */
 
 use crate::ast::NodeRc;
-use juno_ast::{node_cast, GCLock, Node};
+use juno_ast::node_cast;
+use juno_ast::GCLock;
+use juno_ast::Node;
 use juno_support::atom_table::Atom;
 use juno_support::declare_opaque_id;
 use juno_support::source_manager::SourceId;

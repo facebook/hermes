@@ -5,12 +5,27 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::{
-    kind::*, AssignmentExpressionOperator, BinaryExpressionOperator, Context, ExportKind, GCLock,
-    ImportKind, LogicalExpressionOperator, MethodDefinitionKind, Node, NodeLabel, NodeList, NodeRc,
-    NodeString, NodeVariant, Path, PropertyKind, UnaryExpressionOperator, UpdateExpressionOperator,
-    VariableDeclarationKind, Visitor,
-};
+use super::kind::*;
+use super::AssignmentExpressionOperator;
+use super::BinaryExpressionOperator;
+use super::Context;
+use super::ExportKind;
+use super::GCLock;
+use super::ImportKind;
+use super::LogicalExpressionOperator;
+use super::MethodDefinitionKind;
+use super::Node;
+use super::NodeLabel;
+use super::NodeList;
+use super::NodeRc;
+use super::NodeString;
+use super::NodeVariant;
+use super::Path;
+use super::PropertyKind;
+use super::UnaryExpressionOperator;
+use super::UpdateExpressionOperator;
+use super::VariableDeclarationKind;
+use super::Visitor;
 
 use thiserror::Error;
 

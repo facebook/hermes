@@ -11,14 +11,17 @@ mod generated_cvt;
 use crate::ast;
 use convert::Converter;
 use generated_cvt::cvt_node_ptr;
-use hermes::parser::{HermesParser, NodePtr};
+use hermes::parser::HermesParser;
+use hermes::parser::NodePtr;
 use hermes::utf::utf8_with_surrogates_to_string_lossy;
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
 use std::fmt::Formatter;
 use thiserror::Error;
 
-pub use hermes::parser::{MagicCommentKind, ParserDialect, ParserFlags};
+pub use hermes::parser::MagicCommentKind;
+pub use hermes::parser::ParserDialect;
+pub use hermes::parser::ParserFlags;
 
 pub struct ParsedJS<'a> {
     parser: HermesParser<'a>,

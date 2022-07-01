@@ -5,17 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{
-    ast::*,
-    sema::{DeclKind, Resolution, SemContext},
-};
-use juno_support::{convert, source_manager::SourceLoc};
-use sourcemap::{RawToken, SourceMap, SourceMapBuilder};
-use std::{
-    fmt,
-    io::{self, BufWriter, Write},
-    rc::Rc,
-};
+use crate::ast::*;
+use crate::sema::DeclKind;
+use crate::sema::Resolution;
+use crate::sema::SemContext;
+use juno_support::convert;
+use juno_support::source_manager::SourceLoc;
+use sourcemap::RawToken;
+use sourcemap::SourceMap;
+use sourcemap::SourceMapBuilder;
+use std::fmt;
+use std::io::BufWriter;
+use std::io::Write;
+use std::io::{self};
+use std::rc::Rc;
 
 /// Options for JS generation.
 pub struct Opt<'s> {
@@ -103,7 +106,8 @@ enum Assoc {
 }
 
 mod precedence {
-    use crate::ast::{BinaryExpressionOperator, LogicalExpressionOperator};
+    use crate::ast::BinaryExpressionOperator;
+    use crate::ast::LogicalExpressionOperator;
 
     pub type Precedence = u32;
 

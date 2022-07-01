@@ -7,8 +7,10 @@
 
 use crate::uref::URef;
 use crate::uref_intrusive_adapter;
-use intrusive_collections::{LinkedList, LinkedListLink};
-use std::cell::{Cell, UnsafeCell};
+use intrusive_collections::LinkedList;
+use intrusive_collections::LinkedListLink;
+use std::cell::Cell;
+use std::cell::UnsafeCell;
 use std::mem;
 use std::mem::MaybeUninit;
 

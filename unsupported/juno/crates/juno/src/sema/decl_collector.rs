@@ -5,7 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::{self, node_isa, GCLock, Node, NodePtr, Path, VariableDeclarationKind, Visitor};
+use crate::ast::node_isa;
+use crate::ast::GCLock;
+use crate::ast::Node;
+use crate::ast::NodePtr;
+use crate::ast::Path;
+use crate::ast::VariableDeclarationKind;
+use crate::ast::Visitor;
+use crate::ast::{self};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::rc::Rc;

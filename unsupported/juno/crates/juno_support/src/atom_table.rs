@@ -6,7 +6,8 @@
  */
 
 use crate::HeapSize;
-use std::cell::{Cell, UnsafeCell};
+use std::cell::Cell;
+use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::ptr::null;

@@ -8,13 +8,20 @@
 use super::generated_cvt::cvt_node_ptr;
 use crate::ast;
 use crate::ast::SourceId;
-use hermes::parser::{
-    DataRef, HermesParser, NodeLabel, NodeLabelOpt, NodeListOptRef, NodeListRef, NodePtr,
-    NodePtrOpt, NodeString, NodeStringOpt, SMLoc,
-};
-use hermes::utf::{
-    is_utf8_continuation, utf8_with_surrogates_to_string, utf8_with_surrogates_to_utf16,
-};
+use hermes::parser::DataRef;
+use hermes::parser::HermesParser;
+use hermes::parser::NodeLabel;
+use hermes::parser::NodeLabelOpt;
+use hermes::parser::NodeListOptRef;
+use hermes::parser::NodeListRef;
+use hermes::parser::NodePtr;
+use hermes::parser::NodePtrOpt;
+use hermes::parser::NodeString;
+use hermes::parser::NodeStringOpt;
+use hermes::parser::SMLoc;
+use hermes::utf::is_utf8_continuation;
+use hermes::utf::utf8_with_surrogates_to_string;
+use hermes::utf::utf8_with_surrogates_to_utf16;
 use juno_support::atom_table;
 use std::collections::HashMap;
 use std::convert::TryFrom;

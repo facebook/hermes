@@ -27,7 +27,8 @@
 //! Visitor patterns are provided by [`Visitor`] and [`VisitorMut`].
 
 use context::NodeListElement;
-use juno_support::atom_table::{Atom, AtomU16};
+use juno_support::atom_table::Atom;
+use juno_support::atom_table::AtomU16;
 use juno_support::define_str_enum;
 use std::marker::PhantomData;
 use thiserror::Error;
@@ -41,15 +42,25 @@ mod field;
 mod kind;
 mod validate;
 
-pub use juno_support::source_manager::{SourceId, SourceLoc, SourceManager, SourceRange};
+pub use juno_support::source_manager::SourceId;
+pub use juno_support::source_manager::SourceLoc;
+pub use juno_support::source_manager::SourceManager;
+pub use juno_support::source_manager::SourceRange;
 
 pub use field::NodeField;
 pub use kind::NodeVariant;
 
-pub use context::{Context, GCLock, NodePtr, NodeRc};
-pub use dump::{dump_json, Pretty};
+pub use context::Context;
+pub use context::GCLock;
+pub use context::NodePtr;
+pub use context::NodeRc;
+pub use dump::dump_json;
+pub use dump::Pretty;
 pub use kind::*;
-pub use validate::{validate_tree, validate_tree_pure, TreeValidationError, ValidationError};
+pub use validate::validate_tree;
+pub use validate::validate_tree_pure;
+pub use validate::TreeValidationError;
+pub use validate::ValidationError;
 
 /// Indicates the path to the current node.
 #[derive(Debug, Copy, Clone)]

@@ -12,7 +12,8 @@
 //! Nodes must be freed explicitly and are added to a free list.
 //! This is not intended to be a user-visible API.
 
-use std::cell::{Cell, UnsafeCell};
+use std::cell::Cell;
+use std::cell::UnsafeCell;
 use std::mem::MaybeUninit;
 use std::ptr;
 use std::ptr::NonNull;

@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::fmt::{Display, Formatter};
-use std::time::{Duration, Instant};
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::time::Duration;
+use std::time::Instant;
 
 type Mark = (&'static str, Duration);
 

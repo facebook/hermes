@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use sourcemap::{SourceMap, SourceMapBuilder};
+use sourcemap::SourceMap;
+use sourcemap::SourceMapBuilder;
 
 /// Return a merged version of the `input` and `output` source maps.
 /// Currently this only supports a single input source map.

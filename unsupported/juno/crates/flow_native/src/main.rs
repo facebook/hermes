@@ -5,17 +5,29 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow::{self, Context};
-use juno::ast::{self, node_cast, NodeRc};
-use juno::hparser::{self, ParserDialect};
-use juno::sema::{DeclId, DeclKind, FunctionInfoId, LexicalScopeId, Resolution, SemContext};
-use juno::{resolve_dependency, sema};
+use anyhow::Context;
+use anyhow::{self};
+use juno::ast::node_cast;
+use juno::ast::NodeRc;
+use juno::ast::{self};
+use juno::hparser::ParserDialect;
+use juno::hparser::{self};
+use juno::resolve_dependency;
+use juno::sema;
+use juno::sema::DeclId;
+use juno::sema::DeclKind;
+use juno::sema::FunctionInfoId;
+use juno::sema::LexicalScopeId;
+use juno::sema::Resolution;
+use juno::sema::SemContext;
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
 use std::collections::HashSet;
 use std::fmt;
 
-use std::io::{stdout, BufWriter, Write};
+use std::io::stdout;
+use std::io::BufWriter;
+use std::io::Write;
 use std::process::exit;
 use std::rc::Rc;
 

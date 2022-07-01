@@ -10,6 +10,7 @@
 //! Provides transformation traits and the ability to compose them in a pipeline.
 
 mod manager;
-pub use manager::{Pass, PassManager};
+pub use manager::Pass;
+pub use manager::PassManager;
 
 mod passes;

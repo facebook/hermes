@@ -7,19 +7,26 @@
 
 //! Garbage-collected Storage structures for AST nodes.
 
-use crate::{Node, Path, SourceManager, Visitor};
-use juno_support::atom_table::{Atom, AtomTable, AtomU16};
-use juno_support::{Deque, HeapSize};
+use crate::Node;
+use crate::Path;
+use crate::SourceManager;
+use crate::Visitor;
+use juno_support::atom_table::Atom;
+use juno_support::atom_table::AtomTable;
+use juno_support::atom_table::AtomU16;
+use juno_support::Deque;
+use juno_support::HeapSize;
 use libc::c_void;
 use memoffset::offset_of;
-use std::hash::{Hash, Hasher};
+use std::cell::Cell;
+use std::cell::UnsafeCell;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::ops::Deref;
-use std::{
-    cell::{Cell, UnsafeCell},
-    pin::Pin,
-    ptr::NonNull,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use std::pin::Pin;
+use std::ptr::NonNull;
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::Ordering;
 
 /// ID which indicates a `StorageEntry` is free.
 const FREE_ENTRY: u32 = 0;

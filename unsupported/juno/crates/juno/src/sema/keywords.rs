@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use juno_support::atom_table::{Atom, AtomTable};
+use juno_support::atom_table::Atom;
+use juno_support::atom_table::AtomTable;
 
 pub(super) struct Keywords {
     pub ident_arguments: Atom,

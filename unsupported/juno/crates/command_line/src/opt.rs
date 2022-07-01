@@ -6,7 +6,8 @@
  */
 
 use crate::cl::CommandLine;
-use std::cell::{Cell, UnsafeCell};
+use std::cell::Cell;
+use std::cell::UnsafeCell;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::rc::Rc;
