@@ -372,6 +372,35 @@ describe('jsx', () => {
           },
         );
       });
+      test('identifier - fbs', () => {
+        verifyHasScopes(
+          `
+            import React from 'react';
+            import fbs from 'fbs';
+            <fbs />;
+          `,
+          [
+            {
+              type: ScopeType.Module,
+              variables: [
+                {
+                  name: 'React',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 0,
+                },
+                {
+                  name: 'fbs',
+                  type: DefinitionType.ImportBinding,
+                  referenceCount: 1,
+                },
+              ],
+            },
+          ],
+          {
+            fbt: true,
+          },
+        );
+      });
       test('namespace', () => {
         verifyHasScopes(
           `

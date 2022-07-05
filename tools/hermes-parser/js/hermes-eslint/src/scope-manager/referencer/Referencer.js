@@ -104,6 +104,8 @@ function getJsxName(name: JSXTagNameExpression): string {
   }
 }
 
+const FBT_NAMES = new Set(['fbt', 'fbs']);
+
 type ReferencerOptions = $ReadOnly<{
   ...VisitorOptions,
   fbtSupport: boolean | null,
@@ -584,7 +586,7 @@ class Referencer extends Visitor {
 
   JSXOpeningElement(node: JSXOpeningElement): void {
     const rootName = getJsxName(node.name);
-    if (rootName !== 'fbt' || this._fbtSupport !== true) {
+    if (this._fbtSupport !== true || !FBT_NAMES.has(rootName)) {
       // <fbt /> does not reference the jsxPragma, but instead references the fbt import
       this._referenceJsxPragma();
     }
@@ -593,7 +595,7 @@ class Referencer extends Visitor {
       case 'JSXIdentifier':
         if (
           rootName[0].toUpperCase() === rootName[0] ||
-          (rootName === 'fbt' && this._fbtSupport === true)
+          (this._fbtSupport === true && FBT_NAMES.has(rootName))
         ) {
           // lower cased component names are always treated as "intrinsic" names, and are converted to a string,
           // not a variable by JSX transforms:
