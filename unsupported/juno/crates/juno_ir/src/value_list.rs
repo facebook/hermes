@@ -34,6 +34,7 @@ pub(crate) struct UseNode {
 
 uref_intrusive_adapter!(UseNodeAdapter = URef<UseNode>: UseNode { link: LinkedListLink } );
 
+#[derive(Default)]
 pub(crate) struct ValueList {
     owner: Option<URef<Instruction>>,
     data: Vec<UseNode>,
@@ -118,15 +119,6 @@ impl Drop for UseNode {
             unsafe {
                 old_value.remove_user(self);
             }
-        }
-    }
-}
-
-impl Default for ValueList {
-    fn default() -> Self {
-        Self {
-            owner: None,
-            data: Vec::new(),
         }
     }
 }

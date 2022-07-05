@@ -242,7 +242,7 @@ impl<W: Write> Compiler<W> {
         result
     }
 
-    fn create_scope<'gc>(&mut self, scope: LexicalScopeId) {
+    fn create_scope(&mut self, scope: LexicalScopeId) {
         out!(self, "Scope{0} *scope{0} = new Scope{0}();\n", scope);
         let scope = self.sem.scope(scope);
         for decl in &scope.decls {
