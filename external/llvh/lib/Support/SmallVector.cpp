@@ -42,13 +42,16 @@ static_assert(sizeof(SmallVector<void *, 1>) ==
 /// on POD-like datatypes and is out of line to reduce code duplication.
 void SmallVectorBase::grow_pod(void *FirstEl, size_t MinCapacity,
                                size_t TSize) {
-  // Ensure we can fit the new capacity in 32 bits.
-  if (MinCapacity > UINT32_MAX)
-    report_bad_alloc_error("SmallVector capacity overflow during allocation");
+  constexpr size_t MinGrowth = 1;
+  size_t NewCapacity = 2 * capacity() + MinGrowth; // Always grow.
+  NewCapacity = static_cast<unsigned>(std::max(NewCapacity, MinCapacity));
 
-  size_t NewCapacity = 2 * capacity() + 1; // Always grow.
-  NewCapacity =
-      std::min(std::max(NewCapacity, MinCapacity), size_t(UINT32_MAX));
+  // Ensure that NewCapacity did not overflow an unsigned int,
+  // and that the capacity in bytes will not overflow a size_t.
+  if (NewCapacity <= this->capacity() ||
+      NewCapacity < MinCapacity ||
+      NewCapacity > size_t(-1) / TSize)
+    report_bad_alloc_error("SmallVector capacity overflow during allocation");
 
   void *NewElts;
   if (BeginX == FirstEl) {
