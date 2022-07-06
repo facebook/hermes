@@ -219,8 +219,7 @@ pub unsafe fn cvt_node_ptr_opt<'gc, 'ast: 'gc>(
     ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodePtrOpt,
 ) -> Option<&'gc ast::Node<'gc>> {
-    n.as_node_ptr()
-        .map(|n| unsafe { cvt_node_ptr(cvt, ctx, n) })
+    n.as_node_ptr().map(|n| cvt_node_ptr(cvt, ctx, n))
 }
 
 pub unsafe fn cvt_node_list<'gc, 'ast: 'gc>(
@@ -240,8 +239,7 @@ pub unsafe fn cvt_node_list_opt<'gc, 'ast: 'gc>(
     ctx: &'gc ast::GCLock<'ast, '_>,
     n: NodeListOptRef,
 ) -> Option<ast::NodeList<'gc>> {
-    n.as_node_list_ref()
-        .map(|n| unsafe { cvt_node_list(cvt, ctx, n) })
+    n.as_node_list_ref().map(|n| cvt_node_list(cvt, ctx, n))
 }
 
 /// Convert any of the enum `NodeLabel`s into their respective Rust enum types.

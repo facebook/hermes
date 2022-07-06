@@ -1,0 +1,4 @@
+[target.'cfg(all())']
+rustflags = [
+  "-Aclippy::manual_range_contains"
+]
