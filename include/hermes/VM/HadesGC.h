@@ -955,6 +955,9 @@ class HadesGC final : public GCBase {
   ///   compaction cannot occur no matter what.
   void prepareCompactee(bool forceCompaction);
 
+  /// Run finalizers on the compactee and clear any compaction state.
+  void finalizeCompactee();
+
   /// Search a single segment for pointers that may need to be updated as the
   /// YG/compactee are evacuated.
   template <bool CompactionEnabled>

@@ -1717,6 +1717,20 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   }
 }
 
+void HadesGC::finalizeCompactee() {
+  // Run finalisers on compacted objects.
+  compactee_.segment->forCompactedObjs(
+      [this](GCCell *cell) { cell->getVT()->finalizeIfExists(cell, *this); },
+      getPointerBase());
+
+  const size_t segIdx =
+      SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim());
+  segmentIndices_.push_back(segIdx);
+  removeSegmentExtentFromCrashManager(std::to_string(segIdx));
+  removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
+  compactee_ = {};
+}
+
 void HadesGC::updateOldGenThreshold() {
   // TODO: Dynamic threshold is not used in incremental mode because
   // getDrainRate computes the mark rate directly based on the threshold. This
@@ -2447,27 +2461,17 @@ void HadesGC::youngGenCollection(
     if (doCompaction) {
       ygCollectionStats_->addCollectionType("compact");
       heapBytes.before += compactee_.allocatedBytes;
+      // We can use the total amount of external memory in the OG before and
+      // after running finalizers to measure how much external memory has been
+      // released.
       uint64_t ogExternalBefore = oldGen_.externalBytes();
-      // Run finalisers on compacted objects.
-      compactee_.segment->forCompactedObjs(
-          [this](GCCell *cell) {
-            cell->getVT()->finalizeIfExists(cell, *this);
-          },
-          getPointerBase());
+      finalizeCompactee();
       const uint64_t externalCompactedBytes =
           ogExternalBefore - oldGen_.externalBytes();
       // Since we can't track the actual number of external bytes that were in
       // this segment, just use the swept external byte count.
       externalBytes.before += externalCompactedBytes;
       externalBytes.after += externalCompactedBytes;
-
-      const size_t segIdx =
-          SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim());
-      segmentIndices_.push_back(segIdx);
-      removeSegmentExtentFromCrashManager(std::to_string(segIdx));
-      removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
-
-      compactee_ = {};
     }
 
     // Move external memory accounting from YG to OG as well.
