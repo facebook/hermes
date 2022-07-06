@@ -394,12 +394,9 @@ class HadesGC final : public GCBase {
     /// Take ownership of the given segment.
     void addSegment(HeapSegment seg);
 
-    /// Remove the segment at \p segmentIdx.
-    /// WARN: This is an expensive operation and should be used sparingly. It
-    /// calls eraseSegmentFreelists, which has a worst case time complexity of
-    /// O(#Freelist buckets * #Segments).
-    /// \return the segment previously at segmentIdx
-    HeapSegment removeSegment(size_t segmentIdx);
+    /// Remove the last segment from the OG.
+    /// \return the segment that was removed.
+    HeapSegment popSegment();
 
     /// Indicate that OG should target having a size of \p targetSizeBytes.
     void setTargetSizeBytes(size_t targetSizeBytes);
@@ -505,10 +502,6 @@ class HadesGC final : public GCBase {
     /// freelist.
     /// \return a pointer to the removed cell.
     FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
-
-    /// Remove a segment entirely from every freelist. This will shift all bits
-    /// after segmentIdx down by one.
-    void eraseSegmentFreelists(size_t segmentIdx);
 
     /// Sweep the next segment and advance the internal sweep iterator. If there
     /// are no more segments left to sweep, update OG collection stats with
@@ -955,8 +948,8 @@ class HadesGC final : public GCBase {
   /// heap limit. Should be called at the start of completeMarking.
   void updateOldGenThreshold();
 
-  /// Select a segment to compact and initialise any state needed for
-  /// compaction.
+  /// Prepare the last segment in the OG for compaction and initialise any
+  /// necessary state.
   /// \param forceCompaction If true, a compactee will be prepared regardless of
   ///   heap conditions. Note that if there are no OG heap segments, a
   ///   compaction cannot occur no matter what.

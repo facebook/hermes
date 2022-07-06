@@ -115,7 +115,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
 
 #ifdef HERMESVM_GC_HADES
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(26, contextualCustomData.size());
+  EXPECT_LE(26, contextualCustomData.size());
   const std::string expectedKeyBase = "XYZ:HeapSegment:";
   for (int i = 0; i < 26; i++) {
     const std::string expectedKey =

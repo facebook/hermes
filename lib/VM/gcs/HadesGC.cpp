@@ -150,29 +150,6 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
   return cell;
 }
 
-void HadesGC::OldGen::eraseSegmentFreelists(size_t segmentIdx) {
-  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
-    freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
-    auto iter = freelistBucketSegmentBitArray_[bucket].begin();
-    auto endIter = freelistBucketSegmentBitArray_[bucket].end();
-    while (iter != endIter && *iter <= segmentIdx)
-      iter++;
-
-    // Move all the set bits after segmentIdx down by 1.
-    while (iter != endIter) {
-      // Increment the iterator before manipulating values because the
-      // manipulation may invalidate our current iterator.
-      size_t idx = *iter++;
-      freelistBucketSegmentBitArray_[bucket].set(idx - 1);
-      freelistBucketSegmentBitArray_[bucket].reset(idx);
-    }
-
-    freelistBucketBitArray_.set(
-        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
-  }
-  freelistSegmentsBuckets_.erase(freelistSegmentsBuckets_.begin() + segmentIdx);
-}
-
 /* static */
 void HadesGC::HeapSegment::setCellHead(
     const GCCell *cellStart,
@@ -1711,7 +1688,12 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   if (promoteYGToOG_)
     return;
 
-  llvh::Optional<size_t> compacteeIdx;
+#ifdef HERMESVM_SANITIZE_HANDLES
+  // Handle-SAN forces a compaction to move some OG objects.
+  if (sanitizeRate_)
+    forceCompaction = true;
+#endif
+
   // To avoid compacting too often, keep a buffer of one segment or 5% of the
   // heap (whichever is greater). Since the selected segment will be removed
   // from the heap, we only want to compact if there are at least 2 segments in
@@ -1722,32 +1704,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   uint64_t totalBytes = oldGen_.size() + oldGen_.externalBytes();
   if ((forceCompaction || totalBytes > threshold) &&
       oldGen_.numSegments() > 1) {
-    // Select the one with the fewest allocated bytes, to
-    // minimise scanning and copying. We intentionally avoid selecting the very
-    // last segment, since that is going to be the most recently added segment
-    // and is unlikely to be fragmented enough to be a good compaction
-    // candidate.
-    uint64_t minBytes = HeapSegment::maxSize();
-    for (size_t i = 0; i < oldGen_.numSegments() - 1; ++i) {
-      const size_t curBytes = oldGen_.allocatedBytes(i);
-      if (curBytes < minBytes) {
-        compacteeIdx = i;
-        minBytes = curBytes;
-      }
-    }
-  }
-#ifdef HERMESVM_SANITIZE_HANDLES
-  // Handle-SAN forces a compaction on random segments to move the heap.
-  if (sanitizeRate_ && oldGen_.numSegments()) {
-    std::uniform_int_distribution<> distrib(0, oldGen_.numSegments() - 1);
-    compacteeIdx = distrib(randomEngine_);
-  }
-#endif
-
-  if (compacteeIdx) {
-    compactee_.allocatedBytes = oldGen_.allocatedBytes(*compacteeIdx);
-    compactee_.segment =
-        std::make_shared<HeapSegment>(oldGen_.removeSegment(*compacteeIdx));
+    compactee_.allocatedBytes =
+        oldGen_.allocatedBytes(oldGen_.numSegments() - 1);
+    compactee_.segment = std::make_shared<HeapSegment>(oldGen_.popSegment());
     addSegmentExtentToCrashManager(
         *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
@@ -3017,13 +2976,19 @@ void HadesGC::OldGen::addSegment(HeapSegment seg) {
   gc_.addSegmentExtentToCrashManager(newSeg, std::to_string(numSegments()));
 }
 
-HadesGC::HeapSegment HadesGC::OldGen::removeSegment(size_t segmentIdx) {
-  assert(segmentIdx < segments_.size());
-  eraseSegmentFreelists(segmentIdx);
-  allocatedBytes_ -= segmentAllocatedBytes_[segmentIdx].first;
-  segmentAllocatedBytes_.erase(segmentAllocatedBytes_.begin() + segmentIdx);
-  auto oldSeg = std::move(segments_[segmentIdx]);
-  segments_.erase(segments_.begin() + segmentIdx);
+HadesGC::HeapSegment HadesGC::OldGen::popSegment() {
+  size_t segmentIdx = segments_.size() - 1;
+  for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
+    freelistBucketSegmentBitArray_[bucket].reset(segmentIdx);
+    freelistBucketBitArray_.set(
+        bucket, !freelistBucketSegmentBitArray_[bucket].empty());
+  }
+  freelistSegmentsBuckets_.pop_back();
+
+  allocatedBytes_ -= segmentAllocatedBytes_.back().first;
+  segmentAllocatedBytes_.pop_back();
+  auto oldSeg = std::move(segments_.back());
+  segments_.pop_back();
   return oldSeg;
 }
 
