@@ -409,9 +409,6 @@ class HadesGC final : public GCBase {
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
 
-    /// Adds the given region of memory to the free list for this segment.
-    void addCellToFreelist(void *addr, uint32_t sz, size_t segmentIdx);
-
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, including any bytes allocated in a pending compactee, and
     /// excluding free list entries.
@@ -474,23 +471,6 @@ class HadesGC final : public GCBase {
       }
     };
 
-    /// Adds the given cell to the free list for this segment.
-    /// \pre this->contains(cell) is true.
-    void addCellToFreelist(FreelistCell *cell, size_t segmentIdx);
-
-    /// Remove the cell pointed to by the pointer at \p prevLoc from
-    /// the given \p segmentIdx and \p bucket in the freelist.
-    /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(
-        AssignableCompressedPointer *prevLoc,
-        size_t bucket,
-        size_t segmentIdx);
-
-    /// Remove the first cell from the given \p segmentIdx and \p bucket in the
-    /// freelist.
-    /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
-
     /// Sweep the next segment and advance the internal sweep iterator. If there
     /// are no more segments left to sweep, update OG collection stats with
     /// numbers from the sweep. \p backgroundThread indicates  whether this call
@@ -515,6 +495,26 @@ class HadesGC final : public GCBase {
     /// \p size.
     /// \post The returned index is less than kNumFreelistBuckets.
     static uint32_t getFreelistBucket(uint32_t size);
+
+    /// Adds the given region of memory to the free list for this segment.
+    void addCellToFreelist(void *addr, uint32_t sz, size_t segmentIdx);
+
+    /// Adds the given cell to the free list for this segment.
+    /// \pre this->contains(cell) is true.
+    void addCellToFreelist(FreelistCell *cell, size_t segmentIdx);
+
+    /// Remove the cell pointed to by the pointer at \p prevLoc from
+    /// the given \p segmentIdx and \p bucket in the freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(
+        AssignableCompressedPointer *prevLoc,
+        size_t bucket,
+        size_t segmentIdx);
+
+    /// Remove the first cell from the given \p segmentIdx and \p bucket in the
+    /// freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
 
     /// Adds the given region of memory to the free list for the segment that is
     /// currently being swept. This does not update the Freelist bits, those
