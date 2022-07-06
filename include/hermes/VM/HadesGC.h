@@ -413,24 +413,19 @@ class HadesGC final : public GCBase {
     void addCellToFreelist(void *addr, uint32_t sz, size_t segmentIdx);
 
     /// \return the total number of bytes that are in use by the OG section of
-    /// the JS heap, excluding free list entries.
+    /// the JS heap, including any bytes allocated in a pending compactee, and
+    /// excluding free list entries.
     uint64_t allocatedBytes() const;
 
-    /// \return the total number of bytes that are in use by the segment with
-    /// index \p segmentIdx in the OG section of the JS heap, excluding free
-    /// list entries.
-    uint64_t allocatedBytes(uint16_t segmentIdx) const;
-
-    /// Increase the allocated bytes tracker for the segment at index \p
-    /// segmentIdx;
-    void incrementAllocatedBytes(int32_t incr, uint16_t segmentIdx);
+    /// Increase the allocated bytes tracker by \p incr.
+    void incrementAllocatedBytes(int32_t incr);
 
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
     uint64_t externalBytes() const;
 
     /// \return the total number of bytes that are in use by the OG section of
-    /// the JS heap, including free list entries.
+    /// the JS heap, including any pending compactee and free list entries.
     uint64_t size() const;
 
     /// \return the total number of bytes that we aim to use in the OG
@@ -543,10 +538,6 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
-    /// Each element in the vector contains the currently allocated bytes in the
-    /// segment at the same index in segments_.
-    std::vector<uint32_t> segmentAllocatedBytes_;
-
     /// The amount of bytes of external memory credited to objects in the OG.
     uint64_t externalBytes_{0};
 
@@ -623,9 +614,7 @@ class HadesGC final : public GCBase {
     /// \param cell The free memory that will soon have an object allocated into
     ///   it.
     /// \param sz The number of bytes associated with the free memory.
-    /// \param segmentIdx An index into segments_ representing which segment the
-    /// allocation is being made in.
-    GCCell *finishAlloc(GCCell *cell, uint32_t sz, uint16_t segmentIdx);
+    GCCell *finishAlloc(GCCell *cell, uint32_t sz);
   };
 
  private:
@@ -814,10 +803,6 @@ class HadesGC final : public GCBase {
     /// after it is identified, and freed entirely once the compaction is
     /// complete.
     std::shared_ptr<HeapSegment> segment;
-
-    /// The number of bytes in the compactee, should be set before the compactee
-    /// is removed from the OG.
-    uint32_t allocatedBytes{0};
   } compactee_;
 
   /// If compaction completes before sweeping, there is a possibility that
