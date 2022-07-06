@@ -213,16 +213,24 @@ class TimedRuntime final : public jsi::RuntimeDecorator<jsi::Runtime> {
   /// @name HermesRuntime methods.
   /// @{
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override {
-    return RD::createObject(
-        std::make_shared<TimedHostObject>(*this, std::move(ho), rts_));
+    // We cannot invoke RD::createObject here since that wraps its argument in
+    // another DecoratedHostObject. We also can't directly call createObject on
+    // the plain runtime because createObject is a protected method.
+    return jsi::Object::createFromHostObject(
+        plain(), std::make_shared<TimedHostObject>(*this, std::move(ho), rts_));
   }
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
       unsigned int paramCount,
       jsi::HostFunctionType func) override {
-    return RD::createFunctionFromHostFunction(
-        name, paramCount, TimedHostFunction{*this, std::move(func), rts_});
+    // See the comment on createObject above for why we cannot call
+    // RD::createFunctionFromHostFunction.
+    return jsi::Function::createFromHostFunction(
+        plain(),
+        name,
+        paramCount,
+        TimedHostFunction{*this, std::move(func), rts_});
   }
 
   jsi::Value evaluateJavaScript(
