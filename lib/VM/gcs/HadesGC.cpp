@@ -2310,7 +2310,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
       AssignableCompressedPointer cellCP =
           freelistSegmentsBuckets_[segmentIdx][bucket];
 
-      while (cellCP) {
+      do {
         auto *cell =
             vmcast<FreelistCell>(cellCP.getNonNull(gc_.getPointerBase()));
         assert(
@@ -2358,7 +2358,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
         // in the heap. That's not true in debug modes currently.
         prevLoc = &cell->next_;
         cellCP = cell->next_;
-      }
+      } while (cellCP);
     }
   }
   return nullptr;
