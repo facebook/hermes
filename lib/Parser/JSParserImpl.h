@@ -263,7 +263,9 @@ class JSParserImpl {
   UniqueString *constructorIdent_;
   UniqueString *yieldIdent_;
   UniqueString *newIdent_;
+  UniqueString *importIdent_;
   UniqueString *targetIdent_;
+  UniqueString *metaIdent_;
   UniqueString *valueIdent_;
   UniqueString *typeIdent_;
   UniqueString *asyncIdent_;

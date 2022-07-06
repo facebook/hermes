@@ -118,6 +118,14 @@ void SemanticValidator::visit(MetaPropertyNode *metaProp) {
     return;
   }
 
+  if (meta->_name->str() == "import" && property->_name->str() == "meta") {
+    if (compile_) {
+      sm_.error(
+          metaProp->getSourceRange(), "'import.meta' is currently unsupported");
+    }
+    return;
+  }
+
   sm_.error(
       metaProp->getSourceRange(),
       "invalid meta property " + meta->_name->str() + "." +

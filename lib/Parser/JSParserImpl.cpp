@@ -74,6 +74,8 @@ void JSParserImpl::initializeIdentifiers() {
   yieldIdent_ = lexer_.getIdentifier("yield");
   newIdent_ = lexer_.getIdentifier("new");
   targetIdent_ = lexer_.getIdentifier("target");
+  importIdent_ = lexer_.getIdentifier("import");
+  metaIdent_ = lexer_.getIdentifier("meta");
   valueIdent_ = lexer_.getIdentifier("value");
   typeIdent_ = lexer_.getIdentifier("type");
   asyncIdent_ = lexer_.getIdentifier("async");
@@ -3155,46 +3157,70 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
       return None;
     }
   } else if (check(TokenKind::rw_import)) {
-    // ImportCall must be a call with an AssignmentExpression as the
-    // argument.
-    advance();
-    if (!eat(
-            TokenKind::l_paren,
-            JSLexer::AllowRegExp,
-            "in import call",
-            "location of 'import'",
-            startLoc))
-      return None;
-
-    auto optSource = parseAssignmentExpression(ParamIn);
-    if (!optSource)
-      return None;
-    ESTree::Node *source = *optSource;
-
-    checkAndEat(TokenKind::comma);
-
-    ESTree::Node *attributes = nullptr;
-    if (!check(TokenKind::r_paren)) {
-      auto optAttributes = parseAssignmentExpression();
-      if (!optAttributes)
+    SMRange importRange = advance();
+    if (checkAndEat(TokenKind::period)) {
+      // ImportMeta: import . meta
+      //                      ^
+      if (!check(metaIdent_)) {
+        error(tok_->getSourceRange(), "'meta' expected in member expression");
+        sm_.note(
+            importRange.Start, "start of member expression", Subsystem::Parser);
         return None;
-      attributes = *optAttributes;
+      }
+      auto *meta = setLocation(
+          importRange,
+          importRange,
+          new (context_) ESTree::IdentifierNode(importIdent_, nullptr, false));
+      auto *prop = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::IdentifierNode(metaIdent_, nullptr, false));
+      advance();
+      expr = setLocation(
+          meta,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::MetaPropertyNode(meta, prop));
+    } else {
+      // ImportCall must be a call with an AssignmentExpression as the
+      // argument.
+      if (!eat(
+              TokenKind::l_paren,
+              JSLexer::AllowRegExp,
+              "in import call",
+              "location of 'import'",
+              startLoc))
+        return None;
+
+      auto optSource = parseAssignmentExpression(ParamIn);
+      if (!optSource)
+        return None;
+      ESTree::Node *source = *optSource;
+
       checkAndEat(TokenKind::comma);
+
+      ESTree::Node *attributes = nullptr;
+      if (!check(TokenKind::r_paren)) {
+        auto optAttributes = parseAssignmentExpression();
+        if (!optAttributes)
+          return None;
+        attributes = *optAttributes;
+        checkAndEat(TokenKind::comma);
+      }
+
+      SMLoc endLoc = tok_->getEndLoc();
+      if (!eat(
+              TokenKind::r_paren,
+              JSLexer::AllowRegExp,
+              "in import call",
+              "location of 'import'",
+              startLoc))
+        return None;
+
+      expr = setLocation(
+          startLoc,
+          endLoc,
+          new (context_) ESTree::ImportExpressionNode(source, attributes));
     }
-
-    SMLoc endLoc = tok_->getEndLoc();
-    if (!eat(
-            TokenKind::r_paren,
-            JSLexer::AllowRegExp,
-            "in import call",
-            "location of 'import'",
-            startLoc))
-      return None;
-
-    expr = setLocation(
-        startLoc,
-        endLoc,
-        new (context_) ESTree::ImportExpressionNode(source, attributes));
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
