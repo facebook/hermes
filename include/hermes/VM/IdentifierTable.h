@@ -149,9 +149,11 @@ class IdentifierTable {
   /// Mark all identifiers for the garbage collector.
   void markIdentifiers(RootAcceptor &acceptor, GC &gc);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Add native nodes and edges to heap snapshots.
   void snapshotAddNodes(HeapSnapshot &snap);
   void snapshotAddEdges(HeapSnapshot &snap);
+#endif
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for

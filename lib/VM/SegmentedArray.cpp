@@ -20,13 +20,14 @@ const VTable SegmentedArrayBase<HVType>::Segment::vt(
     nullptr,
     nullptr,
     nullptr,
-    nullptr,
-    VTable::HeapSnapshotMetadata{
-        HeapSnapshot::NodeType::Array,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr});
+    nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    ,
+    VTable::HeapSnapshotMetadata {
+      HeapSnapshot::NodeType::Array, nullptr, nullptr, nullptr, nullptr
+    }
+#endif
+);
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray::Segment *>(cell);
@@ -76,13 +77,14 @@ const VTable SegmentedArrayBase<HVType>::vt(
     nullptr,
     nullptr,
     nullptr,
-    _trimSizeCallback,
-    VTable::HeapSnapshotMetadata{
-        HeapSnapshot::NodeType::Array,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr});
+    _trimSizeCallback
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    ,
+    VTable::HeapSnapshotMetadata {
+      HeapSnapshot::NodeType::Array, nullptr, nullptr, nullptr, nullptr
+    }
+#endif
+);
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);

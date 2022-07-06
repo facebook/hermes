@@ -175,6 +175,7 @@ void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC &gc) {
   }
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void IdentifierTable::snapshotAddNodes(HeapSnapshot &snap) {
   snap.beginNode();
   snap.endNode(
@@ -221,6 +222,7 @@ void IdentifierTable::snapshotAddEdges(HeapSnapshot &snap) {
       GCBase::IDTracker::reserved(
           GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols));
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 void IdentifierTable::visitIdentifiers(
     const std::function<void(SymbolID, const StringPrimitive *)> &acceptor) {

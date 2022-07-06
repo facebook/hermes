@@ -312,7 +312,9 @@ class Callable : public JSObject {
   Callable(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, parent, clazz), environment_() {}
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
+#endif
 
   /// Create a an instance of Object to be passed as the 'this' argument when
   /// invoking the constructor.
@@ -650,7 +652,9 @@ class NativeFunction : public Callable {
         functionPtr_(functionPtr) {}
 
  protected:
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
+#endif
 
   /// Call the native function with arguments already on the stack.
   static CallResult<PseudoHandle<>> _callImpl(
@@ -914,10 +918,12 @@ class JSFunction : public Callable {
       Handle<Callable> selfHandle,
       Runtime &runtime);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
   static void
   _snapshotAddLocationsImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 };
 
 /// A function which interprets code and returns a Async Function when called.

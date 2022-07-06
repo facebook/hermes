@@ -217,8 +217,10 @@ class MallocGC final : public GCBase {
   bool dbgContains(const void *p) const override;
 #endif
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvh::raw_ostream &os) override;
+#endif
 
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;

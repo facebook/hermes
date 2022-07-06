@@ -23,13 +23,15 @@ const ObjectVTable JSArrayBuffer::vt{
         _finalizeImpl,
         nullptr,
         _mallocSizeImpl,
-        nullptr,
-        VTable::HeapSnapshotMetadata{
-            HeapSnapshot::NodeType::Object,
-            nullptr,
-            _snapshotAddEdgesImpl,
-            _snapshotAddNodesImpl,
-            nullptr}),
+        nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+        ,
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Object, nullptr, _snapshotAddEdgesImpl,
+              _snapshotAddNodesImpl, nullptr
+        }
+#endif
+        ),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -132,6 +134,7 @@ size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
   return buffer->size_;
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void JSArrayBuffer::_snapshotAddEdgesImpl(
     GCCell *cell,
     GC &gc,
@@ -166,6 +169,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
       self->size_,
       0);
 }
+#endif
 
 void JSArrayBuffer::detach(GC &gc) {
   uint8_t *data = data_.get(gc);

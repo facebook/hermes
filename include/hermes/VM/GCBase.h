@@ -310,6 +310,7 @@ class GCBase {
     /// the current VM stack-trace. It's "slow" because it's virtual.
     virtual const inst::Inst *getCurrentIPSlow() const = 0;
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     /// Return a \c StackTracesTreeNode representing the current VM stack-trace
     /// at this point.
     virtual StackTracesTreeNode *getCurrentStackTracesTreeNode(
@@ -318,6 +319,7 @@ class GCBase {
     /// Get a StackTraceTree which can be used to recover stack-traces from \c
     /// StackTraceTreeNode() as returned by \c getCurrentStackTracesTreeNode() .
     virtual StackTracesTree *getStackTracesTree() = 0;
+#endif
 
 #ifdef HERMES_SLOW_DEBUG
     /// \return true if the given symbol is a live entry in the identifier
@@ -414,6 +416,7 @@ class GCBase {
   };
 #endif
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// When enabled, every allocation gets an attached stack-trace and an
   /// object ID. When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
@@ -566,6 +569,7 @@ class GCBase {
     /// \return How many bytes should be waited until the next sample.
     size_t nextSample();
   };
+#endif
 
   class IDTracker final {
    public:
@@ -959,6 +963,7 @@ class GCBase {
   /// fatal out-of-memory error.
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Creates a snapshot of the heap and writes it to the given \p fileName.
   /// \return An error code on failure, else an empty error code.
   std::error_code createSnapshotToFile(const std::string &fileName);
@@ -1003,6 +1008,7 @@ class GCBase {
   /// trace to \p os. After this call, any remembered data about sampled objects
   /// will be gone.
   virtual void disableSamplingHeapProfiler(llvh::raw_ostream &os);
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
   /// Inform the GC about external memory retained by objects.
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) = 0;
@@ -1210,15 +1216,20 @@ class GCBase {
   virtual std::string getKindAsStr() const = 0;
 
   bool isTrackingIDs() {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     return getIDTracker().isTrackingIDs() ||
         getAllocationLocationTracker().isEnabled() ||
         getSamplingAllocationTracker().isEnabled();
+#else
+    return getIDTracker().isTrackingIDs();
+#endif
   }
 
   IDTracker &getIDTracker() {
     return idTracker_;
   }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   AllocationLocationTracker &getAllocationLocationTracker() {
     return allocationLocationTracker_;
   }
@@ -1226,6 +1237,7 @@ class GCBase {
   SamplingAllocationLocationTracker &getSamplingAllocationTracker() {
     return samplingAllocationTracker_;
   }
+#endif
 
   /// \name Snapshot ID methods
   /// \{
@@ -1502,11 +1514,13 @@ class GCBase {
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Attaches stack-traces to objects when enabled.
   AllocationLocationTracker allocationLocationTracker_;
 
   /// Attaches stack-traces to objects when enabled.
   SamplingAllocationLocationTracker samplingAllocationTracker_;
+#endif
 
 #ifndef NDEBUG
   /// The number of reasons why no allocation is allowed in this heap right

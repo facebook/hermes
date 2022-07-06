@@ -19,6 +19,8 @@
 namespace hermes {
 namespace vm {
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+
 namespace {
 
 /// Lower an instance \p e of enumeration \p Enum to its underlying type.
@@ -507,6 +509,8 @@ void ChromeSamplingMemoryProfile::emitSample(
 void ChromeSamplingMemoryProfile::endSamples() {
   json_.closeArray();
 }
+
+#endif
 
 std::string converter(const char *name) {
   return std::string(name);

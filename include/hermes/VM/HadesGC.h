@@ -90,6 +90,7 @@ class HadesGC final : public GCBase {
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   void createSnapshot(llvh::raw_ostream &os) override;
   void snapshotAddGCNativeNodes(HeapSnapshot &snap) override;
   void snapshotAddGCNativeEdges(HeapSnapshot &snap) override;
@@ -103,6 +104,7 @@ class HadesGC final : public GCBase {
   void enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed)
       override;
   void disableSamplingHeapProfiler(llvh::raw_ostream &os) override;
+#endif // HERMES_MEMORY_INSTRUMENTATION
   void printStats(JSONEmitter &json) override;
   std::string getKindAsStr() const override;
 

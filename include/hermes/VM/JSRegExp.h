@@ -142,9 +142,11 @@ class JSRegExp final : public JSObject {
   static void _finalizeImpl(GCCell *cell, GC &gc);
   static size_t _mallocSizeImpl(GCCell *cell);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 };
 
 static_assert(

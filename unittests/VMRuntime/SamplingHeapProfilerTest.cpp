@@ -29,7 +29,7 @@ namespace hermes {
 namespace {
 
 // The sampling heap profiler only works with location traces enabled.
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 static JSONObject *parseProfile(
     const std::string &json,

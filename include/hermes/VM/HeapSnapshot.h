@@ -98,6 +98,7 @@ class HeapSnapshot {
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   HeapSnapshot(JSONEmitter &json, StackTracesTree *stackTracesTree);
 
   /// NOTE: this destructor writes to \p json.
@@ -186,8 +187,11 @@ class HeapSnapshot {
   /// correctness of the snapshot.
   EdgeIndex expectedEdges_{0};
 #endif
+
+#endif // HERMES_MEMORY_INSTRUMENTATION
 };
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 /// Use this class to output the Chrome .heapprofile file extension type.
 /// It's a JSON-based output, here's a small example of the top of the file:
 /// \code
@@ -281,6 +285,8 @@ class ChromeSamplingMemoryProfile final {
           StackTracesTreeNode *,
           llvh::DenseMap<size_t, size_t>> &sizesToCounts);
 };
+
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 } // namespace vm
 } // namespace hermes

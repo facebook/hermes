@@ -136,7 +136,8 @@ createHeapSnapshot("/tmp/filename.heapsnapshot");
 ```
 
 Note that `createHeapSnapshot` does not exist if you are running Hermes in
-React Native, and you will get an exception if you try to use it.
+React Native, or if Hermes was built without memory instrumentation, and
+you will get an exception if you try to use it.
 
 ## Loading a heap snapshot from disk
 

@@ -549,10 +549,12 @@ bool MallocGC::dbgContains(const void *p) const {
 }
 #endif
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void MallocGC::createSnapshot(llvh::raw_ostream &os) {
   GCCycle cycle{*this};
   GCBase::createSnapshot(*this, os);
 }
+#endif
 
 void MallocGC::creditExternalMemory(GCCell *, uint32_t size) {
   externalBytes_ += size;

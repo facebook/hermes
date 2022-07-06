@@ -24,6 +24,7 @@ namespace vm {
 
 namespace detail {
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void TransitionMap::snapshotAddNodes(GC &gc, HeapSnapshot &snap) {
   if (!isLarge()) {
     return;
@@ -57,6 +58,7 @@ void TransitionMap::snapshotUntrackMemory(GC &gc) {
     gc.getIDTracker().untrackNative(large());
   }
 }
+#endif
 
 void TransitionMap::insertUnsafe(
     Runtime &runtime,
@@ -97,13 +99,17 @@ const VTable HiddenClass::vt{
     _finalizeImpl,
     _markWeakImpl,
     _mallocSizeImpl,
-    nullptr,
+    nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    ,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::Object,
         HiddenClass::_snapshotNameImpl,
         HiddenClass::_snapshotAddEdgesImpl,
         HiddenClass::_snapshotAddNodesImpl,
-        nullptr}};
+        nullptr}
+#endif
+};
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
@@ -121,7 +127,9 @@ void HiddenClass::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
 
 void HiddenClass::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<HiddenClass>(cell);
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   self->transitionMap_.snapshotUntrackMemory(gc);
+#endif
   self->~HiddenClass();
 }
 
@@ -130,6 +138,7 @@ size_t HiddenClass::_mallocSizeImpl(GCCell *cell) {
   return self->transitionMap_.getMemorySize();
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string HiddenClass::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<HiddenClass>(cell);
   std::string name{cell->getVT()->snapshotMetaData.defaultNameForNode(self)};
@@ -154,6 +163,7 @@ void HiddenClass::_snapshotAddNodesImpl(
   auto *const self = vmcast<HiddenClass>(cell);
   self->transitionMap_.snapshotAddNodes(gc, snap);
 }
+#endif
 
 CallResult<HermesValue> HiddenClass::createRoot(Runtime &runtime) {
   return create(

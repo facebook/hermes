@@ -243,6 +243,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
             if (val.get() > 0)
               acceptor.acceptWeak(val.wr);
         });
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.addCustomSnapshotFunction(
         [this](vm::HeapSnapshot &snap) {
           snap.beginNode();
@@ -276,6 +277,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
                   vm::GCBase::IDTracker::ReservedObjectID::
                       JSIWeakHermesValueList));
         });
+#endif // HERMES_MEMORY_INSTRUMENTATION
   }
 
  public:
@@ -466,39 +468,75 @@ class HermesRuntimeImpl final : public HermesRuntime,
           uint64_t,
           std::chrono::microseconds,
           std::vector<HeapStatsUpdate>)> fragmentCallback) override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.enableAllocationLocationTracker(std::move(fragmentCallback));
+#else
+    throw std::logic_error(
+        "Cannot track heap object stack traces if Hermes isn't "
+        "built with memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation
   void stopTrackingHeapObjectStackTraces() override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.disableAllocationLocationTracker();
+#else
+    throw std::logic_error(
+        "Cannot track heap object stack traces if Hermes isn't "
+        "built with memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation
   void startHeapSampling(size_t samplingInterval) override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.enableSamplingHeapProfiler(samplingInterval);
+#else
+    throw std::logic_error(
+        "Cannot perform heap sampling if Hermes isn't built with "
+        "memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation
   void stopHeapSampling(std::ostream &os) override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     llvh::raw_os_ostream ros(os);
     runtime_.disableSamplingHeapProfiler(ros);
+#else
+    throw std::logic_error(
+        "Cannot perform heap sampling if Hermes isn't built with "
+        " memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     std::error_code code;
     llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
     if (code) {
       throw std::system_error(code);
     }
     runtime_.getHeap().createSnapshot(os);
+#else
+    throw std::logic_error(
+        "Cannot create heap snapshots if Hermes isn't built with "
+        "memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation
   void createSnapshotToStream(std::ostream &os) override {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
     llvh::raw_os_ostream ros(os);
     runtime_.getHeap().createSnapshot(ros);
+#else
+    throw std::logic_error(
+        "Cannot create heap snapshots if Hermes isn't built with "
+        "memory instrumentation.");
+#endif
   }
 
   // Overridden from jsi::Instrumentation

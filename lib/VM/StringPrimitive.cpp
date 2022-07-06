@@ -354,6 +354,7 @@ StringView StringPrimitive::createStringViewMustBeFlat(
   return StringView(self);
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<StringPrimitive>(cell);
   // Only convert up to EXTERNAL_STRING_THRESHOLD characters, because large
@@ -378,6 +379,7 @@ std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC &gc) {
   }
   return out;
 }
+#endif
 
 template <typename T, bool Uniqued>
 DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(Ref src)
@@ -514,6 +516,7 @@ size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
   return self->calcExternalMemorySize();
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
@@ -540,6 +543,7 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
       self->contents_.size(),
       0);
 }
+#endif
 
 template class ExternalStringPrimitive<char16_t>;
 template class ExternalStringPrimitive<char>;
@@ -708,6 +712,7 @@ PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
   }
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 template <typename T>
 void BufferedStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
@@ -719,6 +724,7 @@ void BufferedStringPrimitive<T>::_snapshotAddNodesImpl(
     GCCell *cell,
     GC &gc,
     HeapSnapshot &snap) {}
+#endif
 
 template class BufferedStringPrimitive<char16_t>;
 template class BufferedStringPrimitive<char>;

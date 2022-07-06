@@ -799,7 +799,7 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
   newCodeBlock->lazyCompile(*this);
 
-#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) || !defined(NDEBUG)
+#if defined(HERMES_MEMORY_INSTRUMENTATION) || !defined(NDEBUG)
   // We always call getCurrentIP() in a debug build as this has the effect
   // of asserting the IP is correctly set (not invalidated) at this point.
   // This allows us to leverage our whole test-suite to find missing cases
@@ -807,7 +807,7 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
   const inst::Inst *ip = getCurrentIP();
   (void)ip;
 #endif
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   if (ip) {
     const CodeBlock *codeBlock;
     std::tie(codeBlock, ip) = getCurrentInterpreterLocation(ip);
@@ -1636,7 +1636,7 @@ tailCall:
       if (auto *func = dyn_vmcast<JSFunction>(O2REG(Call))) {
         assert(!SingleStep && "can't single-step a call");
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
         runtime.pushCallStack(curCodeBlock, ip);
 #endif
 
@@ -1818,7 +1818,7 @@ tailCall:
 
         PROFILER_EXIT_FUNCTION(curCodeBlock);
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
         runtime.popCallStack();
 #endif
 
@@ -3714,7 +3714,7 @@ tailCall:
            !catchable) {
       PROFILER_EXIT_FUNCTION(curCodeBlock);
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
       runtime.popCallStack();
 #endif
 

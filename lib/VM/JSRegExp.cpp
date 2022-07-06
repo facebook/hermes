@@ -30,13 +30,17 @@ const ObjectVTable JSRegExp::vt{
         JSRegExp::_finalizeImpl,
         nullptr,
         JSRegExp::_mallocSizeImpl,
-        nullptr,
-        VTable::HeapSnapshotMetadata{
-            HeapSnapshot::NodeType::Regexp,
-            JSRegExp::_snapshotNameImpl,
-            JSRegExp::_snapshotAddEdgesImpl,
-            JSRegExp::_snapshotAddNodesImpl,
-            nullptr}),
+        nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+        ,
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Regexp, JSRegExp::_snapshotNameImpl,
+              JSRegExp::_snapshotAddEdgesImpl, JSRegExp::_snapshotAddNodesImpl,
+              nullptr
+        }
+#endif
+
+        ),
     JSRegExp::_getOwnIndexedRangeImpl,
     JSRegExp::_haveOwnIndexedImpl,
     JSRegExp::_getOwnIndexedPropertyFlagsImpl,
@@ -281,6 +285,7 @@ size_t JSRegExp::_mallocSizeImpl(GCCell *cell) {
   return self->bytecodeSize_;
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<JSRegExp>(cell);
   return converter(getPattern(self, gc.getPointerBase()).get());
@@ -312,6 +317,7 @@ void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
         0);
   }
 }
+#endif
 
 /// \return an escaped string equivalent to \p pattern.
 /// This is used to construct the 'source' property of RegExp. This requires

@@ -227,8 +227,10 @@ class JSWeakMapImplBase : public JSObject {
     return self->getMallocSize();
   }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.

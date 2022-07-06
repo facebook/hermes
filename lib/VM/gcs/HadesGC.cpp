@@ -1350,6 +1350,7 @@ void HadesGC::getCrashManagerHeapInfo(
   crashInfo.used_ = info.allocatedBytes;
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   std::lock_guard<Mutex> lk{gcMutex_};
   // No allocations are allowed throughout the entire heap snapshot process.
@@ -1434,6 +1435,7 @@ void HadesGC::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
   waitForCollectionToFinish("sampling heap profiler disable");
   GCBase::disableSamplingHeapProfiler(os);
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 void HadesGC::printStats(JSONEmitter &json) {
   GCBase::printStats(json);

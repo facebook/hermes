@@ -10,7 +10,7 @@
 
 // Enabling Handle-SAN can create additional allocations, which will invalidate
 // the expected outputs in this test.
-#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) && \
+#if defined(HERMES_MEMORY_INSTRUMENTATION) && \
     !defined(HERMESVM_SANITIZE_HANDLES)
 
 #include "TestHelpers.h"
@@ -896,4 +896,5 @@ foo();
 } // namespace unittest
 } // namespace hermes
 
-#endif // HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#endif // defined(HERMES_MEMORY_INSTRUMENTATION) && \
+       // !defined(HERMESVM_SANITIZE_HANDLES)

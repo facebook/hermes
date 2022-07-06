@@ -71,7 +71,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
       static_cast<GC *>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
           size, std::forward<Args>(args)...);
 #endif
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   newAlloc(ptr, size);
 #endif
   return ptr;

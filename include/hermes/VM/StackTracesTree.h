@@ -16,7 +16,7 @@
 namespace hermes {
 namespace vm {
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 /// This is the root of a tree encoding stack-traces for use by the allocation
 /// location tracker. The idea is to minimize the amount of storage needed per
@@ -123,34 +123,8 @@ struct StackTracesTree {
   llvh::SmallVector<std::unique_ptr<StackTracesTreeNode>, 1024> nodes_;
 };
 
-#else // !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
-struct StackTracesTree {
-  void syncWithRuntimeStack(Runtime &runtime) {}
-
-  StackTracesTreeNode *getRootNode() const {
-    return nullptr;
-  }
-
-  void
-  pushCallStack(Runtime &runtime, const CodeBlock *codeBlock, const Inst *ip) {}
-
-  void popCallStack() {}
-
-  StackTracesTreeNode *
-  getStackTrace(Runtime &runtime, const CodeBlock *codeBlock, const Inst *ip) {
-    return nullptr;
-  }
-
-  std::shared_ptr<StringSetVector> getStringTable() const {
-    return {};
-  }
-
-  bool isHeadAtRoot() {
-    return false;
-  }
-};
-#endif // HERMES_ENABLE_ALLOCATION_TRACES_OR_ASSERTIONS
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 } // namespace vm
 } // namespace hermes
-#endif // HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#endif // HERMES_STACK_TRACES_TREE_H

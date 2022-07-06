@@ -28,6 +28,7 @@ void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("elements", &self->indexedStorage_);
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void ArrayImpl::_snapshotAddEdgesImpl(
     GCCell *cell,
     GC &gc,
@@ -58,6 +59,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
     snap.addIndexedEdge(HeapSnapshot::EdgeType::Element, i, elemID.getValue());
   }
 }
+#endif
 
 bool ArrayImpl::_haveOwnIndexedImpl(
     JSObject *selfObj,
@@ -359,13 +361,15 @@ const ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
-        VTable::HeapSnapshotMetadata{
-            HeapSnapshot::NodeType::Object,
-            nullptr,
-            Arguments::_snapshotAddEdgesImpl,
-            nullptr,
-            nullptr}),
+        nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+        ,
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Object, nullptr,
+              Arguments::_snapshotAddEdgesImpl, nullptr, nullptr
+        }
+#endif
+        ),
     Arguments::_getOwnIndexedRangeImpl,
     Arguments::_haveOwnIndexedImpl,
     Arguments::_getOwnIndexedPropertyFlagsImpl,
@@ -472,13 +476,15 @@ const ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
-        nullptr,
-        VTable::HeapSnapshotMetadata{
-            HeapSnapshot::NodeType::Object,
-            nullptr,
-            JSArray::_snapshotAddEdgesImpl,
-            nullptr,
-            nullptr}),
+        nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+        ,
+        VTable::HeapSnapshotMetadata {
+          HeapSnapshot::NodeType::Object, nullptr,
+              JSArray::_snapshotAddEdgesImpl, nullptr, nullptr
+        }
+#endif
+        ),
     JSArray::_getOwnIndexedRangeImpl,
     JSArray::_haveOwnIndexedImpl,
     JSArray::_getOwnIndexedPropertyFlagsImpl,

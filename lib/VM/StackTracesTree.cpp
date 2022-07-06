@@ -7,7 +7,7 @@
 
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 
-#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -258,4 +258,4 @@ StackTracesTreeNode *StackTracesTree::getStackTrace(
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+#endif // HERMES_MEMORY_INSTRUMENTATION

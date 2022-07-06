@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+
 #include "hermes/VM/HeapSnapshot.h"
 #include "TestHelpers.h"
 #include "gtest/gtest.h"
@@ -1309,3 +1311,5 @@ B(4) @ test.js(2):7:15)#");
 } // namespace heapsnapshottest
 } // namespace unittest
 } // namespace hermes
+
+#endif // HERMES_MEMORY_INSTRUMENTATION

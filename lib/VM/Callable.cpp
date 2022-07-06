@@ -52,10 +52,12 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("environment", &self->environment_);
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string Callable::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = reinterpret_cast<Callable *>(cell);
   return self->getNameIfExists(gc.getPointerBase());
 }
+#endif
 
 CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
     Handle<Callable> /*selfHandle*/,
@@ -460,13 +462,15 @@ const CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                BoundFunction::_snapshotNameImpl,
-                BoundFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure, BoundFunction::_snapshotNameImpl,
+                  BoundFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
         BoundFunction::_getOwnIndexedRangeImpl,
         BoundFunction::_haveOwnIndexedImpl,
         BoundFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -820,13 +824,16 @@ const CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                NativeFunction::_snapshotNameImpl,
-                NativeFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  NativeFunction::_snapshotNameImpl,
+                  NativeFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
         NativeFunction::_getOwnIndexedRangeImpl,
         NativeFunction::_haveOwnIndexedImpl,
         NativeFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -844,10 +851,12 @@ void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&NativeFunction::vt);
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = reinterpret_cast<NativeFunction *>(cell);
   return getFunctionName(self->functionPtr_);
 }
+#endif
 
 Handle<NativeFunction> NativeFunction::create(
     Runtime &runtime,
@@ -990,13 +999,16 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                NativeConstructor::_snapshotNameImpl,
-                NativeConstructor::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  NativeConstructor::_snapshotNameImpl,
+                  NativeConstructor::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
         NativeConstructor::_getOwnIndexedRangeImpl,
         NativeConstructor::_haveOwnIndexedImpl,
         NativeConstructor::_getOwnIndexedPropertyFlagsImpl,
@@ -1042,13 +1054,16 @@ const CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                JSFunction::_snapshotNameImpl,
-                JSFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                JSFunction::_snapshotAddLocationsImpl}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure, JSFunction::_snapshotNameImpl,
+                  JSFunction::_snapshotAddEdgesImpl, nullptr,
+                  JSFunction::_snapshotAddLocationsImpl
+            }
+#endif
+            ),
         JSFunction::_getOwnIndexedRangeImpl,
         JSFunction::_haveOwnIndexedImpl,
         JSFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1087,6 +1102,7 @@ PseudoHandle<JSFunction> JSFunction::create(
   return self;
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
     HeapSnapshot::NodeID id) const {
@@ -1098,6 +1114,7 @@ void JSFunction::addLocationToSnapshot(
         location->column);
   }
 }
+#endif
 
 CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
@@ -1111,6 +1128,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
   return createPseudoHandle(*result);
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   auto *const self = vmcast<JSFunction>(cell);
   std::string funcName = Callable::_snapshotNameImpl(self, gc);
@@ -1142,6 +1160,7 @@ void JSFunction::_snapshotAddLocationsImpl(
   auto *const self = vmcast<JSFunction>(cell);
   self->addLocationToSnapshot(snap, gc.getObjectID(self));
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // class JSAsyncFunction
@@ -1154,13 +1173,16 @@ const CallableVTable JSAsyncFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                JSAsyncFunction::_snapshotNameImpl,
-                JSAsyncFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  JSAsyncFunction::_snapshotNameImpl,
+                  JSAsyncFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
         JSAsyncFunction::_getOwnIndexedRangeImpl,
         JSAsyncFunction::_haveOwnIndexedImpl,
         JSAsyncFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1208,13 +1230,16 @@ const CallableVTable JSGeneratorFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                JSGeneratorFunction::_snapshotNameImpl,
-                JSGeneratorFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  JSGeneratorFunction::_snapshotNameImpl,
+                  JSGeneratorFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
         JSGeneratorFunction::_getOwnIndexedRangeImpl,
         JSGeneratorFunction::_haveOwnIndexedImpl,
         JSGeneratorFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1262,13 +1287,17 @@ const CallableVTable GeneratorInnerFunction::vt{
             nullptr,
             nullptr,
             nullptr,
-            nullptr,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                GeneratorInnerFunction::_snapshotNameImpl,
-                GeneratorInnerFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}),
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  GeneratorInnerFunction::_snapshotNameImpl,
+                  GeneratorInnerFunction::_snapshotAddEdgesImpl, nullptr,
+                  nullptr
+            }
+#endif
+            ),
         GeneratorInnerFunction::_getOwnIndexedRangeImpl,
         GeneratorInnerFunction::_haveOwnIndexedImpl,
         GeneratorInnerFunction::_getOwnIndexedPropertyFlagsImpl,

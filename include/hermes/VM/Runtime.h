@@ -1429,6 +1429,7 @@ class Runtime : public PointerBase,
   }
 
  private:
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Given the current last known IP used in the interpreter loop, returns the
   /// last known CodeBlock and IP combination. IP must not be null as this
   /// suggests we're not in the interpter loop, and there will be no CodeBlock
@@ -1471,8 +1472,6 @@ class Runtime : public PointerBase,
     }
   }
 
-  /// Enable allocation location tracking. Only works with
-  /// HERMES_ENABLE_ALLOCATION_LOCATION_TRACES.
   void enableAllocationLocationTracker() {
     enableAllocationLocationTracker(nullptr);
   }
@@ -1504,6 +1503,7 @@ class Runtime : public PointerBase,
   void popCallStackImpl();
   void pushCallStackImpl(const CodeBlock *codeBlock, const inst::Inst *ip);
   std::unique_ptr<StackTracesTree> stackTracesTree_;
+#endif
 };
 
 /// An encrypted/obfuscated native pointer. The key is held by GCBase.

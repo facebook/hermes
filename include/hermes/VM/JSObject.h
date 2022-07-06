@@ -1232,6 +1232,7 @@ class JSObject : public GCCell {
       const IndexedCB &indexedCB,
       const NamedCB &namedCB);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Return the type name of this object, if it can be found heuristically.
   /// There is no one definitive type name for an object. If no heuristic is
   /// able to produce a name, the empty string is returned.
@@ -1240,11 +1241,13 @@ class JSObject : public GCCell {
   /// Accesses the name property on an object, returns the empty string if it
   /// doesn't exist or isn't a string.
   std::string getNameIfExists(PointerBase &base);
+#endif
 
  protected:
   /// @name Virtual function implementations
   /// @{
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Add an estimate of the type name for this object as the name in heap
   /// snapshots.
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
@@ -1255,6 +1258,7 @@ class JSObject : public GCCell {
   /// Add the location of the constructor for this object to the heap snapshot.
   static void
   _snapshotAddLocationsImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(

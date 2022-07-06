@@ -53,8 +53,10 @@ GCBase::GCBase(
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
+#ifdef HERMES_MEMORY_INSTRUMENTATION
       allocationLocationTracker_(this),
       samplingAllocationTracker_(this),
+#endif
 #ifdef HERMESVM_SANITIZE_HANDLES
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
@@ -124,6 +126,7 @@ void GCBase::runtimeWillExecute() {
   }
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
   llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
@@ -634,6 +637,7 @@ void GCBase::enableSamplingHeapProfiler(size_t samplingInterval, int64_t seed) {
 void GCBase::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
   getSamplingAllocationTracker().disable(os);
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 void GCBase::checkTripwire(size_t dataSize) {
   if (LLVM_LIKELY(!tripwireCallback_) ||
@@ -641,6 +645,7 @@ void GCBase::checkTripwire(size_t dataSize) {
     return;
   }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   class Ctx : public GCTripwireContext {
    public:
     Ctx(GCBase *gc) : gc_(gc) {}
@@ -658,6 +663,18 @@ void GCBase::checkTripwire(size_t dataSize) {
    private:
     GCBase *gc_;
   } ctx(this);
+#else // !defined(HERMES_MEMORY_INSTRUMENTATION)
+  class Ctx : public GCTripwireContext {
+   public:
+    std::error_code createSnapshotToFile(const std::string &path) override {
+      return std::error_code(ENOSYS, std::system_category());
+    }
+
+    std::error_code createSnapshot(std::ostream &os) override {
+      return std::error_code(ENOSYS, std::system_category());
+    }
+  } ctx;
+#endif // !defined(HERMES_MEMORY_INSTRUMENTATION)
 
   tripwireCalled_ = true;
   tripwireCallback_(ctx);
@@ -994,8 +1011,10 @@ bool GCBase::hasObjectID(const GCCell *cell) {
 }
 
 void GCBase::newAlloc(const GCCell *ptr, uint32_t sz) {
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   allocationLocationTracker_.newAlloc(ptr, sz);
   samplingAllocationTracker_.newAlloc(ptr, sz);
+#endif
 }
 
 void GCBase::moveObject(
@@ -1008,17 +1027,21 @@ void GCBase::moveObject(
           const_cast<GCCell *>(oldPtr), pointerBase_),
       CompressedPointer::encodeNonNull(
           const_cast<GCCell *>(newPtr), pointerBase_));
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   // Use newPtr here because the idTracker_ just moved it.
   allocationLocationTracker_.updateSize(newPtr, oldSize, newSize);
   samplingAllocationTracker_.updateSize(newPtr, oldSize, newSize);
+#endif
 }
 
 void GCBase::untrackObject(const GCCell *cell, uint32_t sz) {
   assert(cell && "Called untrackObject on a null pointer");
   // The allocation tracker needs to use the ID, so this needs to come
   // before untrackObject.
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   getAllocationLocationTracker().freeAlloc(cell, sz);
   getSamplingAllocationTracker().freeAlloc(cell, sz);
+#endif
   idTracker_.untrackObject(CompressedPointer::encodeNonNull(
       const_cast<GCCell *>(cell), pointerBase_));
 }
@@ -1263,6 +1286,8 @@ HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
   // Numbers will all be considered JS memory, not native memory.
   return nextObjectID();
 }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
     : gc_(gc) {}
@@ -1565,6 +1590,7 @@ void GCBase::SamplingAllocationLocationTracker::updateSize(
 size_t GCBase::SamplingAllocationLocationTracker::nextSample() {
   return (*dist_)(randomEngine_);
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 llvh::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {

@@ -14,6 +14,7 @@ namespace vm {
 
 std::array<const VTable *, kNumCellKinds> VTable::vtableArray;
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC &gc)
     const {
   std::string name;
@@ -57,6 +58,7 @@ void VTable::HeapSnapshotMetadata::addLocations(
     addLocations_(cell, gc, snap);
   }
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const VTable &vt) {
   return os << "VTable: {\n\tsize: " << vt.size

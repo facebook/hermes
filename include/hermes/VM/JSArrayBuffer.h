@@ -96,8 +96,10 @@ class JSArrayBuffer final : public JSObject {
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);
   static size_t _mallocSizeImpl(GCCell *cell);
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 
  private:
   XorPtr<uint8_t> data_;

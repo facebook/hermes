@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMES_ENABLE_DEBUGGER
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
 // gtest must come before folly, because folly/portability/Windows.h undefines
 // some windows standard library macros that gtest-port.h relies on.
@@ -200,4 +200,4 @@ INSTANTIATE_TEST_CASE_P(
     HeapSnapshotAPITest,
     ::testing::Bool());
 
-#endif
+#endif // HERMES_MEMORY_INSTRUMENTATION

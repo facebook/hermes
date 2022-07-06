@@ -438,6 +438,7 @@ size_t RuntimeModule::additionalMemorySize() const {
       templateMap_.getMemorySize();
 }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   // Create a native node for each CodeBlock owned by this module.
   for (const CodeBlock *cb : functionMap_) {
@@ -482,6 +483,7 @@ void RuntimeModule::snapshotAddEdges(GC &gc, HeapSnapshot &snap) const {
       "functionMap",
       gc.getNativeID(&functionMap_));
 }
+#endif // HERMES_MEMORY_INSTRUMENTATION
 
 namespace detail {
 

@@ -151,9 +151,11 @@ class ArrayImpl : public JSObject {
   ArrayImpl(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
       : ArrayImpl(runtime, parent, clazz, GCPointerBase::YesBarriers()) {}
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.

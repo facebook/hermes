@@ -13,14 +13,6 @@
 #ifndef HERMES_STACK_TRACES_TREE_NO_RUNTIME_H
 #define HERMES_STACK_TRACES_TREE_NO_RUNTIME_H
 
-#if defined(HERMES_ENABLE_DEBUGGER)
-/// \def HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-/// \brief This macro is used to decide if various pieces of code for tracking
-/// stack-traces for allocations are enabled. These should be removed from
-/// production VM builds as they add significant overhead.
-#define HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
-#endif
-
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringSetVector.h"
