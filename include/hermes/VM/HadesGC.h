@@ -425,13 +425,6 @@ class HadesGC final : public GCBase {
     /// segmentIdx;
     void incrementAllocatedBytes(int32_t incr, uint16_t segmentIdx);
 
-    /// Get the peak allocated bytes for the segment at \p segmentIdx.
-    uint64_t peakAllocatedBytes(uint16_t segmentIdx) const;
-
-    /// Trigger an update of the peak allocated bytes. This should be done right
-    /// before sweeping a particular segment so we have the true peak.
-    void updatePeakAllocatedBytes(uint16_t segmentIdx);
-
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
     uint64_t externalBytes() const;
@@ -550,11 +543,9 @@ class HadesGC final : public GCBase {
     /// bump-allocated segments.
     uint64_t allocatedBytes_{0};
 
-    /// Each element in the vector corresponds to the segment at the same index
-    /// in segments_. The first element in the pair represents the currently
-    /// allocated bytes in this segment, the second element represents the peak
-    /// allocated bytes in this segment, since it was created or compacted.
-    std::vector<std::pair<uint32_t, uint32_t>> segmentAllocatedBytes_;
+    /// Each element in the vector contains the currently allocated bytes in the
+    /// segment at the same index in segments_.
+    std::vector<uint32_t> segmentAllocatedBytes_;
 
     /// The amount of bytes of external memory credited to objects in the OG.
     uint64_t externalBytes_{0};

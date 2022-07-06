@@ -1085,7 +1085,6 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
 
   sweepIterator_.segNumber--;
 
-  gc_.oldGen_.updatePeakAllocatedBytes(sweepIterator_.segNumber);
   const bool isTracking = gc_.isTrackingIDs();
   // Re-evaluate this start point each time, as releasing the gcMutex_ allows
   // allocations into the old gen, which might boost the credited memory.
@@ -2834,11 +2833,7 @@ uint64_t HadesGC::OldGen::allocatedBytes() const {
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes(uint16_t segmentIdx) const {
-  return segmentAllocatedBytes_[segmentIdx].first;
-}
-
-uint64_t HadesGC::OldGen::peakAllocatedBytes(uint16_t segmentIdx) const {
-  return segmentAllocatedBytes_[segmentIdx].second;
+  return segmentAllocatedBytes_[segmentIdx];
 }
 
 void HadesGC::OldGen::incrementAllocatedBytes(
@@ -2846,17 +2841,11 @@ void HadesGC::OldGen::incrementAllocatedBytes(
     uint16_t segmentIdx) {
   assert(segmentIdx < numSegments());
   allocatedBytes_ += incr;
-  segmentAllocatedBytes_[segmentIdx].first += incr;
+  segmentAllocatedBytes_[segmentIdx] += incr;
   assert(
       allocatedBytes_ <= size() &&
-      segmentAllocatedBytes_[segmentIdx].first <= HeapSegment::maxSize() &&
+      segmentAllocatedBytes_[segmentIdx] <= HeapSegment::maxSize() &&
       "Invalid increment");
-}
-
-void HadesGC::OldGen::updatePeakAllocatedBytes(uint16_t segmentIdx) {
-  segmentAllocatedBytes_[segmentIdx].second = std::max(
-      segmentAllocatedBytes_[segmentIdx].second,
-      segmentAllocatedBytes_[segmentIdx].first);
 }
 
 uint64_t HadesGC::OldGen::externalBytes() const {
@@ -2960,7 +2949,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
 void HadesGC::OldGen::addSegment(HeapSegment seg) {
   uint16_t newSegIdx = segments_.size();
   segments_.emplace_back(std::move(seg));
-  segmentAllocatedBytes_.push_back({0, 0});
+  segmentAllocatedBytes_.push_back(0);
   HeapSegment &newSeg = segments_.back();
   incrementAllocatedBytes(newSeg.used(), newSegIdx);
   // Add a set of freelist buckets for this segment.
@@ -2989,7 +2978,7 @@ HadesGC::HeapSegment HadesGC::OldGen::popSegment() {
   }
   freelistSegmentsBuckets_.pop_back();
 
-  allocatedBytes_ -= segmentAllocatedBytes_.back().first;
+  allocatedBytes_ -= segmentAllocatedBytes_.back();
   segmentAllocatedBytes_.pop_back();
   auto oldSeg = std::move(segments_.back());
   segments_.pop_back();
