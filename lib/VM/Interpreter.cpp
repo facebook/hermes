@@ -1265,32 +1265,30 @@ tailCall:
 /// Implement a binary bitwise instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-/// \param oper the C++ operator to use to actually perform the bitwise
-///     operation.
-#define BITWISEBINOP(name, oper)                                               \
-  CASE(name) {                                                                 \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) {       \
-      /* Fast-path. */                                                         \
-      O1REG(name) = HermesValue::encodeDoubleValue(                            \
-          hermes::truncateToInt32(O2REG(name).getNumber())                     \
-              oper hermes::truncateToInt32(O3REG(name).getNumber()));          \
-      ip = NEXTINST(name);                                                     \
-      DISPATCH;                                                                \
-    }                                                                          \
-    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(name))));            \
-    if (res == ExecutionStatus::EXCEPTION) {                                   \
-      goto exception;                                                          \
-    }                                                                          \
-    int32_t left = res->getNumberAs<int32_t>();                                \
-    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O3REG(name))));            \
-    if (res == ExecutionStatus::EXCEPTION) {                                   \
-      goto exception;                                                          \
-    }                                                                          \
-    O1REG(name) =                                                              \
-        HermesValue::encodeNumberValue(left oper res->getNumberAs<int32_t>()); \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
-    ip = NEXTINST(name);                                                       \
-    DISPATCH;                                                                  \
+#define BITWISEBINOP(name)                                               \
+  CASE(name) {                                                           \
+    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
+      /* Fast-path. */                                                   \
+      O1REG(name) = HermesValue::encodeDoubleValue(do##name(             \
+          hermes::truncateToInt32(O2REG(name).getNumber()),              \
+          hermes::truncateToInt32(O3REG(name).getNumber())));            \
+      ip = NEXTINST(name);                                               \
+      DISPATCH;                                                          \
+    }                                                                    \
+    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(name))));      \
+    if (res == ExecutionStatus::EXCEPTION) {                             \
+      goto exception;                                                    \
+    }                                                                    \
+    int32_t left = res->getNumberAs<int32_t>();                          \
+    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O3REG(name))));      \
+    if (res == ExecutionStatus::EXCEPTION) {                             \
+      goto exception;                                                    \
+    }                                                                    \
+    O1REG(name) = HermesValue::encodeNumberValue(                        \
+        do##name(left, res->getNumberAs<int32_t>()));                    \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
+    ip = NEXTINST(name);                                                 \
+    DISPATCH;                                                            \
   }
 
 /// Implement a comparison instruction.
@@ -3400,9 +3398,9 @@ tailCall:
       BINOP(Sub, doSub);
       BINOP(Mul, doMult);
       BINOP(Div, doDiv);
-      BITWISEBINOP(BitAnd, &);
-      BITWISEBINOP(BitOr, |);
-      BITWISEBINOP(BitXor, ^);
+      BITWISEBINOP(BitAnd);
+      BITWISEBINOP(BitOr);
+      BITWISEBINOP(BitXor);
       SHIFTOP(LShift);
       SHIFTOP(RShift);
       SHIFTOP(URshift);

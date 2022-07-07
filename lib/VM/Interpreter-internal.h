@@ -61,6 +61,18 @@
 namespace hermes {
 namespace vm {
 
+inline int32_t doBitAnd(int32_t x, int32_t y) {
+  return x & y;
+}
+
+inline int32_t doBitOr(int32_t x, int32_t y) {
+  return x | y;
+}
+
+inline int32_t doBitXor(int32_t x, int32_t y) {
+  return x ^ y;
+}
+
 inline int32_t doLShift(uint32_t x, uint32_t y) {
   return x << y;
 }
