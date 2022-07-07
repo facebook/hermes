@@ -1235,8 +1235,7 @@ tailCall:
 /// Implement a shift instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-/// \param lConv the conversion function for the LHS of the expression.
-#define SHIFTOP(name, lConv)                                                   \
+#define SHIFTOP(name)                                                          \
   CASE(name) {                                                                 \
     if (LLVM_LIKELY(                                                           \
             O2REG(name).isNumber() &&                                          \
@@ -1247,7 +1246,7 @@ tailCall:
       ip = NEXTINST(name);                                                     \
       DISPATCH;                                                                \
     }                                                                          \
-    CAPTURE_IP(res = lConv(runtime, Handle<>(&O2REG(name))));                  \
+    CAPTURE_IP(res = ToIntegral<do##name>(runtime, Handle<>(&O2REG(name))));   \
     if (res == ExecutionStatus::EXCEPTION) {                                   \
       goto exception;                                                          \
     }                                                                          \
@@ -3404,11 +3403,9 @@ tailCall:
       BITWISEBINOP(BitAnd, &);
       BITWISEBINOP(BitOr, |);
       BITWISEBINOP(BitXor, ^);
-      // For LShift, we need to use toUInt32 first because lshift on negative
-      // numbers is undefined behavior in theory.
-      SHIFTOP(LShift, toUInt32_RJS);
-      SHIFTOP(RShift, toInt32_RJS);
-      SHIFTOP(URshift, toUInt32_RJS);
+      SHIFTOP(LShift);
+      SHIFTOP(RShift);
+      SHIFTOP(URshift);
       CONDOP(Less, <, lessOp_RJS);
       CONDOP(LessEq, <=, lessEqualOp_RJS);
       CONDOP(Greater, >, greaterOp_RJS);

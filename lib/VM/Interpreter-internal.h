@@ -73,6 +73,22 @@ inline uint32_t doURshift(uint32_t x, uint32_t y) {
   return x >> y;
 }
 
+/// ToIntegral maps the \param Oper shift operation (on Number) to the function
+/// used to convert the operation's lhs operand to integer.
+template <auto Oper>
+inline int ToIntegral;
+
+// For LShift, we need to use toUInt32 first because lshift on negative
+// numbers is undefined behavior in theory.
+template <>
+inline constexpr auto &ToIntegral<doLShift> = toUInt32_RJS;
+
+template <>
+inline constexpr auto &ToIntegral<doRShift> = toInt32_RJS;
+
+template <>
+inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H
