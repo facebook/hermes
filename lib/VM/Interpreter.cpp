@@ -1235,41 +1235,32 @@ tailCall:
 /// Implement a shift instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-/// \param oper the C++ operator to use to actually perform the shift
-///     operation.
 /// \param lConv the conversion function for the LHS of the expression.
-/// \param lType the type of the LHS operand.
-/// \param returnType the type of the return value.
-#define SHIFTOP(name, oper, lConv, lType, returnType)                     \
-  CASE(name) {                                                            \
-    if (LLVM_LIKELY(                                                      \
-            O2REG(name).isNumber() &&                                     \
-            O3REG(name).isNumber())) { /* Fast-path. */                   \
-      auto lnum = static_cast<lType>(                                     \
-          hermes::truncateToInt32(O2REG(name).getNumber()));              \
-      auto rnum = static_cast<uint32_t>(                                  \
-                      hermes::truncateToInt32(O3REG(name).getNumber())) & \
-          0x1f;                                                           \
-      O1REG(name) = HermesValue::encodeDoubleValue(                       \
-          static_cast<returnType>(lnum oper rnum));                       \
-      ip = NEXTINST(name);                                                \
-      DISPATCH;                                                           \
-    }                                                                     \
-    CAPTURE_IP(res = lConv(runtime, Handle<>(&O2REG(name))));             \
-    if (res == ExecutionStatus::EXCEPTION) {                              \
-      goto exception;                                                     \
-    }                                                                     \
-    auto lnum = static_cast<lType>(res->getNumber());                     \
-    CAPTURE_IP(res = toUInt32_RJS(runtime, Handle<>(&O3REG(name))));      \
-    if (res == ExecutionStatus::EXCEPTION) {                              \
-      goto exception;                                                     \
-    }                                                                     \
-    auto rnum = static_cast<uint32_t>(res->getNumber()) & 0x1f;           \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                              \
-    O1REG(name) = HermesValue::encodeDoubleValue(                         \
-        static_cast<returnType>(lnum oper rnum));                         \
-    ip = NEXTINST(name);                                                  \
-    DISPATCH;                                                             \
+#define SHIFTOP(name, lConv)                                                   \
+  CASE(name) {                                                                 \
+    if (LLVM_LIKELY(                                                           \
+            O2REG(name).isNumber() &&                                          \
+            O3REG(name).isNumber())) { /* Fast-path. */                        \
+      auto lnum = hermes::truncateToInt32(O2REG(name).getNumber());            \
+      uint32_t rnum = hermes::truncateToInt32(O3REG(name).getNumber()) & 0x1f; \
+      O1REG(name) = HermesValue::encodeDoubleValue(do##name(lnum, rnum));      \
+      ip = NEXTINST(name);                                                     \
+      DISPATCH;                                                                \
+    }                                                                          \
+    CAPTURE_IP(res = lConv(runtime, Handle<>(&O2REG(name))));                  \
+    if (res == ExecutionStatus::EXCEPTION) {                                   \
+      goto exception;                                                          \
+    }                                                                          \
+    auto lnum = hermes::truncateToInt32(res->getNumber());                     \
+    CAPTURE_IP(res = toUInt32_RJS(runtime, Handle<>(&O3REG(name))));           \
+    if (res == ExecutionStatus::EXCEPTION) {                                   \
+      goto exception;                                                          \
+    }                                                                          \
+    uint32_t rnum = hermes::truncateToInt32(res->getNumber()) & 0x1f;          \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
+    O1REG(name) = HermesValue::encodeDoubleValue(do##name(lnum, rnum));        \
+    ip = NEXTINST(name);                                                       \
+    DISPATCH;                                                                  \
   }
 
 /// Implement a binary bitwise instruction with a fast path where both
@@ -3415,9 +3406,9 @@ tailCall:
       BITWISEBINOP(BitXor, ^);
       // For LShift, we need to use toUInt32 first because lshift on negative
       // numbers is undefined behavior in theory.
-      SHIFTOP(LShift, <<, toUInt32_RJS, uint32_t, int32_t);
-      SHIFTOP(RShift, >>, toInt32_RJS, int32_t, int32_t);
-      SHIFTOP(URshift, >>, toUInt32_RJS, uint32_t, uint32_t);
+      SHIFTOP(LShift, toUInt32_RJS);
+      SHIFTOP(RShift, toInt32_RJS);
+      SHIFTOP(URshift, toUInt32_RJS);
       CONDOP(Less, <, lessOp_RJS);
       CONDOP(LessEq, <=, lessEqualOp_RJS);
       CONDOP(Greater, >, greaterOp_RJS);

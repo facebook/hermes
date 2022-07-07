@@ -58,4 +58,21 @@
 // one.
 #define NEXTINST(name) ((const Inst *)(&ip->i##name + 1))
 
+namespace hermes {
+namespace vm {
+
+inline int32_t doLShift(uint32_t x, uint32_t y) {
+  return x << y;
+}
+
+inline int32_t doRShift(int32_t x, uint32_t y) {
+  return x >> y;
+}
+
+inline uint32_t doURshift(uint32_t x, uint32_t y) {
+  return x >> y;
+}
+
+} // namespace vm
+} // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H
