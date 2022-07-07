@@ -303,6 +303,7 @@ jobs:
           command: |
             cmake -S hermes -B build_intl -GXcode -DHERMES_ENABLE_INTL=ON
             cmake --build ./build_intl
+            cmake --build ./build_intl --target check-hermes
 
   windows:
     executor:

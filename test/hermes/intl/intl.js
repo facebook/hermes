@@ -90,7 +90,10 @@ testServiceGetterTypes(Intl.NumberFormat, 'format');
 testServiceMethodTypes(Intl.NumberFormat, 'formatToParts');
 testServiceMethodTypes(Intl.NumberFormat, 'resolvedOptions');
 assert(typeof Intl.NumberFormat(12345.67).format() === 'string');
-testParts(Intl.NumberFormat(12345.67).formatToParts());
+// TODO: Apple Intl currently does not implement NumberFormat.formatToParts.
+if(Intl.NumberFormat.prototype.formatToParts){
+  testParts(Intl.NumberFormat(12345.67).formatToParts());
+}
 
 // Verify the shared logic around style.
 

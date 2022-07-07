@@ -125,8 +125,12 @@ print('toLocaleString');
 // CHECK-LABEL: toLocaleString
 print((1).toLocaleString());
 // CHECK-NEXT: 1
-print((+Infinity).toLocaleString());
-// CHECK-NEXT: Infinity
+
+var infinityString = (+Infinity).toLocaleString();
+var expected = globalThis.Intl ? "+∞" : "Infinity";
+print(infinityString === expected);
+// CHECK-NEXT: true
+
 print((-3.14).toLocaleString());
 // CHECK-NEXT: -3.14
 
