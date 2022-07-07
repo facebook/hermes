@@ -332,6 +332,101 @@ ExecutionStatus Interpreter::implCallBuiltin(
   return ExecutionStatus::RETURNED;
 }
 
+template <auto Oper>
+CallResult<HermesValue>
+doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+  CallResult<HermesValue> res = toNumber_RJS(runtime, lhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double left = res->getDouble();
+  res = toNumber_RJS(runtime, rhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeDoubleValue(Oper(left, res->getDouble()));
+}
+
+template CallResult<HermesValue>
+doOperSlowPath<doDiv>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doOperSlowPath<doMod>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doOperSlowPath<doMul>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doOperSlowPath<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template <auto Oper>
+CallResult<HermesValue>
+doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+  CallResult<HermesValue> res = toInt32_RJS(runtime, lhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  int32_t left = res->getNumberAs<int32_t>();
+  res = toInt32_RJS(runtime, rhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeNumberValue(
+      Oper(left, res->getNumberAs<int32_t>()));
+}
+
+template CallResult<HermesValue>
+doBitOperSlowPath<doBitAnd>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doBitOperSlowPath<doBitOr>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doBitOperSlowPath<doBitXor>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+namespace {
+/// ToIntegral maps the \param Oper shift operation (on Number) to the function
+/// used to convert the operation's lhs operand to integer.
+template <auto Oper>
+inline int ToIntegral;
+
+// For LShift, we need to use toUInt32 first because lshift on negative
+// numbers is undefined behavior in theory.
+template <>
+inline constexpr auto &ToIntegral<doLShift> = toUInt32_RJS;
+
+template <>
+inline constexpr auto &ToIntegral<doRShift> = toInt32_RJS;
+
+template <>
+inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
+} // namespace
+
+template <auto Oper>
+CallResult<HermesValue>
+doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+  CallResult<HermesValue> res = ToIntegral<Oper>(runtime, lhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lnum = hermes::truncateToInt32(res->getNumber());
+  res = toUInt32_RJS(runtime, rhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto rnum = res->getNumberAs<uint32_t>() & 0x1f;
+  return HermesValue::encodeDoubleValue(Oper(lnum, rnum));
+}
+
+template CallResult<HermesValue>
+doShiftOperSlowPath<doLShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doShiftOperSlowPath<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template CallResult<HermesValue>
+doShiftOperSlowPath<doURshift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
 } // namespace vm
 } // namespace hermes
 

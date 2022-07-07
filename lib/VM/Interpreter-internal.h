@@ -71,6 +71,17 @@ inline double doDiv(double x, double y) {
   return x / y;
 }
 
+inline double doMod(double x, double y) {
+  // We use fmod here for simplicity. Theoretically fmod behaves slightly
+  // differently than the ECMAScript Spec. fmod applies round-towards-zero for
+  // the remainder when it's not representable by a double; while the spec
+  // requires round-to-nearest. As an example, 5 % 0.7 will give
+  // 0.10000000000000031 using fmod, but using the rounding style described by
+  // the spec, the output should really be 0.10000000000000053. Such difference
+  // can be ignored in practice.
+  return std::fmod(x, y);
+}
+
 /// \return the product of x multiplied by y.
 inline double doMul(double x, double y) {
   return x * y;
@@ -105,21 +116,17 @@ inline uint32_t doURshift(uint32_t x, uint32_t y) {
   return x >> y;
 }
 
-/// ToIntegral maps the \param Oper shift operation (on Number) to the function
-/// used to convert the operation's lhs operand to integer.
 template <auto Oper>
-inline int ToIntegral;
+CallResult<HermesValue>
+doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
-// For LShift, we need to use toUInt32 first because lshift on negative
-// numbers is undefined behavior in theory.
-template <>
-inline constexpr auto &ToIntegral<doLShift> = toUInt32_RJS;
+template <auto Oper>
+CallResult<HermesValue>
+doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
-template <>
-inline constexpr auto &ToIntegral<doRShift> = toInt32_RJS;
-
-template <>
-inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
+template <auto Oper>
+CallResult<HermesValue>
+doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 } // namespace vm
 } // namespace hermes

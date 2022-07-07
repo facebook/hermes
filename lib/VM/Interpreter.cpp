@@ -1174,29 +1174,26 @@ tailCall:
 /// operands are numbers.
 /// \param name the name of the instruction. The fast path case will have a
 ///     "n" appended to the name.
-#define BINOP(name)                                                       \
-  CASE(name) {                                                            \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) {  \
-      /* Fast-path. */                                                    \
-      CASE(name##N) {                                                     \
-        O1REG(name) = HermesValue::encodeDoubleValue(                     \
-            do##name(O2REG(name).getNumber(), O3REG(name).getNumber()));  \
-        ip = NEXTINST(name);                                              \
-        DISPATCH;                                                         \
-      }                                                                   \
-    }                                                                     \
-    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O2REG(name))));      \
-    if (res == ExecutionStatus::EXCEPTION)                                \
-      goto exception;                                                     \
-    double left = res->getDouble();                                       \
-    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O3REG(name))));      \
-    if (res == ExecutionStatus::EXCEPTION)                                \
-      goto exception;                                                     \
-    O1REG(name) =                                                         \
-        HermesValue::encodeDoubleValue(do##name(left, res->getDouble())); \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                              \
-    ip = NEXTINST(name);                                                  \
-    DISPATCH;                                                             \
+#define BINOP(name)                                                      \
+  CASE(name) {                                                           \
+    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
+      /* Fast-path. */                                                   \
+      CASE(name##N) {                                                    \
+        O1REG(name) = HermesValue::encodeDoubleValue(                    \
+            do##name(O2REG(name).getNumber(), O3REG(name).getNumber())); \
+        ip = NEXTINST(name);                                             \
+        DISPATCH;                                                        \
+      }                                                                  \
+    }                                                                    \
+    CAPTURE_IP(                                                          \
+        res = doOperSlowPath<do##name>(                                  \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
+    if (res == ExecutionStatus::EXCEPTION)                               \
+      goto exception;                                                    \
+    O1REG(name) = *res;                                                  \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
+    ip = NEXTINST(name);                                                 \
+    DISPATCH;                                                            \
   }
 
 #define INCDECOP(name, oper)                                            \
@@ -1221,18 +1218,14 @@ tailCall:
       ip = NEXTINST(name);                                                     \
       DISPATCH;                                                                \
     }                                                                          \
-    CAPTURE_IP(res = ToIntegral<do##name>(runtime, Handle<>(&O2REG(name))));   \
-    if (res == ExecutionStatus::EXCEPTION) {                                   \
+    CAPTURE_IP(                                                                \
+        res = doShiftOperSlowPath<do##name>(                                   \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));         \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                    \
       goto exception;                                                          \
     }                                                                          \
-    auto lnum = hermes::truncateToInt32(res->getNumber());                     \
-    CAPTURE_IP(res = toUInt32_RJS(runtime, Handle<>(&O3REG(name))));           \
-    if (res == ExecutionStatus::EXCEPTION) {                                   \
-      goto exception;                                                          \
-    }                                                                          \
-    uint32_t rnum = hermes::truncateToInt32(res->getNumber()) & 0x1f;          \
+    O1REG(name) = *res;                                                        \
     gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
-    O1REG(name) = HermesValue::encodeDoubleValue(do##name(lnum, rnum));        \
     ip = NEXTINST(name);                                                       \
     DISPATCH;                                                                  \
   }
@@ -1250,17 +1243,13 @@ tailCall:
       ip = NEXTINST(name);                                               \
       DISPATCH;                                                          \
     }                                                                    \
-    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(name))));      \
-    if (res == ExecutionStatus::EXCEPTION) {                             \
+    CAPTURE_IP(                                                          \
+        res = doBitOperSlowPath<do##name>(                               \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {              \
       goto exception;                                                    \
     }                                                                    \
-    int32_t left = res->getNumberAs<int32_t>();                          \
-    CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O3REG(name))));      \
-    if (res == ExecutionStatus::EXCEPTION) {                             \
-      goto exception;                                                    \
-    }                                                                    \
-    O1REG(name) = HermesValue::encodeNumberValue(                        \
-        do##name(left, res->getNumberAs<int32_t>()));                    \
+    O1REG(name) = *res;                                                  \
     gcScope.flushToSmallCount(KEEP_HANDLES);                             \
     ip = NEXTINST(name);                                                 \
     DISPATCH;                                                            \
@@ -3095,30 +3084,20 @@ tailCall:
         DISPATCH;
       }
       CASE(Mod) {
-        // We use fmod here for simplicity. Theoretically fmod behaves slightly
-        // differently than the ECMAScript Spec. fmod applies round-towards-zero
-        // for the remainder when it's not representable by a double; while the
-        // spec requires round-to-nearest. As an example, 5 % 0.7 will give
-        // 0.10000000000000031 using fmod, but using the rounding style
-        // described
-        // by the spec, the output should really be 0.10000000000000053.
-        // Such difference can be ignored in practice.
         if (LLVM_LIKELY(O2REG(Mod).isNumber() && O3REG(Mod).isNumber())) {
           /* Fast-path. */
           O1REG(Mod) = HermesValue::encodeDoubleValue(
-              std::fmod(O2REG(Mod).getNumber(), O3REG(Mod).getNumber()));
+              doMod(O2REG(Mod).getNumber(), O3REG(Mod).getNumber()));
           ip = NEXTINST(Mod);
           DISPATCH;
         }
-        CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O2REG(Mod))));
-        if (res == ExecutionStatus::EXCEPTION)
+        CAPTURE_IP(
+            res = doOperSlowPath<doMod>(
+                runtime, Handle<>(&O2REG(Mod)), Handle<>(&O3REG(Mod))));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
-        double left = res->getDouble();
-        CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O3REG(Mod))));
-        if (res == ExecutionStatus::EXCEPTION)
-          goto exception;
-        O1REG(Mod) =
-            HermesValue::encodeDoubleValue(std::fmod(left, res->getDouble()));
+        }
+        O1REG(Mod) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Mod);
         DISPATCH;
@@ -3373,6 +3352,7 @@ tailCall:
       BINOP(Sub);
       BINOP(Mul);
       BINOP(Div);
+      // Can't do BINOP(Mod) as there's no ModN opcode.
       BITWISEBINOP(BitAnd);
       BITWISEBINOP(BitOr);
       BITWISEBINOP(BitXor);
