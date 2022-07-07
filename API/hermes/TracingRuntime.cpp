@@ -417,7 +417,7 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
         const jsi::Value &thisVal,
         const jsi::Value *args,
         size_t count) {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
+      TracingRuntime &trt = static_cast<TracingRuntime &>(decoratedRuntime());
 
       trt.trace_.emplace_back<SynthTrace::CallToNativeRecord>(
           trt.getTimeSinceStart(),
@@ -449,10 +449,10 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
     SynthTrace::ObjectID functionID_;
   };
   auto tracer = TracingHostFunction(*this, func);
-  auto tfunc =
-      RD::createFunctionFromHostFunction(name, paramCount, std::move(tracer));
+  auto tfunc = jsi::Function::createFromHostFunction(
+      plain(), name, paramCount, std::move(tracer));
   const auto funcID = getUniqueID(tfunc);
-  RD::getHostFunction(tfunc).target<TracingHostFunction>()->setFunctionID(
+  tfunc.getHostFunction(plain()).target<TracingHostFunction>()->setFunctionID(
       funcID);
   trace_.emplace_back<SynthTrace::CreateHostFunctionRecord>(
       getTimeSinceStart(),
