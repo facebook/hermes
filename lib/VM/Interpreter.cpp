@@ -859,29 +859,6 @@ ExecutionStatus Runtime::stepFunction(InterpreterState &state) {
 }
 #endif
 
-/// \return the quotient of x divided by y.
-static double doDiv(double x, double y)
-    LLVM_NO_SANITIZE("float-divide-by-zero");
-static inline double doDiv(double x, double y) {
-  // UBSan will complain about float divide by zero as our implementation
-  // of OpCode::Div depends on IEEE 754 float divide by zero. All modern
-  // compilers implement this and there is no trivial work-around without
-  // sacrificing performance and readability.
-  // NOTE: This was pulled out of the interpreter to avoid putting the sanitize
-  // silencer on the entire interpreter function.
-  return x / y;
-}
-
-/// \return the product of x multiplied by y.
-static inline double doMult(double x, double y) {
-  return x * y;
-}
-
-/// \return the difference of y subtracted from x.
-static inline double doSub(double x, double y) {
-  return x - y;
-}
-
 template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime &runtime,
@@ -1197,31 +1174,29 @@ tailCall:
 /// operands are numbers.
 /// \param name the name of the instruction. The fast path case will have a
 ///     "n" appended to the name.
-/// \param oper the C++ operator to use to actually perform the arithmetic
-///     operation.
-#define BINOP(name, oper)                                                \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      CASE(name##N) {                                                    \
-        O1REG(name) = HermesValue::encodeDoubleValue(                    \
-            oper(O2REG(name).getNumber(), O3REG(name).getNumber()));     \
-        ip = NEXTINST(name);                                             \
-        DISPATCH;                                                        \
-      }                                                                  \
-    }                                                                    \
-    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O2REG(name))));     \
-    if (res == ExecutionStatus::EXCEPTION)                               \
-      goto exception;                                                    \
-    double left = res->getDouble();                                      \
-    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O3REG(name))));     \
-    if (res == ExecutionStatus::EXCEPTION)                               \
-      goto exception;                                                    \
-    O1REG(name) =                                                        \
-        HermesValue::encodeDoubleValue(oper(left, res->getDouble()));    \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define BINOP(name)                                                       \
+  CASE(name) {                                                            \
+    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) {  \
+      /* Fast-path. */                                                    \
+      CASE(name##N) {                                                     \
+        O1REG(name) = HermesValue::encodeDoubleValue(                     \
+            do##name(O2REG(name).getNumber(), O3REG(name).getNumber()));  \
+        ip = NEXTINST(name);                                              \
+        DISPATCH;                                                         \
+      }                                                                   \
+    }                                                                     \
+    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O2REG(name))));      \
+    if (res == ExecutionStatus::EXCEPTION)                                \
+      goto exception;                                                     \
+    double left = res->getDouble();                                       \
+    CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O3REG(name))));      \
+    if (res == ExecutionStatus::EXCEPTION)                                \
+      goto exception;                                                     \
+    O1REG(name) =                                                         \
+        HermesValue::encodeDoubleValue(do##name(left, res->getDouble())); \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                              \
+    ip = NEXTINST(name);                                                  \
+    DISPATCH;                                                             \
   }
 
 #define INCDECOP(name, oper)                                            \
@@ -3395,9 +3370,9 @@ tailCall:
       LOAD_CONST(LoadConstTrue, HermesValue::encodeBoolValue(true));
       LOAD_CONST(LoadConstFalse, HermesValue::encodeBoolValue(false));
       LOAD_CONST(LoadConstZero, HermesValue::encodeDoubleValue(0));
-      BINOP(Sub, doSub);
-      BINOP(Mul, doMult);
-      BINOP(Div, doDiv);
+      BINOP(Sub);
+      BINOP(Mul);
+      BINOP(Div);
       BITWISEBINOP(BitAnd);
       BITWISEBINOP(BitOr);
       BITWISEBINOP(BitXor);

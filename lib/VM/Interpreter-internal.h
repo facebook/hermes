@@ -61,6 +61,26 @@
 namespace hermes {
 namespace vm {
 
+/// \return the quotient of x divided by y.
+double doDiv(double x, double y) LLVM_NO_SANITIZE("float-divide-by-zero");
+inline double doDiv(double x, double y) {
+  // UBSan will complain about float divide by zero as our implementation
+  // of OpCode::Div depends on IEEE 754 float divide by zero. All modern
+  // compilers implement this and there is no trivial work-around without
+  // sacrificing performance and readability.
+  return x / y;
+}
+
+/// \return the product of x multiplied by y.
+inline double doMul(double x, double y) {
+  return x * y;
+}
+
+/// \return the difference of y subtracted from x.
+inline double doSub(double x, double y) {
+  return x - y;
+}
+
 inline int32_t doBitAnd(int32_t x, int32_t y) {
   return x & y;
 }
