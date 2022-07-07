@@ -229,7 +229,6 @@ Runtime::Runtime(
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-      runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(
           createRuntimeCommonStorage(runtimeConfig.getTraceEnabled())),
       stackPointer_(),

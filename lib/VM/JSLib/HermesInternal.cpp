@@ -141,7 +141,44 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
     }                                                                      \
   } while (false)
 
-  auto &stats = runtime.getRuntimeStats();
+#define PASSTHROUGH_PROP(KEY)                                           \
+  do {                                                                  \
+    if (statsTable) {                                                   \
+      std::string key(KEY);                                             \
+      auto it = statsTable->find(key);                                  \
+      if (it != statsTable->end()) {                                    \
+        GCScopeMarkerRAII marker{gcScope};                              \
+        const MockedEnvironment::StatsTableValue &val = it->getValue(); \
+        if (val.isNum()) {                                              \
+          tmpHandle = HermesValue::encodeDoubleValue(val.num());        \
+        } else {                                                        \
+          auto strRes = StringPrimitive::create(                        \
+              runtime, createASCIIRef(val.str().c_str()));              \
+          if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {    \
+            return ExecutionStatus::EXCEPTION;                          \
+          }                                                             \
+          tmpHandle = *strRes;                                          \
+        }                                                               \
+        auto keySym = symbolForCStr(runtime, KEY);                      \
+        if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {      \
+          return ExecutionStatus::EXCEPTION;                            \
+        }                                                               \
+        auto status = JSObject::defineNewOwnProperty(                   \
+            resultHandle,                                               \
+            runtime,                                                    \
+            keySym->get(),                                              \
+            PropertyFlags::defaultNewNamedPropertyFlags(),              \
+            tmpHandle);                                                 \
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {      \
+          return ExecutionStatus::EXCEPTION;                            \
+        }                                                               \
+        if (newStatsTable) {                                            \
+          newStatsTable->try_emplace(key, val);                         \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  } while (false)
+
   MockedEnvironment::StatsTable *statsTable = nullptr;
   auto *const storage = runtime.getCommonStorage();
   if (storage->env) {
@@ -161,53 +198,24 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
     newStatsTable.reset(new MockedEnvironment::StatsTable());
   }
 
-  // Ensure that the timers measuring the current execution are up to date.
-  stats.flushPendingTimers();
+  PASSTHROUGH_PROP("js_hostFunctionTime");
+  PASSTHROUGH_PROP("js_hostFunctionCPUTime");
+  PASSTHROUGH_PROP("js_hostFunctionCount");
 
-  SET_PROP(P::js_hostFunctionTime, stats.hostFunction.wallDuration);
-  SET_PROP(P::js_hostFunctionCPUTime, stats.hostFunction.cpuDuration);
-  SET_PROP(P::js_hostFunctionCount, stats.hostFunction.count);
+  PASSTHROUGH_PROP("js_evaluateJSTime");
+  PASSTHROUGH_PROP("js_evaluateJSCPUTime");
+  PASSTHROUGH_PROP("js_evaluateJSCount");
 
-  SET_PROP(P::js_evaluateJSTime, stats.evaluateJS.wallDuration);
-  SET_PROP(P::js_evaluateJSCPUTime, stats.evaluateJS.cpuDuration);
-  SET_PROP(P::js_evaluateJSCount, stats.evaluateJS.count);
+  PASSTHROUGH_PROP("js_incomingFunctionTime");
+  PASSTHROUGH_PROP("js_incomingFunctionCPUTime");
+  PASSTHROUGH_PROP("js_incomingFunctionCount");
 
-  SET_PROP(P::js_incomingFunctionTime, stats.incomingFunction.wallDuration);
-  SET_PROP(P::js_incomingFunctionCPUTime, stats.incomingFunction.cpuDuration);
-  SET_PROP(P::js_incomingFunctionCount, stats.incomingFunction.count);
   SET_PROP(P::js_VMExperiments, runtime.getVMExperimentFlags());
 
-  auto makeHermesTime = [](double host, double eval, double incoming) {
-    return eval - host + incoming;
-  };
-
-  SET_PROP(
-      P::js_hermesTime,
-      makeHermesTime(
-          stats.hostFunction.wallDuration,
-          stats.evaluateJS.wallDuration,
-          stats.incomingFunction.wallDuration));
-  SET_PROP(
-      P::js_hermesCPUTime,
-      makeHermesTime(
-          stats.hostFunction.cpuDuration,
-          stats.evaluateJS.cpuDuration,
-          stats.incomingFunction.cpuDuration));
-
-  if (stats.shouldSample) {
-    SET_PROP(
-        P::js_hermesThreadMinorFaults,
-        makeHermesTime(
-            stats.hostFunction.sampled.threadMinorFaults,
-            stats.evaluateJS.sampled.threadMinorFaults,
-            stats.incomingFunction.sampled.threadMinorFaults));
-    SET_PROP(
-        P::js_hermesThreadMajorFaults,
-        makeHermesTime(
-            stats.hostFunction.sampled.threadMajorFaults,
-            stats.evaluateJS.sampled.threadMajorFaults,
-            stats.incomingFunction.sampled.threadMajorFaults));
-  }
+  PASSTHROUGH_PROP("js_hermesTime");
+  PASSTHROUGH_PROP("js_hermesCPUTime");
+  PASSTHROUGH_PROP("js_hermesThreadMinorFaults");
+  PASSTHROUGH_PROP("js_hermesThreadMajorFaults");
 
   auto &heap = runtime.getHeap();
   SET_PROP(P::js_numGCs, heap.getNumGCs());
@@ -256,134 +264,19 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
     SET_PROP_NEW("js_markStackOverflows", info.numMarkStackOverflows);
   }
 
-  if (stats.shouldSample) {
-    SET_PROP_NEW(
-        "js_hermesVolCtxSwitches",
-        makeHermesTime(
-            stats.hostFunction.sampled.volCtxSwitches,
-            stats.evaluateJS.sampled.volCtxSwitches,
-            stats.incomingFunction.sampled.volCtxSwitches));
-    SET_PROP_NEW(
-        "js_hermesInvolCtxSwitches",
-        makeHermesTime(
-            stats.hostFunction.sampled.involCtxSwitches,
-            stats.evaluateJS.sampled.involCtxSwitches,
-            stats.incomingFunction.sampled.involCtxSwitches));
-    // Sampled because it doesn't vary much, not because it's expensive to get.
-    SET_PROP_NEW("js_pageSize", oscompat::page_size());
-  }
-
-/// Adds a property to \c resultHandle. \p KEY and \p VALUE provide its name and
-/// value as a C string and ASCIIRef respectively. If property definition fails,
-/// the exceptional execution status will be propogated to the outer function.
-#define SET_PROP_STR(KEY, VALUE)                               \
-  do {                                                         \
-    auto keySym = symbolForCStr(runtime, KEY);                 \
-    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
-    ASCIIRef val = VALUE;                                      \
-    std::string valStdStr(val.data(), val.size());             \
-    if (statsTable && statsTable->count(KEY)) {                \
-      valStdStr = (*statsTable)[std::string(KEY)].str();       \
-    }                                                          \
-    val = ASCIIRef(valStdStr.c_str(), valStdStr.size());       \
-    auto valStr = StringPrimitive::create(runtime, val);       \
-    if (LLVM_UNLIKELY(valStr == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
-    tmpHandle = *valStr;                                       \
-    auto status = JSObject::defineNewOwnProperty(              \
-        resultHandle,                                          \
-        runtime,                                               \
-        **keySym,                                              \
-        PropertyFlags::defaultNewNamedPropertyFlags(),         \
-        tmpHandle);                                            \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
-    if (newStatsTable) {                                       \
-      newStatsTable->try_emplace(KEY, valStdStr);              \
-    }                                                          \
-  } while (false)
-
-  if (runtime.getRuntimeStats().shouldSample) {
-    // Build a string showing the set of cores on which we may run.
-    std::string mask;
-    for (auto b : oscompat::sched_getaffinity())
-      mask += b ? '1' : '0';
-    SET_PROP_STR("js_threadAffinityMask", ASCIIRef(mask.data(), mask.size()));
-    SET_PROP_NEW("js_threadCPU", oscompat::sched_getcpu());
-
-    size_t bytecodePagesResident = 0;
-    size_t bytecodePagesResidentRuns = 0;
-    for (auto &module : runtime.getRuntimeModules()) {
-      auto buf = module.getBytecode()->getRawBuffer();
-      if (buf.size()) {
-        llvh::SmallVector<int, 64> runs;
-        int pages = oscompat::pages_in_ram(buf.data(), buf.size(), &runs);
-        if (pages >= 0) {
-          bytecodePagesResident += pages;
-          bytecodePagesResidentRuns += runs.size();
-        }
-      }
-    }
-    SET_PROP_NEW("js_bytecodePagesResident", bytecodePagesResident);
-    SET_PROP_NEW("js_bytecodePagesResidentRuns", bytecodePagesResidentRuns);
-
-    // Stats for the module with most accesses.
-    uint32_t bytecodePagesAccessed = 0;
-    uint32_t bytecodeSize = 0;
-    JenkinsHash bytecodePagesTraceHash = 0;
-    double bytecodeIOus = 0;
-    // Sample a small number of (position in access order, page id) pairs
-    // encoded as a base64vlq stream.
-    static constexpr unsigned NUM_SAMPLES = 32;
-    std::string sample;
-    for (auto &module : runtime.getRuntimeModules()) {
-      auto tracker = module.getBytecode()->getPageAccessTracker();
-      if (tracker) {
-        auto ids = tracker->getPagesAccessed();
-        if (ids.size() <= bytecodePagesAccessed)
-          continue;
-        bytecodePagesAccessed = ids.size();
-        bytecodeSize = module.getBytecode()->getRawBuffer().size();
-        bytecodePagesTraceHash = 0;
-        for (auto id : ids) {
-          // char16_t is at least 16 bits unsigned, so the quality of this hash
-          // might degrade if accessing bytecode above 2^16 * 4 kB = 256 MB.
-          bytecodePagesTraceHash = updateJenkinsHash(
-              bytecodePagesTraceHash, static_cast<char16_t>(id));
-        }
-        bytecodeIOus = 0;
-        for (auto us : tracker->getMicros()) {
-          bytecodeIOus += us;
-        }
-        sample.clear();
-        llvh::raw_string_ostream str(sample);
-        std::random_device rng;
-        for (unsigned sampleIdx = 0; sampleIdx < NUM_SAMPLES; ++sampleIdx) {
-          int32_t accessOrderPos = rng() % ids.size();
-          base64vlq::encode(str, accessOrderPos);
-          base64vlq::encode(str, ids[accessOrderPos]);
-        }
-      }
-    }
-    // If we have are replaying a trace, override the value.
-    if (statsTable) {
-      bytecodePagesAccessed = (*statsTable)["js_bytecodePagesAccessed"].num();
-    }
-
-    if (bytecodePagesAccessed) {
-      SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
-      SET_PROP_NEW("js_bytecodeSize", bytecodeSize);
-      SET_PROP_NEW("js_bytecodePagesTraceHash", bytecodePagesTraceHash);
-      SET_PROP_NEW("js_bytecodeIOTime", bytecodeIOus / 1e6);
-      SET_PROP_STR(
-          "js_bytecodePagesTraceSample",
-          ASCIIRef(sample.data(), sample.size()));
-    }
-  }
+#undef SET_PROP_NEW
+  PASSTHROUGH_PROP("js_hermesVolCtxSwitches");
+  PASSTHROUGH_PROP("js_hermesInvolCtxSwitches");
+  PASSTHROUGH_PROP("js_pageSize");
+  PASSTHROUGH_PROP("js_threadAffinityMask");
+  PASSTHROUGH_PROP("js_threadCPU");
+  PASSTHROUGH_PROP("js_bytecodePagesResident");
+  PASSTHROUGH_PROP("js_bytecodePagesResidentRuns");
+  PASSTHROUGH_PROP("js_bytecodePagesAccessed");
+  PASSTHROUGH_PROP("js_bytecodeSize");
+  PASSTHROUGH_PROP("js_bytecodePagesTraceHash");
+  PASSTHROUGH_PROP("js_bytecodeIOTime");
+  PASSTHROUGH_PROP("js_bytecodePagesTraceSample");
 
   if (storage->env && statsTable) {
     storage->env->callsToHermesInternalGetInstrumentedStats.pop_front();
@@ -394,8 +287,6 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
   }
 
   return resultHandle.getHermesValue();
-
-#undef SET_PROP_NEW
 }
 
 /// \return a static string summarising the presence and resolution type of

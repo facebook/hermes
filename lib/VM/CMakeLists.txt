@@ -50,7 +50,6 @@ set(source_files
   PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
-  RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp

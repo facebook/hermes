@@ -33,7 +33,6 @@
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/RuntimeModule.h"
-#include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
@@ -562,12 +561,6 @@ class Runtime : public PointerBase,
   /// Returns trailing data for all runtime modules.
   std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
-  /// \return the set of runtime stats.
-  instrumentation::RuntimeStats &getRuntimeStats() {
-    return runtimeStats_;
-  }
-
-  /// Print the heap and other misc. stats to the given stream.
   void printHeapStats(llvh::raw_ostream &os);
 
   /// Write IO tracking (aka HBC page access) info to the supplied
@@ -1175,9 +1168,6 @@ class Runtime : public PointerBase,
 
   /// The global symbol registry.
   SymbolRegistry symbolRegistry_{};
-
-  /// Set of runtime statistics.
-  instrumentation::RuntimeStats runtimeStats_;
 
   /// Shared location to place native objects required by JSLib
   std::shared_ptr<RuntimeCommonStorage> commonStorage_;
