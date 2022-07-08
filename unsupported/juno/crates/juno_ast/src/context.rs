@@ -203,6 +203,12 @@ impl<'ast> Context<'ast> {
         }
     }
 
+    /// Acquire a [`GCLock`] on this `Context`.
+    /// This is just a more ergonomic way to call `GCLock::new`.
+    pub fn lock<'ctx>(&'ctx mut self) -> GCLock<'ast, 'ctx> {
+        GCLock::new(self)
+    }
+
     /// Allocate a new `Node` in this `Context`.
     pub(crate) fn alloc<'s>(&'s self, n: Node<'_>) -> &'s Node<'s> {
         let free = unsafe { &mut *self.free_nodes.get() };

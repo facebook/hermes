@@ -88,7 +88,7 @@ fn test_roundtrip_jsx(src1: &str) {
 fn test_literals() {
     let mut ctx = Context::new();
     let string = {
-        let gc = GCLock::new(&mut ctx);
+        let gc = ctx.lock();
         NodeRc::from_node(
             &gc,
             builder::StringLiteral::build_template(
