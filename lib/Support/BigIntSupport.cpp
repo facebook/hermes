@@ -707,6 +707,14 @@ int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
 }
 
 namespace {
+/// Helper adapter for calling getSignExtValue with *BigIntRefs.
+template <typename AnyBigIntRef>
+BigIntDigitType getBigIntRefSignExtValue(const AnyBigIntRef &src) {
+  return src.numDigits == 0
+      ? static_cast<BigIntDigitType>(0)
+      : getSignExtValue<BigIntDigitType>(src.digits[src.numDigits - 1]);
+}
+
 /// Copies \p src's digits to \p dst's, which must have at least
 /// as many digits as \p src. Sign-extends dst to fill \p dst.numDigits.
 OperationStatus initNonCanonicalWithReadOnlyBigInt(
@@ -725,9 +733,7 @@ OperationStatus initNonCanonicalWithReadOnlyBigInt(
   // and finally size-extend dst to its size.
   const uint32_t digitsToSet = dst.numDigits - digitsToCopy;
   const uint32_t bytesToSet = digitsToSet * BigIntDigitSizeInBytes;
-  const BigIntDigitType signExtValue = src.numDigits == 0
-      ? static_cast<BigIntDigitType>(0)
-      : getSignExtValue<BigIntDigitType>(src.digits[src.numDigits - 1]);
+  const BigIntDigitType signExtValue = getBigIntRefSignExtValue(src);
   memset(dst.digits + digitsToCopy, signExtValue, bytesToSet);
 
   return OperationStatus::RETURNED;
@@ -778,6 +784,81 @@ OperationStatus unaryNot(MutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 
   llvh::APInt::tcComplement(lhs.digits, lhs.numDigits);
   ensureCanonicalResult(lhs);
+  return OperationStatus::RETURNED;
+}
+
+uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  // Simulate infinite precision by requiring an extra digit in the result,
+  // regardless of the operands. It could be smarter -- carry will only happen
+  // if the operands are the same size, and the sign_bit ˆ last_bit is 1 for
+  // either.
+  return std::max(lhs.numDigits, rhs.numDigits) + 1;
+}
+
+OperationStatus
+subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  // The APInt API requires the operands to have the same size, and it is
+  // inplace. Thus the subtraction will be expressed as
+  //
+  // dst = signExt(lhs) if dst has more digits than lhs else lhs
+  // dst -= signExt(rhs) if dst has more digits than rhs else rhs
+  //
+  // There's no need to sign-extend rhs if it is the same size as dst. If it
+  // isn't the same size, then it must be sign-extended first, thus the
+  // operation would be expressed as
+  //
+  // dst = signExt(lhs) if dst has more digits than lhs else lhs
+  // tmp = signExt(rhs)
+  // dst -= tmp
+  //
+  // To avoid needing to create a temporary version of rhs, the operation is
+  // expressed as
+  //
+  // dst = signExt(srcWithFewerDigits)
+  // dst -= srcWithMostDigits
+  // dst = -dst if srcWithMostDigits == lhs
+  //
+  // which avoids the need for the extra storage and sign-extension.
+  const auto &[srcWithFewerDigits, srcWithMostDigits, negateResult] =
+      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs, false)
+                                     : std::make_tuple(rhs, lhs, true);
+
+  // The caller provided dst may be too big -- i.e., have more digits than
+  // actually needed. Precisely srcWithMostDigits.numDigits + 1 digits are
+  // needed to simulate infinite precision. Thus limit the result size to
+  // srcWithMostDigits.numDigits + 1 if dst has more digits than that.
+  if (srcWithMostDigits.numDigits + 1 < dst.numDigits) {
+    dst.numDigits = srcWithMostDigits.numDigits + 1;
+  }
+
+  // dst = sign-extend srcWithFewerDigits.
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, srcWithFewerDigits);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  // dst -= srcWithMostDigits
+  // N.B.: the carryOut may need to be propagated to dst's last digit (if
+  // there's an extra precision digit in dst).
+  const BigIntDigitType carryIn = 0;
+  BigIntDigitType carryOut = llvh::APInt::tcSubtract(
+      dst.digits,
+      srcWithMostDigits.digits,
+      carryIn,
+      srcWithMostDigits.numDigits);
+
+  llvh::APInt::tcSubtractPart(
+      dst.digits + srcWithMostDigits.numDigits,
+      carryOut + getBigIntRefSignExtValue(srcWithMostDigits),
+      dst.numDigits - srcWithMostDigits.numDigits);
+
+  // dst = -dst if srcWithMostDigits = lhs
+  if (negateResult) {
+    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+  }
+
+  // Resize dst appropriately to ensure the resulting bigint is canonical.
+  ensureCanonicalResult(dst);
   return OperationStatus::RETURNED;
 }
 } // namespace bigint

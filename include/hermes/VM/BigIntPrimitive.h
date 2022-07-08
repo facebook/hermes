@@ -169,6 +169,12 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> src,
       Runtime &runtime);
 
+  /// \return \p lhs - \p rhs
+  static CallResult<HermesValue> subtract(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

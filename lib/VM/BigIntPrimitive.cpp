@@ -106,5 +106,29 @@ CallResult<HermesValue> BigIntPrimitive::unaryNOT(
   return unaryOp(&bigint::unaryNot, src, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::subtract(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const size_t numDigits = bigint::subtractResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  auto u =
+      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
+
+  if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto res = bigint::subtract(
+      u->getMutableRef(runtime),
+      lhs->getImmutableRef(runtime),
+      rhs->getImmutableRef(runtime));
+  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(res, runtime);
+  }
+
+  return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+}
+
 } // namespace vm
 } // namespace hermes

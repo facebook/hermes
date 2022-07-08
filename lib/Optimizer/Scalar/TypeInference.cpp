@@ -274,6 +274,34 @@ static bool inferPhiInstInst(PhiInst *P) {
   }
 }
 
+namespace {
+static bool inferBinaryArith(BinaryOperatorInst *BOI) {
+  Type LeftTy = BOI->getLeftHandSide()->getType();
+  Type RightTy = BOI->getRightHandSide()->getType();
+
+  // Number - Number => Number
+  if (LeftTy.isNumberType() && RightTy.isNumberType()) {
+    BOI->setType(Type::createNumber());
+    return true;
+  }
+
+  // BigInt - BigInt => BigInt
+  if (LeftTy.isBigIntType() && RightTy.isBigIntType()) {
+    BOI->setType(Type::createBigInt());
+    return true;
+  }
+
+  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+      ? Type::createBigInt()
+      : Type::createNoType();
+
+  // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands can be
+  // BigInt due to the no automatic BigInt conversion.
+  BOI->setType(Type::unionTy(Type::createNumber(), mayBeBigInt));
+  return true;
+}
+} // anonymous namespace
+
 static bool inferBinaryInst(BinaryOperatorInst *BOI) {
   switch (BOI->getOperatorKind()) {
     // The following operations always return a boolean result.
@@ -295,6 +323,11 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
       BOI->setType(Type::createBoolean());
       return true;
 
+    // These arithmetic operations always return a number or bigint:
+    // https://tc39.es/ecma262/#sec-subtraction-operator-minus
+    case BinaryOperatorInst::OpKind::SubtractKind:
+      return inferBinaryArith(BOI);
+
     // These arithmetic operations always return a number:
     // https://es5.github.io/#x11.5.1
     case BinaryOperatorInst::OpKind::MultiplyKind:
@@ -302,10 +335,6 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
     case BinaryOperatorInst::OpKind::DivideKind:
     // https://es5.github.io/#x11.5.3
     case BinaryOperatorInst::OpKind::ModuloKind:
-    // https://es5.github.io/#x11.6.2
-    case BinaryOperatorInst::OpKind::SubtractKind:
-      BOI->setType(Type::createNumber());
-      return true;
     // https://es5.github.io/#x11.7.1
     case BinaryOperatorInst::OpKind::LeftShiftKind:
     // https://es5.github.io/#x11.7.2

@@ -7,6 +7,7 @@
 
 #define DEBUG_TYPE "vm"
 #include "JSLib/JSLibInternal.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -332,19 +333,76 @@ ExecutionStatus Interpreter::implCallBuiltin(
   return ExecutionStatus::RETURNED;
 }
 
+using BigIntBinaryOp = CallResult<HermesValue>(
+    Handle<BigIntPrimitive>,
+    Handle<BigIntPrimitive>,
+    Runtime &);
+
+static CallResult<HermesValue> doBigIntBinOp(
+    Runtime &runtime,
+    BigIntBinaryOp Oper,
+    Handle<BigIntPrimitive> lhs,
+    Handle<> rhs) {
+  // Cannot use ToBigInt here as it would incorrectly allow boolean/string rhs.
+  CallResult<HermesValue> res = toNumeric_RJS(runtime, rhs);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!res->isBigInt()) {
+    return runtime.raiseTypeErrorForValue("Cannot convert ", rhs, " to BigInt");
+  }
+  return Oper(lhs, runtime.makeHandle(res->getBigInt()), runtime);
+}
+
+static CallResult<HermesValue> UnimplementedBigIntBinOp(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+namespace {
+/// BigIntOper maps the \param Oper (a Number operation) to its respective
+/// BigIntPrimitive counterpart.
+template <auto Oper>
+int BigIntOper;
+
+template <>
+static constexpr auto &BigIntOper<doDiv> = UnimplementedBigIntBinOp;
+
+template <>
+static constexpr auto &BigIntOper<doMod> = UnimplementedBigIntBinOp;
+
+template <>
+constexpr auto &BigIntOper<doSub> = BigIntPrimitive::subtract;
+
+template <>
+static constexpr auto &BigIntOper<doMul> = UnimplementedBigIntBinOp;
+
+} // namespace
+
 template <auto Oper>
 CallResult<HermesValue>
 doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
-  CallResult<HermesValue> res = toNumber_RJS(runtime, lhs);
+  CallResult<HermesValue> res =
+      toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double left = res->getDouble();
-  res = toNumber_RJS(runtime, rhs);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_LIKELY(!res->isBigInt())) {
+    res = toNumber_RJS(runtime, runtime.makeHandle(*res));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    double left = res->getDouble();
+    res = toNumber_RJS(runtime, rhs);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeDoubleValue(Oper(left, res->getDouble()));
   }
-  return HermesValue::encodeDoubleValue(Oper(left, res->getDouble()));
+  return doBigIntBinOp(
+      runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
 }
 
 template CallResult<HermesValue>
