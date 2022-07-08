@@ -760,6 +760,17 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
                  value.getBool(),
                  Handle<JSObject>::vmcast(&runtime.booleanPrototype))
           .getHermesValue();
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2: {
+      auto res = JSBigInt::create(
+          runtime,
+          runtime.makeHandle(value.getBigInt()),
+          Handle<JSObject>::vmcast(&runtime.bigintPrototype));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return res->getHermesValue();
+    }
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2: {
       auto res = JSString::create(

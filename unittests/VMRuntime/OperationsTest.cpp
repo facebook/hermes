@@ -917,6 +917,20 @@ TEST_F(OperationsTest, ToObjectTest) {
     EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
                     .equals(strRef));
   }
+
+  {
+    auto bigint = BigIntPrimitive::fromSignedNoThrow(0x7ffffffe, runtime);
+    auto scopedVal =
+        runtime.makeHandle(HermesValue::encodeBigIntValue(bigint.get()));
+    auto res = toObject(runtime, scopedVal);
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
+    EXPECT_TRUE(res->isObject());
+    auto obj = vmcast<JSBigInt>(static_cast<GCCell *>(res->getObject()));
+    // Although not required by the spec, Hermes' implementation is expected to
+    // not create a new BigIntPrimitive when boxing. Thus, make sure the
+    // addresses match.
+    EXPECT_TRUE(bigint.get() == JSBigInt::getPrimitiveBigInt(obj, runtime));
+  }
 }
 
 #define TypeOfTest(result, hv)                                      \
