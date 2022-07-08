@@ -60,16 +60,14 @@ class TypeInferenceImpl {
   bool runOnModule(Module *M);
 };
 
-static bool inferUnaryMinus(UnaryOperatorInst *UOI) {
+static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
   Value *op = UOI->getSingleOperand();
 
-  // - Number => Number
   if (op->getType().isNumberType()) {
-    UOI->setType(Type::createNumber());
+    UOI->setType(numberResultType);
     return true;
   }
 
-  // - BigInt => BigInt
   if (op->getType().isBigIntType()) {
     UOI->setType(Type::createBigInt());
     return true;
@@ -79,8 +77,22 @@ static bool inferUnaryMinus(UnaryOperatorInst *UOI) {
       op->getType().canBeBigInt() ? Type::createBigInt() : Type::createNoType();
 
   // - ?? => Number|?BigInt. BigInt is only possible if op.Type canBeBigInt.
-  UOI->setType(Type::unionTy(Type::createNumber(), mayBeBigInt));
+  UOI->setType(Type::unionTy(numberResultType, mayBeBigInt));
   return true;
+}
+
+static bool inferUnaryMinus(UnaryOperatorInst *UOI) {
+  // - Number => Number
+  // - BigInt => BigInt
+  // - ?? => Number|BigInt
+  return inferUnaryArith(UOI, Type::createNumber());
+}
+
+static bool inferTilde(UnaryOperatorInst *UOI) {
+  // ~ Number => Int32
+  // ~ BigInt => BigInt
+  // ~ ?? => Int32|BigInt
+  return inferUnaryArith(UOI, Type::createInt32());
 }
 } // anonymous namespace.
 
@@ -105,9 +117,9 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
     case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());
       return true;
+    // https://tc39.es/ecma262/#sec-bitwise-not-operator
     case OpKind::TildeKind: // ~
-      UOI->setType(Type::createInt32());
-      return true;
+      return inferTilde(UOI);
     case OpKind::BangKind: // !
       UOI->setType(Type::createBoolean());
       return true;

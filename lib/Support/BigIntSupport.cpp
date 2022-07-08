@@ -763,5 +763,22 @@ OperationStatus unaryMinus(MutableBigIntRef dst, ImmutableBigIntRef src) {
       "unaryMinus overflow");
   return OperationStatus::RETURNED;
 }
+
+uint32_t unaryNotResultSize(ImmutableBigIntRef src) {
+  // ~ 0n requires one extra digit;
+  // ~ anything else requires at most src.numDigits digits.
+  return std::max(1u, src.numDigits);
+}
+
+OperationStatus unaryNot(MutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  auto res = initNonCanonicalWithReadOnlyBigInt(lhs, rhs);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  llvh::APInt::tcComplement(lhs.digits, lhs.numDigits);
+  ensureCanonicalResult(lhs);
+  return OperationStatus::RETURNED;
+}
 } // namespace bigint
 } // namespace hermes

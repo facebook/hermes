@@ -66,6 +66,26 @@ CallResult<HermesValue> BigIntPrimitive::toString(
       runtime, createASCIIRef(result.c_str()));
 }
 
+CallResult<HermesValue> BigIntPrimitive::unaryOp(
+    UnaryOp op,
+    Handle<BigIntPrimitive> src,
+    size_t numDigits,
+    Runtime &runtime) {
+  auto u =
+      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
+
+  if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto res = (*op)(u->getMutableRef(runtime), src->getImmutableRef(runtime));
+  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(res, runtime);
+  }
+
+  return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+}
+
 CallResult<HermesValue> BigIntPrimitive::unaryMinus(
     Handle<BigIntPrimitive> src,
     Runtime &runtime) {
@@ -75,21 +95,15 @@ CallResult<HermesValue> BigIntPrimitive::unaryMinus(
 
   const uint32_t numDigits =
       bigint::unaryMinusResultSize(src->getImmutableRef(runtime));
+  return unaryOp(&bigint::unaryMinus, src, numDigits, runtime);
+}
 
-  auto u =
-      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
-
-  if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  auto res = bigint::unaryMinus(
-      u->getMutableRef(runtime), src->getImmutableRef(runtime));
-  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
-    return raiseOnError(res, runtime);
-  }
-
-  return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+CallResult<HermesValue> BigIntPrimitive::unaryNOT(
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  const uint32_t numDigits =
+      bigint::unaryNotResultSize(src->getImmutableRef(runtime));
+  return unaryOp(&bigint::unaryNot, src, numDigits, runtime);
 }
 
 } // namespace vm

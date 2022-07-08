@@ -164,6 +164,11 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> src,
       Runtime &runtime);
 
+  /// \return ~ \p src
+  static CallResult<HermesValue> unaryNOT(
+      Handle<BigIntPrimitive> src,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 
@@ -298,6 +303,15 @@ class BigIntPrimitive final
         runtime.makeAVariable<BigIntPrimitive>(cellSizeInBytes, numDigits)};
     return ret;
   }
+
+  using UnaryOp = bigint::OperationStatus (*)(
+      bigint::MutableBigIntRef dst,
+      bigint::ImmutableBigIntRef src);
+  static CallResult<HermesValue> unaryOp(
+      UnaryOp op,
+      Handle<BigIntPrimitive> src,
+      size_t numDigits,
+      Runtime &runtime);
 };
 } // namespace vm
 } // namespace hermes

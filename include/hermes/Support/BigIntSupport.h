@@ -203,6 +203,12 @@ uint32_t unaryMinusResultSize(ImmutableBigIntRef src);
 /// \return \p dst = - \p src
 OperationStatus unaryMinus(MutableBigIntRef dst, ImmutableBigIntRef src);
 
+/// \return number of digits needed to perform \p ~ src
+uint32_t unaryNotResultSize(ImmutableBigIntRef src);
+
+/// \return \p dst = ~ \p src.
+OperationStatus unaryNot(MutableBigIntRef dst, ImmutableBigIntRef src);
+
 } // namespace bigint
 } // namespace hermes
 

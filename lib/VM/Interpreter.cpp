@@ -2791,13 +2791,26 @@ tailCall:
           ip = NEXTINST(BitNot);
           DISPATCH;
         }
-        CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(BitNot))));
+        CAPTURE_IP(res = toNumeric_RJS(runtime, Handle<>(&O2REG(BitNot))));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
+        if (res->isBigInt()) {
+          CAPTURE_IP_ASSIGN(auto bigint, runtime.makeHandle(res->getBigInt()));
+          CAPTURE_IP(res = BigIntPrimitive::unaryNOT(bigint, runtime));
+          if (res == ExecutionStatus::EXCEPTION) {
+            goto exception;
+          }
+          O1REG(Negate) = HermesValue::encodeBigIntValue(res->getBigInt());
+        } else {
+          CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(BitNot))));
+          if (res == ExecutionStatus::EXCEPTION) {
+            goto exception;
+          }
+          O1REG(BitNot) = HermesValue::encodeDoubleValue(
+              ~static_cast<int32_t>(res->getNumber()));
+        }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(BitNot) = HermesValue::encodeDoubleValue(
-            ~static_cast<int32_t>(res->getNumber()));
         ip = NEXTINST(BitNot);
         DISPATCH;
       }
