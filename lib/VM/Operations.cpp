@@ -831,6 +831,81 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
       valueStr);
 }
 
+/// Implement a BigInt vs. String comparison operation using a user-provided
+/// \p comparator. Note that \p leftHandle is a Handle<BigIntPrimitive> to
+/// ensure the caller is putting the BigInt in the lhs (and adjusting \p
+/// comparator appropriately).
+/// \return \p comparator ( \p leftHandle <=> \p righHandle ).
+static CallResult<bool> compareBigIntAndString(
+    Runtime &runtime,
+    Handle<BigIntPrimitive> leftHandle,
+    Handle<> rightHandle,
+    bool (*comparator)(int)) {
+  assert(rightHandle->isString() && "rhs should be string");
+
+  auto bigintRight = stringToBigInt_RJS(runtime, rightHandle);
+  if (LLVM_UNLIKELY(bigintRight == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (bigintRight->isUndefined()) { // Non-compliance: should be undefined.
+    return false;
+  }
+  assert(bigintRight->isBigInt() && "stringToBigInt resulted in non-bigint");
+  return comparator(leftHandle->compare(bigintRight->getBigInt()));
+}
+
+/// Implement a BigInt vs. Number comparison operation using a user-provided
+/// \p comparator. Note that \p leftHandle is a Handle<BigIntPrimitive> to
+/// ensure the caller is putting the BigInt in the lhs (and adjusting \p
+/// comparator appropriately).
+/// \return \p comparator ( \p leftHandle <=> \p righHandle ).
+static CallResult<bool> compareBigIntAndNumber(
+    Runtime &runtime,
+    Handle<BigIntPrimitive> leftHandle,
+    double right,
+    bool (*comparator)(int)) {
+  switch (std::fpclassify(right)) {
+    case FP_NAN:
+      // BigInt comparison to NaN is always false.
+      return false;
+    case FP_INFINITE:
+      // If rhs is +infinite, it is greater than lhs; otherwise, it is less than
+      // rhs.
+      return comparator(right > 0 ? -1 : 1);
+    default:
+      break;
+  }
+
+  // Split the rhs into integral and fractional parts.
+  double integralPart;
+  const double fractionalPart = std::modf(right, &integralPart);
+
+  // Now use the rhs' integral part to create a new BigInt, which is compared to
+  // lhs.
+  auto rightHandle = BigIntPrimitive::fromDouble(integralPart, runtime);
+  if (LLVM_UNLIKELY(rightHandle == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // If rhs' integral part is different than lhs, then use the integral parts'
+  // comparison to decide the result.
+  if (int comparisonResult = leftHandle->compare(rightHandle->getBigInt())) {
+    return comparator(comparisonResult);
+  }
+
+  // Lhs' and rhs' integral parts are equal, thus resort the rhs' fractional
+  // part.
+  if (fractionalPart != 0) {
+    //  If rhs is negative, then it is smaller than lhs; otherwise, it is
+    //  greater.
+    return comparator(right < 0 ? 1 : -1);
+  }
+
+  // Lhs' and rhs' integral parts are equal, and rhs does not have a fractional
+  // part (it is zero), thus they are equal.
+  return comparator(0);
+}
+
 /// Implement a comparison operator. First both operands a converted to
 /// primitives. If they both end up being strings, a lexicographical comparison
 /// is performed. Otherwise both operands are converted to numbers and the
@@ -856,17 +931,53 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
       return left->getString()->compare(right->getString()) oper 0;   \
     }                                                                 \
                                                                       \
+    if (left->isBigInt() && right->isString()) {                      \
+      return compareBigIntAndString(                                  \
+          runtime,                                                    \
+          Handle<BigIntPrimitive>::vmcast(left),                      \
+          right,                                                      \
+          [](int result) { return result oper 0; });                  \
+    }                                                                 \
+                                                                      \
+    if (left->isString() && right->isBigInt()) {                      \
+      return compareBigIntAndString(                                  \
+          runtime,                                                    \
+          Handle<BigIntPrimitive>::vmcast(right),                     \
+          left,                                                       \
+          [](int result) { return -result oper 0; });                 \
+    }                                                                 \
+                                                                      \
     /* Convert both to a number and compare the numbers. */           \
-    resLeft = toNumber_RJS(runtime, left);                            \
+    resLeft = toNumeric_RJS(runtime, left);                           \
     if (resLeft == ExecutionStatus::EXCEPTION)                        \
       return ExecutionStatus::EXCEPTION;                              \
     left = resLeft.getValue();                                        \
-    resRight = toNumber_RJS(runtime, right);                          \
+    resRight = toNumeric_RJS(runtime, right);                         \
     if (resRight == ExecutionStatus::EXCEPTION)                       \
       return ExecutionStatus::EXCEPTION;                              \
     right = resRight.getValue();                                      \
                                                                       \
-    return left->getNumber() oper right->getNumber();                 \
+    if (left->isNumber() && right->isNumber()) {                      \
+      return left->getNumber() oper right->getNumber();               \
+    } else if (left->isBigInt() && right->isBigInt()) {               \
+      return left->getBigInt()->compare(right->getBigInt()) oper 0;   \
+    }                                                                 \
+                                                                      \
+    if (left->isBigInt() && right->isNumber()) {                      \
+      return compareBigIntAndNumber(                                  \
+          runtime,                                                    \
+          Handle<BigIntPrimitive>::vmcast(left),                      \
+          right->getNumber(),                                         \
+          [](int result) { return result oper 0; });                  \
+    }                                                                 \
+    assert(                                                           \
+        left->isNumber() && right->isBigInt() &&                      \
+        "expecting one number and one bigint");                       \
+    return compareBigIntAndNumber(                                    \
+        runtime,                                                      \
+        Handle<BigIntPrimitive>::vmcast(right),                       \
+        left->getNumber(),                                            \
+        [](int result) { return -result oper 0; });                   \
   }
 
 IMPLEMENT_COMPARISON_OP(lessOp_RJS, <);
