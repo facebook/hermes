@@ -1511,6 +1511,135 @@ describe('This type annotation', () => {
       ],
     );
   });
+
+  describe('this annotation can reference generics', () => {
+    test('function decl', () => {
+      verifyHasScopes(
+        `
+          function foo<This>(this: This) {}
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'foo',
+                type: DefinitionType.FunctionName,
+                referenceCount: 0,
+              },
+            ],
+          },
+          {
+            type: ScopeType.Function,
+            variables: [
+              {
+                name: 'arguments',
+                type: null,
+                referenceCount: 0,
+              },
+              {
+                name: 'This',
+                type: DefinitionType.TypeParameter,
+                referenceCount: 1,
+              },
+            ],
+          },
+        ],
+      );
+    });
+    test('function expr', () => {
+      verifyHasScopes(
+        `
+          const foo = function <This>(this: This) {};
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'foo',
+                type: DefinitionType.Variable,
+                referenceCount: 1,
+              },
+            ],
+          },
+          {
+            type: ScopeType.Function,
+            variables: [
+              {
+                name: 'arguments',
+                type: null,
+                referenceCount: 0,
+              },
+              {
+                name: 'This',
+                type: DefinitionType.TypeParameter,
+                referenceCount: 1,
+              },
+            ],
+          },
+        ],
+      );
+    });
+    test('function type1', () => {
+      verifyHasScopes(
+        `
+          type foo = <This>(this: This) => void;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'foo',
+                type: DefinitionType.Type,
+                referenceCount: 0,
+              },
+            ],
+          },
+          {
+            type: ScopeType.Type,
+            variables: [
+              {
+                name: 'This',
+                type: DefinitionType.TypeParameter,
+                referenceCount: 1,
+              },
+            ],
+          },
+        ],
+      );
+    });
+    test('function type2', () => {
+      verifyHasScopes(
+        `
+          type foo<This> = (this: This) => void;
+        `,
+        [
+          {
+            type: ScopeType.Module,
+            variables: [
+              {
+                name: 'foo',
+                type: DefinitionType.Type,
+                referenceCount: 0,
+              },
+            ],
+          },
+          {
+            type: ScopeType.Type,
+            variables: [
+              {
+                name: 'This',
+                type: DefinitionType.TypeParameter,
+                referenceCount: 1,
+              },
+            ],
+          },
+        ],
+      );
+    });
+  });
 });
 
 describe('Imports', () => {

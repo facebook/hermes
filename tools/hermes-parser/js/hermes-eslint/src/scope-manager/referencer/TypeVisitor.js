@@ -244,6 +244,7 @@ class TypeVisitor extends Visitor {
     const hasTypeScope = this.maybeCreateTypeScope(node);
 
     this.visit(node.typeParameters);
+    this.visit(node.this);
     this.visitArray(node.params);
     this.visit(node.returnType);
     this.visit(node.rest);
