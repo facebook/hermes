@@ -103,6 +103,8 @@ type TransformCloneAPIs = $ReadOnly<{
   shallowCloneArray: {
     <T: ESNode>(node: $ReadOnlyArray<T>): $ReadOnlyArray<DetachedNode<T>>,
     <T: ESNode>(node: ?$ReadOnlyArray<T>): ?$ReadOnlyArray<DetachedNode<T>>,
+    <T: ESNode>(node: $ReadOnlyArray<?T>): $ReadOnlyArray<DetachedNode<?T>>,
+    <T: ESNode>(node: ?$ReadOnlyArray<?T>): ?$ReadOnlyArray<DetachedNode<?T>>,
   },
 
   /**
@@ -339,14 +341,20 @@ export function getTransformContext(): TransformContextAdditions {
     }: TransformCloneAPIs['shallowCloneNodeWithOverrides']),
 
     shallowCloneArray: (<T: ESNode>(
-      nodes: ?$ReadOnlyArray<T>,
+      nodes: ?$ReadOnlyArray<?T>,
     ): // $FlowExpectedError[incompatible-cast]
-    ?$ReadOnlyArray<DetachedNode<ESNode>> => {
+    ?$ReadOnlyArray<DetachedNode<?ESNode>> => {
       if (nodes == null) {
         return null;
       }
 
-      return nodes.map(node => shallowCloneNode<T>(node));
+      return nodes.map(node => {
+        if (node == null) {
+          // $FlowExpectedError[incompatible-call]
+          return node;
+        }
+        return shallowCloneNode<T>(node);
+      });
     }: TransformCloneAPIs['shallowCloneArray']),
 
     deepCloneNode: ((

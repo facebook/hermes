@@ -221,34 +221,35 @@ export type AFunction =
   | ArrowFunctionExpression;
 
 export type Statement =
-  | ExpressionStatement
   | BlockStatement
-  | EmptyStatement
-  | DebuggerStatement
-  | WithStatement
-  | ReturnStatement
-  | LabeledStatement
   | BreakStatement
+  | ClassDeclaration
   | ContinueStatement
+  | DebuggerStatement
+  | DeclareInterface
+  | DeclareModule
+  | DeclareOpaqueType
+  | DeclareTypeAlias
+  | DoWhileStatement
+  | EmptyStatement
+  | EnumDeclaration
+  | ExpressionStatement
+  | ForInStatement
+  | ForOfStatement
+  | ForStatement
+  | FunctionDeclaration
   | IfStatement
+  | InterfaceDeclaration
+  | LabeledStatement
+  | OpaqueType
+  | ReturnStatement
   | SwitchStatement
   | ThrowStatement
   | TryStatement
-  | WhileStatement
-  | DoWhileStatement
-  | ForStatement
-  | ForInStatement
-  | ForOfStatement
   | TypeAlias
-  | OpaqueType
-  | InterfaceDeclaration
-  | FunctionDeclaration
   | VariableDeclaration
-  | ClassDeclaration
-  | DeclareTypeAlias
-  | DeclareOpaqueType
-  | DeclareInterface
-  | DeclareModule;
+  | WhileStatement
+  | WithStatement;
 
 // nodes that can be the direct parent of a statement
 export type StatementParentSingle =
@@ -388,6 +389,8 @@ export interface VariableDeclarator extends BaseNode {
   +type: 'VariableDeclarator';
   +id: BindingName;
   +init?: Expression | null;
+
+  +parent: VariableDeclaration;
 }
 
 export type Expression =
@@ -445,7 +448,11 @@ export type ObjectProperty =
   | ObjectPropertyWithNonShorthandStaticName
   | ObjectPropertyWithShorthandStaticName
   | ObjectPropertyWithComputedName;
-export interface ObjectPropertyWithNonShorthandStaticName extends BaseNode {
+interface ObjectPropertyBase extends BaseNode {
+  +parent: ObjectExpression | ObjectPattern;
+}
+export interface ObjectPropertyWithNonShorthandStaticName
+  extends ObjectPropertyBase {
   +type: 'Property';
   +computed: false;
   // non-computed, non-shorthand names are constrained significantly
@@ -455,7 +462,8 @@ export interface ObjectPropertyWithNonShorthandStaticName extends BaseNode {
   +method: boolean;
   +shorthand: false;
 }
-export interface ObjectPropertyWithShorthandStaticName extends BaseNode {
+export interface ObjectPropertyWithShorthandStaticName
+  extends ObjectPropertyBase {
   +type: 'Property';
   +computed: false;
   // shorthand keys *must* be identifiers
@@ -466,7 +474,7 @@ export interface ObjectPropertyWithShorthandStaticName extends BaseNode {
   +method: boolean;
   +shorthand: true;
 }
-export interface ObjectPropertyWithComputedName extends BaseNode {
+export interface ObjectPropertyWithComputedName extends ObjectPropertyBase {
   +type: 'Property';
   +computed: true;
   // computed names can be any expression
@@ -486,6 +494,8 @@ interface DestructuringObjectPropertyBase extends BaseNode {
   // destructuring properties cannot be methods
   +kind: 'init';
   +method: false;
+
+  +parent: ObjectExpression | ObjectPattern;
 }
 export interface DestructuringObjectPropertyWithNonShorthandStaticName
   extends DestructuringObjectPropertyBase {
@@ -862,6 +872,8 @@ export type ClassMemberWithNonComputedName =
 export interface ClassBody extends BaseNode {
   +type: 'ClassBody';
   +body: $ReadOnlyArray<ClassMember>;
+
+  +parent: AClass;
 }
 
 export type MethodDefinition =
@@ -870,6 +882,8 @@ export type MethodDefinition =
   | MethodDefinitionWithNonComputedName;
 interface MethodDefinitionBase extends BaseNode {
   +value: FunctionExpression;
+
+  +parent: ClassBody;
 }
 export interface MethodDefinitionConstructor extends MethodDefinitionBase {
   +type: 'MethodDefinition';
@@ -906,6 +920,8 @@ interface PropertyDefinitionBase extends BaseNode {
   +declare: boolean;
   // hermes always emit this as false
   +optional: false;
+
+  +parent: ClassBody;
 }
 export interface PropertyDefinitionWithComputedName
   extends PropertyDefinitionBase {
@@ -966,6 +982,8 @@ export interface ImportAttribute extends BaseNode {
   +type: 'ImportAttribute';
   +key: Identifier;
   +value: StringLiteral;
+
+  +parent: ImportDeclaration | ImportExpression;
 }
 
 export interface ImportSpecifier extends BaseNode {
@@ -973,6 +991,8 @@ export interface ImportSpecifier extends BaseNode {
   +imported: Identifier;
   +local: Identifier;
   +importKind: null | 'type' | 'typeof';
+
+  +parent: ImportDeclaration;
 }
 
 export interface ImportExpression extends BaseNode {
@@ -984,11 +1004,15 @@ export interface ImportExpression extends BaseNode {
 export interface ImportDefaultSpecifier extends BaseNode {
   +type: 'ImportDefaultSpecifier';
   +local: Identifier;
+
+  +parent: ImportDeclaration;
 }
 
 export interface ImportNamespaceSpecifier extends BaseNode {
   +type: 'ImportNamespaceSpecifier';
   +local: Identifier;
+
+  +parent: ImportDeclaration;
 }
 
 export type DefaultDeclaration = FunctionDeclaration | ClassDeclaration;
@@ -1183,6 +1207,8 @@ export interface ObjectTypeInternalSlot extends BaseNode {
   +static: boolean;
   +method: boolean;
   +value: TypeAnnotation;
+
+  +parent: ObjectTypeAnnotation;
 }
 
 export interface InterfaceTypeAnnotation extends BaseInterfaceNode {
@@ -1211,9 +1237,13 @@ export interface FunctionTypeParam extends BaseNode {
   +name: Identifier | null;
   +typeAnnotation: TypeAnnotationType;
   +optional: boolean;
+
+  +parent: FunctionTypeAnnotation;
 }
 export interface InferredPredicate extends BaseNode {
   +type: 'InferredPredicate';
+
+  +parent: AFunction | DeclareFunction;
 }
 
 export interface ObjectTypeAnnotation extends BaseNode {
@@ -1235,11 +1265,15 @@ export interface ObjectTypeProperty extends BaseNode {
   +proto: false; // ???
   +variance: Variance | null;
   +kind: 'init';
+
+  +parent: ObjectTypeAnnotation;
 }
 export interface ObjectTypeCallProperty extends BaseNode {
   +type: 'ObjectTypeCallProperty';
   +value: FunctionTypeAnnotation;
   +static: false; // can't be static
+
+  +parent: ObjectTypeAnnotation;
 }
 export interface ObjectTypeIndexer extends BaseNode {
   +type: 'ObjectTypeIndexer';
@@ -1248,10 +1282,14 @@ export interface ObjectTypeIndexer extends BaseNode {
   +value: TypeAnnotationType;
   +static: false; // can't be static
   +variance: null | Variance;
+
+  +parent: ObjectTypeAnnotation;
 }
 export interface ObjectTypeSpreadProperty extends BaseNode {
   +type: 'ObjectTypeSpreadProperty';
   +argument: TypeAnnotationType;
+
+  +parent: ObjectTypeAnnotation;
 }
 
 export interface IndexedAccessType extends BaseNode {
@@ -1289,17 +1327,23 @@ export interface InterfaceExtends extends BaseNode {
   +type: 'InterfaceExtends';
   +id: Identifier;
   +typeParameters: null | TypeParameterDeclaration;
+
+  +parent: InterfaceDeclaration | DeclareInterface;
 }
 
 export interface ClassImplements extends BaseNode {
   +type: 'ClassImplements';
   +id: Identifier;
   +typeParameters: null | TypeParameterDeclaration;
+
+  +parent: AClass | DeclareClass;
 }
 
 export interface Decorator extends BaseNode {
   +type: 'Decorator';
   +expression: Expression;
+
+  +parent: AClass;
 }
 
 export interface TypeParameterDeclaration extends BaseNode {
@@ -1312,10 +1356,14 @@ export interface TypeParameter extends BaseNode {
   +bound: null | TypeAnnotation;
   +variance: null | Variance;
   +default: null | TypeAnnotationType;
+
+  +parent: TypeParameterDeclaration;
 }
 export interface TypeParameterInstantiation extends BaseNode {
   +type: 'TypeParameterInstantiation';
   +params: $ReadOnlyArray<TypeAnnotationType>;
+
+  +parent: GenericTypeAnnotation | CallExpression | NewExpression;
 }
 
 export interface EnumDeclaration extends BaseNode {
@@ -1336,46 +1384,62 @@ export interface EnumNumberBody extends BaseInferrableEnumBody {
   // enum number members cannot be defaulted
   +members: $ReadOnlyArray<EnumNumberMember>;
   +explicitType: boolean;
+
+  +parent: EnumDeclaration;
 }
 
 export interface EnumNumberMember extends BaseNode {
   +type: 'EnumNumberMember';
   +id: Identifier;
   +init: NumericLiteral;
+
+  +parent: EnumNumberBody;
 }
 
 export interface EnumStringBody extends BaseInferrableEnumBody {
   +type: 'EnumStringBody';
   +members: $ReadOnlyArray<EnumStringMember | EnumDefaultedMember>;
+
+  +parent: EnumDeclaration;
 }
 
 export interface EnumStringMember extends BaseNode {
   +type: 'EnumStringMember';
   +id: Identifier;
   +init: StringLiteral;
+
+  +parent: EnumStringBody;
 }
 
 export interface EnumBooleanBody extends BaseInferrableEnumBody {
   +type: 'EnumBooleanBody';
   // enum boolean members cannot be defaulted
   +members: $ReadOnlyArray<EnumBooleanMember>;
+
+  +parent: EnumDeclaration;
 }
 
 export interface EnumBooleanMember extends BaseNode {
   +type: 'EnumBooleanMember';
   +id: Identifier;
   +init: BooleanLiteral;
+
+  +parent: EnumBooleanBody;
 }
 
 export interface EnumSymbolBody extends BaseEnumBody {
   +type: 'EnumSymbolBody';
   // enum symbol members can only be defaulted
   +members: $ReadOnlyArray<EnumDefaultedMember>;
+
+  +parent: EnumDeclaration;
 }
 
 export interface EnumDefaultedMember extends BaseNode {
   +type: 'EnumDefaultedMember';
   +id: Identifier;
+
+  +parent: EnumStringBody | EnumSymbolBody;
 }
 
 /*****************
@@ -1502,15 +1566,21 @@ export interface JSXAttribute extends BaseNode {
   +type: 'JSXAttribute';
   +name: JSXIdentifier;
   +value: Literal | JSXExpression | null;
+
+  +parent: JSXOpeningElement;
 }
 
 export interface JSXClosingElement extends BaseNode {
   +type: 'JSXClosingElement';
   +name: JSXTagNameExpression;
+
+  +parent: JSXElement;
 }
 
 export interface JSXClosingFragment extends BaseNode {
   +type: 'JSXClosingFragment';
+
+  +parent: JSXFragment;
 }
 
 export interface JSXElement extends BaseNode {
@@ -1558,15 +1628,21 @@ export interface JSXOpeningElement extends BaseNode {
   +selfClosing: boolean;
   +name: JSXTagNameExpression;
   +attributes: $ReadOnlyArray<JSXAttribute | JSXSpreadAttribute>;
+
+  +parent: JSXElement;
 }
 
 export interface JSXOpeningFragment extends BaseNode {
   +type: 'JSXOpeningFragment';
+
+  +parent: JSXFragment;
 }
 
 export interface JSXSpreadAttribute extends BaseNode {
   +type: 'JSXSpreadAttribute';
   +argument: Expression;
+
+  +parent: JSXOpeningElement;
 }
 
 export interface JSXText extends BaseNode {
