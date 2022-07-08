@@ -1067,5 +1067,86 @@ multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return OperationStatus::RETURNED;
 }
 
+uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return std::max(lhs.numDigits, rhs.numDigits) + 1;
+}
+
+OperationStatus
+divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  // Ensure dst is large enough.
+  const uint32_t dstSize = divideResultSize(lhs, rhs);
+  if (dst.numDigits < dstSize) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+
+  // make sure to drop any extraneous digits.
+  dst.numDigits = dstSize;
+
+  // Signal division by zero.
+  if (compare(rhs, 0) == 0) {
+    return OperationStatus::DIVISION_BY_ZERO;
+  }
+
+  // tcDivide is in-place, so division will be expressed as
+  //
+  // dst = signExt(lhs)
+  // dst, rem, scratch /= signExt(rhs)
+  //
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, lhs);
+  assert(res == OperationStatus::RETURNED && "dst array is too small");
+  (void)res;
+
+  // tcDivide operates on unsigned number, so just like multiply, the operands
+  // must be negated (and the result as well, if appropriate) if they are
+  // negative.
+  const bool isLhsNegative = isNegative(lhs);
+  const bool isRhsNegative = isNegative(rhs);
+
+  // lhs can't be modified, but it has been sign-extended into dst; thus, if lhs
+  // < 0 negate dst.
+  if (isLhsNegative) {
+    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+  }
+
+  // If rhs has fewer digits than dst we must resize it.
+  const bool needToResizeRhs = rhs.numDigits < dstSize;
+
+  uint32_t tmpStorageSizeScratch = dstSize;
+  uint32_t tmpStorageSizeRemainder = dstSize;
+  uint32_t tmpStorageSizeRhs = (needToResizeRhs || isRhsNegative) ? dstSize : 0;
+  const uint32_t tmpStorageSize =
+      tmpStorageSizeScratch + tmpStorageSizeRemainder + tmpStorageSizeRhs;
+
+  TmpStorage tmpStorage(tmpStorageSize);
+
+  BigIntDigitType *scratch = tmpStorage.requestNumDigits(tmpStorageSizeScratch);
+
+  BigIntDigitType *remainder =
+      tmpStorage.requestNumDigits(tmpStorageSizeRemainder);
+
+  if (tmpStorageSizeRhs > 0) {
+    MutableBigIntRef tmpRhs{
+        tmpStorage.requestNumDigits(tmpStorageSizeRhs), tmpStorageSizeRhs};
+    res = initNonCanonicalWithReadOnlyBigInt(tmpRhs, rhs);
+    assert(res == OperationStatus::RETURNED && "temporary array is too small");
+    (void)res;
+    if (isRhsNegative) {
+      llvh::APInt::tcNegate(tmpRhs.digits, tmpRhs.numDigits);
+    }
+    rhs = ImmutableBigIntRef{tmpRhs.digits, tmpRhs.numDigits};
+  }
+
+  llvh::APInt::tcDivide(dst.digits, rhs.digits, remainder, scratch, dstSize);
+
+  // the result must be negated if the srcs' sign don't match.
+  const bool negateResult = isLhsNegative != isRhsNegative;
+  if (negateResult) {
+    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+  }
+
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
+}
+
 } // namespace bigint
 } // namespace hermes

@@ -368,7 +368,7 @@ template <auto Oper>
 int BigIntOper;
 
 template <>
-static constexpr auto &BigIntOper<doDiv> = UnimplementedBigIntBinOp;
+constexpr auto &BigIntOper<doDiv> = BigIntPrimitive::divide;
 
 template <>
 static constexpr auto &BigIntOper<doMod> = UnimplementedBigIntBinOp;

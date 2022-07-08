@@ -138,6 +138,7 @@ enum class OperationStatus : uint32_t {
   RETURNED,
   DEST_TOO_SMALL,
   TOO_MANY_DIGITS,
+  DIVISION_BY_ZERO,
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
 /// Initializes \p dst with \p data, sign-extending the bits as needed.
@@ -230,6 +231,13 @@ uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 /// \return \p dst = \p lhs * \p rhs (full precision)
 OperationStatus
 multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return number of digits needed to perform \p lhs / \p rhs
+uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return \p dst = \p lhs / \p rhs
+OperationStatus
+divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 
 } // namespace bigint
 } // namespace hermes

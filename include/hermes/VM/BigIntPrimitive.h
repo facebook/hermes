@@ -187,6 +187,12 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p lhs / \p rhs
+  static CallResult<HermesValue> divide(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 
@@ -213,6 +219,8 @@ class BigIntPrimitive final
             "BigInt is too small for the operation result");
       case bigint::OperationStatus::TOO_MANY_DIGITS:
         return runtime.raiseRangeError("Maximum BigInt size exceeded");
+      case bigint::OperationStatus::DIVISION_BY_ZERO:
+        return runtime.raiseRangeError("Division by zero");
     }
   }
 

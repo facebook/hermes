@@ -325,14 +325,13 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
 
     // These arithmetic operations always return a number or bigint:
     // https://262.ecma-international.org/#sec-multiplicative-operators
+    case BinaryOperatorInst::OpKind::DivideKind:
     case BinaryOperatorInst::OpKind::MultiplyKind:
     // https://tc39.es/ecma262/#sec-subtraction-operator-minus
     case BinaryOperatorInst::OpKind::SubtractKind:
       return inferBinaryArith(BOI);
 
     // These arithmetic operations always return a number:
-    // https://es5.github.io/#x11.5.2
-    case BinaryOperatorInst::OpKind::DivideKind:
     // https://es5.github.io/#x11.5.3
     case BinaryOperatorInst::OpKind::ModuloKind:
     // https://es5.github.io/#x11.7.1
