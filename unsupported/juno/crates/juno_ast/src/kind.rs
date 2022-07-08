@@ -31,6 +31,9 @@ macro_rules! gen_nodekind_enum {
         ),*
         $(,)?
     }) => {
+        use crate::context::NodeListElement;
+        use crate::node_child::NodeChild;
+
         // The kind of an AST node.
         // Matching against this enum allows traversal of the AST.
         // Each variant of the enum must only have fields of the following types:
@@ -356,9 +359,9 @@ macro_rules! gen_nodekind_enum {
                 LogicalExpressionOperator,
                 MethodDefinitionKind,
                 Node,
-                NodeChild,
                 NodeLabel,
                 NodeList,
+                node_child::NodeChild,
                 NodeMetadata,
                 NodeString,
                 PropertyKind,

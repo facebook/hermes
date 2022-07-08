@@ -24,8 +24,8 @@ use super::UpdateExpressionOperator;
 use super::VariableDeclarationKind;
 use juno_support::case::ascii_snake_to_camel;
 use juno_support::json::*;
+use std::io;
 use std::io::Write;
-use std::io::{self};
 
 pub use juno_support::json::Pretty;
 
