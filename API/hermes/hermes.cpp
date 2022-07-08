@@ -620,7 +620,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
-    } else if (value.isSymbol() || value.isString() || value.isObject()) {
+    } else if (
+        value.isSymbol() || value.isBigInt() || value.isString() ||
+        value.isObject()) {
       return phv(value);
     } else {
       llvm_unreachable("unknown value kind");
@@ -637,7 +639,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
           vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
-    } else if (value.isSymbol() || value.isString() || value.isObject()) {
+    } else if (
+        value.isSymbol() || value.isBigInt() || value.isString() ||
+        value.isObject()) {
       return vm::Handle<vm::HermesValue>(&phv(value));
     } else {
       llvm_unreachable("unknown value kind");
@@ -655,6 +659,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return hv.getDouble();
     } else if (hv.isSymbol()) {
       return add<jsi::Symbol>(hv);
+    } else if (hv.isBigInt()) {
+      return add<jsi::BigInt>(hv);
     } else if (hv.isString()) {
       return add<jsi::String>(hv);
     } else if (hv.isObject()) {
@@ -688,6 +694,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Instrumentation &instrumentation() override;
 
   PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override;
+  PointerValue *cloneBigInt(const Runtime::PointerValue *pv) override;
   PointerValue *cloneString(const Runtime::PointerValue *pv) override;
   PointerValue *cloneObject(const Runtime::PointerValue *pv) override;
   PointerValue *clonePropNameID(const Runtime::PointerValue *pv) override;
@@ -760,6 +767,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       size_t count) override;
 
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
+  bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
   bool strictEquals(const jsi::String &a, const jsi::String &b) const override;
   bool strictEquals(const jsi::Object &a, const jsi::Object &b) const override;
 
@@ -1512,6 +1520,11 @@ jsi::Runtime::PointerValue *HermesRuntimeImpl::cloneSymbol(
   return clone(pv);
 }
 
+jsi::Runtime::PointerValue *HermesRuntimeImpl::cloneBigInt(
+    const Runtime::PointerValue *pv) {
+  return clone(pv);
+}
+
 jsi::Runtime::PointerValue *HermesRuntimeImpl::cloneString(
     const Runtime::PointerValue *pv) {
   return clone(pv);
@@ -2060,6 +2073,14 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
     const {
   return phv(a).getSymbol() == phv(b).getSymbol();
+}
+
+bool HermesRuntimeImpl::strictEquals(const jsi::BigInt &a, const jsi::BigInt &b)
+    const {
+  throw jsi::JSError(
+      *const_cast<HermesRuntimeImpl *>(this),
+      "unimplemented: "
+      "HermesRuntime::strictEquals(const BigInt &, const BigInt &)");
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::String &a, const jsi::String &b)
