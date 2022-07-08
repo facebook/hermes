@@ -1738,6 +1738,11 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
       auto id = JSObject::getObjectID(vmcast<JSObject>(*value), *this);
       return llvh::hash_value(id);
     }
+    case HermesValue::Tag::BigInt: {
+      // For bigints, we hash the string content.
+      auto bytes = Handle<BigIntPrimitive>::vmcast(value)->getRawDataCompact();
+      return llvh::hash_combine_range(bytes.begin(), bytes.end());
+    }
     case HermesValue::Tag::Str: {
       // For strings, we hash the string content.
       auto strView = StringPrimitive::createStringView(

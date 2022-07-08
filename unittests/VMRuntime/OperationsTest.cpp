@@ -1127,4 +1127,22 @@ TEST_F(OperationsTest, AdditionTest) {
     DoubleAdditionTest(3528.142, 3527, 1.142);
   }
 }
+
+TEST_F(OperationsTest, NumberToBigIntTest) {
+  // Non-integral inputs to numberToBigInt should result in an exception.
+  {
+    auto res = numberToBigInt(runtime, 0.5);
+    ASSERT_EQ(ExecutionStatus::EXCEPTION, res.getStatus());
+    HermesValue thrownValue = runtime.getThrownValue();
+    ASSERT_TRUE(thrownValue.isObject());
+    auto *thrownJSObject = dyn_vmcast<JSObject>(thrownValue.getObject(runtime));
+    ASSERT_TRUE(thrownJSObject);
+    auto thrownProto =
+        JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
+    ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
+    EXPECT_EQ(
+        runtime.RangeErrorPrototype.getObject(runtime), thrownProto->get());
+    runtime.clearThrownValue();
+  }
+}
 } // namespace

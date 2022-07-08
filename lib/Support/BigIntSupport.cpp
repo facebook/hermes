@@ -10,6 +10,7 @@
 #include "hermes/Support/OptValue.h"
 
 #include "llvh/ADT/APInt.h"
+#include "llvh/ADT/bit.h"
 #include "llvh/Support/Endian.h"
 
 #include <cmath>
@@ -134,6 +135,37 @@ OperationStatus initWithBytes(
 bool isNegative(ImmutableBigIntRef src) {
   return src.numDigits > 0 &&
       static_cast<SignedBigIntDigitType>(src.digits[src.numDigits - 1]) < 0;
+}
+
+uint32_t fromDoubleResultSize(double src) {
+  uint64_t srcI = llvh::bit_cast<uint64_t>(src);
+  int64_t exp = ((srcI >> 52) & 0x7ff) - 1023;
+
+  // If the exponent is negative, |src| is in +/- 0.xyz, so
+  // just return 0.
+  if (exp < 0)
+    return 0;
+
+  // double needs at most numBits(mantissa) + 1 (implicit 1 in the mantissa) +
+  // exp - numBits(mantissa) + 1 bits to be represented, hence the + 2 below.
+  return numDigitsForSizeInBits(exp + 2);
+}
+
+OperationStatus fromDouble(MutableBigIntRef dst, double src) {
+  assert(
+      dst.numDigits >= fromDoubleResultSize(src) &&
+      "not enough digits provided for double conversion");
+  // A double can represent a 1024-bit number; the extra bit is needed to
+  // represent the BigInt's sign.
+  const uint32_t MaxBitsToRepresentDouble =
+      llvh::alignTo(1024 + 1, BigIntDigitSizeInBits);
+  llvh::APInt tmp =
+      llvh::APIntOps::RoundDoubleToAPInt(src, MaxBitsToRepresentDouble);
+
+  auto *ptr = reinterpret_cast<const uint8_t *>(tmp.getRawData());
+  auto size = tmp.getNumWords() * BigIntDigitSizeInBytes;
+  auto bytesRef = llvh::makeArrayRef<uint8_t>(ptr, size);
+  return initWithBytes(dst, dropExtraSignBits(bytesRef));
 }
 
 namespace {

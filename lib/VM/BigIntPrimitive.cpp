@@ -38,5 +38,25 @@ BigIntPrimitive::BigIntPrimitive(uint32_t numDigits) : numDigits(numDigits) {
       "cell must fit BigIntPrimitive + Digits exactly");
 }
 
+CallResult<HermesValue> BigIntPrimitive::fromDouble(
+    double value,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::fromDoubleResultSize(value);
+
+  auto u =
+      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
+
+  if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto res = bigint::fromDouble(u->getMutableRef(runtime), value);
+  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(res, runtime);
+  }
+
+  return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+}
+
 } // namespace vm
 } // namespace hermes

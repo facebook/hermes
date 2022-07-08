@@ -87,12 +87,23 @@ Handle<JSObject> createBigIntConstructor(Runtime &runtime) {
 
 CallResult<HermesValue>
 bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
-  auto res = BigIntPrimitive::fromSigned(0, runtime);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+  // The bigint constructor is not a constructor according to
+  // https://262.ecma-international.org/#sec-bigint-constructor
+  if (args.isConstructorCall()) {
+    return runtime.raiseTypeError("BigInt is not a constructor");
+  }
+
+  auto hArg0 = runtime.makeHandle(args.getArg(0));
+  auto prim = toPrimitive_RJS(runtime, hArg0, PreferredType::NUMBER);
+  if (LLVM_UNLIKELY(prim == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeBigIntValue(res->getBigInt());
+  if (prim->isNumber()) {
+    return numberToBigInt(runtime, prim->getNumber());
+  }
+
+  return toBigInt_RJS(runtime, hArg0);
 }
 
 CallResult<HermesValue>

@@ -83,6 +83,9 @@ class BigIntPrimitive final
     return fromBytes(llvh::makeArrayRef(ptr, size), runtime);
   }
 
+  /// \return a newly allocated BigIntPrimitive representing Z( R( \p value ) ).
+  static CallResult<HermesValue> fromDouble(double value, Runtime &runtime);
+
   /// \return a newly allocated BigIntPrimitive with digits filled from \p
   /// bytes, possibly sign-extending to a multiple of DigitType. Brings down the
   /// VM on OOM.

@@ -123,6 +123,12 @@ OperationStatus initWithBytes(
 /// \return true if \p src is a negative bigint, and false otherwise.
 bool isNegative(ImmutableBigIntRef src);
 
+/// \return number of digits needed to perform Z( R( \p src ) ).
+uint32_t fromDoubleResultSize(double src);
+
+/// \return \p dst = Z( R( \p src ) )
+OperationStatus fromDouble(MutableBigIntRef dst, double src);
+
 /// Holds the bytes in a parsed BigInt value.
 class ParsedBigInt {
   ParsedBigInt(const ParsedBigInt &) = delete;

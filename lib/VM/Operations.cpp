@@ -9,6 +9,7 @@
 
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/JSArray.h"
@@ -1982,5 +1983,87 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
   return obj.getHermesValue();
 }
 
+CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number) {
+  if (!isIntegralNumber(number)) {
+    return runtime.raiseRangeError("number is not integral");
+  }
+
+  return BigIntPrimitive::fromDouble(number, runtime);
+}
+
+bool isIntegralNumber(double number) {
+  // 1. if Type(argument) is not Number, return false
+  // it is a number
+
+  // 2. if argument is NaN, +inf, -inf, return false
+  if (std::isnan(number) || number == std::numeric_limits<double>::infinity() ||
+      number == -std::numeric_limits<double>::infinity()) {
+    return false;
+  }
+
+  // 3. if floor(abs(R(argument))) != abs(R(argument)) return false
+  if (std::floor(std::abs(number)) != std::abs(number)) {
+    return false;
+  }
+
+  // 4. return true
+  return true;
+}
+
+CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value) {
+  auto prim = toPrimitive_RJS(runtime, value, PreferredType::NUMBER);
+  if (LLVM_UNLIKELY(prim == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  switch (prim->getETag()) {
+    default:
+      break;
+    case HermesValue::ETag::Undefined:
+      return runtime.raiseTypeError("invalid argument to BigInt()");
+    case HermesValue::ETag::Null:
+      return runtime.raiseTypeError("invalid argument to BigInt()");
+    case HermesValue::ETag::Bool:
+      return BigIntPrimitive::fromSigned(value->getBool() ? 1 : 0, runtime);
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return *prim;
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2: {
+      auto n = stringToBigInt_RJS(runtime, runtime.makeHandle(*prim));
+      if (LLVM_UNLIKELY(n == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (n->isUndefined()) {
+        return runtime.raiseSyntaxError("can't convert string to bigint");
+      }
+      return *n;
+    }
+    case HermesValue::ETag::Symbol:
+      return runtime.raiseTypeError("invalid argument to BigInt()");
+  }
+
+  return runtime.raiseTypeError("invalid argument to BigInt()");
+}
+
+CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value) {
+  if (value->isString()) {
+    auto str = value->getString();
+
+    std::string outError;
+    auto parsedBigInt = str->isASCII()
+        ? bigint::ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
+              str->getStringRef<char>(), &outError)
+        : bigint::ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
+              str->getStringRef<char16_t>(), &outError);
+    if (!parsedBigInt) {
+      return HermesValue::encodeUndefinedValue();
+    }
+
+    return BigIntPrimitive::fromBytes(parsedBigInt->getBytes(), runtime);
+  }
+
+  return runtime.raiseTypeError("Invalid argument to stringToBigInt");
+}
 } // namespace vm
 } // namespace hermes

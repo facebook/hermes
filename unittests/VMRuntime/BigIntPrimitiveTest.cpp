@@ -24,18 +24,34 @@ namespace {
 
 using BigIntPrimitiveTest = RuntimeTestFixture;
 
-LeftToRightVector fullRawData(const Handle<BigIntPrimitive> &bigint) {
+LeftToRightVector fullRawData(BigIntPrimitive *bigint) {
   auto fullBytes = bigint->getRawDataFull();
   LeftToRightVector ret;
   ret.data.insert(ret.data.end(), fullBytes.begin(), fullBytes.end());
   return ret;
 }
 
-LeftToRightVector compactRawData(const Handle<BigIntPrimitive> bigint) {
+LeftToRightVector compactRawData(BigIntPrimitive *bigint) {
   auto fullBytes = bigint->getRawDataCompact();
   LeftToRightVector ret;
   ret.data.insert(ret.data.end(), fullBytes.begin(), fullBytes.end());
   return ret;
+}
+
+LeftToRightVector fullRawData(const Handle<BigIntPrimitive> &bigint) {
+  return fullRawData(bigint.get());
+}
+
+LeftToRightVector compactRawData(const Handle<BigIntPrimitive> &bigint) {
+  return compactRawData(bigint.get());
+}
+
+LeftToRightVector fullRawData(HermesValue bigint) {
+  return fullRawData(bigint.getBigInt());
+}
+
+LeftToRightVector compactRawData(HermesValue bigint) {
+  return compactRawData(bigint.getBigInt());
 }
 
 // Zero is an important corner case -- it has no trailing digits, and it is
@@ -155,6 +171,89 @@ TEST_F(BigIntPrimitiveTest, Create) {
   EXPECT_EQ(
       fullRawData(HH800000000000000000),
       digit(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0));
+}
+
+TEST_F(BigIntPrimitiveTest, FromDouble) {
+  auto HMaxDouble = runtime.ignoreAllocationFailure(
+      BigIntPrimitive::fromDouble(std::numeric_limits<double>::max(), runtime));
+  EXPECT_EQ(
+      fullRawData(HMaxDouble),
+      digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x00) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0));
+  EXPECT_EQ(
+      compactRawData(HMaxDouble),
+      digit(0) + digit(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x00) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0));
+
+  auto HNegMaxDouble =
+      runtime.ignoreAllocationFailure(BigIntPrimitive::fromDouble(
+          -std::numeric_limits<double>::max(), runtime));
+  EXPECT_EQ(
+      fullRawData(HNegMaxDouble),
+      digit(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff) +
+          digit(0, 0, 0, 0, 0, 0, 0x08, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0));
+  EXPECT_EQ(
+      compactRawData(HNegMaxDouble),
+      digit(0xff) + digit(0, 0, 0, 0, 0, 0, 0x08, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0));
+
+  auto H1024e32 = runtime.ignoreAllocationFailure(
+      BigIntPrimitive::fromDouble(1024e32, runtime));
+  EXPECT_EQ(
+      fullRawData(H1024e32),
+      digit(0x00, 0x13, 0xb8, 0xb5, 0xb5, 0x05, 0x6e, 0x17) +
+          digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00));
+  EXPECT_EQ(
+      compactRawData(H1024e32),
+      digit(0x13, 0xb8, 0xb5, 0xb5, 0x05, 0x6e, 0x17) +
+          digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00));
+
+  auto HNeg123456e150 = runtime.ignoreAllocationFailure(
+      BigIntPrimitive::fromDouble(-123456e150, runtime));
+  EXPECT_EQ(
+      fullRawData(HNeg123456e150),
+      digit(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xf6) +
+          digit(0xca, 0xcf, 0xa4, 0x60, 0x2c, 0x09, 0x00, 0x00) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0));
+  EXPECT_EQ(
+      compactRawData(HNeg123456e150),
+      digit(0xf6) + digit(0xca, 0xcf, 0xa4, 0x60, 0x2c, 0x09, 0x00, 0x00) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
+          digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
           digit(0, 0, 0, 0, 0, 0, 0, 0));
 }
 } // namespace

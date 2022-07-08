@@ -447,6 +447,18 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     ComputedPropertyDescriptor desc,
     Handle<> valueOrAccessor);
 
+/// ES2022 21.2.1.1.1 NumberToBigInt(number)
+CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number);
+
+// ES2022 7.2.6 IsIntegralNumber(argument)
+bool isIntegralNumber(double number);
+
+// ES2022 7.1.13 ToBigInt(argument)
+CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value);
+
+// ES2022 7.1.14 StringToBigInt
+CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value);
+
 } // namespace vm
 } // namespace hermes
 
