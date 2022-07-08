@@ -17,6 +17,15 @@
 
 #include "gtest/gtest.h"
 
+namespace hermes {
+namespace vm {
+
+// Temporarily register the BigInt constructor for testing.
+Handle<JSObject> createBigIntConstructor(Runtime &runtime);
+
+} // namespace vm
+} // namespace hermes
+
 using namespace hermes::vm;
 
 namespace {
@@ -703,11 +712,14 @@ TEST_F(OperationsTest, ToStringTest) {
     Handle<> scopedValue = runtime.makeHandle(value);           \
     Handle<> scopedResult = runtime.makeHandle(result);         \
     res = toNumeric_RJS(runtime, scopedValue);                  \
-    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());      \
+    ASSERT_EQ(ExecutionStatus::RETURNED, res.getStatus());      \
+    ASSERT_TRUE(res->isBigInt());                               \
     EXPECT_TRUE(scopedResult->getBigInt() == res->getBigInt()); \
   }
 
 TEST_F(OperationsTest, ToNumericTest) {
+  createBigIntConstructor(runtime);
+
   // Sanity-check a few simple values that should be numbers, not bigints.
   ToNumericTest(+0.0, HermesValue::encodeNullValue());
   InvalidToNumericTest(HermesValue::encodeUndefinedValue());
@@ -722,6 +734,12 @@ TEST_F(OperationsTest, ToNumericTest) {
   {
     auto bigintPrim = BigIntPrimitive::fromSignedNoThrow(12, runtime);
     BigIntToNumericTest(bigintPrim.get(), bigintPrim.get());
+  }
+
+  {
+    auto bigintPrim = BigIntPrimitive::fromSignedNoThrow(42, runtime);
+    auto bigintBoxed = toObject(runtime, bigintPrim);
+    BigIntToNumericTest(bigintPrim.get(), *bigintBoxed);
   }
 }
 

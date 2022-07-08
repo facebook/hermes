@@ -149,7 +149,7 @@ bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 bigintPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeUndefinedValue();
+  return thisBigIntValue(runtime, args.getThisHandle());
 }
 
 CallResult<HermesValue>
