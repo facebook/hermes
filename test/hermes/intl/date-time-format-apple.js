@@ -112,8 +112,8 @@ lengthOptions.slice(1).forEach(element => print(new Intl.DateTimeFormat('en-GB',
 // CHECK-NEXT: Greenwich Mean Time
 
 numericOptions.forEach(element => print(new Intl.DateTimeFormat('ja-JP', {hour: element, minute: element}).format(date)));
-// CHECK-NEXT: 03:45
-// CHECK-NEXT: 03:45
+// CHECK-NEXT: 午前3:45
+// CHECK-NEXT: 午前3:45
 
 print(new Intl.DateTimeFormat('en-US').resolvedOptions().locale);
 // CHECK-NEXT: en-US
