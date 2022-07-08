@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//! Pass to strip the Flow type declarations from code.
+
 use crate::Pass;
 use juno::ast::*;
 

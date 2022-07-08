@@ -39,7 +39,7 @@ impl PassManager {
         }
     }
 
-    /// Pipeline containing a list of standard passes.
+    /// Pipeline containing only the Flow type stripping pass.
     pub fn strip_flow() -> Self {
         Self {
             passes: vec![Box::new(strip_flow::StripFlow::new())],
