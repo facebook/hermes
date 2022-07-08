@@ -354,13 +354,6 @@ static CallResult<HermesValue> doBigIntBinOp(
   return Oper(lhs, runtime.makeHandle(res->getBigInt()), runtime);
 }
 
-static CallResult<HermesValue> UnimplementedBigIntBinOp(
-    Handle<BigIntPrimitive> lhs,
-    Handle<BigIntPrimitive> rhs,
-    Runtime &runtime) {
-  return HermesValue::encodeUndefinedValue();
-}
-
 namespace {
 /// BigIntOper maps the \param Oper (a Number operation) to its respective
 /// BigIntPrimitive counterpart.
@@ -371,7 +364,7 @@ template <>
 constexpr auto &BigIntOper<doDiv> = BigIntPrimitive::divide;
 
 template <>
-static constexpr auto &BigIntOper<doMod> = UnimplementedBigIntBinOp;
+constexpr auto &BigIntOper<doMod> = BigIntPrimitive::remainder;
 
 template <>
 constexpr auto &BigIntOper<doSub> = BigIntPrimitive::subtract;

@@ -166,5 +166,13 @@ CallResult<HermesValue> BigIntPrimitive::divide(
   return binaryOp(&bigint::divide, lhs, rhs, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::remainder(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::remainderResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::remainder, lhs, rhs, numDigits, runtime);
+}
 } // namespace vm
 } // namespace hermes

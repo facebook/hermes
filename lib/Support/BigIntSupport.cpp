@@ -1067,34 +1067,45 @@ multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return OperationStatus::RETURNED;
 }
 
-uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+namespace {
+namespace div_rem {
+static uint32_t getResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return std::max(lhs.numDigits, rhs.numDigits) + 1;
 }
 
-OperationStatus
-divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  // Ensure dst is large enough.
-  const uint32_t dstSize = divideResultSize(lhs, rhs);
-  if (dst.numDigits < dstSize) {
+static OperationStatus compute(
+    MutableBigIntRef quoc,
+    MutableBigIntRef rem,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  assert(
+      ((quoc.digits != nullptr) != (rem.digits != nullptr)) &&
+      "untested -- calling with both or neither quoc and rem");
+
+  const uint32_t resultSize = divideResultSize(lhs, rhs);
+  // set quoc's and rem's numDigits if their digits buffer is nullptr, which
+  // allows querying either for determining the result size.
+  if (quoc.digits == nullptr) {
+    quoc.numDigits = resultSize;
+  }
+
+  if (rem.digits == nullptr) {
+    rem.numDigits = resultSize;
+  }
+
+  // Ensure quoc is large enough; rem is the same size.
+  if (quoc.numDigits < resultSize) {
     return OperationStatus::DEST_TOO_SMALL;
   }
 
   // make sure to drop any extraneous digits.
-  dst.numDigits = dstSize;
+  quoc.numDigits = resultSize;
+  rem.numDigits = resultSize;
 
   // Signal division by zero.
   if (compare(rhs, 0) == 0) {
     return OperationStatus::DIVISION_BY_ZERO;
   }
-
-  // tcDivide is in-place, so division will be expressed as
-  //
-  // dst = signExt(lhs)
-  // dst, rem, scratch /= signExt(rhs)
-  //
-  auto res = initNonCanonicalWithReadOnlyBigInt(dst, lhs);
-  assert(res == OperationStatus::RETURNED && "dst array is too small");
-  (void)res;
 
   // tcDivide operates on unsigned number, so just like multiply, the operands
   // must be negated (and the result as well, if appropriate) if they are
@@ -1102,32 +1113,41 @@ divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   const bool isLhsNegative = isNegative(lhs);
   const bool isRhsNegative = isNegative(rhs);
 
-  // lhs can't be modified, but it has been sign-extended into dst; thus, if lhs
-  // < 0 negate dst.
-  if (isLhsNegative) {
-    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
-  }
+  // If rhs has fewer digits than quoc/rem it must be resized.
+  const bool needToResizeRhs = rhs.numDigits < resultSize;
 
-  // If rhs has fewer digits than dst we must resize it.
-  const bool needToResizeRhs = rhs.numDigits < dstSize;
+  // Figure out which temporary buffers are needed -- this determines how much
+  // temporary storage will be allocated for the division.
+  const bool needTmpQuoc = quoc.digits == nullptr;
+  const bool needTmpRem = rem.digits == nullptr;
+  const bool needTmpRhs = isRhsNegative || needToResizeRhs;
 
-  uint32_t tmpStorageSizeScratch = dstSize;
-  uint32_t tmpStorageSizeRemainder = dstSize;
-  uint32_t tmpStorageSizeRhs = (needToResizeRhs || isRhsNegative) ? dstSize : 0;
-  const uint32_t tmpStorageSize =
-      tmpStorageSizeScratch + tmpStorageSizeRemainder + tmpStorageSizeRhs;
+  uint32_t tmpStorageSizeScratch = resultSize;
+  uint32_t tmpStorageSizeQuoc = needTmpQuoc ? resultSize : 0;
+  uint32_t tmpStorageSizeRem = needTmpRem ? resultSize : 0;
+  uint32_t tmpStorageSizeRhs = needTmpRhs ? resultSize : 0;
+
+  const uint32_t tmpStorageSize = tmpStorageSizeScratch + tmpStorageSizeQuoc +
+      tmpStorageSizeRem + tmpStorageSizeRhs;
 
   TmpStorage tmpStorage(tmpStorageSize);
 
   BigIntDigitType *scratch = tmpStorage.requestNumDigits(tmpStorageSizeScratch);
 
-  BigIntDigitType *remainder =
-      tmpStorage.requestNumDigits(tmpStorageSizeRemainder);
+  if (needTmpQuoc) {
+    assert(quoc.numDigits == tmpStorageSizeQuoc);
+    quoc.digits = tmpStorage.requestNumDigits(tmpStorageSizeQuoc);
+  }
 
-  if (tmpStorageSizeRhs > 0) {
+  if (needTmpRem) {
+    assert(rem.numDigits == tmpStorageSizeRem);
+    rem.digits = tmpStorage.requestNumDigits(tmpStorageSizeRem);
+  }
+
+  if (needTmpRhs) {
     MutableBigIntRef tmpRhs{
         tmpStorage.requestNumDigits(tmpStorageSizeRhs), tmpStorageSizeRhs};
-    res = initNonCanonicalWithReadOnlyBigInt(tmpRhs, rhs);
+    auto res = initNonCanonicalWithReadOnlyBigInt(tmpRhs, rhs);
     assert(res == OperationStatus::RETURNED && "temporary array is too small");
     (void)res;
     if (isRhsNegative) {
@@ -1136,16 +1156,71 @@ divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
     rhs = ImmutableBigIntRef{tmpRhs.digits, tmpRhs.numDigits};
   }
 
-  llvh::APInt::tcDivide(dst.digits, rhs.digits, remainder, scratch, dstSize);
+  // tcDivide is in-place (i.e. quoc is lhs), so division will be expressed as
+  //
+  // quoc = signExt(lhs)
+  // quoc, rem, scratch /= signExt(rhs)
+  auto res = initNonCanonicalWithReadOnlyBigInt(quoc, lhs);
+  assert(res == OperationStatus::RETURNED && "quoc array is too small");
+  (void)res;
 
-  // the result must be negated if the srcs' sign don't match.
-  const bool negateResult = isLhsNegative != isRhsNegative;
-  if (negateResult) {
-    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+  // lhs can't be modified, but it has been sign-extended into quoc; thus, if
+  // lhs < 0 negate quoc.
+  if (isLhsNegative) {
+    llvh::APInt::tcNegate(quoc.digits, quoc.numDigits);
   }
 
-  ensureCanonicalResult(dst);
+  llvh::APInt::tcDivide(
+      quoc.digits, rhs.digits, rem.digits, scratch, resultSize);
+
+  // post-process quoc if no space was allocated for it in the temporary storage
+  // -- i.e., the caller wants the quoc.
+  if (!needTmpQuoc) {
+    // quoc must be negated if lhs' and rhs' signs don't match.
+    const bool negateQuoc = isLhsNegative != isRhsNegative;
+    if (negateQuoc) {
+      llvh::APInt::tcNegate(quoc.digits, quoc.numDigits);
+    }
+    ensureCanonicalResult(quoc);
+  }
+
+  // post-process rem if no space was allocated for it in the temporary storage
+  // -- i.e., the caller wants the rem.
+  if (!needTmpRem) {
+    // rem must be negated if lhs is negative.
+    if (isLhsNegative) {
+      llvh::APInt::tcNegate(rem.digits, rem.numDigits);
+    }
+    ensureCanonicalResult(rem);
+  }
+
   return OperationStatus::RETURNED;
+}
+} // namespace div_rem
+} // namespace
+
+uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return div_rem::getResultSize(lhs, rhs);
+}
+
+OperationStatus
+divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  uint32_t numRemDigits = 0;
+  MutableBigIntRef nullRem{nullptr, numRemDigits};
+  return div_rem::compute(dst, nullRem, lhs, rhs);
+}
+
+uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return div_rem::getResultSize(lhs, rhs);
+}
+
+OperationStatus remainder(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  uint32_t numQuocDigits = 0;
+  MutableBigIntRef nullDigits{nullptr, numQuocDigits};
+  return div_rem::compute(nullDigits, dst, lhs, rhs);
 }
 
 } // namespace bigint

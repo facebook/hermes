@@ -275,13 +275,15 @@ static bool inferPhiInstInst(PhiInst *P) {
 }
 
 namespace {
-static bool inferBinaryArith(BinaryOperatorInst *BOI) {
+static bool inferBinaryArith(
+    BinaryOperatorInst *BOI,
+    Type numberType = Type::createNumber()) {
   Type LeftTy = BOI->getLeftHandSide()->getType();
   Type RightTy = BOI->getRightHandSide()->getType();
 
   // Number - Number => Number
   if (LeftTy.isNumberType() && RightTy.isNumberType()) {
-    BOI->setType(Type::createNumber());
+    BOI->setType(numberType);
     return true;
   }
 
@@ -297,7 +299,7 @@ static bool inferBinaryArith(BinaryOperatorInst *BOI) {
 
   // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands can be
   // BigInt due to the no automatic BigInt conversion.
-  BOI->setType(Type::unionTy(Type::createNumber(), mayBeBigInt));
+  BOI->setType(Type::unionTy(numberType, mayBeBigInt));
   return true;
 }
 } // anonymous namespace
@@ -331,9 +333,10 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
     case BinaryOperatorInst::OpKind::SubtractKind:
       return inferBinaryArith(BOI);
 
-    // These arithmetic operations always return a number:
-    // https://es5.github.io/#x11.5.3
     case BinaryOperatorInst::OpKind::ModuloKind:
+      return inferBinaryArith(BOI, Type::createInt32());
+
+    // These arithmetic operations always return a number:
     // https://es5.github.io/#x11.7.1
     case BinaryOperatorInst::OpKind::LeftShiftKind:
     // https://es5.github.io/#x11.7.2
