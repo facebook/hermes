@@ -6,6 +6,7 @@
 set(SupportSources
   Algorithms.cpp
   AllocatorTest.cpp
+  BigIntSupportTest.cpp
   CheckedMalloc.cpp
   ConversionsTest.cpp
   CtorConfigTest.cpp
