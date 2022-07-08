@@ -66,5 +66,31 @@ CallResult<HermesValue> BigIntPrimitive::toString(
       runtime, createASCIIRef(result.c_str()));
 }
 
+CallResult<HermesValue> BigIntPrimitive::unaryMinus(
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  if (src->compare(0) == 0) {
+    return HermesValue::encodeBigIntValue(*src);
+  }
+
+  const uint32_t numDigits =
+      bigint::unaryMinusResultSize(src->getImmutableRef(runtime));
+
+  auto u =
+      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
+
+  if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto res = bigint::unaryMinus(
+      u->getMutableRef(runtime), src->getImmutableRef(runtime));
+  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(res, runtime);
+  }
+
+  return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+}
+
 } // namespace vm
 } // namespace hermes

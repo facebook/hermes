@@ -3069,11 +3069,22 @@ tailCall:
           O1REG(Negate) =
               HermesValue::encodeDoubleValue(-O2REG(Negate).getNumber());
         } else {
-          CAPTURE_IP(res = toNumber_RJS(runtime, Handle<>(&O2REG(Negate))));
+          CAPTURE_IP(res = toNumeric_RJS(runtime, Handle<>(&O2REG(Negate))));
           if (res == ExecutionStatus::EXCEPTION)
             goto exception;
+          if (res->isNumber()) {
+            O1REG(Negate) = HermesValue::encodeDoubleValue(-res->getNumber());
+          } else {
+            assert(res->isBigInt() && "should be bigint");
+            CAPTURE_IP_ASSIGN(
+                auto bigint, runtime.makeHandle(res->getBigInt()));
+            CAPTURE_IP(res = BigIntPrimitive::unaryMinus(bigint, runtime));
+            if (res == ExecutionStatus::EXCEPTION) {
+              goto exception;
+            }
+            O1REG(Negate) = HermesValue::encodeBigIntValue(res->getBigInt());
+          }
           gcScope.flushToSmallCount(KEEP_HANDLES);
-          O1REG(Negate) = HermesValue::encodeDoubleValue(-res->getNumber());
         }
         ip = NEXTINST(Negate);
         DISPATCH;

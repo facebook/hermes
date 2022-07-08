@@ -705,5 +705,63 @@ int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
   // now use the other compare, with both rhs and lhs being canonical.
   return compare(lhs, ImmutableBigIntRef{digits, numDigits});
 }
+
+namespace {
+/// Copies \p src's digits to \p dst's, which must have at least
+/// as many digits as \p src. Sign-extends dst to fill \p dst.numDigits.
+OperationStatus initNonCanonicalWithReadOnlyBigInt(
+    MutableBigIntRef &dst,
+    const ImmutableBigIntRef &src) {
+  // ensure dst is large enough
+  if (dst.numDigits < src.numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+
+  // now copy src digits to dst.
+  const uint32_t digitsToCopy = src.numDigits;
+  const uint32_t bytesToCopy = digitsToCopy * BigIntDigitSizeInBytes;
+  memcpy(dst.digits, src.digits, bytesToCopy);
+
+  // and finally size-extend dst to its size.
+  const uint32_t digitsToSet = dst.numDigits - digitsToCopy;
+  const uint32_t bytesToSet = digitsToSet * BigIntDigitSizeInBytes;
+  const BigIntDigitType signExtValue = src.numDigits == 0
+      ? static_cast<BigIntDigitType>(0)
+      : getSignExtValue<BigIntDigitType>(src.digits[src.numDigits - 1]);
+  memset(dst.digits + digitsToCopy, signExtValue, bytesToSet);
+
+  return OperationStatus::RETURNED;
+}
+} // namespace
+
+uint32_t unaryMinusResultSize(ImmutableBigIntRef src) {
+  // negating a non-negative number requires at most the same number of digits,
+  // but it could require less; negating a negative number could require an
+  // extra digit to hold the sign bit(s). Specifically, negating
+  //
+  // 0x8000000000000000n (which is a negative number)
+  //
+  // requires an extra digit:
+  //
+  // 0x0000000000000000 0x8000000000000000n
+  return !isNegative(src) ? src.numDigits : src.numDigits + 1;
+}
+
+OperationStatus unaryMinus(MutableBigIntRef dst, ImmutableBigIntRef src) {
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, src);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+  ensureCanonicalResult(dst);
+
+  assert(
+      ((isNegative(ImmutableBigIntRef{dst.digits, dst.numDigits}) !=
+        isNegative(src)) ||
+       compare(src, 0) == 0) &&
+      "unaryMinus overflow");
+  return OperationStatus::RETURNED;
+}
 } // namespace bigint
 } // namespace hermes

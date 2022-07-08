@@ -98,18 +98,22 @@ inline unsigned constexpr maxCharsPerDigitInRadix(uint8_t radix) {
 /// src are zero.
 llvh::ArrayRef<uint8_t> dropExtraSignBits(llvh::ArrayRef<uint8_t> src);
 
-/// \return the byte value that represents the sign extension of \p byte.
-/// I.e., returns 0 if \p byte is 0b0xxxxxxx, and ~0, if \p byte is
-/// 0x1xxxxxxx.
-template <typename T>
-static constexpr T getSignExtValue(uint8_t byte) {
+/// \return the BigIntDigitType value that represents the sign extension of \p
+/// byte. I.e., returns 0 if \p value is 0b0xxx....xxx, and ~0, if \p value is
+/// 0x1xxx....xxx.
+template <typename D, typename T, typename UT = std::make_unsigned_t<T>>
+static constexpr std::enable_if_t<std::is_integral_v<T>, D> getSignExtValue(
+    const T &value) {
+  uint32_t UnsignedTSizeInBits = sizeof(UT) * 8;
+  UT unsignedValue = value;
+
   // We rely on the unsigned (i.e., "logical") shift right to convert the sign
   // bit to [0, 1], then do 0 - [0, 1] to get 0ull or ~0ull as the sign
   // extension value.
-  uint64_t signExtValue = 0ull - (byte >> 7);
+  uint64_t signExtValue = 0ull - (unsignedValue >> (UnsignedTSizeInBits - 1));
 
   // But still possibly truncate the value as requested by the caller.
-  return static_cast<T>(signExtValue);
+  return static_cast<D>(signExtValue);
 }
 
 /// ImmutableBigIntRef is used to represent bigint payloads that are not mutated
@@ -192,6 +196,12 @@ std::string toString(ImmutableBigIntRef src, uint8_t radix);
 /// value : zero.
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs);
+
+/// \return number of digits needed to perform \p - src
+uint32_t unaryMinusResultSize(ImmutableBigIntRef src);
+
+/// \return \p dst = - \p src
+OperationStatus unaryMinus(MutableBigIntRef dst, ImmutableBigIntRef src);
 
 } // namespace bigint
 } // namespace hermes

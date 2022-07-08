@@ -60,6 +60,28 @@ class TypeInferenceImpl {
   bool runOnModule(Module *M);
 };
 
+static bool inferUnaryMinus(UnaryOperatorInst *UOI) {
+  Value *op = UOI->getSingleOperand();
+
+  // - Number => Number
+  if (op->getType().isNumberType()) {
+    UOI->setType(Type::createNumber());
+    return true;
+  }
+
+  // - BigInt => BigInt
+  if (op->getType().isBigIntType()) {
+    UOI->setType(Type::createBigInt());
+    return true;
+  }
+
+  Type mayBeBigInt =
+      op->getType().canBeBigInt() ? Type::createBigInt() : Type::createNoType();
+
+  // - ?? => Number|?BigInt. BigInt is only possible if op.Type canBeBigInt.
+  UOI->setType(Type::unionTy(Type::createNumber(), mayBeBigInt));
+  return true;
+}
 } // anonymous namespace.
 
 static bool inferUnaryInst(UnaryOperatorInst *UOI) {
@@ -75,8 +97,10 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
     case OpKind::TypeofKind: // typeof
       UOI->setType(Type::createString());
       return true;
-    case OpKind::PlusKind: // +
+    // https://tc39.es/ecma262/#sec-unary-minus-operator
     case OpKind::MinusKind: // -
+      return inferUnaryMinus(UOI);
+    case OpKind::PlusKind: // +
     case OpKind::IncKind: // ++
     case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());

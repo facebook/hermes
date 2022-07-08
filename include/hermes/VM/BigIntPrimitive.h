@@ -157,6 +157,13 @@ class BigIntPrimitive final
     return bigint::compare(this->getImmutableRefUnsafe(), value);
   }
 
+  // Supported Math Operations
+
+  /// \return - \p src
+  static CallResult<HermesValue> unaryMinus(
+      Handle<BigIntPrimitive> src,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

@@ -212,62 +212,76 @@ TEST(BigIntTest, maxCharsPerDigitInRadixTest) {
 TEST(BigIntTest, getSignExtValueTest) {
   // sanity-check some base values.
   static_assert(
-      getSignExtValue<uint8_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<uint8_t>(0x80) == 0xff, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<int8_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<int8_t>(0x80) == -1, "Unexpected sign-ext value");
-
-  static_assert(
-      getSignExtValue<uint16_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<uint16_t>(0x80) == 0xffff, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<int16_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<int16_t>(0x80) == -1, "Unexpected sign-ext value");
-
-  static_assert(
-      getSignExtValue<uint32_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<uint32_t>(0x80) == 0xffffffff,
+      getSignExtValue<uint8_t, uint8_t>(0x00) == 0,
       "Unexpected sign-ext value");
   static_assert(
-      getSignExtValue<int32_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<int32_t>(0x80) == -1, "Unexpected sign-ext value");
-
-  static_assert(
-      getSignExtValue<uint64_t>(0x00) == 0, "Unexpected sign-ext value");
-  static_assert(
-      getSignExtValue<uint64_t>(0x80) == 0xffffffffffffffffull,
+      getSignExtValue<uint8_t, uint8_t>(0x80) == 0xff,
       "Unexpected sign-ext value");
   static_assert(
-      getSignExtValue<int64_t>(0x00) == 0, "Unexpected sign-ext value");
+      getSignExtValue<int8_t, uint8_t>(0x00) == 0, "Unexpected sign-ext value");
   static_assert(
-      getSignExtValue<int64_t>(0x80) == -1, "Unexpected sign-ext value");
+      getSignExtValue<int8_t, uint8_t>(0x80) == -1,
+      "Unexpected sign-ext value");
+
+  static_assert(
+      getSignExtValue<uint16_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<uint16_t, uint8_t>(0x80) == 0xffff,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int16_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int16_t, uint8_t>(0x80) == -1,
+      "Unexpected sign-ext value");
+
+  static_assert(
+      getSignExtValue<uint32_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<uint32_t, uint8_t>(0x80) == 0xffffffff,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int32_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int32_t, uint8_t>(0x80) == -1,
+      "Unexpected sign-ext value");
+
+  static_assert(
+      getSignExtValue<uint64_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<uint64_t, uint8_t>(0x80) == 0xffffffffffffffffull,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int64_t, uint8_t>(0x00) == 0,
+      "Unexpected sign-ext value");
+  static_assert(
+      getSignExtValue<int64_t, uint8_t>(0x80) == -1,
+      "Unexpected sign-ext value");
 
   for (uint32_t i = 0; i < 128; ++i) {
-    EXPECT_EQ(getSignExtValue<uint8_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<int8_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<uint16_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<int16_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<uint32_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<int32_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<uint64_t>(i), 0) << i;
-    EXPECT_EQ(getSignExtValue<int64_t>(i), 0) << i;
+    EXPECT_EQ((getSignExtValue<uint8_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<int8_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<uint16_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<int16_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<uint32_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<int32_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<uint64_t, uint8_t>(i)), 0) << i;
+    EXPECT_EQ((getSignExtValue<int64_t, uint8_t>(i)), 0) << i;
   }
   for (uint32_t i = 128; i < 256; ++i) {
-    EXPECT_EQ(getSignExtValue<uint8_t>(i), 0xff) << i;
-    EXPECT_EQ(getSignExtValue<int8_t>(i), -1) << i;
-    EXPECT_EQ(getSignExtValue<uint16_t>(i), 0xffff) << i;
-    EXPECT_EQ(getSignExtValue<int16_t>(i), -1) << i;
-    EXPECT_EQ(getSignExtValue<uint32_t>(i), 0xffffffff) << i;
-    EXPECT_EQ(getSignExtValue<int32_t>(i), -1) << i;
-    EXPECT_EQ(getSignExtValue<uint64_t>(i), 0xffffffffffffffffull) << i;
-    EXPECT_EQ(getSignExtValue<int64_t>(i), -1) << i;
+    EXPECT_EQ((getSignExtValue<uint8_t, uint8_t>(i)), 0xff) << i;
+    EXPECT_EQ((getSignExtValue<int8_t, uint8_t>(i)), -1) << i;
+    EXPECT_EQ((getSignExtValue<uint16_t, uint8_t>(i)), 0xffff) << i;
+    EXPECT_EQ((getSignExtValue<int16_t, uint8_t>(i)), -1) << i;
+    EXPECT_EQ((getSignExtValue<uint32_t, uint8_t>(i)), 0xffffffff) << i;
+    EXPECT_EQ((getSignExtValue<int32_t, uint8_t>(i)), -1) << i;
+    EXPECT_EQ((getSignExtValue<uint64_t, uint8_t>(i)), 0xffffffffffffffffull)
+        << i;
+    EXPECT_EQ((getSignExtValue<int64_t, uint8_t>(i)), -1) << i;
   }
 }
 

@@ -99,13 +99,13 @@ function check_after_check() {
 //CHECK-NEXT:  %22 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
-//CHKOPT-LABEL:function inner(p) : undefined|null|boolean|string|number|object|closure|regexp
+//CHKOPT-LABEL:function inner(p) : undefined|null|boolean|string|number|bigint|object|closure|regexp
 //CHKOPT-NEXT:frame = [p]
 //CHKOPT-NEXT:%BB0:
 //CHKOPT-NEXT:  %0 = StoreFrameInst %p, [p]
 //CHKOPT-NEXT:  %1 = LoadFrameInst [x@check_after_check]
 //CHKOPT-NEXT:  %2 = ThrowIfEmptyInst %1
-//CHKOPT-NEXT:  %3 = AsNumberInst %2 : undefined|null|boolean|string|number|object|closure|regexp
+//CHKOPT-NEXT:  %3 = AsNumberInst %2 : undefined|null|boolean|string|number|bigint|object|closure|regexp
 //CHKOPT-NEXT:  %4 = UnaryOperatorInst '++', %3 : number
 //CHKOPT-NEXT:  %5 = StoreFrameInst %4 : number, [x@check_after_check]
 //CHKOPT-NEXT:  %6 = LoadFrameInst [p]
