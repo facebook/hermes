@@ -108,7 +108,19 @@ bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeUndefinedValue();
+  auto bigint = thisBigIntValue(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(bigint == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Call toString, as JSC does.
+  // TODO(T120187933): Format string according to locale.
+  auto res = toString_RJS(runtime, runtime.makeHandle(*bigint));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue>
