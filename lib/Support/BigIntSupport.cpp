@@ -131,5 +131,10 @@ OperationStatus initWithBytes(
   return OperationStatus::RETURNED;
 }
 
+bool isNegative(ImmutableBigIntRef src) {
+  return src.numDigits > 0 &&
+      static_cast<SignedBigIntDigitType>(src.digits[src.numDigits - 1]) < 0;
+}
+
 } // namespace bigint
 } // namespace hermes

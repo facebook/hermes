@@ -11,6 +11,7 @@
 #include "hermes/VM/SmallHermesValue.h"
 
 #include "hermes/Support/SlowAssert.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/BoxedDouble.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/PointerBase.h"
@@ -33,6 +34,9 @@ HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
     case ETag::Object1:
     case ETag::Object2:
       return HermesValue::encodeObjectValue(getObject(pb));
+    case ETag::BigInt1:
+    case ETag::BigInt2:
+      return HermesValue::encodeBigIntValue(getBigInt(pb));
     case ETag::String1:
     case ETag::String2:
       return HermesValue::encodeStringValue(getString(pb));
@@ -63,6 +67,11 @@ HermesValue HermesValue32::toHV(PointerBase &pb) const {
   if (getTag() == Tag::BoxedDouble)
     return HermesValue::encodeObjectValue(getPointer(pb));
   return unboxToHV(pb);
+}
+
+BigIntPrimitive *HermesValue32::getBigInt(PointerBase &pb) const {
+  assert(isBigInt());
+  return vmcast<BigIntPrimitive>(getPointer(pb));
 }
 
 StringPrimitive *HermesValue32::getString(PointerBase &pb) const {
@@ -101,6 +110,9 @@ double HermesValue32::getNumber(PointerBase &pb) const {
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2:
       return encodeStringValue(hv.getString(), runtime);
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return encodeBigIntValue(hv.getBigInt(), runtime);
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
       return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), runtime);
@@ -128,8 +140,8 @@ double HermesValue32::getNumber(PointerBase &pb) const {
     GCCell *ptr,
     PointerBase &pb) {
   assert(
-      (!ptr || !vmisa<StringPrimitive>(ptr)) &&
-      "Strings must use encodeStringValue");
+      (!ptr || !vmisa<StringPrimitive>(ptr) || !vmisa<BigIntPrimitive>(ptr)) &&
+      "Strings must use encodeStringValue; BigInts, encodeBigIntValue");
   return encodePointerImpl(ptr, Tag::Object, pb);
 }
 } // namespace vm

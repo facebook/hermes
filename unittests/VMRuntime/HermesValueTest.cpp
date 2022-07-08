@@ -60,6 +60,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isDouble());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
@@ -75,6 +76,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isDouble());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
@@ -91,6 +93,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isDouble());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
@@ -122,6 +125,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V2.isUndefined());
     EXPECT_FALSE(V2.isNull());
     EXPECT_FALSE(V2.isDouble());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V2.isString());
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
@@ -140,6 +144,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_TRUE(V.isNumber());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
@@ -160,6 +165,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isBool());
@@ -176,6 +182,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(T.isDouble());
     EXPECT_FALSE(T.isUndefined());
     EXPECT_FALSE(T.isObject());
+    EXPECT_FALSE(T.isBigInt());
     EXPECT_FALSE(T.isString());
     EXPECT_FALSE(T.isNull());
     EXPECT_FALSE(T.isNativeValue());
@@ -188,6 +195,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(F.isDouble());
     EXPECT_FALSE(F.isUndefined());
     EXPECT_FALSE(F.isObject());
+    EXPECT_FALSE(F.isBigInt());
     EXPECT_FALSE(F.isString());
     EXPECT_FALSE(F.isNull());
     EXPECT_FALSE(F.isNativeValue());
@@ -209,6 +217,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isDouble());
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isUndefined());
@@ -224,6 +233,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V2.isNativeValue());
     EXPECT_FALSE(V2.isBool());
     EXPECT_FALSE(V2.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V2.isDouble());
     EXPECT_FALSE(V2.isNull());
     EXPECT_FALSE(V2.isUndefined());
@@ -237,6 +247,42 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V == V2);
   }
 
+  /// Encode bigints.
+  {
+    auto H = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    auto V = HermesValue::encodeBigIntValue(H.get());
+    EXPECT_TRUE(V.isBigInt());
+    EXPECT_FALSE(V.isNativeValue());
+    EXPECT_FALSE(V.isBool());
+    EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isString());
+    EXPECT_FALSE(V.isDouble());
+    EXPECT_FALSE(V.isNull());
+    EXPECT_FALSE(V.isUndefined());
+    EXPECT_FALSE(V.isNumber());
+    EXPECT_FALSE(V.isSymbol());
+    EXPECT_TRUE(V.isPointer());
+    EXPECT_EQ(V.getPointer(), H.get());
+
+    auto H2 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    auto V2 = HermesValue::encodeBigIntValue(H2.get());
+    EXPECT_TRUE(V2.isBigInt());
+    EXPECT_FALSE(V2.isNativeValue());
+    EXPECT_FALSE(V2.isBool());
+    EXPECT_FALSE(V2.isObject());
+    EXPECT_FALSE(V2.isString());
+    EXPECT_FALSE(V2.isDouble());
+    EXPECT_FALSE(V2.isNull());
+    EXPECT_FALSE(V2.isUndefined());
+    EXPECT_FALSE(V2.isNumber());
+    EXPECT_FALSE(V.isSymbol());
+    EXPECT_TRUE(V2.isPointer());
+    EXPECT_EQ(V2.getPointer(), H2.get());
+
+    EXPECT_TRUE(V == V);
+    EXPECT_TRUE(V2 == V2);
+  }
+
   // Encode symbols.
   for (int i = 0; i < 1000; i++) {
     // Check that we can encode the whole range of ints.
@@ -248,6 +294,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
+    EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isBool());
@@ -307,6 +354,10 @@ TEST(HermesValueTest, OutputStreamTest) {
   result.clear();
   OS << HermesValue::encodeObjectValueUnsafe(nullptr);
   EXPECT_EQ("[Object :0 0x00000000]", OS.str());
+
+  result.clear();
+  OS << HermesValue::encodeBigIntValueUnsafe(nullptr);
+  EXPECT_EQ("[BigInt :0 0x00000000]", OS.str());
 
   result.clear();
   OS << HermesValue::encodeStringValueUnsafe(nullptr);

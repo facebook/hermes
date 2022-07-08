@@ -98,6 +98,8 @@ CELL_KIND(GeneratorInnerFunction)
 CELL_KIND(JSAsyncFunction)
 CELL_CLASS(JSFunction, "Function")
 
+CELL_KIND(BigIntPrimitive)
+
 // Dummy object used only in tests.
 CELL_KIND(DummyObject)
 

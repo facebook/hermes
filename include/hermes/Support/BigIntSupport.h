@@ -20,6 +20,7 @@
 namespace hermes {
 namespace bigint {
 
+using SignedBigIntDigitType = int64_t;
 using BigIntDigitType = uint64_t;
 
 static constexpr size_t BigIntDigitSizeInBytes = sizeof(BigIntDigitType);
@@ -65,6 +66,13 @@ static constexpr T getSignExtValue(uint8_t byte) {
   return static_cast<T>(signExtValue);
 }
 
+/// ImmutableBigIntRef is used to represent bigint payloads that are not mutated
+/// by any of the API functions below.
+struct ImmutableBigIntRef {
+  const BigIntDigitType *digits;
+  uint32_t numDigits;
+};
+
 /// MutableBigIntRef is used to represent bigint payloads that are mutated
 /// by any of the API functions below. Note how numDigits is a reference to
 /// numDigits - the API may modify that in order to canonicalize the payloads.
@@ -79,12 +87,16 @@ struct MutableBigIntRef {
 enum class OperationStatus : uint32_t {
   RETURNED,
   DEST_TOO_SMALL,
+  TOO_MANY_DIGITS,
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
 /// Initializes \p dst with \p data, sign-extending the bits as needed.
 OperationStatus initWithBytes(
     MutableBigIntRef dst,
     llvh::ArrayRef<uint8_t> data);
+
+/// \return true if \p src is a negative bigint, and false otherwise.
+bool isNegative(ImmutableBigIntRef src);
 
 } // namespace bigint
 } // namespace hermes

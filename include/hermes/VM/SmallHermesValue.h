@@ -23,6 +23,7 @@
 namespace hermes {
 namespace vm {
 
+class BigIntPrimitive;
 class StringPrimitive;
 class GCCell;
 class Runtime;
@@ -49,6 +50,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
 
   using HermesValue::getBool;
   using HermesValue::getSymbol;
+  using HermesValue::isBigInt;
   using HermesValue::isBool;
   using HermesValue::isEmpty;
   using HermesValue::isNull;
@@ -81,6 +83,9 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
   StringPrimitive *getString(PointerBase &) const {
     return HermesValue::getString();
+  }
+  BigIntPrimitive *getBigInt(PointerBase &) const {
+    return HermesValue::getBigInt();
   }
   double getNumber(PointerBase &) const {
     return HermesValue::getNumber();
@@ -117,6 +122,11 @@ class SmallHermesValueAdaptor : protected HermesValue {
       HermesValue hv,
       Runtime &) {
     return SmallHermesValueAdaptor{hv};
+  }
+  static SmallHermesValueAdaptor encodeBigIntValue(
+      BigIntPrimitive *ptr,
+      PointerBase *) {
+    return SmallHermesValueAdaptor{HermesValue::encodeBigIntValue(ptr)};
   }
   static SmallHermesValueAdaptor
   encodeNumberValue(double d, GC &, PointerBase &) {
@@ -178,6 +188,7 @@ class HermesValue32 {
   /// types are distinguished using an additional bit found in the "ETag".
   enum class Tag : uint8_t {
     Object,
+    BigInt,
     String,
     BoxedDouble,
     SmallInt,
@@ -206,6 +217,8 @@ class HermesValue32 {
   enum class ETag : uint8_t {
     Object1 = static_cast<uint8_t>(Tag::Object),
     Object2 = static_cast<uint8_t>(Tag::Object) + kETagOffset,
+    BigInt1 = static_cast<uint8_t>(Tag::BigInt),
+    BigInt2 = static_cast<uint8_t>(Tag::BigInt) + kETagOffset,
     String1 = static_cast<uint8_t>(Tag::String),
     String2 = static_cast<uint8_t>(Tag::String) + kETagOffset,
     BoxedDouble1 = static_cast<uint8_t>(Tag::BoxedDouble),
@@ -322,6 +335,9 @@ class HermesValue32 {
   bool isObject() const {
     return getTag() == Tag::Object;
   }
+  bool isBigInt() const {
+    return getTag() == Tag::BigInt;
+  }
   bool isString() const {
     return getTag() == Tag::String;
   }
@@ -369,6 +385,7 @@ class HermesValue32 {
     return CompressedPointer::fromRaw(raw_).get(pb);
   }
 
+  inline BigIntPrimitive *getBigInt(PointerBase &pb) const;
   inline StringPrimitive *getString(PointerBase &pb) const;
   inline double getNumber(PointerBase &pb) const;
 
@@ -416,6 +433,12 @@ class HermesValue32 {
   inline static HermesValue32 encodeObjectValue(GCCell *ptr, PointerBase &pb);
   static HermesValue32 encodeObjectValue(CompressedPointer cp) {
     return encodePointerImpl(cp, Tag::Object);
+  }
+
+  static HermesValue32 encodeBigIntValue(
+      BigIntPrimitive *ptr,
+      PointerBase &pb) {
+    return encodePointerImpl(reinterpret_cast<GCCell *>(ptr), Tag::BigInt, pb);
   }
 
   static HermesValue32 encodeStringValue(

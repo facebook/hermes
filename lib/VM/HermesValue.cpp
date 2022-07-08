@@ -7,6 +7,7 @@
 
 #include "hermes/VM/HermesValue.h"
 
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -48,6 +49,21 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
         OS << " '";
         OS.write_escaped(narrowStr);
         OS << "'";
+      }
+      return OS << ']';
+    }
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2: {
+      auto *cell = static_cast<GCCell *>(hv.getPointer());
+      OS << "[BigInt "
+         << ":" << (cell ? cell->getDebugAllocationId() : 0) << " "
+         << llvh::format_hex((uintptr_t)cell, 10);
+      // Note contained BigIntPrimitive may be NULL.
+      if (hv.getBigInt()) {
+        llvh::ArrayRef<uint8_t> storage = hv.getBigInt()->getRawDataCompact();
+        for (auto it = storage.rbegin(); it != storage.rend(); ++it) {
+          OS << " " << llvh::format_hex(*it, 2);
+        }
       }
       return OS << ']';
     }

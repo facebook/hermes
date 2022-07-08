@@ -14,6 +14,7 @@ set(RTSources
   AlignedStorageTest.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
+  BigIntPrimitiveTest.cpp
   BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
