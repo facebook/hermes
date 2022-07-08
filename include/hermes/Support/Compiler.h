@@ -66,6 +66,8 @@ extern "C" {
 #endif
 void AnnotateIgnoreReadsBegin(const char *file, int line);
 void AnnotateIgnoreReadsEnd(const char *file, int line);
+void AnnotateIgnoreWritesBegin(const char *file, int line);
+void AnnotateIgnoreWritesEnd(const char *file, int line);
 void AnnotateBenignRaceSized(
     const char *file,
     int line,
@@ -82,6 +84,12 @@ void AnnotateThreadName(const char *file, int line, const char *name);
 
 /// Resume checking for racy reads.
 #define TsanIgnoreReadsEnd() AnnotateIgnoreReadsEnd(__FILE__, __LINE__)
+
+/// Ignore any races on writes between here and the next TsanIgnoreWritesEnd.
+#define TsanIgnoreWritesBegin() AnnotateIgnoreWritesBegin(__FILE__, __LINE__)
+
+/// Resume checking for racy writes.
+#define TsanIgnoreWritesEnd() AnnotateIgnoreWritesEnd(__FILE__, __LINE__)
 
 /// \def TsanBenignRaceSized(address, size, description)
 /// Tell TSAN to ignore a race that was detected at the given address.

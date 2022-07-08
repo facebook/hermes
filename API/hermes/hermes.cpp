@@ -298,12 +298,25 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     void inc() {
+      // It is always safe to use relaxed operations for incrementing the
+      // reference count, because the only operation that may occur concurrently
+      // with it is decrementing the reference count, and we do not need to
+      // enforce any ordering between the two.
       auto oldCount = refCount.fetch_add(1, std::memory_order_relaxed);
+      assert(oldCount && "Cannot resurrect a pointer");
       assert(oldCount + 1 != 0 && "Ref count overflow");
       (void)oldCount;
     }
 
     void dec() {
+      // It is safe to use relaxed operations here because decrementing the
+      // reference count is the only access that may be performed without proper
+      // synchronisation. As a result, the only ordering we need to enforce when
+      // decrementing is that the vtable pointer used to call \c invalidate is
+      // loaded from before the decrement, in case the decrement ends up causing
+      // this value to be freed. We get this ordering from the fact that the
+      // vtable read and the reference count update form a load-store control
+      // dependency, which preserves their ordering on any reasonable hardware.
       auto oldCount = refCount.fetch_sub(1, std::memory_order_relaxed);
       assert(oldCount > 0 && "Ref count underflow");
       (void)oldCount;
@@ -968,6 +981,21 @@ class HermesRuntimeImpl final : public HermesRuntime,
     iterator erase(iterator it) {
       return values_.erase(it);
     }
+    iterator eraseIfExpired(iterator it) {
+      auto next = std::next(it);
+      if (it->get() == 0) {
+        // TSAN will complain here because the value is being freed without any
+        // explicit synchronisation with a background thread that may have just
+        // updated the reference count (and read the vtable in the process).
+        // However, this can be safely ignored because the check above creates a
+        // load-store control dependency, and the free below therefore cannot be
+        // reordered before the check on the reference count.
+        TsanIgnoreWritesBegin();
+        values_.erase(it);
+        TsanIgnoreWritesEnd();
+      }
+      return next;
+    }
 
     size_t size() const {
       return values_.size();
@@ -997,7 +1025,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
    private:
     void collect() {
-      values_.remove_if([](const T &t) { return t.get() == 0; });
+      for (auto it = values_.begin(), e = values_.end(); it != e;)
+        it = eraseIfExpired(it);
       targetSize_ = size() / occupancyRatio_;
     }
 
@@ -2129,11 +2158,7 @@ void HermesRuntimeImpl::popScope(ScopeState *prv) {
       std::terminate();
     }
 
-    if (value.get() == 0) {
-      it = hermesValues_.erase(it);
-    } else {
-      ++it;
-    }
+    it = hermesValues_.eraseIfExpired(it);
   }
 
   // We did not find a sentinel value.
