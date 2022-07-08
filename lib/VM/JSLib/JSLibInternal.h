@@ -242,6 +242,11 @@ void populateCallSitePrototype(Runtime &runtime);
 /// \return the global String constructor.
 Handle<JSObject> createStringConstructor(Runtime &runtime);
 
+/// Create and initialize the global BigInt constructor. Populate the methods
+/// of BigInt and BigInt.prototype.
+/// \return the global BigInt constructor.
+Handle<JSObject> createBigIntConstructor(Runtime &runtime);
+
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
 /// \return the global Function constructor.

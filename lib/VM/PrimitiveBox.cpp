@@ -7,6 +7,7 @@
 
 #include "hermes/VM/PrimitiveBox.h"
 
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -257,6 +258,40 @@ CallResult<HermesValue> JSStringIterator::nextElement(
 
   // 14. Return CreateIterResultObject(resultString, false).
   return createIterResultObject(runtime, resultString, false).getHermesValue();
+}
+
+//===----------------------------------------------------------------------===//
+// class JSBigInt
+
+const ObjectVTable JSBigInt::vt{
+    VTable(CellKind::JSBigIntKind, cellSize<JSBigInt>()),
+    JSBigInt::_getOwnIndexedRangeImpl,
+    JSBigInt::_haveOwnIndexedImpl,
+    JSBigInt::_getOwnIndexedPropertyFlagsImpl,
+    JSBigInt::_getOwnIndexedImpl,
+    JSBigInt::_setOwnIndexedImpl,
+    JSBigInt::_deleteOwnIndexedImpl,
+    JSBigInt::_checkAllOwnIndexedImpl,
+};
+
+void JSBigIntBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBigInt>());
+  JSObjectBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSBigInt *>(cell);
+  mb.setVTable(&JSBigInt::vt);
+  mb.addField(&self->primitiveValue_);
+}
+
+CallResult<Handle<JSBigInt>> JSBigInt::create(
+    Runtime &runtime,
+    Handle<BigIntPrimitive> value,
+    Handle<JSObject> parentHandle) {
+  auto clazzHandle = runtime.getHiddenClassForPrototype(
+      *parentHandle, numOverlapSlots<JSBigInt>());
+  auto obj =
+      runtime.makeAFixed<JSBigInt>(runtime, value, parentHandle, clazzHandle);
+
+  return JSObjectInit::initToHandle(runtime, obj);
 }
 
 //===----------------------------------------------------------------------===//

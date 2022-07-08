@@ -68,6 +68,10 @@ HermesValue typeOf(Runtime &runtime, Handle<> valueHandle) {
     case HermesValue::ETag::Str2:
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::string));
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return HermesValue::encodeStringValue(
+          runtime.getPredefinedString(Predefined::bigint));
     case HermesValue::ETag::Bool:
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::boolean));
@@ -700,6 +704,9 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2:
       return Handle<JSObject>::vmcast(&runtime.stringPrototype);
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return Handle<JSObject>::vmcast(&runtime.bigintPrototype);
     case HermesValue::ETag::Bool:
       return Handle<JSObject>::vmcast(&runtime.booleanPrototype);
     case HermesValue::ETag::Symbol:

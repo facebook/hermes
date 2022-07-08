@@ -843,6 +843,79 @@ TEST_F(OperationsTest, ToObjectTest) {
   }
 }
 
+#define TypeOfTest(result, hv)                                      \
+  do {                                                              \
+    auto handleValue = runtime.makeHandle(hv);                      \
+    auto res = typeOf(runtime, handleValue);                        \
+    ASSERT_TRUE(res.isString());                                    \
+    auto str = runtime.makeHandle(res.getString());                 \
+    auto strView = StringPrimitive::createStringView(runtime, str); \
+    EXPECT_TRUE(strView.equals(createUTF16Ref(result)));            \
+  } while (0)
+
+TEST_F(OperationsTest, typeOfTest) {
+  TypeOfTest(u"undefined", HermesValue::encodeUndefinedValue());
+
+  TypeOfTest(u"object", HermesValue::encodeNullValue());
+
+  TypeOfTest(u"boolean", HermesValue::encodeBoolValue(false));
+  TypeOfTest(u"boolean", HermesValue::encodeBoolValue(true));
+
+  TypeOfTest(u"number", HermesValue::encodeNumberValue(+0.0));
+  TypeOfTest(u"number", HermesValue::encodeNaNValue());
+
+  TypeOfTest(
+      u"string", *StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"")));
+
+  TypeOfTest(u"bigint", *BigIntPrimitive::fromSignedNoThrow(0, runtime));
+
+  TypeOfTest(
+      u"symbol", HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(1)));
+}
+
+#define GetPrimitivePrototypeTest(result, hv)               \
+  do {                                                      \
+    auto handleValue = runtime.makeHandle(hv);              \
+    auto res = getPrimitivePrototype(runtime, handleValue); \
+    ASSERT_EQ(ExecutionStatus::RETURNED, res.getStatus());  \
+    EXPECT_TRUE(Handle<JSObject>::vmcast(&result) == *res); \
+  } while (0)
+
+#define GetPrimitivePrototypeThrowsTest(hv)                 \
+  do {                                                      \
+    auto handleValue = runtime.makeHandle(hv);              \
+    auto res = getPrimitivePrototype(runtime, handleValue); \
+    EXPECT_EQ(ExecutionStatus::EXCEPTION, res.getStatus()); \
+    runtime.clearThrownValue();                             \
+  } while (0)
+
+TEST_F(OperationsTest, getPrimitivePrototypeTest) {
+  GetPrimitivePrototypeThrowsTest(HermesValue::encodeUndefinedValue());
+
+  GetPrimitivePrototypeThrowsTest(HermesValue::encodeNullValue());
+
+  GetPrimitivePrototypeTest(
+      runtime.booleanPrototype, HermesValue::encodeBoolValue(false));
+  GetPrimitivePrototypeTest(
+      runtime.booleanPrototype, HermesValue::encodeBoolValue(true));
+
+  GetPrimitivePrototypeTest(
+      runtime.numberPrototype, HermesValue::encodeNumberValue(+0.0));
+  GetPrimitivePrototypeTest(
+      runtime.numberPrototype, HermesValue::encodeNaNValue());
+
+  GetPrimitivePrototypeTest(
+      runtime.stringPrototype,
+      *StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"")));
+
+  GetPrimitivePrototypeTest(
+      runtime.bigintPrototype, *BigIntPrimitive::fromSignedNoThrow(0, runtime));
+
+  GetPrimitivePrototypeTest(
+      runtime.symbolPrototype,
+      HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(1)));
+}
+
 #define NumberAdditionTest(result, x, y)                                    \
   {                                                                         \
     res = addOp_RJS(runtime, runtime.makeHandle(x), runtime.makeHandle(y)); \

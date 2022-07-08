@@ -87,6 +87,7 @@ CELL_CLASS(JSRegExpStringIterator, "RegExp String Iterator")
 CELL_CLASS(RequireContext, "RequireContext")
 CELL_CLASS(JSGenerator, "Generator")
 CELL_CLASS(JSProxy, "Proxy")
+CELL_CLASS(JSBigInt, "BigInt")
 
 CELL_KIND(BoundFunction)
 CELL_KIND(NativeFunction)

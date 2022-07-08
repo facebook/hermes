@@ -76,6 +76,7 @@ set(source_files
   JSLib/ArrayBuffer.cpp
   JSLib/ArrayIterator.cpp
   JSLib/AsyncFunction.cpp
+  JSLib/BigInt.cpp
   JSLib/CallSite.cpp
   JSLib/DataView.cpp
   JSLib/TypedArray.cpp

@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_PRIMITIVEBOX_H
 #define HERMES_VM_PRIMITIVEBOX_H
 
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/JSObject.h"
 
 namespace hermes {
@@ -163,6 +164,65 @@ class JSStringIterator : public JSObject {
 
   /// [[StringIteratorNextIndex]]
   uint32_t nextIndex_{0};
+};
+
+/// BigInt object.
+/// N.B.: users can create boxed bigints with
+///   let o = new Object(1n),
+/// but not with the BigInt constructor, i.e.,
+///   let o = new BigInt(1)
+/// as BigInt() is not a constructor.
+class JSBigInt final : public JSObject {
+ public:
+  using Super = JSObject;
+
+  friend void JSBigIntBuildMeta(const GCCell *, Metadata::Builder &);
+
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS;
+  static const ObjectVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSBigIntKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::JSBigIntKind;
+  }
+
+  static CallResult<Handle<JSBigInt>> create(
+      Runtime &runtime,
+      Handle<BigIntPrimitive> value,
+      Handle<JSObject> prototype);
+
+  static CallResult<Handle<JSBigInt>> create(
+      Runtime &runtime,
+      Handle<JSObject> prototype) {
+    auto bigIntRes = BigIntPrimitive::fromSigned(0, runtime);
+    if (LLVM_UNLIKELY(bigIntRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    return create(
+        runtime, runtime.makeHandle(bigIntRes->getBigInt()), prototype);
+  }
+
+  /// Return the [[PrimitiveValue]] internal property as a bigint.
+  static BigIntPrimitive *getPrimitiveBigInt(
+      const JSBigInt *self,
+      Runtime &runtime) {
+    return self->primitiveValue_.get(runtime);
+  }
+
+  JSBigInt(
+      Runtime &runtime,
+      Handle<BigIntPrimitive> value,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz)
+      : JSObject(runtime, *parent, *clazz),
+        primitiveValue_(runtime, *value, runtime.getHeap()) {}
+
+ private:
+  GCPointer<BigIntPrimitive> primitiveValue_;
 };
 
 /// Number object.
