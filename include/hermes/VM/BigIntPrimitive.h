@@ -139,6 +139,21 @@ class BigIntPrimitive final
     return bigint::dropExtraSignBits(getRawDataFull());
   }
 
+  /// Compares this with \p other. Logically similar to *this - *other.
+  /// \return < 0 if this is less than other; > 0, if other is less than this;
+  /// and 0 if this and other represent the same bigint.
+  int32_t compare(const BigIntPrimitive *other) const {
+    return bigint::compare(
+        this->getImmutableRefUnsafe(), other->getImmutableRefUnsafe());
+  }
+
+  /// Same as compare(const BigIntPrimitive *) above, but specialized for the
+  /// case when comparing with a integral element.
+  template <typename T>
+  std::enable_if_t<std::is_signed<T>::value, int32_t> compare(T value) const {
+    return bigint::compare(this->getImmutableRefUnsafe(), value);
+  }
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

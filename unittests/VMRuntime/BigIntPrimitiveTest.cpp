@@ -256,4 +256,116 @@ TEST_F(BigIntPrimitiveTest, FromDouble) {
           digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
           digit(0, 0, 0, 0, 0, 0, 0, 0));
 }
+
+TEST_F(BigIntPrimitiveTest, Compare) {
+  auto H0 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+  auto H1 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  auto HM1 = BigIntPrimitive::fromSignedNoThrow(-1, runtime);
+  auto HH10000000000000000 = BigIntPrimitive::fromBytesNoThrow(
+      digit(1) + digit(0, 0, 0, 0, 0, 0, 0, 0), runtime);
+  auto HH80000000000000000 = BigIntPrimitive::fromBytesNoThrow(
+      digit(0x80) + digit(0, 0, 0, 0, 0, 0, 0, 0), runtime);
+
+  // H0 == H0
+  EXPECT_EQ(H0->compare(H0.get()), 0);
+
+  // H1 == H1
+  EXPECT_EQ(H1->compare(H1.get()), 0);
+
+  // HM1 == HM1
+  EXPECT_EQ(HM1->compare(HM1.get()), 0);
+
+  // HH10000000000000000 == HH10000000000000000
+  EXPECT_EQ(HH10000000000000000->compare(HH10000000000000000.get()), 0);
+
+  // HH80000000000000000 == HH80000000000000000
+  EXPECT_EQ(HH80000000000000000->compare(HH80000000000000000.get()), 0);
+
+  // HH80000000000000000 < HM1 < H0 < H1 < HH10000000000000000
+  EXPECT_LT(HH80000000000000000->compare(HM1.get()), 0);
+  EXPECT_LT(HH80000000000000000->compare(H0.get()), 0);
+  EXPECT_LT(HH80000000000000000->compare(H1.get()), 0);
+  EXPECT_LT(HH80000000000000000->compare(HH10000000000000000.get()), 0);
+
+  EXPECT_LT(HM1->compare(H0.get()), 0);
+  EXPECT_LT(HM1->compare(H1.get()), 0);
+  EXPECT_LT(HM1->compare(HH10000000000000000.get()), 0);
+
+  EXPECT_LT(H0->compare(H1.get()), 0);
+  EXPECT_LT(H0->compare(HH10000000000000000.get()), 0);
+
+  EXPECT_LT(H1->compare(HH10000000000000000.get()), 0);
+
+  // HH10000000000000000 > H1 > H0 > HM1 >> HH80000000000000000
+  EXPECT_GT(HH10000000000000000->compare(H1.get()), 0);
+  EXPECT_GT(HH10000000000000000->compare(H0.get()), 0);
+  EXPECT_GT(HH10000000000000000->compare(HM1.get()), 0);
+  EXPECT_GT(HH10000000000000000->compare(HH80000000000000000.get()), 0);
+
+  EXPECT_GT(H1->compare(H0.get()), 0);
+  EXPECT_GT(H1->compare(HM1.get()), 0);
+  EXPECT_GT(H1->compare(HH80000000000000000.get()), 0);
+
+  EXPECT_GT(H0->compare(HM1.get()), 0);
+  EXPECT_GT(H0->compare(HH80000000000000000.get()), 0);
+
+  EXPECT_GT(HM1->compare(HH80000000000000000.get()), 0);
+}
+
+TEST_F(BigIntPrimitiveTest, CompareSigned) {
+  auto H0 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+  auto H1 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  auto HM1 = BigIntPrimitive::fromSignedNoThrow(-1, runtime);
+  auto HH7fffffffffffffff = BigIntPrimitive::fromBytesNoThrow(
+      digit(0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff), runtime);
+  auto HH8000000000000000 = BigIntPrimitive::fromBytesNoThrow(
+      digit(0x80, 0, 0, 0, 0, 0, 0, 0), runtime);
+
+  // 0n == 0
+  EXPECT_EQ(H0->compare(0), 0);
+
+  // 1n == 1
+  EXPECT_EQ(H1->compare(1), 0);
+
+  // -1n == -1
+  EXPECT_EQ(HM1->compare(-1), 0);
+
+  // 0x7fffffffffffffffn == 0x7fffffffffffffff
+  EXPECT_EQ(HH7fffffffffffffff->compare(0x7fffffffffffffffll), 0);
+
+  // 0x8000000000000000n == -9223372036854775807
+  EXPECT_EQ(
+      HH8000000000000000->compare(static_cast<int64_t>(0x8000000000000000ll)),
+      0);
+
+  // 0 < 1
+  EXPECT_LT(H0->compare(1), 0);
+
+  // 0 > -1
+  EXPECT_GT(H0->compare(-1), 0);
+
+  // 0x7fffffffffffffffn > 0x8000000000000000
+  EXPECT_GT(
+      HH7fffffffffffffff->compare(static_cast<int64_t>(0x8000000000000000ll)),
+      0);
+
+  // 0x8000000000000000n < 0x7fffffffffffffff
+  EXPECT_LT(HH8000000000000000->compare(0x7fffffffffffffffll), 0);
+
+  // 0x00_0000000000000000_8000000000000000_0000000000000000n
+  auto a = BigIntPrimitive::fromBytesNoThrow(
+      digit(0x00) + digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) +
+          digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) +
+          digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+      runtime);
+
+  // 0x80n
+  auto b = BigIntPrimitive::fromBytesNoThrow(digit(0x80), runtime);
+
+  // 0x00_0000000000000000_8000000000000000_0000000000000000n > 0
+  EXPECT_GT(a->compare(0), 0);
+
+  // 0x80n < 0
+  EXPECT_LT(b->compare(0), 0);
+}
 } // namespace

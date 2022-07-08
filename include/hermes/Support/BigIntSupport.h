@@ -164,6 +164,11 @@ class ParsedBigInt {
   Storage storage_;
 };
 
+/// \return (\p lhs < \p rhs) ? negative value : (\p lhs > \p rhs) ? positive
+/// value : zero.
+int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs);
+
 } // namespace bigint
 } // namespace hermes
 

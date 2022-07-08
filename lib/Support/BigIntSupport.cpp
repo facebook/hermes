@@ -609,5 +609,57 @@ std::optional<ParsedBigInt> ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
 
   return ret;
 }
+
+int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  const int kLhsGreater = 1;
+  const int kRhsGreater = -kLhsGreater;
+
+  const bool lhsSign = isNegative(lhs);
+  const bool rhsSign = isNegative(rhs);
+
+  // Different signs:
+  //   1) lhsSign => !rhsSign => lhs < rhs; or
+  //   2) !lhsSign => rhsSign => lhs > rhs
+  if (lhsSign != rhsSign) {
+    return lhsSign ? kRhsGreater : kLhsGreater;
+  }
+
+  int result;
+
+  if (lhs.numDigits == rhs.numDigits) {
+    // Defer to APInt's comparison routine.
+    result = llvh::APInt::tcCompare(lhs.digits, rhs.digits, lhs.numDigits);
+  } else {
+    // bigints are always created using their compact representation, thus
+    // their sizes (in number of digits) can be used to compare them, with
+    // the bigint that has more digits being greater/less (depending on
+    // their sign).
+    if (lhsSign) {
+      // negative numbers -- the one with fewer digits is the greater.
+      result = lhs.numDigits < rhs.numDigits ? kLhsGreater : kRhsGreater;
+    } else {
+      // positive numbers -- the one with most digits is the greater.
+      result = lhs.numDigits < rhs.numDigits ? kRhsGreater : kLhsGreater;
+    }
+  }
+
+  return result;
+}
+
+int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
+  // A single BigIntDigit is enough to represent the (scalar) rhs --  given that
+  // rhs is **SIGNED**, the value 0x8000000000000000 represents a negative
+  // quantity, thus there's no need for an extra digit in the bigint -- there
+  // would be if 0x8000000000000000 represented a positive number.
+  auto *digits = reinterpret_cast<BigIntDigitType *>(&rhs);
+  uint32_t numDigits = 1;
+  MutableBigIntRef mr{digits, numDigits};
+  // make sure mr is canonicalized, otherwise comparisons may fail -- they
+  // assume all inputs to be canonical. This can happen if
+  ensureCanonicalResult(mr);
+
+  // now use the other compare, with both rhs and lhs being canonical.
+  return compare(lhs, ImmutableBigIntRef{digits, numDigits});
+}
 } // namespace bigint
 } // namespace hermes
