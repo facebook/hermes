@@ -113,7 +113,38 @@ bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeUndefinedValue();
+  // 1. Let x be ? thisBigIntValue(this value).
+  auto x = thisBigIntValue(runtime, args.getThisHandle());
+
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  Handle<BigIntPrimitive> xHandle = runtime.makeHandle(x->getBigInt());
+
+  // 2. If radix is undefined, let radixMV be 10.
+  uint32_t radixMV = 10;
+
+  // 3. Else, let radixMV be ? ToIntegerOrInfinity(radix).
+  auto radixArg = args.getArgHandle(0);
+  if (!radixArg->isUndefined()) {
+    auto r = toIntegerOrInfinity(runtime, radixArg);
+    if (LLVM_UNLIKELY(r == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(r->isNumber());
+    // 4. If radixMV < 2 or radixMV > 36, throw a RangeError exception.
+    if (r->getNumber() < 2 || r->getNumber() > 36) {
+      return runtime.raiseRangeError(
+          "radix out-of-range in BigInt.prototype.toString");
+    }
+
+    radixMV = r->getNumber();
+  }
+
+  // 5. If radixMV = 10, return ! ToString(x).
+  // 6. Return the String representation of x.
+  return xHandle->toString(runtime, radixMV);
 }
 
 CallResult<HermesValue>

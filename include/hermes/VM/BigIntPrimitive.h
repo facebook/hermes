@@ -139,6 +139,9 @@ class BigIntPrimitive final
     return bigint::dropExtraSignBits(getRawDataFull());
   }
 
+  /// \return This bigint converted to a string in \p radix.
+  CallResult<HermesValue> toString(Runtime &runtime, uint8_t radix) const;
+
   /// Compares this with \p other. Logically similar to *this - *other.
   /// \return < 0 if this is less than other; > 0, if other is less than this;
   /// and 0 if this and other represent the same bigint.

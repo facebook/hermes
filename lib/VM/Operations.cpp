@@ -339,6 +339,17 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     case HermesValue::ETag::Native1:
     case HermesValue::ETag::Native2:
       llvm_unreachable("native value");
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2: {
+      const uint8_t kDefaultRadix = 10;
+      auto res =
+          vmcast<BigIntPrimitive>(value)->toString(runtime, kDefaultRadix);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      result = res->getString();
+      break;
+    }
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2:
       result = vmcast<StringPrimitive>(value);
@@ -2065,5 +2076,29 @@ CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value) {
 
   return runtime.raiseTypeError("Invalid argument to stringToBigInt");
 }
+
+CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
+  switch (value->getTag()) {
+    default:
+      break;
+
+    case HermesValue::Tag::BigInt:
+      return *value;
+
+    case HermesValue::Tag::Object:
+      if (auto jsBigInt = Handle<JSBigInt>::dyn_vmcast(value)) {
+        if (value->getRaw() != runtime.bigintPrototype.getRaw()) {
+          BigIntPrimitive *bigint =
+              JSBigInt::getPrimitiveBigInt(jsBigInt.get(), runtime);
+          assert(bigint && "boxed bigint is missing its primitive");
+          return HermesValue::encodeBigIntValue(bigint);
+        }
+      }
+      break;
+  }
+
+  return runtime.raiseTypeError("value is not a bigint");
+}
+
 } // namespace vm
 } // namespace hermes

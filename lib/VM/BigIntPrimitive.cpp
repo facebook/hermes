@@ -58,5 +58,13 @@ CallResult<HermesValue> BigIntPrimitive::fromDouble(
   return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
 }
 
+CallResult<HermesValue> BigIntPrimitive::toString(
+    Runtime &runtime,
+    uint8_t radix) const {
+  std::string result = bigint::toString(this->getImmutableRef(runtime), radix);
+  return StringPrimitive::createEfficient(
+      runtime, createASCIIRef(result.c_str()));
+}
+
 } // namespace vm
 } // namespace hermes

@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_OPERATIONS_H
 #define HERMES_VM_OPERATIONS_H
 
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/Runtime.h"
@@ -458,6 +459,9 @@ CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value);
 
 // ES2022 7.1.14 StringToBigInt
 CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value);
+
+// ES2022 21.2.3 Properties of the BigInt Prototype Object - thisBigIntValue
+CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value);
 
 } // namespace vm
 } // namespace hermes

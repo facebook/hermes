@@ -610,6 +610,50 @@ std::optional<ParsedBigInt> ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
   return ret;
 }
 
+std::string toString(ImmutableBigIntRef src, uint8_t radix) {
+  assert(radix >= 2 && radix <= 36);
+
+  if (compare(src, 0) == 0) {
+    return "0";
+  }
+
+  const unsigned numBits = src.numDigits * BigIntDigitSizeInBytes * 8;
+  const bool sign = isNegative(src);
+  llvh::APInt tmp(numBits, llvh::makeArrayRef(src.digits, src.numDigits));
+
+  if (sign) {
+    // negate negative numbers, and then add a "-" to the output.
+    tmp.negate();
+  }
+
+  std::string digits;
+
+  // avoid trashing the heap by pre-allocating the largest possible string
+  // returned by this function. The "1" below is to account for a possible "-"
+  // sign.
+  digits.reserve(1 + src.numDigits * maxCharsPerDigitInRadix(radix));
+  do {
+    llvh::APInt quoc;
+    uint64_t rem;
+    llvh::APInt::udivrem(tmp, static_cast<uint64_t>(radix), quoc, rem);
+
+    if (rem < 10) {
+      digits.push_back('0' + rem);
+    } else {
+      digits.push_back('a' + rem - 10);
+    }
+
+    tmp = std::move(quoc);
+  } while (tmp != 0);
+
+  if (sign) {
+    digits.push_back('-');
+  }
+
+  std::reverse(digits.begin(), digits.end());
+  return digits;
+}
+
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   const int kLhsGreater = 1;
   const int kRhsGreater = -kLhsGreater;

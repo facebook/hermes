@@ -15,6 +15,7 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace hermes {
@@ -70,6 +71,26 @@ inline size_t numDigitsForSizeInBits(uint32_t v) {
 inline size_t numDigitsForSizeInBytes(uint32_t v) {
   return static_cast<size_t>(llvh::alignTo(v, BigIntDigitSizeInBytes)) /
       BigIntDigitSizeInBytes;
+}
+
+/// \return how many chars in base \p radix fit a BigIntDigitType.
+inline unsigned constexpr maxCharsPerDigitInRadix(uint8_t radix) {
+  // To compute the lower bound of bits in a BigIntDigitType "covered" by a
+  // char. For power of 2 radixes, it is known (exactly) that each character
+  // covers log2(radix) bits. For non-power of 2 radixes, a lower bound is
+  // log2(greates power of 2 that is less than radix).
+  unsigned minNumBitsPerChar = radix < 4 ? 1
+      : radix < 8                        ? 2
+      : radix < 16                       ? 3
+      : radix < 32                       ? 4
+                                         : 5;
+
+  // With minNumBitsPerChar being the lower bound estimate of how many bits each
+  // char can represent, the upper bound of how many chars "fit" in a bigint
+  // digit is ceil(sizeofInBits(bigint digit) / minNumBitsPerChar).
+  unsigned numCharsPerDigits = BigIntDigitSizeInBits / (1 << minNumBitsPerChar);
+
+  return numCharsPerDigits;
 }
 
 /// Returns another view of \p src where high order bytes that are just used
@@ -163,6 +184,9 @@ class ParsedBigInt {
 
   Storage storage_;
 };
+
+/// \return \p src's representation in \p radix.
+std::string toString(ImmutableBigIntRef src, uint8_t radix);
 
 /// \return (\p lhs < \p rhs) ? negative value : (\p lhs > \p rhs) ? positive
 /// value : zero.
