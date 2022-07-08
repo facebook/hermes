@@ -130,6 +130,7 @@ TEST_F(OperationsTest, IsSameValueTest) {
 
 #define AbstractEqualityTest(result, x, y)                          \
   {                                                                 \
+    GCScopeMarkerRAII trimmer(gcScope);                             \
     auto xHandle = runtime.makeHandle(x);                           \
     auto yHandle = runtime.makeHandle(y);                           \
     auto res = abstractEqualityTest_RJS(runtime, xHandle, yHandle); \
@@ -142,7 +143,7 @@ TEST_F(OperationsTest, IsSameValueTest) {
   }
 
 TEST_F(OperationsTest, AbstractEqualityTest) {
-  GCScope gcScope{runtime, "OperationsTest.AbstractEqualityTest", 200};
+  GCScope gcScope{runtime, "OperationsTest.AbstractEqualityTest", 80};
 
   PinnedHermesValue v1;
   PinnedHermesValue v2;
@@ -255,6 +256,93 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
   v2 = HermesValue::encodeDoubleValue(153);
   AbstractEqualityTest(FALSE, v1, v2);
 
+  // BigInt tests
+  // 0n does not equal null, undefined
+  auto bigint0 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNullValue();
+  AbstractEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeUndefinedValue();
+  AbstractEqualityTest(FALSE, v1, v2);
+
+  // 0n equals bigint created with no bytes
+  auto bigintNoBytes = BigIntPrimitive::fromBytesNoThrow({}, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeBigIntValue(bigintNoBytes.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  // 0n equals false, "", "0", 0.0, +0.0, -0.0
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeBoolValue(false);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  auto s0 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"0"));
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeStringValue(s0.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  auto sEmpty = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u""));
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeStringValue(sEmpty.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(0);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(+0.0);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(-0.0);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  // 1n equals true, "1", 1
+  auto bigint1 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  s1 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"1"));
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeBoolValue(true);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeStringValue(s1.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeNumberValue(1.0);
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  // Other tests
+  auto bigint0x00ffff00ffff00 =
+      BigIntPrimitive::fromSignedNoThrow(0x0000ffff00ffff00ll, runtime);
+  uint8_t bigint00ffff00ffff00Bytes[] = {
+      0x00, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00};
+  auto bigint00ffff00ffff00 =
+      BigIntPrimitive::fromBytesNoThrow(bigint00ffff00ffff00Bytes, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeBigIntValue(bigint00ffff00ffff00.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  auto s281470698520320 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"281470698520320"));
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeStringValue(s281470698520320.get());
+  AbstractEqualityTest(TRUE, v1, v2);
+
+  auto s281470698520320_0 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"281470698520320.0"));
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeStringValue(s281470698520320_0.get());
+  AbstractEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeDoubleValue(281470698520320.0);
+  AbstractEqualityTest(TRUE, v1, v2);
+
   // TODO: Test Object equality once Runtime::interpretFunction() is written.
 }
 
@@ -353,6 +441,93 @@ TEST_F(OperationsTest, StrictEquaityTest) {
   v3 = HermesValue::encodeStringValue(s3.get());
   StrictEqualityTest(TRUE, v1, v2);
   StrictEqualityTest(FALSE, v1, v3);
+
+  // BigInt tests
+  // 0n does not equal null, undefined
+  auto bigint0 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNullValue();
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeUndefinedValue();
+  StrictEqualityTest(FALSE, v1, v2);
+
+  // 0n equals bigint created with no bytes
+  auto bigintNoBytes = BigIntPrimitive::fromBytesNoThrow({}, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeBigIntValue(bigintNoBytes.get());
+  StrictEqualityTest(TRUE, v1, v2);
+
+  // 0n is not strictly equal to false, "", "0", 0.0, +0.0, -0.0
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeBoolValue(false);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  auto s0 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"0"));
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeStringValue(s0.get());
+  StrictEqualityTest(FALSE, v1, v2);
+
+  auto sEmpty = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u""));
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeStringValue(sEmpty.get());
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(0);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(+0.0);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0.get());
+  v2 = HermesValue::encodeNumberValue(-0.0);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  // 1n is not strictly equal to true, "1", 1
+  auto bigint1 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  s1 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"1"));
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeBoolValue(true);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeStringValue(s1.get());
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint1.get());
+  v2 = HermesValue::encodeNumberValue(1.0);
+  StrictEqualityTest(FALSE, v1, v2);
+
+  // Other tests
+  auto bigint0x00ffff00ffff00 =
+      BigIntPrimitive::fromSignedNoThrow(0x0000ffff00ffff00ll, runtime);
+  uint8_t bigint00ffff00ffff00Bytes[] = {
+      0x00, 0xff, 0xff, 0x00, 0xff, 0xff, 0x00};
+  auto bigint00ffff00ffff00 =
+      BigIntPrimitive::fromBytesNoThrow(bigint00ffff00ffff00Bytes, runtime);
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeBigIntValue(bigint00ffff00ffff00.get());
+  StrictEqualityTest(TRUE, v1, v2);
+
+  auto s281470698520320 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"281470698520320"));
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeStringValue(s281470698520320.get());
+  StrictEqualityTest(FALSE, v1, v2);
+
+  auto s281470698520320_0 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"281470698520320.0"));
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeStringValue(s281470698520320_0.get());
+  StrictEqualityTest(FALSE, v1, v2);
+
+  v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
+  v2 = HermesValue::encodeDoubleValue(281470698520320.0);
+  StrictEqualityTest(FALSE, v1, v2);
 }
 
 TEST_F(OperationsTest, IsPrimitiveTest) {

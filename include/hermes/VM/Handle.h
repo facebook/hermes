@@ -15,6 +15,8 @@
 #include "hermes/VM/HermesValueTraits.h"
 #include "llvh/Support/type_traits.h"
 
+#include <algorithm>
+
 namespace hermes {
 namespace vm {
 
@@ -510,6 +512,16 @@ inline PseudoHandle<> createPseudoHandle(HermesValue value) {
 } // namespace vm
 } // namespace hermes
 
+namespace std {
+/// std::swap<MutableHandle<T>> specialization. This is needed as the default
+/// implementation is not correct due MutableHandle<>::operator= definition.
+template <typename T>
+void swap(hermes::vm::MutableHandle<T> &a, hermes::vm::MutableHandle<T> &b) {
+  typename hermes::vm::MutableHandle<T>::value_type tmp = a.get();
+  a.set(b.get());
+  b.set(tmp);
+}
+} // namespace std
 /// When we updated LLVM most recently (2/2019), we had build failures.
 /// Apparently, llvh::Optional<T> asks whether T "isPodLike", to
 /// determine whether it can use an instantiation that invokes a copy

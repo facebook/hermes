@@ -933,6 +933,9 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       CASE_M_M(Str, Str) {
         return x->getString()->equals(y->getString());
       }
+      CASE_M_M(BigInt, BigInt) {
+        return x->getBigInt()->compare(y->getBigInt()) == 0;
+      }
       CASE_S_S(Bool, Bool)
       CASE_S_S(Symbol, Symbol)
       CASE_M_M(Object, Object) {
@@ -957,11 +960,28 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
             y->getNumber();
       }
       // 6. If Type(x) is BigInt and Type(y) is String, then
-      // a. Let n be ! StringToBigInt(y).
-      // b. If n is NaN, return false.
-      // c. Return the result of the comparison x == n.
+      CASE_M_M(BigInt, Str) {
+        // a. Let n be ! StringToBigInt(y).
+        auto n = stringToBigInt_RJS(runtime, y);
+        if (LLVM_UNLIKELY(n == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        // b. If n is NaN, return false.
+        // N.B.: this has been amended in ES2023 to read
+        //       If n is undefined, return false.
+        if (n->isUndefined()) {
+          return false;
+        }
+        // c. Return the result of the comparison x == n.
+        y = n.getValue();
+        break;
+      }
       // 7. If Type(x) is String and Type(y) is BigInt, return the result of the
       // comparison y == x.
+      CASE_M_M(Str, BigInt) {
+        std::swap(x, y);
+        break;
+      }
       // 8. If Type(x) is Boolean, return the result of the comparison !
       // ToNumber(x) == y.
       CASE_S_S(Bool, NUMBER_TAG) {
@@ -972,6 +992,9 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         // Do string parsing and check double equality.
         return x->getBool() ==
             stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
+      }
+      CASE_S_M(Bool, BigInt) {
+        return y->getBigInt()->compare(static_cast<int32_t>(x->getBool())) == 0;
       }
       CASE_S_M(Bool, Object) {
         x = HermesValue::encodeDoubleValue(x->getBool());
@@ -986,6 +1009,9 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
             y->getBool();
       }
+      CASE_M_S(BigInt, Bool) {
+        return x->getBigInt()->compare(static_cast<int32_t>(y->getBool())) == 0;
+      }
       CASE_M_S(Object, Bool) {
         y = HermesValue::encodeDoubleValue(y->getBool());
         break;
@@ -993,6 +1019,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y)
       // is Object, return the result of the comparison x == ToPrimitive(y).
       CASE_M_M(Str, Object)
+      CASE_M_M(BigInt, Object)
       CASE_S_M(Symbol, Object)
       CASE_S_M(NUMBER_TAG, Object) {
         auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
@@ -1005,6 +1032,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // 11. If Type(x) is Object and Type(y) is either String, Number, BigInt,
       // or Symbol, return the result of the comparison ToPrimitive(x) == y.
       CASE_M_M(Object, Str)
+      CASE_M_M(Object, BigInt)
       CASE_M_S(Object, Symbol)
       CASE_M_S(Object, NUMBER_TAG) {
         auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
@@ -1014,11 +1042,27 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         x = status.getValue();
         break;
       }
-        // 12. If Type(x) is BigInt and Type(y) is Number, or if Type(x) is
-        // Number and Type(y) is BigInt, then a. If x or y are any of NaN, +∞,
-        // or -∞, return false. b. If the mathematical value of x is equal to
-        // the mathematical value of y, return true; otherwise return false.
-        // 13. Return false.
+      // 12. If Type(x) is BigInt and Type(y) is Number, or if Type(x) is
+      // Number and Type(y) is BigInt, then a. If x or y are any of NaN, +∞,
+      // or -∞, return false. b. If the mathematical value of x is equal to
+      // the mathematical value of y, return true; otherwise return false.
+      CASE_M_S(BigInt, NUMBER_TAG) {
+        std::swap(x, y);
+        LLVM_FALLTHROUGH;
+      }
+      CASE_S_M(NUMBER_TAG, BigInt) {
+        if (!isIntegralNumber(x->getNumber())) {
+          return false;
+        }
+
+        auto xAsBigInt = BigIntPrimitive::fromDouble(x->getNumber(), runtime);
+        if (LLVM_UNLIKELY(xAsBigInt == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        return xAsBigInt->getBigInt()->compare(y->getBigInt()) == 0;
+      }
+
+      // 13. Return false.
       default:
         return false;
     }
@@ -1042,8 +1086,12 @@ bool strictEqualityTest(HermesValue x, HermesValue y) {
   // All the rest of the cases need to have the same tags.
   if (x.getTag() != y.getTag())
     return false;
-  // The only remaining case is string, which needs a deep comparison.
-  return x.isString() && x.getString()->equals(y.getString());
+  // Strings need deep comparison.
+  if (x.isString())
+    return x.getString()->equals(y.getString());
+
+  // The only remaining case is bigint, which also needs a deep comparison.
+  return x.isBigInt() && x.getBigInt()->compare(y.getBigInt()) == 0;
 }
 
 CallResult<HermesValue>
