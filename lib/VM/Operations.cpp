@@ -1211,23 +1211,23 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   if (resX == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto x = runtime.makeHandle(resX.getValue());
+  auto xPrim = runtime.makeHandle(resX.getValue());
 
   auto resY = toPrimitive_RJS(runtime, yHandle, PreferredType::NONE);
   if (resY == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto y = runtime.makeHandle(resY.getValue());
+  auto yPrim = runtime.makeHandle(resY.getValue());
 
   // If one of the values is a string, concatenate as strings.
-  if (x->isString() || y->isString()) {
-    auto resX = toString_RJS(runtime, x);
+  if (xPrim->isString() || yPrim->isString()) {
+    auto resX = toString_RJS(runtime, xPrim);
     if (resX == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     auto xStr = runtime.makeHandle(std::move(*resX));
 
-    auto resY = toString_RJS(runtime, y);
+    auto resY = toString_RJS(runtime, yPrim);
     if (resY == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1236,20 +1236,37 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
     return StringPrimitive::concat(runtime, xStr, yStr);
   }
 
-  // Add the numbers since neither are strings.
-  resX = toNumber_RJS(runtime, x);
-  if (LLVM_UNLIKELY(resX == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  // xPrim and yPrim are primitives; hence, they are already bigints, or they
+  // will never be bigints.
+  if (LLVM_LIKELY(!xPrim->isBigInt())) {
+    // xPrim is not a bigint; thus this is Number + Number.
+    auto res = toNumber_RJS(runtime, xPrim);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    const double xNum = res->getNumber();
+    // N.B.: toNumber(yPrim) will raise an TypeError if yPrim is bigint, which
+    // is the correct exception to be raised when trying to perform
+    // Number + BigInt. This avoids the need to check if yPrim is a bigint.
+    res = toNumber_RJS(runtime, yPrim);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    const double yNum = res->getNumber();
+    return HermesValue::encodeDoubleValue(xNum + yNum);
   }
-  auto xNum = resX.getValue().getNumber();
 
-  resY = toNumber_RJS(runtime, y);
-  if (LLVM_UNLIKELY(resY == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  // yPrim is a primitive; therefore it is already a BigInt, or it will never be
+  // one.
+  if (!yPrim->isBigInt()) {
+    return runtime.raiseTypeErrorForValue(
+        "Cannot convert ", yHandle, " to BigInt");
   }
-  auto yNum = resY.getValue().getNumber();
 
-  return HermesValue::encodeDoubleValue(xNum + yNum);
+  return BigIntPrimitive::add(
+      runtime.makeHandle(resX->getBigInt()),
+      runtime.makeHandle(resY->getBigInt()),
+      runtime);
 }
 
 static const size_t MIN_RADIX = 2;

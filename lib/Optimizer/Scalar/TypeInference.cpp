@@ -347,7 +347,7 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
       return true;
 
     // The Add operator is special:
-    // https://es5.github.io/#x11.6.1
+    // https://262.ecma-international.org/#sec-addition-operator-plus
     case BinaryOperatorInst::OpKind::AddKind: {
       Type LeftTy = BOI->getLeftHandSide()->getType();
       Type RightTy = BOI->getRightHandSide()->getType();
@@ -357,23 +357,40 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
         BOI->setType(Type::createString());
         return true;
       }
+
       // Number + Number -> Number.
       if (LeftTy.isNumberType() && RightTy.isNumberType()) {
         BOI->setType(Type::createNumber());
         return true;
       }
 
-      // If both sides of the binary operand are known and both sides are known
-      // to be non-string (and can't be converted to strings) then the result
-      // must be of a number type.
-      if (isSideEffectFree(LeftTy) && isSideEffectFree(RightTy) &&
-          !LeftTy.canBeString() && !RightTy.canBeString()) {
-        BOI->setType(Type::createNumber());
+      // BigInt + BigInt -> BigInt.
+      if (LeftTy.isBigIntType() && RightTy.isBigIntType()) {
+        BOI->setType(Type::createBigInt());
         return true;
       }
 
-      // The plus operator always returns a number or a string.
-      BOI->setType(Type::unionTy(Type::createNumber(), Type::createString()));
+      // ?BigInt + ?BigInt => ?BigInt. Both operands need to "may be a BigInt"
+      // for a possible BigInt result from this operator. This is true because
+      // there's no automative BigInt type conversion.
+      Type mayBeBigInt = (LeftTy.canBeBigInt() && RightTy.canBeBigInt())
+          ? Type::createBigInt()
+          : Type::createNoType();
+
+      // handy alias for number|maybe(BigInt).
+      Type numeric = Type::unionTy(Type::createNumber(), mayBeBigInt);
+
+      // If both sides of the binary operand are known and both sides are known
+      // to be non-string (and can't be converted to strings) then the result
+      // must be of a numeric type.
+      if (isSideEffectFree(LeftTy) && isSideEffectFree(RightTy) &&
+          !LeftTy.canBeString() && !RightTy.canBeString()) {
+        BOI->setType(numeric);
+        return true;
+      }
+
+      // The plus operator always returns a number, bigint, or a string.
+      BOI->setType(Type::unionTy(numeric, Type::createString()));
       return false;
     }
 

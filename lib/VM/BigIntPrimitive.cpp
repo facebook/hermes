@@ -106,20 +106,20 @@ CallResult<HermesValue> BigIntPrimitive::unaryNOT(
   return unaryOp(&bigint::unaryNot, src, numDigits, runtime);
 }
 
-CallResult<HermesValue> BigIntPrimitive::subtract(
+CallResult<HermesValue> BigIntPrimitive::binaryOp(
+    BinaryOp op,
     Handle<BigIntPrimitive> lhs,
     Handle<BigIntPrimitive> rhs,
+    uint32_t numDigitsResult,
     Runtime &runtime) {
-  const size_t numDigits = bigint::subtractResultSize(
-      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
-  auto u =
-      BigIntPrimitive::createUninitializedWithNumDigits(numDigits, runtime);
+  auto u = BigIntPrimitive::createUninitializedWithNumDigits(
+      numDigitsResult, runtime);
 
   if (LLVM_UNLIKELY(u == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto res = bigint::subtract(
+  auto res = (*op)(
       u->getMutableRef(runtime),
       lhs->getImmutableRef(runtime),
       rhs->getImmutableRef(runtime));
@@ -128,6 +128,24 @@ CallResult<HermesValue> BigIntPrimitive::subtract(
   }
 
   return HermesValue::encodeBigIntValue(u->getBigIntPrimitive());
+}
+
+CallResult<HermesValue> BigIntPrimitive::add(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const size_t numDigits = bigint::addResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::add, lhs, rhs, numDigits, runtime);
+}
+
+CallResult<HermesValue> BigIntPrimitive::subtract(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const size_t numDigits = bigint::subtractResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::subtract, lhs, rhs, numDigits, runtime);
 }
 
 } // namespace vm

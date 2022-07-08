@@ -175,6 +175,12 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p lhs + \p rhs
+  static CallResult<HermesValue> add(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 
@@ -317,6 +323,17 @@ class BigIntPrimitive final
       UnaryOp op,
       Handle<BigIntPrimitive> src,
       size_t numDigits,
+      Runtime &runtime);
+
+  using BinaryOp = bigint::OperationStatus (*)(
+      bigint::MutableBigIntRef dst,
+      bigint::ImmutableBigIntRef lhs,
+      bigint::ImmutableBigIntRef src);
+  static CallResult<HermesValue> binaryOp(
+      BinaryOp op,
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      uint32_t numDigitsResult,
       Runtime &runtime);
 };
 } // namespace vm

@@ -787,6 +787,103 @@ OperationStatus unaryNot(MutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return OperationStatus::RETURNED;
 }
 
+namespace {
+using AdditiveOp = BigIntDigitType (*)(
+    BigIntDigitType *,
+    const BigIntDigitType *,
+    BigIntDigitType,
+    unsigned);
+using AdditiveOpPart =
+    BigIntDigitType (*)(BigIntDigitType *, BigIntDigitType, unsigned);
+using AdditiveOpPostProcess = void (*)(MutableBigIntRef &);
+
+OperationStatus additiveOperation(
+    AdditiveOp op,
+    AdditiveOpPart opPart,
+    AdditiveOpPostProcess opPost,
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  // Requirement: lhs should have at most rhs.numDigits digits. This allows for
+  // an efficient implementation of the operation as follows:
+  //
+  // dst = sign-ext lhs
+  // dst op= rhs
+  //
+  // Which fits nicely into the APInt model where
+  //  1. operands should have the same size; and
+  //  2. operations are in-place
+  assert(
+      lhs.numDigits <= rhs.numDigits &&
+      "lhs should have fewer digits than rhs");
+
+  if (dst.numDigits < rhs.numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+
+  // The caller provided dst may be too big -- i.e., have more digits than
+  // actually needed. Precisely rhs.numDigits + 1 digits are needed to simulate
+  // infinite precision. Thus limit the result size to rhs.numDigits + 1 if dst
+  // has more digits than that.
+  if (rhs.numDigits + 1 < dst.numDigits) {
+    dst.numDigits = rhs.numDigits + 1;
+  }
+
+  // dst = sign-ext lhs.
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, lhs);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  // dst op= rhs
+  const BigIntDigitType carryIn = 0;
+  BigIntDigitType carryOut =
+      (*op)(dst.digits, rhs.digits, carryIn, rhs.numDigits);
+  (*opPart)(
+      dst.digits + rhs.numDigits,
+      carryOut + getBigIntRefSignExtValue(rhs),
+      dst.numDigits - rhs.numDigits);
+
+  // perform any post-op transformation.
+  (*opPost)(dst);
+
+  // Resize dst appropriately to ensure the resulting bigint is canonical.
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
+}
+
+void noopAdditiveOpPostProcess(MutableBigIntRef &) {}
+
+void negateAdditiveOpPostProcess(MutableBigIntRef &dst) {
+  llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+}
+
+} // namespace
+
+uint32_t addResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  // simulate infinite precision by requiring an extra digits in the result,
+  // regardless of the operands. It could be smarter -- carry will only happen
+  // if the operands are the same size, and the sign_bit ^ last_bit is 1 for
+  // either.
+  return std::max(lhs.numDigits, rhs.numDigits) + 1;
+}
+
+OperationStatus
+add(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  // Addition is commutative, so lhs and rhs can be swapped at will.
+  const auto &[srcWithFewerDigits, srcWithMostDigits] =
+      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs)
+                                     : std::make_tuple(rhs, lhs);
+
+  return additiveOperation(
+      llvh::APInt::tcAdd,
+      llvh::APInt::tcAddPart,
+      noopAdditiveOpPostProcess,
+      dst,
+      srcWithFewerDigits,
+      srcWithMostDigits);
+}
+
 uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   // Simulate infinite precision by requiring an extra digit in the result,
   // regardless of the operands. It could be smarter -- carry will only happen
@@ -797,69 +894,20 @@ uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 
 OperationStatus
 subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  // The APInt API requires the operands to have the same size, and it is
-  // inplace. Thus the subtraction will be expressed as
-  //
-  // dst = signExt(lhs) if dst has more digits than lhs else lhs
-  // dst -= signExt(rhs) if dst has more digits than rhs else rhs
-  //
-  // There's no need to sign-extend rhs if it is the same size as dst. If it
-  // isn't the same size, then it must be sign-extended first, thus the
-  // operation would be expressed as
-  //
-  // dst = signExt(lhs) if dst has more digits than lhs else lhs
-  // tmp = signExt(rhs)
-  // dst -= tmp
-  //
-  // To avoid needing to create a temporary version of rhs, the operation is
-  // expressed as
-  //
-  // dst = signExt(srcWithFewerDigits)
-  // dst -= srcWithMostDigits
-  // dst = -dst if srcWithMostDigits == lhs
-  //
-  // which avoids the need for the extra storage and sign-extension.
-  const auto &[srcWithFewerDigits, srcWithMostDigits, negateResult] =
-      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs, false)
-                                     : std::make_tuple(rhs, lhs, true);
+  // Subtraction is not commutative, so the result may need to be negated, in
+  // case rhs has fewer digits than lhs.
+  const auto &[srcWithFewerDigits, srcWithMostDigits, postProcess] =
+      lhs.numDigits <= rhs.numDigits
+      ? std::make_tuple(lhs, rhs, noopAdditiveOpPostProcess)
+      : std::make_tuple(rhs, lhs, negateAdditiveOpPostProcess);
 
-  // The caller provided dst may be too big -- i.e., have more digits than
-  // actually needed. Precisely srcWithMostDigits.numDigits + 1 digits are
-  // needed to simulate infinite precision. Thus limit the result size to
-  // srcWithMostDigits.numDigits + 1 if dst has more digits than that.
-  if (srcWithMostDigits.numDigits + 1 < dst.numDigits) {
-    dst.numDigits = srcWithMostDigits.numDigits + 1;
-  }
-
-  // dst = sign-extend srcWithFewerDigits.
-  auto res = initNonCanonicalWithReadOnlyBigInt(dst, srcWithFewerDigits);
-  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
-    return res;
-  }
-
-  // dst -= srcWithMostDigits
-  // N.B.: the carryOut may need to be propagated to dst's last digit (if
-  // there's an extra precision digit in dst).
-  const BigIntDigitType carryIn = 0;
-  BigIntDigitType carryOut = llvh::APInt::tcSubtract(
-      dst.digits,
-      srcWithMostDigits.digits,
-      carryIn,
-      srcWithMostDigits.numDigits);
-
-  llvh::APInt::tcSubtractPart(
-      dst.digits + srcWithMostDigits.numDigits,
-      carryOut + getBigIntRefSignExtValue(srcWithMostDigits),
-      dst.numDigits - srcWithMostDigits.numDigits);
-
-  // dst = -dst if srcWithMostDigits = lhs
-  if (negateResult) {
-    llvh::APInt::tcNegate(dst.digits, dst.numDigits);
-  }
-
-  // Resize dst appropriately to ensure the resulting bigint is canonical.
-  ensureCanonicalResult(dst);
-  return OperationStatus::RETURNED;
+  return additiveOperation(
+      llvh::APInt::tcSubtract,
+      llvh::APInt::tcSubtractPart,
+      postProcess,
+      dst,
+      srcWithFewerDigits,
+      srcWithMostDigits);
 }
 } // namespace bigint
 } // namespace hermes

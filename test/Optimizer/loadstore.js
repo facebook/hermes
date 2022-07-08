@@ -66,12 +66,12 @@ foo()
 //OPT-CHECK-NEXT:%BB0:
 //OPT-CHECK-NEXT:  %0 = BinaryOperatorInst '+', %p1, %p2
 //OPT-CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-//OPT-CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0 : string|number, 1 : number
-//OPT-CHECK-NEXT:  %3 = BinaryOperatorInst '+', %0 : string|number, 2 : number
-//OPT-CHECK-NEXT:  %4 = BinaryOperatorInst '+', %0 : string|number, 3 : number
-//OPT-CHECK-NEXT:  %5 = BinaryOperatorInst '+', %0 : string|number, 4 : number
-//OPT-CHECK-NEXT:  %6 = BinaryOperatorInst '+', %0 : string|number, 5 : number
-//OPT-CHECK-NEXT:  %7 = BinaryOperatorInst '+', %0 : string|number, 6 : number
+//OPT-CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0 : string|number|bigint, 1 : number
+//OPT-CHECK-NEXT:  %3 = BinaryOperatorInst '+', %0 : string|number|bigint, 2 : number
+//OPT-CHECK-NEXT:  %4 = BinaryOperatorInst '+', %0 : string|number|bigint, 3 : number
+//OPT-CHECK-NEXT:  %5 = BinaryOperatorInst '+', %0 : string|number|bigint, 4 : number
+//OPT-CHECK-NEXT:  %6 = BinaryOperatorInst '+', %0 : string|number|bigint, 5 : number
+//OPT-CHECK-NEXT:  %7 = BinaryOperatorInst '+', %0 : string|number|bigint, 6 : number
 //OPT-CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, %2 : string|number, %3 : string|number, %4 : string|number, %5 : string|number, %6 : string|number, %7 : string|number
 //OPT-CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 //OPT-CHECK-NEXT:function_end
@@ -80,4 +80,3 @@ function test2(p1, p2) {
   /// No need to load X so many times.
   print(x + 1, x + 2, x + 3, x + 4, x + 5, x + 6)
 }
-
