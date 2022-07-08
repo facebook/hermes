@@ -377,7 +377,7 @@ template <>
 constexpr auto &BigIntOper<doSub> = BigIntPrimitive::subtract;
 
 template <>
-static constexpr auto &BigIntOper<doMul> = UnimplementedBigIntBinOp;
+constexpr auto &BigIntOper<doMul> = BigIntPrimitive::multiply;
 
 } // namespace
 

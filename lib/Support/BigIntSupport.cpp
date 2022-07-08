@@ -10,6 +10,7 @@
 #include "hermes/Support/OptValue.h"
 
 #include "llvh/ADT/APInt.h"
+#include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/bit.h"
 #include "llvh/Support/Endian.h"
 
@@ -909,5 +910,162 @@ subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
       srcWithFewerDigits,
       srcWithMostDigits);
 }
+
+namespace {
+/// Helper class for allocating temporary storage needed for BigInt operations.
+/// It uses inline storage for "small enough" temporary requirements, and heap
+/// allocates
+class TmpStorage {
+  TmpStorage() = delete;
+  TmpStorage(const TmpStorage &) = delete;
+  TmpStorage(TmpStorage &&) = delete;
+
+  TmpStorage &operator=(const TmpStorage &) = delete;
+  TmpStorage &operator=(TmpStorage &&) = delete;
+
+ public:
+  explicit TmpStorage(uint32_t sizeInDigits)
+      : storage_(sizeInDigits), data_(storage_.begin()) {}
+
+  ~TmpStorage() = default;
+
+  /// \return a pointer to \p size digits in the temporary storage.
+  BigIntDigitType *requestNumDigits(uint32_t size) {
+    BigIntDigitType *ret = data_;
+    data_ += size;
+    assert(data_ <= storage_.end() && "too many temporary digits requested.");
+    return ret;
+  }
+
+ private:
+  static constexpr uint32_t MaxStackTmpStorageInDigits = 4;
+  llvh::SmallVector<BigIntDigitType, MaxStackTmpStorageInDigits> storage_;
+
+  BigIntDigitType *data_;
+};
+} // namespace
+
+uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return (!lhs.numDigits || !rhs.numDigits) ? 0
+                                            : lhs.numDigits + rhs.numDigits + 1;
+}
+
+namespace {
+/// \return dst = -src without worrying about negative integer negation
+/// overflow.
+std::tuple<OperationStatus, ImmutableBigIntRef> copyAndNegate(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef src) {
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, src);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return std::make_tuple(res, ImmutableBigIntRef{});
+  }
+
+  // Can't call unaryMinus directly as that API checks for negation overflow.
+  llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+
+  // Still return a canonical bigint.
+  ensureCanonicalResult(dst);
+
+  // N.B.: numDigits could have been modified in ensureCanonicalResult.
+  return std::make_tuple(
+      OperationStatus::RETURNED, ImmutableBigIntRef{dst.digits, dst.numDigits});
+}
+} // namespace
+
+OperationStatus
+multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  const uint32_t oldDstSize = multiplyResultSize(lhs, rhs);
+  const bool isLhsNegative = isNegative(lhs);
+  const bool isRhsNegative = isNegative(rhs);
+
+  // tcFullMultiply operates on unsigned quantities, so lhs/rhs may need to be
+  // negated. They could temporarily negated in place, but that violates the
+  // promise the API makes by taking ImmutableBigIntRefs. The solution is thus
+  // to allocate temporary buffers for negating the inputs when needed.
+  //
+  // There's no need to worry about the need for an extra digit to prevent
+  // negation overflow (i.e., -MIN_INT == MIN_INT). For example,
+  //
+  // if lhs = -0x80000000_00000000n, then
+  //    * lhs.numDigits = 1; and
+  //    * lhs.digits[0] = 0x8000000000000000
+  //
+  // and negating that usually yields
+  //
+  //     * result.numDigits = 2; and
+  //     * result.digits[0] = 0x8000000000000000
+  //     * result.digits[1] = 0x0000000000000000
+  //
+  // i.e., there's an explicit zero-extension of the result, which is
+  // superfluous given tcFullMultiply assumption of unsigned operands.
+  uint32_t tmpStorageSizeLhs = isLhsNegative ? lhs.numDigits : 0;
+  uint32_t tmpStorageSizeRhs = isRhsNegative ? rhs.numDigits : 0;
+  const uint32_t tmpStorageSize = tmpStorageSizeLhs + tmpStorageSizeRhs;
+
+  // temporary storage used to negate negative operands.
+  TmpStorage tmpStorage(tmpStorageSize);
+
+  if (isLhsNegative) {
+    MutableBigIntRef tmp{
+        tmpStorage.requestNumDigits(tmpStorageSizeLhs), tmpStorageSizeLhs};
+    auto [res, newLhs] = copyAndNegate(tmp, lhs);
+    if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+      return res;
+    }
+    lhs = newLhs;
+  }
+
+  if (isRhsNegative) {
+    MutableBigIntRef tmp{
+        tmpStorage.requestNumDigits(tmpStorageSizeRhs), tmpStorageSizeRhs};
+    auto [res, newRhs] = copyAndNegate(tmp, rhs);
+    if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+      return res;
+    }
+    rhs = newRhs;
+  }
+
+  // The operands may have been negated, but their sizes should not have
+  // changed.
+  const uint32_t dstSize = multiplyResultSize(lhs, rhs);
+  assert(
+      oldDstSize == dstSize &&
+      "multiplication result size can't change even if operands were negated.");
+  (void)oldDstSize;
+
+  if (dst.numDigits < dstSize) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+
+  // Truncate dst to the exact result size.
+  dst.numDigits = dstSize;
+
+  // if dstSize is zero, then there's no need to perform the multiplication.
+  if (dstSize > 0) {
+    // tcFullMultiply returns a result with lhs.numDigits + rhs.numDigits. Thus,
+    // there could be extraneous digits in dst that are not initialized by it.
+    llvh::APInt::tcFullMultiply(
+        dst.digits, lhs.digits, rhs.digits, lhs.numDigits, rhs.numDigits);
+
+    // Zero out extranous digits in dst. These digits are used to simulate
+    // infinite precision when multiplying negative and positive numbers.
+    const uint32_t resultSize = lhs.numDigits + rhs.numDigits;
+    memset(
+        dst.digits + resultSize,
+        0,
+        (dst.numDigits - resultSize) * BigIntDigitSizeInBytes);
+
+    // The result must be negated if the srcs' signs don't match.
+    const bool negateResult = isLhsNegative != isRhsNegative;
+    if (negateResult) {
+      llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+    }
+  }
+
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
+}
+
 } // namespace bigint
 } // namespace hermes

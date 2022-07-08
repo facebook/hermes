@@ -148,5 +148,14 @@ CallResult<HermesValue> BigIntPrimitive::subtract(
   return binaryOp(&bigint::subtract, lhs, rhs, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::multiply(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::multiplyResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::multiply, lhs, rhs, numDigits, runtime);
+}
+
 } // namespace vm
 } // namespace hermes
