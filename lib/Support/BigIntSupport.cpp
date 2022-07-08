@@ -168,6 +168,17 @@ OperationStatus fromDouble(MutableBigIntRef dst, double src) {
   return initWithBytes(dst, dropExtraSignBits(bytesRef));
 }
 
+double toDouble(ImmutableBigIntRef src) {
+  if (src.numDigits == 0) {
+    return 0.0;
+  }
+
+  const uint32_t numBits = src.numDigits * BigIntDigitSizeInBits;
+  llvh::APInt tmp(numBits, llvh::makeArrayRef(src.digits, src.numDigits));
+  constexpr bool kSigned = true;
+  return tmp.roundToDouble(kSigned);
+}
+
 namespace {
 /// ES5.1 7.2
 /// Copied from Operations.h to preserve layering.

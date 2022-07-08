@@ -169,11 +169,11 @@ numberConstructor(void *, Runtime &runtime, NativeArgs args) {
   double value = +0.0;
 
   if (args.getArgCount() > 0) {
-    auto res = toNumber_RJS(runtime, args.getArgHandle(0));
+    auto res = toNumeric_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    value = res->getNumber();
+    value = res->isBigInt() ? res->getBigInt()->toDouble() : res->getNumber();
   }
 
   if (args.isConstructorCall()) {

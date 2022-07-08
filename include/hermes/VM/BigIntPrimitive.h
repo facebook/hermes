@@ -148,6 +148,11 @@ class BigIntPrimitive final
     return bigint::isNegative(getImmutableRefUnsafe());
   }
 
+  /// \return R(Z(*this))
+  double toDouble() const {
+    return bigint::toDouble(this->getImmutableRefUnsafe());
+  }
+
  private:
   static ExecutionStatus raiseOnError(
       bigint::OperationStatus status,
