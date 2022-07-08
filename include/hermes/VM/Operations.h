@@ -48,15 +48,8 @@ bool toBoolean(HermesValue value);
 /// ES5.1 9.3
 CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle);
 
-/// ES 2020 7.1.3
-inline CallResult<HermesValue> toNumeric_RJS(
-    Runtime &runtime,
-    Handle<> valueHandle) {
-  // The difference between this and toNumber is that it can return a
-  // BigInt.  But Hermes doesn't support BigInt yet, so for now, this
-  // is a placeholder.
-  return toNumber_RJS(runtime, valueHandle);
-}
+/// ES 2020 7.1.3 ToNumeric(value)
+CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle);
 
 /// ES6 7.1.15
 CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle);

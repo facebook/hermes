@@ -493,6 +493,63 @@ TEST_F(OperationsTest, ToStringTest) {
   // TODO: Test Object toString once Runtime::interpretFunction() is written.
 }
 
+#define ToNumericTest(result, value)                       \
+  {                                                        \
+    Handle<> scopedValue = runtime.makeHandle(value);      \
+    res = toNumeric_RJS(runtime, scopedValue);             \
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
+    EXPECT_EQ((double)result, res->getDouble());           \
+  }
+
+#define InvalidToNumericTest(value)                        \
+  {                                                        \
+    Handle<> scopedValue = runtime.makeHandle(value);      \
+    res = toNumeric_RJS(runtime, scopedValue);             \
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus()); \
+    EXPECT_TRUE(std::isnan(res->getDouble()));             \
+  }
+
+#define StringToNumericTest(result, string)                               \
+  {                                                                       \
+    auto strPrim =                                                        \
+        StringPrimitive::createNoThrow(runtime, createUTF16Ref(string));  \
+    ToNumericTest(result, HermesValue::encodeStringValue(strPrim.get())); \
+  }
+
+#define InvalidStringToNumericTest(string)                               \
+  {                                                                      \
+    auto strPrim =                                                       \
+        StringPrimitive::createNoThrow(runtime, createUTF16Ref(string)); \
+    InvalidToNumericTest(HermesValue::encodeStringValue(strPrim.get())); \
+  }
+
+#define BigIntToNumericTest(result, value)                      \
+  {                                                             \
+    Handle<> scopedValue = runtime.makeHandle(value);           \
+    Handle<> scopedResult = runtime.makeHandle(result);         \
+    res = toNumeric_RJS(runtime, scopedValue);                  \
+    EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());      \
+    EXPECT_TRUE(scopedResult->getBigInt() == res->getBigInt()); \
+  }
+
+TEST_F(OperationsTest, ToNumericTest) {
+  // Sanity-check a few simple values that should be numbers, not bigints.
+  ToNumericTest(+0.0, HermesValue::encodeNullValue());
+  InvalidToNumericTest(HermesValue::encodeUndefinedValue());
+  ToNumericTest(1, HermesValue::encodeBoolValue(true));
+  ToNumericTest(0, HermesValue::encodeBoolValue(false));
+  StringToNumericTest(1.0, u"1");
+
+  // ToNumeric(string) should never return a bigint, even for well-formed
+  // bigints.
+  InvalidStringToNumericTest(u"0n");
+
+  {
+    auto bigintPrim = BigIntPrimitive::fromSignedNoThrow(12, runtime);
+    BigIntToNumericTest(bigintPrim.get(), bigintPrim.get());
+  }
+}
+
 // Use macros for these tests because they're verbose.
 #define ToNumberTest(result, value)                        \
   {                                                        \

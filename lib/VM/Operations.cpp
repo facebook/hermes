@@ -529,6 +529,21 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
   return HermesValue::encodeDoubleValue(result);
 }
 
+CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
+  GCScopeMarkerRAII marker{runtime};
+  auto primValue = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
+
+  if (LLVM_UNLIKELY(primValue == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (primValue->isBigInt()) {
+    return *primValue;
+  }
+
+  return toNumber_RJS(runtime, runtime.makeHandle(*primValue));
+}
+
 CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
   constexpr double maxLength = 9007199254740991.0; // 2**53 - 1
   auto res = toIntegerOrInfinity(runtime, valueHandle);
