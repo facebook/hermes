@@ -20,6 +20,31 @@
 namespace hermes {
 namespace bigint {
 
+enum class ParsedSign {
+  Minus = -1,
+  None = 0,
+  Plus = 1,
+};
+
+/// https://tc39.es/ecma262/#sec-stringintegerliteral-grammar
+/// Parse \p src as a StringIntegerLiteral.
+///
+/// \return an empty optional if \p src is not a valid StringIntegerLiteral, in
+/// which case \p outError (if not null) will contain a description of the
+/// error; or, if \p src is a valid StringIntegerLiteral, then a string with the
+/// bigint digits is returned; \p radix is set to the literal's radix; \p sign
+/// represents which sign was parsed, if any.
+std::optional<std::string> getStringIntegerLiteralDigitsAndSign(
+    llvh::ArrayRef<char> src,
+    uint8_t &radix,
+    ParsedSign &sign,
+    std::string *outError = nullptr);
+std::optional<std::string> getStringIntegerLiteralDigitsAndSign(
+    llvh::ArrayRef<char16_t> src,
+    uint8_t &radix,
+    ParsedSign &sign,
+    std::string *outError = nullptr);
+
 using SignedBigIntDigitType = int64_t;
 using BigIntDigitType = uint64_t;
 
@@ -97,6 +122,38 @@ OperationStatus initWithBytes(
 
 /// \return true if \p src is a negative bigint, and false otherwise.
 bool isNegative(ImmutableBigIntRef src);
+
+/// Holds the bytes in a parsed BigInt value.
+class ParsedBigInt {
+  ParsedBigInt(const ParsedBigInt &) = delete;
+  ParsedBigInt &operator=(const ParsedBigInt &) = delete;
+
+ public:
+  using Storage = std::vector<uint8_t>;
+
+  ParsedBigInt(ParsedBigInt &&) = default;
+  ParsedBigInt &operator=(ParsedBigInt &&) = default;
+
+  static std::optional<ParsedBigInt> parsedBigIntFromStringIntegerLiteral(
+      llvh::ArrayRef<char> input,
+      std::string *outError = nullptr);
+
+  static std::optional<ParsedBigInt> parsedBigIntFromStringIntegerLiteral(
+      llvh::ArrayRef<char16_t> input,
+      std::string *outError = nullptr);
+
+  /// \return A compact representation of the BigInt. Compact means all most
+  /// significant bytes in storage_ that can be inferred with a
+  /// sign-extension are dropped.
+  llvh::ArrayRef<uint8_t> getBytes() const {
+    return dropExtraSignBits(storage_);
+  }
+
+ private:
+  ParsedBigInt(llvh::ArrayRef<uint8_t> bytes) : storage_(bytes) {}
+
+  Storage storage_;
+};
 
 } // namespace bigint
 } // namespace hermes

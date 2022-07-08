@@ -17,6 +17,131 @@ namespace {
 using namespace hermes;
 using namespace hermes::bigint;
 
+using Radix = uint32_t;
+
+void sucessfullStringLiteralParsing(
+    llvh::ArrayRef<char> src,
+    llvh::ArrayRef<char> expected,
+    Radix expectedRadix,
+    ParsedSign expectedSign) {
+  std::string outError;
+  uint8_t radix;
+  ParsedSign sign;
+  auto bigintDigits =
+      getStringIntegerLiteralDigitsAndSign(src, radix, sign, &outError);
+  EXPECT_TRUE(bigintDigits)
+      << "failure to parse '" << src.data() << "': " << outError.data();
+
+  if (bigintDigits) {
+    EXPECT_EQ(radix, expectedRadix) << src.data();
+    EXPECT_EQ(sign, expectedSign) << src.data();
+    EXPECT_EQ(*bigintDigits, expected.data());
+  }
+}
+
+void failedStringLiteralParsing(llvh::ArrayRef<char> src) {
+  std::string outError;
+  uint8_t radix;
+  ParsedSign sign;
+  auto bigintDigits =
+      getStringIntegerLiteralDigitsAndSign(src, radix, sign, &outError);
+  EXPECT_FALSE(bigintDigits)
+      << "'" << src.data() << "' was parsed as " << *bigintDigits;
+}
+
+TEST(BigIntTest, getStringIntegerLiteralDigitsAndSignTest) {
+  // empty string
+  sucessfullStringLiteralParsing("", "0", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing(" ", "0", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing("   ", "0", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing("     ", "0", Radix(10), ParsedSign::None);
+
+  // string of zeros, with and without sign.
+  sucessfullStringLiteralParsing("00000", "0", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing("+0000000", "0", Radix(10), ParsedSign::Plus);
+  sucessfullStringLiteralParsing("-00", "0", Radix(10), ParsedSign::Minus);
+
+  // simple decimal without sign
+  sucessfullStringLiteralParsing("1", "1", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing("     1", "1", Radix(10), ParsedSign::None);
+  sucessfullStringLiteralParsing("1      ", "1", Radix(10), ParsedSign::None);
+
+  // simple decimal with a '-' sign
+  sucessfullStringLiteralParsing("+1", "1", Radix(10), ParsedSign::Plus);
+  sucessfullStringLiteralParsing("      +1", "1", Radix(10), ParsedSign::Plus);
+  sucessfullStringLiteralParsing(
+      "+1        ", "1", Radix(10), ParsedSign::Plus);
+  sucessfullStringLiteralParsing(" +1 ", "1", Radix(10), ParsedSign::Plus);
+
+  // simple decimal with a '-' sign
+  sucessfullStringLiteralParsing("-1", "1", Radix(10), ParsedSign::Minus);
+  sucessfullStringLiteralParsing(" -1", "1", Radix(10), ParsedSign::Minus);
+  sucessfullStringLiteralParsing("-1   ", "1", Radix(10), ParsedSign::Minus);
+  sucessfullStringLiteralParsing(
+      "    -1    ", "1", Radix(10), ParsedSign::Minus);
+
+  // hex number
+  sucessfullStringLiteralParsing("0x1", "1", Radix(16), ParsedSign::None);
+  sucessfullStringLiteralParsing("  0x123", "123", Radix(16), ParsedSign::None);
+  sucessfullStringLiteralParsing("0X1a  ", "1a", Radix(16), ParsedSign::None);
+  sucessfullStringLiteralParsing(
+      "   0X1bde    ", "1bde", Radix(16), ParsedSign::None);
+
+  // octal number
+  sucessfullStringLiteralParsing("0o1", "1", Radix(8), ParsedSign::None);
+  sucessfullStringLiteralParsing("    0o12", "12", Radix(8), ParsedSign::None);
+  sucessfullStringLiteralParsing(
+      "0O176        ", "176", Radix(8), ParsedSign::None);
+  sucessfullStringLiteralParsing(
+      "       0O150123          ", "150123", Radix(8), ParsedSign::None);
+
+  // binary number
+  sucessfullStringLiteralParsing("0b1", "1", Radix(2), ParsedSign::None);
+  sucessfullStringLiteralParsing("   0b10", "10", Radix(2), ParsedSign::None);
+  sucessfullStringLiteralParsing(
+      "0B11111111100     ", "11111111100", Radix(2), ParsedSign::None);
+  sucessfullStringLiteralParsing(
+      "0B100000011", "100000011", Radix(2), ParsedSign::None);
+
+  // +/- without digits.
+  failedStringLiteralParsing("+");
+  failedStringLiteralParsing("-");
+
+  // radix prefix but no digits
+  failedStringLiteralParsing("0x");
+  failedStringLiteralParsing("0X");
+  failedStringLiteralParsing("0o");
+  failedStringLiteralParsing("0O");
+  failedStringLiteralParsing("0b");
+  failedStringLiteralParsing("0B");
+
+  // input can't have the n suffix
+  failedStringLiteralParsing("0n");
+  failedStringLiteralParsing("1n");
+  failedStringLiteralParsing("0x1n");
+  failedStringLiteralParsing("0X1n");
+  failedStringLiteralParsing("0o1n");
+  failedStringLiteralParsing("0O1n");
+  failedStringLiteralParsing("0b1n");
+  failedStringLiteralParsing("0B1n");
+
+  // leading zeros before radix prefix
+  failedStringLiteralParsing("00x1");
+  failedStringLiteralParsing("000X1");
+  failedStringLiteralParsing("0000o1");
+  failedStringLiteralParsing("00000O1");
+  failedStringLiteralParsing("000000b1");
+  failedStringLiteralParsing("0000000B1");
+
+  // no +/- in non-decimal strings
+  failedStringLiteralParsing("+0x1");
+  failedStringLiteralParsing("-0X1");
+  failedStringLiteralParsing("+0o1");
+  failedStringLiteralParsing("-0O1");
+  failedStringLiteralParsing("+0b1");
+  failedStringLiteralParsing("-0B1");
+}
+
 TEST(BigIntTest, numDigitsForSizeInBytesTest) {
   EXPECT_EQ(numDigitsForSizeInBytes(0), 0);
 
