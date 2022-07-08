@@ -508,6 +508,9 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
       result =
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(valueHandle));
       break;
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return runtime.raiseTypeError("Cannot convert BigInt to number");
     case HermesValue::ETag::Undefined:
       result = std::numeric_limits<double>::quiet_NaN();
       break;

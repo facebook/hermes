@@ -651,6 +651,25 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     InvalidStringToNumberTest(u"1֍  ");
   }
 
+  // BigInt
+  {
+    auto bigintPrim = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    Handle<> hBigInt =
+        runtime.makeHandle(HermesValue::encodeBigIntValue(bigintPrim.get()));
+    res = toNumber_RJS(runtime, hBigInt);
+    ASSERT_EQ(ExecutionStatus::EXCEPTION, res.getStatus());
+    HermesValue thrownValue = runtime.getThrownValue();
+    ASSERT_TRUE(thrownValue.isObject());
+    auto *thrownJSObject = dyn_vmcast<JSObject>(thrownValue.getObject(runtime));
+    ASSERT_TRUE(thrownJSObject);
+    auto thrownProto =
+        JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
+    ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
+    EXPECT_EQ(
+        runtime.TypeErrorPrototype.getObject(runtime), thrownProto->get());
+    runtime.clearThrownValue();
+  }
+
   // TODO: Test Object toNumber once Runtime::interpretFunction() is written.
 }
 
