@@ -603,6 +603,11 @@ class HadesGC final : public GCBase {
       /// sweep.
       uint64_t sweptBytes{0};
       uint64_t sweptExternalBytes{0};
+
+#ifndef NDEBUG
+      /// The total number of bytes trimmed from GC-managed cells.
+      uint64_t trimmedBytes{0};
+#endif
     } sweepIterator_;
 
     /// Searches the OG for a space to allocate memory into.

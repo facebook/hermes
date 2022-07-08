@@ -298,10 +298,12 @@ class HadesGC::CollectionStats final {
   /// initially allocated bytes and the swept bytes to determine the actual
   /// impact of the GC.
   uint64_t afterAllocatedBytes() const {
+    assert(sweptBytes_ <= allocatedBefore_);
     return allocatedBefore_ - sweptBytes_;
   }
 
   uint64_t afterExternalBytes() const {
+    assert(sweptExternalBytes_ <= externalBefore_);
     return externalBefore_ - sweptExternalBytes_;
   }
 
@@ -1130,6 +1132,9 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
             !HeapSegment::getCellMarkBit(newCell) &&
             "Trimmed space cannot be marked");
         HeapSegment::setCellHead(newCell, trimmableBytes);
+#ifndef NDEBUG
+        sweepIterator_.trimmedBytes += trimmableBytes;
+#endif
       }
       continue;
     }
@@ -1194,7 +1199,20 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
 
   // This was the last sweep iteration, finish the collection.
   auto &stats = *gc_.ogCollectionStats_;
-  stats.setSweptBytes(sweepIterator_.sweptBytes);
+
+  auto sweptBytes = sweepIterator_.sweptBytes;
+  auto preAllocated = stats.beforeAllocatedBytes();
+  if (sweptBytes > preAllocated) {
+    // Only trimming can result in freeing more memory than was allocated at the
+    // start of the collection, since we may trim cells that were allocated
+    // after the collection started.
+    assert(sweepIterator_.trimmedBytes >= (sweptBytes - preAllocated));
+    // We can't precisely calculate how much of the trimmed memory came from
+    // cells allocated during the collection, so just cap the swept bytes at the
+    // number of initially allocated bytes.
+    sweptBytes = preAllocated;
+  }
+  stats.setSweptBytes(sweptBytes);
   stats.setSweptExternalBytes(sweepIterator_.sweptExternalBytes);
   const uint64_t targetSizeBytes =
       (stats.afterAllocatedBytes() + stats.afterExternalBytes()) /
