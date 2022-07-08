@@ -15,9 +15,9 @@ use sourcemap::RawToken;
 use sourcemap::SourceMap;
 use sourcemap::SourceMapBuilder;
 use std::fmt;
+use std::io;
 use std::io::BufWriter;
 use std::io::Write;
-use std::io::{self};
 use std::rc::Rc;
 
 /// Options for JS generation.

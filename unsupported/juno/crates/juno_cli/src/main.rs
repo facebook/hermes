@@ -8,21 +8,20 @@
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
-use anyhow::{self};
 use command_line::CommandLine;
 use command_line::Hidden;
 use command_line::Opt;
 use command_line::OptDesc;
+use juno::ast;
 use juno::ast::node_cast;
 use juno::ast::validate_tree;
 use juno::ast::NodeRc;
 use juno::ast::SourceRange;
-use juno::ast::{self};
 use juno::gen_js;
+use juno::hparser;
 use juno::hparser::MagicCommentKind;
 use juno::hparser::ParsedJS;
 use juno::hparser::ParserDialect;
-use juno::hparser::{self};
 use juno::resolve_dependency;
 use juno::sema;
 use juno::sema::SemContext;
@@ -44,7 +43,6 @@ use std::process::exit;
 use std::rc::Rc;
 use std::str::FromStr;
 use url::Url;
-use url::{self};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum Gen {

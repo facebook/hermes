@@ -6,12 +6,11 @@
  */
 
 use anyhow::Context;
-use anyhow::{self};
+use juno::ast;
 use juno::ast::node_cast;
 use juno::ast::NodeRc;
-use juno::ast::{self};
+use juno::hparser;
 use juno::hparser::ParserDialect;
-use juno::hparser::{self};
 use juno::resolve_dependency;
 use juno::sema;
 use juno::sema::DeclId;

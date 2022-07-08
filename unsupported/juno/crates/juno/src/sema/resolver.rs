@@ -6,6 +6,7 @@
  */
 
 use super::sem_context::*;
+use crate::ast;
 use crate::ast::builder;
 use crate::ast::node_cast;
 use crate::ast::node_isa;
@@ -23,7 +24,6 @@ use crate::ast::TemplateMetadata;
 use crate::ast::UnaryExpressionOperator;
 use crate::ast::VariableDeclarationKind;
 use crate::ast::Visitor;
-use crate::ast::{self};
 use crate::resolve_dependency::DependencyKind;
 use crate::resolve_dependency::DependencyResolver;
 use crate::sema::decl_collector::DeclCollector;

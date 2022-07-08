@@ -7,12 +7,12 @@
 
 extern crate juno_support;
 
+use juno::ast;
 use juno::ast::dump_json;
 use juno::ast::NodeRc;
-use juno::ast::{self};
 use juno::gen_js;
+use juno::hparser;
 use juno::hparser::ParserDialect;
-use juno::hparser::{self};
 use juno_pass::PassManager;
 use juno_support::NullTerminatedBuf;
 
