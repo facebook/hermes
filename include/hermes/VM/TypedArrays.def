@@ -24,5 +24,7 @@ TYPED_ARRAY(Uint16, uint16_t)
 TYPED_ARRAY(Uint32, uint32_t)
 TYPED_ARRAY(Float32, float)
 TYPED_ARRAY(Float64, double)
+TYPED_ARRAY(BigInt64, int64_t)
+TYPED_ARRAY(BigUint64, uint64_t)
 
 #undef TYPED_ARRAY

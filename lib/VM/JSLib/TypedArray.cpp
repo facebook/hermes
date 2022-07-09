@@ -411,20 +411,23 @@ class TypedArraySortModel : public SortModel {
       {
         NoAllocScope noAllocs{runtime_};
         if (!WithCompareFn) {
-          double a = aVal.getNumber();
-          double b = bVal.getNumber();
-          if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
-              LLVM_UNLIKELY(std::signbit(a)) &&
-              LLVM_UNLIKELY(!std::signbit(b))) {
-            // -0 < +0, according to the spec.
-            return -1;
+          if (LLVM_UNLIKELY(aVal.isBigInt())) {
+            return aVal.getBigInt()->compare(bVal.getBigInt());
+          } else {
+            double a = aVal.getNumber();
+            double b = bVal.getNumber();
+            if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
+                LLVM_UNLIKELY(std::signbit(a)) &&
+                LLVM_UNLIKELY(!std::signbit(b))) {
+              // -0 < +0, according to the spec.
+              return -1;
+            }
+            return (a < b) ? -1 : (a > b ? 1 : 0);
           }
-          return (a < b) ? -1 : (a > b ? 1 : 0);
+          assert(
+              compareFn_ && "Cannot use this version if the compareFn is null");
         }
-        assert(
-            compareFn_ && "Cannot use this version if the compareFn is null");
       }
-
       // ES7 22.2.3.26 2a.
       // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
       callRes = Callable::executeCall2(
@@ -913,7 +916,16 @@ typedArrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   const double len = self->getLength();
-  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
+  CallResult<HermesValue> res = ExecutionStatus::EXCEPTION;
+  switch (self->getKind()) {
+    default:
+      res = toNumber_RJS(runtime, args.getArgHandle(0));
+      break;
+    case CellKind::BigInt64ArrayKind:
+    case CellKind::BigUint64ArrayKind:
+      res = toBigInt_RJS(runtime, args.getArgHandle(0));
+      break;
+  }
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1085,8 +1097,8 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
   if (len == 0) {
     return ret();
   }
-  auto searchElement = args.getArg(0);
-  if (!searchElement.isNumber()) {
+  auto searchElement = args.getArgHandle(0);
+  if (!searchElement->isNumber() && !searchElement->isBigInt()) {
     // If it's not a number, nothing will match.
     return ret();
   }
@@ -1132,8 +1144,8 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
     NoAllocScope noAllocs{runtime};
 
     bool comp = indexOfMode == IndexOfMode::includes
-        ? isSameValueZero(curr, searchElement)
-        : strictEqualityTest(curr, searchElement);
+        ? isSameValueZero(curr, *searchElement)
+        : strictEqualityTest(curr, *searchElement);
     if (comp) {
       return ret(true, k);
     }

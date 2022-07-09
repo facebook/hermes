@@ -215,7 +215,9 @@ C_STRING((function() {
              val instanceof Uint16Array ||
              val instanceof Uint32Array ||
              val instanceof Float32Array ||
-             val instanceof Float64Array;
+             val instanceof Float64Array ||
+             val instanceof BigInt64Array ||
+             val instanceof BigUint64Array;
     }
 
     if (isTypedArray(value)) {

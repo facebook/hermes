@@ -83,6 +83,19 @@ class BigIntPrimitive final
     return fromBytes(llvh::makeArrayRef(ptr, size), runtime);
   }
 
+  /// \return a newly allocated BigIntPrimitive representing \p value (an
+  /// unsigned integer).
+  template <typename T>
+  static std::enable_if_t<std::is_unsigned<T>::value, CallResult<HermesValue>>
+  fromUnsigned(T value, Runtime &runtime) {
+    static_assert(sizeof(T) <= sizeof(DigitType), "unsigned value truncation");
+    DigitType tmp[2] = {static_cast<DigitType>(value), 0};
+    const auto *ptr = reinterpret_cast<const uint8_t *>(tmp);
+    const uint32_t size = sizeof(tmp);
+
+    return fromBytes(llvh::makeArrayRef(ptr, size), runtime);
+  }
+
   /// \return a newly allocated BigIntPrimitive representing Z( R( \p value ) ).
   static CallResult<HermesValue> fromDouble(double value, Runtime &runtime);
 

@@ -115,7 +115,7 @@ CELL_RANGE(ArrayImpl, Arguments, JSArray)
 CELL_RANGE(Callable, BoundFunction, JSFunction)
 CELL_RANGE(CodeBlockFunction, JSGeneratorFunction, JSFunction)
 CELL_RANGE(NativeFunction, NativeFunction, FinalizableNativeFunction)
-CELL_RANGE(TypedArrayBase, Int8Array, Float64Array)
+CELL_RANGE(TypedArrayBase, Int8Array, BigUint64Array)
 CELL_RANGE(WeakMapImplBase, JSWeakMap, JSWeakSet)
 CELL_RANGE(
     StringPrimitive,

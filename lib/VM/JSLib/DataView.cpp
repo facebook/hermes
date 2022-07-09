@@ -101,7 +101,7 @@ dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "DataView.prototype.set<Type> called on a detached ArrayBuffer");
   }
-  T value = JSTypedArray<T, C>::toDestType(res->getNumber());
+  T value = JSTypedArray<T, C>::toDestType(*res);
   if (byteOffset + sizeof(T) > self->byteLength()) {
     return runtime.raiseRangeError(
         "DataView.prototype.set<Type>(): Cannot "
