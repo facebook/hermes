@@ -12,6 +12,8 @@
 
 #include <vector>
 
+#include "gmock/gmock.h"
+
 namespace {
 
 using namespace hermes;
@@ -543,4 +545,68 @@ TEST(BigIntTest, initWithBytesTest) {
       digit(0, 0, 0, 0, 0, 0, 0, 9) + digit(1, 2, 3, 4, 5, 6, 7, 8));
 }
 
+TEST(BigIntTest, UniquingBigIntTable) {
+  UniquingBigIntTable t;
+
+  EXPECT_TRUE(t.empty());
+
+  auto parse = [](std::string_view str) {
+    std::string outError;
+    return std::make_pair(
+        ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
+            llvh::makeArrayRef(str.data(), str.size()), &outError),
+        outError);
+  };
+
+  const struct {
+    const char *str;
+    uint32_t expectedIndex;
+    LeftToRightVector expectedBytes;
+  } kTests[] = {
+      {"999999999999999999999999999999999999",
+       0,
+       LeftToRightVector{
+           digit(0x00, 0xc0, 0x97, 0xce, 0x7b, 0xc9, 0x07, 0x15) +
+           digit(0xb3, 0x4b, 0x9f, 0x0f, 0xff, 0xff, 0xff, 0xff)}},
+      {"1", 1, LeftToRightVector{digit(1)}},
+      {"", 2, LeftToRightVector{noDigits()}},
+      {"0xaabbccddeeff1122aabbccddeeff1122aabbccddeeff1122",
+       3,
+       LeftToRightVector{
+           digit(0x00) + digit(0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11, 0x22) +
+           digit(0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11, 0x22) +
+           digit(0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x11, 0x22)}},
+      {"-1", 4, LeftToRightVector{digit(0xff)}},
+      {"0", 2, LeftToRightVector{noDigits()}},
+      {"-999999999999999999999999999999999999",
+       5,
+       LeftToRightVector{
+           digit(0xff, 0x3f, 0x68, 0x31, 0x84, 0x36, 0xf8, 0xea) +
+           digit(0x4c, 0xb4, 0x60, 0xf0, 0x00, 0x00, 0x00, 0x01)}},
+  };
+
+  auto byIndex = [&t](uint32_t index) {
+    auto entries = t.getEntryList();
+    assert(index < entries.size() && "bigint index out-of-bounds");
+    auto digitsBuffer = t.getDigitsBuffer();
+    const auto &entry = entries[index];
+    assert(
+        entry.offset + entry.length <= digitsBuffer.size() &&
+        "bigint table entry out-of-bounds");
+    auto byteView =
+        llvh::makeArrayRef(digitsBuffer.data() + entry.offset, entry.length);
+    LeftToRightVector ret;
+    ret.data.insert(ret.data.end(), byteView.begin(), byteView.end());
+    return ret;
+  };
+
+  for (const auto &test : kTests) {
+    auto [maybeParsed, errorStr] = parse(test.str);
+    ASSERT_TRUE(maybeParsed)
+        << "failed to parse " << test.str << ": " << errorStr;
+    EXPECT_EQ(t.addBigInt(*std::move(maybeParsed)), test.expectedIndex);
+    EXPECT_EQ(byIndex(test.expectedIndex), test.expectedBytes)
+        << "test[" << (&test - kTests) << "].str = " << test.str;
+  }
+}
 } // namespace

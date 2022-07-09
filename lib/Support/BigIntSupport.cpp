@@ -2043,5 +2043,26 @@ OperationStatus signedRightShift(
   return shiftImpl(ShiftOpIs::Right, dst, lhs, rhs);
 }
 
+std::vector<BigIntTableEntry> UniquingBigIntTable::getEntryList() const {
+  std::vector<BigIntTableEntry> result;
+  result.reserve(bigints_.size());
+  uint32_t offset = 0;
+  for (const ParsedBigInt &bigint : bigints_) {
+    const uint32_t size = bigint.getBytes().size();
+    result.push_back(BigIntTableEntry{offset, size});
+    offset += size;
+  }
+  return result;
+}
+
+BigIntBytes UniquingBigIntTable::getDigitsBuffer() const {
+  BigIntBytes result;
+  for (const ParsedBigInt &bigint : bigints_) {
+    auto bytes = bigint.getBytes();
+    result.insert(result.end(), bytes.begin(), bytes.end());
+  }
+  return result;
+}
+
 } // namespace bigint
 } // namespace hermes

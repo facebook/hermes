@@ -96,6 +96,13 @@ inline LeftToRightVector noDigits() {
   return LeftToRightVector{};
 }
 
+/// \return \p lhs.data == \p rhs.data.
+inline bool operator==(
+    const LeftToRightVector &lhs,
+    const LeftToRightVector &rhs) {
+  return lhs.data == rhs.data;
+}
+
 /// \return \p lhs.data == \p rhs.bag.
 inline bool operator==(
     const LeftToRightVector &lhs,

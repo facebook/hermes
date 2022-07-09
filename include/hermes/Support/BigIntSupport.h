@@ -11,10 +11,12 @@
 #include "hermes/Support/Compiler.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/MathExtras.h"
 
+#include <deque>
 #include <optional>
 #include <string>
 #include <vector>
@@ -207,6 +209,10 @@ class ParsedBigInt {
     return dropExtraSignBits(storage_);
   }
 
+  llvh::ArrayRef<uint8_t> getRawDataFull() const {
+    return storage_;
+  }
+
  private:
   ParsedBigInt(llvh::ArrayRef<uint8_t> bytes) : storage_(bytes) {}
 
@@ -367,6 +373,72 @@ OperationStatus signedRightShift(
     MutableBigIntRef dst,
     ImmutableBigIntRef lhs,
     ImmutableBigIntRef rhs);
+
+/// A list of bytes representing all bigints known by UniquingBigIntTable.
+using BigIntBytes = std::vector<uint8_t>;
+
+/// A BigIntTableEntry is simply an (offset, length) pair for indexing the
+/// bigint tables in the bytecode.
+struct BigIntTableEntry {
+  uint32_t offset;
+  uint32_t length;
+};
+
+inline bool operator==(
+    const BigIntTableEntry &lhs,
+    const BigIntTableEntry &rhs) {
+  return lhs.offset == rhs.offset && lhs.length == rhs.length;
+}
+
+/// A class responsible for assigning IDs to bigints.
+class UniquingBigIntTable {
+  /// List of created bigints. Use deque because it does not move elements
+  /// when appending, which might invalidate the ArrayRefs.
+  std::deque<ParsedBigInt> bigints_;
+
+  using KeyType = llvh::ArrayRef<uint8_t>;
+
+  /// Map from parsed bigint to its index. The
+  /// StringRefs reference data owned by the bigints_ field.
+  llvh::DenseMap<KeyType, uint32_t> keysToIndex_;
+
+  /// A UniquingBigIntTable may not be copied.
+  UniquingBigIntTable(const UniquingBigIntTable &) = delete;
+  void operator=(const UniquingBigIntTable &) = delete;
+
+ public:
+  UniquingBigIntTable() = default;
+
+  /// Adds a bigint to the table if not already present.
+  /// \return the ID of the bigint.
+  uint32_t addBigInt(ParsedBigInt bigint) {
+    auto iter = keysToIndex_.find(keyFor(bigint));
+    if (iter != keysToIndex_.end()) {
+      return iter->second;
+    }
+
+    const uint32_t index = bigints_.size();
+    bigints_.push_back(std::move(bigint));
+    keysToIndex_[keyFor(bigints_.back())] = index;
+    return index;
+  }
+
+  /// \return whether the table is empty.
+  bool empty() const {
+    return bigints_.empty();
+  }
+
+  /// Return the bigint entry list.
+  std::vector<BigIntTableEntry> getEntryList() const;
+
+  /// Return the combined bytecode buffer.
+  BigIntBytes getDigitsBuffer() const;
+
+ private:
+  static KeyType keyFor(const ParsedBigInt &parsedBigInt) {
+    return parsedBigInt.getBytes();
+  }
+};
 
 } // namespace bigint
 } // namespace hermes
