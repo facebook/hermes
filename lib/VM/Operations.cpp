@@ -263,6 +263,9 @@ bool toBoolean(HermesValue value) {
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
       return true;
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return value.getBigInt()->compare(0) != 0;
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2:
       return value.getString()->getStringLength() != 0;

@@ -589,6 +589,17 @@ TEST_F(OperationsTest, ToBooleanTest) {
   }
 
   {
+    auto bigint12 = BigIntPrimitive::fromSignedNoThrow(12, runtime);
+    EXPECT_TRUE(toBoolean(HermesValue::encodeBigIntValue(bigint12.get())));
+
+    auto bigint0 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    EXPECT_FALSE(toBoolean(HermesValue::encodeBigIntValue(bigint0.get())));
+
+    auto bigintMinus42 = BigIntPrimitive::fromSignedNoThrow(-42, runtime);
+    EXPECT_TRUE(toBoolean(HermesValue::encodeBigIntValue(bigintMinus42.get())));
+  }
+
+  {
     EXPECT_FALSE(toBoolean(HermesValue::encodeDoubleValue(0)));
     EXPECT_FALSE(toBoolean(HermesValue::encodeDoubleValue(-0.0)));
     EXPECT_FALSE(toBoolean(HermesValue::encodeNaNValue()));
