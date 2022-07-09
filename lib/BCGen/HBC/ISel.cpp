@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/Optional.h"
@@ -1410,6 +1411,18 @@ void HBCISel::generateHBCLoadConstInst(
           // Instead we are going to copy it as if it is binary.
           BCFGen_->emitLoadConstDoubleDirect(output, litNum->getValue());
         }
+      }
+      break;
+    }
+    case ValueKind::LiteralBigIntKind: {
+      auto parsedBigInt = bigint::ParsedBigInt::parsedBigIntFromNumericValue(
+          cast<LiteralBigInt>(literal)->getValue());
+      assert(parsedBigInt && "should be valid");
+      auto idx = BCFGen_->addBigInt(std::move(*parsedBigInt));
+      if (idx <= UINT16_MAX) {
+        BCFGen_->emitLoadConstBigInt(output, idx);
+      } else {
+        BCFGen_->emitLoadConstBigIntLongIndex(output, idx);
       }
       break;
     }

@@ -312,14 +312,15 @@ void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
 
   for (uint32_t i = 0; i < bigintCount; ++i) {
     const auto &entry = bigintTable[i];
-    uint32_t start = entry.offset;
-    uint32_t end = start + entry.length;
+    const uint32_t start = entry.offset;
+    const uint32_t count = entry.length;
     OS << " " << i << "[";
-    if (start == end) {
-      OS << "empty]";
+    if (count == 0) {
+      OS << " " << i << "[empty]";
     } else {
-      auto bytes = bigintStorage.slice(start, end);
-      OS << (end - 1) << ".." << start
+      auto bytes = bigintStorage.slice(start, count);
+      const uint32_t end = start + count - 1;
+      OS << " " << i << "[" << end << ".." << start
          << "]: " << bigintMagnitudeToLengthLimitedString(bytes);
     }
     OS << "\n";
@@ -626,12 +627,8 @@ void PrettyDisassembleVisitor::dumpOperandBigInt(
 
   const uint32_t count = entry.length;
   const uint32_t start = entry.offset;
-  const uint32_t end = start + count;
 
-  if (!bigintStorage.empty()) {
-  }
-
-  OS << bigintMagnitudeToLengthLimitedString(bigintStorage.slice(start, end))
+  OS << bigintMagnitudeToLengthLimitedString(bigintStorage.slice(start, count))
      << "n";
 }
 

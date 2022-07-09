@@ -315,13 +315,6 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
   visitESTreeChildren(*this, labelStmt);
 }
 
-void SemanticValidator::visit(BigIntLiteralNode *bigint) {
-  if (compile_) {
-    sm_.error(bigint->getSourceRange(), "BigInt literal is not supported");
-  }
-  visitESTreeChildren(*this, bigint);
-}
-
 /// Check RegExp syntax.
 void SemanticValidator::visit(RegExpLiteralNode *regexp) {
   llvh::StringRef regexpError;

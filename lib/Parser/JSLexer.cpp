@@ -1461,11 +1461,21 @@ end:
 
     llvh::StringRef raw{rawStart, (size_t)(curCharPtr_ - rawStart)};
     if (ok && !real && (!legacyOctal || raw == "0n") && tmpStorage_ == "n") {
-      // This is a BigInt.
-      rawStorage_.clear();
-      rawStorage_.append(raw);
-      token_.setBigIntLiteral(getStringLiteral(rawStorage_));
-      return;
+      assert(curCharPtr_ > start + 1 && "there should be numbers here");
+      // use parseIntWithRadix to validate the bigint literal's digits. The
+      // converted value does not matter, only whether or not the string was
+      // parsed correctly.
+      if (parseIntWithRadix</* AllowNumericSeparator */ true>(
+              llvh::ArrayRef<char>{start, (size_t)(curCharPtr_ - start - 1)},
+              radix)) {
+        // This is a BigInt.
+        rawStorage_.clear();
+        rawStorage_.append(raw);
+        token_.setBigIntLiteral(getStringLiteral(rawStorage_));
+        return;
+      }
+
+      // This is a BigInt with invalid digits; fail.
     }
 
     ok = false;

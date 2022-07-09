@@ -17,15 +17,6 @@
 
 #include "gtest/gtest.h"
 
-namespace hermes {
-namespace vm {
-
-// Temporarily register the BigInt constructor for testing.
-Handle<JSObject> createBigIntConstructor(Runtime &runtime);
-
-} // namespace vm
-} // namespace hermes
-
 using namespace hermes::vm;
 
 namespace {
@@ -739,8 +730,6 @@ TEST_F(OperationsTest, ToStringTest) {
   }
 
 TEST_F(OperationsTest, ToNumericTest) {
-  createBigIntConstructor(runtime);
-
   // Sanity-check a few simple values that should be numbers, not bigints.
   ToNumericTest(+0.0, HermesValue::encodeNullValue());
   InvalidToNumericTest(HermesValue::encodeUndefinedValue());

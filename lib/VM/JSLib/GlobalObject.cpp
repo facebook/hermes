@@ -576,6 +576,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // String constructor.
   createStringConstructor(runtime);
 
+  // BigInt constructor.
+  createBigIntConstructor(runtime);
+
   // Function constructor.
   runtime.functionConstructor =
       createFunctionConstructor(runtime).getHermesValue();

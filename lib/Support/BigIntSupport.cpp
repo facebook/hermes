@@ -1986,7 +1986,8 @@ static std::tuple<uint32_t, bool> getShiftAmountAndSign(
       ? 0ll
       : static_cast<SignedBigIntDigitType>(shiftAmnt.digits[0]);
   assert(
-      shiftAmnt.digits[0] != std::numeric_limits<BigIntDigitType>::min() &&
+      (shiftAmnt.numDigits == 0 ||
+       shiftAmnt.digits[0] != std::numeric_limits<BigIntDigitType>::min()) &&
       "shiftAmnt is MIN_INT, hence -signedShiftAmnt is MIN_INT");
   // Always return a positive result -- thus negate sa if shiftAmnt is negative.
   return std::make_tuple(shiftAmntIsNeg ? -sa : sa, shiftAmntIsNeg);

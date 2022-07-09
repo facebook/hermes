@@ -10,4 +10,10 @@
 "use strict";
 0x
 
-//CHECK: No digits after 0x
+// CHECK: No digits after 0x
+
+0b2
+// CHECK: invalid integer literal
+
+0b2n
+// CHECK: invalid numeric literal
