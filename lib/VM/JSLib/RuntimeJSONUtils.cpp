@@ -741,15 +741,27 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   }
   operationStrValue_.set(propRes->get());
 
-  if (auto valueObj = Handle<JSObject>::dyn_vmcast(operationStrValue_)) {
+  // Str.2. If Type(value) is Object or BigInt, then
+  MutableHandle<> hValueHV{runtime_, *operationStrValue_};
+  if (vmisa<BigIntPrimitive>(*operationStrValue_)) {
+    CallResult<HermesValue> hObjRes = toObject(runtime_, hValueHV);
+    if (LLVM_UNLIKELY(hObjRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    assert(vmisa<JSBigInt>(*hObjRes) && "if not boxed bigint, then what?!");
+    assert(vmisa<JSObject>(*hObjRes) && "if not object, then what?!");
+    hValueHV = std::move(*hObjRes);
+  }
+
+  if (auto valueObj = Handle<JSObject>::dyn_vmcast(hValueHV)) {
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getNamed_RJS(
+            (propRes = JSObject::getNamedWithReceiver_RJS(
                  valueObj,
                  runtime_,
-                 Predefined::getSymbolID(Predefined::toJSON))) ==
-            ExecutionStatus::EXCEPTION)) {
+                 Predefined::getSymbolID(Predefined::toJSON),
+                 operationStrValue_)) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
@@ -821,6 +833,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     //      Set value to value.[[BooleanData]].
     operationStrValue_ =
         HermesValue::encodeBoolValue(jsBool->getPrimitiveBoolean());
+  } else if (auto jsBigInt = dyn_vmcast<JSBigInt>(*operationStrValue_)) {
+    //  Else if value has a [[BigIntData]] internal slot, then
+    //      Set value to value.[[BigIntData]]
+    BigIntPrimitive *bigintData =
+        JSBigInt::getPrimitiveBigInt(jsBigInt, runtime_);
+    operationStrValue_ = HermesValue::encodeBigIntValue(bigintData);
   }
 
   // Str.5.
@@ -861,7 +879,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     return true;
   }
 
-  // Str.10.
+  // Str.10
+  if (vmisa<BigIntPrimitive>(*operationStrValue_)) {
+    return runtime_.raiseTypeError("Do not know how to serialize a BigInt");
+  }
+
+  // Str.11.
   if (vmisa<JSObject>(*operationStrValue_) &&
       !vmisa<Callable>(*operationStrValue_)) {
     auto cr = pushValueToStack(*operationStrValue_);
@@ -888,7 +911,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     return true;
   }
 
-  // Str.11.
+  // Str.12.
   return false;
 }
 
