@@ -86,10 +86,10 @@ function forof_update(seq) {
 //CHECK-NEXT:%BB5:
 //CHECK-NEXT:  %23 = LoadFrameInst [ar]
 //CHECK-NEXT:  %24 = LoadFrameInst [i]
-//CHECK-NEXT:  %25 = AsNumberInst %24
-//CHECK-NEXT:  %26 = UnaryOperatorInst '++', %25 : number
+//CHECK-NEXT:  %25 = AsNumericInst %24
+//CHECK-NEXT:  %26 = UnaryOperatorInst '++', %25 : number|bigint
 //CHECK-NEXT:  %27 = StoreFrameInst %26, [i]
-//CHECK-NEXT:  %28 = StorePropertyInst %13, %23, %25 : number
+//CHECK-NEXT:  %28 = StorePropertyInst %13, %23, %25 : number|bigint
 //CHECK-NEXT:  %29 = BranchInst %BB6
 //CHECK-NEXT:%BB6:
 //CHECK-NEXT:  %30 = TryEndInst

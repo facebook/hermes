@@ -70,8 +70,8 @@ function test_one(x,y) {
 //CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, %1 : undefined
 //CHECK-NEXT:  %3 = UnaryOperatorInst '!', %x
 //CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, %3 : boolean
-//CHECK-NEXT:  %5 = AsNumberInst %x
-//CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, %5 : number
+//CHECK-NEXT:  %5 = AsNumericInst %x
+//CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, %5 : number|bigint
 //CHECK-NEXT:  %7 = UnaryOperatorInst 'typeof', %x
 //CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, %7 : string
 //CHECK-NEXT:  %9 = ReturnInst undefined : undefined

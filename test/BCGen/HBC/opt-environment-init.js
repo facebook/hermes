@@ -27,27 +27,27 @@ function foo(o) {
 }
 
 //CHECK-LABEL:function foo(o) : closure
-//CHECK-NEXT:frame = [cnt : number, flag, flag1, flag2]
+//CHECK-NEXT:frame = [cnt : number|bigint, flag, flag1, flag2]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [flag]
 //CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [flag1]
-//CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [cnt] : number
+//CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [cnt] : number|bigint
 //CHECK-NEXT:  %3 = CallInst %o, undefined : undefined
 //CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [flag2]
-//CHECK-NEXT:  %5 = CreateFunctionInst %""() : number
+//CHECK-NEXT:  %5 = CreateFunctionInst %""() : number|bigint
 //CHECK-NEXT:  %6 = ReturnInst %5 : closure
 //CHECK-NEXT:function_end
 
 //CHKLIR-LABEL:function foo(o) : closure
-//CHKLIR-NEXT:frame = [cnt : number, flag, flag1, flag2]
+//CHKLIR-NEXT:frame = [cnt : number|bigint, flag, flag1, flag2]
 //CHKLIR-NEXT:%BB0:
 //CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst
 //CHKLIR-NEXT:  %1 = HBCLoadConstInst 0 : number
-//CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0, %1 : number, [cnt] : number
+//CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0, %1 : number, [cnt] : number|bigint
 //CHKLIR-NEXT:  %3 = HBCLoadParamInst 1 : number
 //CHKLIR-NEXT:  %4 = HBCLoadConstInst undefined : undefined
 //CHKLIR-NEXT:  %5 = HBCCallNInst %3, %4 : undefined
 //CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0, %4 : undefined, [flag2]
-//CHKLIR-NEXT:  %7 = HBCCreateFunctionInst %""() : number, %0
+//CHKLIR-NEXT:  %7 = HBCCreateFunctionInst %""() : number|bigint, %0
 //CHKLIR-NEXT:  %8 = ReturnInst %7 : closure
 //CHKLIR-NEXT:function_end

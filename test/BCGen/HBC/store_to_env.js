@@ -51,21 +51,21 @@ function foo() {
 
 // CHECK: Function<bar>(1 params, 13 registers, 0 symbols):
 // CHECK-NEXT: Offset in debug table: {{.*}}
-// CHECK-NEXT:     GetEnvironment    r1, 0
-// CHECK-NEXT:     LoadFromEnvironment r0, r1, 0
-// CHECK-NEXT:     Inc               r0, r0
-// CHECK-NEXT:     StoreNPToEnvironment r1, 0, r0
-// CHECK-NEXT:     LoadConstFalse    r0
-// CHECK-NEXT:     StoreNPToEnvironment r1, 1, r0
-// CHECK-NEXT:     LoadConstString   r0, "new string"
-// CHECK-NEXT:     StoreToEnvironment r1, 2, r0
-// CHECK-NEXT:     GetGlobalObject   r2
-// CHECK-NEXT:     TryGetById        r4, r2, 1, "print"
-// CHECK-NEXT:     LoadFromEnvironment r3, r1, 3
-// CHECK-NEXT:     LoadConstUndefined r0
-// CHECK-NEXT:     Call2             r3, r4, r0, r3
-// CHECK-NEXT:     TryGetById        r3, r2, 1, "print"
-// CHECK-NEXT:     LoadFromEnvironment r2, r1, 4
-// CHECK-NEXT:     Call2             r2, r3, r0, r2
-// CHECK-NEXT:     StoreNPToEnvironment r1, 5, r0
-// CHECK-NEXT:     Ret               r0
+// CHECK-NEXT:    GetEnvironment    r1, 0
+// CHECK-NEXT:    LoadFromEnvironment r0, r1, 0
+// CHECK-NEXT:    Inc               r0, r0
+// CHECK-NEXT:    StoreToEnvironment r1, 0, r0
+// CHECK-NEXT:    LoadConstFalse    r0
+// CHECK-NEXT:    StoreNPToEnvironment r1, 1, r0
+// CHECK-NEXT:    LoadConstString   r0, "new string"
+// CHECK-NEXT:    StoreToEnvironment r1, 2, r0
+// CHECK-NEXT:    GetGlobalObject   r2
+// CHECK-NEXT:    TryGetById        r4, r2, 1, "print"
+// CHECK-NEXT:    LoadFromEnvironment r3, r1, 3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call2             r3, r4, r0, r3
+// CHECK-NEXT:    TryGetById        r3, r2, 1, "print"
+// CHECK-NEXT:    LoadFromEnvironment r2, r1, 4
+// CHECK-NEXT:    Call2             r2, r3, r0, r2
+// CHECK-NEXT:    StoreNPToEnvironment r1, 5, r0
+// CHECK-NEXT:    Ret               r0

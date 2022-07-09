@@ -244,8 +244,8 @@ function naked_for_loop() {
 //CHECK-NEXT:    %7 = CondBranchInst false : boolean, %BB2, %BB4
 //CHECK-NEXT:  %BB3:
 //CHECK-NEXT:    %8 = LoadFrameInst [i]
-//CHECK-NEXT:    %9 = AsNumberInst %8
-//CHECK-NEXT:    %10 = UnaryOperatorInst '++', %9 : number
+//CHECK-NEXT:    %9 = AsNumericInst %8
+//CHECK-NEXT:    %10 = UnaryOperatorInst '++', %9 : number|bigint
 //CHECK-NEXT:    %11 = StoreFrameInst %10, [i]
 //CHECK-NEXT:    %12 = BranchInst %BB6
 //CHECK-NEXT:  %BB7:
@@ -259,20 +259,19 @@ function naked_for_loop() {
 //CHECK-NEXT:    %17 = CondBranchInst false : boolean, %BB7, %BB9
 //CHECK-NEXT:  %BB8:
 //CHECK-NEXT:    %18 = LoadFrameInst [i]
-//CHECK-NEXT:    %19 = AsNumberInst %18
-//CHECK-NEXT:    %20 = UnaryOperatorInst '--', %19 : number
-//CHECK-NEXT:    %21 = StoreFrameInst %20, [i]
-//CHECK-NEXT:    %22 = BranchInst %BB11
+//CHECK-NEXT:    %19 = UnaryOperatorInst '--', %18
+//CHECK-NEXT:    %20 = StoreFrameInst %19, [i]
+//CHECK-NEXT:    %21 = BranchInst %BB11
 //CHECK-NEXT:  %BB12:
-//CHECK-NEXT:    %23 = BranchInst %BB13
+//CHECK-NEXT:    %22 = BranchInst %BB13
 //CHECK-NEXT:  %BB14:
-//CHECK-NEXT:    %24 = ReturnInst undefined : undefined
+//CHECK-NEXT:    %23 = ReturnInst undefined : undefined
 //CHECK-NEXT:  %BB10:
-//CHECK-NEXT:    %25 = CondBranchInst false : boolean, %BB12, %BB14
+//CHECK-NEXT:    %24 = CondBranchInst false : boolean, %BB12, %BB14
 //CHECK-NEXT:  %BB15:
-//CHECK-NEXT:    %26 = CondBranchInst false : boolean, %BB12, %BB14
+//CHECK-NEXT:    %25 = CondBranchInst false : boolean, %BB12, %BB14
 //CHECK-NEXT:  %BB13:
-//CHECK-NEXT:    %27 = BranchInst %BB15
+//CHECK-NEXT:    %26 = BranchInst %BB15
 //CHECK-NEXT:function_end
 function test_init_update_exprs(param1) {
   for (var i = 0; false ; i++) { }

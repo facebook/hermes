@@ -210,8 +210,8 @@ function modify_prop(obj) {
 //CHECK-NEXT:  %17 = LoadFrameInst [obj]
 //CHECK-NEXT:  %18 = LoadFrameInst [x]
 //CHECK-NEXT:  %19 = LoadPropertyInst %17, %18
-//CHECK-NEXT:  %20 = AsNumberInst %19
-//CHECK-NEXT:  %21 = UnaryOperatorInst '++', %20 : number
+//CHECK-NEXT:  %20 = AsNumericInst %19
+//CHECK-NEXT:  %21 = UnaryOperatorInst '++', %20 : number|bigint
 //CHECK-NEXT:  %22 = StorePropertyInst %21, %17, %18
 //CHECK-NEXT:  %23 = LoadFrameInst [ret]
 //CHECK-NEXT:  %24 = LoadFrameInst [obj]

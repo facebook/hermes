@@ -116,6 +116,14 @@ inline uint32_t doURshift(uint32_t x, uint32_t y) {
   return x >> y;
 }
 
+inline double doInc(double d) {
+  return d + 1;
+}
+
+inline double doDec(double d) {
+  return d - 1;
+}
+
 template <auto Oper>
 CallResult<HermesValue>
 doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
@@ -127,6 +135,9 @@ doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 template <auto Oper>
 CallResult<HermesValue>
 doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template <auto Oper>
+CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src);
 
 } // namespace vm
 } // namespace hermes

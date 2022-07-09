@@ -296,6 +296,17 @@ uint32_t addResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 OperationStatus
 add(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 
+/// \return number of digits needed to perform \p lhs + \p sImm
+uint32_t addSignedResultSize(
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm);
+
+/// \return \p dst = \p lhs + \p sImm
+OperationStatus addSigned(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm);
+
 /// \return number of digits needed to perform \p lhs - \p rhs
 uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 

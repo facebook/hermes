@@ -45,9 +45,9 @@
 //CHECK-NEXT:L1:
 //CHECK-NEXT:    Mov               r1, r2
 //CHECK-NEXT:    Mov               r2, r1
-//CHECK-NEXT:    JNotGreaterN      L4, r2, r3
+//CHECK-NEXT:    JNotGreater       L4, r2, r3
 //CHECK-NEXT:L5:
-//CHECK-NEXT:    Dec              r1, r1
+//CHECK-NEXT:    Dec               r1, r1
 //CHECK-NEXT:    Mov               r2, r1
 //CHECK-NEXT:    AsyncBreakCheck
 //CHECK-NEXT:    JGreaterN         L5, r2, r3

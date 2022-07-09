@@ -17,7 +17,6 @@ function foo (a) {
 //CHECK-LABEL:Function<foo>(2 params, {{[0-9]+}} registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    LoadParam         r0, 1
-//CHECK-NEXT:    ToNumber          r0, r0
 //CHECK-NEXT:    Dec               r1, r0
 //CHECK-NEXT:    LoadConstZero     r0
 //CHECK-NEXT:    LoadConstZero     r3

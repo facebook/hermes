@@ -845,20 +845,33 @@ int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return result;
 }
 
-int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
-  // A single BigIntDigit is enough to represent the (scalar) rhs --  given that
-  // rhs is **SIGNED**, the value 0x8000000000000000 represents a negative
-  // quantity, thus there's no need for an extra digit in the bigint -- there
-  // would be if 0x8000000000000000 represented a positive number.
-  auto *digits = reinterpret_cast<BigIntDigitType *>(&rhs);
+namespace {
+/// Create an ImmutableBigIntRef wrapping the given digit. Note that \p digit is
+/// not modified at all, so it could have been taking by const ref. That would
+/// be dangerous, though, as calls like
+///
+/// makeImmutableRefFromSignedDigit(1)
+///
+/// would be valid, even though the returned ImmutableBigIntRef would be
+/// pointing to invalid memory. A non-const ref requires the caller to allocate
+/// the storage.
+ImmutableBigIntRef makeImmutableRefFromSignedDigit(
+    SignedBigIntDigitType &digit) {
+  // Initially the bigint has 1 digit...
   uint32_t numDigits = 1;
-  MutableBigIntRef mr{digits, numDigits};
+  MutableBigIntRef mr{reinterpret_cast<BigIntDigitType *>(&digit), numDigits};
   // make sure mr is canonicalized, otherwise comparisons may fail -- they
   // assume all inputs to be canonical. This can happen if
   ensureCanonicalResult(mr);
+  // Return a canonical, immutable bigint ref.
+  return ImmutableBigIntRef{
+      reinterpret_cast<BigIntDigitType *>(&digit), numDigits};
+}
+} // namespace
 
-  // now use the other compare, with both rhs and lhs being canonical.
-  return compare(lhs, ImmutableBigIntRef{digits, numDigits});
+int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
+  // wrapping rhs in a ImmutableBigIntRef is safe -- rhs outlives the temporary.
+  return compare(lhs, makeImmutableRefFromSignedDigit(rhs));
 }
 
 namespace {
@@ -1290,6 +1303,19 @@ add(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
       dst,
       srcWithFewerDigits,
       srcWithMostDigits);
+}
+
+uint32_t addSignedResultSize(
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm) {
+  return addResultSize(lhs, makeImmutableRefFromSignedDigit(sImm));
+}
+
+OperationStatus addSigned(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm) {
+  return add(dst, lhs, makeImmutableRefFromSignedDigit(sImm));
 }
 
 uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {

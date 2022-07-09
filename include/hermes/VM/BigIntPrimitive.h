@@ -249,6 +249,11 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p src + 1
+  static CallResult<HermesValue> inc(
+      Handle<BigIntPrimitive> src,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

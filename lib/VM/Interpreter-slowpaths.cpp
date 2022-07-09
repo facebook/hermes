@@ -390,6 +390,18 @@ constexpr auto &BigIntOper<doRShift> = BigIntPrimitive::signedRightShift;
 template <>
 constexpr auto &BigIntOper<doURshift> = BigIntPrimitive::unsignedRightShift;
 
+template <>
+constexpr auto &BigIntOper<doInc> = BigIntPrimitive::inc;
+
+static CallResult<HermesValue> UnimplementedBigIntDec(
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+template <>
+static constexpr auto &BigIntOper<doDec> = UnimplementedBigIntDec;
+
 } // namespace
 
 template <auto Oper>
@@ -518,6 +530,33 @@ doShiftOperSlowPath<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
 doShiftOperSlowPath<doURshift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+
+template <auto Oper>
+CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src) {
+  CallResult<HermesValue> res =
+      toPrimitive_RJS(runtime, std::move(src), PreferredType::NUMBER);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (LLVM_LIKELY(!res->isBigInt())) {
+    res = toNumber_RJS(runtime, runtime.makeHandle(*res));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeNumberValue(Oper(res->getNumber()));
+  }
+
+  return BigIntOper<Oper>(runtime.makeHandle(res->getBigInt()), runtime);
+}
+
+template CallResult<HermesValue> doIncDecOperSlowPath<doInc>(
+    Runtime &runtime,
+    Handle<> src);
+
+template CallResult<HermesValue> doIncDecOperSlowPath<doDec>(
+    Runtime &runtime,
+    Handle<> src);
 
 } // namespace vm
 } // namespace hermes

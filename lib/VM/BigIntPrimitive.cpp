@@ -280,5 +280,19 @@ CallResult<HermesValue> BigIntPrimitive::unsignedRightShift(
   return runtime.raiseTypeError("BigInts have no unsigned shift");
 }
 
+CallResult<HermesValue> BigIntPrimitive::inc(
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  auto incAdapter = [](bigint::MutableBigIntRef dst,
+                       bigint::ImmutableBigIntRef lhs) {
+    constexpr bigint::SignedBigIntDigitType one = 1ll;
+    return bigint::addSigned(dst, lhs, one);
+  };
+
+  const size_t numDigits =
+      bigint::addSignedResultSize(src->getImmutableRef(runtime), 1);
+  return unaryOp(incAdapter, src, numDigits, runtime);
+}
+
 } // namespace vm
 } // namespace hermes

@@ -1460,8 +1460,10 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 
   LReference lref = createLRef(updateExpr->_argument, false);
 
-  // Load the original value.
-  Value *original = Builder.createAsNumberInst(lref.emitLoad());
+  // Load the original value. Postfix updates need to convert it toNumeric
+  // before Inc/Dec to ensure the updateExpr has the proper result value.
+  Value *original =
+      isPrefix ? lref.emitLoad() : Builder.createAsNumericInst(lref.emitLoad());
 
   // Create the inc or dec.
   Value *result = Builder.createUnaryOperatorInst(original, opKind);

@@ -108,10 +108,10 @@ function *loop(x) {
 //CHECK-NEXT:%BB4:
 //CHECK-NEXT:  %10 = LoadFrameInst [x]
 //CHECK-NEXT:  %11 = LoadFrameInst [i]
-//CHECK-NEXT:  %12 = AsNumberInst %11
-//CHECK-NEXT:  %13 = UnaryOperatorInst '++', %12 : number
+//CHECK-NEXT:  %12 = AsNumericInst %11
+//CHECK-NEXT:  %13 = UnaryOperatorInst '++', %12 : number|bigint
 //CHECK-NEXT:  %14 = StoreFrameInst %13, [i]
-//CHECK-NEXT:  %15 = LoadPropertyInst %10, %12 : number
+//CHECK-NEXT:  %15 = LoadPropertyInst %10, %12 : number|bigint
 //CHECK-NEXT:  %16 = AllocStackInst $?anon_1_isReturn
 //CHECK-NEXT:  %17 = SaveAndYieldInst %15, %BB5
 //CHECK-NEXT:%BB6:

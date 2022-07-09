@@ -13,10 +13,9 @@
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = BranchInst %BB1
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %3 : number, %BB1
-//CHECK-NEXT:  %2 = AsNumberInst %1 : undefined|number
-//CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2 : number
-//CHECK-NEXT:  %4 = BranchInst %BB1
+//CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %2 : number|bigint, %BB1
+//CHECK-NEXT:  %2 = UnaryOperatorInst '++', %1 : undefined|number|bigint
+//CHECK-NEXT:  %3 = BranchInst %BB1
 //CHECK-NEXT:function_end
 function bug1() {
   var x;

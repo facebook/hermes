@@ -42,7 +42,7 @@ function *loop(x) {
 // CHECK-NEXT: L5:
 // CHECK-NEXT:     LoadFromEnvironment r6, r0, 1
 // CHECK-NEXT:     LoadFromEnvironment r8, r0, 0
-// CHECK-NEXT:     ToNumber          r9, r8
+// CHECK-NEXT:     ToNumeric         r9, r8
 // CHECK-NEXT:     Inc              r10, r9
 // CHECK-NEXT:     StoreToEnvironment r0, 0, r10
 // CHECK-NEXT:     GetByVal          r11, r6, r9

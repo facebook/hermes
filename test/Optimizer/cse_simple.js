@@ -70,11 +70,10 @@ function cse_this_instr() {
 //CHECK-LABEL:function cse_unary(a)
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = AsNumberInst %a
-//CHECK-NEXT:  %1 = UnaryOperatorInst '++', %0 : number
-//CHECK-NEXT:  %2 = UnaryOperatorInst '-', %1
-//CHECK-NEXT:  %3 = BinaryOperatorInst '*', %2 : number, %2 : number
-//CHECK-NEXT:  %4 = ReturnInst %3 : number
+//CHECK-NEXT:  %0 = UnaryOperatorInst '++', %a
+//CHECK-NEXT:  %1 = UnaryOperatorInst '-', %0 : number|bigint
+//CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1 : number|bigint, %1 : number|bigint
+//CHECK-NEXT:  %3 = ReturnInst %2 : number|bigint
 //CHECK-NEXT:function_end
 function cse_unary(a) {
     ++a;

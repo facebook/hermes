@@ -101,8 +101,8 @@ function do_while_continue_test(cond) {
 //CHECK-NEXT:    %11 = CondBranchInst %10, %BB2, %BB4
 //CHECK-NEXT:  %BB6:
 //CHECK-NEXT:    %12 = LoadFrameInst [i]
-//CHECK-NEXT:    %13 = AsNumberInst %12
-//CHECK-NEXT:    %14 = UnaryOperatorInst '++', %13 : number
+//CHECK-NEXT:    %13 = AsNumericInst %12
+//CHECK-NEXT:    %14 = UnaryOperatorInst '++', %13 : number|bigint
 //CHECK-NEXT:    %15 = StoreFrameInst %14, [i]
 //CHECK-NEXT:    %16 = BranchInst %BB5
 //CHECK-NEXT:  %BB7:

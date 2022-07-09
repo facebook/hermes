@@ -81,7 +81,7 @@ static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
   return true;
 }
 
-static bool inferUnaryMinus(UnaryOperatorInst *UOI) {
+static bool inferUnaryArithDefault(UnaryOperatorInst *UOI) {
   // - Number => Number
   // - BigInt => BigInt
   // - ?? => Number|BigInt
@@ -109,11 +109,14 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
     case OpKind::TypeofKind: // typeof
       UOI->setType(Type::createString());
       return true;
+    // https://tc39.es/ecma262/#sec-prefix-increment-operator
+    // https://tc39.es/ecma262/#sec-postfix-increment-operator
+    case OpKind::IncKind: // ++
     // https://tc39.es/ecma262/#sec-unary-minus-operator
     case OpKind::MinusKind: // -
-      return inferUnaryMinus(UOI);
+      return inferUnaryArithDefault(UOI);
+    // https://tc39.es/ecma262/#sec-unary-plus-operator
     case OpKind::PlusKind: // +
-    case OpKind::IncKind: // ++
     case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());
       return true;

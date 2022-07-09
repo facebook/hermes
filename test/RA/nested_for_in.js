@@ -37,24 +37,23 @@
 //CHECK-NEXT:  {{.*}}  %23 = AllocStackInst $?anon_5_prop
 //CHECK-NEXT:  {{.*}}  %24 = GetPNamesInst %17, %18, %19, %20, %BB3, %BB4
 //CHECK-NEXT:%BB2:
-//CHECK-NEXT:  {{.*}}  %25 = PhiInst %13 : undefined, %BB0, %33 : object, %BB3
+//CHECK-NEXT:  {{.*}}  %25 = PhiInst %13 : undefined, %BB0, %32 : object, %BB3
 //CHECK-NEXT:  {{.*}}  %26 = MovInst %25 : undefined|object
 //CHECK-NEXT:  {{.*}}  %27 = ReturnInst %26 : undefined|object
 //CHECK-NEXT:%BB3:
 //CHECK-NEXT:  {{.*}}  %28 = LoadPropertyInst %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %29 = AsNumberInst %28
-//CHECK-NEXT:  {{.*}}  %30 = UnaryOperatorInst '++', %29 : number
-//CHECK-NEXT:  {{.*}}  %31 = StorePropertyInst %30 : number, %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %32 = LoadPropertyInst %0 : object, "i" : string
-//CHECK-NEXT:  {{.*}}  %33 = MovInst %15 : object
-//CHECK-NEXT:  {{.*}}  %34 = CompareBranchInst '<', %32, %2 : number, %BB1, %BB2
+//CHECK-NEXT:  {{.*}}  %29 = UnaryOperatorInst '++', %28
+//CHECK-NEXT:  {{.*}}  %30 = StorePropertyInst %29 : number|bigint, %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %31 = LoadPropertyInst %0 : object, "i" : string
+//CHECK-NEXT:  {{.*}}  %32 = MovInst %15 : object
+//CHECK-NEXT:  {{.*}}  %33 = CompareBranchInst '<', %31, %2 : number, %BB1, %BB2
 //CHECK-NEXT:%BB4:
-//CHECK-NEXT:  {{.*}}  %35 = GetNextPNameInst %23, %18, %19, %20, %17, %BB3, %BB5
+//CHECK-NEXT:  {{.*}}  %34 = GetNextPNameInst %23, %18, %19, %20, %17, %BB3, %BB5
 //CHECK-NEXT:%BB5:
-//CHECK-NEXT:  {{.*}}  %36 = LoadStackInst %23
-//CHECK-NEXT:  {{.*}}  %37 = LoadPropertyInst %0 : object, "a" : string
-//CHECK-NEXT:  {{.*}}  %38 = StorePropertyInst %36, %37, %3 : number
-//CHECK-NEXT:  {{.*}}  %39 = BranchInst %BB4
+//CHECK-NEXT:  {{.*}}  %35 = LoadStackInst %23
+//CHECK-NEXT:  {{.*}}  %36 = LoadPropertyInst %0 : object, "a" : string
+//CHECK-NEXT:  {{.*}}  %37 = StorePropertyInst %35, %36, %3 : number
+//CHECK-NEXT:  {{.*}}  %38 = BranchInst %BB4
 //CHECK-NEXT:function_end
 
 
