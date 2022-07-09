@@ -381,6 +381,15 @@ constexpr auto &BigIntOper<doBitOr> = BigIntPrimitive::bitwiseOR;
 template <>
 constexpr auto &BigIntOper<doBitXor> = BigIntPrimitive::bitwiseXOR;
 
+template <>
+constexpr auto &BigIntOper<doLShift> = BigIntPrimitive::leftShift;
+
+template <>
+constexpr auto &BigIntOper<doRShift> = BigIntPrimitive::signedRightShift;
+
+template <>
+constexpr auto &BigIntOper<doURshift> = BigIntPrimitive::unsignedRightShift;
+
 } // namespace
 
 template <auto Oper>
@@ -474,17 +483,31 @@ inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
 template <auto Oper>
 CallResult<HermesValue>
 doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
-  CallResult<HermesValue> res = ToIntegral<Oper>(runtime, lhs);
+  CallResult<HermesValue> res =
+      toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
+
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lnum = hermes::truncateToInt32(res->getNumber());
-  res = toUInt32_RJS(runtime, rhs);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+
+  if (LLVM_LIKELY(!res->isBigInt())) {
+    res = ToIntegral<Oper>(runtime, runtime.makeHandle(*res));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto lnum = hermes::truncateToInt32(res->getNumber());
+    res = toUInt32_RJS(runtime, rhs);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto rnum = static_cast<uint32_t>(res->getNumber()) & 0x1f;
+    return HermesValue::encodeDoubleValue((*Oper)(lnum, rnum));
   }
-  auto rnum = res->getNumberAs<uint32_t>() & 0x1f;
-  return HermesValue::encodeDoubleValue(Oper(lnum, rnum));
+  return doBigIntBinOp(
+      runtime,
+      BigIntOper<Oper>,
+      runtime.makeHandle(res->getBigInt()),
+      std::move(rhs));
 }
 
 template CallResult<HermesValue>

@@ -223,6 +223,24 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p lhs << \p rhs
+  static CallResult<HermesValue> leftShift(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
+  /// \return \p lhs >> \p rhs, signed
+  static CallResult<HermesValue> signedRightShift(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
+  /// Raises a JS TypeError exception, as required by the BigInt specification.
+  static CallResult<HermesValue> unsignedRightShift(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

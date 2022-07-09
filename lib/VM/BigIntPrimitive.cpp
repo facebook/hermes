@@ -220,5 +220,26 @@ CallResult<HermesValue> BigIntPrimitive::bitwiseXOR(
   return binaryOp(&bigint::bitwiseXOR, lhs, rhs, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::leftShift(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue> BigIntPrimitive::signedRightShift(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue> BigIntPrimitive::unsignedRightShift(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  return runtime.raiseTypeError("BigInts have no unsigned shift");
+}
+
 } // namespace vm
 } // namespace hermes
