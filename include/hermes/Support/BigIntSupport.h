@@ -227,6 +227,20 @@ class TmpStorage {
 /// \return \p src's representation in \p radix.
 std::string toString(ImmutableBigIntRef src, uint8_t radix);
 
+/// \return number of digits needed to perform asUintN(\p n, \p src).
+uint32_t asUintNResultSize(uint64_t n, ImmutableBigIntRef src);
+
+/// \return \p src % (2n ** \p n), zero extended.
+OperationStatus
+asUintN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src);
+
+/// \return number of digits needed to perform asIntN(\p n, \p src).
+uint32_t asIntNResultSize(uint64_t n, ImmutableBigIntRef src);
+
+/// \return \p src % (2n ** \p n), sign extended; \p N-th bit is the sign bit.
+OperationStatus
+asIntN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src);
+
 /// \return (\p lhs < \p rhs) ? negative value : (\p lhs > \p rhs) ? positive
 /// value : zero.
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);

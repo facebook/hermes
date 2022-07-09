@@ -66,8 +66,43 @@ CallResult<HermesValue> BigIntPrimitive::toString(
       runtime, createASCIIRef(result.c_str()));
 }
 
+template <auto Op>
+static auto makeTruncAdapter(uint64_t n) {
+  return [n](bigint::MutableBigIntRef dst, bigint::ImmutableBigIntRef src) {
+    return (*Op)(dst, n, src);
+  };
+}
+
+CallResult<HermesValue> BigIntPrimitive::asIntN(
+    uint64_t n,
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  if (n == 0) {
+    return BigIntPrimitive::fromSigned(0, runtime);
+  }
+
+  const uint32_t numDigits =
+      bigint::asIntNResultSize(n, src->getImmutableRef(runtime));
+  return unaryOp(makeTruncAdapter<&bigint::asIntN>(n), src, numDigits, runtime);
+}
+
+CallResult<HermesValue> BigIntPrimitive::asUintN(
+    uint64_t n,
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  if (n == 0) {
+    return BigIntPrimitive::fromSigned(0, runtime);
+  }
+
+  const uint32_t numDigits =
+      bigint::asUintNResultSize(n, src->getImmutableRef(runtime));
+  return unaryOp(
+      makeTruncAdapter<&bigint::asUintN>(n), src, numDigits, runtime);
+}
+
+template <typename UnaryOpT>
 CallResult<HermesValue> BigIntPrimitive::unaryOp(
-    UnaryOp op,
+    UnaryOpT op,
     Handle<BigIntPrimitive> src,
     size_t numDigits,
     Runtime &runtime) {
@@ -78,7 +113,7 @@ CallResult<HermesValue> BigIntPrimitive::unaryOp(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto res = (*op)(u->getMutableRef(runtime), src->getImmutableRef(runtime));
+  auto res = (op)(u->getMutableRef(runtime), src->getImmutableRef(runtime));
   if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
     return raiseOnError(res, runtime);
   }

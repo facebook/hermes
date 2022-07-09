@@ -13,6 +13,7 @@
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/bit.h"
 #include "llvh/Support/Endian.h"
+#include "llvh/Support/MathExtras.h"
 
 #include <cmath>
 #include <string>
@@ -748,6 +749,176 @@ OperationStatus initNonCanonicalWithReadOnlyBigInt(
   return OperationStatus::RETURNED;
 }
 } // namespace
+
+uint32_t asUintNResultSize(uint64_t n, ImmutableBigIntRef src) {
+  static_assert(
+      BigIntMaxSizeInDigits < std::numeric_limits<uint32_t>::max(),
+      "uint32_t is not large enough to represent max bigint digits.");
+
+  const uint64_t numDigitsN = numDigitsForSizeInBits(n + 1);
+
+  if (!isNegative(src)) {
+    // for src >= 0, the result is limited to the same number of digits in src.
+    return std::min<uint64_t>(numDigitsN, src.numDigits);
+  }
+
+  // for src < 0, the result is only limited by BigInt's maximum size due to
+  // negative numbers' infinite size, they have infinite non-zero digits.
+  return numDigitsN;
+}
+
+uint32_t asIntNResultSize(uint64_t n, ImmutableBigIntRef src) {
+  static_assert(
+      BigIntMaxSizeInDigits < std::numeric_limits<uint32_t>::max(),
+      "uint32_t is not large enough to represent max bigint digits.");
+
+  // The result size for asIntN is limited to src.numDigits. Moreover, there's
+  // no need to account for a sign bit due to the two's complement
+  // representation.
+  const uint64_t numDigitsN = numDigitsForSizeInBits(n);
+
+  return std::min<uint64_t>(src.numDigits, numDigitsN);
+}
+
+namespace {
+enum class BigIntAs { IntN, UintN };
+
+/// Helper that implements BigInt.asIntN and BigInt.asUintN. It works as
+/// as follows
+///
+/// ----+-----------+-----------+-----------+-----------+-----------+----
+/// ... | Digit k+2 | Digit k+1 |  Digit k  | Digit k-1 | Digit k-2 | ...
+/// ----+-----------+-----------+-----------+-----------+-----------+----
+///                              | fill |^
+///                                      n
+///
+/// First, digits 0 through k are copied from \p src to \p dst, with
+/// sign-extension.
+///
+/// Next, Digit k needs to be adjusted, either by zeroing out | fill | (if
+/// \p operation == BigIntAs::UintN), or by copying \p n to | fill | (if
+/// \p operation == BigIntAs::IntN). Note that nothing needs to happen to
+/// Digit k if n == BigIntDigitSizeInBits - 1.
+///
+/// Finally, initialize the remaining bits in \p dst with zeros (AsUintN),
+/// or Digit k's sign (AsIntN).
+static OperationStatus bigintAsImpl(
+    MutableBigIntRef dst,
+    uint32_t numDigits,
+    uint64_t n,
+    ImmutableBigIntRef src,
+    BigIntAs operation) {
+  if (dst.numDigits < numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+  dst.numDigits = numDigits;
+
+  // Special cases:
+  //     src == 0n => dst == 0n for any n.
+  //     n = 0 => dst == 0n for any src.
+  if (src.numDigits == 0 || n == 0) {
+    return initWithDigits(dst, src);
+  }
+
+  // figure out the k-th digit -- i.e., the digit where bit n lives. Also figure
+  // out which bit in k is the last that should be copied to the output.
+  const uint32_t k = (n - 1) / BigIntDigitSizeInBits;
+  const uint32_t bitWithinK = (n - 1) % BigIntDigitSizeInBits;
+
+  // sanity-check: k (zero based) should be less than dst.numDigits for
+  // operation == BigInt::AsUintN when src < 0n. For BigInt.asIntN(), however,
+  // that restriction can be relaxed. For example, BigInt.asIntN(9999, -1n) will
+  // need exactly 1 digit. In general, BigInt.asIntN() can always be represented
+  // with at most src.numDigits.
+  assert(
+      (k < dst.numDigits || !isNegative(src) || operation == BigIntAs::IntN) &&
+      "result is missing digits");
+
+  // only copy the first k digits from src into dst, unless k is more digits --
+  // then simply copy all of src.
+  const uint32_t numDigitsToCopy = std::min(k + 1, src.numDigits);
+
+  // only initialize the first k digits in dst, unless k is more digits -- then
+  // fully initialize dst.
+  // N.B.: This can't be const because it is used to initialize a
+  // MutableBigIntRef.
+  uint32_t numDigitsDst = std::min(k + 1, dst.numDigits);
+  MutableBigIntRef limitedDst{dst.digits, numDigitsDst};
+
+  // copy digits from src to dst, sign-extending src if needed.
+  auto res = initNonCanonicalWithReadOnlyBigInt(
+      limitedDst, ImmutableBigIntRef{src.digits, numDigitsToCopy});
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  if (k < dst.numDigits) {
+    // decide on zero- vs sign-extension based on the operation parameter.
+    const bool hasSign = operation == BigIntAs::IntN;
+
+    // then figure out what the result sign is. the result is unsigned if the
+    // operation if asUintN, or if the n-th bit in dst is set.
+    // N.B.: src may not have an n-th bit (i.e., n is larger than the number of
+    // bits in src).
+    // N.B.: the n-th bit in dst is bit n-1.
+    const bool sign = hasSign && (dst.digits[k] & (1ull << bitWithinK)) != 0;
+
+    if (bitWithinK < BigIntDigitSizeInBits - 1) {
+      // compute a mask for sign-extension -- i.e., a mask that, when or'd with
+      // the digit where n lives results in that digit being sign extended. if
+      // the result needs to be zero-extended, then use the complement mask to
+      // clear the upper bits. Note how this creates a mask with with upper
+      // (i.e., Trailing) bits -- that's because dst is correct up-to, and
+      // including, bit n-1.
+      const BigIntDigitType signExtMask =
+          llvh::maskTrailingZeros<BigIntDigitType>(bitWithinK + 1);
+
+      if (sign) {
+        dst.digits[k] |= signExtMask;
+      } else {
+        dst.digits[k] &= ~signExtMask;
+      }
+    }
+
+    // There could be digits past k. Those should be initialized with 0, or ~0,
+    // according to sign. Note that sign will always be false for
+    // operation == UintN, so the result will always be zero extended.
+    const uint32_t numDigitsToSet =
+        (k + 1 < dst.numDigits) ? (dst.numDigits - k - 1) : 0;
+
+    // sanity-check: BigInt.asUintN should always return a non-negative number.
+    // Thus, either the k-th digit is positive (when converted to a signed
+    // bigint digit), or there should exist more digits after k (for zero
+    // extension).
+    assert(
+        (operation == BigIntAs::IntN ||
+         static_cast<SignedBigIntDigitType>(dst.digits[k]) >= 0 ||
+         dst.numDigits > k + 1) &&
+        "BigInt.asUintN will result in negative number.");
+
+    // zero-/sign-extend the result's upper digits, if any.
+    memset(
+        dst.digits + k + 1,
+        sign ? 0xff : 0,
+        numDigitsToSet * BigIntDigitSizeInBytes);
+  }
+
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
+}
+} // namespace
+
+OperationStatus
+asUintN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src) {
+  const uint32_t numDigits = asUintNResultSize(n, src);
+  return bigintAsImpl(dst, numDigits, n, src, BigIntAs::UintN);
+}
+
+OperationStatus
+asIntN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src) {
+  const uint32_t numDigits = asIntNResultSize(n, src);
+  return bigintAsImpl(dst, numDigits, n, src, BigIntAs::IntN);
+}
 
 uint32_t unaryMinusResultSize(ImmutableBigIntRef src) {
   // negating a non-negative number requires at most the same number of digits,

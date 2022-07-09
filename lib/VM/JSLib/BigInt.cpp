@@ -60,15 +60,15 @@ Handle<JSObject> createBigIntConstructor(Runtime &runtime) {
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::asIntN),
-      ctx,
-      bigintAsIntN,
+      reinterpret_cast<void *>(&BigIntPrimitive::asIntN),
+      bigintTruncate,
       2);
   defineMethod(
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::asUintN),
-      ctx,
-      bigintAsUintN,
+      reinterpret_cast<void *>(&BigIntPrimitive::asUintN),
+      bigintTruncate,
       2);
 
   // BigInt.xxx properties
@@ -164,14 +164,24 @@ bigintPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
   return thisBigIntValue(runtime, args.getThisHandle());
 }
 
-CallResult<HermesValue>
-bigintAsIntN(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeUndefinedValue();
-}
+using TruncateOp =
+    CallResult<HermesValue> (*)(uint64_t, Handle<BigIntPrimitive>, Runtime &);
 
 CallResult<HermesValue>
-bigintAsUintN(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeUndefinedValue();
+bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
+  auto bitsRes = toIndex(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(bitsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t bits = bitsRes->getNumberAs<uint64_t>();
+
+  auto bigint = toBigInt_RJS(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(bigint == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto op = reinterpret_cast<TruncateOp>(ctx);
+  return (*op)(bits, runtime.makeHandle(bigint->getBigInt()), runtime);
 }
 
 } // namespace vm

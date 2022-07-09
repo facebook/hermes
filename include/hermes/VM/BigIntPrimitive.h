@@ -142,6 +142,14 @@ class BigIntPrimitive final
   /// \return This bigint converted to a string in \p radix.
   CallResult<HermesValue> toString(Runtime &runtime, uint8_t radix) const;
 
+  /// \return \p src % (2n ** \p n), sign extended; \p n-th bit is the sign bit.
+  static CallResult<HermesValue>
+  asIntN(uint64_t n, Handle<BigIntPrimitive> src, Runtime &runtime);
+
+  /// \return \p src % (2n ** \p n), zero extended.
+  static CallResult<HermesValue>
+  asUintN(uint64_t n, Handle<BigIntPrimitive> src, Runtime &runtime);
+
   /// Compares this with \p other. Logically similar to *this - *other.
   /// \return < 0 if this is less than other; > 0, if other is less than this;
   /// and 0 if this and other represent the same bigint.
@@ -383,8 +391,9 @@ class BigIntPrimitive final
   using UnaryOp = bigint::OperationStatus (*)(
       bigint::MutableBigIntRef dst,
       bigint::ImmutableBigIntRef src);
+  template <typename UnaryOpT = UnaryOp>
   static CallResult<HermesValue> unaryOp(
-      UnaryOp op,
+      UnaryOpT op,
       Handle<BigIntPrimitive> src,
       size_t numDigits,
       Runtime &runtime);
