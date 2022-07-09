@@ -39,7 +39,8 @@ bool canBeNaN(Value *value) {
   return true;
 }
 
-Value *reduceAsNumber(AsNumberInst *asNumber) {
+template <typename T>
+Value *reduceAsNumberLike(T *asNumber) {
   IRBuilder builder(asNumber->getParent()->getParent());
   auto *op = asNumber->getSingleOperand();
 
@@ -57,6 +58,19 @@ Value *reduceAsNumber(AsNumberInst *asNumber) {
 
   // If it can't be converted, return the original instruction.
   return asNumber;
+}
+
+Value *reduceAsNumber(AsNumberInst *asNumber) {
+  return reduceAsNumberLike(asNumber);
+}
+
+Value *reduceAsNumeric(AsNumericInst *asNumeric) {
+  auto *op = asNumeric->getSingleOperand();
+  if (op->getType().isBigIntType()) {
+    return op;
+  }
+
+  return reduceAsNumberLike(asNumeric);
 }
 
 Value *reduceAsInt32(AsInt32Inst *asInt32) {
@@ -466,6 +480,41 @@ Value *simplifyAsNumber(AsNumberInst *asNumber) {
   return reduced == asNumber ? nullptr : reduced;
 }
 
+bool isUnaryIncOrDec(Value *value) {
+  if (auto *unOp = llvh::dyn_cast<UnaryOperatorInst>(value)) {
+    switch (unOp->getOperatorKind()) {
+      default:
+        break;
+      case UnaryOperatorInst::OpKind::IncKind:
+      case UnaryOperatorInst::OpKind::DecKind:
+        return true;
+    }
+  }
+
+  return false;
+}
+
+Value *simplifyAsNumeric(AsNumericInst *asNumeric) {
+  // reduced == asNumeric means that it wasn't possible to optimize asNumeric.
+  Value *reduced = asNumeric;
+
+  if (asNumeric->hasOneUser()) {
+    if (isUnaryIncOrDec(*asNumeric->users_begin())) {
+      // Single-use ToNumeric that feeds Inc/Dec can be optimized out as Inc/Dec
+      // will perform ToNumeric internally.
+      reduced = asNumeric->getSingleOperand();
+    }
+  }
+
+  if (reduced == asNumeric) {
+    // asNumeric can be optimized out if its (single) argument is provably
+    // numeric.
+    reduced = reduceAsNumeric(asNumeric);
+  }
+
+  return reduced == asNumeric ? nullptr : reduced;
+}
+
 Value *simplifyAsInt32(AsInt32Inst *asInt32) {
   Value *reduced = reduceAsInt32(asInt32);
   return (reduced == asInt32) ? nullptr : reduced;
@@ -536,6 +585,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyUnOp(cast<UnaryOperatorInst>(I));
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));
+    case ValueKind::AsNumericInstKind:
+      return simplifyAsNumeric(cast<AsNumericInst>(I));
     case ValueKind::AsInt32InstKind:
       return simplifyAsInt32(cast<AsInt32Inst>(I));
     case ValueKind::AddEmptyStringInstKind:
