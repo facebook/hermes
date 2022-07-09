@@ -28,15 +28,36 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
 namespace hermes {
 namespace hbc {
 
+enum class BytecodeTable {
+  None,
+  String,
+  BigInt,
+};
+
+/// \return a BytecodeTable other than BytecodeTable::None value if
+/// \p operandIndex (a zero-based operand index of \p opCode) references an
+/// entry in a table in bytecode. BytecodeTable::None is returned otherwise.
+static BytecodeTable getBytecodeTableForOperand(
+    OpCode opCode,
+    unsigned operandIndex) {
+#define OPERAND_STRING_ID(name, operandNumber)                     \
+  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
+    return BytecodeTable::String;
+
+#define OPERAND_BIGINT_ID(name, operandNumber)                     \
+  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
+    return BytecodeTable::BigInt;
+
+#include "hermes/BCGen/HBC/BytecodeList.def"
+
+  return BytecodeTable::None;
+}
+
 /// Check if the zero based \p operandIndex in instruction \p opCode is a
 /// string table ID.
 static bool isOperandStringID(OpCode opCode, unsigned operandIndex) {
-#define OPERAND_STRING_ID(name, operandNumber)                     \
-  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
-    return true;
-#include "hermes/BCGen/HBC/BytecodeList.def"
-
-  return false;
+  return getBytecodeTableForOperand(opCode, operandIndex) ==
+      BytecodeTable::String;
 }
 
 std::pair<int, SLG::TagType> checkBufferTag(const unsigned char *buff) {
@@ -246,6 +267,64 @@ void BytecodeDisassembler::disassembleObjectBuffer(raw_ostream &OS) {
       OS << SLPToString(valTag.second, objValueBuffer.data(), &valInd) << "\n";
     }
   }
+}
+
+/// Converts the given bigint magnitude \p bytes to a string in base 10.
+static std::string bigintMagnitudeToLengthLimitedString(
+    llvh::ArrayRef<uint8_t> bytes) {
+  const uint8_t kBase10 = 10;
+  std::string value;
+  if (LLVM_UNLIKELY(
+          bigint::toString(value, bytes, kBase10) !=
+          bigint::OperationStatus::RETURNED)) {
+    value = "error printing bigint";
+  }
+  static constexpr size_t LEN_LIMIT = 16;
+  const size_t numValueDigits = value.size() - (value[0] == '-' ? 1 : 0);
+  const bool tooLong = numValueDigits > LEN_LIMIT;
+  if (tooLong) {
+    std::stringstream ss;
+    ss << value.substr(0, LEN_LIMIT) << "... (" << numValueDigits
+       << " decimal digits)";
+    value = std::move(ss).str();
+  }
+
+  return value;
+}
+
+/// Print the content of the bigint storage.
+void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
+  auto bigintStorage = bcProvider_->getBigIntStorage();
+  auto bigintTable = bcProvider_->getBigIntTable();
+
+  const uint32_t bigintCount = bcProvider_->getBigIntCount();
+
+  assert(
+      bigintTable.empty() == bigintStorage.empty() &&
+      "inconsistent bigint arrays");
+
+  if (bigintTable.empty()) {
+    return;
+  }
+
+  OS << "Global BigInt Table:\n";
+
+  for (uint32_t i = 0; i < bigintCount; ++i) {
+    const auto &entry = bigintTable[i];
+    uint32_t start = entry.offset;
+    uint32_t end = start + entry.length;
+    OS << " " << i << "[";
+    if (start == end) {
+      OS << "empty]";
+    } else {
+      auto bytes = bigintStorage.slice(start, end);
+      OS << (end - 1) << ".." << start
+         << "]: " << bigintMagnitudeToLengthLimitedString(bytes);
+    }
+    OS << "\n";
+  }
+
+  OS << "\n";
 }
 
 void BytecodeDisassembler::disassembleCJSModuleTable(raw_ostream &OS) {
@@ -538,6 +617,23 @@ void JumpTargetsVisitor::visitOperand(
   }
 }
 
+void PrettyDisassembleVisitor::dumpOperandBigInt(
+    BigIntID bigintID,
+    raw_ostream &OS) {
+  auto bigintStorage = bcProvider_->getBigIntStorage();
+  const auto &entry = bcProvider_->getBigIntTable()[bigintID];
+
+  const uint32_t count = entry.length;
+  const uint32_t start = entry.offset;
+  const uint32_t end = start + count;
+
+  if (!bigintStorage.empty()) {
+  }
+
+  OS << bigintMagnitudeToLengthLimitedString(bigintStorage.slice(start, end))
+     << "n";
+}
+
 /// Dump a string table entry referenced by an opcode operand. It is truncated
 /// to about 16 characters (by appending "...") and all non-ASCII values are
 /// escaped.
@@ -657,7 +753,8 @@ void PrettyDisassembleVisitor::visitOperand(
     os_ << "r";
   }
 
-  const bool isStringID = isOperandStringID(opcode_, operandIndex);
+  const BytecodeTable bytecodeTable =
+      getBytecodeTableForOperand(opcode_, operandIndex);
 
   switch (operandType) {
 #define DEFINE_OPERAND_TYPE(name, ctype)                            \
@@ -668,8 +765,10 @@ void PrettyDisassembleVisitor::visitOperand(
         operandType == OperandType::Addr32) {                       \
       /* operandVal is relative to current ip.*/                    \
       os_ << "L" << jumpTargets_[ip + (int32_t)operandVal];         \
-    } else if (isStringID) {                                        \
+    } else if (bytecodeTable == BytecodeTable::String) {            \
       dumpOperandString(operandVal, os_);                           \
+    } else if (bytecodeTable == BytecodeTable::BigInt) {            \
+      dumpOperandBigInt(operandVal, os_);                           \
     } else if (operandType == OperandType::Double) {                \
       char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];                  \
       (void)hermes::numberToString(operandVal, buf, sizeof(buf));   \

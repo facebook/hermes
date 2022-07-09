@@ -24,6 +24,7 @@ namespace hermes {
 namespace hbc {
 
 using llvh::raw_ostream;
+using BigIntID = uint32_t;
 using StringID = uint32_t;
 
 /// The reverse of emitOperand, loading an operand encoded in little-endian
@@ -198,6 +199,10 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
   /// escaped.
   void dumpOperandString(StringID stringID, raw_ostream &OS);
 
+  /// Dump the bigint table entry referenced by an opcode operand. It is
+  /// truncated to about 8 uint8_t (by appending "...") at the end.
+  void dumpOperandBigInt(BigIntID bigintID, raw_ostream &OS);
+
  protected:
   void beforeStart(unsigned funcId, const uint8_t *bytecodeStart);
   void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length);
@@ -294,6 +299,9 @@ class BytecodeDisassembler {
 
   /// Print the content of the array buffer table into \p OS.
   void disassembleArrayBuffer(raw_ostream &OS);
+
+  /// Print the content of the bigint storage.
+  void disassembleBigIntStorage(raw_ostream &OS);
 
   /// Print the content of the object buffer table into \p OS.
   void disassembleObjectBuffer(raw_ostream &OS);

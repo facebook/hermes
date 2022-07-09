@@ -791,6 +791,24 @@ std::string toString(ImmutableBigIntRef src, uint8_t radix) {
   return digits;
 }
 
+OperationStatus
+toString(std::string &out, llvh::ArrayRef<uint8_t> bytes, uint8_t radix) {
+  unsigned numDigits = numDigitsForSizeInBytes(bytes.size());
+  if (tooManyDigits(numDigits)) {
+    return OperationStatus::TOO_MANY_DIGITS;
+  }
+
+  TmpStorage tmp(numDigits);
+  MutableBigIntRef dst{tmp.requestNumDigits(numDigits), numDigits};
+  auto res = initWithBytes(dst, bytes);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  out = toString(ImmutableBigIntRef{dst.digits, dst.numDigits}, radix);
+  return OperationStatus::RETURNED;
+}
+
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   const int kLhsGreater = 1;
   const int kRhsGreater = -kLhsGreater;

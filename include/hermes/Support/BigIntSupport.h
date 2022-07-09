@@ -254,6 +254,10 @@ class TmpStorage {
 /// \return \p src's representation in \p radix.
 std::string toString(ImmutableBigIntRef src, uint8_t radix);
 
+/// same as toString() above, but prints a byte payload.
+OperationStatus
+toString(std::string &out, llvh::ArrayRef<uint8_t> bytes, uint8_t radix);
+
 /// \return number of digits needed to perform asUintN(\p n, \p src).
 uint32_t asUintNResultSize(uint64_t n, ImmutableBigIntRef src);
 

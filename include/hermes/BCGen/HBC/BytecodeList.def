@@ -54,6 +54,9 @@
 #ifndef ASSERT_MONOTONE_INCREASING
 #define ASSERT_MONOTONE_INCREASING(first, ...)
 #endif
+#ifndef OPERAND_BIGINT_ID
+#define OPERAND_BIGINT_ID(name, operandNumber)
+#endif
 #ifndef OPERAND_STRING_ID
 #define OPERAND_STRING_ID(name, operandNumber)
 #endif
@@ -847,4 +850,5 @@ ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 #undef ASSERT_EQUAL_LAYOUT3
 #undef ASSERT_EQUAL_LAYOUT4
 #undef ASSERT_MONOTONE_INCREASING
+#undef OPERAND_BIGINT_ID
 #undef OPERAND_STRING_ID

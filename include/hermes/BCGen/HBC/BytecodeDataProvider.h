@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
 #include "hermes/Support/RegExpSerialization.h"
@@ -158,6 +159,10 @@ class BCProviderBase {
   uint32_t getStringCount() const {
     return stringCount_;
   }
+  // N.B. skeleton method needed for hbcdump changes to compile.
+  uint32_t getBigIntCount() const {
+    return 0;
+  }
   llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
@@ -175,6 +180,14 @@ class BCProviderBase {
   }
   llvh::ArrayRef<unsigned char> getObjectValueBuffer() const {
     return objValueBuffer_;
+  }
+  // N.B. skeleton method needed for hbcdump changes to compile.
+  llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
+    return {};
+  }
+  // N.B. skeleton method needed for hbcdump changes to compile.
+  llvh::ArrayRef<unsigned char> getBigIntStorage() const {
+    return {};
   }
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
     return regExpTable_;
