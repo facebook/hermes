@@ -135,6 +135,16 @@ TEST_F(OperationsTest, IsSameValueTest) {
 
   v2 = HermesValue::encodeDoubleValue(0);
   IsSameValueTest(FALSE, v1, v2);
+
+  auto b1 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  auto b2 = BigIntPrimitive::fromSignedNoThrow(1, runtime);
+  auto b3 = BigIntPrimitive::fromSignedNoThrow(-22, runtime);
+
+  v1 = HermesValue::encodeBigIntValue(b1.get());
+  v2 = HermesValue::encodeBigIntValue(b2.get());
+  v3 = HermesValue::encodeBigIntValue(b3.get());
+  IsSameValueTest(TRUE, v1, v2);
+  IsSameValueTest(FALSE, v1, v3);
 }
 
 #define AbstractEqualityTest(result, x, y)                          \

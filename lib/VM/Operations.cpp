@@ -119,10 +119,16 @@ bool isSameValue(HermesValue x, HermesValue y) {
       !x.isEmpty() && !x.isNativeValue() &&
       "Empty and Native Value cannot be compared");
 
-  // Strings are the only type that requires deep comparison.
+  // Strings require deep comparison.
   if (x.isString()) {
     // For strings, we compare each character in sequence.
     return x.getString()->equals(y.getString());
+  }
+
+  // Bigints also require deep comparison.
+  if (x.isBigInt()) {
+    // For bigints, perform the numerical comparison.
+    return x.getBigInt()->compare(y.getBigInt()) == 0;
   }
 
   // Otherwise they are identical if the raw bits are the same.
