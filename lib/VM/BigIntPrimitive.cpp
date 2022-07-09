@@ -294,5 +294,19 @@ CallResult<HermesValue> BigIntPrimitive::inc(
   return unaryOp(incAdapter, src, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::dec(
+    Handle<BigIntPrimitive> src,
+    Runtime &runtime) {
+  auto decAdapter = [](bigint::MutableBigIntRef dst,
+                       bigint::ImmutableBigIntRef lhs) {
+    constexpr bigint::SignedBigIntDigitType one = 1ll;
+    return bigint::subtractSigned(dst, lhs, one);
+  };
+
+  const size_t numDigits =
+      bigint::subtractSignedResultSize(src->getImmutableRef(runtime), 1);
+  return unaryOp(decAdapter, src, numDigits, runtime);
+}
+
 } // namespace vm
 } // namespace hermes

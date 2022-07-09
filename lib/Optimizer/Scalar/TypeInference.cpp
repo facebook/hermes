@@ -112,12 +112,14 @@ static bool inferUnaryInst(UnaryOperatorInst *UOI) {
     // https://tc39.es/ecma262/#sec-prefix-increment-operator
     // https://tc39.es/ecma262/#sec-postfix-increment-operator
     case OpKind::IncKind: // ++
+    // https://tc39.es/ecma262/#sec-prefix-decrement-operator
+    // https://tc39.es/ecma262/#sec-postfix-decrement-operator
+    case OpKind::DecKind: // --
     // https://tc39.es/ecma262/#sec-unary-minus-operator
     case OpKind::MinusKind: // -
       return inferUnaryArithDefault(UOI);
     // https://tc39.es/ecma262/#sec-unary-plus-operator
     case OpKind::PlusKind: // +
-    case OpKind::DecKind: // --
       UOI->setType(Type::createNumber());
       return true;
     // https://tc39.es/ecma262/#sec-bitwise-not-operator

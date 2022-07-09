@@ -1344,6 +1344,19 @@ subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
       srcWithMostDigits);
 }
 
+uint32_t subtractSignedResultSize(
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm) {
+  return subtractResultSize(lhs, makeImmutableRefFromSignedDigit(sImm));
+}
+
+OperationStatus subtractSigned(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm) {
+  return subtract(dst, lhs, makeImmutableRefFromSignedDigit(sImm));
+}
+
 uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return (!lhs.numDigits || !rhs.numDigits) ? 0
                                             : lhs.numDigits + rhs.numDigits + 1;

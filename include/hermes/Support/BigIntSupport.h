@@ -314,6 +314,17 @@ uint32_t subtractResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 OperationStatus
 subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 
+/// \return number of digits needed to perform \p lhs - \p sImm
+uint32_t subtractSignedResultSize(
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm);
+
+/// \return \p dst = \p lhs - \p sImm
+OperationStatus subtractSigned(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    SignedBigIntDigitType sImm);
+
 /// \return number of digits needed to perform \p lhs * \p rhs with full
 /// precision
 uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);

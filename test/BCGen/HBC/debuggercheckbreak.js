@@ -50,7 +50,7 @@
 //CHECK-NEXT:    Dec               r1, r1
 //CHECK-NEXT:    Mov               r2, r1
 //CHECK-NEXT:    AsyncBreakCheck
-//CHECK-NEXT:    JGreaterN         L5, r2, r3
+//CHECK-NEXT:    JGreater          L5, r2, r3
 //CHECK-NEXT:L4:
 //CHECK-NEXT:    TryGetById        r1, r0, 3, "print"
 //CHECK-NEXT:    LoadConstUndefined r0

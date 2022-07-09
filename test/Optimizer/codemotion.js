@@ -71,10 +71,10 @@ function hoist_branch_window(x, y) {
 //CHECK-NEXT:  {{.*}}  %5 = BranchInst %BB3
 //CHECK-NEXT:%BB2:
 //CHECK-NEXT:  {{.*}}  %6 = UnaryOperatorInst '--', %0
-//CHECK-NEXT:  {{.*}}  %7 = MovInst %6 : number
+//CHECK-NEXT:  {{.*}}  %7 = MovInst %6 : number|bigint
 //CHECK-NEXT:  {{.*}}  %8 = BranchInst %BB3
 //CHECK-NEXT:%BB3:
-//CHECK-NEXT:  {{.*}}  %9 = PhiInst %4 : number|bigint, %BB1, %7 : number, %BB2
+//CHECK-NEXT:  {{.*}}  %9 = PhiInst %4 : number|bigint, %BB1, %7 : number|bigint, %BB2
 //CHECK-NEXT:  {{.*}}  %10 = MovInst %9 : number|bigint
 //CHECK-NEXT:  {{.*}}  %11 = ReturnInst %10 : number|bigint
 //CHECK-NEXT:function_end

@@ -393,14 +393,8 @@ constexpr auto &BigIntOper<doURshift> = BigIntPrimitive::unsignedRightShift;
 template <>
 constexpr auto &BigIntOper<doInc> = BigIntPrimitive::inc;
 
-static CallResult<HermesValue> UnimplementedBigIntDec(
-    Handle<BigIntPrimitive> src,
-    Runtime &runtime) {
-  return HermesValue::encodeUndefinedValue();
-}
-
 template <>
-static constexpr auto &BigIntOper<doDec> = UnimplementedBigIntDec;
+constexpr auto &BigIntOper<doDec> = BigIntPrimitive::dec;
 
 } // namespace
 
