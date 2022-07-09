@@ -255,6 +255,22 @@ OperationStatus bitwiseAND(
     ImmutableBigIntRef lhs,
     ImmutableBigIntRef rhs);
 
+/// \return number of digits needed to perform \p lhs | \p rhs
+uint32_t bitwiseORResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return \p dst = \p lhs | \p rhs
+OperationStatus
+bitwiseOR(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return number of digits needed to perform \p lhs ^ \p rhs
+uint32_t bitwiseXORResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return \p dst = \p lhs ^ \p rhs
+OperationStatus bitwiseXOR(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs);
+
 } // namespace bigint
 } // namespace hermes
 

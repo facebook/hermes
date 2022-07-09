@@ -412,14 +412,9 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
 
     // https://tc39.es/ecma262/#sec-binary-bitwise-operators
     case BinaryOperatorInst::OpKind::AndKind:
-      return inferBinaryBitwise(BOI);
-
-    // Binary operators alwats return a number.
-    // https://es5.github.io/#x11.10
     case BinaryOperatorInst::OpKind::OrKind:
     case BinaryOperatorInst::OpKind::XorKind:
-      BOI->setType(Type::createInt32());
-      return true;
+      return inferBinaryBitwise(BOI);
 
     default:
       break;

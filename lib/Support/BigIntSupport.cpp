@@ -900,6 +900,50 @@ OperationStatus bitwiseAND(
       srcWithMostDigits);
 }
 
+uint32_t bitwiseORResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return std::max(lhs.numDigits, rhs.numDigits);
+}
+
+OperationStatus bitwiseOR(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  // bitwiseOR is commutative, so lhs and rhs can be swapped at will.
+  const auto &[srcWithFewerDigits, srcWithMostDigits] =
+      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs)
+                                     : std::make_tuple(rhs, lhs);
+
+  return additiveOperation(
+      tcBitwiseWithCarry<llvh::APInt::tcOr>,
+      noopAdditiveOpPart,
+      noopAdditiveOpPostProcess,
+      dst,
+      srcWithFewerDigits,
+      srcWithMostDigits);
+}
+
+uint32_t bitwiseXORResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return std::max(lhs.numDigits, rhs.numDigits);
+}
+
+OperationStatus bitwiseXOR(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  // bitwiseXOR is commutative, so lhs and rhs can be swapped at will.
+  const auto &[srcWithFewerDigits, srcWithMostDigits] =
+      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs)
+                                     : std::make_tuple(rhs, lhs);
+
+  return additiveOperation(
+      tcBitwiseWithCarry<llvh::APInt::tcXor>,
+      noopAdditiveOpPart,
+      noopAdditiveOpPostProcess,
+      dst,
+      srcWithFewerDigits,
+      srcWithMostDigits);
+}
+
 uint32_t addResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   // simulate infinite precision by requiring an extra digits in the result,
   // regardless of the operands. It could be smarter -- carry will only happen

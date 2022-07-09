@@ -205,6 +205,18 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p lhs | \p rhs
+  static CallResult<HermesValue> bitwiseOR(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
+  /// \return \p lhs ^ \p rhs
+  static CallResult<HermesValue> bitwiseXOR(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
 

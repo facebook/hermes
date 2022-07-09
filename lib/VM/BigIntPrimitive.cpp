@@ -184,5 +184,23 @@ CallResult<HermesValue> BigIntPrimitive::bitwiseAND(
   return binaryOp(&bigint::bitwiseAND, lhs, rhs, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::bitwiseOR(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::bitwiseORResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::bitwiseOR, lhs, rhs, numDigits, runtime);
+}
+
+CallResult<HermesValue> BigIntPrimitive::bitwiseXOR(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::bitwiseXORResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::bitwiseXOR, lhs, rhs, numDigits, runtime);
+}
+
 } // namespace vm
 } // namespace hermes

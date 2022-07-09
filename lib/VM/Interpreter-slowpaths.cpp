@@ -372,21 +372,14 @@ constexpr auto &BigIntOper<doSub> = BigIntPrimitive::subtract;
 template <>
 constexpr auto &BigIntOper<doMul> = BigIntPrimitive::multiply;
 
-static CallResult<HermesValue> UnimplementedBigIntBinOp(
-    Handle<BigIntPrimitive> lhs,
-    Handle<BigIntPrimitive> rhs,
-    Runtime &runtime) {
-  return HermesValue::encodeUndefinedValue();
-}
-
 template <>
 constexpr auto &BigIntOper<doBitAnd> = BigIntPrimitive::bitwiseAND;
 
 template <>
-static constexpr auto &BigIntOper<doBitOr> = UnimplementedBigIntBinOp;
+constexpr auto &BigIntOper<doBitOr> = BigIntPrimitive::bitwiseOR;
 
 template <>
-static constexpr auto &BigIntOper<doBitXor> = UnimplementedBigIntBinOp;
+constexpr auto &BigIntOper<doBitXor> = BigIntPrimitive::bitwiseXOR;
 
 } // namespace
 
