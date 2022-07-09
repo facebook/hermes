@@ -252,7 +252,8 @@ ExecutionStatus JSTypedArrayBase::setToCopyOfTypedArray(
     // Else must do type conversions.
     MutableHandle<> storage(runtime);
     for (auto k = srcIndex; k < srcIndex + count; ++k) {
-      storage = JSObject::getOwnIndexed(*src, runtime, k);
+      storage =
+          JSObject::getOwnIndexed(createPseudoHandle(src.get()), runtime, k);
       if (JSObject::setOwnIndexed(dst, runtime, dstIndex++, storage) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -427,17 +428,21 @@ JSTypedArray<T, C>::JSTypedArray(
 
 template <typename T, CellKind C>
 HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
-    JSObject *selfObj,
+    PseudoHandle<JSObject> selfObj,
     Runtime &runtime,
     uint32_t index) {
-  auto *self = vmcast<JSTypedArray>(selfObj);
+  NoAllocScope noAllocs{runtime};
+  auto *self = vmcast<JSTypedArray>(selfObj.get());
+
   if (LLVM_UNLIKELY(!self->attached(runtime))) {
     // NOTE: This should be a TypeError to be fully spec-compliant, but
     // getOwnIndexed is not allowed to return an exception.
     return HermesValue::encodeNumberValue(0);
   }
   if (LLVM_LIKELY(index < self->getLength())) {
-    return SafeNumericEncoder<T>::encode(self->at(runtime, index));
+    auto elem = self->at(runtime, index);
+    noAllocs.release();
+    return SafeNumericEncoder<T>::encode(elem);
   }
   return HermesValue::encodeUndefinedValue();
 }

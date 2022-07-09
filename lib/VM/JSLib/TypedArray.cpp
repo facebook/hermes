@@ -303,6 +303,7 @@ CallResult<HermesValue> mapFilterLoop(
     JSTypedArrayBase::size_type insert,
     JSTypedArrayBase::size_type len) {
   MutableHandle<> storage(runtime);
+  MutableHandle<> val{runtime};
   GCScopeMarkerRAII marker{runtime};
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
     if (!self->attached(runtime)) {
@@ -310,12 +311,12 @@ CallResult<HermesValue> mapFilterLoop(
       // continue.
       return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
-    auto val = JSObject::getOwnIndexed(*self, runtime, i);
+    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall3(
         callbackfn,
         runtime,
         thisArg,
-        val,
+        *val,
         HermesValue::encodeNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
@@ -326,7 +327,7 @@ CallResult<HermesValue> mapFilterLoop(
       storage = std::move(*callRes);
       JSArray::setElementAt(values, runtime, insert++, storage);
     } else if (toBoolean(callRes->get())) {
-      storage = val;
+      storage = *val;
       JSArray::setElementAt(values, runtime, insert++, storage);
     }
     marker.flush();
@@ -375,8 +376,10 @@ class TypedArraySortModel : public SortModel {
 
   // Swap elements at indices a and b.
   virtual ExecutionStatus swap(uint32_t a, uint32_t b) override {
-    aHandle_ = JSObject::getOwnIndexed(*self_, runtime_, a);
-    bHandle_ = JSObject::getOwnIndexed(*self_, runtime_, b);
+    aHandle_ =
+        JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, a);
+    bHandle_ =
+        JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, b);
     if (JSObject::setOwnIndexed(self_, runtime_, a, bHandle_) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -391,23 +394,43 @@ class TypedArraySortModel : public SortModel {
   // Compare elements at index a and at index b.
   virtual CallResult<int> compare(uint32_t a, uint32_t b) override {
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
-    HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
-    HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
-    if (!WithCompareFn) {
-      double a = aVal.getNumber();
-      double b = bVal.getNumber();
-      if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
-          LLVM_UNLIKELY(std::signbit(a)) && LLVM_UNLIKELY(!std::signbit(b))) {
-        // -0 < +0, according to the spec.
-        return -1;
+
+    CallResult<PseudoHandle<HermesValue>> callRes{ExecutionStatus::EXCEPTION};
+    {
+      Handle<> aValHandle = runtime_.makeHandle(JSObject::getOwnIndexed(
+          createPseudoHandle(self_.get()), runtime_, a));
+      // To avoid the need to create a handle for bVal a NoAllocScope is created
+      // below, to ensure no memory allocation will happen.
+      HermesValue bVal =
+          JSObject::getOwnIndexed(createPseudoHandle(self_.get()), runtime_, b);
+
+      // N.B.: aVal needs to be initialized after bVal's initialization -- i.e.,
+      // after no more allocations are expected for a while.
+      HermesValue aVal = *aValHandle;
+
+      {
+        NoAllocScope noAllocs{runtime_};
+        if (!WithCompareFn) {
+          double a = aVal.getNumber();
+          double b = bVal.getNumber();
+          if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
+              LLVM_UNLIKELY(std::signbit(a)) &&
+              LLVM_UNLIKELY(!std::signbit(b))) {
+            // -0 < +0, according to the spec.
+            return -1;
+          }
+          return (a < b) ? -1 : (a > b ? 1 : 0);
+        }
+        assert(
+            compareFn_ && "Cannot use this version if the compareFn is null");
       }
-      return (a < b) ? -1 : (a > b ? 1 : 0);
+
+      // ES7 22.2.3.26 2a.
+      // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
+      callRes = Callable::executeCall2(
+          compareFn_, runtime_, Runtime::getUndefinedValue(), aVal, bVal);
     }
-    assert(compareFn_ && "Cannot use this version if the compareFn is null");
-    // ES7 22.2.3.26 2a.
-    // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
-    auto callRes = Callable::executeCall2(
-        compareFn_, runtime_, Runtime::getUndefinedValue(), aVal, bVal);
+
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -853,14 +876,16 @@ typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
+  MutableHandle<> val{runtime};
   // Run the callback over every element.
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < self->getLength(); ++i) {
+    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall3(
         callbackfn,
         runtime,
         thisArg,
-        JSObject::getOwnIndexed(*self, runtime, i),
+        *val,
         HermesValue::encodeNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
@@ -969,20 +994,21 @@ typedFindHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
+  MutableHandle<> val{runtime};
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type counter = 0; counter < len; counter++) {
     auto i = reverse ? (len - counter - 1) : counter;
-    auto val = JSObject::getOwnIndexed(*self, runtime, i);
+    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto idx = HermesValue::encodeNumberValue(i);
     auto callRes = Callable::executeCall3(
-        callbackfn, runtime, thisArg, val, idx, self.getHermesValue());
+        callbackfn, runtime, thisArg, *val, idx, self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     if (toBoolean(callRes->get())) {
       // Found one, return it.
-      return index ? idx : val;
+      return index ? idx : *val;
     }
     gcScope.flushToMarker(marker);
   }
@@ -1013,6 +1039,7 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
+  MutableHandle<> val{runtime};
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
@@ -1020,12 +1047,12 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
     if (!self->attached(runtime)) {
       return runtime.raiseTypeError("Detached the ArrayBuffer in the callback");
     }
-    HermesValue val = JSObject::getOwnIndexed(*self, runtime, i);
+    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     if (Callable::executeCall3(
             callbackfn,
             runtime,
             thisArg,
-            val,
+            *val,
             HermesValue::encodeNumberValue(i),
             self.getHermesValue()) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1100,7 +1127,10 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
     }
   };
   for (; inRange(k, len); k += delta) {
-    auto curr = JSObject::getOwnIndexed(*self, runtime, k);
+    HermesValue curr =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, k);
+    NoAllocScope noAllocs{runtime};
+
     bool comp = indexOfMode == IndexOfMode::includes
         ? isSameValueZero(curr, searchElement)
         : strictEqualityTest(curr, searchElement);
@@ -1246,7 +1276,8 @@ typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     MutableHandle<> elem(runtime);
     for (decltype(len) i = 0; i < len; ++i) {
       GCScope gcScope(runtime);
-      elem = JSObject::getOwnIndexed(*self, runtime, i);
+      elem =
+          JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
 
       auto res2 = toString_RJS(runtime, elem);
       if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
@@ -1300,7 +1331,8 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
   if (calledWithInitialValue) {
     accumulator = args.getArg(1);
   } else {
-    accumulator = JSObject::getOwnIndexed(*self, runtime, right ? len - 1 : 0);
+    accumulator = JSObject::getOwnIndexed(
+        createPseudoHandle(self.get()), runtime, right ? len - 1 : 0);
   }
 
   auto inRange = [right](double i, double len) {
@@ -1313,6 +1345,7 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   Handle<> undefinedThis = Runtime::getUndefinedValue();
+  MutableHandle<> val{runtime};
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   for (; inRange(i, len); i += right ? -1 : 1) {
@@ -1321,12 +1354,13 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
       // continue.
       return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
+    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall4(
         callbackfn,
         runtime,
         undefinedThis,
         accumulator.getHermesValue(),
-        JSObject::getOwnIndexed(*self, runtime, i),
+        *val,
         HermesValue::encodeNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
@@ -1352,8 +1386,10 @@ typedArrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
   MutableHandle<> upperHandle(runtime);
   for (JSTypedArrayBase::size_type lower = 0; lower != middle; ++lower) {
     auto upper = len - lower - 1;
-    lowerHandle = JSObject::getOwnIndexed(*self, runtime, lower);
-    upperHandle = JSObject::getOwnIndexed(*self, runtime, upper);
+    lowerHandle =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, lower);
+    upperHandle =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, upper);
     if (JSObject::setOwnIndexed(self, runtime, lower, upperHandle) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1538,7 +1574,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
+  Handle<JSTypedArrayBase> self = args.vmcastThis<JSTypedArrayBase>();
 
   auto emptyString = runtime.getPredefinedStringHandle(Predefined::emptyString);
 
@@ -1566,7 +1602,8 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
 
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
-    storage = JSObject::getOwnIndexed(*self, runtime, i);
+    storage =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto objRes = toObject(runtime, storage);
     if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

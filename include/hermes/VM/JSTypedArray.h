@@ -275,8 +275,10 @@ class JSTypedArray final : public JSTypedArrayBase {
 
  protected:
   /// Retrieve an indexed property.
-  static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
+  static HermesValue _getOwnIndexedImpl(
+      PseudoHandle<JSObject> self,
+      Runtime &runtime,
+      uint32_t index);
   static CallResult<bool> _setOwnIndexedImpl(
       Handle<JSObject> selfHandle,
       Runtime &runtime,

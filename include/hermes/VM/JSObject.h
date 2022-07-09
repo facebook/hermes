@@ -222,8 +222,10 @@ struct ObjectVTable : public VTable {
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
   /// \return the value of the element or "empty" if there is no such element.
-  HermesValue (
-      *getOwnIndexed)(JSObject *self, Runtime &runtime, uint32_t index);
+  HermesValue (*getOwnIndexed)(
+      PseudoHandle<JSObject> self,
+      Runtime &runtime,
+      uint32_t index);
 
   /// Set an element in the "indexed storage" of this object. Depending on the
   /// semantics of the "indexed storage" the storage capacity may need to be
@@ -1035,8 +1037,8 @@ class JSObject : public GCCell {
 
   /// Calls ObjectVTable::getOwnIndexed.
   static HermesValue
-  getOwnIndexed(JSObject *self, Runtime &runtime, uint32_t index) {
-    return self->getVT()->getOwnIndexed(self, runtime, index);
+  getOwnIndexed(PseudoHandle<JSObject> self, Runtime &runtime, uint32_t index) {
+    return self->getVT()->getOwnIndexed(std::move(self), runtime, index);
   }
 
   /// Calls ObjectVTable::setOwnIndexed.
@@ -1282,8 +1284,10 @@ class JSObject : public GCCell {
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
   /// \return the value of the element or "empty" if there is no such element.
-  static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
+  static HermesValue _getOwnIndexedImpl(
+      PseudoHandle<JSObject> self,
+      Runtime &runtime,
+      uint32_t index);
 
   /// Set an element in the "indexed storage" of this object. Depending on the
   /// semantics of the "indexed storage" the storage capacity may need to be
@@ -1756,7 +1760,8 @@ inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
     assert(
         self->flags_.indexedStorage &&
         "indexed flag set but no indexed storage");
-    return createPseudoHandle(getOwnIndexed(self.get(), runtime, desc.slot));
+    return createPseudoHandle(
+        getOwnIndexed(std::move(self), runtime, desc.slot));
   }
   if (LLVM_UNLIKELY(desc.flags.proxyObject) ||
       LLVM_UNLIKELY(desc.flags.hostObject)) {
@@ -1781,7 +1786,7 @@ inline HermesValue JSObject::getComputedSlotValueUnsafe(
     assert(
         self->flags_.indexedStorage &&
         "indexed flag set but no indexed storage");
-    return getOwnIndexed(self.get(), runtime, desc.slot);
+    return getOwnIndexed(std::move(self), runtime, desc.slot);
   }
   // Call is valid because this function cannot be called with a Proxy.
   return getNamedSlotValueUnsafe(

@@ -112,10 +112,14 @@ std::pair<uint32_t, uint32_t> ArrayImpl::_getOwnIndexedRangeImpl(
 }
 
 HermesValue ArrayImpl::_getOwnIndexedImpl(
-    JSObject *selfObj,
+    PseudoHandle<JSObject> selfObj,
     Runtime &runtime,
     uint32_t index) {
-  return vmcast<ArrayImpl>(selfObj)->at(runtime, index).unboxToHV(runtime);
+  NoAllocScope noAllocs{runtime};
+
+  return vmcast<ArrayImpl>(selfObj.get())
+      ->at(runtime, index)
+      .unboxToHV(runtime);
 }
 
 ExecutionStatus ArrayImpl::setStorageEndIndex(

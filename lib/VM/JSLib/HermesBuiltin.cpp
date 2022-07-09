@@ -423,7 +423,8 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
             return true;
         }
 
-        valueHandle = JSObject::getOwnIndexed(*source, runtime, index);
+        valueHandle = JSObject::getOwnIndexed(
+            createPseudoHandle(source.get()), runtime, index);
 
         if (LLVM_UNLIKELY(
                 JSObject::defineOwnComputedPrimitive(

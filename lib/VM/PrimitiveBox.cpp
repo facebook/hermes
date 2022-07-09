@@ -113,12 +113,21 @@ std::pair<uint32_t, uint32_t> JSString::_getOwnIndexedRangeImpl(
   return {0, str->getStringLength()};
 }
 
-HermesValue
-JSString::_getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index) {
-  auto *str = getPrimitiveString(vmcast<JSString>(self), runtime);
-  return LLVM_LIKELY(index < str->getStringLength())
-      ? runtime.getCharacterString(str->at(index)).getHermesValue()
-      : HermesValue::encodeEmptyValue();
+HermesValue JSString::_getOwnIndexedImpl(
+    PseudoHandle<JSObject> self,
+    Runtime &runtime,
+    uint32_t index) {
+  auto *str = getPrimitiveString(vmcast<JSString>(self.get()), runtime);
+
+  NoAllocScope noAllocs{runtime};
+
+  if (LLVM_LIKELY(index < str->getStringLength())) {
+    auto chr = str->at(index);
+    noAllocs.release();
+    return runtime.getCharacterString(chr).getHermesValue();
+  }
+
+  return HermesValue::encodeEmptyValue();
 }
 
 CallResult<bool> JSString::_setOwnIndexedImpl(

@@ -1098,8 +1098,8 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
   if (selfHandle->flags_.fastIndexProperties) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       // Do we have this value present in our array storage? If so, return it.
-      PseudoHandle<> ourValue = createPseudoHandle(
-          getOwnIndexed(selfHandle.get(), runtime, *arrayIndex));
+      PseudoHandle<> ourValue =
+          createPseudoHandle(getOwnIndexed(selfHandle, runtime, *arrayIndex));
       if (LLVM_LIKELY(!ourValue->isEmpty()))
         return ourValue;
     }
@@ -2151,14 +2151,14 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
       getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
   if (indexedPropPresent) {
     // The current value of the property.
-    HermesValue curValueOrAccessor =
-        getOwnIndexed(selfHandle.get(), runtime, *arrayIndex);
+    Handle<> curValueOrAccessor =
+        runtime.makeHandle(getOwnIndexed(selfHandle, runtime, *arrayIndex));
 
     auto updateStatus = checkPropertyUpdate(
         runtime,
         *indexedPropPresent,
         dpFlags,
-        curValueOrAccessor,
+        *curValueOrAccessor,
         valueOrAccessor,
         opFlags);
     if (updateStatus == ExecutionStatus::EXCEPTION)
@@ -2198,7 +2198,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
     if (dpFlags.setValue || dpFlags.isAccessor()) {
       value = valueOrAccessor.get();
     } else {
-      value = curValueOrAccessor;
+      value = *curValueOrAccessor;
     }
 
     // Update dpFlags to match the existing property flags.
@@ -2500,7 +2500,8 @@ OptValue<PropertyFlags> JSObject::_getOwnIndexedPropertyFlagsImpl(
   return llvh::None;
 }
 
-HermesValue JSObject::_getOwnIndexedImpl(JSObject *, Runtime &, uint32_t) {
+HermesValue
+JSObject::_getOwnIndexedImpl(PseudoHandle<JSObject>, Runtime &, uint32_t) {
   return HermesValue::encodeEmptyValue();
 }
 

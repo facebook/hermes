@@ -179,8 +179,10 @@ class ArrayImpl : public JSObject {
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
   /// \return the value of the element or "empty" if there is no such element.
-  static HermesValue
-  _getOwnIndexedImpl(JSObject *self, Runtime &runtime, uint32_t index);
+  static HermesValue _getOwnIndexedImpl(
+      PseudoHandle<JSObject> self,
+      Runtime &runtime,
+      uint32_t index);
 
   /// Set an element in the "indexed storage" of this object. Depending on the
   /// semantics of the "indexed storage" the storage capacity may need to be
