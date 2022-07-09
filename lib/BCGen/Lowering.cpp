@@ -675,18 +675,19 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       builder.setInsertionPointAfter(inst);
       builder.setLocation(inst->getLocation());
 
-      // Checks if any operand of an AllocArray is undefined.
+      // Checks if any operand of an AllocArray is unserializable.
       // If it finds one, the loop removes it along with every operand past it.
       {
-        bool seenUndef = false;
+        bool seenUnserializable = false;
         unsigned ind = -1;
         unsigned i = AllocArrayInst::ElementStartIdx;
         unsigned e = inst->getElementCount() + AllocArrayInst::ElementStartIdx;
         while (i < e) {
           ind++;
-          seenUndef |=
+          seenUnserializable |=
+              inst->getOperand(i)->getKind() == ValueKind::LiteralBigIntKind ||
               inst->getOperand(i)->getKind() == ValueKind::LiteralUndefinedKind;
-          if (seenUndef) {
+          if (seenUnserializable) {
             e--;
             builder.createStoreOwnPropertyInst(
                 inst->getOperand(i),

@@ -675,6 +675,36 @@ class LiteralUndefined : public Literal {
   }
 };
 
+class LiteralBigInt : public Literal, public llvh::FoldingSetNode {
+  LiteralBigInt(const LiteralBigInt &) = delete;
+  LiteralBigInt &operator=(const LiteralBigInt &) = delete;
+
+  // value holds the BigInt literal string as parsed by the front-end.
+  std::string value;
+
+ public:
+  explicit LiteralBigInt(std::string &&v)
+      : Literal(ValueKind::LiteralBigIntKind), value(std::move(v)) {
+    setType(Type::createBigInt());
+  }
+
+  const std::string &getValue() const {
+    return value;
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, llvh::StringRef value) {
+    ID.AddString(value);
+  }
+
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    LiteralBigInt::Profile(ID, value);
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralBigIntKind;
+  }
+};
+
 class LiteralNumber : public Literal, public llvh::FoldingSetNode {
   LiteralNumber(const LiteralNumber &) = delete;
   void operator=(const LiteralNumber &) = delete;
@@ -1852,9 +1882,11 @@ class Module : public Value {
   EmptySentinel emptySentinel_{};
 
   using LiteralNumberFoldingSet = llvh::FoldingSet<LiteralNumber>;
+  using LiteralBigIntFoldingSet = llvh::FoldingSet<LiteralBigInt>;
   using LiteralStringFoldingSet = llvh::FoldingSet<LiteralString>;
 
   LiteralNumberFoldingSet literalNumbers{};
+  LiteralBigIntFoldingSet literalBigInts{};
   LiteralStringFoldingSet literalStrings{};
 
   /// Map from an identifier to a number indicating how many times it has been
@@ -1974,6 +2006,9 @@ class Module : public Value {
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
+
+  /// Create a new literal BigInt of value \p value.
+  LiteralBigInt *getLiteralBigInt(llvh::StringRef value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);

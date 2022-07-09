@@ -203,6 +203,10 @@ LiteralNumber *IRBuilder::getLiteralNaN() {
   return M->getLiteralNumber(std::numeric_limits<double>::quiet_NaN());
 }
 
+LiteralBigInt *IRBuilder::getLiteralBigInt(llvh::StringRef value) {
+  return M->getLiteralBigInt(value);
+}
+
 LiteralString *IRBuilder::getLiteralString(StringRef value) {
   Identifier Iden = createIdentifier(value);
   return getLiteralString(Iden);

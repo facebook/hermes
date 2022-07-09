@@ -115,6 +115,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
        << getBuiltinMethodName(
               cast<GetBuiltinClosureInst>(I)->getBuiltinIndex())
        << "]";
+  } else if (auto LBI = dyn_cast<LiteralBigInt>(V)) {
+    os << LBI->getValue();
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
     os << escapeStr(ctx.toString(LS->getValue()));
   } else if (auto LB = dyn_cast<LiteralBool>(V)) {
