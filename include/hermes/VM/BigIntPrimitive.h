@@ -199,6 +199,12 @@ class BigIntPrimitive final
       Handle<BigIntPrimitive> rhs,
       Runtime &runtime);
 
+  /// \return \p lhs ** \p rhs
+  static CallResult<HermesValue> exponentiate(
+      Handle<BigIntPrimitive> lhs,
+      Handle<BigIntPrimitive> rhs,
+      Runtime &runtime);
+
   /// \return \p lhs & \p rhs
   static CallResult<HermesValue> bitwiseAND(
       Handle<BigIntPrimitive> lhs,
@@ -245,6 +251,8 @@ class BigIntPrimitive final
         return runtime.raiseRangeError("Maximum BigInt size exceeded");
       case bigint::OperationStatus::DIVISION_BY_ZERO:
         return runtime.raiseRangeError("Division by zero");
+      case bigint::OperationStatus::NEGATIVE_EXPONENT:
+        return runtime.raiseRangeError("Exponent must be positive");
     }
   }
 

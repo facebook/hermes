@@ -11,6 +11,7 @@
 #include "hermes/Support/Compiler.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/MathExtras.h"
 
@@ -139,6 +140,7 @@ enum class OperationStatus : uint32_t {
   DEST_TOO_SMALL,
   TOO_MANY_DIGITS,
   DIVISION_BY_ZERO,
+  NEGATIVE_EXPONENT,
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
 /// Initializes \p dst with \p data, sign-extending the bits as needed.
@@ -188,6 +190,38 @@ class ParsedBigInt {
   ParsedBigInt(llvh::ArrayRef<uint8_t> bytes) : storage_(bytes) {}
 
   Storage storage_;
+};
+
+/// Helper class for allocating temporary storage needed for BigInt operations.
+/// It uses inline storage for "small enough" temporary requirements, and heap
+/// allocates
+class TmpStorage {
+  TmpStorage() = delete;
+  TmpStorage(const TmpStorage &) = delete;
+  TmpStorage(TmpStorage &&) = delete;
+
+  TmpStorage &operator=(const TmpStorage &) = delete;
+  TmpStorage &operator=(TmpStorage &&) = delete;
+
+ public:
+  explicit TmpStorage(uint32_t sizeInDigits)
+      : storage_(sizeInDigits), data_(storage_.begin()) {}
+
+  ~TmpStorage() = default;
+
+  /// \return a pointer to \p size digits in the temporary storage.
+  BigIntDigitType *requestNumDigits(uint32_t size) {
+    BigIntDigitType *ret = data_;
+    data_ += size;
+    assert(data_ <= storage_.end() && "too many temporary digits requested.");
+    return ret;
+  }
+
+ private:
+  static constexpr uint32_t MaxStackTmpStorageInDigits = 4;
+  llvh::SmallVector<BigIntDigitType, MaxStackTmpStorageInDigits> storage_;
+
+  BigIntDigitType *data_;
 };
 
 /// \return \p src's representation in \p radix.
@@ -245,6 +279,16 @@ uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 /// \return \p dst = \p lhs % \p rhs
 OperationStatus
 remainder(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return \p dst = \p lhs ** \p rhs
+/// N.B.: There is no easy way to compute a reasonable upper bound on how
+/// many digits are needed to store the result of the exponentiate operation,
+/// thus callers are expected to call with a "big enough" dst, and the operation
+/// will try to compute the result in that buffer.
+OperationStatus exponentiate(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs);
 
 /// \return number of digits needed to perform \p lhs & \p rhs
 uint32_t bitwiseANDResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);

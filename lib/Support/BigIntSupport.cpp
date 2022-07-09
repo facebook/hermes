@@ -82,6 +82,14 @@ void ensureCanonicalResult(MutableBigIntRef &dst) {
       dropExtraSignBits(llvh::makeArrayRef(ptr, sizeInBytes));
   dst.numDigits = numDigitsForSizeInBytes(compactView.size());
 }
+
+static OperationStatus initWithDigits(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef src) {
+  auto ptr = reinterpret_cast<const uint8_t *>(src.digits);
+  auto size = src.numDigits * BigIntDigitSizeInBytes;
+  return initWithBytes(dst, llvh::makeArrayRef(ptr, size));
+}
 } // namespace
 
 // Ensure there's a compile-time failure if/when hermes is compiled for
@@ -994,40 +1002,6 @@ subtract(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
       srcWithMostDigits);
 }
 
-namespace {
-/// Helper class for allocating temporary storage needed for BigInt operations.
-/// It uses inline storage for "small enough" temporary requirements, and heap
-/// allocates
-class TmpStorage {
-  TmpStorage() = delete;
-  TmpStorage(const TmpStorage &) = delete;
-  TmpStorage(TmpStorage &&) = delete;
-
-  TmpStorage &operator=(const TmpStorage &) = delete;
-  TmpStorage &operator=(TmpStorage &&) = delete;
-
- public:
-  explicit TmpStorage(uint32_t sizeInDigits)
-      : storage_(sizeInDigits), data_(storage_.begin()) {}
-
-  ~TmpStorage() = default;
-
-  /// \return a pointer to \p size digits in the temporary storage.
-  BigIntDigitType *requestNumDigits(uint32_t size) {
-    BigIntDigitType *ret = data_;
-    data_ += size;
-    assert(data_ <= storage_.end() && "too many temporary digits requested.");
-    return ret;
-  }
-
- private:
-  static constexpr uint32_t MaxStackTmpStorageInDigits = 4;
-  llvh::SmallVector<BigIntDigitType, MaxStackTmpStorageInDigits> storage_;
-
-  BigIntDigitType *data_;
-};
-} // namespace
-
 uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return (!lhs.numDigits || !rhs.numDigits) ? 0
                                             : lhs.numDigits + rhs.numDigits + 1;
@@ -1304,6 +1278,278 @@ OperationStatus remainder(
   uint32_t numQuocDigits = 0;
   MutableBigIntRef nullDigits{nullptr, numQuocDigits};
   return div_rem::compute(nullDigits, dst, lhs, rhs);
+}
+
+namespace {
+/// Implements the fast-path for computing \p dst = 2n ** \p rhs.
+static OperationStatus exponentiatePowerOf2(
+    MutableBigIntRef dst,
+    uint32_t exponent) {
+  const uint32_t numDigitsResult = 1 + (exponent / BigIntDigitSizeInBits);
+  const uint32_t numDigits = 1 + numDigitsResult;
+  const uint32_t bitToSet = exponent % BigIntDigitSizeInBits;
+
+  if (BigIntMaxSizeInDigits < numDigits) {
+    return OperationStatus::TOO_MANY_DIGITS;
+  }
+
+  if (dst.numDigits < numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+  dst.numDigits = numDigits;
+
+  // dummyDigit is used for creating a temporary 0n that is used to initialize
+  // dst -- i.e., zero-initialize all elements in dst.
+  BigIntDigitType dummyDigit[1];
+  ImmutableBigIntRef zero{dummyDigit, 0};
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, zero);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+  // then set the only bit in result.
+  dst.digits[numDigitsResult - 1] = 1ull << bitToSet;
+  return OperationStatus::RETURNED;
+}
+
+/// Helper class that holds a reference to a MutableBigIntRef and what's the
+/// maximum number of digits in ref. This is needed during exponentiateSlowPath
+/// below so that the intermediate results can be canonicalized and later
+/// restored to an "empty" state. It exposes conversion operators to make
+/// passing the underlaying ref as input/output to other function in the API
+/// (e.g., multiply).
+class MutableBigIntAndMaxSize {
+ public:
+  // This (implicit) convenience constructor assumes r.numDigits is also the
+  // maximum number of digits that \p r can hold.
+  MutableBigIntAndMaxSize(MutableBigIntRef &ref)
+      : r(&ref), maxDigits(ref.numDigits) {}
+
+  /*implicit*/ operator MutableBigIntRef &() {
+    return ref();
+  }
+
+  /*implicit*/ operator ImmutableBigIntRef() const {
+    return ImmutableBigIntRef{r->digits, r->numDigits};
+  }
+
+  void swap(MutableBigIntAndMaxSize &other) {
+    std::swap(r, other.r);
+    std::swap(maxDigits, other.maxDigits);
+  }
+
+  MutableBigIntRef &ref() {
+    return *r;
+  }
+
+  void resetRefNumDigits() {
+    r->numDigits = maxDigits;
+  }
+
+  uint32_t getMaxDigits() const {
+    return maxDigits;
+  }
+
+ private:
+  MutableBigIntRef *r;
+  uint32_t maxDigits;
+};
+
+/// Helper method for converting the status returned by multiply in
+/// exponentiateSlowPath to the actual status that needs to be reported to the
+/// user.
+OperationStatus multiplyStatusToExponentiateStatus(
+    OperationStatus status,
+    uint32_t maxDigitsDst) {
+  // if dst has max digits, then don't return DEST_TOO_SMALL -- because there's
+  // no way to create a BigInt with more digits.
+  if (status == OperationStatus::DEST_TOO_SMALL &&
+      maxDigitsDst >= BigIntMaxSizeInDigits) {
+    return OperationStatus::TOO_MANY_DIGITS;
+  }
+
+  // The multiply status should be bubbled up.
+  return status;
+}
+
+/// Slow path for bigint exponentiation. Computes the following series
+///
+//    (lhs ** 1      * rhs_0) +
+//    (lhs ** 2      * rhs_1) +
+//    (lhs ** 4      * rhs_2) +
+//          ...          +
+//    (lhs ** 2 ** n * rhs_n)
+//
+// where lhs_i is the i-th bit in rhs.
+OperationStatus exponentiateSlowPath(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    uint32_t exponent) {
+  // At each iteration i, runningSquare will have the current value for
+  // lhs ** 2 ** i, and nextRunningSquare will be used to compute
+  // runningSquare * runningSquare (i.e.,
+  // nextRunningSquare = runningSquare ** 2) which will be used by the next
+  // iteration in the algorithm. This is necessary because multiply()
+  // requires/assumes dst's digits don't overload with lhs' or rhs'.
+  uint32_t runningSquareSize0 = BigIntMaxSizeInDigits;
+  uint32_t runningSquareSize1 = BigIntMaxSizeInDigits;
+  uint32_t tmpResultTmpSize = BigIntMaxSizeInDigits;
+  TmpStorage tmpBuffers(
+      runningSquareSize0 + runningSquareSize1 + tmpResultTmpSize);
+  MutableBigIntRef runningSquare0{
+      tmpBuffers.requestNumDigits(runningSquareSize0), runningSquareSize0};
+  MutableBigIntRef runningSquare1{
+      tmpBuffers.requestNumDigits(runningSquareSize1), runningSquareSize1};
+
+  // at each iteration i, result is the exponentiation result, i.e.,
+  //
+  //   result = result * runningSquare, if lhs_i is 1
+  //   result = result                , otherwise
+  //
+  // Thus, a temporary result buffer is needed (because multiply() requires).
+
+  MutableBigIntRef tmpResult{
+      tmpBuffers.requestNumDigits(tmpResultTmpSize), tmpResultTmpSize};
+
+  // These are the MutableBigIntRef "adapters". Besides being implicitly
+  // converted to ImmutableBigIntRef and MutableBigIntRef, their contents can
+  // also be swapp()ed with one another.
+  MutableBigIntAndMaxSize runningSquare = runningSquare0;
+  MutableBigIntAndMaxSize tmpRunningSquare = runningSquare1;
+  MutableBigIntAndMaxSize result = dst;
+  MutableBigIntAndMaxSize nextResult = tmpResult;
+
+  // runningSquare is initialized to base, i.e., lhs ** 2 ** 0.
+  auto res = initWithDigits(runningSquare, lhs);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  // initialize the result. It is either 0 (if x_0 = 0), or lhs (otherwise).
+  if ((exponent & 1) == 0) {
+    result.ref().numDigits = 0;
+  } else {
+    res = initWithDigits(result, lhs);
+    if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+      return res;
+    }
+  }
+
+  // now iterate over the exponent until there are no more bits set in it.
+  for (exponent >>= 1; exponent > 0; exponent >>= 1) {
+    // runningSquare <<= 2;
+    tmpRunningSquare.resetRefNumDigits();
+    res = multiply(tmpRunningSquare, runningSquare, runningSquare);
+    res = multiplyStatusToExponentiateStatus(
+        res, tmpRunningSquare.getMaxDigits());
+    tmpRunningSquare.swap(runningSquare);
+
+    if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+      return res;
+    }
+
+    // include runningSquare in the result if lhs_i is 1.
+    if ((exponent & 1) != 0) {
+      nextResult.resetRefNumDigits();
+      if (compare(result, 0) == 0) {
+        res = initWithDigits(nextResult, runningSquare);
+      } else {
+        res = multiply(nextResult, result, runningSquare);
+        res =
+            multiplyStatusToExponentiateStatus(res, nextResult.getMaxDigits());
+      }
+      if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+        return res;
+      }
+      nextResult.swap(result);
+    }
+  }
+
+  res = OperationStatus::RETURNED;
+  if (&result.ref() != &dst) {
+    nextResult.resetRefNumDigits();
+    res = initNonCanonicalWithReadOnlyBigInt(nextResult, result);
+  }
+
+  return res;
+}
+} // namespace
+
+OperationStatus exponentiate(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  if (compare(rhs, 0) < 0) {
+    return OperationStatus::NEGATIVE_EXPONENT;
+  }
+
+  // |rhs| is limited to the BigInt's maximum number of digits when |lhs| >= 2.
+  // Therefore, to simplify the code, a copy of rhs' first digit is made on a
+  // scalar that's large enough to fit said max exponent.
+  static constexpr auto maxExponent =
+      BigIntMaxSizeInDigits * BigIntDigitSizeInBits;
+  const uint32_t exponent = rhs.numDigits ? rhs.digits[0] : 0;
+  // sanity-check: ensure the max bigint exponent when |lhs| >= 2 first
+  // exponent.
+  static_assert(
+      maxExponent <= std::numeric_limits<decltype(exponent)>::max(),
+      "exponent is too large");
+
+  // Avoid exponentiate's slow path by special handling the easy cases (e.g.,
+  // 0 ** y, x ** 0, x ** 1, 1 ** x).
+  OperationStatus res = OperationStatus::RETURNED;
+  if (compare(rhs, 0) == 0) {
+    // lhs ** 0 => 1, for all lhs
+    // N.B.: JS defines 0n ** 0n == 1.
+    if (dst.numDigits < 1) {
+      res = OperationStatus::DEST_TOO_SMALL;
+    } else {
+      dst.numDigits = 1;
+      dst.digits[0] = 1;
+    }
+  } else if (compare(lhs, 0) == 0) {
+    // 0 ** rhs => 0, for rhs > 0
+    dst.numDigits = 0;
+  } else if (dst.numDigits < 1) {
+    // |lhs| != 0, rhs > 0 =>  |result| != 0, i.e., the result requires at least
+    // one digit.
+    res = OperationStatus::DEST_TOO_SMALL;
+  } else if (compare(lhs, 1) == 0) {
+    // 1 ** rhs => 1, for all rhs
+    assert(rhs.numDigits > 0 && "should have handled 0n");
+    dst.numDigits = 1;
+    dst.digits[0] = 1;
+  } else if (compare(lhs, -1) == 0) {
+    // -1 ** rhs => 1, for even rhs, -1 for odd
+    assert(rhs.numDigits > 0 && "should have handled 0n");
+    dst.numDigits = 1;
+    // Note that rhs > 0, therefore rhs % 2n === exponent % 2.
+    dst.digits[0] = (exponent % 2 == 0) ? 1ull : -1ull;
+  } else if (rhs.numDigits > 1 || exponent >= maxExponent) {
+    // Exponent is too large, hence the result would be too big.
+    res = OperationStatus::TOO_MANY_DIGITS;
+  } else if (exponent == 1) {
+    // lhs ** 1n => lhs, for any lhs
+    res = initWithDigits(dst, lhs);
+  } else if (compare(lhs, 2) == 0) {
+    // Fast-path for 2n ** rhs
+    res = exponentiatePowerOf2(dst, exponent);
+  } else if (compare(lhs, -2) == 0) {
+    // Fast-path for -2n ** rhs
+    res = exponentiatePowerOf2(dst, exponent);
+    if (exponent % 2 != 0) {
+      llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+    }
+  } else {
+    // Slow path
+    res = exponentiateSlowPath(dst, lhs, exponent);
+  }
+
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
 }
 
 } // namespace bigint

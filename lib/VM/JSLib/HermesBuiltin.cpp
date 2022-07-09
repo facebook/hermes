@@ -14,6 +14,7 @@
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
@@ -771,6 +772,40 @@ hermesBuiltinExportAll(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+CallResult<HermesValue>
+hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
+  CallResult<HermesValue> res = toNumeric_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_LIKELY(!res->isBigInt())) {
+    double left = res->getNumber();
+    // Using ? toNumber() here causes an exception to be raised if args[1] is a
+    // BigInt.
+    CallResult<HermesValue> res = toNumber_RJS(runtime, args.getArgHandle(1));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeNumberValue(expOp(left, res->getNumber()));
+  }
+
+  Handle<BigIntPrimitive> lhs = runtime.makeHandle(res->getBigInt());
+
+  // Can't use toBigInt() here as it converts boolean/strings to bigint.
+  res = toNumeric_RJS(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (!res->isBigInt()) {
+    return runtime.raiseTypeErrorForValue(
+        "Cannot convert ", args.getArgHandle(1), " to BigInt");
+  }
+
+  return BigIntPrimitive::exponentiate(
+      std::move(lhs), runtime.makeHandle(res->getBigInt()), runtime);
+}
+
 void createHermesBuiltins(
     Runtime &runtime,
     llvh::MutableArrayRef<Callable *> builtins) {
@@ -841,7 +876,7 @@ void createHermesBuiltins(
   defineInternMethod(
       B::HermesBuiltin_exponentiationOperator,
       P::exponentiationOperator,
-      mathPow);
+      hermesBuiltinExponentiate);
 
   // Define the 'requireFast' function, which takes a number argument.
   defineInternMethod(

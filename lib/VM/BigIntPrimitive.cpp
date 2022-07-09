@@ -175,6 +175,24 @@ CallResult<HermesValue> BigIntPrimitive::remainder(
   return binaryOp(&bigint::remainder, lhs, rhs, numDigits, runtime);
 }
 
+CallResult<HermesValue> BigIntPrimitive::exponentiate(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  uint32_t tmpDstSize = bigint::BigIntMaxSizeInDigits;
+  bigint::TmpStorage tmpDst(tmpDstSize);
+  bigint::MutableBigIntRef dst{tmpDst.requestNumDigits(tmpDstSize), tmpDstSize};
+  auto res = bigint::exponentiate(
+      dst, lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  if (LLVM_UNLIKELY(res != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(res, runtime);
+  }
+
+  auto ptr = reinterpret_cast<const uint8_t *>(dst.digits);
+  uint32_t size = dst.numDigits * DigitSizeInBytes;
+  return BigIntPrimitive::fromBytes(llvh::makeArrayRef(ptr, size), runtime);
+}
+
 CallResult<HermesValue> BigIntPrimitive::bitwiseAND(
     Handle<BigIntPrimitive> lhs,
     Handle<BigIntPrimitive> rhs,
