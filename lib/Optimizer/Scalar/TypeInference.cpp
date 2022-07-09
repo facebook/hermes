@@ -302,6 +302,20 @@ static bool inferBinaryArith(
   BOI->setType(Type::unionTy(numberType, mayBeBigInt));
   return true;
 }
+
+static bool inferBinaryBitwise(BinaryOperatorInst *BOI) {
+  Type LeftTy = BOI->getLeftHandSide()->getType();
+  Type RightTy = BOI->getRightHandSide()->getType();
+
+  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+      ? Type::createBigInt()
+      : Type::createNoType();
+
+  // ?? - ?? => Int32|?BigInt. BigInt is only possible if both operands can be
+  // BigInt due to the no automatic BigInt conversion.
+  BOI->setType(Type::unionTy(Type::createInt32(), mayBeBigInt));
+  return true;
+}
 } // anonymous namespace
 
 static bool inferBinaryInst(BinaryOperatorInst *BOI) {
@@ -396,11 +410,14 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
       return false;
     }
 
+    // https://tc39.es/ecma262/#sec-binary-bitwise-operators
+    case BinaryOperatorInst::OpKind::AndKind:
+      return inferBinaryBitwise(BOI);
+
     // Binary operators alwats return a number.
     // https://es5.github.io/#x11.10
     case BinaryOperatorInst::OpKind::OrKind:
     case BinaryOperatorInst::OpKind::XorKind:
-    case BinaryOperatorInst::OpKind::AndKind:
       BOI->setType(Type::createInt32());
       return true;
 

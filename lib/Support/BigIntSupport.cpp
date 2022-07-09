@@ -853,13 +853,52 @@ OperationStatus additiveOperation(
   return OperationStatus::RETURNED;
 }
 
+BigIntDigitType
+noopAdditiveOpPart(BigIntDigitType *, BigIntDigitType, unsigned numDigits) {
+  assert(
+      numDigits == 0 &&
+      "noop additive part was given digits; noop additive part is free!");
+  return 0;
+}
+
 void noopAdditiveOpPostProcess(MutableBigIntRef &) {}
 
 void negateAdditiveOpPostProcess(MutableBigIntRef &dst) {
   llvh::APInt::tcNegate(dst.digits, dst.numDigits);
 }
 
+template <auto Op>
+BigIntDigitType tcBitwiseWithCarry(
+    BigIntDigitType *lhs,
+    const BigIntDigitType *rhs,
+    BigIntDigitType /*unused*/,
+    uint32_t numDigits) {
+  Op(lhs, rhs, numDigits);
+  return 0;
+}
 } // namespace
+
+uint32_t bitwiseANDResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  return std::max(lhs.numDigits, rhs.numDigits);
+}
+
+OperationStatus bitwiseAND(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  // bitwiseAND is commutative, so lhs and rhs can be swapped at will.
+  const auto &[srcWithFewerDigits, srcWithMostDigits] =
+      lhs.numDigits <= rhs.numDigits ? std::make_tuple(lhs, rhs)
+                                     : std::make_tuple(rhs, lhs);
+
+  return additiveOperation(
+      tcBitwiseWithCarry<llvh::APInt::tcAnd>,
+      noopAdditiveOpPart,
+      noopAdditiveOpPostProcess,
+      dst,
+      srcWithFewerDigits,
+      srcWithMostDigits);
+}
 
 uint32_t addResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   // simulate infinite precision by requiring an extra digits in the result,

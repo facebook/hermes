@@ -246,6 +246,15 @@ uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 OperationStatus
 remainder(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 
+/// \return number of digits needed to perform \p lhs & \p rhs
+uint32_t bitwiseANDResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return dst = lhs & rhs
+OperationStatus bitwiseAND(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs);
+
 } // namespace bigint
 } // namespace hermes
 

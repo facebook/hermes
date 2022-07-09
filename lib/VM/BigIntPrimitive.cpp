@@ -174,5 +174,15 @@ CallResult<HermesValue> BigIntPrimitive::remainder(
       lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
   return binaryOp(&bigint::remainder, lhs, rhs, numDigits, runtime);
 }
+
+CallResult<HermesValue> BigIntPrimitive::bitwiseAND(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  const uint32_t numDigits = bigint::bitwiseANDResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::bitwiseAND, lhs, rhs, numDigits, runtime);
+}
+
 } // namespace vm
 } // namespace hermes

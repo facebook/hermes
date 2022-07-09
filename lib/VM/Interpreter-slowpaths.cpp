@@ -372,6 +372,22 @@ constexpr auto &BigIntOper<doSub> = BigIntPrimitive::subtract;
 template <>
 constexpr auto &BigIntOper<doMul> = BigIntPrimitive::multiply;
 
+static CallResult<HermesValue> UnimplementedBigIntBinOp(
+    Handle<BigIntPrimitive> lhs,
+    Handle<BigIntPrimitive> rhs,
+    Runtime &runtime) {
+  return HermesValue::encodeUndefinedValue();
+}
+
+template <>
+constexpr auto &BigIntOper<doBitAnd> = BigIntPrimitive::bitwiseAND;
+
+template <>
+static constexpr auto &BigIntOper<doBitOr> = UnimplementedBigIntBinOp;
+
+template <>
+static constexpr auto &BigIntOper<doBitXor> = UnimplementedBigIntBinOp;
+
 } // namespace
 
 template <auto Oper>
@@ -413,17 +429,26 @@ doOperSlowPath<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 template <auto Oper>
 CallResult<HermesValue>
 doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
-  CallResult<HermesValue> res = toInt32_RJS(runtime, lhs);
+  CallResult<HermesValue> res =
+      toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  int32_t left = res->getNumberAs<int32_t>();
-  res = toInt32_RJS(runtime, rhs);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_LIKELY(!res->isBigInt())) {
+    res = toInt32_RJS(runtime, runtime.makeHandle(*res));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    const int32_t left = res->getNumberAs<int32_t>();
+    res = toInt32_RJS(runtime, std::move(rhs));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeNumberValue(
+        Oper(left, res->getNumberAs<int32_t>()));
   }
-  return HermesValue::encodeNumberValue(
-      Oper(left, res->getNumberAs<int32_t>()));
+  return doBigIntBinOp(
+      runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
 }
 
 template CallResult<HermesValue>
