@@ -47,6 +47,18 @@ std::optional<std::string> getStringIntegerLiteralDigitsAndSign(
     ParsedSign &sign,
     std::string *outError = nullptr);
 
+/// https://tc39.es/ecma262/#sec-numericvalue
+/// Parse \p src as a NumericValue.
+///
+/// \return an empty optional if \p src is not a valid NumericValue, in which
+/// case \p outError (if not null) will contain a description of the error; or,
+/// if \p src is a valid NumericValue, then a string with the bigint digits is
+/// returned; \p radix is set to the literal's radix.
+std::optional<std::string> getNumericValueDigits(
+    llvh::StringRef src,
+    uint8_t &radix,
+    std::string *outError = nullptr);
+
 using SignedBigIntDigitType = int64_t;
 using BigIntDigitType = uint64_t;
 
@@ -177,6 +189,15 @@ class ParsedBigInt {
 
   static std::optional<ParsedBigInt> parsedBigIntFromStringIntegerLiteral(
       llvh::ArrayRef<char16_t> input,
+      std::string *outError = nullptr);
+
+  /// Tries to parse \p input assuming it is the text in a BigInt literal (see
+  /// ES2022 12.8.3.2 SS: NumericValue for mor information). \p outError is set
+  /// with a description of the first error encountered while parsing \p input.
+  /// \return A ParsedBigInt if \p input can be parsed, or an empty optional
+  /// otherwise.
+  static std::optional<ParsedBigInt> parsedBigIntFromNumericValue(
+      llvh::StringRef input,
       std::string *outError = nullptr);
 
   /// \return A compact representation of the BigInt. Compact means all most

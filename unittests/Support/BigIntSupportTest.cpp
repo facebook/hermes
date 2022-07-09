@@ -142,6 +142,92 @@ TEST(BigIntTest, getStringIntegerLiteralDigitsAndSignTest) {
   failedStringLiteralParsing("-0B1");
 }
 
+void successfulParseTest(
+    llvh::StringRef src,
+    llvh::StringRef expected,
+    Radix expectedRadix) {
+  std::string outError;
+  uint8_t radix;
+  auto bigintDigits = getNumericValueDigits(src, radix, &outError);
+  EXPECT_TRUE(bigintDigits)
+      << "failure to parse " << src.data() << ": " << outError.data();
+
+  if (bigintDigits) {
+    EXPECT_EQ(radix, expectedRadix) << src.data();
+    EXPECT_EQ(*bigintDigits, expected.data());
+  }
+}
+
+void parsingFailureTest(llvh::StringRef src) {
+  std::string outError;
+  uint8_t radix;
+  auto bigintDigits = getNumericValueDigits(src, radix, &outError);
+  EXPECT_FALSE(bigintDigits)
+      << src.data() << " was parsed as " << *bigintDigits;
+}
+
+TEST(BigIntTest, getNumericValueDigitsTest) {
+  // Decimal strings.
+  successfulParseTest("0n", "0", Radix(10));
+  successfulParseTest("1n", "1", Radix(10));
+  successfulParseTest("12n", "12", Radix(10));
+  successfulParseTest("1_2n", "12", Radix(10));
+  successfulParseTest("1_2_3_4_5_6_7_8_9_0_1n", "12345678901", Radix(10));
+  successfulParseTest("1234_5678n", "12345678", Radix(10));
+  successfulParseTest("1234_567_9n", "12345679", Radix(10));
+
+  // Binary strings.
+  successfulParseTest("0b0n", "0", Radix(2));
+  successfulParseTest("0b1n", "1", Radix(2));
+  successfulParseTest("0b1010_1111n", "10101111", Radix(2));
+  successfulParseTest("0B1010_1111n", "10101111", Radix(2));
+
+  // octal strings.
+  successfulParseTest("0o0n", "0", Radix(8));
+  successfulParseTest("0o1n", "1", Radix(8));
+  successfulParseTest("0o01_234_567n", "01234567", Radix(8));
+  successfulParseTest("0O01_234_567n", "01234567", Radix(8));
+
+  // hex strings.
+  successfulParseTest("0x0n", "0", Radix(16));
+  successfulParseTest("0x1n", "1", Radix(16));
+  successfulParseTest(
+      "0x01_2345_6789_ABCD_EFab_cdefn", "0123456789ABCDEFabcdef", Radix(16));
+  successfulParseTest(
+      "0X01_2345_6789_ABCD_EFab_cdefn", "0123456789ABCDEFabcdef", Radix(16));
+
+  // Failure cases
+  parsingFailureTest(""); // empty string
+  parsingFailureTest("n"); // n suffix without numbers
+  parsingFailureTest("0"); // zero without n suffix
+  parsingFailureTest("_1n"); // leading separator
+  parsingFailureTest("1_n"); // separator without follow up numbers
+  parsingFailureTest("12"); // missing n suffix
+  parsingFailureTest("1__1n"); // multiple separators
+  parsingFailureTest("1_an"); // invalid digit
+
+  parsingFailureTest("0b"); // missing digits and suffix
+  parsingFailureTest("0b0"); // missing digits and suffix
+  parsingFailureTest("0bn"); // missing digits
+  parsingFailureTest("0b1_n"); // missing digits after separator
+  parsingFailureTest("0b1__1n"); // multiple separators
+  parsingFailureTest("0b1_12n"); // invalid digit
+
+  parsingFailureTest("0o"); // missing digits and suffix
+  parsingFailureTest("0o1"); // missing digits and suffix
+  parsingFailureTest("0on"); // missing digits
+  parsingFailureTest("0o1_n"); // missing digits after separator
+  parsingFailureTest("0o1__1n"); // multiple separators
+  parsingFailureTest("0o1_19n"); // invalid digit
+
+  parsingFailureTest("0x"); // missing digits and suffix
+  parsingFailureTest("0x1"); // missing suffix
+  parsingFailureTest("0xn"); // missing digits
+  parsingFailureTest("0x1_n"); // missing digits after separator
+  parsingFailureTest("0x1__1n"); // multiple separators
+  parsingFailureTest("0x1_1Gn"); // invalid digit
+}
+
 TEST(BigIntTest, numDigitsForSizeInBytesTest) {
   EXPECT_EQ(numDigitsForSizeInBytes(0), 0);
 

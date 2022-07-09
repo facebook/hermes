@@ -199,10 +199,13 @@ static inline bool isWhiteSpaceChar(char16_t c) {
       c == u'\u3000';
 }
 
+template <typename ConcreteParser>
+struct ConcreteParserTraits;
+
 /// A class with several utility methods used for parsing strings as bigints.
 /// The spec has multiple types of bigint strings; each "type" should have
 /// its own parser class that inherits from this.
-template <typename StringRefT>
+template <typename ConcreteParser>
 class BigIntLiteralParsingToolBox {
   BigIntLiteralParsingToolBox(const BigIntLiteralParsingToolBox &) = delete;
   BigIntLiteralParsingToolBox &operator=(const BigIntLiteralParsingToolBox &) =
@@ -212,6 +215,8 @@ class BigIntLiteralParsingToolBox {
       delete;
 
  protected:
+  using StringRefT = typename ConcreteParserTraits<ConcreteParser>::StringRefT;
+
   // The underlying string's char type.
   using CharT = std::remove_cv_t<std::remove_reference_t<decltype(
       *typename StringRefT::const_iterator{})>>;
@@ -247,7 +252,7 @@ class BigIntLiteralParsingToolBox {
 #define BIGINT_BINARY_DIGITS '0', '1'
     if (lookaheadAndEatIfAnyOf<BIGINT_BINARY_PREFIX>()) {
       radix_ = 2;
-      buildBigIntWithDigits<BIGINT_BINARY_DIGITS>();
+      dispatchBuildBigIntWithDigitsToConcrete<BIGINT_BINARY_DIGITS>();
       return bigintDigits_.size() > 0;
     }
 
@@ -261,7 +266,7 @@ class BigIntLiteralParsingToolBox {
 #define BIGINT_OCTAL_DIGITS '0', '1', '2', '3', '4', '5', '6', '7'
     if (lookaheadAndEatIfAnyOf<BIGINT_OCTAL_PREFIX>()) {
       radix_ = 8;
-      buildBigIntWithDigits<BIGINT_OCTAL_DIGITS>();
+      dispatchBuildBigIntWithDigitsToConcrete<BIGINT_OCTAL_DIGITS>();
       return bigintDigits_.size() > 0;
     }
 
@@ -278,7 +283,7 @@ class BigIntLiteralParsingToolBox {
 
     if (lookaheadAndEatIfAnyOf<BIGINT_HEX_PREFIX>()) {
       radix_ = 16;
-      buildBigIntWithDigits<BIGINT_HEX_DIGITS>();
+      dispatchBuildBigIntWithDigitsToConcrete<BIGINT_HEX_DIGITS>();
       return bigintDigits_.size() > 0;
     }
 
@@ -292,7 +297,7 @@ class BigIntLiteralParsingToolBox {
 #define BIGINT_DEC_DIGITS '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
     if (nextIsAnyOf<BIGINT_NONZERO_DEC_DIGITS>()) {
       radix_ = 10;
-      buildBigIntWithDigits<BIGINT_DEC_DIGITS>();
+      dispatchBuildBigIntWithDigitsToConcrete<BIGINT_DEC_DIGITS>();
       return bigintDigits_.size() > 0;
     }
     return false;
@@ -315,11 +320,19 @@ class BigIntLiteralParsingToolBox {
 #define BIGINT_DEC_DIGITS '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
     if (nextIsAnyOf<BIGINT_DEC_DIGITS>()) {
       radix_ = 10;
-      buildBigIntWithDigits<BIGINT_DEC_DIGITS>();
+      dispatchBuildBigIntWithDigitsToConcrete<BIGINT_DEC_DIGITS>();
       return bigintDigits_.size() > 0;
     }
     return false;
 #undef BIGINT_NONZERO_DEC_DIGITS
+  }
+
+  /// Helper for dispatching a call to buildBigIntWithDigits to the concrete
+  /// class.
+  template <char... digits>
+  void dispatchBuildBigIntWithDigitsToConcrete() {
+    static_cast<ConcreteParser *>(this)
+        ->template buildBigIntWithDigits<digits...>();
   }
 
   bool fail(const char *err) {
@@ -336,17 +349,8 @@ class BigIntLiteralParsingToolBox {
     return (ch && *ch != 0) ? fail(err) : true;
   }
 
-  template <CharT... digits>
-  void buildBigIntWithDigits() {
-    OptValue<CharT> ch = lookaheadAndEatIfAnyOf<digits...>();
-    while (ch.hasValue()) {
-      bigintDigits_.push_back(*ch);
-      ch = lookaheadAndEatIfAnyOf<digits...>();
-    }
-  }
-
-  template <CharT c>
-  static bool anyOf(CharT rhs) {
+  template <char c>
+  static bool anyOf(char rhs) {
     return c == rhs;
   }
 
@@ -432,20 +436,31 @@ class BigIntLiteralParsingToolBox {
   std::string *outError_;
 };
 
+template <typename StringRef>
+class StringIntegerLiteralParser;
+
+template <typename T>
+struct ConcreteParserTraits<StringIntegerLiteralParser<T>> {
+  using StringRefT = T;
+};
+
 /// A class for parsing StringIntegerLiteral as bigints. Used to parse string
 /// arguments to the BigInt constructor.
 /// See https://tc39.es/ecma262/#sec-stringintegerliteral-grammar.
 template <typename StringRefT>
-class StringIntegerLiteralParser
-    : public BigIntLiteralParsingToolBox<StringRefT> {
+class StringIntegerLiteralParser : public BigIntLiteralParsingToolBox<
+                                       StringIntegerLiteralParser<StringRefT>> {
  public:
+  using CharT = typename BigIntLiteralParsingToolBox<
+      StringIntegerLiteralParser<StringRefT>>::CharT;
+
   StringIntegerLiteralParser(
       StringRefT str,
       uint8_t &radix,
       std::string &bigintDigits,
       ParsedSign &sign,
       std::string *outError)
-      : BigIntLiteralParsingToolBox<StringRefT>(
+      : BigIntLiteralParsingToolBox<StringIntegerLiteralParser<StringRefT>>(
             str,
             radix,
             bigintDigits,
@@ -506,6 +521,99 @@ class StringIntegerLiteralParser
 
     return this->fail("invalid bigint literal");
   }
+
+ public:
+  template <CharT... digits>
+  void buildBigIntWithDigits() {
+    OptValue<CharT> ch = this->template lookaheadAndEatIfAnyOf<digits...>();
+    while (ch.hasValue()) {
+      this->bigintDigits_.push_back(*ch);
+      ch = this->template lookaheadAndEatIfAnyOf<digits...>();
+    }
+  }
+};
+
+template <>
+struct ConcreteParserTraits<class NumericValueParser> {
+  using StringRefT = llvh::StringRef;
+};
+/// A class for parsing NumericValues as bigints. Used to parse bigint literals.
+/// See https://tc39.es/ecma262/#sec-numericvalue
+class NumericValueParser
+    : public BigIntLiteralParsingToolBox<NumericValueParser> {
+ public:
+  NumericValueParser(
+      llvh::StringRef str,
+      uint8_t &radix,
+      std::string &bigintDigits,
+      ParsedSign &sign,
+      std::string *outError)
+      : BigIntLiteralParsingToolBox(str, radix, bigintDigits, sign, outError) {}
+
+  /// goal function for parsing a BigInt literal (e.g., 123n) from JS.
+  /// \p return true if parsing suceeds, and false otherwise.
+  bool goal() && {
+    if (auto ch = peek()) {
+      if (*ch == '0') {
+        // discard the current char -- it is known to be '0'.
+        eat();
+
+        // This is either:
+        //    (1) 0 BigIntLiteralSuffix
+        //    (2) NonDecimalIntegerLiteral BigIntLiteralSuffix
+
+        // Try matching (1).
+        if (bigIntLiteralSuffix()) {
+          radix_ = 10;
+          bigintDigits_ = "0";
+          return checkEnd("trailing data in 0n literal");
+        }
+
+        // Try matching (2).
+        if (nonDecimalIntegerLiteral()) {
+          if (bigIntLiteralSuffix()) {
+            return checkEnd("trailing data in non-decimal literal");
+          }
+
+          return fail("no n suffix in non-decimal");
+        }
+      } else {
+        // This must be NonZeroDecimalLiteral BigIntLiteralSuffix
+        if (nonZeroDecimalLiteral()) {
+          if (bigIntLiteralSuffix()) {
+            return checkEnd("trailing data in decimal literal");
+          }
+
+          return fail("no n suffix in decimal");
+        }
+      }
+    }
+
+    return fail("invalid bigint literal");
+  }
+
+  template <char... digits>
+  void buildBigIntWithDigits() {
+    OptValue<char> ch = lookaheadAndEatIfAnyOf<digits...>();
+    while (ch.hasValue()) {
+      bigintDigits_.push_back(*ch);
+      auto atSep = getCurrentParserState();
+      bool isSep = numericLiteralSeparator();
+      ch = lookaheadAndEatIfAnyOf<digits...>();
+      if (isSep && !ch) {
+        restoreParserState(atSep);
+      }
+    }
+  }
+
+ private:
+  bool numericLiteralSeparator() {
+    return lookaheadAndEatIfAnyOf<'_'>().hasValue();
+  }
+
+  bool bigIntLiteralSuffix() {
+    return lookaheadAndEatIfAnyOf<'n'>().hasValue();
+  }
 };
 
 /// \return How many bits to request when creating the APInt for \p str
@@ -559,6 +667,14 @@ std::optional<std::string> getStringIntegerLiteralDigitsAndSign(
     std::string *outError) {
   return getDigitsWith<StringIntegerLiteralParser<llvh::ArrayRef<char16_t>>>(
       src, radix, sign, outError);
+}
+
+std::optional<std::string> getNumericValueDigits(
+    llvh::StringRef src,
+    uint8_t &radix,
+    std::string *outError) {
+  ParsedSign sign;
+  return getDigitsWith<NumericValueParser>(src, radix, sign, outError);
 }
 
 namespace {
@@ -615,6 +731,17 @@ std::optional<ParsedBigInt> ParsedBigInt::parsedBigIntFromStringIntegerLiteral(
           StringIntegerLiteralParser<llvh::ArrayRef<char16_t>>>(
           input, outError)) {
     ret = ParsedBigInt(*maybeBytes);
+  }
+
+  return ret;
+}
+
+std::optional<ParsedBigInt> ParsedBigInt::parsedBigIntFromNumericValue(
+    llvh::StringRef input,
+    std::string *outError) {
+  std::optional<ParsedBigInt> ret;
+  if (auto maybeBytes = parsedBigIntFrom<NumericValueParser>(input, outError)) {
+    ret = ParsedBigInt(std::move(*maybeBytes));
   }
 
   return ret;
