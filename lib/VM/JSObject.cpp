@@ -2117,6 +2117,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // If not storing a property with an array index name, or if we don't have
   // indexed storage, just pass to the named routine.
   if (!arrayIndex) {
+    // TODO(T125334872): properly handle the case when self is a TypedArray.
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
     return defineOwnPropertyInternal(
         selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
@@ -2291,6 +2292,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
     return true;
 
   // We are adding a new property with an index-like name.
+  // TODO(T125334872): properly handle the case when self is a TypedArray.
   LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
   return addOwnProperty(
       selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
