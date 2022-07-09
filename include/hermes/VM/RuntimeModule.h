@@ -25,6 +25,7 @@ namespace vm {
 class CodeBlock;
 class Runtime;
 
+using BigIntID = uint32_t;
 using StringID = uint32_t;
 
 namespace detail {
@@ -254,6 +255,9 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// \return the UTF-8 encoded string represented by stringID.
   /// Does no JS heap allocation.
   std::string getStringFromStringID(StringID stringID);
+
+  /// \return the bigint bytes for a given \p bigIntId.
+  llvh::ArrayRef<uint8_t> getBigIntBytesFromBigIntId(BigIntID bigIntId) const;
 
   /// \return the RegExp bytecode for a given regexp ID.
   llvh::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(

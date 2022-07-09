@@ -137,6 +137,7 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  Source hash: " << hashAsString(bcProvider_->getSourceHash()) << "\n";
   OS << "  Function count: " << bcProvider_->getFunctionCount() << "\n";
   OS << "  String count: " << bcProvider_->getStringCount() << "\n";
+  OS << "  BigInt count: " << bcProvider_->getBigIntCount() << "\n";
   OS << "  String Kind Entry count: " << bcProvider_->getStringKinds().size()
      << "\n";
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
@@ -903,6 +904,10 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getObjectValueBuffer().begin(),
       bcProvider->getObjectValueBuffer().end());
   addSection(
+      "BigInt storage",
+      bcProvider->getBigIntStorage().begin(),
+      bcProvider->getBigIntStorage().end());
+  addSection(
       "Regular expression table",
       bcProvider->getRegExpTable().begin(),
       bcProvider->getRegExpTable().end());
@@ -1201,6 +1206,7 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
   disassembleStringStorage(OS);
   disassembleArrayBuffer(OS);
   disassembleObjectBuffer(OS);
+  disassembleBigIntStorage(OS);
   disassembleCJSModuleTable(OS);
   disassembleFunctionSourceTable(OS);
 

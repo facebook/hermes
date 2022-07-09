@@ -10,6 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeVersion.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
@@ -78,6 +79,8 @@ struct BytecodeFileHeader {
   uint32_t stringCount; // Number of strings in the string table.
   uint32_t overflowStringCount; // Number of strings in the overflow table.
   uint32_t stringStorageSize; // Bytes in the blob of string contents.
+  uint32_t bigIntCount; // number of bigints in the bigint table.
+  uint32_t bigIntStorageSize; // Bytes in the bigint table.
   uint32_t regExpCount;
   uint32_t regExpStorageSize;
   uint32_t arrayBufferSize;
@@ -91,7 +94,7 @@ struct BytecodeFileHeader {
 
   // Insert any padding to make function headers that follow this file header
   // less likely to cross cache lines.
-  uint8_t padding[27];
+  uint8_t padding[19];
 
   BytecodeFileHeader(
       uint64_t magic,
@@ -105,6 +108,8 @@ struct BytecodeFileHeader {
       uint32_t stringCount,
       uint32_t overflowStringCount,
       uint32_t stringStorageSize,
+      uint32_t bigIntCount,
+      uint32_t bigIntStorageSize,
       uint32_t regExpCount,
       uint32_t regExpStorageSize,
       uint32_t arrayBufferSize,
@@ -126,6 +131,8 @@ struct BytecodeFileHeader {
         stringCount(stringCount),
         overflowStringCount(overflowStringCount),
         stringStorageSize(stringStorageSize),
+        bigIntCount(bigIntCount),
+        bigIntStorageSize(bigIntStorageSize),
         regExpCount(regExpCount),
         regExpStorageSize(regExpStorageSize),
         arrayBufferSize(arrayBufferSize),
@@ -403,6 +410,8 @@ void visitBytecodeSegmentsInOrder(Visitor &visitor) {
   visitor.visitArrayBuffer();
   visitor.visitObjectKeyBuffer();
   visitor.visitObjectValueBuffer();
+  visitor.visitBigIntTable();
+  visitor.visitBigIntStorage();
   visitor.visitRegExpTable();
   visitor.visitRegExpStorage();
   visitor.visitCJSModuleTable();
@@ -454,6 +463,12 @@ struct BytecodeFileFields {
 
   /// Buffer for object values.
   Array<uint8_t> objValueBuffer;
+
+  /// List of bigint literals.
+  Array<bigint::BigIntTableEntry> bigIntTable;
+
+  /// Storage for bigint bytecode.
+  Array<uint8_t> bigIntStorage;
 
   /// List of regexp literals.
   Array<RegExpTableEntry> regExpTable;

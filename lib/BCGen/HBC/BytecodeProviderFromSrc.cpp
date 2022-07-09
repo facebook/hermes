@@ -54,6 +54,9 @@ BCProviderFromSrc::BCProviderFromSrc(
   stringCount_ = module_->getStringTable().size();
   stringStorage_ = module_->getStringStorage();
 
+  bigIntStorage_ = module_->getBigIntStorage();
+  bigIntTable_ = module_->getBigIntTable();
+
   regExpStorage_ = module_->getRegExpStorage();
   regExpTable_ = module_->getRegExpTable();
 

@@ -278,6 +278,16 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
       f.objValueBuffer =
           castArrayRef<unsigned char>(buf, h->objValueBufferSize, end);
     }
+    void visitBigIntTable() {
+      align(buf);
+      f.bigIntTable =
+          castArrayRef<bigint::BigIntTableEntry>(buf, h->bigIntCount, end);
+    }
+    void visitBigIntStorage() {
+      align(buf);
+      f.bigIntStorage =
+          castArrayRef<unsigned char>(buf, h->bigIntStorageSize, end);
+    }
     void visitRegExpTable() {
       align(buf);
       f.regExpTable = castArrayRef<RegExpTableEntry>(buf, h->regExpCount, end);
@@ -565,6 +575,8 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   arrayBuffer_ = fields.arrayBuffer;
   objKeyBuffer_ = fields.objKeyBuffer;
   objValueBuffer_ = fields.objValueBuffer;
+  bigIntTable_ = fields.bigIntTable;
+  bigIntStorage_ = fields.bigIntStorage;
   regExpTable_ = fields.regExpTable;
   regExpStorage_ = fields.regExpStorage;
   segmentID_ = fileHeader->segmentID;

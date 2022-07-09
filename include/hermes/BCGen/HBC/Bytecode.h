@@ -16,6 +16,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
@@ -168,6 +169,13 @@ class BytecodeModule {
   /// The global string storage. A sequence of bytes.
   std::vector<unsigned char> stringStorage_;
 
+  /// The bigint digit table. This is a list of pairs of (offset, lengths)
+  /// into bigIntStorage_.
+  std::vector<bigint::BigIntTableEntry> bigIntTable_;
+
+  /// The buffer with bigint literal bytes.
+  std::vector<uint8_t> bigIntStorage_;
+
   /// The regexp bytecode buffer.
   std::vector<unsigned char> regExpStorage_;
 
@@ -220,6 +228,8 @@ class BytecodeModule {
       std::vector<uint32_t> &&identifierHashes,
       std::vector<StringTableEntry> &&stringTable,
       std::vector<unsigned char> &&stringStorage,
+      std::vector<bigint::BigIntTableEntry> &&bigIntTable,
+      std::vector<uint8_t> &&bigIntStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
       std::vector<unsigned char> &&regExpStorage,
       uint32_t globalFunctionIndex,
@@ -236,6 +246,8 @@ class BytecodeModule {
         identifierHashes_(std::move(identifierHashes)),
         stringTable_(std::move(stringTable)),
         stringStorage_(std::move(stringStorage)),
+        bigIntTable_(std::move(bigIntTable)),
+        bigIntStorage_(std::move(bigIntStorage)),
         regExpStorage_(std::move(regExpStorage)),
         regExpTable_(std::move(regExpTable)),
         arrayBuffer_(std::move(arrayBuffer)),
@@ -301,6 +313,14 @@ class BytecodeModule {
 
   StringTableEntry::StringStorageRefTy getStringStorage() const {
     return stringStorage_;
+  }
+
+  llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
+    return bigIntTable_;
+  }
+
+  llvh::ArrayRef<uint8_t> getBigIntStorage() const {
+    return bigIntStorage_;
   }
 
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {

@@ -336,6 +336,14 @@ std::string RuntimeModule::getStringFromStringID(StringID stringID) {
   }
 }
 
+llvh::ArrayRef<uint8_t> RuntimeModule::getBigIntBytesFromBigIntId(
+    BigIntID bigIntId) const {
+  assert(
+      bigIntId < bcProvider_->getBigIntTable().size() && "Invalid bigint id");
+  bigint::BigIntTableEntry entry = bcProvider_->getBigIntTable()[bigIntId];
+  return bcProvider_->getBigIntStorage().slice(entry.offset, entry.length);
+}
+
 llvh::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
     uint32_t regExpId) const {
   assert(

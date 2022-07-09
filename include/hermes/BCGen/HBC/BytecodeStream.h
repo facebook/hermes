@@ -119,6 +119,8 @@ class BytecodeSerializer {
   void visitArrayBuffer();
   void visitObjectKeyBuffer();
   void visitObjectValueBuffer();
+  void visitBigIntTable();
+  void visitBigIntStorage();
   void visitRegExpTable();
   void visitRegExpStorage();
   void visitCJSModuleTable();

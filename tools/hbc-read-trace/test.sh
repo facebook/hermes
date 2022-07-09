@@ -26,6 +26,9 @@ EOF
 
 # The test trace of page accesses (states that we saw one access, of the 0'th
 # page and it took 42 microseconds).
+# The output test.log is a tsv file, and therefore there are tabs in the string
+# below, thus
+# @lint-ignore-every TXT2
 cat <<EOF > "$TMP/test.log"
 Page	Time (us)
 0	42
@@ -43,6 +46,7 @@ string-storage
 array-buffer
 object-key-buffer
 object-value-buffer
+bigint-storage
 regular-expression-table
 regular-expression-storage
 commonjs-module-table

@@ -28,6 +28,8 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       BM.getStringTableSize(),
       overflowStringEntryCount_,
       BM.getStringStorageSize(),
+      static_cast<uint32_t>(BM.getBigIntTable().size()),
+      static_cast<uint32_t>(BM.getBigIntStorage().size()),
       static_cast<uint32_t>(BM.getRegExpTable().size()),
       static_cast<uint32_t>(BM.getRegExpStorage().size()),
       BM.getArrayBufferSize(),
@@ -302,6 +304,16 @@ void BytecodeSerializer::visitObjectValueBuffer() {
   pad(BYTECODE_ALIGNMENT);
   auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
   writeBinaryArray(objectKeyValBufferPair.second);
+}
+
+void BytecodeSerializer::visitBigIntTable() {
+  pad(BYTECODE_ALIGNMENT);
+  writeBinaryArray(bytecodeModule_->getBigIntTable());
+}
+
+void BytecodeSerializer::visitBigIntStorage() {
+  pad(BYTECODE_ALIGNMENT);
+  writeBinaryArray(bytecodeModule_->getBigIntStorage());
 }
 
 void BytecodeSerializer::visitRegExpTable() {

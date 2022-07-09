@@ -115,6 +115,9 @@ class BCProviderBase {
   llvh::ArrayRef<unsigned char> objKeyBuffer_{};
   llvh::ArrayRef<unsigned char> objValueBuffer_{};
 
+  llvh::ArrayRef<bigint::BigIntTableEntry> bigIntTable_{};
+  llvh::ArrayRef<unsigned char> bigIntStorage_{};
+
   llvh::ArrayRef<RegExpTableEntry> regExpTable_{};
   llvh::ArrayRef<unsigned char> regExpStorage_{};
 
@@ -159,9 +162,8 @@ class BCProviderBase {
   uint32_t getStringCount() const {
     return stringCount_;
   }
-  // N.B. skeleton method needed for hbcdump changes to compile.
   uint32_t getBigIntCount() const {
-    return 0;
+    return bigIntTable_.size();
   }
   llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
@@ -181,13 +183,11 @@ class BCProviderBase {
   llvh::ArrayRef<unsigned char> getObjectValueBuffer() const {
     return objValueBuffer_;
   }
-  // N.B. skeleton method needed for hbcdump changes to compile.
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
-    return {};
+    return bigIntTable_;
   }
-  // N.B. skeleton method needed for hbcdump changes to compile.
   llvh::ArrayRef<unsigned char> getBigIntStorage() const {
-    return {};
+    return bigIntStorage_;
   }
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
     return regExpTable_;

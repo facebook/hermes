@@ -20,6 +20,7 @@
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/RegExpSerialization.h"
@@ -130,6 +131,10 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   unsigned getFunctionID(Function *F);
 
+  /// \return the ID in the bytecode's bigint table for a given literal string
+  /// \p value.
+  unsigned getBigIntID(LiteralBigInt *value) const;
+
   /// \return the ID in the bytecode's string table for a given literal string
   /// \p value.
   unsigned getStringID(LiteralString *value) const;
@@ -137,6 +142,10 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// \return the ID in the bytecode's string table for a given literal string
   /// \p value, assuming it has been registered for us as an identifier.
   unsigned getIdentifierID(LiteralString *value) const;
+
+  /// Adds a parsed bigint to the module table.
+  /// \return the index of the bigint in the table.
+  uint32_t addBigInt(bigint::ParsedBigInt bigint);
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
@@ -274,6 +283,9 @@ class BytecodeModuleGenerator {
   /// module.
   StringLiteralTable stringTable_{};
 
+  /// A module-wide parsed bigint table.
+  bigint::UniquingBigIntTable bigIntTable_{};
+
   /// A module-wide compiled regexp table.
   UniquingRegExpTable regExpTable_;
 
@@ -351,6 +363,11 @@ class BytecodeModuleGenerator {
     entryPointIndex_ = index;
   }
 
+  /// \returns the index of the bigint in this module's bigint table if it
+  /// exists.  If the bigint does not exist will trigger an assertion failure
+  /// if assertions are enabled.
+  unsigned getBigIntID(StringRef str) const;
+
   /// \returns the index of the string in this module's string table if it
   /// exists.  If the string does not exist will trigger an assertion failure
   /// if assertions are enabled.
@@ -367,6 +384,10 @@ class BytecodeModuleGenerator {
   /// must be added beforehand.  This can only be called once on a given
   /// generator.
   void initializeStringTable(StringLiteralTable stringTable);
+
+  /// Adds a parsed bigint to the module table.
+  /// \return the index of the bigint in the table.
+  uint32_t addBigInt(bigint::ParsedBigInt bigint);
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.

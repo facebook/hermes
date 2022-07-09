@@ -579,6 +579,12 @@ DEFINE_OPCODE_2(LoadConstInt, Reg8, Imm32)
 /// Load a constant double value.
 DEFINE_OPCODE_2(LoadConstDouble, Reg8, Double)
 
+/// Load a constant BigInt value by bigint table index.
+DEFINE_OPCODE_2(LoadConstBigInt, Reg8, UInt16)
+DEFINE_OPCODE_2(LoadConstBigIntLongIndex, Reg8, UInt32)
+OPERAND_BIGINT_ID(LoadConstBigInt, 2)
+OPERAND_BIGINT_ID(LoadConstBigIntLongIndex, 2)
+
 /// Load a constant string value by string table index.
 DEFINE_OPCODE_2(LoadConstString, Reg8, UInt16)
 DEFINE_OPCODE_2(LoadConstStringLongIndex, Reg8, UInt32)
@@ -609,6 +615,9 @@ DEFINE_OPCODE_1(LoadThisNS, Reg8)
 /// Convert a value to a number.
 /// Arg1 = Arg2 - 0
 DEFINE_OPCODE_2(ToNumber, Reg8, Reg8)
+/// Convert a value to a numberic.
+/// Arg1 = ToNumeric(Arg2)
+DEFINE_OPCODE_2(ToNumeric, Reg8, Reg8)
 /// Convert a value to a 32-bit signed integer.
 /// Arg1 = Arg2 | 0
 DEFINE_OPCODE_2(ToInt32, Reg8, Reg8)

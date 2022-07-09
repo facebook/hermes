@@ -26,6 +26,13 @@ unsigned BytecodeFunctionGenerator::getIdentifierID(
   return BMGen_.getIdentifierID(value->getValue().str());
 }
 
+uint32_t BytecodeFunctionGenerator::addBigInt(bigint::ParsedBigInt bigint) {
+  assert(
+      !complete_ &&
+      "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+  return BMGen_.addBigInt(std::move(bigint));
+}
+
 uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp regexp) {
   assert(
       !complete_ &&
@@ -227,6 +234,10 @@ void BytecodeModuleGenerator::initializeStringTable(
   stringTable_ = std::move(stringTable);
 }
 
+uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
+  return bigIntTable_.addBigInt(std::move(bigint));
+}
+
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {
   return regExpTable_.addRegExp(std::move(regexp));
 }
@@ -280,6 +291,8 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       std::move(hashes),
       stringTable_.acquireStringTable(),
       stringTable_.acquireStringStorage(),
+      bigIntTable_.getEntryList(),
+      bigIntTable_.getDigitsBuffer(),
       regExpTable_.getEntryList(),
       regExpTable_.getBytecodeBuffer(),
       entryPointIndex_,

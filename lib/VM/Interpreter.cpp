@@ -13,6 +13,7 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/SlowAssert.h"
 #include "hermes/Support/Statistic.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
@@ -2675,6 +2676,21 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(ToNumeric) {
+        if (LLVM_LIKELY(O2REG(ToNumeric).isNumber())) {
+          O1REG(ToNumeric) = O2REG(ToNumeric);
+          ip = NEXTINST(ToNumeric);
+        } else {
+          CAPTURE_IP(res = toNumeric_RJS(runtime, Handle<>(&O2REG(ToNumeric))));
+          if (res == ExecutionStatus::EXCEPTION)
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          O1REG(ToNumeric) = res.getValue();
+          ip = NEXTINST(ToNumeric);
+        }
+        DISPATCH;
+      }
+
       CASE(ToInt32) {
         CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32))));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
@@ -3355,6 +3371,22 @@ tailCall:
       LOAD_CONST(
           LoadConstDouble,
           HermesValue::encodeDoubleValue(ip->iLoadConstDouble.op2));
+      // LoadConstBigInt will always allocate a new (heap) object (unlike, e.g.,
+      // LoadConstString). This could become an issue for code that uses lots of
+      // BigInt literals in loops, in which case the VM may need to cache the
+      // objects.
+      LOAD_CONST_CAPTURE_IP(
+          LoadConstBigInt,
+          runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
+              curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
+                  ip->iLoadConstBigInt.op2),
+              runtime)));
+      LOAD_CONST_CAPTURE_IP(
+          LoadConstBigIntLongIndex,
+          runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
+              curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
+                  ip->iLoadConstBigIntLongIndex.op2),
+              runtime)));
       LOAD_CONST_CAPTURE_IP(
           LoadConstString,
           HermesValue::encodeStringValue(
