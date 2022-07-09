@@ -317,6 +317,12 @@ AsNumberInst *IRBuilder::createAsNumberInst(Value *val) {
   return ANI;
 }
 
+AsNumericInst *IRBuilder::createAsNumericInst(Value *val) {
+  auto *ANI = new AsNumericInst(val);
+  insert(ANI);
+  return ANI;
+}
+
 AsInt32Inst *IRBuilder::createAsInt32Inst(Value *val) {
   auto *AII = new AsInt32Inst(val);
   insert(AII);

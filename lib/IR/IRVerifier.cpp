@@ -339,6 +339,15 @@ void Verifier::visitAsNumberInst(const AsNumberInst &Inst) {
       "AsNumberInst must return a number type");
 }
 
+void Verifier::visitAsNumericInst(const AsNumericInst &Inst) {
+  Assert(
+      !isTerminator(&Inst),
+      "Non-terminator cannot be the last instruction of a basic block");
+  Assert(
+      Inst.getType() == Type::createNumeric(),
+      "AsNumericInst must return a numeric type");
+}
+
 void Verifier::visitAsInt32Inst(const AsInt32Inst &Inst) {
   Assert(
       !isTerminator(&Inst),

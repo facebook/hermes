@@ -322,6 +322,12 @@ void HBCISel::generateAsNumberInst(AsNumberInst *Inst, BasicBlock *next) {
   BCFGen_->emitToNumber(dst, src);
 }
 
+void HBCISel::generateAsNumericInst(AsNumericInst *Inst, BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSingleOperand());
+  BCFGen_->emitToNumeric(dst, src);
+}
+
 void HBCISel::generateAsInt32Inst(AsInt32Inst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());

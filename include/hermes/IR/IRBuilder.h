@@ -275,6 +275,8 @@ class IRBuilder {
 
   AsNumberInst *createAsNumberInst(Value *val);
 
+  AsNumericInst *createAsNumericInst(Value *val);
+
   AsInt32Inst *createAsInt32Inst(Value *val);
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
