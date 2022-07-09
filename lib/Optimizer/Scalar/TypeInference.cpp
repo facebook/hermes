@@ -345,18 +345,15 @@ static bool inferBinaryInst(BinaryOperatorInst *BOI) {
     case BinaryOperatorInst::OpKind::MultiplyKind:
     // https://tc39.es/ecma262/#sec-subtraction-operator-minus
     case BinaryOperatorInst::OpKind::SubtractKind:
+    // https://tc39.es/ecma262/#sec-left-shift-operator
+    case BinaryOperatorInst::OpKind::LeftShiftKind:
+    // https://tc39.es/ecma262/#sec-signed-right-shift-operator
+    case BinaryOperatorInst::OpKind::RightShiftKind:
       return inferBinaryArith(BOI);
 
     case BinaryOperatorInst::OpKind::ModuloKind:
       return inferBinaryArith(BOI, Type::createInt32());
 
-    // These arithmetic operations always return a number:
-    // https://es5.github.io/#x11.7.1
-    case BinaryOperatorInst::OpKind::LeftShiftKind:
-    // https://es5.github.io/#x11.7.2
-    case BinaryOperatorInst::OpKind::RightShiftKind:
-      BOI->setType(Type::createInt32());
-      return true;
     // https://es5.github.io/#x11.7.3
     case BinaryOperatorInst::OpKind::UnsignedRightShiftKind:
       BOI->setType(Type::createUint32());

@@ -224,14 +224,18 @@ CallResult<HermesValue> BigIntPrimitive::leftShift(
     Handle<BigIntPrimitive> lhs,
     Handle<BigIntPrimitive> rhs,
     Runtime &runtime) {
-  return HermesValue::encodeUndefinedValue();
+  const uint32_t numDigits = bigint::leftShiftResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::leftShift, lhs, rhs, numDigits, runtime);
 }
 
 CallResult<HermesValue> BigIntPrimitive::signedRightShift(
     Handle<BigIntPrimitive> lhs,
     Handle<BigIntPrimitive> rhs,
     Runtime &runtime) {
-  return HermesValue::encodeUndefinedValue();
+  const uint32_t numDigits = bigint::signedRightShiftResultSize(
+      lhs->getImmutableRef(runtime), rhs->getImmutableRef(runtime));
+  return binaryOp(&bigint::signedRightShift, lhs, rhs, numDigits, runtime);
 }
 
 CallResult<HermesValue> BigIntPrimitive::unsignedRightShift(

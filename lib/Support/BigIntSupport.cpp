@@ -1474,6 +1474,15 @@ OperationStatus exponentiateSlowPath(
 }
 } // namespace
 
+// The maximum BigInt size in bits. This is defined here and not the header file
+// to prevent more bit-related definitions in the API -- which mostly operates
+// in terms of Digits, and sometimes, bytes.
+static constexpr BigIntDigitType BigIntMaxSizeInBits =
+    BigIntMaxSizeInDigits * BigIntDigitSizeInBits;
+static_assert(
+    static_cast<SignedBigIntDigitType>(BigIntMaxSizeInBits) > 0,
+    "BigIntMaxSizeInBits overflow");
+
 OperationStatus exponentiate(
     MutableBigIntRef dst,
     ImmutableBigIntRef lhs,
@@ -1485,8 +1494,7 @@ OperationStatus exponentiate(
   // |rhs| is limited to the BigInt's maximum number of digits when |lhs| >= 2.
   // Therefore, to simplify the code, a copy of rhs' first digit is made on a
   // scalar that's large enough to fit said max exponent.
-  static constexpr auto maxExponent =
-      BigIntMaxSizeInDigits * BigIntDigitSizeInBits;
+  static constexpr auto maxExponent = BigIntMaxSizeInBits;
   const uint32_t exponent = rhs.numDigits ? rhs.digits[0] : 0;
   // sanity-check: ensure the max bigint exponent when |lhs| >= 2 first
   // exponent.
@@ -1550,6 +1558,191 @@ OperationStatus exponentiate(
 
   ensureCanonicalResult(dst);
   return OperationStatus::RETURNED;
+}
+
+namespace {
+using IsRightShiftFn = bool (*)(ImmutableBigIntRef);
+using GetShiftAmntFn = uint32_t (*)(ImmutableBigIntRef);
+
+/// Computes the size of \p lhs shiftOp \p shiftAmnt, where
+///
+///   shiftOp = >>, isRightShift
+///   shiftOp = <<, !isRightShift
+enum class ShiftOpIs { Left, Right };
+
+static uint32_t shiftResultSizeImpl(
+    ShiftOpIs shiftOp,
+    ImmutableBigIntRef lhs,
+    uint32_t shiftAmnt) {
+  uint32_t extraDigits = 0;
+  if (shiftOp == ShiftOpIs::Left) {
+    // left shifts will preppend zero digits to the bigint, thus the result
+    // should have extra bits (when compared to lhs)
+    extraDigits = numDigitsForSizeInBits(shiftAmnt);
+  }
+
+  const uint32_t result = lhs.numDigits + extraDigits;
+  assert(extraDigits <= result && "too many digits in result");
+  return result;
+}
+
+static constexpr SignedBigIntDigitType MaxPositiveShiftAmountInBits =
+    BigIntMaxSizeInBits;
+
+static constexpr SignedBigIntDigitType MinNegativeShiftAmountInBits =
+    -static_cast<SignedBigIntDigitType>(BigIntMaxSizeInBits);
+
+// If any of the following static_asserts ever fail then getShiftAmountAndSign
+// should return uint64_t.
+static_assert(
+    1 + MaxPositiveShiftAmountInBits < std::numeric_limits<uint32_t>::max(),
+    "non negative shift amounts don't fit uint32_t");
+static_assert(
+    1 + MinNegativeShiftAmountInBits > std::numeric_limits<int32_t>::min(),
+    "non negative shift amounts don't fit int32_t");
+
+/// Returns the shift amount that \p shiftAmnt specifies, and a boolean
+/// specifying whether \p shiftAmnt was negative or not. This effecitvely limits
+/// shift amount to a single BigIntDigit, which shouldn't be a problem as long
+/// as BigIntDigitType can represent
+/// BigIntMaxSizeInDigits * BigIntDigitTypeSizeInBits + 1 -- which is ensured by
+/// the static_asserts above.
+static std::tuple<uint32_t, bool> getShiftAmountAndSign(
+    ImmutableBigIntRef shiftAmnt) {
+  // reallyLargeShiftAmount represents a shift amount that's either going to
+  // produce a 0 result (in case of a signed right shift), or an impossibly
+  // large one (i.e., one with over BigIntMaxSizeInDigits). It is used as the
+  // return value when shiftAmnt is outsize
+  // [MinNegativeShiftAmountInBits, MaxPositiveShiftAmountInBits].
+  const BigIntDigitType reallyLargeShiftAmount =
+      numDigitsForSizeInBytes(MaxPositiveShiftAmountInBits + 1);
+
+  const bool shiftAmntIsNeg = isNegative(shiftAmnt);
+
+  if (compare(shiftAmnt, MinNegativeShiftAmountInBits) < 0 ||
+      compare(shiftAmnt, MaxPositiveShiftAmountInBits) > 0) {
+    // shiftAmnt is outside of the
+    // [MinNegativeShiftAmountInBits, MaxPositiveShiftAmountInBits]; thus return
+    // a really large shift amount.
+    return std::make_tuple(reallyLargeShiftAmount, shiftAmntIsNeg);
+  }
+
+  const SignedBigIntDigitType sa = (shiftAmnt.numDigits == 0)
+      ? 0ll
+      : static_cast<SignedBigIntDigitType>(shiftAmnt.digits[0]);
+  assert(
+      shiftAmnt.digits[0] != std::numeric_limits<BigIntDigitType>::min() &&
+      "shiftAmnt is MIN_INT, hence -signedShiftAmnt is MIN_INT");
+  // Always return a positive result -- thus negate sa if shiftAmnt is negative.
+  return std::make_tuple(shiftAmntIsNeg ? -sa : sa, shiftAmntIsNeg);
+}
+
+} // namespace
+
+uint32_t leftShiftResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
+  const auto &[shiftAmnt, isNegative] = getShiftAmountAndSign(rhs);
+  const auto shiftOp = isNegative ? ShiftOpIs::Right : ShiftOpIs::Left;
+  return shiftResultSizeImpl(shiftOp, lhs, shiftAmnt);
+}
+
+uint32_t signedRightShiftResultSize(
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  const auto &[shiftAmnt, isNegative] = getShiftAmountAndSign(rhs);
+  const auto shiftOp = isNegative ? ShiftOpIs::Left : ShiftOpIs::Right;
+  return shiftResultSizeImpl(shiftOp, lhs, shiftAmnt);
+}
+
+namespace {
+static std::tuple<uint32_t, ShiftOpIs, uint32_t>
+getShiftAmountSignAndResultSize(
+    ShiftOpIs shiftOp,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  const auto &[shiftAmnt, isNegative] = getShiftAmountAndSign(rhs);
+  const auto actualShiftOp = (shiftOp == ShiftOpIs::Left) == isNegative
+      ? ShiftOpIs::Right
+      : ShiftOpIs::Left;
+
+  return std::make_tuple(
+      shiftAmnt,
+      actualShiftOp,
+      shiftResultSizeImpl(actualShiftOp, lhs, shiftAmnt));
+}
+
+/// An adapter for using APInt's usigned right shift as a signed right shift.
+/// This is accomplished by **complementing** digits if it is a negative number
+/// before and after tcShiftRight. The idea is that, for negative numbers
+///
+/// ~(~digits >>> shiftAmnt)
+///
+/// This works because the unsigned right shift operation shifts 0 in. For
+/// example,
+///
+/// -4 >> 1 = 0b11111100 >> 1 = ~(~0b11111100 >> 1) = ~(0b00000011 >> 1) =
+///         = ~(0b00000001) = 0b11111110 = -2 .
+///
+/// Intuitively, by using the negative number's complement, the 0 shifted in by
+/// the >>> operator are the "complemented" sign. Curiously, using negation
+/// does not work for any signed right shift's resultig in -1, e.g.,
+///
+/// -8 >> 1024 = - (8 >> 1024) = 0
+void signedRightShiftAdapter(
+    BigIntDigitType *digits,
+    uint32_t numDigits,
+    uint32_t shiftAmnt) {
+  const bool dstNegative = isNegative(ImmutableBigIntRef{digits, numDigits});
+
+  if (dstNegative) {
+    llvh::APInt::tcComplement(digits, numDigits);
+  }
+
+  llvh::APInt::tcShiftRight(digits, numDigits, shiftAmnt);
+
+  if (dstNegative) {
+    llvh::APInt::tcComplement(digits, numDigits);
+  }
+}
+
+/// A generic \p dst = \p lhs shiftOp \p shiftAmnt
+OperationStatus shiftImpl(
+    ShiftOpIs shiftOp,
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  auto [shiftAmnt, actualShiftOp, numDigits] =
+      getShiftAmountSignAndResultSize(shiftOp, lhs, rhs);
+  auto op = (actualShiftOp == ShiftOpIs::Right) ? signedRightShiftAdapter
+                                                : llvh::APInt::tcShiftLeft;
+
+  if (dst.numDigits < numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
+  }
+
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, lhs);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return res;
+  }
+
+  (*op)(dst.digits, dst.numDigits, shiftAmnt);
+
+  ensureCanonicalResult(dst);
+  return OperationStatus::RETURNED;
+}
+} // namespace
+
+OperationStatus leftShift(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  return shiftImpl(ShiftOpIs::Left, dst, lhs, rhs);
+}
+
+OperationStatus signedRightShift(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs) {
+  return shiftImpl(ShiftOpIs::Right, dst, lhs, rhs);
 }
 
 } // namespace bigint

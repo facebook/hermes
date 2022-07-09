@@ -315,6 +315,24 @@ OperationStatus bitwiseXOR(
     ImmutableBigIntRef lhs,
     ImmutableBigIntRef rhs);
 
+/// \return number of digits needed to perform \p lhs << \p rhs
+uint32_t leftShiftResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return \p dst = \p lhs << \p rhs
+OperationStatus
+leftShift(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
+
+/// \return number of digits needed to perform \p lhs >> \p rhs
+uint32_t signedRightShiftResultSize(
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs);
+
+/// \return dst = \p lhs >> \p rhs
+OperationStatus signedRightShift(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef lhs,
+    ImmutableBigIntRef rhs);
+
 } // namespace bigint
 } // namespace hermes
 
