@@ -787,13 +787,15 @@ TEST_F(StackTracesTreeTest, WithSourceMap) {
 
   ASSERT_TRUE(runWithSourceMap(
       R"#(
-function bar() {
-  return new Object();
-};
-function foo() {
-  return bar();
-};
-foo();
+(function (){
+  function bar() {
+    return new Object();
+  };
+  function foo() {
+    return bar();
+  };
+  return foo();
+})();
       )#",
       sourceMapGen));
 
@@ -817,36 +819,65 @@ foo();
         {
           "name": "global",
           "scriptName": "JavaScript",
-          "line": 8,
-          "col": 4,
+          "line": 10,
+          "col": 3,
           "children": [
             {
-              "name": "foo",
+              "name": "(anonymous)",
               "scriptName": "JavaScript",
-              "line": 6,
+              "line": 9,
               "col": 13,
               "children": [
                 {
-                  "name": "bar",
+                  "name": "foo",
                   "scriptName": "JavaScript",
-                  "line": 3,
-                  "col": 20,
-                  "children": []
+                  "line": 7,
+                  "col": 15,
+                  "children": [
+                    {
+                      "name": "bar",
+                      "scriptName": "JavaScript",
+                      "line": 4,
+                      "col": 22,
+                      "children": []
+                    },
+                    {
+                      "name": "bar",
+                      "scriptName": "JavaScript",
+                      "line": 3,
+                      "col": 3,
+                      "children": []
+                    }
+                  ]
                 },
                 {
-                  "name": "bar",
+                  "name": "foo",
                   "scriptName": "JavaScript",
-                  "line": 2,
-                  "col": 1,
+                  "line": 6,
+                  "col": 3,
                   "children": []
                 }
               ]
             },
             {
-              "name": "foo",
+              "name": "(anonymous)",
               "scriptName": "JavaScript",
-              "line": 5,
-              "col": 1,
+              "line": 2,
+              "col": 2,
+              "children": []
+            },
+            {
+              "name": "(anonymous)",
+              "scriptName": "JavaScript",
+              "line": 2,
+              "col": 2,
+              "children": []
+            },
+            {
+              "name": "(anonymous)",
+              "scriptName": "JavaScript",
+              "line": 2,
+              "col": 2,
               "children": []
             }
           ]
@@ -855,28 +886,7 @@ foo();
           "name": "global",
           "scriptName": "JavaScript",
           "line": 2,
-          "col": 1,
-          "children": []
-        },
-        {
-          "name": "global",
-          "scriptName": "JavaScript",
-          "line": 2,
-          "col": 1,
-          "children": []
-        },
-        {
-          "name": "global",
-          "scriptName": "JavaScript",
-          "line": 2,
-          "col": 1,
-          "children": []
-        },
-        {
-          "name": "global",
-          "scriptName": "JavaScript",
-          "line": 2,
-          "col": 1,
+          "col": 2,
           "children": []
         }
       ]
