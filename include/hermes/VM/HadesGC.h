@@ -491,56 +491,6 @@ class HadesGC final : public GCBase {
     size_t getMemorySize() const;
 
    private:
-    /// \return the index of the bucket in freelistBuckets_ corresponding to
-    /// \p size.
-    /// \post The returned index is less than kNumFreelistBuckets.
-    static uint32_t getFreelistBucket(uint32_t size);
-
-    /// Adds the given region of memory to the free list for this segment.
-    void addCellToFreelist(void *addr, uint32_t sz, size_t segmentIdx);
-
-    /// Adds the given cell to the free list for this segment.
-    /// \pre this->contains(cell) is true.
-    void addCellToFreelist(FreelistCell *cell, size_t segmentIdx);
-
-    /// Remove the cell pointed to by the pointer at \p prevLoc from
-    /// the given \p segmentIdx and \p bucket in the freelist.
-    /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(
-        AssignableCompressedPointer *prevLoc,
-        size_t bucket,
-        size_t segmentIdx);
-
-    /// Remove the first cell from the given \p segmentIdx and \p bucket in the
-    /// freelist.
-    /// \return a pointer to the removed cell.
-    FreelistCell *removeCellFromFreelist(size_t bucket, size_t segmentIdx);
-
-    /// Adds the given region of memory to the free list for the segment that is
-    /// currently being swept. This does not update the Freelist bits, those
-    /// should all be updated in a single pass at the end of sweeping.
-    void addCellToFreelistFromSweep(
-        char *freeRangeStart,
-        char *freeRangeEnd,
-        bool setHead);
-
-    HadesGC &gc_;
-
-    /// Use a std::deque instead of a std::vector so that references into it
-    /// remain valid across a push_back.
-    std::deque<HeapSegment> segments_;
-
-    /// See \c targetSizeBytes() above.
-    ExponentialMovingAverage targetSizeBytes_{0, 0};
-
-    /// This is the sum of all bytes currently allocated in the heap, excluding
-    /// bump-allocated segments. Use \c allocatedBytes() to include
-    /// bump-allocated segments.
-    uint64_t allocatedBytes_{0};
-
-    /// The amount of bytes of external memory credited to objects in the OG.
-    uint64_t externalBytes_{0};
-
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
     /// In the "large" section, there is a bucket for each power of 2. The
@@ -568,29 +518,107 @@ class HadesGC final : public GCBase {
     static constexpr size_t kNumFreelistBuckets =
         kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
 
+    /// \return the index of the bucket in freelistBuckets_ corresponding to
+    /// \p size.
+    /// \post The returned index is less than kNumFreelistBuckets.
+    static uint32_t getFreelistBucket(uint32_t size);
+
+    /// A node in the segment level freelist for a given bucket. It is inserted
+    /// into a doubly linked list for a given bucket when the segment contains
+    /// free cells for that bucket, and contains a pointer to a linked list of
+    /// those cells.
+    struct SegmentBucket {
+      /// Pointers for maintaining a doubly linked list.
+      SegmentBucket *next{nullptr};
+      SegmentBucket *prev{nullptr};
+
+      /// The head of the freelist of cells for this segment and bucket. Can be
+      /// null if and only if this SegmentBucket is not in a segment level
+      /// freelist.
+      AssignableCompressedPointer head{nullptr};
+
+      /// Adds this SegmentBucket to the freelist starting with \p dummyHead.
+      void addToFreelist(SegmentBucket *dummyHead);
+
+      /// Removes this SegmentBucket from its freelist, by updating the buckets
+      /// before and after it.
+      void removeFromFreelist() const;
+    };
+
+    /// Array containing the nodes for each bucket in a given segment.
+    using SegmentBuckets = std::array<SegmentBucket, kNumFreelistBuckets>;
+
+    /// Adds the given region of memory to the free list held in \p segBucket.
+    void addCellToFreelist(void *addr, uint32_t sz, SegmentBucket *segBucket);
+
+    /// Adds the given cell to the free list held in \p segBucket.
+    /// \pre this->contains(cell) is true.
+    void addCellToFreelist(FreelistCell *cell, SegmentBucket *segBucket);
+
+    /// Remove the cell pointed to by the pointer at \p prevLoc from
+    /// the given \p segBucket and \p bucket in the freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(
+        AssignableCompressedPointer *prevLoc,
+        size_t bucket,
+        SegmentBucket *segBucket);
+
+    /// Remove the first cell from the given \p segBucket and \p bucket in the
+    /// freelist.
+    /// \return a pointer to the removed cell.
+    FreelistCell *removeCellFromFreelist(
+        size_t bucket,
+        SegmentBucket *segBucket);
+
+    /// Adds the given region of memory to the free list for the segment that is
+    /// currently being swept. \p buckets is a pointer to the array of
+    /// SegmentBuckets for the segment. This does not update the Freelist bits,
+    /// those should all be updated in a single pass at the end of sweeping.
+    void addCellToFreelistFromSweep(
+        char *freeRangeStart,
+        char *freeRangeEnd,
+        SegmentBuckets &segBuckets,
+        bool setHead);
+
+    HadesGC &gc_;
+
+    /// Use a std::deque instead of a std::vector so that references into it
+    /// remain valid across a push_back.
+    std::deque<HeapSegment> segments_;
+
+    /// See \c targetSizeBytes() above.
+    ExponentialMovingAverage targetSizeBytes_{0, 0};
+
+    /// This is the sum of all bytes currently allocated in the heap, excluding
+    /// bump-allocated segments. Use \c allocatedBytes() to include
+    /// bump-allocated segments.
+    uint64_t allocatedBytes_{0};
+
+    /// The amount of bytes of external memory credited to objects in the OG.
+    uint64_t externalBytes_{0};
+
     /// The below data structures should be used as follows.
     /// 1. When looking for a given size, first find the smallest appropriate
     ///    bucket that has any elements at all, by scanning
     ///    freelistBucketBitArray_.
-    /// 2. Once a bucket is identified, find a segment that contains cells for
-    ///    that bucket using freelistBucketSegmentBitArray_.
-    /// 3. Finally, with the given pair of bucket and segment index, obtain the
-    ///    head of the freelist from freelistSegmentsBuckets_.
-
-    /// Maintain a freelist as described above for every segment. Each element
-    /// is the head of a freelist for the given segment + bucket pair.
-    std::vector<std::array<AssignableCompressedPointer, kNumFreelistBuckets>>
-        freelistSegmentsBuckets_;
+    /// 2. Once a bucket is identified, index into buckets_ to obtain the
+    ///    segment level freelist, which is a linked list of SegmentBuckets
+    ///    containing free cells for that bucket.
+    /// 3. Finally, obtain the cell level freelist from the selected
+    ///    SegmentBucket, and select a cell.
 
     /// Keep track of which freelist buckets have valid elements to make search
     /// fast. This includes all segments.
     BitArray<kNumFreelistBuckets> freelistBucketBitArray_;
 
-    /// Keep track of which segments have a valid element in a particular
-    /// bucket. Combined with the above bit array, this allows us to quickly
-    /// index into a freelist bucket.
-    std::array<llvh::SparseBitVector<>, kNumFreelistBuckets>
-        freelistBucketSegmentBitArray_;
+    /// Contains all of the nodes for the segment level freelists. For each
+    /// segment in the OG, this holds kNumFreelistBuckets SegmentBucket nodes.
+    /// These can be added or removed from the freelists pointed to by buckets_
+    /// as needed.
+    std::deque<SegmentBuckets> segmentBuckets_;
+
+    /// Contains dummy heads for the segment level freelists for each bucket.
+    std::array<SegmentBucket, kNumFreelistBuckets> buckets_{};
 
     /// Tracks the current progress of sweeping.
     struct SweepIterator {
