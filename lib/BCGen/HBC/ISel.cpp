@@ -1416,7 +1416,7 @@ void HBCISel::generateHBCLoadConstInst(
     }
     case ValueKind::LiteralBigIntKind: {
       auto parsedBigInt = bigint::ParsedBigInt::parsedBigIntFromNumericValue(
-          cast<LiteralBigInt>(literal)->getValue());
+          cast<LiteralBigInt>(literal)->getValue()->str());
       assert(parsedBigInt && "should be valid");
       auto idx = BCFGen_->addBigInt(std::move(*parsedBigInt));
       if (idx <= UINT16_MAX) {

@@ -761,7 +761,7 @@ LiteralNumber *Module::getLiteralNumber(double value) {
   return New;
 }
 
-LiteralBigInt *Module::getLiteralBigInt(llvh::StringRef value) {
+LiteralBigInt *Module::getLiteralBigInt(UniqueString *value) {
   // Check to see if we've already seen this tuple before.
   llvh::FoldingSetNodeID ID;
 

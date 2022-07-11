@@ -680,20 +680,20 @@ class LiteralBigInt : public Literal, public llvh::FoldingSetNode {
   LiteralBigInt &operator=(const LiteralBigInt &) = delete;
 
   // value holds the BigInt literal string as parsed by the front-end.
-  std::string value;
+  UniqueString *value;
 
  public:
-  explicit LiteralBigInt(std::string &&v)
-      : Literal(ValueKind::LiteralBigIntKind), value(std::move(v)) {
+  explicit LiteralBigInt(UniqueString *v)
+      : Literal(ValueKind::LiteralBigIntKind), value(v) {
     setType(Type::createBigInt());
   }
 
-  const std::string &getValue() const {
+  UniqueString *getValue() const {
     return value;
   }
 
-  static void Profile(llvh::FoldingSetNodeID &ID, llvh::StringRef value) {
-    ID.AddString(value);
+  static void Profile(llvh::FoldingSetNodeID &ID, UniqueString *value) {
+    ID.AddPointer(value);
   }
 
   void Profile(llvh::FoldingSetNodeID &ID) const {
@@ -2008,7 +2008,7 @@ class Module : public Value {
   LiteralNumber *getLiteralNumber(double value);
 
   /// Create a new literal BigInt of value \p value.
-  LiteralBigInt *getLiteralBigInt(llvh::StringRef value);
+  LiteralBigInt *getLiteralBigInt(UniqueString *value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);

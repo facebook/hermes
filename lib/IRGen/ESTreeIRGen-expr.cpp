@@ -66,7 +66,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   if (auto *Lit = llvh::dyn_cast<ESTree::BigIntLiteralNode>(expr)) {
     LLVM_DEBUG(
         dbgs() << "Loading BitInt Literal \"" << Lit->_bigint->str() << "\"\n");
-    return Builder.getLiteralBigInt(Lit->_bigint->str());
+    return Builder.getLiteralBigInt(Lit->_bigint);
   }
 
   // Handle the assignment expression.

@@ -203,7 +203,7 @@ LiteralNumber *IRBuilder::getLiteralNaN() {
   return M->getLiteralNumber(std::numeric_limits<double>::quiet_NaN());
 }
 
-LiteralBigInt *IRBuilder::getLiteralBigInt(llvh::StringRef value) {
+LiteralBigInt *IRBuilder::getLiteralBigInt(UniqueString *value) {
   return M->getLiteralBigInt(value);
 }
 

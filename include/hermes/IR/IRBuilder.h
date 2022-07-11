@@ -164,7 +164,7 @@ class IRBuilder {
   LiteralNumber *getLiteralNaN();
 
   /// Create a new literal BitInt of value \p value.
-  LiteralBigInt *getLiteralBigInt(llvh::StringRef value);
+  LiteralBigInt *getLiteralBigInt(UniqueString *value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(StringRef value);
