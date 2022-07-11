@@ -21,18 +21,20 @@ namespace hermes {
 class SafeUInt32 {
   /// The current value. Use a uint64_t to allow for overflow checking.
   uint64_t value_;
+  /// The bitwise OR of the top halves of all intermediate values.
+  uint32_t ors_;
 
  public:
-  explicit SafeUInt32(uint32_t value = 0) : value_(value) {}
+  explicit SafeUInt32(uint32_t value = 0) : value_(value), ors_(0) {}
 
-  /// \return true iff the value has overflowed the max string length.
+  /// \return true iff the value has overflowed 32 bits.
   bool isOverflowed() const {
-    return value_ > std::numeric_limits<uint32_t>::max();
+    return ors_ != 0;
   }
 
   /// \return true iff the value is 0.
   bool isZero() const {
-    return value_ == 0;
+    return value_ == 0 && ors_ == 0;
   }
 
   /// \return the value of the factory.
@@ -44,9 +46,10 @@ class SafeUInt32 {
     return value_;
   };
 
-  /// Add \param n characters to the value of the factory.
+  /// Add \param n to the value of the factory.
   void add(uint32_t n) {
     value_ += n;
+    ors_ |= (value_ >> 32);
   };
 
   uint32_t operator*() const {
