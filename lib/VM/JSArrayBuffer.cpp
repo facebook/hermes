@@ -118,13 +118,8 @@ JSArrayBuffer::JSArrayBuffer(
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
-  // Need to untrack the native memory that may have been tracked by snapshots.
-  if (self->attached()) {
-    uint8_t *data = self->data_.get(gc);
-    gc.getIDTracker().untrackNative(data);
-    gc.debitExternalMemory(self, self->size_);
-    free(data);
-  }
+  if (self->attached())
+    self->freeInternalBuffer(gc);
   self->~JSArrayBuffer();
 }
 
@@ -172,17 +167,21 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
 }
 #endif
 
+void JSArrayBuffer::freeInternalBuffer(GC &gc) {
+  uint8_t *data = data_.get(gc);
+  assert(attached() && "Buffer must be attached");
+  assert((data || size_ == 0) && "Null buffers must have zero size");
+
+  // Need to untrack the native memory that may have been tracked by snapshots.
+  gc.debitExternalMemory(this, size_);
+  gc.getIDTracker().untrackNative(data);
+  free(data);
+}
+
 void JSArrayBuffer::detach(GC &gc) {
   if (!attached())
     return;
-
-  uint8_t *data = data_.get(gc);
-  if (data) {
-    gc.debitExternalMemory(this, size_);
-    free(data);
-  } else {
-    assert(size_ == 0);
-  }
+  freeInternalBuffer(gc);
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
   attached_ = false;

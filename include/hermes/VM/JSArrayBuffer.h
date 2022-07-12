@@ -89,6 +89,9 @@ class JSArrayBuffer final : public JSObject {
     return attached_;
   }
 
+  /// Free the data block owned by this JSArrayBuffer.
+  void freeInternalBuffer(GC &gc);
+
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
