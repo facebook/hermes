@@ -1463,11 +1463,12 @@ end:
     if (ok && !real && (!legacyOctal || raw == "0n") && tmpStorage_ == "n") {
       assert(curCharPtr_ > start && "Must consume at least the trailing n.");
       llvh::ArrayRef<char> digits{start, curCharPtr_ - 1};
-      // use parseIntWithRadix to validate the bigint literal's digits. The
-      // converted value does not matter, only whether or not the string was
-      // parsed correctly.
+      // Use parseIntWithRadixDigits to validate the bigint literal's digits.
+      // The digits themselves can be ignored, since we're only interested in
+      // whether the string was parsed correctly.
       if (digits.size() &&
-          parseIntWithRadix</* AllowNumericSeparator */ true>(digits, radix)) {
+          parseIntWithRadixDigits</* AllowNumericSeparator */ true>(
+              digits, radix, [](uint8_t) {})) {
         // This is a BigInt.
         rawStorage_.clear();
         rawStorage_.append(raw);

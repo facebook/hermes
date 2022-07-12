@@ -125,43 +125,58 @@ inline T charLetterToLower(T ch) {
 }
 
 /// Takes a non-empty string (without the leading "0x" if hex) and parses it
-/// as radix \p radix.
+/// as radix \p radix, calling \p digitCallback with the value of each digit,
+/// going from left to right.
 /// \param AllowNumericSeparator when true, allow '_' as a separator and ignore
-///    it when parsing.
-/// \returns the double that results on success, empty on error.
-template <bool AllowNumericSeparator, class Iterable>
-OptValue<double> parseIntWithRadix(Iterable str, int radix) {
+/// it when parsing.
+/// \returns true if the string was successfully parsed, false otherwise.
+template <bool AllowNumericSeparator, class Iterable, typename Callback>
+bool parseIntWithRadixDigits(Iterable str, int radix, Callback digitCallback) {
   assert(
       radix >= 2 && radix <= 36 && "Invalid radix passed to parseIntWithRadix");
-
   assert(str.begin() != str.end() && "Empty string");
-  double result = 0;
   for (auto it = str.begin(); it != str.end(); ++it) {
     auto c = *it;
     auto cLow = charLetterToLower(c);
     if ('0' <= c && c <= '9' && c < '0' + radix) {
-      result *= radix;
-      result += c - '0';
+      digitCallback(c - '0');
     } else if ('a' <= cLow && cLow < 'a' + radix - 10) {
-      result *= radix;
-      result += cLow - 'a' + 0xa;
+      digitCallback(cLow - 'a' + 0xa);
     } else if (AllowNumericSeparator && LLVM_UNLIKELY(c == '_')) {
       // Ensure the '_' is in a valid location.
       // It can only be between two existing digits.
       if (it == str.begin() || it == str.end() - 1) {
-        return llvh::None;
+        return false;
       }
       // Note that the previous character must not be '_' if the current
       // character is '_', because we would have returned None.
       // So just check if the next character is '_'.
       char next = *(it + 1);
       if (next == '_') {
-        return llvh::None;
+        return false;
       }
     } else {
-      return llvh::None;
+      return false;
     }
   }
+  return true;
+}
+
+/// Takes a non-empty string (without the leading "0x" if hex) and parses it
+/// as radix \p radix.
+/// \param AllowNumericSeparator when true, allow '_' as a separator and ignore
+///    it when parsing.
+/// \returns the double that results on success, empty on error.
+template <bool AllowNumericSeparator, class Iterable>
+OptValue<double> parseIntWithRadix(Iterable str, int radix) {
+  double result = 0;
+  bool success = parseIntWithRadixDigits<AllowNumericSeparator>(
+      str, radix, [&result, radix](uint8_t d) {
+        result *= radix;
+        result += d;
+      });
+  if (!success)
+    return llvh::None;
 
   // The largest value that fits in the 53-bit mantissa (2**53).
   const double MAX_MANTISSA = 9007199254740992.0;
