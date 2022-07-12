@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 
+#include "hermes/ADT/SafeInt.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/Operations.h"
@@ -548,22 +549,26 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   // Precompute the final size of the array so it can be preallocated.
   // Note this is necessarily an estimate because an accessor on one array
   // may change the length of subsequent arrays.
-  uint64_t finalSizeEstimate = 0;
+  SafeUInt32 finalSizeEstimate{0};
   if (JSArray *arr = dyn_vmcast<JSArray>(O.get())) {
-    finalSizeEstimate += JSArray::getLength(arr, runtime);
+    finalSizeEstimate.add(JSArray::getLength(arr, runtime));
   } else {
-    ++finalSizeEstimate;
+    finalSizeEstimate.add(1);
   }
   for (int64_t i = 0; i < argCount; ++i) {
     if (JSArray *arr = dyn_vmcast<JSArray>(args.getArg(i))) {
-      finalSizeEstimate += JSArray::getLength(arr, runtime);
+      finalSizeEstimate.add(JSArray::getLength(arr, runtime));
     } else {
-      ++finalSizeEstimate;
+      finalSizeEstimate.add(1);
     }
+  }
+  if (finalSizeEstimate.isOverflowed()) {
+    return runtime.raiseTypeError("Array.prototype.concat result out of space");
   }
 
   // Resultant array.
-  auto arrRes = JSArray::create(runtime, finalSizeEstimate, finalSizeEstimate);
+  auto arrRes =
+      JSArray::create(runtime, *finalSizeEstimate, *finalSizeEstimate);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -718,7 +723,10 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   }
   // Update the array's length. We never expect this to fail since we just
   // created the array.
-  auto res = JSArray::setLengthProperty(A, runtime, n);
+  if (n > UINT32_MAX) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  auto res = JSArray::setLengthProperty(A, runtime, static_cast<uint32_t>(n));
   assert(
       res == ExecutionStatus::RETURNED &&
       "Setting length of new array should never fail");
