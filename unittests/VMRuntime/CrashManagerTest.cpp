@@ -72,18 +72,6 @@ class TestCrashManager : public CrashManager {
 
 #ifndef HERMESVM_SANITIZE_HANDLES
 
-static ::testing::AssertionResult validJSON(const std::string &json) {
-  SourceErrorManager sm;
-  hermes::parser::JSONFactory::Allocator alloc;
-  hermes::parser::JSONFactory factory{alloc};
-  hermes::parser::JSONParser parser{factory, json, sm};
-  if (!parser.parse()) {
-    return ::testing::AssertionFailure() << "Invalid JSON: \"" << json << "\"";
-  }
-
-  return ::testing::AssertionSuccess();
-}
-
 /// We are able to materialize every segment.
 TEST(CrashManagerTest, HeapExtentsCorrect) {
   /// We need a max heap that's bigger than normal
@@ -110,28 +98,44 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   for (size_t i = 0; i < 17; ++i) {
     rt.makeHandle(SegmentCell::create(rt));
   }
-  // This function isn't used in all paths.
-  (void)validJSON;
 
 #ifdef HERMESVM_GC_HADES
+  static constexpr char numberedSegmentFmt[] = "XYZ:HeapSegment:%d";
+  static constexpr std::string_view ygSegmentName = "XYZ:HeapSegment:YG";
+
   const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_LE(26, contextualCustomData.size());
-  const std::string expectedKeyBase = "XYZ:HeapSegment:";
-  for (int i = 0; i < 26; i++) {
-    const std::string expectedKey =
-        expectedKeyBase + (i == 0 ? std::string("YG") : std::to_string(i));
-    std::string actual = contextualCustomData.at(expectedKey);
-    void *ptr = nullptr;
-    int numArgsWritten = std::sscanf(actual.c_str(), "%p", &ptr);
-    EXPECT_EQ(numArgsWritten, 1);
-    // The pointer value itself doesn't matter, as long as it is one of the
-    // segments in the heap. That would require exposing more GC APIs though,
-    // so just check that it was parsed as non-null.
-    EXPECT_NE(ptr, nullptr);
+  uint32_t numHeapSegmentsYG = 0;
+  uint32_t numHeapSegmentsNumbered = 0;
+  int32_t keyNum;
+  for (const auto &[key, payload] : contextualCustomData) {
+    // Keeps track whether key represents a HeapSegment so that payload can be
+    // validated below.
+    bool validatePayload = false;
+    if (key == ygSegmentName) {
+      validatePayload = true;
+      ++numHeapSegmentsYG;
+    } else if (std::sscanf(key.c_str(), numberedSegmentFmt, &keyNum) == 1) {
+      // keyNum doesn't matter, but sscanf needs it to ensure a number is found
+      // after the expected segment name "prefix".
+      validatePayload = true;
+      ++numHeapSegmentsNumbered;
+    }
+
+    if (validatePayload) {
+      void *ptr = nullptr;
+      int numArgsWritten = std::sscanf(payload.c_str(), "%p", &ptr);
+      EXPECT_EQ(numArgsWritten, 1);
+      // The pointer value itself doesn't matter, as long as it is one of the
+      // segments in the heap. That would require exposing more GC APIs though,
+      // so just check that it was parsed as non-null.
+      EXPECT_NE(ptr, nullptr);
+    }
   }
-#endif
+  EXPECT_EQ(1, numHeapSegmentsYG);
+  EXPECT_LE(25, numHeapSegmentsNumbered);
+#endif // HERMESVM_GC_HADES
 }
-#endif
+#endif // HERMESVM_SANITIZE_HANDLES
 
 #ifdef HERMESVM_GC_HADES
 TEST(CrashManagerTest, PromotedYGHasCorrectName) {
