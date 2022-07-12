@@ -1499,9 +1499,10 @@ class Runtime : public PointerBase,
 /// An encrypted/obfuscated native pointer. The key is held by GCBase.
 template <typename T>
 class XorPtr {
-  uintptr_t bits_{0};
+  uintptr_t bits_;
 
  public:
+  XorPtr() = default;
   XorPtr(Runtime &runtime, T *ptr) {
     set(runtime, ptr);
   }
@@ -1518,6 +1519,8 @@ class XorPtr {
     return reinterpret_cast<T *>(bits_ ^ gc.pointerEncryptionKey_);
   }
 };
+
+static_assert(std::is_trivial<XorPtr<void>>::value, "XorPtr must be trivial");
 
 /// An RAII class for automatically tracking the native call frame depth.
 class ScopedNativeDepthTracker {
