@@ -17,3 +17,6 @@
 
 0b2n
 // CHECK: invalid numeric literal
+
+0bn
+// CHECK: invalid numeric literal
