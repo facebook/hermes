@@ -804,7 +804,7 @@ hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   return BigIntPrimitive::exponentiate(
-      std::move(lhs), runtime.makeHandle(res->getBigInt()), runtime);
+      runtime, std::move(lhs), runtime.makeHandle(res->getBigInt()));
 }
 
 void createHermesBuiltins(

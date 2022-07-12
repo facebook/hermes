@@ -61,13 +61,13 @@ CallResult<HermesValue> dataViewPrototypeGetEncoder(Runtime &, T value) {
 CallResult<HermesValue> dataViewPrototypeGetEncoder(
     Runtime &runtime,
     int64_t value) {
-  return BigIntPrimitive::fromSigned(value, runtime);
+  return BigIntPrimitive::fromSigned(runtime, value);
 }
 
 CallResult<HermesValue> dataViewPrototypeGetEncoder(
     Runtime &runtime,
     uint64_t value) {
-  return BigIntPrimitive::fromUnsigned(value, runtime);
+  return BigIntPrimitive::fromUnsigned(runtime, value);
 }
 
 template <typename T>

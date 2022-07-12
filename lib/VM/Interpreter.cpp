@@ -2826,7 +2826,7 @@ tailCall:
         }
         if (res->isBigInt()) {
           CAPTURE_IP_ASSIGN(auto bigint, runtime.makeHandle(res->getBigInt()));
-          CAPTURE_IP(res = BigIntPrimitive::unaryNOT(bigint, runtime));
+          CAPTURE_IP(res = BigIntPrimitive::unaryNOT(runtime, bigint));
           if (res == ExecutionStatus::EXCEPTION) {
             goto exception;
           }
@@ -3120,7 +3120,7 @@ tailCall:
             assert(res->isBigInt() && "should be bigint");
             CAPTURE_IP_ASSIGN(
                 auto bigint, runtime.makeHandle(res->getBigInt()));
-            CAPTURE_IP(res = BigIntPrimitive::unaryMinus(bigint, runtime));
+            CAPTURE_IP(res = BigIntPrimitive::unaryMinus(runtime, bigint));
             if (res == ExecutionStatus::EXCEPTION) {
               goto exception;
             }
@@ -3391,15 +3391,15 @@ tailCall:
       LOAD_CONST_CAPTURE_IP(
           LoadConstBigInt,
           runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
+              runtime,
               curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
-                  ip->iLoadConstBigInt.op2),
-              runtime)));
+                  ip->iLoadConstBigInt.op2))));
       LOAD_CONST_CAPTURE_IP(
           LoadConstBigIntLongIndex,
           runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
+              runtime,
               curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
-                  ip->iLoadConstBigIntLongIndex.op2),
-              runtime)));
+                  ip->iLoadConstBigIntLongIndex.op2))));
       LOAD_CONST_CAPTURE_IP(
           LoadConstString,
           HermesValue::encodeStringValue(

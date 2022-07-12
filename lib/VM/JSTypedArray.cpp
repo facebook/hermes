@@ -452,7 +452,7 @@ struct _getOwnRetEncoder {
 template <>
 struct _getOwnRetEncoder<int64_t> {
   static HermesValue encodeMayAlloc(Runtime &runtime, int64_t element) {
-    auto res = BigIntPrimitive::fromSigned(element, runtime);
+    auto res = BigIntPrimitive::fromSigned(runtime, element);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       assert(false && "Failed to encode BigInt in _getOwnRetEncoder<int64_t>");
       runtime.clearThrownValue();
@@ -465,7 +465,7 @@ struct _getOwnRetEncoder<int64_t> {
 template <>
 struct _getOwnRetEncoder<uint64_t> {
   static HermesValue encodeMayAlloc(Runtime &runtime, uint64_t element) {
-    auto res = BigIntPrimitive::fromUnsigned(element, runtime);
+    auto res = BigIntPrimitive::fromUnsigned(runtime, element);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       assert(false && "Failed to encode BigInt in _getOwnRetEncoder<uint64_t>");
       runtime.clearThrownValue();

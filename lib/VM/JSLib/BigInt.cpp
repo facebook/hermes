@@ -165,7 +165,7 @@ bigintPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
 }
 
 using TruncateOp =
-    CallResult<HermesValue> (*)(uint64_t, Handle<BigIntPrimitive>, Runtime &);
+    CallResult<HermesValue> (*)(Runtime &, uint64_t, Handle<BigIntPrimitive>);
 
 CallResult<HermesValue>
 bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
@@ -181,7 +181,7 @@ bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   auto op = reinterpret_cast<TruncateOp>(ctx);
-  return (*op)(bits, runtime.makeHandle(bigint->getBigInt()), runtime);
+  return (*op)(runtime, bits, runtime.makeHandle(bigint->getBigInt()));
 }
 
 } // namespace vm

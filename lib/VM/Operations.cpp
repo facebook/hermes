@@ -893,7 +893,7 @@ static CallResult<bool> compareBigIntAndNumber(
 
   // Now use the rhs' integral part to create a new BigInt, which is compared to
   // lhs.
-  auto rightHandle = BigIntPrimitive::fromDouble(integralPart, runtime);
+  auto rightHandle = BigIntPrimitive::fromDouble(runtime, integralPart);
   if (LLVM_UNLIKELY(rightHandle == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1177,7 +1177,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
           return false;
         }
 
-        auto xAsBigInt = BigIntPrimitive::fromDouble(x->getNumber(), runtime);
+        auto xAsBigInt = BigIntPrimitive::fromDouble(runtime, x->getNumber());
         if (LLVM_UNLIKELY(xAsBigInt == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1275,9 +1275,9 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   }
 
   return BigIntPrimitive::add(
+      runtime,
       runtime.makeHandle(resX->getBigInt()),
-      runtime.makeHandle(resY->getBigInt()),
-      runtime);
+      runtime.makeHandle(resY->getBigInt()));
 }
 
 static const size_t MIN_RADIX = 2;
@@ -2186,7 +2186,7 @@ CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number) {
     return runtime.raiseRangeError("number is not integral");
   }
 
-  return BigIntPrimitive::fromDouble(number, runtime);
+  return BigIntPrimitive::fromDouble(runtime, number);
 }
 
 bool isIntegralNumber(double number) {
@@ -2222,7 +2222,7 @@ CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value) {
     case HermesValue::ETag::Null:
       return runtime.raiseTypeError("invalid argument to BigInt()");
     case HermesValue::ETag::Bool:
-      return BigIntPrimitive::fromSigned(value->getBool() ? 1 : 0, runtime);
+      return BigIntPrimitive::fromSigned(runtime, value->getBool() ? 1 : 0);
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2:
       return *prim;
@@ -2258,7 +2258,7 @@ CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value) {
       return HermesValue::encodeUndefinedValue();
     }
 
-    return BigIntPrimitive::fromBytes(parsedBigInt->getBytes(), runtime);
+    return BigIntPrimitive::fromBytes(runtime, parsedBigInt->getBytes());
   }
 
   return runtime.raiseTypeError("Invalid argument to stringToBigInt");

@@ -249,7 +249,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
 
   /// Encode bigints.
   {
-    auto H = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    auto H = BigIntPrimitive::fromSignedNoThrow(runtime, 0);
     auto V = HermesValue::encodeBigIntValue(H.get());
     EXPECT_TRUE(V.isBigInt());
     EXPECT_FALSE(V.isNativeValue());
@@ -264,7 +264,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_TRUE(V.isPointer());
     EXPECT_EQ(V.getPointer(), H.get());
 
-    auto H2 = BigIntPrimitive::fromSignedNoThrow(0, runtime);
+    auto H2 = BigIntPrimitive::fromSignedNoThrow(runtime, 0);
     auto V2 = HermesValue::encodeBigIntValue(H2.get());
     EXPECT_TRUE(V2.isBigInt());
     EXPECT_FALSE(V2.isNativeValue());

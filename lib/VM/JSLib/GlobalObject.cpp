@@ -416,7 +416,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime
           .ignoreAllocationFailure(JSBigInt::create(
               runtime,
-              BigIntPrimitive::fromSignedNoThrow(0, runtime),
+              BigIntPrimitive::fromSignedNoThrow(runtime, 0),
               Handle<JSObject>::vmcast(&runtime.objectPrototype)))
           .getHermesValue();
 

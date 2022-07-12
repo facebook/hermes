@@ -334,9 +334,9 @@ ExecutionStatus Interpreter::implCallBuiltin(
 }
 
 using BigIntBinaryOp = CallResult<HermesValue>(
+    Runtime &,
     Handle<BigIntPrimitive>,
-    Handle<BigIntPrimitive>,
-    Runtime &);
+    Handle<BigIntPrimitive>);
 
 static CallResult<HermesValue> doBigIntBinOp(
     Runtime &runtime,
@@ -351,7 +351,7 @@ static CallResult<HermesValue> doBigIntBinOp(
   if (!res->isBigInt()) {
     return runtime.raiseTypeErrorForValue("Cannot convert ", rhs, " to BigInt");
   }
-  return Oper(lhs, runtime.makeHandle(res->getBigInt()), runtime);
+  return Oper(runtime, lhs, runtime.makeHandle(res->getBigInt()));
 }
 
 namespace {
@@ -541,7 +541,7 @@ CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src) {
     return HermesValue::encodeNumberValue(Oper(res->getNumber()));
   }
 
-  return BigIntOper<Oper>(runtime.makeHandle(res->getBigInt()), runtime);
+  return BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
 }
 
 template CallResult<HermesValue> doIncDecOperSlowPath<doInc>(

@@ -199,7 +199,7 @@ class JSBigInt final : public JSObject {
   static CallResult<Handle<JSBigInt>> create(
       Runtime &runtime,
       Handle<JSObject> prototype) {
-    auto bigIntRes = BigIntPrimitive::fromSigned(0, runtime);
+    auto bigIntRes = BigIntPrimitive::fromSigned(runtime, 0);
     if (LLVM_UNLIKELY(bigIntRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

@@ -179,7 +179,7 @@ TEST_F(SmallHermesValueRuntimeTest, StringTest) {
 
 TEST_F(SmallHermesValueRuntimeTest, BigIntTest) {
   // Encode a bigint.
-  auto H = BigIntPrimitive::fromSignedNoThrow(0x123, runtime);
+  auto H = BigIntPrimitive::fromSignedNoThrow(runtime, 0x123);
   auto SHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeBigIntValue(H.get()), runtime);
   EXPECT_TRUE(SHV.isPointer());

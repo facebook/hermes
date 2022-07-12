@@ -67,62 +67,62 @@ class BigIntPrimitive final
   /// integer). Brings down the VM on OOM.
   template <typename T>
   static std::enable_if_t<std::is_signed<T>::value, Handle<BigIntPrimitive>>
-  fromSignedNoThrow(T value, Runtime &runtime) {
+  fromSignedNoThrow(Runtime &runtime, T value) {
     return runtime.makeHandle<BigIntPrimitive>(
-        runtime.ignoreAllocationFailure(fromSigned(value, runtime)));
+        runtime.ignoreAllocationFailure(fromSigned(runtime, value)));
   }
 
   /// \return a newly allocated BigIntPrimitive representing \p value (a signed
   /// integer).
   template <typename T>
   static std::enable_if_t<std::is_signed<T>::value, CallResult<HermesValue>>
-  fromSigned(T value, Runtime &runtime) {
+  fromSigned(Runtime &runtime, T value) {
     const auto *ptr = reinterpret_cast<const uint8_t *>(&value);
     const uint32_t size = sizeof(T);
 
-    return fromBytes(llvh::makeArrayRef(ptr, size), runtime);
+    return fromBytes(runtime, llvh::makeArrayRef(ptr, size));
   }
 
   /// \return a newly allocated BigIntPrimitive representing \p value (an
   /// unsigned integer).
   template <typename T>
   static std::enable_if_t<std::is_unsigned<T>::value, CallResult<HermesValue>>
-  fromUnsigned(T value, Runtime &runtime) {
+  fromUnsigned(Runtime &runtime, T value) {
     static_assert(sizeof(T) <= sizeof(DigitType), "unsigned value truncation");
     DigitType tmp[2] = {static_cast<DigitType>(value), 0};
     const auto *ptr = reinterpret_cast<const uint8_t *>(tmp);
     const uint32_t size = sizeof(tmp);
 
-    return fromBytes(llvh::makeArrayRef(ptr, size), runtime);
+    return fromBytes(runtime, llvh::makeArrayRef(ptr, size));
   }
 
   /// \return a newly allocated BigIntPrimitive representing Z( R( \p value ) ).
-  static CallResult<HermesValue> fromDouble(double value, Runtime &runtime);
+  static CallResult<HermesValue> fromDouble(Runtime &runtime, double value);
 
   /// \return a newly allocated BigIntPrimitive with digits filled from \p
   /// bytes, possibly sign-extending to a multiple of DigitType. Brings down the
   /// VM on OOM.
   static Handle<BigIntPrimitive> fromBytesNoThrow(
-      llvh::ArrayRef<uint8_t> bytes,
-      Runtime &runtime) {
+      Runtime &runtime,
+      llvh::ArrayRef<uint8_t> bytes) {
     return runtime.makeHandle<BigIntPrimitive>(
-        runtime.ignoreAllocationFailure(fromBytes(bytes, runtime)));
+        runtime.ignoreAllocationFailure(fromBytes(runtime, bytes)));
   }
 
   /// \return a newly allocated BigIntPrimitive with digits filled from \p
   /// bytes.
   static CallResult<HermesValue> fromBytes(
-      llvh::ArrayRef<uint8_t> bytes,
-      Runtime &runtime) {
+      Runtime &runtime,
+      llvh::ArrayRef<uint8_t> bytes) {
     const uint32_t numDigits = bigint::numDigitsForSizeInBytes(bytes.size());
 
-    auto ret = createUninitializedWithNumDigits(numDigits, runtime);
+    auto ret = createUninitializedWithNumDigits(runtime, numDigits);
     if (LLVM_UNLIKELY(ret == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     auto res = raiseOnError(
-        bigint::initWithBytes(ret->getMutableRef(runtime), bytes), runtime);
+        runtime, bigint::initWithBytes(ret->getMutableRef(runtime), bytes));
 
     if (LLVM_UNLIKELY(res != ExecutionStatus::RETURNED)) {
       return res;
@@ -157,11 +157,11 @@ class BigIntPrimitive final
 
   /// \return \p src % (2n ** \p n), sign extended; \p n-th bit is the sign bit.
   static CallResult<HermesValue>
-  asIntN(uint64_t n, Handle<BigIntPrimitive> src, Runtime &runtime);
+  asIntN(Runtime &runtime, uint64_t n, Handle<BigIntPrimitive> src);
 
   /// \return \p src % (2n ** \p n), zero extended.
   static CallResult<HermesValue>
-  asUintN(uint64_t n, Handle<BigIntPrimitive> src, Runtime &runtime);
+  asUintN(Runtime &runtime, uint64_t n, Handle<BigIntPrimitive> src);
 
   /// Compares this with \p other. Logically similar to *this - *other.
   /// \return < 0 if this is less than other; > 0, if other is less than this;
@@ -182,95 +182,95 @@ class BigIntPrimitive final
 
   /// \return - \p src
   static CallResult<HermesValue> unaryMinus(
-      Handle<BigIntPrimitive> src,
-      Runtime &runtime);
+      Runtime &runtime,
+      Handle<BigIntPrimitive> src);
 
   /// \return ~ \p src
   static CallResult<HermesValue> unaryNOT(
-      Handle<BigIntPrimitive> src,
-      Runtime &runtime);
+      Runtime &runtime,
+      Handle<BigIntPrimitive> src);
 
   /// \return \p lhs - \p rhs
   static CallResult<HermesValue> subtract(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs + \p rhs
   static CallResult<HermesValue> add(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs * \p rhs
   static CallResult<HermesValue> multiply(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs / \p rhs
   static CallResult<HermesValue> divide(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs % \p rhs
   static CallResult<HermesValue> remainder(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs ** \p rhs
   static CallResult<HermesValue> exponentiate(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs & \p rhs
   static CallResult<HermesValue> bitwiseAND(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs | \p rhs
   static CallResult<HermesValue> bitwiseOR(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs ^ \p rhs
   static CallResult<HermesValue> bitwiseXOR(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs << \p rhs
   static CallResult<HermesValue> leftShift(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p lhs >> \p rhs, signed
   static CallResult<HermesValue> signedRightShift(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// Raises a JS TypeError exception, as required by the BigInt specification.
   static CallResult<HermesValue> unsignedRightShift(
+      Runtime &runtime,
       Handle<BigIntPrimitive> lhs,
-      Handle<BigIntPrimitive> rhs,
-      Runtime &runtime);
+      Handle<BigIntPrimitive> rhs);
 
   /// \return \p src + 1
   static CallResult<HermesValue> inc(
-      Handle<BigIntPrimitive> src,
-      Runtime &runtime);
+      Runtime &runtime,
+      Handle<BigIntPrimitive> src);
 
   /// \return \p src - 1
   static CallResult<HermesValue> dec(
-      Handle<BigIntPrimitive> src,
-      Runtime &runtime);
+      Runtime &runtime,
+      Handle<BigIntPrimitive> src);
 
   /// N.B.: public so we can create using runtime.makeAVariable. Do not call.
   explicit BigIntPrimitive(uint32_t numDigits);
@@ -288,8 +288,8 @@ class BigIntPrimitive final
 
  private:
   static ExecutionStatus raiseOnError(
-      bigint::OperationStatus status,
-      Runtime &runtime) {
+      Runtime &runtime,
+      bigint::OperationStatus status) {
     switch (status) {
       case bigint::OperationStatus::RETURNED:
         return ExecutionStatus::RETURNED;
@@ -399,9 +399,9 @@ class BigIntPrimitive final
   /// Create and returns an uninitialized BigIntPrimitive with \p numDigits
   /// digits.
   static CallResult<UninitializedBigIntPrimitive>
-  createUninitializedWithNumDigits(uint32_t numDigits, Runtime &runtime) {
+  createUninitializedWithNumDigits(Runtime &runtime, uint32_t numDigits) {
     if (bigint::tooManyDigits(numDigits)) {
-      return raiseOnError(bigint::OperationStatus::TOO_MANY_DIGITS, runtime);
+      return raiseOnError(runtime, bigint::OperationStatus::TOO_MANY_DIGITS);
     }
 
     const uint32_t cellSizeInBytes = calcCellSizeInBytes(numDigits);
@@ -416,21 +416,21 @@ class BigIntPrimitive final
       bigint::ImmutableBigIntRef src);
   template <typename UnaryOpT = UnaryOp>
   static CallResult<HermesValue> unaryOp(
+      Runtime &runtime,
       UnaryOpT op,
       Handle<BigIntPrimitive> src,
-      size_t numDigits,
-      Runtime &runtime);
+      size_t numDigits);
 
   using BinaryOp = bigint::OperationStatus (*)(
       bigint::MutableBigIntRef dst,
       bigint::ImmutableBigIntRef lhs,
       bigint::ImmutableBigIntRef src);
   static CallResult<HermesValue> binaryOp(
+      Runtime &runtime,
       BinaryOp op,
       Handle<BigIntPrimitive> lhs,
       Handle<BigIntPrimitive> rhs,
-      uint32_t numDigitsResult,
-      Runtime &runtime);
+      uint32_t numDigitsResult);
 };
 } // namespace vm
 } // namespace hermes
