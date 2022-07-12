@@ -844,7 +844,8 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
 /// \p comparator. Note that \p leftHandle is a Handle<BigIntPrimitive> to
 /// ensure the caller is putting the BigInt in the lhs (and adjusting \p
 /// comparator appropriately).
-/// \return \p comparator ( \p leftHandle <=> \p righHandle ).
+/// \return false if StringToBigInt( \p rightHandle ) is undefined, otherwise
+/// returns \p comparator ( \p leftHandle <=> \p righHandle ).
 static CallResult<bool> compareBigIntAndString(
     Runtime &runtime,
     Handle<BigIntPrimitive> leftHandle,
@@ -867,7 +868,8 @@ static CallResult<bool> compareBigIntAndString(
 /// \p comparator. Note that \p leftHandle is a Handle<BigIntPrimitive> to
 /// ensure the caller is putting the BigInt in the lhs (and adjusting \p
 /// comparator appropriately).
-/// \return \p comparator ( \p leftHandle <=> \p righHandle ).
+/// \return false if \p right is NaN, otherwise returns
+/// \p comparator ( \p leftHandle <=> \p righHandle ).
 static CallResult<bool> compareBigIntAndNumber(
     Runtime &runtime,
     Handle<BigIntPrimitive> leftHandle,

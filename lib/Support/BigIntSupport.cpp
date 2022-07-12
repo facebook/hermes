@@ -861,7 +861,7 @@ ImmutableBigIntRef makeImmutableRefFromSignedDigit(
   uint32_t numDigits = 1;
   MutableBigIntRef mr{reinterpret_cast<BigIntDigitType *>(&digit), numDigits};
   // make sure mr is canonicalized, otherwise comparisons may fail -- they
-  // assume all inputs to be canonical. This can happen if
+  // assume all inputs to be canonical. This will happen when digit is 0.
   ensureCanonicalResult(mr);
   // Return a canonical, immutable bigint ref.
   return ImmutableBigIntRef{
@@ -1499,9 +1499,7 @@ static OperationStatus compute(
   // allows querying either for determining the result size.
   if (quoc.digits == nullptr) {
     quoc.numDigits = resultSize;
-  }
-
-  if (rem.digits == nullptr) {
+  } else {
     rem.numDigits = resultSize;
   }
 
@@ -1549,9 +1547,7 @@ static OperationStatus compute(
   if (needTmpQuoc) {
     assert(quoc.numDigits == tmpStorageSizeQuoc);
     quoc.digits = tmpStorage.requestNumDigits(tmpStorageSizeQuoc);
-  }
-
-  if (needTmpRem) {
+  } else {
     assert(rem.numDigits == tmpStorageSizeRem);
     rem.digits = tmpStorage.requestNumDigits(tmpStorageSizeRem);
   }
@@ -1631,8 +1627,8 @@ OperationStatus remainder(
     ImmutableBigIntRef lhs,
     ImmutableBigIntRef rhs) {
   uint32_t numQuocDigits = 0;
-  MutableBigIntRef nullDigits{nullptr, numQuocDigits};
-  return div_rem::compute(nullDigits, dst, lhs, rhs);
+  MutableBigIntRef nullQuoc{nullptr, numQuocDigits};
+  return div_rem::compute(nullQuoc, dst, lhs, rhs);
 }
 
 namespace {

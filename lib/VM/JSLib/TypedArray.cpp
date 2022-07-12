@@ -879,16 +879,16 @@ typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
-  MutableHandle<> val{runtime};
   // Run the callback over every element.
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < self->getLength(); ++i) {
-    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
+    HermesValue val =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall3(
         callbackfn,
         runtime,
         thisArg,
-        *val,
+        val,
         HermesValue::encodeNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
@@ -1051,7 +1051,6 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("callbackfn must be a Callable");
   }
   auto thisArg = args.getArgHandle(1);
-  MutableHandle<> val{runtime};
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
   for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
@@ -1059,12 +1058,13 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
     if (!self->attached(runtime)) {
       return runtime.raiseTypeError("Detached the ArrayBuffer in the callback");
     }
-    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
+    HermesValue val =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     if (Callable::executeCall3(
             callbackfn,
             runtime,
             thisArg,
-            *val,
+            val,
             HermesValue::encodeNumberValue(i),
             self.getHermesValue()) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1357,7 +1357,6 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   Handle<> undefinedThis = Runtime::getUndefinedValue();
-  MutableHandle<> val{runtime};
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   for (; inRange(i, len); i += right ? -1 : 1) {
@@ -1366,13 +1365,14 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
       // continue.
       return runtime.raiseTypeError("Detached the TypedArray in the callback");
     }
-    val = JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
+    HermesValue val =
+        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, i);
     auto callRes = Callable::executeCall4(
         callbackfn,
         runtime,
         undefinedThis,
         accumulator.getHermesValue(),
-        *val,
+        val,
         HermesValue::encodeNumberValue(i),
         self.getHermesValue());
     if (callRes == ExecutionStatus::EXCEPTION) {
