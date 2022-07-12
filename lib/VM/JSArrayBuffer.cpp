@@ -114,18 +114,17 @@ JSArrayBuffer::JSArrayBuffer(
     Runtime &runtime,
     Handle<JSObject> parent,
     Handle<HiddenClass> clazz)
-    : JSObject(runtime, *parent, *clazz),
-      data_(runtime, nullptr),
-      size_(0),
-      attached_(false) {}
+    : JSObject(runtime, *parent, *clazz), attached_(false) {}
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
-  uint8_t *data = self->data_.get(gc);
-  gc.getIDTracker().untrackNative(data);
-  gc.debitExternalMemory(self, self->size_);
-  free(data);
+  if (self->attached()) {
+    uint8_t *data = self->data_.get(gc);
+    gc.getIDTracker().untrackNative(data);
+    gc.debitExternalMemory(self, self->size_);
+    free(data);
+  }
   self->~JSArrayBuffer();
 }
 
@@ -140,15 +139,16 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  uint8_t *data = self->data_.get(gc);
-  if (!data) {
+  if (!self->attached()) {
     return;
   }
-  // While this is an internal edge, it is to a native node which is not
-  // automatically added by the metadata.
-  snap.addNamedEdge(
-      HeapSnapshot::EdgeType::Internal, "backingStore", gc.getNativeID(data));
-  // The backing store just has numbers, so there's no edges to add here.
+  if (uint8_t *data = self->data_.get(gc)) {
+    // While this is an internal edge, it is to a native node which is not
+    // automatically added by the metadata.
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal, "backingStore", gc.getNativeID(data));
+    // The backing store just has numbers, so there's no edges to add here.
+  }
 }
 
 void JSArrayBuffer::_snapshotAddNodesImpl(
@@ -156,28 +156,30 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  uint8_t *data = self->data_.get(gc);
-  if (!data) {
+  if (!self->attached()) {
     return;
   }
-  // Add the native node before the JSArrayBuffer node.
-  snap.beginNode();
-  snap.endNode(
-      HeapSnapshot::NodeType::Native,
-      "JSArrayBufferData",
-      gc.getNativeID(data),
-      self->size_,
-      0);
+  if (uint8_t *data = self->data_.get(gc)) {
+    // Add the native node before the JSArrayBuffer node.
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "JSArrayBufferData",
+        gc.getNativeID(data),
+        self->size_,
+        0);
+  }
 }
 #endif
 
 void JSArrayBuffer::detach(GC &gc) {
+  if (!attached())
+    return;
+
   uint8_t *data = data_.get(gc);
   if (data) {
     gc.debitExternalMemory(this, size_);
     free(data);
-    data_.set(gc, nullptr);
-    size_ = 0;
   } else {
     assert(size_ == 0);
   }
@@ -189,34 +191,30 @@ void JSArrayBuffer::detach(GC &gc) {
 ExecutionStatus
 JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
   detach(runtime.getHeap());
-  if (size == 0) {
-    // Even though there is no storage allocated, the spec requires an empty
-    // ArrayBuffer to still be considered as attached.
-    attached_ = true;
-    return ExecutionStatus::RETURNED;
-  }
-  // If an external allocation of this size would exceed the GC heap size,
-  // raise RangeError.
-  if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(size))) {
-    return runtime.raiseRangeError(
-        "Cannot allocate a data block for the ArrayBuffer");
+  uint8_t *data = nullptr;
+  if (size > 0) {
+    // If an external allocation of this size would exceed the GC heap size,
+    // raise RangeError.
+    if (LLVM_UNLIKELY(!runtime.getHeap().canAllocExternalMemory(size))) {
+      return runtime.raiseRangeError(
+          "Cannot allocate a data block for the ArrayBuffer");
+    }
+
+    // Note that the result of calloc or malloc is immediately checked below, so
+    // we don't use the checked versions.
+    data = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
+                : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
+    if (!data) {
+      return runtime.raiseRangeError(
+          "Cannot allocate a data block for the ArrayBuffer");
+    }
   }
 
-  // Note that the result of calloc or malloc is immediately checked below, so
-  // we don't use the checked versions.
-  auto data = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
-                   : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
+  attached_ = true;
   data_.set(runtime, data);
-  if (!data) {
-    // Failed to allocate.
-    return runtime.raiseRangeError(
-        "Cannot allocate a data block for the ArrayBuffer");
-  } else {
-    attached_ = true;
-    size_ = size;
-    runtime.getHeap().creditExternalMemory(this, size);
-    return ExecutionStatus::RETURNED;
-  }
+  size_ = size;
+  runtime.getHeap().creditExternalMemory(this, size);
+  return ExecutionStatus::RETURNED;
 }
 
 } // namespace vm

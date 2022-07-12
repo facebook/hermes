@@ -78,6 +78,7 @@ class JSArrayBuffer final : public JSObject {
 
   /// Get the size of this buffer.
   size_type size() const {
+    assert(attached() && "Cannot get size from a detached ArrayBuffer");
     return size_;
   }
 
@@ -102,6 +103,7 @@ class JSArrayBuffer final : public JSObject {
 #endif
 
  private:
+  /// data_ and size_ are only valid when attached_ is true.
   XorPtr<uint8_t> data_;
   size_type size_;
   bool attached_;
