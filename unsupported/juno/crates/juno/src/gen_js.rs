@@ -85,8 +85,8 @@ impl QuoteChar {
 
 /// Generate JS for `root` and print it to `out`.
 /// FIXME: This currently only returns an empty SourceMap.
-pub fn generate<W: Write>(
-    out: W,
+pub fn generate(
+    out: &mut dyn Write,
     ctx: &mut Context,
     root: &NodeRc,
     opt: Opt,
@@ -213,9 +213,9 @@ pub enum Annotation<'s> {
 }
 
 /// Generator for output JS. Walks the AST to output real JS.
-struct GenJS<'s, W: Write> {
+struct GenJS<'s, 'w> {
     /// Where to write the generated JS.
-    out: BufWriter<W>,
+    out: BufWriter<&'w mut dyn Write>,
 
     /// Options for generating JS.
     opt: Opt<'s>,
@@ -259,12 +259,12 @@ macro_rules! out_token {
     }}
 }
 
-impl<W: Write> GenJS<'_, W> {
+impl GenJS<'_, '_> {
     /// Generate JS for `root` and flush the output.
     /// If at any point, JS generation resulted in an error, return `Err(err)`,
     /// otherwise return `Ok(())`.
     fn gen_root<'gc>(
-        writer: W,
+        writer: &mut dyn Write,
         ctx: &'gc GCLock,
         root: &'gc Node<'gc>,
         opt: Opt,
@@ -3975,7 +3975,7 @@ impl<W: Write> GenJS<'_, W> {
     }
 }
 
-impl<'gc, W: Write> Visitor<'gc> for GenJS<'_, W> {
+impl<'gc> Visitor<'gc> for GenJS<'_, '_> {
     fn call(&mut self, ctx: &'gc GCLock, node: &'gc Node<'gc>, path: Option<Path<'gc>>) {
         self.gen_node(ctx, node, path);
     }
