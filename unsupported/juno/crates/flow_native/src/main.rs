@@ -40,11 +40,11 @@ macro_rules! out {
     }}
 }
 
-struct Writer<W: Write> {
-    out: BufWriter<W>,
+struct Writer<'w> {
+    out: BufWriter<&'w mut dyn Write>,
 }
 
-impl<W: Write> Writer<W> {
+impl Writer<'_> {
     /// Write to the `out` writer. Used via the `out!` macro. The output must be ASCII.
     fn write_ascii(&mut self, args: fmt::Arguments<'_>) {
         let buf = format!("{}", args);
@@ -122,8 +122,8 @@ enum LRef {
     Var(ValueId),
 }
 
-struct Compiler<W: Write> {
-    writer: Writer<W>,
+struct Compiler<'w> {
+    writer: Writer<'w>,
     sem: Rc<SemContext>,
     /// The number of ValueIds that have been created so far. This is also used
     /// to give a unique index to each one.
@@ -131,7 +131,7 @@ struct Compiler<W: Write> {
     escaped_decls: HashSet<DeclId>,
 }
 
-impl<W: Write> Compiler<W> {
+impl Compiler<'_> {
     fn find_escapes<'gc>(
         sem: Rc<SemContext>,
         node: &'gc ast::Node<'gc>,
@@ -148,9 +148,11 @@ impl<W: Write> Compiler<W> {
         find_escapes.escaped_decls
     }
 
-    pub fn compile(out: BufWriter<W>, mut ctx: ast::Context, ast: NodeRc, sem: Rc<SemContext>) {
+    pub fn compile(out: &mut dyn Write, mut ctx: ast::Context, ast: NodeRc, sem: Rc<SemContext>) {
         let lock = ast::GCLock::new(&mut ctx);
-        let writer = Writer { out };
+        let writer = Writer {
+            out: BufWriter::new(out),
+        };
         let escaped_decls = Self::find_escapes(Rc::clone(&sem), ast.node(&lock), &lock);
         let mut comp = Compiler {
             writer,
@@ -1050,7 +1052,7 @@ fn run() -> anyhow::Result<()> {
             sema::resolve_module(&lock, module, SourceId(0), &resolver),
         )
     };
-    Compiler::compile(BufWriter::new(stdout()), ctx, ast, Rc::new(sem));
+    Compiler::compile(&mut stdout(), ctx, ast, Rc::new(sem));
     Ok(())
 }
 
