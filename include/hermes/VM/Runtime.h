@@ -1497,7 +1497,7 @@ class Runtime : public PointerBase,
 };
 
 /// An encrypted/obfuscated native pointer. The key is held by GCBase.
-template <typename T>
+template <typename T, XorPtrKeyID K>
 class XorPtr {
   uintptr_t bits_;
 
@@ -1510,17 +1510,19 @@ class XorPtr {
     set(runtime.getHeap(), ptr);
   }
   void set(GC &gc, T *ptr) {
-    bits_ = reinterpret_cast<uintptr_t>(ptr) ^ gc.pointerEncryptionKey_;
+    bits_ = reinterpret_cast<uintptr_t>(ptr) ^ gc.pointerEncryptionKey_[K];
   }
   T *get(Runtime &runtime) const {
     return get(runtime.getHeap());
   }
   T *get(GC &gc) const {
-    return reinterpret_cast<T *>(bits_ ^ gc.pointerEncryptionKey_);
+    return reinterpret_cast<T *>(bits_ ^ gc.pointerEncryptionKey_[K]);
   }
 };
 
-static_assert(std::is_trivial<XorPtr<void>>::value, "XorPtr must be trivial");
+static_assert(
+    std::is_trivial<XorPtr<void, XorPtrKeyID::_NumKeys>>::value,
+    "XorPtr must be trivial");
 
 /// An RAII class for automatically tracking the native call frame depth.
 class ScopedNativeDepthTracker {

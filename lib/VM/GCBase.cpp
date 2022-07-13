@@ -67,11 +67,13 @@ GCBase::GCBase(
       randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
 #endif
 {
-  pointerEncryptionKey_ = std::random_device()();
-  if constexpr (sizeof(uintptr_t) >= 8) {
-    // std::random_device() yields an unsigned int, so combine two.
-    pointerEncryptionKey_ =
-        (pointerEncryptionKey_ << 32) | std::random_device()();
+  for (unsigned i = 0; i < (unsigned)XorPtrKeyID::_NumKeys; ++i) {
+    pointerEncryptionKey_[i] = std::random_device()();
+    if constexpr (sizeof(uintptr_t) >= 8) {
+      // std::random_device() yields an unsigned int, so combine two.
+      pointerEncryptionKey_[i] =
+          (pointerEncryptionKey_[i] << 32) | std::random_device()();
+    }
   }
   buildMetadataTable();
 #ifdef HERMESVM_PLATFORM_LOGGING

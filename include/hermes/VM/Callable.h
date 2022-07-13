@@ -831,7 +831,7 @@ class JSFunction : public Callable {
   friend void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// CodeBlock to execute when called.
-  XorPtr<CodeBlock> codeBlock_;
+  XorPtr<CodeBlock, XorPtrKeyID::JSFunctionCodeBlock> codeBlock_;
 
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 

@@ -67,6 +67,9 @@ class GCCell;
 #define RUNTIME_GC_KINDS GC_KIND(HadesGC)
 #endif
 
+/// Used by XorPtr to separate encryption keys between uses.
+enum XorPtrKeyID { ArrayBufferData, JSFunctionCodeBlock, _NumKeys };
+
 // A specific GC class extend GCBase, and override its virtual functions.
 // In addition, it must implement the following methods:
 
@@ -1568,11 +1571,11 @@ class GCBase {
   }
 #endif
 
-  template <typename T>
+  template <typename T, XorPtrKeyID K>
   friend class XorPtr;
 
   /// Randomly generated key used to obfuscate pointers in XorPtr.
-  uintptr_t pointerEncryptionKey_;
+  uintptr_t pointerEncryptionKey_[XorPtrKeyID::_NumKeys];
 
   /// Callback called if it's not null when the Live Data Tripwire is
   /// triggered.

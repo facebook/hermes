@@ -107,7 +107,7 @@ class JSArrayBuffer final : public JSObject {
 
  private:
   /// data_ and size_ are only valid when attached_ is true.
-  XorPtr<uint8_t> data_;
+  XorPtr<uint8_t, XorPtrKeyID::ArrayBufferData> data_;
   size_type size_;
   bool attached_;
 
