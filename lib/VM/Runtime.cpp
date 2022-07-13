@@ -1787,7 +1787,7 @@ void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
     if (auto *closure = dyn_vmcast<Callable>(sf.getCalleeClosureOrCBRef())) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
-    if (auto *cb = sf.getCalleeCodeBlock()) {
+    if (auto *cb = sf.getCalleeCodeBlock(*this)) {
       OS << formatSymbolID(cb->getNameMayAllocate()) << " ";
     }
     dumpStackFrame(sf, OS, next);
@@ -1909,7 +1909,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   std::string res;
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
-    auto codeBlock = frame->getCalleeCodeBlock();
+    auto codeBlock = frame->getCalleeCodeBlock(*this);
     if (codeBlock) {
       res += codeBlock->getNameString(*this);
       // Default to the function entrypoint, this
@@ -2048,13 +2048,13 @@ ExecutionStatus Runtime::notifyTimeout() {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 
 std::pair<const CodeBlock *, const inst::Inst *>
-Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) const {
+Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) {
   assert(ip && "IP being null implies we're not currently in the interpreter.");
   auto callFrames = getStackFrames();
   const CodeBlock *codeBlock = nullptr;
   for (auto frameIt = callFrames.begin(); frameIt != callFrames.end();
        ++frameIt) {
-    codeBlock = frameIt->getCalleeCodeBlock();
+    codeBlock = frameIt->getCalleeCodeBlock(*this);
     if (codeBlock) {
       break;
     } else {

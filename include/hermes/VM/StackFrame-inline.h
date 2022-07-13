@@ -26,11 +26,11 @@ inline Handle<Callable> StackFramePtrT<isConst>::getCalleeClosureHandleUnsafe()
 
 template <bool isConst>
 typename StackFramePtrT<isConst>::QualifiedCB *
-StackFramePtrT<isConst>::getCalleeCodeBlock() const {
+StackFramePtrT<isConst>::getCalleeCodeBlock(Runtime &runtime) const {
   auto &ref = getCalleeClosureOrCBRef();
   if (ref.isObject()) {
     if (auto *func = dyn_vmcast<JSFunction>(ref))
-      return func->getCodeBlock();
+      return func->getCodeBlock(runtime);
     else
       return nullptr;
   } else {

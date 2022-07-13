@@ -1425,7 +1425,7 @@ class Runtime : public PointerBase,
   /// suggests we're not in the interpter loop, and there will be no CodeBlock
   /// to find.
   std::pair<const CodeBlock *, const inst::Inst *>
-  getCurrentInterpreterLocation(const inst::Inst *initialSearchIP) const;
+  getCurrentInterpreterLocation(const inst::Inst *initialSearchIP);
 
  public:
   /// Return a StackTraceTreeNode for the last known interpreter bytecode
@@ -1512,10 +1512,10 @@ class XorPtr {
   void set(GC &gc, T *ptr) {
     bits_ = reinterpret_cast<uintptr_t>(ptr) ^ gc.pointerEncryptionKey_;
   }
-  T *get(Runtime &runtime) {
+  T *get(Runtime &runtime) const {
     return get(runtime.getHeap());
   }
-  T *get(GC &gc) {
+  T *get(GC &gc) const {
     return reinterpret_cast<T *>(bits_ ^ gc.pointerEncryptionKey_);
   }
 };

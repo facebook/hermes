@@ -598,7 +598,7 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
       // frame's saved IP.
       StackFramePtr prev = cf->getPreviousFrame();
       assert(prev && "bound function calls must have a caller");
-      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock(runtime_)) {
         codeBlock = parentCB;
       }
     }
@@ -814,10 +814,10 @@ void Debugger::breakpointCaller() {
     assert(
         frameIt != callFrames.end() &&
         "The frame that has saved ip cannot be the bottom frame");
-  } while (!frameIt->getCalleeCodeBlock());
+  } while (!frameIt->getCalleeCodeBlock(runtime_));
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
-  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
+  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock(runtime_);
   assert(codeBlock && "The code block must exist since we have ip");
   // Track the call stack depth that the breakpoint would be set on.
   uint32_t offset = codeBlock->getNextOffset(codeBlock->getOffsetOf(ip));
@@ -898,7 +898,7 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     result.variableCountsByScope_.push_back(0);
     return result;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
   if (!cb) {
     // Native functions have no saved code block.
     result.variableCountsByScope_.push_back(0);
@@ -938,7 +938,7 @@ HermesValue Debugger::getVariableInFrame(
     // TODO: support them.
     return undefined;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
   assert(cb && "Unexpectedly null code block");
   auto scopeChain = scopeChainForBlock(runtime_, cb);
   if (!scopeChain) {
@@ -1035,7 +1035,7 @@ HermesValue Debugger::evalInFrame(
     return HermesValue::encodeUndefinedValue();
   }
 
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
   auto scopeChain = scopeChainForBlock(runtime_, cb);
   if (!scopeChain) {
     // Binary was compiled without variable debug info.

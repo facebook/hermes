@@ -1680,11 +1680,12 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
 
   // If it is a bytecode function, check the flags.
   if (auto *func = dyn_vmcast<JSFunction>(callable)) {
-    auto *cb = func->getCodeBlock();
+    auto *cb = func->getCodeBlock(runtime);
     // Even though it doesn't make sense logically, we need to compile the
     // function in order to access it flags.
     cb->lazyCompile(runtime);
-    return !func->getCodeBlock()->getHeaderFlags().isCallProhibited(true);
+    return !func->getCodeBlock(runtime)->getHeaderFlags().isCallProhibited(
+        true);
   }
 
   // We check for NativeFunction since those are defined to not be

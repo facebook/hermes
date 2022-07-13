@@ -122,9 +122,9 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   // Deal with JSFunctions that has a source String ID. That implies this
   // function need a non-default toString implementation.
   if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
-    if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
+    if (auto sourceID = jsFunc->getCodeBlock(runtime)->getFunctionSourceID()) {
       StringPrimitive *source =
-          jsFunc->getCodeBlock()
+          jsFunc->getCodeBlock(runtime)
               ->getRuntimeModule()
               ->getLazyRootModule()
               ->getStringPrimFromStringIDMayAllocate(*sourceID);

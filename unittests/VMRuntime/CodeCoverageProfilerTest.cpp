@@ -30,9 +30,12 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
   }
 
  protected:
-  static CodeCoverageProfiler::FuncInfo getFuncInfo(Handle<JSFunction> func) {
-    auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
-    auto functionId = func->getCodeBlock()->getFunctionID();
+  static CodeCoverageProfiler::FuncInfo getFuncInfo(
+      Runtime &runtime,
+      Handle<JSFunction> func) {
+    auto bcProvider =
+        func->getCodeBlock(runtime)->getRuntimeModule()->getBytecode();
+    auto functionId = func->getCodeBlock(runtime)->getFunctionID();
     auto debugInfo = bcProvider->getDebugInfo();
     auto debugOffsets = bcProvider->getDebugOffsets(functionId);
     if (debugInfo && debugOffsets &&
@@ -48,15 +51,18 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
     const uint32_t segmentID = bcProvider->getSegmentID();
     const uint32_t funcVirtualOffset =
         bcProvider->getVirtualOffsetForFunction(functionId);
-    const std::string sourceURL = func->getRuntimeModule()->getSourceURL();
+    const std::string sourceURL =
+        func->getRuntimeModule(runtime)->getSourceURL();
     return {segmentID, funcVirtualOffset, sourceURL};
   }
 
   // Check if the function is executed or not.
   static bool isFuncExecuted(
+      Runtime &runtime,
       const std::vector<CodeCoverageProfiler::FuncInfo> &executedFuncInfos,
       Handle<JSFunction> checkFunc) {
-    CodeCoverageProfiler::FuncInfo checkFuncInfo = getFuncInfo(checkFunc);
+    CodeCoverageProfiler::FuncInfo checkFuncInfo =
+        getFuncInfo(runtime, checkFunc);
     return std::find(
                executedFuncInfos.begin(),
                executedFuncInfos.end(),
@@ -66,9 +72,10 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
   // Whether \p func1 and \p func2 have different FuncInfo
   // or not.
   static ::testing::AssertionResult hasDifferentInfo(
+      Runtime &runtime,
       Handle<JSFunction> func1,
       Handle<JSFunction> func2) {
-    if (getFuncInfo(func1) == getFuncInfo(func2)) {
+    if (getFuncInfo(runtime, func1) == getFuncInfo(runtime, func2)) {
       return ::testing::AssertionFailure()
           << "func1 and func2 has same func info.";
     } else {
@@ -98,12 +105,13 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
       vmcast<JSFunction>(funcArr->at(runtime, 1).getObject(runtime)));
 
   // Used and unused functions should have different info.
-  EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
+  EXPECT_TRUE(hasDifferentInfo(runtime, funcUsed, funcUnused));
 
   // Global + used.
   EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 2);
-  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed));
-  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUsed));
+  EXPECT_FALSE(
+      isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 // Right now, this just tests that we can simultaneously run two code coverage
@@ -143,12 +151,12 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
         rt.makeHandle(vmcast<JSFunction>(funcArr->at(rt, 1).getObject(rt)));
 
     // Used and unused functions should have different info.
-    EXPECT_TRUE(hasDifferentInfo(funcUsed, funcUnused));
+    EXPECT_TRUE(hasDifferentInfo(rt, funcUsed, funcUnused));
 
     // Global + used.
     EXPECT_EQ(executedFuncInfos.size(), 2);
-    EXPECT_TRUE(isFuncExecuted(executedFuncInfos, funcUsed));
-    EXPECT_FALSE(isFuncExecuted(executedFuncInfos, funcUnused));
+    EXPECT_TRUE(isFuncExecuted(rt, executedFuncInfos, funcUsed));
+    EXPECT_FALSE(isFuncExecuted(rt, executedFuncInfos, funcUnused));
   }
 }
 
@@ -178,13 +186,14 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleModules) {
       vmcast<JSFunction>(funcArr->at(runtime, 1).getObject(runtime)));
 
   // Used and unused functions should have different info.
-  EXPECT_TRUE(hasDifferentInfo(funcFoo, funcUnused));
-  EXPECT_TRUE(hasDifferentInfo(funcBar, funcUnused));
+  EXPECT_TRUE(hasDifferentInfo(runtime, funcFoo, funcUnused));
+  EXPECT_TRUE(hasDifferentInfo(runtime, funcBar, funcUnused));
 
   EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 4);
-  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcFoo));
-  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcBar));
-  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcFoo));
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcBar));
+  EXPECT_FALSE(
+      isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
@@ -212,14 +221,15 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
       vmcast<JSFunction>(funcArr->at(runtime, 2).getObject(runtime)));
 
   // Used and unused functions should have different info.
-  EXPECT_TRUE(hasDifferentInfo(funcUsed1, funcUnused));
-  EXPECT_TRUE(hasDifferentInfo(funcUsed2, funcUnused));
+  EXPECT_TRUE(hasDifferentInfo(runtime, funcUsed1, funcUnused));
+  EXPECT_TRUE(hasDifferentInfo(runtime, funcUsed2, funcUnused));
 
   // Global + two eval() code + used1 + used2.
   EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 5);
-  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed1));
-  EXPECT_TRUE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUsed2));
-  EXPECT_FALSE(isFuncExecuted(testRuntimeExecutedFuncInfos, funcUnused));
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUsed1));
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUsed2));
+  EXPECT_FALSE(
+      isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUnused));
 }
 
 } // namespace CodeCoverageTest

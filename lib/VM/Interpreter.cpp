@@ -1606,7 +1606,7 @@ tailCall:
         runtime.pushCallStack(curCodeBlock, ip);
 #endif
 
-        CodeBlock *calleeBlock = func->getCodeBlock();
+        CodeBlock *calleeBlock = func->getCodeBlock(runtime);
         CAPTURE_IP(calleeBlock->lazyCompile(runtime));
 #if defined(HERMESVM_PROFILER_EXTERN)
         CAPTURE_IP(res = runtime.interpretFunction(calleeBlock));
@@ -1748,7 +1748,7 @@ tailCall:
             GeneratorInnerFunction::State::SuspendedStart) {
           nextIP = NEXTINST(StartGenerator);
         } else {
-          nextIP = innerFn->getNextIP();
+          nextIP = innerFn->getNextIP(runtime);
           innerFn->restoreStack(runtime);
         }
         innerFn->setState(GeneratorInnerFunction::State::Executing);

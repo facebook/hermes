@@ -2476,7 +2476,7 @@ void JSObject::_snapshotAddLocationsImpl(
     if (constructorVal->isObject()) {
       if (auto *constructor =
               dyn_vmcast<JSFunction>(constructorVal->getObject(base))) {
-        constructor->addLocationToSnapshot(snap, gc.getObjectID(self));
+        constructor->addLocationToSnapshot(snap, gc.getObjectID(self), gc);
       }
     }
   }

@@ -69,7 +69,7 @@ CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
-    const CodeBlock *codeBlock = jsFun->getCodeBlock();
+    const CodeBlock *codeBlock = jsFun->getCodeBlock(runtime);
     // Create empty object for prototype.
     auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
@@ -1105,11 +1105,12 @@ PseudoHandle<JSFunction> JSFunction::create(
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
-    HeapSnapshot::NodeID id) const {
-  if (auto location = codeBlock_->getSourceLocation()) {
+    HeapSnapshot::NodeID id,
+    GC &gc) const {
+  if (auto location = codeBlock_.get(gc)->getSourceLocation()) {
     snap.addLocation(
         id,
-        codeBlock_->getRuntimeModule()->getScriptID(),
+        codeBlock_.get(gc)->getRuntimeModule()->getScriptID(),
         location->line,
         location->column);
   }
@@ -1121,7 +1122,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  result = runtime.interpretFunction(self->getCodeBlock());
+  result = runtime.interpretFunction(self->getCodeBlock(runtime));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1135,7 +1136,7 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   if (!funcName.empty()) {
     return funcName;
   }
-  return self->codeBlock_->getNameString(gc.getCallbacks());
+  return self->codeBlock_.get(gc)->getNameString(gc.getCallbacks());
 }
 
 void JSFunction::_snapshotAddEdgesImpl(
@@ -1150,7 +1151,7 @@ void JSFunction::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Shortcut,
       "codeBlock",
-      gc.getIDTracker().getNativeID(self->codeBlock_));
+      gc.getIDTracker().getNativeID(self->codeBlock_.get(gc)));
 }
 
 void JSFunction::_snapshotAddLocationsImpl(
@@ -1158,7 +1159,7 @@ void JSFunction::_snapshotAddLocationsImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSFunction>(cell);
-  self->addLocationToSnapshot(snap, gc.getObjectID(self));
+  self->addLocationToSnapshot(snap, gc.getObjectID(self), gc);
 }
 #endif
 
@@ -1396,15 +1397,15 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
   // We're about to call the function anyway, so this doesn't reduce laziness.
   // Note that this will do nothing after the very first time a lazy function
   // is called, so we only resize before we save any registers at all.
-  if (LLVM_UNLIKELY(selfHandle->getCodeBlock()->isLazy())) {
-    selfHandle->getCodeBlock()->lazyCompile(runtime);
+  if (LLVM_UNLIKELY(selfHandle->getCodeBlock(runtime)->isLazy())) {
+    selfHandle->getCodeBlock(runtime)->lazyCompile(runtime);
     if (LLVM_UNLIKELY(
             ArrayStorage::resize(
                 ctx,
                 runtime,
                 getContextSize(
-                    selfHandle->getCodeBlock(), selfHandle->argCount_)) ==
-            ExecutionStatus::EXCEPTION)) {
+                    selfHandle->getCodeBlock(runtime),
+                    selfHandle->argCount_)) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     selfHandle->savedContext_.set(runtime, ctx.get(), runtime.getHeap());
