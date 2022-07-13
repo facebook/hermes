@@ -63,9 +63,8 @@ void SamplingProfiler::GlobalProfiler::unregisterRuntime(
   (void)succeed;
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  assert(
-      threadLocalProfilerForLoom_.get() == profiler &&
-      "invalid hermes runtime for this thread");
+  // TODO(T125910634): re-introduce the requirement for unregistering the
+  // runtime in the same thread it was registered.
   threadLocalProfilerForLoom_.set(nullptr);
 #endif
 }
@@ -409,11 +408,8 @@ SamplingProfiler::SamplingProfiler(Runtime &runtime)
 }
 
 SamplingProfiler::~SamplingProfiler() {
-  if (pthread_self() != currentThread_) {
-    ::hermes::hermes_fatal(
-        "SamplingProfiler should be destroyed on the same thread it is "
-        "created");
-  }
+  // TODO(T125910634): re-introduce the requirement for destroying the sampling
+  // profiler on the same thread in which it was created.
   GlobalProfiler::get()->unregisterRuntime(this);
 }
 
