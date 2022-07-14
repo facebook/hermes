@@ -31,7 +31,7 @@ TracingRuntime::TracingRuntime(
 
 void TracingRuntime::replaceNondeterministicFuncs() {
   insertHostForwarder({"Math", "random"});
-  insertHostForwarder({"Date", "now"});
+  setupDate();
   setUpWeakRef();
 
   numPreambleRecords_ = trace_.records().size();
@@ -39,11 +39,10 @@ void TracingRuntime::replaceNondeterministicFuncs() {
 
 void TracingRuntime::insertHostForwarder(
     const std::vector<const char *> &propertyPath) {
-  jsi::Function origFunc =
-      walkPropertyPath(*runtime_, propertyPath).asFunction(*runtime_);
-  auto lenProp = origFunc.getProperty(*runtime_, "length").asNumber();
-  savedFunctions.push_back(std::move(origFunc));
-  jsi::Function *funcPtr = &savedFunctions.back();
+  auto lenProp = walkPropertyPath(*runtime_, propertyPath)
+                     .getProperty(*runtime_, "length")
+                     .asNumber();
+  jsi::Function *funcPtr = saveFunction(propertyPath);
 
   jsi::Function funcReplacement = jsi::Function::createFromHostFunction(
       *this,
@@ -102,6 +101,99 @@ void TracingRuntime::setUpWeakRef() {
       .asFunction(*this)
       .call(*this, {std::move(nativeNoOp)});
   insertHostForwarder({"WeakRef", "prototype", "deref"});
+}
+
+void TracingRuntime::setupDate() {
+  auto lenProp = walkPropertyPath(*runtime_, {"Date"})
+                     .getProperty(*runtime_, "length")
+                     .asNumber();
+  jsi::Function *origDateFunc = saveFunction({"Date"});
+
+  jsi::Function nativeDateCtor = jsi::Function::createFromHostFunction(
+      *this,
+      jsi::PropNameID::forAscii(*this, "Date"),
+      lenProp,
+      [this, origDateFunc](
+          Runtime &rt,
+          const jsi::Value &thisVal,
+          const jsi::Value *args,
+          size_t count) {
+        auto ret = origDateFunc->callAsConstructor(*runtime_);
+        // We cannot return this value here, because the trace would be
+        // invalid. `new Date()` returns an object, so returning it would mean
+        // returning an object that has never been defined. Therefore, we trace
+        // reconstructing a new Date with the argument being the getTime() value
+        // from the Date object created in the untraced runtime. Conceptually,
+        // we are transforming calls to the no-arg Date constructor:
+        // var myDate = new Date();
+        // -->
+        // var tmp = new Date();        <-- this is untraced
+        // var arg = tmp.getTime();     <-- this is untraced
+        // var myDate = new Date(arg);  <-- this is traced
+        auto obj = ret.asObject(*runtime_);
+        auto val = obj.getPropertyAsFunction(*runtime_, "getTime")
+                       .callWithThis(*runtime_, obj);
+        return this->global()
+            .getPropertyAsFunction(*this, "Date")
+            .callAsConstructor(*this, val);
+      });
+
+  jsi::Function nativeDateFunc = jsi::Function::createFromHostFunction(
+      *this,
+      jsi::PropNameID::forAscii(*this, "Date"),
+      lenProp,
+      [this, origDateFunc](
+          Runtime &rt,
+          const jsi::Value &thisVal,
+          const jsi::Value *args,
+          size_t count) {
+        auto ret = origDateFunc->call(*runtime_, args, count);
+        std::string retStr = ret.asString(*runtime_).utf8(*runtime_);
+        // If we just returned the string directly from the above call, the
+        // trace would not be valid because we would be using a string that has
+        // never been defined before. Therefore, we must copy the string in the
+        // tracing runtime to get this string to show up and be defined in the
+        // trace.
+        return jsi::String::createFromAscii(*this, retStr);
+      });
+
+  auto code = R"(
+(function(nativeDateCtor, nativeDateFunc){
+  var DateReal = Date;
+  function DateJSReplacement(...args){
+    if (new.target){
+      if (arguments.length == 0){
+        return nativeDateCtor();
+      } else {
+        // calling new Date with arguments is deterministic
+        return new DateReal(...args);
+      }
+    } else {
+      return nativeDateFunc(...args);
+    }
+  }
+  // Cannot use Object.assign because Date methods are not enumerable
+  for (p of Object.getOwnPropertyNames(DateReal)){
+    DateJSReplacement[p] = DateReal[p];
+  }
+  globalThis.Date = DateJSReplacement;
+});
+)";
+  global()
+      .getPropertyAsFunction(*this, "eval")
+      .call(*this, code)
+      .asObject(*this)
+      .asFunction(*this)
+      .call(*this, {std::move(nativeDateCtor), std::move(nativeDateFunc)});
+  insertHostForwarder({"Date", "now"});
+}
+
+jsi::Function *TracingRuntime::saveFunction(
+    const std::vector<const char *> &propertyPath) {
+  jsi::Function origFunc =
+      walkPropertyPath(*runtime_, propertyPath).asFunction(*runtime_);
+  savedFunctions.push_back(std::move(origFunc));
+  return &savedFunctions.back();
 }
 
 jsi::Object TracingRuntime::walkPropertyPath(
