@@ -1077,7 +1077,7 @@ Handle<JSObject> Runtime::runInternalBytecode() {
   auto res = runBytecode(
       std::move(bcResult.first),
       flags,
-      /*sourceURL*/ "",
+      /*sourceURL*/ "InternalBytecode.js",
       makeNullHandle<Environment>());
   // It is a fatal error for the internal bytecode to throw an exception.
   assert(
