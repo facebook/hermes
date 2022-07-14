@@ -382,6 +382,8 @@ NATIVE_FUNCTION(weakSetConstructor)
 NATIVE_FUNCTION(weakSetPrototypeAdd)
 NATIVE_FUNCTION(weakSetPrototypeDelete)
 NATIVE_FUNCTION(weakSetPrototypeHas)
+NATIVE_FUNCTION(weakRefConstructor)
+NATIVE_FUNCTION(weakRefPrototypeDeref)
 
 #ifdef HERMES_ENABLE_IR_INSTRUMENTATION
 NATIVE_FUNCTION(instrumentDoNothing)
@@ -413,6 +415,7 @@ NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSString>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakRef>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
 NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
 

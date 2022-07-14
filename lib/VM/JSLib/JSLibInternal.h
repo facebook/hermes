@@ -16,6 +16,7 @@
 #include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSWeakRef.h"
 
 namespace hermes {
 namespace vm {
@@ -399,6 +400,9 @@ Handle<JSObject> createWeakMapConstructor(Runtime &runtime);
 
 /// Create the WeakSet constructor and populate methods.
 Handle<JSObject> createWeakSetConstructor(Runtime &runtime);
+
+/// Create the WeakRef constructor and populate methods.
+Handle<JSObject> createWeakRefConstructor(Runtime &runtime);
 
 /// Create the Symbol constructor and populate methods.
 Handle<JSObject> createSymbolConstructor(Runtime &runtime);

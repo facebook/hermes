@@ -16,6 +16,7 @@
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/JSWeakRef.h"
 #include "hermes/VM/PrimitiveBox.h"
 
 #include <limits>

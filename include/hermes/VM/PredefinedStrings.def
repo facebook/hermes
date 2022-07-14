@@ -387,6 +387,9 @@ STR(stringify, "stringify")
 STR(WeakMap, "WeakMap")
 STR(WeakSet, "WeakSet")
 
+STR(WeakRef, "WeakRef")
+STR(deref, "deref")
+
 STR(Symbol, "Symbol")
 STR(predefinedFor, "for")
 STR(keyFor, "keyFor")

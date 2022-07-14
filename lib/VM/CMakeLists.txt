@@ -40,6 +40,7 @@ set(source_files
   JSNativeFunctions.cpp
   JSTypedArray.cpp
   JSWeakMapImpl.cpp
+  JSWeakRef.cpp
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
@@ -112,6 +113,7 @@ set(source_files
   JSLib/Symbol.cpp
   JSLib/Date.cpp JSLib/DateUtil.cpp
   JSLib/WeakMap.cpp
+  JSLib/WeakRef.cpp
   JSLib/WeakSet.cpp
   JSLib/print.cpp
   JSLib/eval.cpp
