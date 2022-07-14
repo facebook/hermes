@@ -62,11 +62,6 @@ struct SynthTraceTest : public ::testing::Test {
           << ", actual is: " << ::testing::PrintToString(actual);
     }
   }
-
-  llvh::ArrayRef<std::unique_ptr<SynthTrace::Record>> getRecords() {
-    auto &recs = rt->trace().records();
-    return llvh::makeArrayRef(recs.data(), recs.size());
-  }
 };
 
 #define EXPECT_EQ_RECORD(expected, actual) \
@@ -81,7 +76,7 @@ TEST_F(SynthTraceTest, CreateObject) {
     auto obj = jsi::Object(*rt);
     objID = rt->getUniqueID(obj);
   }
-  auto records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(1, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
@@ -109,7 +104,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   // the function that was called.
   ASSERT_EQ(argStr, ret.asString(*rt).utf8(*rt));
 
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   // The first two records are for executing the JS for "identity".
   // Then there are two string creations -- one labeled StringCreate0 above,
   // and the other for the string "identity" in StringCreate1.
@@ -160,7 +155,7 @@ TEST_F(SynthTraceTest, CallToNative) {
     auto ret = func.call(*rt, {jsi::Value(arg)});
     ASSERT_EQ(arg + 100, ret.asNumber());
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(6, records.size());
   // The function is called from native, and is defined in native, so it
   // trampolines through the VM.
@@ -231,7 +226,7 @@ TEST_F(SynthTraceTest, GetProperty) {
     auto bValue = obj.getProperty(*rt, bProp);
     ASSERT_TRUE(bValue.isUndefined());
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(7, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
@@ -292,7 +287,7 @@ TEST_F(SynthTraceTest, SetProperty) {
     bPropID = rt->getUniqueID(bProp);
     obj.setProperty(*rt, bProp, true);
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(5, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
@@ -344,7 +339,7 @@ TEST_F(SynthTraceTest, HasProperty) {
     // Whether or not "b" exists is irrelevant in this test.
     (void)hasB;
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(5, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
@@ -385,7 +380,7 @@ TEST_F(SynthTraceTest, GetPropertyNames) {
     jsi::Array names = obj.getPropertyNames(*rt);
     propNamesID = rt->getUniqueID(names);
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records[0]);
@@ -400,7 +395,7 @@ TEST_F(SynthTraceTest, CreateArray) {
     auto arr = jsi::Array(*rt, 10);
     objID = rt->getUniqueID(arr);
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(1, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateArrayRecord(dummyTime, objID, 10), *records[0]);
@@ -413,7 +408,7 @@ TEST_F(SynthTraceTest, ArrayWrite) {
     objID = rt->getUniqueID(arr);
     arr.setValueAtIndex(*rt, 0, 1);
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateArrayRecord(dummyTime, objID, 10), *records[0]);
@@ -457,7 +452,7 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
     // Make sure the right value was returned.
     ASSERT_EQ(1, value.asNumber());
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(9, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateStringRecord(dummyTime, aStringID, a.c_str(), 1),
@@ -522,7 +517,7 @@ TEST_F(SynthTraceTest, DrainMicrotasks) {
     rt->drainMicrotasks();
     rt->drainMicrotasks(5);
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
   EXPECT_EQ_RECORD(SynthTrace::DrainMicrotasksRecord(dummyTime), *records[0]);
   EXPECT_EQ_RECORD(
@@ -612,7 +607,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
     // Check that it was written just in case.
     ASSERT_EQ(insertValue, ho.getProperty(*rt, tho->xPropName).asNumber());
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   auto globID = rt->getUniqueID(rt->global());
   EXPECT_EQ(17, records.size());
   // Created a proxy host object.
@@ -807,7 +802,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
     ASSERT_EQ(7, rt->global().getProperty(*rt, xResPropName).asNumber());
     ASSERT_FALSE(rt->global().getProperty(*rt, yResPropName).getBool());
   }
-  const auto &records = getRecords();
+  const auto &records = rt->trace().records();
   auto globID = rt->getUniqueID(rt->global());
   EXPECT_EQ(20, records.size());
   // Created a proxy host object.
@@ -1018,12 +1013,6 @@ struct SynthTraceReplayTest : public ::testing::Test {
 
   jsi::Value eval(jsi::Runtime &rt, const char *code) {
     return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
-  }
-
-  llvh::ArrayRef<std::unique_ptr<SynthTrace::Record>> getRecords() {
-    auto n = traceRt->getNumPreambleRecordsForTest();
-    auto &recs = traceRt->trace().records();
-    return llvh::makeArrayRef(recs.data() + n, recs.size() - n);
   }
 };
 
