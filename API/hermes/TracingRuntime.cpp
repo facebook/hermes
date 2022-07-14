@@ -29,6 +29,54 @@ TracingRuntime::TracingRuntime(
       runtime_(std::move(runtime)),
       trace_(globalID, conf, std::move(traceStream)) {}
 
+void TracingRuntime::replaceNondeterministicFuncs() {
+  insertHostForwarder({"Math", "random"});
+  insertHostForwarder({"Date", "now"});
+  numPreambleRecords_ = trace_.records().size();
+}
+
+void TracingRuntime::insertHostForwarder(
+    const std::vector<const char *> &propertyPath) {
+  jsi::Function origFunc =
+      walkPropertyPath(*runtime_, propertyPath).asFunction(*runtime_);
+  auto lenProp = origFunc.getProperty(*runtime_, "length").asNumber();
+  savedFunctions.push_back(std::move(origFunc));
+  jsi::Function *funcPtr = &savedFunctions.back();
+
+  jsi::Function funcReplacement = jsi::Function::createFromHostFunction(
+      *this,
+      jsi::PropNameID::forAscii(*this, propertyPath.back()),
+      lenProp,
+      [this, funcPtr](
+          Runtime &rt,
+          const jsi::Value &thisVal,
+          const jsi::Value *args,
+          size_t count) {
+        return thisVal.isObject()
+            ? funcPtr->callWithThis(
+                  *runtime_, thisVal.asObject(*runtime_), args, count)
+            : funcPtr->call(*runtime_, args, count);
+      });
+
+  walkPropertyPath(*this, propertyPath, 1)
+      .setProperty(*this, propertyPath.back(), funcReplacement);
+}
+
+jsi::Object TracingRuntime::walkPropertyPath(
+    jsi::Runtime &runtime,
+    const std::vector<const char *> &propertyPath,
+    size_t skipLastAmt) {
+  assert(
+      skipLastAmt <= propertyPath.size() &&
+      "skipLastAmt cannot be larger than length of property path");
+  jsi::Object obj = runtime.global();
+  for (auto e = propertyPath.begin(); e != propertyPath.end() - skipLastAmt;
+       e++) {
+    obj = obj.getPropertyAsObject(runtime, *e);
+  }
+  return obj;
+}
+
 jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
@@ -554,7 +602,9 @@ TracingHermesRuntime::TracingHermesRuntime(
           runtimeConfig,
           std::move(traceStream),
           std::move(commitAction),
-          std::move(rollbackAction)) {}
+          std::move(rollbackAction)) {
+  replaceNondeterministicFuncs();
+}
 
 TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {

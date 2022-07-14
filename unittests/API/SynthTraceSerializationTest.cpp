@@ -368,7 +368,8 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
   auto records = optTrace.getPropertyAsObject(*rt, "trace").asArray(*rt);
 
-  auto record = records.getValueAtIndex(*rt, 0).asObject(*rt);
+  auto offset = rt->getNumPreambleRecordsForTest();
+  auto record = records.getValueAtIndex(*rt, 0 + offset).asObject(*rt);
   EXPECT_EQ(
       "CreateObjectRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
@@ -376,7 +377,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_EQ(objID, record.getProperty(*rt, "objID").asNumber());
 
   // The obj.getProperty(*rt, "a") creates a string primitive for "a".
-  record = records.getValueAtIndex(*rt, 1).asObject(*rt);
+  record = records.getValueAtIndex(*rt, 1 + offset).asObject(*rt);
   EXPECT_EQ(
       "CreateStringRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
@@ -384,7 +385,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_TRUE(record.getProperty(*rt, "objID").isNumber());
   auto stringID = record.getProperty(*rt, "objID").asNumber();
 
-  record = records.getValueAtIndex(*rt, 2).asObject(*rt);
+  record = records.getValueAtIndex(*rt, 2 + offset).asObject(*rt);
   EXPECT_EQ(
       "GetPropertyRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
@@ -393,59 +394,6 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_EQ(stringID, record.getProperty(*rt, "propID").asNumber());
   EXPECT_EQ(
       "undefined:", record.getProperty(*rt, "value").asString(*rt).utf8(*rt));
-}
-
-TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
-  const ::hermes::vm::RuntimeConfig conf =
-      ::hermes::vm::RuntimeConfig::Builder().withTraceEnabled(true).build();
-  std::string result;
-  auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
-  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(conf), conf, std::move(resultStream)));
-
-  uint64_t dateNow = 0;
-  uint64_t newDate = 0;
-  std::string dateAsFunc;
-  {
-    jsi::Object math = rt->global().getPropertyAsObject(*rt, "Math");
-    jsi::Object date = rt->global().getPropertyAsObject(*rt, "Date");
-    // Don't need the result, just making sure the seed gets set.
-    math.getPropertyAsFunction(*rt, "random").call(*rt).asNumber();
-    dateNow = date.getPropertyAsFunction(*rt, "now").call(*rt).asNumber();
-    jsi::Function dateFunc = date.asFunction(*rt);
-    auto createdDateObj = dateFunc.callAsConstructor(*rt).asObject(*rt);
-    newDate = createdDateObj.getPropertyAsFunction(*rt, "getTime")
-                  .callWithThis(*rt, createdDateObj)
-                  .asNumber();
-    dateAsFunc = dateFunc.call(*rt).asString(*rt).utf8(*rt);
-  }
-
-  rt->flushAndDisableTrace();
-
-  auto optTrace = rt->global()
-                      .getPropertyAsObject(*rt, "JSON")
-                      .getPropertyAsFunction(*rt, "parse")
-                      .call(*rt, result)
-                      .asObject(*rt);
-
-  auto environment = optTrace.getPropertyAsObject(*rt, "env");
-  EXPECT_TRUE(environment.getProperty(*rt, "mathRandomSeed").isNumber());
-  auto callsToDateNow =
-      environment.getPropertyAsObject(*rt, "callsToDateNow").asArray(*rt);
-  auto callsToNewDate =
-      environment.getPropertyAsObject(*rt, "callsToNewDate").asArray(*rt);
-  auto callsToDateAsFunction =
-      environment.getPropertyAsObject(*rt, "callsToDateAsFunction")
-          .asArray(*rt);
-  EXPECT_EQ(1, callsToDateNow.size(*rt));
-  EXPECT_EQ(dateNow, callsToDateNow.getValueAtIndex(*rt, 0).asNumber());
-  EXPECT_EQ(1, callsToNewDate.size(*rt));
-  EXPECT_EQ(newDate, callsToNewDate.getValueAtIndex(*rt, 0).asNumber());
-  EXPECT_EQ(1, callsToDateAsFunction.size(*rt));
-  EXPECT_EQ(
-      dateAsFunc,
-      callsToDateAsFunction.getValueAtIndex(*rt, 0).asString(*rt).utf8(*rt));
-  // Ignore the elements inside the trace, those are tested elsewhere.
 }
 
 // Handle sanitization does extra "FillerCell" allocations that break this test.

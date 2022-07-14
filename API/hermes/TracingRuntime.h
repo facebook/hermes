@@ -121,6 +121,18 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
     return trace_;
   }
 
+  void replaceNondeterministicFuncs();
+
+  // This is the number of records recorded as part of the 'preamble' of a synth
+  // trace. This means all the records after this amount are from the actual
+  // execution of the trace.
+  uint32_t getNumPreambleRecordsForTest() const {
+    assert(
+        numPreambleRecords_ > 0 &&
+        "Only call this method if the preamble has been executed");
+    return numPreambleRecords_;
+  }
+
  private:
   SynthTrace::TraceValue toTraceValue(const jsi::Value &value);
 
@@ -130,9 +142,21 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   SynthTrace::TimeSinceStart getTimeSinceStart() const;
 
+  void insertHostForwarder(const std::vector<const char *> &propertyPath);
+
+  // This function will traverse the properties defined in propertyPath,
+  // starting from the global object in the given runtime. This function can
+  // optionally skip the last \p skipLastAmt of properties in the given path.
+  static jsi::Object walkPropertyPath(
+      jsi::Runtime &runtime,
+      const std::vector<const char *> &propertyPath,
+      size_t skipLastAmt = 0);
+
   std::unique_ptr<jsi::Runtime> runtime_;
   SynthTrace trace_;
+  std::deque<jsi::Function> savedFunctions;
   const SynthTrace::TimePoint startTime_{std::chrono::steady_clock::now()};
+  uint32_t numPreambleRecords_;
 };
 
 // TracingRuntime is *almost* vm independent.  This provides the
