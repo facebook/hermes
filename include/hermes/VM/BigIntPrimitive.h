@@ -303,6 +303,7 @@ class BigIntPrimitive final
       case bigint::OperationStatus::NEGATIVE_EXPONENT:
         return runtime.raiseRangeError("Exponent must be positive");
     }
+    llvm_unreachable("No other OperationStatus.");
   }
 
   template <typename BigIntRefTy>
