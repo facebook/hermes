@@ -1516,6 +1516,7 @@ bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
   }
   // \c drainJobs is currently an unbounded execution, hence no exceptions
   // implies drained until TODO(T89426441): \c maxMicrotasksHint is supported
+  runtime_.clearKeptObjects();
   return true;
 }
 

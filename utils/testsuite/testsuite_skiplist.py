@@ -2037,7 +2037,6 @@ UNSUPPORTED_FEATURES = [
     "Temporal",
     "well-formed-json-stringify",
     "u180e",
-    "WeakRef",
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [

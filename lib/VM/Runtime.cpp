@@ -31,6 +31,7 @@
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/OrderedHashMap.h"
 #include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
@@ -1729,6 +1730,23 @@ ExecutionStatus Runtime::drainJobs() {
     }
   }
   return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Runtime::addToKeptObjects(Handle<JSObject> obj) {
+  // Lazily create the map for keptObjects_
+  if (keptObjects_.isUndefined()) {
+    auto mapRes = OrderedHashMap::create(*this);
+    if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    keptObjects_ = mapRes->getHermesValue();
+  }
+  auto mapHandle = Handle<OrderedHashMap>::vmcast(&keptObjects_);
+  return OrderedHashMap::insert(mapHandle, *this, obj, obj);
+}
+
+void Runtime::clearKeptObjects() {
+  keptObjects_ = HermesValue::encodeUndefinedValue();
 }
 
 uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
