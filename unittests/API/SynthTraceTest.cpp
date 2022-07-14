@@ -1120,6 +1120,7 @@ struct NonDeterminismReplayTest : public SynthTraceReplayTest {
       : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
                                  .withTraceEnabled(true)
                                  .withEnableHermesInternal(true)
+                                 .withMicrotaskQueue(true)
                                  .build()) {}
 };
 
@@ -1141,6 +1142,43 @@ TEST_F(NonDeterminismReplayTest, MathRandomTest) {
 
   auto replayedVal = eval(*replayRt, "x").asNumber();
   EXPECT_EQ(randVal, replayedVal);
+}
+
+TEST_F(NonDeterminismReplayTest, SimpleWeakRefTest) {
+  eval(*traceRt, R"(
+var obj = {x: 5};
+var ref = new WeakRef(obj);
+var x = ref.deref().x;
+)");
+
+  auto traceX = eval(*traceRt, "x").asNumber();
+
+  replay();
+
+  auto replayX = eval(*replayRt, "x").asNumber();
+  EXPECT_EQ(traceX, replayX);
+}
+
+TEST_F(NonDeterminismReplayTest, WeakRefTest) {
+  eval(*traceRt, R"(
+var obj = {x: 5};
+var ref = new WeakRef(obj);
+obj = null;
+var firstDeref = ref.deref();
+)");
+  traceRt->drainMicrotasks();
+  eval(*traceRt, R"(
+gc();
+var secondDeref = ref.deref();
+)");
+  auto secondDeref = eval(*traceRt, "secondDeref").isUndefined();
+
+  replay();
+
+  auto replayedFirst = eval(*replayRt, "firstDeref.x").asNumber();
+  auto replayedSecond = eval(*replayRt, "secondDeref").isUndefined();
+  EXPECT_EQ(replayedFirst, 5);
+  EXPECT_EQ(secondDeref, replayedSecond);
 }
 
 /// @}

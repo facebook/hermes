@@ -144,6 +144,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   void insertHostForwarder(const std::vector<const char *> &propertyPath);
 
+  void setUpWeakRef();
+
   // This function will traverse the properties defined in propertyPath,
   // starting from the global object in the given runtime. This function can
   // optionally skip the last \p skipLastAmt of properties in the given path.
