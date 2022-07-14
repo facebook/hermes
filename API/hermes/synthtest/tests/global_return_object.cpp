@@ -16,10 +16,6 @@ const char *globalReturnObjectTrace() {
 {
   "globalObjID": 1,
   "env": {
-    "mathRandomSeed": 0,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [

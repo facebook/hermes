@@ -270,7 +270,6 @@ bool executeHBCBytecodeImpl(
     // Try to limit features that can introduce unpredictable CPU instruction
     // behavior. Date is a potential cause, but is not handled currently.
     vm::MockedEnvironment env;
-    env.mathRandomSeed = 0;
     env.stabilizeInstructionCount = true;
     runtime->setMockedEnvironment(env);
   }

@@ -43,10 +43,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     "vmExperimentFlags": 123
   },
   "env": {
-    "mathRandomSeed": 123,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
@@ -56,7 +52,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   const SynthTrace &trace = std::get<0>(result);
   hermes::vm::RuntimeConfig rtconf =
       std::get<1>(result).withGCConfig(std::get<2>(result).build()).build();
-  const hermes::vm::MockedEnvironment &env = std::get<3>(result);
 
   EXPECT_EQ(trace.records().size(), 0);
 
@@ -75,11 +70,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_FALSE(rtconf.getIntl());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
   EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
-
-  EXPECT_EQ(env.mathRandomSeed, 123);
-  EXPECT_EQ(env.callsToDateNow.size(), 0);
-  EXPECT_EQ(env.callsToNewDate.size(), 0);
-  EXPECT_EQ(env.callsToDateAsFunction.size(), 0);
 }
 
 TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
@@ -89,10 +79,6 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   "globalObjID": 258,
   "runtimeConfig": {},
   "env": {
-    "mathRandomSeed": 123,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
@@ -119,10 +105,6 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
     }
   },
   "env": {
-    "mathRandomSeed": 123,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
@@ -143,10 +125,6 @@ TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
     }
   },
   "env": {
-    "mathRandomSeed": 123,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
@@ -162,10 +140,6 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
   "runtimeConfig": {
   },
   "env": {
-    "mathRandomSeed": 123,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []

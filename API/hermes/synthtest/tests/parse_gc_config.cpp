@@ -22,10 +22,6 @@ const char *parseGCConfigTrace() {
     }
   },
   "env": {
-    "mathRandomSeed": 0,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [

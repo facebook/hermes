@@ -1061,22 +1061,6 @@ class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
 TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   GCScope scope(runtime);
 
-  const std::minstd_rand::result_type mathRandomSeed = 123;
-  std::minstd_rand engine;
-  engine.seed(mathRandomSeed);
-  std::uniform_real_distribution<> dist{0.0, 1.0};
-  const double mathRandom = dist(engine);
-  const double secondMathRandom = dist(engine);
-  const uint64_t dateNow = 100;
-  const uint64_t newDate = 200;
-  const std::string dateAsFunc{"foo"};
-  const std::u16string dateAsFuncU16{u"foo"};
-
-  // This will be added on to as part of the test.
-  std::deque<uint64_t> dateNowColl{dateNow};
-  const std::deque<uint64_t> newDateColl{newDate};
-  const std::deque<std::string> dateAsFuncColl{dateAsFunc};
-
   std::string affinityMaskKey{"js_threadAffinityMask"};
   std::string affinityMaskValue{"<affinity mask>"};
   std::string totalAllocBytesKey{"js_totalAllocatedBytes"};
@@ -1091,88 +1075,8 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
 
   const std::deque<MockedEnvironment::StatsTable> instrumentedStats{statsTable};
 
-  runtime.setMockedEnvironment(hermes::vm::MockedEnvironment{
-      mathRandomSeed,
-      dateNowColl,
-      newDateColl,
-      dateAsFuncColl,
-      instrumentedStats});
-
-  {
-    // Call Math.random() and check that its output matches the one given.
-    auto propRes = JSObject::getNamed_RJS(
-        runtime.getGlobal(),
-        runtime,
-        Predefined::getSymbolID(Predefined::Math));
-    ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
-        << "Exception accessing Math on the global object";
-    auto mathObj = runtime.makeHandle<JSObject>(std::move(propRes.getValue()));
-    propRes = JSObject::getNamed_RJS(
-        mathObj, runtime, Predefined::getSymbolID(Predefined::random));
-    ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
-        << "Exception accessing random on the Math object";
-    auto randomFunc =
-        runtime.makeHandle<Callable>(std::move(propRes.getValue()));
-    auto val = Callable::executeCall0(
-        randomFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Math.random()";
-    EXPECT_EQ(val->get().getNumber(), mathRandom);
-
-    // Make sure the second call gets the second value.
-    val = Callable::executeCall0(
-        randomFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Math.random()";
-    EXPECT_EQ(val->get().getNumber(), secondMathRandom);
-  }
-
-  {
-    // Call various Date functions and check that the output matches the ones
-    // given.
-    auto propRes = JSObject::getNamed_RJS(
-        runtime.getGlobal(),
-        runtime,
-        Predefined::getSymbolID(Predefined::Date));
-    ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
-        << "Exception accessing Date on the global object";
-    Handle<Callable> dateFunc =
-        runtime.makeHandle<Callable>(std::move(propRes.getValue()));
-
-    // Call Date.now().
-    propRes = JSObject::getNamed_RJS(
-        dateFunc, runtime, Predefined::getSymbolID(Predefined::now));
-    ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
-        << "Exception accessing now on the Date object";
-    auto nowFunc = runtime.makeHandle<Callable>(std::move(propRes.getValue()));
-    auto val =
-        Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Date.now()";
-    EXPECT_EQ(val->getHermesValue().getNumberAs<uint64_t>(), dateNow);
-
-    // Call new Date()
-    val = Callable::executeConstruct0(dateFunc, runtime);
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on new Date()";
-    PseudoHandle<JSDate> valAsObj =
-        PseudoHandle<JSDate>::vmcast(std::move(*val));
-    HermesValue hv =
-        HermesValue::encodeNumberValue(valAsObj->getPrimitiveValue());
-    // This pointer can become invalid, don't be tempted to use it incorrectly.
-    valAsObj.invalidate();
-    EXPECT_EQ(hv.getNumberAs<uint64_t>(), newDate);
-
-    // Call Date()
-    val =
-        Callable::executeCall0(dateFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Date()";
-    SmallU16String<32> tmp;
-    val->get().getString()->appendUTF16String(tmp);
-    std::u16string str(tmp.begin(), tmp.end());
-    EXPECT_EQ(str, dateAsFuncU16);
-  }
+  runtime.setMockedEnvironment(
+      hermes::vm::MockedEnvironment{instrumentedStats});
 
 #ifndef _WINDOWS
   // TODO(T62209287): For unknown reasons, this doesn't work on Windows.
@@ -1243,17 +1147,9 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     double totalAllocBytesVal2 = totalAllocBytesVal2Res.getValue()->getNumber();
     ASSERT_EQ(totalAllocBytesVal2, 2222.0);
   }
-#endif
-
   // If the tracing mode is also engaged, ensure that the same values were
   // traced as well.
   auto *storage = runtime.getCommonStorage();
-  EXPECT_EQ(mathRandomSeed, storage->tracedEnv.mathRandomSeed);
-  EXPECT_EQ(dateNowColl, storage->tracedEnv.callsToDateNow);
-  EXPECT_EQ(newDateColl, storage->tracedEnv.callsToNewDate);
-  EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
-  EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
-#ifndef _WINDOWS
   // TODO(T62209287): For unknown reasons, this doesn't work on Windows.
   // When we figure out why, and fix, it remove the #ifndef.
   EXPECT_EQ(

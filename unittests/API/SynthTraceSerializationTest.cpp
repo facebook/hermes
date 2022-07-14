@@ -348,24 +348,6 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
                       .call(*rt, result)
                       .asObject(*rt);
 
-  auto environment = optTrace.getPropertyAsObject(*rt, "env");
-  EXPECT_TRUE(environment.getProperty(*rt, "mathRandomSeed").isNumber());
-  EXPECT_EQ(
-      0,
-      environment.getPropertyAsObject(*rt, "callsToDateNow")
-          .asArray(*rt)
-          .size(*rt));
-  EXPECT_EQ(
-      0,
-      environment.getPropertyAsObject(*rt, "callsToNewDate")
-          .asArray(*rt)
-          .size(*rt));
-  EXPECT_EQ(
-      0,
-      environment.getPropertyAsObject(*rt, "callsToDateAsFunction")
-          .asArray(*rt)
-          .size(*rt));
-
   auto records = optTrace.getPropertyAsObject(*rt, "trace").asArray(*rt);
 
   auto offset = rt->getNumPreambleRecordsForTest();

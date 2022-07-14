@@ -10,9 +10,6 @@
 
 #define FOREACH_TEST(F)              \
   F(callbacksCallJSFunction)         \
-  F(dateAsFunction)                  \
-  F(dateAsNew)                       \
-  F(dateNow)                         \
   F(getInstrumentedStats)            \
   F(getInstrumentedStatsAllowsEmpty) \
   F(globalReturnObject)              \
@@ -29,7 +26,6 @@
   F(hostFunctionReturnArgument)      \
   F(hostFunctionReturnThis)          \
   F(hostGlobalObject)                \
-  F(mathRandom)                      \
   F(nativePropertyNames)             \
   F(nativeSetsConstant)              \
   F(parseGCConfig)                   \

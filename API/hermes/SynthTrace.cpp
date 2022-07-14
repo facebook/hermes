@@ -736,28 +736,6 @@ void SynthTrace::flushAndDisable(
   // Env section.
   json_->emitKey("env");
   json_->openDict();
-  json_->emitKeyValue("mathRandomSeed", env.mathRandomSeed);
-
-  json_->emitKey("callsToDateNow");
-  json_->openArray();
-  for (uint64_t dateNow : env.callsToDateNow) {
-    json_->emitValue(dateNow);
-  }
-  json_->closeArray();
-
-  json_->emitKey("callsToNewDate");
-  json_->openArray();
-  for (uint64_t newDate : env.callsToNewDate) {
-    json_->emitValue(newDate);
-  }
-  json_->closeArray();
-
-  json_->emitKey("callsToDateAsFunction");
-  json_->openArray();
-  for (const std::string &dateAsFunc : env.callsToDateAsFunction) {
-    json_->emitValue(dateAsFunc);
-  }
-  json_->closeArray();
 
   json_->emitKey("callsToHermesInternalGetInstrumentedStats");
   json_->openArray();

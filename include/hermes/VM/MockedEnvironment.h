@@ -54,11 +54,6 @@ struct MockedEnvironment final {
   };
   using StatsTable = llvh::StringMap<StatsTableValue>;
 
-  // Zero is assumed to be an invalid random seed in several places.
-  std::minstd_rand::result_type mathRandomSeed{0};
-  std::deque<uint64_t> callsToDateNow;
-  std::deque<uint64_t> callsToNewDate;
-  std::deque<std::string> callsToDateAsFunction;
   std::deque<StatsTable> callsToHermesInternalGetInstrumentedStats;
 
   /// True if we should try to execute the same number of CPU instructions
@@ -67,16 +62,8 @@ struct MockedEnvironment final {
 
   MockedEnvironment() = default;
   explicit MockedEnvironment(
-      std::minstd_rand::result_type mathRandomSeed,
-      const std::deque<uint64_t> &callsToDateNow,
-      const std::deque<uint64_t> &callsToNewDate,
-      const std::deque<std::string> &callsToDateAsFunction,
       const std::deque<StatsTable> &callsToHermesInternalGetInstrumentedStats)
-      : mathRandomSeed(mathRandomSeed),
-        callsToDateNow(callsToDateNow),
-        callsToNewDate(callsToNewDate),
-        callsToDateAsFunction(callsToDateAsFunction),
-        callsToHermesInternalGetInstrumentedStats(
+      : callsToHermesInternalGetInstrumentedStats(
             callsToHermesInternalGetInstrumentedStats) {}
 };
 

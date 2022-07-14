@@ -216,35 +216,10 @@ getListOfStatsTable(JSONArray *array) {
 }
 
 ::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
-  auto getListOfNumbers = [](JSONArray *array) -> std::deque<uint64_t> {
-    std::deque<uint64_t> calls;
-    std::transform(
-        array->begin(),
-        array->end(),
-        std::back_inserter(calls),
-        [](const JSONValue *value) { return getNumberAs<uint64_t>(value); });
-    return calls;
-  };
-
-  if (!llvh::dyn_cast_or_null<JSONNumber>(env->get("mathRandomSeed"))) {
-    throw std::invalid_argument("env.mathRandomSeed is not a number");
-  }
-  std::minstd_rand::result_type mathRandomSeed =
-      llvh::cast<JSONNumber>(env->at("mathRandomSeed"))->getValue();
-  auto callsToDateNow =
-      getListOfNumbers(llvh::cast<JSONArray>(env->at("callsToDateNow")));
-  auto callsToNewDate =
-      getListOfNumbers(llvh::cast<JSONArray>(env->at("callsToNewDate")));
-  auto callsToDateAsFunction = getListOfStrings<std::deque>(
-      llvh::cast<JSONArray>(env->at("callsToDateAsFunction")));
   auto callsToHermesInternalGetInstrumentedStats =
       getListOfStatsTable<std::deque>(llvh::cast_or_null<JSONArray>(
           env->get("callsToHermesInternalGetInstrumentedStats")));
   return ::hermes::vm::MockedEnvironment{
-      mathRandomSeed,
-      callsToDateNow,
-      callsToNewDate,
-      callsToDateAsFunction,
       callsToHermesInternalGetInstrumentedStats};
 }
 

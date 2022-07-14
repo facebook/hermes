@@ -19,10 +19,6 @@ const char *getInstrumentedStatsTrace() {
      "enableSampledStats": true,
    },
   "env": {
-    "mathRandomSeed": 0,
-    "callsToDateNow": [],
-    "callsToNewDate": [],
-    "callsToDateAsFunction": [],
     "callsToHermesInternalGetInstrumentedStats": [
       {
          "js_heapSize": 100,
@@ -92,7 +88,6 @@ const char *getInstrumentedStatsAllowsEmptyTrace() {
    },
   "env": {
     "mathRandomSeed": 0,
-    "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],  // Empty.
   },

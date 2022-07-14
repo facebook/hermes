@@ -411,27 +411,14 @@ static CallResult<double> makeTimeFromArgs(Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 dateConstructor(void *, Runtime &runtime, NativeArgs args) {
-  auto *const storage = runtime.getCommonStorage();
   if (args.isConstructorCall()) {
     auto self = args.vmcastThis<JSDate>();
     uint32_t argCount = args.getArgCount();
     double finalDate;
 
     if (argCount == 0) {
-      if (storage->env) {
-        if (storage->env->callsToNewDate.empty()) {
-          return runtime.raiseTypeError(
-              "Replay of new Date() ran out of traced values");
-        }
-        finalDate = storage->env->callsToNewDate.front();
-        storage->env->callsToNewDate.pop_front();
-      } else {
-        // No arguments, just set it to the current time.
-        finalDate = curTime();
-      }
-      if (LLVM_UNLIKELY(storage->shouldTrace)) {
-        storage->tracedEnv.callsToNewDate.push_back(finalDate);
-      }
+      // No arguments, just set it to the current time.
+      finalDate = curTime();
     } else if (argCount == 1) {
       if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
         // No handle needed here because we just retrieve a double.
@@ -475,22 +462,9 @@ dateConstructor(void *, Runtime &runtime, NativeArgs args) {
   }
 
   llvh::SmallString<32> str{};
-  if (storage->env) {
-    if (storage->env->callsToDateAsFunction.empty()) {
-      return runtime.raiseTypeError(
-          "Replay of Date() ran out of traced values");
-    }
-    str = storage->env->callsToDateAsFunction.front();
-    storage->env->callsToDateAsFunction.pop_front();
-  } else {
-    double t = curTime();
-    double local = localTime(t);
-    dateTimeString(local, local - t, str);
-  }
-  if (LLVM_UNLIKELY(storage->shouldTrace)) {
-    storage->tracedEnv.callsToDateAsFunction.push_back(
-        std::string(str.c_str()));
-  }
+  double t = curTime();
+  double local = localTime(t);
+  dateTimeString(local, local - t, str);
   return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, str));
 }
 
@@ -528,20 +502,7 @@ CallResult<HermesValue> dateUTC(void *, Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue> dateNow(void *, Runtime &runtime, NativeArgs args) {
-  double t = curTime();
-  auto *const storage = runtime.getCommonStorage();
-  if (storage->env) {
-    if (storage->env->callsToDateNow.empty()) {
-      return runtime.raiseTypeError(
-          "Replay of Date.now() ran out of traced values");
-    }
-    t = storage->env->callsToDateNow.front();
-    storage->env->callsToDateNow.pop_front();
-  }
-  if (LLVM_UNLIKELY(storage->shouldTrace)) {
-    storage->tracedEnv.callsToDateNow.push_back(t);
-  }
-  return HermesValue::encodeDoubleValue(t);
+  return HermesValue::encodeDoubleValue(curTime());
 }
 
 CallResult<HermesValue>
