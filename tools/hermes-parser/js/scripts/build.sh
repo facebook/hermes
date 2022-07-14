@@ -62,6 +62,7 @@ yarn babel-node "$THIS_DIR/genSelectorTypes.js"
 yarn babel-node "$THIS_DIR/genPredicateFunctions.js"
 yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
 yarn babel-node "$THIS_DIR/genTransformCloneTypes.js"
+yarn babel-node "$THIS_DIR/genTransformModifyTypes.js"
 yarn babel-node "$THIS_DIR/genTransformReplaceNodeTypes.js"
 
 for package in "${PACKAGES[@]}"; do

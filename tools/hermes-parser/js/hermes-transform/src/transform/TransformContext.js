@@ -18,8 +18,9 @@ import type {
   Statement,
   TypeAnnotationType,
 } from 'hermes-estree';
-import type {DetachedNode} from '../detachedNode';
+import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 import type {TransformCloneSignatures} from '../generated/TransformCloneSignatures';
+import type {TransformModifySignatures} from '../generated/TransformModifySignatures';
 import type {TransformReplaceSignatures} from '../generated/TransformReplaceSignatures';
 import type {TraversalContext} from '../traverse/traverse';
 import type {AddCommentsMutation} from './mutations/AddComments';
@@ -150,14 +151,14 @@ type TransformCommentAPIs = $ReadOnly<{
    */
   cloneCommentsTo: (
     target: ESNode,
-    destination: ESNode | DetachedNode<ESNode>,
+    destination: MaybeDetachedNode<ESNode>,
   ) => void,
 
   /**
    * Add comments on the line before a specified node.
    */
   addLeadingComments: (
-    node: ESNode | DetachedNode<ESNode>,
+    node: MaybeDetachedNode<ESNode>,
     comments: SingleOrArray<Comment>,
   ) => void,
 
@@ -165,7 +166,7 @@ type TransformCommentAPIs = $ReadOnly<{
    * Add comments inline before a specified node.
    */
   addLeadingInlineComments: (
-    node: ESNode | DetachedNode<ESNode>,
+    node: MaybeDetachedNode<ESNode>,
     comments: SingleOrArray<Comment>,
   ) => void,
 
@@ -173,7 +174,7 @@ type TransformCommentAPIs = $ReadOnly<{
    * Add comments on the line after a specified node.
    */
   addTrailingComments: (
-    node: ESNode | DetachedNode<ESNode>,
+    node: MaybeDetachedNode<ESNode>,
     comments: SingleOrArray<Comment>,
   ) => void,
 
@@ -181,7 +182,7 @@ type TransformCommentAPIs = $ReadOnly<{
    * Add comments inline after a specified node.
    */
   addTrailingInlineComments: (
-    node: ESNode | DetachedNode<ESNode>,
+    node: MaybeDetachedNode<ESNode>,
     comments: SingleOrArray<Comment>,
   ) => void,
 
@@ -213,6 +214,14 @@ type TransformInsertAPIs = $ReadOnly<{
       DetachedNode<InsertStatementMutation['target']>,
     >,
   ) => void,
+}>;
+
+type TransformModifyAPIs = $ReadOnly<{
+  /**
+   * Modifies a given node in place.
+   * This is equivalent to doing a replace with a shallow clone with overrides.
+   */
+  modifyNodeInPlace: TransformModifySignatures,
 }>;
 
 type TransformRemoveAPIs = $ReadOnly<{
@@ -298,6 +307,7 @@ export type TransformContextAdditions = $ReadOnly<{
   ...TransformCommentAPIs,
   ...TransformCloneAPIs,
   ...TransformInsertAPIs,
+  ...TransformModifyAPIs,
   ...TransformRemoveAPIs,
   ...TransformReplaceAPIs,
 }>;
@@ -323,13 +333,12 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return shallowCloneNode(node);
+      return shallowCloneNode(node, {}, {preserveLocation: true});
     }: TransformCloneAPIs['shallowCloneNode']),
 
-    // $FlowExpectedError[incompatible-exact]
     shallowCloneNodeWithOverrides: ((
       node: ?ESNode,
-      newProps?: $ReadOnly<{...}>,
+      newProps?: $ReadOnly<{...}> = {},
     ): // $FlowExpectedError[incompatible-cast]
     // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
@@ -337,7 +346,7 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return shallowCloneNode(node, newProps);
+      return shallowCloneNode(node, newProps, {preserveLocation: true});
     }: TransformCloneAPIs['shallowCloneNodeWithOverrides']),
 
     shallowCloneArray: (<T: ESNode>(
@@ -353,7 +362,7 @@ export function getTransformContext(): TransformContextAdditions {
           // $FlowExpectedError[incompatible-call]
           return node;
         }
-        return shallowCloneNode<T>(node);
+        return shallowCloneNode<T>(node, {}, {preserveLocation: true});
       });
     }: TransformCloneAPIs['shallowCloneArray']),
 
@@ -365,13 +374,12 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return deepCloneNode(node);
+      return deepCloneNode(node, {});
     }: TransformCloneAPIs['deepCloneNode']),
 
-    // $FlowExpectedError[incompatible-exact]
     deepCloneNodeWithOverrides: ((
       node: ?ESNode,
-      newProps?: $ReadOnly<{...}>,
+      newProps?: $ReadOnly<{...}> = {},
     ): // $FlowExpectedError[incompatible-cast]
     // $FlowExpectedError[prop-missing]
     ?DetachedNode<ESNode> => {
@@ -500,6 +508,21 @@ export function getTransformContext(): TransformContextAdditions {
       );
     }: TransformReplaceAPIs['replaceStatementWithMany']),
   };
+  const modifyAPIs: TransformModifyAPIs = {
+    modifyNodeInPlace: ((
+      node: ?ESNode,
+      newProps?: $ReadOnly<{...}> = {},
+      options?: ReplaceNodeOptions,
+    ): void => {
+      if (node == null) {
+        return;
+      }
+
+      const cloned = shallowCloneNode(node, newProps, {preserveLocation: true});
+      // $FlowExpectedError[incompatible-call]
+      replaceAPIs.replaceNode(node, cloned, options);
+    }: TransformModifyAPIs['modifyNodeInPlace']),
+  };
 
   return {
     mutations,
@@ -512,6 +535,7 @@ export function getTransformContext(): TransformContextAdditions {
     ...cloneAPIs,
     ...commentAPIs,
     ...insertAPIs,
+    ...modifyAPIs,
     ...removeAPIs,
     ...replaceAPIs,
   };

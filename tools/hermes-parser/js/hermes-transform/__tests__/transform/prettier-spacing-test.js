@@ -158,23 +158,18 @@ describe('call with function spacing', () => {
           return;
         }
         const callback = node.arguments[0];
-        context.replaceNode(
-          node,
-          context.shallowCloneNodeWithOverrides(node, {
-            arguments: [
-              t.ArrowFunctionExpression({
-                async: callback.async,
-                body: context.shallowCloneNode(callback.body),
-                params: context.shallowCloneArray(callback.params),
-                predicate: context.shallowCloneNode(callback.predicate),
-                returnType: context.shallowCloneNode(callback.returnType),
-                typeParameters: context.shallowCloneNode(
-                  callback.typeParameters,
-                ),
-              }),
-            ],
-          }),
-        );
+        context.modifyNodeInPlace(node, {
+          arguments: [
+            t.ArrowFunctionExpression({
+              async: callback.async,
+              body: context.shallowCloneNode(callback.body),
+              params: context.shallowCloneArray(callback.params),
+              predicate: context.shallowCloneNode(callback.predicate),
+              returnType: context.shallowCloneNode(callback.returnType),
+              typeParameters: context.shallowCloneNode(callback.typeParameters),
+            }),
+          ],
+        });
       },
     }));
   }

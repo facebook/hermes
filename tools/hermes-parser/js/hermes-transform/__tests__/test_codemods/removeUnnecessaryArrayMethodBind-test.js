@@ -39,12 +39,9 @@ function codemod(code: string) {
           case 'ArrowFunctionExpression':
             // arr.forEach(() => {}, this);
             //                       ^^^^ remove
-            context.replaceNode(
-              node,
-              context.shallowCloneNodeWithOverrides(node, {
-                arguments: [context.shallowCloneNode(node.arguments[0])],
-              }),
-            );
+            context.modifyNodeInPlace(node, {
+              arguments: [context.shallowCloneNode(node.arguments[0])],
+            });
             break;
 
           case 'FunctionExpression':
@@ -64,23 +61,20 @@ function codemod(code: string) {
             // arr.forEach(function foo() {}, this);
             //                                ^^^^ remove
             //             ^^^^^^^^^^^^^^^^^ convert to arrow
-            context.replaceNode(
-              node,
-              context.shallowCloneNodeWithOverrides(node, {
-                arguments: [
-                  t.ArrowFunctionExpression({
-                    async: callback.async,
-                    body: context.shallowCloneNode(callback.body),
-                    params: context.shallowCloneArray(callback.params),
-                    predicate: context.shallowCloneNode(callback.predicate),
-                    returnType: context.shallowCloneNode(callback.returnType),
-                    typeParameters: context.shallowCloneNode(
-                      callback.typeParameters,
-                    ),
-                  }),
-                ],
-              }),
-            );
+            context.modifyNodeInPlace(node, {
+              arguments: [
+                t.ArrowFunctionExpression({
+                  async: callback.async,
+                  body: context.shallowCloneNode(callback.body),
+                  params: context.shallowCloneArray(callback.params),
+                  predicate: context.shallowCloneNode(callback.predicate),
+                  returnType: context.shallowCloneNode(callback.returnType),
+                  typeParameters: context.shallowCloneNode(
+                    callback.typeParameters,
+                  ),
+                }),
+              ],
+            });
         }
       },
     };

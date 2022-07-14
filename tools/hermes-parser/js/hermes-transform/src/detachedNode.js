@@ -14,47 +14,59 @@ import {getVisitorKeys, isNode} from './getVisitorKeys';
 import {SimpleTraverser} from './traverse/SimpleTraverser';
 
 export opaque type DetachedNode<+T> = T;
+export type MaybeDetachedNode<+T> = T | DetachedNode<T>;
+
+export type DetachConfig = $ReadOnly<{
+  preserveLocation?: boolean,
+}>;
 
 // used by the node type function codegen
 export function detachedProps<T: BaseNode>(
   parent: ?ESNode,
-  props: {...},
+  props: $ReadOnly<$Partial<{...}>>,
+  config: DetachConfig = {...null},
 ): DetachedNode<T> {
-  // $FlowExpectedError[incompatible-return]
+  // $FlowExpectedError[incompatible-type]
   // $FlowExpectedError[cannot-spread-inexact]
-  return {
+  const detachedNode: DetachedNode<T> = {
     ...props,
-    // if this is [0,0] AND the file has a docblock then prettier will insert newlines between
-    // certain detached nodes. Because of "intended" formatting behaviour (https://github.com/prettier/prettier/issues/12078)
-    // this can cause us to output weirdly formatted code that should have been collapsed.
-    //
-    // prettier works backwards from the position you give it to find newlines or non whitespace
-    // tokens and uses this to determine if newlines should be inserted between nodes.
-    // By placing the range at [1, 1] we can ensure a token is always found before a newline
-    // and therefore no newlines will be placed between nodes.
-    //
-    // NOTE: we will still run into the bug if there is weird code like a docblock with whitespace
-    //       characters before it. However we assume this isn't going to happen because any file
-    //       already formatted by prettier will have that whitespace removed.
-    // We considered a more complex solution involving traversing the AST and manually updating
-    // detached node ranges after mutations are applied - however this is a lot heavier and will
-    // probably never be needed.
-    range: [1, 1],
-    loc: {
-      start: {
-        line: 1,
-        column: 0,
-      },
-      end: {
-        line: 1,
-        column: 0,
-      },
-    },
+    ...(config?.preserveLocation !== true
+      ? {
+          // if this is [0,0] AND the file has a docblock then prettier will insert newlines between
+          // certain detached nodes. Because of "intended" formatting behaviour (https://github.com/prettier/prettier/issues/12078)
+          // this can cause us to output weirdly formatted code that should have been collapsed.
+          //
+          // prettier works backwards from the position you give it to find newlines or non whitespace
+          // tokens and uses this to determine if newlines should be inserted between nodes.
+          // By placing the range at [1, 1] we can ensure a token is always found before a newline
+          // and therefore no newlines will be placed between nodes.
+          //
+          // NOTE: we will still run into the bug if there is weird code like a docblock with whitespace
+          //       characters before it. However we assume this isn't going to happen because any file
+          //       already formatted by prettier will have that whitespace removed.
+          // We considered a more complex solution involving traversing the AST and manually updating
+          // detached node ranges after mutations are applied - however this is a lot heavier and will
+          // probably never be needed.
+          range: [1, 1],
+          loc: {
+            start: {
+              line: 1,
+              column: 0,
+            },
+            end: {
+              line: 1,
+              column: 0,
+            },
+          },
+        }
+      : {}),
     // if not provided, then we purposely don't set this here
     // and will rely on the tooling to update it as appropriate.
     // nothing should be reading from this before it's set anyway.
     parent: (parent: $FlowFixMe),
   };
+
+  return detachedNode;
 }
 
 /**
@@ -62,9 +74,14 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $Partial<{...}> = {},
+  newProps: $ReadOnly<$Partial<{...}>>,
+  config?: DetachConfig,
 ): DetachedNode<T> {
-  return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe));
+  return detachedProps(
+    null,
+    (Object.assign({}, node, newProps): $FlowFixMe),
+    config,
+  );
 }
 
 /**
@@ -72,7 +89,7 @@ export function shallowCloneNode<T: ESNode>(
  */
 export function deepCloneNode<T: ESNode>(
   node: T,
-  newProps: $Partial<{...}> = {},
+  newProps: $ReadOnly<$Partial<{...}>>,
 ): DetachedNode<T> {
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(
