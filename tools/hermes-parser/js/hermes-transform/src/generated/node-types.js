@@ -26,67 +26,62 @@ import type {
   VariableDeclaration as VariableDeclarationType,
   VariableDeclarator as VariableDeclaratorType,
 } from 'hermes-estree';
-import type {DetachedNode} from '../detachedNode';
+import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
+  asDetachedNode,
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
 
 export type BlockStatementProps = {
-  +body: $ReadOnlyArray<DetachedNode<BlockStatementType['body'][number]>>,
+  +body: $ReadOnlyArray<MaybeDetachedNode<BlockStatementType['body'][number]>>,
 };
-export function BlockStatement({
-  parent,
-  ...props
-}: {
+export function BlockStatement(props: {
   ...$ReadOnly<BlockStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<BlockStatementType> {
-  const node = detachedProps<BlockStatementType>(parent, {
+  const node = detachedProps<BlockStatementType>(props.parent, {
     type: 'BlockStatement',
-    ...props,
+    body: props.body.map(n => asDetachedNode(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
 }
 
 export type CallExpressionProps = {
-  +callee: DetachedNode<CallExpressionType['callee']>,
-  +typeArguments?: ?DetachedNode<CallExpressionType['typeArguments']>,
+  +callee: MaybeDetachedNode<CallExpressionType['callee']>,
+  +typeArguments?: ?MaybeDetachedNode<CallExpressionType['typeArguments']>,
   +arguments: $ReadOnlyArray<
-    DetachedNode<CallExpressionType['arguments'][number]>,
+    MaybeDetachedNode<CallExpressionType['arguments'][number]>,
   >,
 };
-export function CallExpression({
-  parent,
-  ...props
-}: {
+export function CallExpression(props: {
   ...$ReadOnly<CallExpressionProps>,
   +parent?: ESNode,
 }): DetachedNode<CallExpressionType> {
-  const node = detachedProps<CallExpressionType>(parent, {
+  const node = detachedProps<CallExpressionType>(props.parent, {
     type: 'CallExpression',
-    ...props,
+    callee: asDetachedNode(props.callee),
+    typeArguments: asDetachedNode(props.typeArguments),
+    arguments: props.arguments.map(n => asDetachedNode(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
 }
 
 export type ExpressionStatementProps = {
-  +expression: DetachedNode<ExpressionStatementType['expression']>,
+  +expression: MaybeDetachedNode<ExpressionStatementType['expression']>,
   +directive?: ?ExpressionStatementType['directive'],
 };
-export function ExpressionStatement({
-  parent,
-  ...props
-}: {
+export function ExpressionStatement(props: {
   ...$ReadOnly<ExpressionStatementProps>,
   +parent?: ESNode,
 }): DetachedNode<ExpressionStatementType> {
-  const node = detachedProps<ExpressionStatementType>(parent, {
+  const node = detachedProps<ExpressionStatementType>(props.parent, {
     type: 'ExpressionStatement',
-    ...props,
+    expression: asDetachedNode(props.expression),
+    directive: props.directive,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -94,37 +89,41 @@ export function ExpressionStatement({
 
 export type NumberTypeAnnotationProps = {};
 export function NumberTypeAnnotation(
-  {
-    parent,
-  }: {
+  props: {
     +parent?: ESNode,
   } = {...null},
 ): DetachedNode<NumberTypeAnnotationType> {
-  return detachedProps<NumberTypeAnnotationType>(parent, {
+  return detachedProps<NumberTypeAnnotationType>(props.parent, {
     type: 'NumberTypeAnnotation',
   });
 }
 
 export type PropertyDefinitionProps = {
-  +key: DetachedNode<PropertyDefinitionType['key']>,
-  +value?: ?DetachedNode<PropertyDefinitionType['value']>,
+  +key: MaybeDetachedNode<PropertyDefinitionType['key']>,
+  +value?: ?MaybeDetachedNode<PropertyDefinitionType['value']>,
   +computed: PropertyDefinitionType['computed'],
   +static: PropertyDefinitionType['static'],
   +declare: PropertyDefinitionType['declare'],
   +optional: PropertyDefinitionType['optional'],
-  +variance?: ?DetachedNode<PropertyDefinitionType['variance']>,
-  +typeAnnotation?: ?DetachedNode<PropertyDefinitionType['typeAnnotation']>,
+  +variance?: ?MaybeDetachedNode<PropertyDefinitionType['variance']>,
+  +typeAnnotation?: ?MaybeDetachedNode<
+    PropertyDefinitionType['typeAnnotation'],
+  >,
 };
-export function PropertyDefinition({
-  parent,
-  ...props
-}: {
+export function PropertyDefinition(props: {
   ...$ReadOnly<PropertyDefinitionProps>,
   +parent?: ESNode,
 }): DetachedNode<PropertyDefinitionType> {
-  const node = detachedProps<PropertyDefinitionType>(parent, {
+  const node = detachedProps<PropertyDefinitionType>(props.parent, {
     type: 'PropertyDefinition',
-    ...props,
+    key: asDetachedNode(props.key),
+    value: asDetachedNode(props.value),
+    computed: props.computed,
+    static: props.static,
+    declare: props.declare,
+    optional: props.optional,
+    variance: asDetachedNode(props.variance),
+    typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -133,38 +132,34 @@ export function PropertyDefinition({
 export type VariableDeclarationProps = {
   +kind: VariableDeclarationType['kind'],
   +declarations: $ReadOnlyArray<
-    DetachedNode<VariableDeclarationType['declarations'][number]>,
+    MaybeDetachedNode<VariableDeclarationType['declarations'][number]>,
   >,
 };
-export function VariableDeclaration({
-  parent,
-  ...props
-}: {
+export function VariableDeclaration(props: {
   ...$ReadOnly<VariableDeclarationProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclarationType> {
-  const node = detachedProps<VariableDeclarationType>(parent, {
+  const node = detachedProps<VariableDeclarationType>(props.parent, {
     type: 'VariableDeclaration',
-    ...props,
+    kind: props.kind,
+    declarations: props.declarations.map(n => asDetachedNode(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
 }
 
 export type VariableDeclaratorProps = {
-  +init?: ?DetachedNode<VariableDeclaratorType['init']>,
-  +id: DetachedNode<VariableDeclaratorType['id']>,
+  +init?: ?MaybeDetachedNode<VariableDeclaratorType['init']>,
+  +id: MaybeDetachedNode<VariableDeclaratorType['id']>,
 };
-export function VariableDeclarator({
-  parent,
-  ...props
-}: {
+export function VariableDeclarator(props: {
   ...$ReadOnly<VariableDeclaratorProps>,
   +parent?: ESNode,
 }): DetachedNode<VariableDeclaratorType> {
-  const node = detachedProps<VariableDeclaratorType>(parent, {
+  const node = detachedProps<VariableDeclaratorType>(props.parent, {
     type: 'VariableDeclarator',
-    ...props,
+    init: asDetachedNode(props.init),
+    id: asDetachedNode(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;

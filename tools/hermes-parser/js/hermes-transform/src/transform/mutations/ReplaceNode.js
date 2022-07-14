@@ -15,6 +15,7 @@ import type {DetachedNode} from '../../detachedNode';
 import {replaceInArray} from './utils/arrayUtils';
 import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
+import {getOriginalNode} from '../../detachedNode';
 import {getVisitorKeys, isNode} from '../../getVisitorKeys';
 
 export type ReplaceNodeMutation = $ReadOnly<{
@@ -99,7 +100,9 @@ function getParentKey(target: ESNode): $ReadOnly<
       }
     } else if (Array.isArray(parent[key])) {
       for (let i = 0; i < parent[key].length; i += 1) {
-        if (parent[key][i] === target) {
+        const current = parent[key][i];
+        const originalNode = getOriginalNode(current);
+        if (current === target || originalNode === target) {
           return {type: 'array', parent, key, targetIndex: i};
         }
       }
@@ -108,6 +111,6 @@ function getParentKey(target: ESNode): $ReadOnly<
 
   // this shouldn't happen ever
   throw new InvalidReplacementError(
-    `Expected to find the ${target.type} as a direct child of the ${target.type}.`,
+    `Expected to find the ${target.type} as a direct child of the ${parent.type}.`,
   );
 }

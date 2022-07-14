@@ -30,9 +30,12 @@ import type {RemoveCommentMutation} from './mutations/RemoveComment';
 import type {RemoveNodeMutation} from './mutations/RemoveNode';
 import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
-import type {ReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import type {
+  ReplaceStatementWithManyMutation,
+  ReplaceStatementWithManyMutationNodes,
+} from './mutations/ReplaceStatementWithMany';
 
-import {deepCloneNode, shallowCloneNode} from '../detachedNode';
+import {asDetachedNode, deepCloneNode, shallowCloneNode} from '../detachedNode';
 import {
   CommentPlacement,
   getCommentsForNode,
@@ -200,7 +203,7 @@ type TransformInsertAPIs = $ReadOnly<{
   insertAfterStatement: (
     target: InsertStatementMutation['target'],
     nodeToInsert: SingleOrArray<
-      DetachedNode<InsertStatementMutation['target']>,
+      MaybeDetachedNode<InsertStatementMutation['target']>,
     >,
   ) => void,
 
@@ -211,7 +214,7 @@ type TransformInsertAPIs = $ReadOnly<{
   insertBeforeStatement: (
     target: InsertStatementMutation['target'],
     nodeToInsert: SingleOrArray<
-      DetachedNode<InsertStatementMutation['target']>,
+      MaybeDetachedNode<InsertStatementMutation['target']>,
     >,
   ) => void,
 }>;
@@ -247,37 +250,37 @@ type TransformReplaceAPIs = $ReadOnly<{
     // Expressions may be replaced with other expressions
     (
       target: Expression,
-      nodeToReplaceWith: DetachedNode<Expression>,
+      nodeToReplaceWith: MaybeDetachedNode<Expression>,
       options?: ReplaceNodeOptions,
     ): void,
     // Module declarations may be replaced with statements or other module declarations
     (
       target: ModuleDeclaration,
-      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      nodeToReplaceWith: MaybeDetachedNode<ModuleDeclaration | Statement>,
       options?: ReplaceNodeOptions,
     ): void,
     // Statement maybe be replaced with statements or module declarations
     (
       target: Statement,
-      nodeToReplaceWith: DetachedNode<ModuleDeclaration | Statement>,
+      nodeToReplaceWith: MaybeDetachedNode<ModuleDeclaration | Statement>,
       options?: ReplaceNodeOptions,
     ): void,
     // Types maybe be replaced with other types
     (
       target: TypeAnnotationType,
-      nodeToReplaceWith: DetachedNode<TypeAnnotationType>,
+      nodeToReplaceWith: MaybeDetachedNode<TypeAnnotationType>,
       options?: ReplaceNodeOptions,
     ): void,
     // Class members may be replaced with other class members
     (
       target: ClassMember,
-      nodeToReplaceWith: DetachedNode<ClassMember>,
+      nodeToReplaceWith: MaybeDetachedNode<ClassMember>,
       options?: ReplaceNodeOptions,
     ): void,
     // Function params amy be replace with other function params
     (
       target: FunctionParameter,
-      nodeToReplaceWith: DetachedNode<FunctionParameter>,
+      nodeToReplaceWith: MaybeDetachedNode<FunctionParameter>,
       options?: ReplaceNodeOptions,
     ): void,
   } & TransformReplaceSignatures, // allow like-for-like replacements as well
@@ -288,7 +291,9 @@ type TransformReplaceAPIs = $ReadOnly<{
    */
   replaceStatementWithMany: (
     target: ReplaceStatementWithManyMutation['target'],
-    nodesToReplaceWith: ReplaceStatementWithManyMutation['nodesToReplaceWith'],
+    nodesToReplaceWith: $ReadOnlyArray<
+      MaybeDetachedNode<ReplaceStatementWithManyMutationNodes>,
+    >,
     options?: {
       /**
        * Moves the comments from the target node to the first node in the array.
@@ -333,7 +338,7 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return shallowCloneNode(node, {}, {preserveLocation: true});
+      return shallowCloneNode(node, {});
     }: TransformCloneAPIs['shallowCloneNode']),
 
     shallowCloneNodeWithOverrides: ((
@@ -346,7 +351,7 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return shallowCloneNode(node, newProps, {preserveLocation: true});
+      return shallowCloneNode(node, newProps);
     }: TransformCloneAPIs['shallowCloneNodeWithOverrides']),
 
     shallowCloneArray: (<T: ESNode>(
@@ -362,7 +367,7 @@ export function getTransformContext(): TransformContextAdditions {
           // $FlowExpectedError[incompatible-call]
           return node;
         }
-        return shallowCloneNode<T>(node, {}, {preserveLocation: true});
+        return shallowCloneNode<T>(node, {});
       });
     }: TransformCloneAPIs['shallowCloneArray']),
 
@@ -464,13 +469,25 @@ export function getTransformContext(): TransformContextAdditions {
   const insertAPIs: TransformInsertAPIs = {
     insertAfterStatement: ((target, nodesToInsert): void => {
       pushMutation(
-        createInsertStatementMutation('after', target, toArray(nodesToInsert)),
+        createInsertStatementMutation(
+          'after',
+          target,
+          toArray(nodesToInsert).map(n =>
+            asDetachedNode(n, {useDeepClone: true}),
+          ),
+        ),
       );
     }: TransformInsertAPIs['insertBeforeStatement']),
 
     insertBeforeStatement: ((target, nodesToInsert): void => {
       pushMutation(
-        createInsertStatementMutation('before', target, toArray(nodesToInsert)),
+        createInsertStatementMutation(
+          'before',
+          target,
+          toArray(nodesToInsert).map(n =>
+            asDetachedNode(n, {useDeepClone: true}),
+          ),
+        ),
       );
     }: TransformInsertAPIs['insertBeforeStatement']),
   };
@@ -486,11 +503,15 @@ export function getTransformContext(): TransformContextAdditions {
   const replaceAPIs: TransformReplaceAPIs = {
     replaceNode: ((
       target: ESNode,
-      nodeToReplaceWith: DetachedNode<ESNode>,
+      nodeToReplaceWith: MaybeDetachedNode<ESNode>,
       options?: ReplaceNodeOptions,
     ): void => {
       pushMutation(
-        createReplaceNodeMutation(target, nodeToReplaceWith, options),
+        createReplaceNodeMutation(
+          target,
+          asDetachedNode(nodeToReplaceWith),
+          options,
+        ),
       );
     }: TransformReplaceAPIs['replaceNode']),
 
@@ -502,7 +523,7 @@ export function getTransformContext(): TransformContextAdditions {
       pushMutation(
         createReplaceStatementWithManyMutation(
           target,
-          nodesToReplaceWith,
+          nodesToReplaceWith.map(n => asDetachedNode(n)),
           options,
         ),
       );

@@ -18,11 +18,11 @@ describe('function parameter spacing', () => {
           node,
           t.ArrowFunctionExpression({
             async: node.async,
-            body: context.shallowCloneNode(node.body),
-            params: context.shallowCloneArray(node.params),
-            predicate: context.shallowCloneNode(node.predicate),
-            returnType: context.shallowCloneNode(node.returnType),
-            typeParameters: context.shallowCloneNode(node.typeParameters),
+            body: node.body,
+            params: node.params,
+            predicate: node.predicate,
+            returnType: node.returnType,
+            typeParameters: node.typeParameters,
           }),
         );
       },
@@ -92,8 +92,8 @@ describe('call argument spacing', () => {
         context.replaceNode(
           node,
           t.CallExpression({
-            callee: context.shallowCloneNode(node.callee),
-            arguments: context.shallowCloneArray(node.arguments),
+            callee: node.callee,
+            arguments: node.arguments,
           }),
         );
       },
@@ -162,11 +162,11 @@ describe('call with function spacing', () => {
           arguments: [
             t.ArrowFunctionExpression({
               async: callback.async,
-              body: context.shallowCloneNode(callback.body),
-              params: context.shallowCloneArray(callback.params),
-              predicate: context.shallowCloneNode(callback.predicate),
-              returnType: context.shallowCloneNode(callback.returnType),
-              typeParameters: context.shallowCloneNode(callback.typeParameters),
+              body: callback.body,
+              params: callback.params,
+              predicate: callback.predicate,
+              returnType: callback.returnType,
+              typeParameters: callback.typeParameters,
             }),
           ],
         });
@@ -245,7 +245,7 @@ describe('class member spacing', () => {
         context.replaceNode(
           node,
           t.ClassDeclaration({
-            body: context.shallowCloneNode(node.body),
+            body: node.body,
             id: t.Identifier({name: `${node.id?.name ?? 'Class'}_Replaced`}),
           }),
         );

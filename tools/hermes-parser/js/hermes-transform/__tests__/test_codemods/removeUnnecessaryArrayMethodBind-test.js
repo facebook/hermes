@@ -40,7 +40,7 @@ function codemod(code: string) {
             // arr.forEach(() => {}, this);
             //                       ^^^^ remove
             context.modifyNodeInPlace(node, {
-              arguments: [context.shallowCloneNode(node.arguments[0])],
+              arguments: [node.arguments[0]],
             });
             break;
 
@@ -65,13 +65,11 @@ function codemod(code: string) {
               arguments: [
                 t.ArrowFunctionExpression({
                   async: callback.async,
-                  body: context.shallowCloneNode(callback.body),
-                  params: context.shallowCloneArray(callback.params),
-                  predicate: context.shallowCloneNode(callback.predicate),
-                  returnType: context.shallowCloneNode(callback.returnType),
-                  typeParameters: context.shallowCloneNode(
-                    callback.typeParameters,
-                  ),
+                  body: callback.body,
+                  params: callback.params,
+                  predicate: callback.predicate,
+                  returnType: callback.returnType,
+                  typeParameters: callback.typeParameters,
                 }),
               ],
             });

@@ -16,9 +16,49 @@ import {SimpleTraverser} from './traverse/SimpleTraverser';
 export opaque type DetachedNode<+T> = T;
 export type MaybeDetachedNode<+T> = T | DetachedNode<T>;
 
-export type DetachConfig = $ReadOnly<{
+type DetachConfig = $ReadOnly<{
   preserveLocation?: boolean,
+  originalNode?: ESNode,
 }>;
+
+const DETACHED_MARKER = Symbol.for('hermes-transform - Detached AST Node');
+const ORIGINAL_NODE = Symbol.for('hermes-transform - Original Node');
+
+export function isDetachedNode(node: MaybeDetachedNode<ESNode>): boolean {
+  // $FlowExpectedError[invalid-in-lhs] flow doesn't support symbols as keys
+  return DETACHED_MARKER in node;
+}
+export function getOriginalNode(node: MaybeDetachedNode<ESNode>): ?ESNode {
+  // $FlowExpectedError[prop-missing]
+  return node[ORIGINAL_NODE];
+}
+
+export const asDetachedNode: {
+  <T: ESNode>(
+    node: MaybeDetachedNode<T>,
+    config?: {useDeepClone: boolean},
+  ): DetachedNode<T>,
+  <T: ESNode>(
+    node: ?MaybeDetachedNode<T>,
+    config?: {useDeepClone: boolean},
+  ): ?DetachedNode<T>,
+} = <T: ESNode>(
+  node: ?MaybeDetachedNode<T>,
+  {useDeepClone}: {useDeepClone: boolean} = {useDeepClone: false},
+): // $FlowExpectedError[incompatible-type]
+?DetachedNode<T> => {
+  if (node == null) {
+    return null;
+  }
+
+  if (isDetachedNode(node)) {
+    return node;
+  }
+
+  return useDeepClone
+    ? deepCloneNode<T>(node, {})
+    : shallowCloneNode<T>(node, {});
+};
 
 // used by the node type function codegen
 export function detachedProps<T: BaseNode>(
@@ -27,7 +67,6 @@ export function detachedProps<T: BaseNode>(
   config: DetachConfig = {...null},
 ): DetachedNode<T> {
   // $FlowExpectedError[incompatible-type]
-  // $FlowExpectedError[cannot-spread-inexact]
   const detachedNode: DetachedNode<T> = {
     ...props,
     ...(config?.preserveLocation !== true
@@ -66,6 +105,23 @@ export function detachedProps<T: BaseNode>(
     parent: (parent: $FlowFixMe),
   };
 
+  // mark the node as detached
+  Object.defineProperty(detachedNode, DETACHED_MARKER, {
+    configurable: false,
+    enumerable: false,
+    value: true,
+    writable: false,
+  });
+
+  if (config.originalNode) {
+    Object.defineProperty(detachedNode, ORIGINAL_NODE, {
+      configurable: false,
+      enumerable: false,
+      value: config.originalNode,
+      writable: false,
+    });
+  }
+
   return detachedNode;
 }
 
@@ -75,13 +131,12 @@ export function detachedProps<T: BaseNode>(
 export function shallowCloneNode<T: ESNode>(
   node: T,
   newProps: $ReadOnly<$Partial<{...}>>,
-  config?: DetachConfig,
+  config?: DetachConfig = {...null},
 ): DetachedNode<T> {
-  return detachedProps(
-    null,
-    (Object.assign({}, node, newProps): $FlowFixMe),
-    config,
-  );
+  return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe), {
+    preserveLocation: config.preserveLocation ?? true,
+    originalNode: config.originalNode ?? node,
+  });
 }
 
 /**

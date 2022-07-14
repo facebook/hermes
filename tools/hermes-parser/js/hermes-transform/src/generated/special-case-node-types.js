@@ -29,9 +29,10 @@ import type {
   StringLiteral as StringLiteralType,
   TemplateElement as TemplateElementType,
 } from 'hermes-estree';
-import type {DetachedNode} from '../detachedNode';
+import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
+  asDetachedNode,
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
@@ -41,65 +42,66 @@ import {
 // No need to make consumers set these
 export type ArrowFunctionExpressionProps = {
   +params: $ReadOnlyArray<
-    DetachedNode<ArrowFunctionExpressionType['params'][number]>,
+    MaybeDetachedNode<ArrowFunctionExpressionType['params'][number]>,
   >,
-  +body: DetachedNode<ArrowFunctionExpressionType['body']>,
-  +typeParameters?: ?DetachedNode<
+  +body: MaybeDetachedNode<ArrowFunctionExpressionType['body']>,
+  +typeParameters?: ?MaybeDetachedNode<
     ArrowFunctionExpressionType['typeParameters'],
   >,
-  +returnType?: ?DetachedNode<ArrowFunctionExpressionType['returnType']>,
-  +predicate?: ?DetachedNode<ArrowFunctionExpressionType['predicate']>,
+  +returnType?: ?MaybeDetachedNode<ArrowFunctionExpressionType['returnType']>,
+  +predicate?: ?MaybeDetachedNode<ArrowFunctionExpressionType['predicate']>,
   +async: ArrowFunctionExpressionType['async'],
 };
-export function ArrowFunctionExpression({
-  parent,
-  ...props
-}: {
+export function ArrowFunctionExpression(props: {
   ...$ReadOnly<ArrowFunctionExpressionProps>,
   +parent?: ESNode,
 }): DetachedNode<ArrowFunctionExpressionType> {
-  const node = detachedProps<ArrowFunctionExpressionType>(parent, {
+  const node = detachedProps<ArrowFunctionExpressionType>(props.parent, {
     type: 'ArrowFunctionExpression',
     id: null,
     // $FlowExpectedError[incompatible-use]
     expression: props.body.type !== 'BlockStatement',
-    ...props,
+    params: props.params.map(n => asDetachedNode(n)),
+    body: asDetachedNode(props.body),
+    typeParameters: asDetachedNode(props.typeParameters),
+    returnType: asDetachedNode(props.returnType),
+    predicate: asDetachedNode(props.predicate),
+    async: props.async,
   });
   setParentPointersInDirectChildren(node);
   return node;
 }
 
 export type ClassDeclarationProps = {
-  +id?: ?DetachedNode<ClassDeclarationType['id']>,
-  +typeParameters?: ?DetachedNode<ClassDeclarationType['typeParameters']>,
-  +superClass?: ?DetachedNode<ClassDeclarationType['superClass']>,
-  +superTypeParameters?: ?DetachedNode<
+  +id?: ?MaybeDetachedNode<ClassDeclarationType['id']>,
+  +typeParameters?: ?MaybeDetachedNode<ClassDeclarationType['typeParameters']>,
+  +superClass?: ?MaybeDetachedNode<ClassDeclarationType['superClass']>,
+  +superTypeParameters?: ?MaybeDetachedNode<
     ClassDeclarationType['superTypeParameters'],
   >,
   // make this optional as it's rarer that people would want to include them
   +implements?: $ReadOnlyArray<
-    DetachedNode<ClassDeclarationType['implements'][number]>,
+    MaybeDetachedNode<ClassDeclarationType['implements'][number]>,
   >,
   // make this optional as it's rarer that people would want to include them
   +decorators?: $ReadOnlyArray<
-    DetachedNode<ClassDeclarationType['decorators'][number]>,
+    MaybeDetachedNode<ClassDeclarationType['decorators'][number]>,
   >,
-  +body: DetachedNode<ClassDeclarationType['body']>,
+  +body: MaybeDetachedNode<ClassDeclarationType['body']>,
 };
-export function ClassDeclaration({
-  parent,
-  decorators = [],
-  implements: implements_ = [],
-  ...props
-}: {
+export function ClassDeclaration(props: {
   ...$ReadOnly<ClassDeclarationProps>,
   +parent?: ESNode,
 }): DetachedNode<ClassDeclarationType> {
-  const node = detachedProps<ClassDeclarationType>(parent, {
+  const node = detachedProps<ClassDeclarationType>(props.parent, {
     type: 'ClassDeclaration',
-    decorators: decorators,
-    implements: implements_,
-    ...props,
+    id: asDetachedNode(props.id),
+    typeParameters: asDetachedNode(props.typeParameters),
+    superClass: asDetachedNode(props.superClass),
+    superTypeParameters: asDetachedNode(props.superTypeParameters),
+    decorators: (props.decorators ?? []).map(n => asDetachedNode(n)),
+    implements: (props.implements ?? []).map(n => asDetachedNode(n)),
+    body: asDetachedNode(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -111,22 +113,18 @@ export type RegExpLiteralProps = {
   +pattern: RegExpLiteralType['regex']['pattern'],
   +flags: RegExpLiteralType['regex']['flags'],
 };
-export function RegExpLiteral({
-  pattern,
-  flags,
-  parent,
-}: {
+export function RegExpLiteral(props: {
   ...$ReadOnly<RegExpLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<RegExpLiteralType> {
-  const value = new RegExp(pattern, flags);
-  return detachedProps<RegExpLiteralType>(parent, {
+  const value = new RegExp(props.pattern, props.flags);
+  return detachedProps<RegExpLiteralType>(props.parent, {
     type: 'Literal',
     value,
     raw: value.toString(),
     regex: {
-      pattern,
-      flags,
+      pattern: props.pattern,
+      flags: props.flags,
     },
   });
 }
@@ -137,18 +135,17 @@ export type TemplateElementProps = {
   +cooked: TemplateElementType['value']['cooked'],
   +raw: TemplateElementType['value']['raw'],
 };
-export function TemplateElement({
-  tail,
-  parent,
-  ...value
-}: {
+export function TemplateElement(props: {
   ...$ReadOnly<TemplateElementProps>,
   +parent?: ESNode,
 }): DetachedNode<TemplateElementType> {
-  return detachedProps<TemplateElementType>(parent, {
+  return detachedProps<TemplateElementType>(props.parent, {
     type: 'TemplateElement',
-    tail,
-    value,
+    tail: props.tail,
+    value: {
+      cooked: props.cooked,
+      raw: props.raw,
+    },
   });
 }
 
@@ -156,23 +153,18 @@ export function TemplateElement({
 // this manual def to allow us to default some values
 export type IdentifierProps = {
   +name: IdentifierType['name'],
-  +typeAnnotation?: ?DetachedNode<IdentifierType['typeAnnotation']>,
+  +typeAnnotation?: ?MaybeDetachedNode<IdentifierType['typeAnnotation']>,
   +optional?: IdentifierType['optional'],
 };
-export function Identifier({
-  parent,
-  optional = false,
-  typeAnnotation = null,
-  ...props
-}: {
+export function Identifier(props: {
   ...$ReadOnly<IdentifierProps>,
   +parent?: ESNode,
 }): DetachedNode<IdentifierType> {
-  const node = detachedProps<IdentifierType>(parent, {
+  const node = detachedProps<IdentifierType>(props.parent, {
     type: 'Identifier',
-    optional,
-    typeAnnotation,
-    ...props,
+    name: props.name,
+    optional: props.optional ?? false,
+    typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -190,16 +182,13 @@ export type BigIntLiteralProps = {
    */
   +raw?: NumericLiteralType['raw'],
 };
-export function BigIntLiteral({
-  parent,
-  ...props
-}: {
+export function BigIntLiteral(props: {
   ...$ReadOnly<BigIntLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<BigIntLiteralType> {
-  const node = detachedProps<BigIntLiteralType>(parent, {
+  const node = detachedProps<BigIntLiteralType>(props.parent, {
     type: 'Literal',
-    ...props,
+    value: props.value,
     raw: props.raw ?? `${props.value}n`,
     bigint: `${props.value}`,
   });
@@ -210,17 +199,14 @@ export function BigIntLiteral({
 export type BooleanLiteralProps = {
   +value: BooleanLiteralType['value'],
 };
-export function BooleanLiteral({
-  parent,
-  value,
-}: {
+export function BooleanLiteral(props: {
   ...$ReadOnly<BooleanLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<BooleanLiteralType> {
-  return detachedProps<BooleanLiteralType>(parent, {
+  return detachedProps<BooleanLiteralType>(props.parent, {
     type: 'Literal',
-    raw: value ? 'true' : 'false',
-    value,
+    raw: props.value ? 'true' : 'false',
+    value: props.value,
   });
 }
 
@@ -232,29 +218,24 @@ export type NumericLiteralProps = {
    */
   +raw?: NumericLiteralType['raw'],
 };
-export function NumericLiteral({
-  parent,
-  ...props
-}: {
+export function NumericLiteral(props: {
   ...$ReadOnly<NumericLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<NumericLiteralType> {
-  return detachedProps<NumericLiteralType>(parent, {
+  return detachedProps<NumericLiteralType>(props.parent, {
     type: 'Literal',
-    ...props,
+    value: props.value,
     raw: props.raw ?? `${props.value}`,
   });
 }
 
 export type NullLiteralProps = {};
 export function NullLiteral(
-  {
-    parent,
-  }: {
+  props: {
     +parent?: ESNode,
   } = {...null},
 ): DetachedNode<NullLiteralType> {
-  return detachedProps<NullLiteralType>(parent, {
+  return detachedProps<NullLiteralType>(props.parent, {
     type: 'Literal',
     value: null,
     raw: 'null',
@@ -265,49 +246,45 @@ export type StringLiteralProps = {
   +value: StringLiteralType['value'],
   +raw?: StringLiteralType['raw'],
 };
-export function StringLiteral({
-  parent,
-  raw: rawIn,
-  value,
-}: {
+export function StringLiteral(props: {
   ...$ReadOnly<StringLiteralProps>,
   +parent?: ESNode,
 }): DetachedNode<StringLiteralType> {
-  const hasSingleQuote = value.includes('"');
-  const hasDoubleQuote = value.includes("'");
-  let raw = rawIn;
+  const hasSingleQuote = props.value.includes('"');
+  const hasDoubleQuote = props.value.includes("'");
+  let raw = props.raw;
   if (raw == null) {
     if (hasSingleQuote && hasDoubleQuote) {
-      raw = `'${value.replace(/'/g, "\\'")}'`;
+      raw = `'${props.value.replace(/'/g, "\\'")}'`;
     } else if (hasSingleQuote) {
-      raw = `"${value}"`;
+      raw = `"${props.value}"`;
     } else {
-      raw = `'${value}'`;
+      raw = `'${props.value}'`;
     }
   }
-  return detachedProps<StringLiteralType>(parent, {
+  return detachedProps<StringLiteralType>(props.parent, {
     type: 'Literal',
     raw,
-    value,
+    value: props.value,
   });
 }
 
 export type LineCommentProps = {+value: string};
-export function LineComment({value}: LineCommentProps): LineCommentType {
+export function LineComment(props: LineCommentProps): LineCommentType {
   // $FlowExpectedError[prop-missing]
   // $FlowExpectedError[incompatible-return]
   return detachedProps<LineCommentType>(undefined, {
     type: 'Line',
-    value,
+    value: props.value,
   });
 }
 
 export type BlockCommentProps = {+value: string};
-export function BlockComment({value}: BlockCommentProps): BlockCommentType {
+export function BlockComment(props: BlockCommentProps): BlockCommentType {
   // $FlowExpectedError[prop-missing]
   // $FlowExpectedError[incompatible-return]
   return detachedProps<BlockCommentType>(undefined, {
     type: 'Block',
-    value,
+    value: props.value,
   });
 }

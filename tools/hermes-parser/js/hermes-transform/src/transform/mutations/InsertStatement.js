@@ -113,6 +113,7 @@ export function performInsertStatementMutation(
 
   (insertionParent.parent: interface {[string]: mixed})[insertionParent.key] =
     blockStatement;
+  statementToWrap.parent = blockStatement;
 
   return insertionParent.parent;
 }

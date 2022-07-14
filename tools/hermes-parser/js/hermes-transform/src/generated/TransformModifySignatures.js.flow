@@ -19,9 +19,9 @@ import type {CallExpressionProps} from './node-types';
  * the transformation tests.
  */
 
-type CallExpressionCloneSignature = (
+type CallExpressionModifySignature = (
   node: CallExpression,
   newProps: $Partial<CallExpressionProps>,
 ) => void;
 
-export type TransformModifySignatures = CallExpressionCloneSignature;
+export type TransformModifySignatures = CallExpressionModifySignature;

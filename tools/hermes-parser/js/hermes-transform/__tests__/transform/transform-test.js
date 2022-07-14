@@ -543,16 +543,14 @@ class Foo {
               kind: 'const',
               declarations: [
                 t.VariableDeclarator({
-                  id: context.shallowCloneNode(node.id),
+                  id: node.id,
                   init: t.ArrowFunctionExpression({
                     async: node.async,
-                    body: context.shallowCloneNode(node.body),
-                    params: context.shallowCloneArray(node.params),
-                    predicate: context.shallowCloneNode(node.predicate),
-                    returnType: context.shallowCloneNode(node.returnType),
-                    typeParameters: context.shallowCloneNode(
-                      node.typeParameters,
-                    ),
+                    body: node.body,
+                    params: node.params,
+                    predicate: node.predicate,
+                    returnType: node.returnType,
+                    typeParameters: node.typeParameters,
                   }),
                 }),
               ],
@@ -713,7 +711,7 @@ statement(); // inline comment to be duplicated
 
         const result = transform(code, context => ({
           ExpressionStatement(node) {
-            context.insertBeforeStatement(node, context.shallowCloneNode(node));
+            context.insertBeforeStatement(node, node);
           },
         }));
 

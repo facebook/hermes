@@ -19,11 +19,14 @@ import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import * as t from '../../generated/node-types';
 
+export type ReplaceStatementWithManyMutationNodes =
+  | ModuleDeclaration
+  | Statement;
 export type ReplaceStatementWithManyMutation = $ReadOnly<{
   type: 'replaceStatementWithMany',
-  target: ModuleDeclaration | Statement,
+  target: ReplaceStatementWithManyMutationNodes,
   nodesToReplaceWith: $ReadOnlyArray<
-    DetachedNode<ModuleDeclaration | Statement>,
+    DetachedNode<ReplaceStatementWithManyMutationNodes>,
   >,
   keepComments: boolean,
 }>;

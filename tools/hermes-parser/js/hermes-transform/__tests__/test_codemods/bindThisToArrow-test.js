@@ -89,11 +89,11 @@ function codemod(code: string, useCodeFrame: boolean = true) {
         node,
         t.ArrowFunctionExpression({
           async: func.async,
-          body: context.shallowCloneNode(func.body),
-          params: context.shallowCloneArray(func.params),
-          predicate: context.shallowCloneNode(func.predicate),
-          typeParameters: context.shallowCloneNode(func.typeParameters),
-          returnType: context.shallowCloneNode(func.returnType),
+          body: func.body,
+          params: func.params,
+          predicate: func.predicate,
+          typeParameters: func.typeParameters,
+          returnType: func.returnType,
         }),
       );
     },
