@@ -92,7 +92,7 @@ namespace microtask {
 /// until there was no errors (implying queue exhaustiveness).
 /// Note that exceptions are directly printed to stderr.
 inline void performCheckpoint(vm::Runtime &runtime) {
-  if (!runtime.useJobQueue())
+  if (!runtime.hasMicrotaskQueue())
     return;
 
   while (LLVM_UNLIKELY(runtime.drainJobs() == vm::ExecutionStatus::EXCEPTION)) {

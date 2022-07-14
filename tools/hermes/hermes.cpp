@@ -107,6 +107,7 @@ static int executeHBCBytecodeFromCL(
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withIntl(cl::Intl)
+          .withMicrotaskQueue(cl::MicrotaskQueue)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
           .withTrackIO(cl::TrackBytecodeIO)
@@ -165,6 +166,7 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withES6Promise(cl::ES6Promise)
       .withES6Proxy(cl::ES6Proxy)
       .withIntl(cl::Intl)
+      .withMicrotaskQueue(cl::MicrotaskQueue)
       .withEnableHermesInternal(cl::EnableHermesInternal)
       .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
       .build();

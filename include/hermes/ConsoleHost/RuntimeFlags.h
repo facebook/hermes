@@ -143,6 +143,12 @@ static opt<bool> Intl(
     init(RuntimeConfig::getDefaultIntl()),
     cat(RuntimeCategory));
 
+static opt<bool> MicrotaskQueue(
+    "Xmicrotask-queue",
+    desc("Enable support for using microtasks"),
+    init(RuntimeConfig::getDefaultMicrotaskQueue()),
+    cat(RuntimeCategory));
+
 static llvh::cl::opt<bool> StopAfterInit(
     "stop-after-module-init",
     llvh::cl::desc("Exit once module loading is finished. Useful "

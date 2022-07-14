@@ -142,6 +142,9 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *intl = rtConfig->get("Intl")) {
     conf.withIntl(llvh::cast<JSONBoolean>(intl)->getValue());
   }
+  if (auto *microtasks = rtConfig->get("MicrotasksQueue")) {
+    conf.withMicrotaskQueue(llvh::cast<JSONBoolean>(microtasks)->getValue());
+  }
   if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
     conf.withEnableSampledStats(
         llvh::cast<JSONBoolean>(enableSampledStats)->getValue());

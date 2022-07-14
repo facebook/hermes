@@ -1511,7 +1511,7 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScript(
 }
 
 bool HermesRuntimeImpl::drainMicrotasks(int maxMicrotasksHint) {
-  if (runtime_.useJobQueue()) {
+  if (runtime_.hasMicrotaskQueue()) {
     checkStatus(runtime_.drainJobs());
   }
   // \c drainJobs is currently an unbounded execution, hence no exceptions

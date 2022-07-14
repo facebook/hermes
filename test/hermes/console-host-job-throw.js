@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xvm-experiment-flags=16384 %s 2>&1 | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xmicrotask-queue %s 2>&1 | %FileCheck --match-full-lines %s
 
 print("ConsoleHost job throws");
 // CHECK-LABEL: ConsoleHost job throws

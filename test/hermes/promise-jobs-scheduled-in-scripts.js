@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines --check-prefix=TASK %s
-// RUN: %hermes -Xvm-experiment-flags=16384 %s | %FileCheck --match-full-lines --check-prefix=MICROTASK %s
+// RUN: %hermes -Xmicrotask-queue %s | %FileCheck --match-full-lines --check-prefix=MICROTASK %s
 
 print('promise jobs scheduled in scripts');
 // CHECK-LABEL: promise jobs scheduled in scripts

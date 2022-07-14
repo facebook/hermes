@@ -363,6 +363,7 @@ def showStatus(filename):
 
 es6_args = ["-Xes6-promise", "-Xes6-proxy"]
 extra_run_args = ["-Xhermes-internal-test-methods"]
+useMicrotasksFlag = ["-Xmicrotask-queue"]
 
 extra_compile_flags = ["-fno-static-builtins"]
 
@@ -708,6 +709,7 @@ def runTest(
                     + es6_args
                     + extra_run_args
                     + disableHandleSanFlag
+                    + useMicrotasksFlag
                 )
                 if lazy:
                     args.append("-lazy")

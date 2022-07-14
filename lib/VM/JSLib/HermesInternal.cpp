@@ -505,7 +505,7 @@ hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(runtime.useJobQueue());
+  return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
 }
 
 /// \code

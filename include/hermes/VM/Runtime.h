@@ -849,8 +849,8 @@ class Runtime : public PointerBase,
     return hasArrayBuffer_;
   }
 
-  bool useJobQueue() const {
-    return getVMExperimentFlags() & experiments::JobQueue;
+  bool hasMicrotaskQueue() const {
+    return hasMicrotaskQueue_;
   }
 
   bool builtinsAreFrozen() const {
@@ -1116,6 +1116,9 @@ class Runtime : public PointerBase,
 
   /// Set to true if we should enable ArrayBuffer, DataView and typed arrays.
   const bool hasArrayBuffer_;
+
+  /// Set to true if we are using microtasks.
+  const bool hasMicrotaskQueue_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;

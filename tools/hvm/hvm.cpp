@@ -123,6 +123,7 @@ int main(int argc, char **argv) {
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withIntl(cl::Intl)
+          .withMicrotaskQueue(cl::MicrotaskQueue)
           .withTrackIO(cl::TrackBytecodeIO)
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(

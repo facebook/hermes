@@ -1070,12 +1070,11 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
 
 struct JobQueueReplayTest : public SynthTraceReplayTest {
   JobQueueReplayTest()
-      : SynthTraceReplayTest(
-            ::hermes::vm::RuntimeConfig::Builder()
-                .withTraceEnabled(true)
-                .withEnableHermesInternal(true)
-                .withVMExperimentFlags(::hermes::vm::experiments::JobQueue)
-                .build()) {}
+      : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
+                                 .withTraceEnabled(true)
+                                 .withEnableHermesInternal(true)
+                                 .withMicrotaskQueue(true)
+                                 .build()) {}
 };
 
 TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {
