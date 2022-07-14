@@ -785,7 +785,7 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
     case HermesValue::ETag::BigInt2: {
       auto res = JSBigInt::create(
           runtime,
-          runtime.makeHandle(value.getBigInt()),
+          Handle<BigIntPrimitive>::vmcast(valueHandle),
           Handle<JSObject>::vmcast(&runtime.bigintPrototype));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -796,7 +796,7 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
     case HermesValue::ETag::Str2: {
       auto res = JSString::create(
           runtime,
-          runtime.makeHandle(value.getString()),
+          Handle<StringPrimitive>::vmcast(valueHandle),
           Handle<JSObject>::vmcast(&runtime.stringPrototype));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
