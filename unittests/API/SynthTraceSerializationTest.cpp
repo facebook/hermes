@@ -350,8 +350,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
   auto records = optTrace.getPropertyAsObject(*rt, "trace").asArray(*rt);
 
-  auto offset = rt->getNumPreambleRecordsForTest();
-  auto record = records.getValueAtIndex(*rt, 0 + offset).asObject(*rt);
+  auto record = records.getValueAtIndex(*rt, 0).asObject(*rt);
   EXPECT_EQ(
       "CreateObjectRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
@@ -359,7 +358,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_EQ(objID, record.getProperty(*rt, "objID").asNumber());
 
   // The obj.getProperty(*rt, "a") creates a string primitive for "a".
-  record = records.getValueAtIndex(*rt, 1 + offset).asObject(*rt);
+  record = records.getValueAtIndex(*rt, 1).asObject(*rt);
   EXPECT_EQ(
       "CreateStringRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
@@ -367,7 +366,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_TRUE(record.getProperty(*rt, "objID").isNumber());
   auto stringID = record.getProperty(*rt, "objID").asNumber();
 
-  record = records.getValueAtIndex(*rt, 2 + offset).asObject(*rt);
+  record = records.getValueAtIndex(*rt, 2).asObject(*rt);
   EXPECT_EQ(
       "GetPropertyRecord",
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));

@@ -27,7 +27,8 @@ TracingRuntime::TracingRuntime(
     std::unique_ptr<llvh::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
-      trace_(globalID, conf, std::move(traceStream)) {}
+      trace_(globalID, conf, std::move(traceStream)),
+      numPreambleRecords_(0) {}
 
 void TracingRuntime::replaceNondeterministicFuncs() {
   insertHostForwarder({"Math", "random"});
@@ -736,9 +737,7 @@ TracingHermesRuntime::TracingHermesRuntime(
           runtimeConfig,
           std::move(traceStream),
           std::move(commitAction),
-          std::move(rollbackAction)) {
-  replaceNondeterministicFuncs();
-}
+          std::move(rollbackAction)) {}
 
 TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
@@ -870,10 +869,13 @@ static std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeImpl(
       std::move(traceStream),
       commitAction,
       rollbackAction);
-  // In non-replay executions, add the __nativeRecordTraceMarker function.
-  // In replay executions, this will be simulated from the trace.
   if (!forReplay) {
+    // In non-replay executions, add the __nativeRecordTraceMarker function.
+    // In replay executions, this will be simulated from the trace.
     addRecordMarker(*ret);
+    // In replay executions, the trace will contain the instructions for
+    // replacing the nondeterministic functions.
+    ret->replaceNondeterministicFuncs();
   }
   return ret;
 }

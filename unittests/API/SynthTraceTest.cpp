@@ -64,9 +64,8 @@ struct SynthTraceTest : public ::testing::Test {
   }
 
   llvh::ArrayRef<std::unique_ptr<SynthTrace::Record>> getRecords() {
-    auto n = rt->getNumPreambleRecordsForTest();
     auto &recs = rt->trace().records();
-    return llvh::makeArrayRef(recs.data() + n, recs.size() - n);
+    return llvh::makeArrayRef(recs.data(), recs.size());
   }
 };
 
@@ -1003,7 +1002,7 @@ struct SynthTraceReplayTest : public ::testing::Test {
             config,
             /* traceStream */
             std::make_unique<llvh::raw_string_ostream>(traceResult),
-            /* forReplay */ true)) {}
+            /* forReplay */ false)) {}
 
   SynthTraceReplayTest()
       : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
@@ -1019,6 +1018,12 @@ struct SynthTraceReplayTest : public ::testing::Test {
 
   jsi::Value eval(jsi::Runtime &rt, const char *code) {
     return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
+  }
+
+  llvh::ArrayRef<std::unique_ptr<SynthTrace::Record>> getRecords() {
+    auto n = traceRt->getNumPreambleRecordsForTest();
+    auto &recs = traceRt->trace().records();
+    return llvh::makeArrayRef(recs.data() + n, recs.size() - n);
   }
 };
 
