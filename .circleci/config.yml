@@ -561,4 +561,4 @@ jobs:
             cmake -S hermes -B build -GXcode -DHERMES_ENABLE_INTL=ON
             cmake --build ./build
             cmake --build ./build --target check-hermes
-            python3 hermes/utils/testsuite/run_testsuite.py test262/test -b build/bin
+            python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
