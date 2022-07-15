@@ -64,7 +64,7 @@ export const asDetachedNode: {
 export function detachedProps<T: BaseNode>(
   parent: ?ESNode,
   props: $ReadOnly<$Partial<{...}>>,
-  config: DetachConfig = {...null},
+  config: DetachConfig = {},
 ): DetachedNode<T> {
   // $FlowExpectedError[incompatible-type]
   const detachedNode: DetachedNode<T> = {
@@ -131,12 +131,17 @@ export function detachedProps<T: BaseNode>(
 export function shallowCloneNode<T: ESNode>(
   node: T,
   newProps: $ReadOnly<$Partial<{...}>>,
-  config?: DetachConfig = {...null},
+  config?: DetachConfig = {},
 ): DetachedNode<T> {
-  return detachedProps(null, (Object.assign({}, node, newProps): $FlowFixMe), {
-    preserveLocation: config.preserveLocation ?? true,
-    originalNode: config.originalNode ?? node,
-  });
+  return detachedProps(
+    null,
+    // $FlowFixMe[cannot-spread-interface]
+    {...node, ...newProps},
+    {
+      preserveLocation: config.preserveLocation ?? true,
+      originalNode: config.originalNode ?? node,
+    },
+  );
 }
 
 /**
