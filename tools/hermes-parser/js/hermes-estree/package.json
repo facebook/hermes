@@ -9,6 +9,8 @@
     "url": "git@github.com:facebook/hermes.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENCE",
+    "README.md"
   ]
 }

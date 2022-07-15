@@ -1596,7 +1596,7 @@ export interface JSXEmptyExpression extends BaseNode {
 
 export interface JSXExpressionContainer extends BaseNode {
   +type: 'JSXExpressionContainer';
-  +expression: Expression;
+  +expression: Expression | JSXEmptyExpression;
 }
 
 export interface JSXFragment extends BaseNode {

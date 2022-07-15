@@ -9,7 +9,10 @@
     "url": "git@github.com:facebook/hermes.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENCE",
+    "TYPESCRIPT_ESLINT_SCOPE_MANAGER_LICENSE",
+    "README.md"
   ],
   "dependencies": {
     "esrecurse": "^4.3.0",
