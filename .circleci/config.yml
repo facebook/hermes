@@ -550,7 +550,7 @@ jobs:
       - run:
           name: Prepare dependencies
           command: |
-            brew install cmake
+            brew install cmake ninja
             # Check out test262 at a pinned revision to reduce flakiness
             git clone https://github.com/tc39/test262
             cd test262
@@ -558,7 +558,7 @@ jobs:
       - run:
           name: Run Hermes tests and test262 with Intl
           command: |
-            cmake -S hermes -B build -GXcode -DHERMES_ENABLE_INTL=ON
+            cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON
             cmake --build ./build
             cmake --build ./build --target check-hermes
             python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
