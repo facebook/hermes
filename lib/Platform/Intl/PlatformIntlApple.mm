@@ -630,6 +630,124 @@ std::u16string getDefaultHourCycle(NSLocale *locale) {
   }
   return u"h24";
 }
+
+template <size_t N, size_t P = 0>
+static constexpr bool isSorted(const std::u16string_view (&v)[N]) {
+  if constexpr (P < N - 1) {
+    return v[P] < v[P + 1] && isSorted<N, P + 1>(v);
+  }
+  return true;
+}
+
+// https://402.ecma-international.org/8.0/#sec-issanctionedsimpleunitidentifier
+bool isSanctionedSimpleUnitIdentifier(std::u16string_view unitIdentifier) {
+  static constexpr std::u16string_view sanctionedIdentifiers[] = {
+      u"acre",       u"bit",        u"byte",
+      u"celsius",    u"centimeter", u"day",
+      u"degree",     u"fahrenheit", u"fluid-ounce",
+      u"foot",       u"gallon",     u"gigabit",
+      u"gigabyte",   u"gram",       u"hectare",
+      u"hour",       u"inch",       u"kilobit",
+      u"kilobyte",   u"kilogram",   u"kilometer",
+      u"liter",      u"megabit",    u"megabyte",
+      u"meter",      u"mile",       u"mile-scandinavian",
+      u"milliliter", u"millimeter", u"millisecond",
+      u"minute",     u"month",      u"ounce",
+      u"percent",    u"petabyte",   u"pound",
+      u"second",     u"stone",      u"terabit",
+      u"terabyte",   u"week",       u"yard",
+      u"year"};
+
+  static_assert(
+      isSorted(sanctionedIdentifiers), "keep sanctionedIdentifiers sorted");
+  //  1. If unitIdentifier is listed in Table 2 (sanctionedIdentifiers) above,
+  //  return true
+  //  2. Else, return false.
+  return std::binary_search(
+      std::begin(sanctionedIdentifiers),
+      std::end(sanctionedIdentifiers),
+      unitIdentifier);
+}
+
+// https://402.ecma-international.org/8.0/#sec-iswellformedunitidentifier
+bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
+  //  1. If the result of IsSanctionedSimpleUnitIdentifier(unitIdentifier) is
+  //  true, then a. Return true.
+  if (isSanctionedSimpleUnitIdentifier(unitIdentifier))
+    return true;
+  //  2. If the substring "-per-" does not occur exactly once in unitIdentifier,
+  //  then a. Return false.
+  std::u16string_view fractionDelimiter = u"-per-";
+  auto foundPos = unitIdentifier.find(fractionDelimiter);
+  if (foundPos == std::u16string_view::npos)
+    return false;
+  //  3. Let numerator be the substring of unitIdentifier from the beginning to
+  //  just before "-per-".
+  //  4. If the result of IsSanctionedSimpleUnitIdentifier(numerator) is false,
+  //  then a. Return false.
+  auto numerator = unitIdentifier.substr(0, foundPos);
+  if (!isSanctionedSimpleUnitIdentifier(numerator))
+    return false;
+  //  5. Let denominator be the substring of unitIdentifier from just after
+  //  "-per-" to the end.
+  //  6. If the result of IsSanctionedSimpleUnitIdentifier(denominator) is
+  //  false, then a. Return false.
+  const size_t denominatorPos = foundPos + fractionDelimiter.size();
+  auto denominator = unitIdentifier.substr(
+      denominatorPos, unitIdentifier.length() - denominatorPos);
+  if (!isSanctionedSimpleUnitIdentifier(denominator))
+    return false;
+  //  7. Return true.
+  return true;
+}
+
+// https://402.ecma-international.org/8.0/#sec-iswellformedcurrencycode
+bool isWellFormedCurrencyCode(std::u16string_view currencyCode) {
+  //  1. Let normalized be the result of mapping currency to upper case as
+  //  described in 6.1.
+  auto normalized = toASCIIUppercase(currencyCode);
+  //  2. If the number of elements in normalized is not 3, return false.
+  if (normalized.size() != 3)
+    return false;
+  //  3. If normalized contains any character that is not in the range "A" to
+  //  "Z" (U+0041 to U+005A), return false.
+  if (!llvh::all_of(normalized, [](auto c) { return c >= u'A' && c <= u'Z'; }))
+    return false;
+  //  4. Return true.
+  return true;
+}
+
+struct CurrencyInfo {
+  std::u16string_view code;
+  uint8_t digits;
+};
+
+template <size_t N, size_t P = 0>
+static constexpr bool isSorted(const CurrencyInfo (&v)[N]) {
+  if constexpr (P < N - 1) {
+    return v[P].code < v[P + 1].code && isSorted<N, P + 1>(v);
+  }
+  return true;
+}
+
+uint8_t getCurrencyDigits(std::u16string_view code) {
+  //  https://en.wikipedia.org/wiki/ISO_4217#Active_codes
+  static constexpr CurrencyInfo currencies[] = {
+      {u"BHD", 3}, {u"BIF", 0}, {u"CLF", 4}, {u"CLP", 0}, {u"DJF", 0},
+      {u"GNF", 0}, {u"IQD", 3}, {u"ISK", 0}, {u"JOD", 3}, {u"JPY", 0},
+      {u"KMF", 0}, {u"KRW", 0}, {u"KWD", 3}, {u"LYD", 3}, {u"OMR", 3},
+      {u"PYG", 0}, {u"RWF", 0}, {u"TND", 3}, {u"UGX", 0}, {u"UYI", 0},
+      {u"UYW", 4}, {u"VND", 0}, {u"VUV", 0}, {u"XAF", 0}, {u"XOF", 0},
+      {u"XPF", 0}};
+  //  1. If the ISO 4217 currency and funds code list contains currency as an
+  //  alphabetic code, return the minor unit value corresponding to the currency
+  //  from the list; otherwise, return 2.
+  static_assert(isSorted(currencies), "keep currencies sorted by their code");
+  auto it = llvh::lower_bound(currencies, code, [](auto currency, auto toFind) {
+    return currency.code < toFind;
+  });
+  return (it != std::end(currencies) && it->code == code) ? it->digits : 2;
+}
 }
 
 /// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
@@ -1877,92 +1995,6 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   return supportedLocales(availableLocales, requestedLocales.getValue());
 }
 
-template <size_t N, size_t P = 0>
-static constexpr bool isSorted(const std::u16string_view (&v)[N]) {
-  if constexpr (P < N - 1) {
-    return v[P] < v[P + 1] && isSorted<N, P + 1>(v);
-  }
-  return true;
-}
-
-static constexpr std::u16string_view sanctionedIdentifiers[] = {
-    u"acre",       u"bit",        u"byte",
-    u"celsius",    u"centimeter", u"day",
-    u"degree",     u"fahrenheit", u"fluid-ounce",
-    u"foot",       u"gallon",     u"gigabit",
-    u"gigabyte",   u"gram",       u"hectare",
-    u"hour",       u"inch",       u"kilobit",
-    u"kilobyte",   u"kilogram",   u"kilometer",
-    u"liter",      u"megabit",    u"megabyte",
-    u"meter",      u"mile",       u"mile-scandinavian",
-    u"milliliter", u"millimeter", u"millisecond",
-    u"minute",     u"month",      u"ounce",
-    u"percent",    u"petabyte",   u"pound",
-    u"second",     u"stone",      u"terabit",
-    u"terabyte",   u"week",       u"yard",
-    u"year"};
-
-// https://402.ecma-international.org/8.0/#sec-issanctionedsimpleunitidentifier
-bool isSanctionedSimpleUnitIdentifier(std::u16string_view unitIdentifier) {
-  static_assert(
-      isSorted(sanctionedIdentifiers), "keep sanctionedIdentifiers sorted");
-  //  1. If unitIdentifier is listed in Table 2 (sanctionedIdentifiers) above,
-  //  return true
-  //  2. Else, return false.
-  return std::binary_search(
-      std::begin(sanctionedIdentifiers),
-      std::end(sanctionedIdentifiers),
-      unitIdentifier);
-}
-
-// https://402.ecma-international.org/8.0/#sec-iswellformedunitidentifier
-bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
-  //  1. If the result of IsSanctionedSimpleUnitIdentifier(unitIdentifier) is
-  //  true, then a. Return true.
-  if (isSanctionedSimpleUnitIdentifier(unitIdentifier))
-    return true;
-  //  2. If the substring "-per-" does not occur exactly once in unitIdentifier,
-  //  then a. Return false.
-  std::u16string_view fractionDelimiter = u"-per-";
-  auto foundPos = unitIdentifier.find(fractionDelimiter);
-  if (foundPos == std::u16string_view::npos)
-    return false;
-  //  3. Let numerator be the substring of unitIdentifier from the beginning to
-  //  just before "-per-".
-  //  4. If the result of IsSanctionedSimpleUnitIdentifier(numerator) is false,
-  //  then a. Return false.
-  auto numerator = unitIdentifier.substr(0, foundPos);
-  if (!isSanctionedSimpleUnitIdentifier(numerator))
-    return false;
-  //  5. Let denominator be the substring of unitIdentifier from just after
-  //  "-per-" to the end.
-  //  6. If the result of IsSanctionedSimpleUnitIdentifier(denominator) is
-  //  false, then a. Return false.
-  const size_t denominatorPos = foundPos + fractionDelimiter.size();
-  auto denominator = unitIdentifier.substr(
-      denominatorPos, unitIdentifier.length() - denominatorPos);
-  if (!isSanctionedSimpleUnitIdentifier(denominator))
-    return false;
-  //  7. Return true.
-  return true;
-}
-
-// https://402.ecma-international.org/8.0/#sec-iswellformedcurrencycode
-bool isWellFormedCurrencyCode(std::u16string_view currencyCode) {
-  //  1. Let normalized be the result of mapping currency to upper case as
-  //  described in 6.1.
-  auto normalized = toASCIIUppercase(currencyCode);
-  //  2. If the number of elements in normalized is not 3, return false.
-  if (normalized.size() != 3)
-    return false;
-  //  3. If normalized contains any character that is not in the range "A" to
-  //  "Z" (U+0041 to U+005A), return false.
-  if (!llvh::all_of(normalized, [](auto c) { return c >= u'A' && c <= u'Z'; }))
-    return false;
-  //  4. Return true.
-  return true;
-}
-
 // https://402.ecma-international.org/8.0/#sec-setnumberformatunitoptions
 vm::ExecutionStatus NumberFormat::Impl::setNumberFormatUnitOptions(
     vm::Runtime &runtime,
@@ -2165,39 +2197,6 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatDigitOptions(
   }
   return vm::ExecutionStatus::RETURNED;
 }
-
-struct CurrencyInfo {
-  std::u16string_view code;
-  uint8_t digits;
-};
-
-template <size_t N, size_t P = 0>
-static constexpr bool isSorted(const CurrencyInfo (&v)[N]) {
-  if constexpr (P < N - 1) {
-    return v[P].code < v[P + 1].code && isSorted<N, P + 1>(v);
-  }
-  return true;
-}
-
-//  https://en.wikipedia.org/wiki/ISO_4217#Active_codes
-static constexpr CurrencyInfo currencies[] = {
-    {u"BHD", 3}, {u"BIF", 0}, {u"CLF", 4}, {u"CLP", 0}, {u"DJF", 0},
-    {u"GNF", 0}, {u"IQD", 3}, {u"ISK", 0}, {u"JOD", 3}, {u"JPY", 0},
-    {u"KMF", 0}, {u"KRW", 0}, {u"KWD", 3}, {u"LYD", 3}, {u"OMR", 3},
-    {u"PYG", 0}, {u"RWF", 0}, {u"TND", 3}, {u"UGX", 0}, {u"UYI", 0},
-    {u"UYW", 4}, {u"VND", 0}, {u"VUV", 0}, {u"XAF", 0}, {u"XOF", 0},
-    {u"XPF", 0}};
-
-uint8_t getCurrencyDigits(std::u16string_view code) {
-  //  1. If the ISO 4217 currency and funds code list contains currency as an
-  //  alphabetic code, return the minor unit value corresponding to the currency
-  //  from the list; otherwise, return 2.
-  static_assert(isSorted(currencies), "keep currencies sorted by their code");
-  auto it = llvh::lower_bound(currencies, code, [](auto currency, auto toFind) {
-    return currency.code < toFind;
-  });
-  return (it != std::end(currencies) && it->code == code) ? it->digits : 2;
-};
 
 // https://402.ecma-international.org/8.0/#sec-initializenumberformat
 vm::ExecutionStatus NumberFormat::initialize(
