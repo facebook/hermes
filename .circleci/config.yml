@@ -548,7 +548,7 @@ jobs:
       - checkout:
           path: hermes
       - run:
-          name: Prepare dependencies
+          name: Setup dependencies
           command: |
             brew install cmake ninja
             # Check out test262 at a pinned revision to reduce flakiness
