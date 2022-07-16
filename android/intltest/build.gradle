@@ -34,6 +34,7 @@ task prepareTests() {
         include("test/intl402/String/**/*.js")
         include("test/intl402/Number/**/*.js")
         include("test/intl402/Array/**/*.js")
+        include("test/intl402/TypedArray/**/*.js")
         include("test/intl402/Date/**/*.js")
         include("test/intl402/Intl/**/*.js")
         include("test/built-ins/String/prototype/toLocale**/*.js")
