@@ -2247,8 +2247,8 @@ vm::ExecutionStatus NumberFormat::initialize(
   // requestedLocales, opt, %NumberFormat%.[[RelevantExtensionKeys]],
   // localeData).
   static constexpr std::u16string_view relevantExtensionKeys[] = {u"nu"};
-  auto r =
-      resolveLocale(locales, *requestedLocales, opt, relevantExtensionKeys);
+  auto r = resolveLocale(
+      getAvailableLocales(), *requestedLocales, opt, relevantExtensionKeys);
   // 11. Set numberFormat.[[Locale]] to r.[[locale]].
   impl_->locale = r.locale;
   // 12. Set numberFormat.[[DataLocale]] to r.[[dataLocale]].
@@ -2370,7 +2370,7 @@ std::u16string NumberFormat::Impl::format(double number) noexcept {
   // - signDisplay is not supported.
   // - NSNumberFormatter has maximumIntegerDigits, which is 42 by default
   auto nsLocale =
-      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(locale)];
+      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(dataLocale)];
   auto nf = [NSNumberFormatter new];
   nf.locale = nsLocale;
   if (style == u"decimal") {
