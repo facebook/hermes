@@ -41,11 +41,12 @@ workflows:
       - test-linux
       - test-e2e
       - test-e2e-intl
+      - test-macos-test262
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 12.4.0
+    xcode: 13.4.1
   resource_class: macos.x86.medium.gen2
   working_directory: ~/hermes
   environment:
@@ -235,16 +236,14 @@ jobs:
             - ~/hermes/destroot
 
   package-apple-runtime:
-    macos:
-      xcode: 13.4.1
+    <<: *apple_defaults
     steps:
-      - checkout:
-          path: hermes
+      - checkout
       - restore_cache:
           key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
-          command: mkdir -p output
+          command: mkdir -p /tmp/hermes/output
       - run:
           name: Install dependencies
           command: |
@@ -255,32 +254,32 @@ jobs:
           command: |
             . ./utils/build-apple-framework.sh
 
-            mkdir -p cocoapods-package-root/destroot
-            cp -R destroot cocoapods-package-root
-            cp hermes-engine.podspec LICENSE cocoapods-package-root
+            mkdir -p /tmp/cocoapods-package-root/destroot
+            cp -R ./destroot /tmp/cocoapods-package-root
+            cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
 
-            tar -C cocoapods-package-root -czvf output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
+            tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
       - run:
           name: Package the CLI
           command: |
-            . hermes/utils/build-apple-framework.sh
+            . ./utils/build-apple-framework.sh
 
-            mkdir -p hermes-cli-root
-            cp -R ./destroot/bin/* hermes-cli-root
+            mkdir -p /tmp/hermes-cli-root
+            cp -R ./destroot/bin/* /tmp/hermes-cli-root
 
-            tar -C hermes-cli-root/ -czvf output/hermes-cli-darwin-v$(get_release_version).tar.gz .
+            tar -C /tmp/hermes-cli-root/ -czvf /tmp/hermes/output/hermes-cli-darwin-v$(get_release_version).tar.gz .
       - run:
           name: Checksum artifacts
           command: |
-            cd output
+            cd /tmp/hermes/output
             for file in *
             do
               shasum -a 256 "$file" > "$file.sha256"
             done
       - store_artifacts:
-          path: output
+          path: /tmp/hermes/output/
       - persist_to_workspace:
-          root: output
+          root: /tmp/hermes/output/
           paths:
             - .
 
@@ -300,12 +299,6 @@ jobs:
             cmake -S hermes -B build -GXcode
             cmake --build ./build
             cmake --build ./build --target check-hermes
-      - run:
-          name: Test Apple Intl
-          command: |
-            cmake -S hermes -B build_intl -GXcode -DHERMES_ENABLE_INTL=ON
-            cmake --build ./build_intl
-            cmake --build ./build_intl --target check-hermes
 
   windows:
     executor:
@@ -547,3 +540,25 @@ jobs:
           run-logcat: true
           additional-emulator-args: -timezone Europe/Paris
           test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+
+  test-macos-test262:
+    macos:
+      xcode: 13.4.1
+    steps:
+      - checkout:
+          path: hermes
+      - run:
+          name: Setup dependencies
+          command: |
+            brew install cmake ninja
+            # Check out test262 at a pinned revision to reduce flakiness
+            git clone https://github.com/tc39/test262
+            cd test262
+            git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
+      - run:
+          name: Run Hermes tests and test262 with Intl
+          command: |
+            cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON
+            cmake --build ./build
+            cmake --build ./build --target check-hermes
+            python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
