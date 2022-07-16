@@ -53,6 +53,7 @@ public class HermesIntlTest262 extends InstrumentationTestCase {
     evalScriptFromAsset(rt, "test262/harness/compareArray.js");
     evalScriptFromAsset(rt, "test262/harness/dateConstants.js");
     evalScriptFromAsset(rt, "test262/harness/isConstructor.js");
+    evalScriptFromAsset(rt, "test262/harness/testTypedArray.js");
   }
 
   public void test262Intl() throws IOException {
