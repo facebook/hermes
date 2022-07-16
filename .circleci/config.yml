@@ -235,14 +235,16 @@ jobs:
             - ~/hermes/destroot
 
   package-apple-runtime:
-    <<: *apple_defaults
+    macos:
+      xcode: 13.4.1
     steps:
-      - checkout
+      - checkout:
+          path: hermes
       - restore_cache:
           key: v4-repo-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: Set up workspace
-          command: mkdir -p /tmp/hermes/output
+          command: mkdir -p output
       - run:
           name: Install dependencies
           command: |
@@ -253,32 +255,32 @@ jobs:
           command: |
             . ./utils/build-apple-framework.sh
 
-            mkdir -p /tmp/cocoapods-package-root/destroot
-            cp -R ./destroot /tmp/cocoapods-package-root
-            cp hermes-engine.podspec LICENSE /tmp/cocoapods-package-root
+            mkdir -p cocoapods-package-root/destroot
+            cp -R destroot cocoapods-package-root
+            cp hermes-engine.podspec LICENSE cocoapods-package-root
 
-            tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
+            tar -C cocoapods-package-root -czvf output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
       - run:
           name: Package the CLI
           command: |
-            . ./utils/build-apple-framework.sh
+            . hermes/utils/build-apple-framework.sh
 
-            mkdir -p /tmp/hermes-cli-root
-            cp -R ./destroot/bin/* /tmp/hermes-cli-root
+            mkdir -p hermes-cli-root
+            cp -R ./destroot/bin/* hermes-cli-root
 
-            tar -C /tmp/hermes-cli-root/ -czvf /tmp/hermes/output/hermes-cli-darwin-v$(get_release_version).tar.gz .
+            tar -C hermes-cli-root/ -czvf output/hermes-cli-darwin-v$(get_release_version).tar.gz .
       - run:
           name: Checksum artifacts
           command: |
-            cd /tmp/hermes/output
+            cd output
             for file in *
             do
               shasum -a 256 "$file" > "$file.sha256"
             done
       - store_artifacts:
-          path: /tmp/hermes/output/
+          path: output
       - persist_to_workspace:
-          root: /tmp/hermes/output/
+          root: output
           paths:
             - .
 
