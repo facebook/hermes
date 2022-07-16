@@ -1456,18 +1456,13 @@ vm::ExecutionStatus DateTimeFormat::initialize(
 Options DateTimeFormat::resolvedOptions() noexcept {
   Options options;
   options.emplace(u"locale", Option(impl_->locale));
-  options.emplace(u"numeric", Option(false));
   options.emplace(u"timeZone", Option(impl_->timeZone));
   if (impl_->calendar)
     options.emplace(u"calendar", Option(*impl_->calendar));
-
   if (impl_->hourCycle.has_value()) {
     options.emplace(u"hourCycle", *impl_->hourCycle);
-    if (impl_->hourCycle == u"h11" || impl_->hourCycle == u"h12") {
-      options.emplace(u"hour12", true);
-    } else {
-      options.emplace(u"hour12", false);
-    }
+    options.emplace(
+        u"hour12", impl_->hourCycle == u"h11" || impl_->hourCycle == u"h12");
   }
   if (impl_->weekday.has_value())
     options.emplace(u"weekday", *impl_->weekday);
