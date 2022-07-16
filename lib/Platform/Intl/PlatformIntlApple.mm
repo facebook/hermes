@@ -1892,45 +1892,48 @@ struct NumberFormat::Impl {
   // [[Currency]] is a String value with the currency code identifying the
   // currency to be used if formatting with the "currency" unit type. It is only
   // used when [[Style]] has the value "currency".
-  std::u16string currency;
+  std::optional<std::u16string> currency;
   // [[CurrencyDisplay]] is one of the String values "code", "symbol",
   // "narrowSymbol", or "name", specifying whether to display the currency as an
   // ISO 4217 alphabetic currency code, a localized currency symbol, or a
   // localized currency name if formatting with the "currency" style. It is only
   // used when [[Style]] has the value "currency".
-  std::u16string currencyDisplay;
+  std::optional<std::u16string> currencyDisplay;
   // [[CurrencySign]] is one of the String values "standard" or "accounting",
   // specifying whether to render negative numbers in accounting format, often
   // signified by parenthesis. It is only used when [[Style]] has the value
   // "currency" and when [[SignDisplay]] is not "never".
-  std::u16string currencySign;
+  std::optional<std::u16string> currencySign;
   // [[Unit]] is a core unit identifier, as defined by Unicode Technical
   // Standard #35, Part 2, Section 6. It is only used when [[Style]] has the
   // value "unit".
-  std::u16string unit;
+  std::optional<std::u16string> unit;
   // [[UnitDisplay]] is one of the String values "short", "narrow", or "long",
   // specifying whether to display the unit as a symbol, narrow symbol, or
   // localized long name if formatting with the "unit" style. It is only used
   // when [[Style]] has the value "unit".
-  std::u16string unitDisplay;
+  std::optional<std::u16string> unitDisplay;
   // [[MinimumIntegerDigits]] is a non-negative integer Number value indicating
   // the minimum integer digits to be used. Numbers will be padded with leading
   // zeroes if necessary.
   uint8_t minimumIntegerDigits;
+
+  struct NumDigits {
+    uint8_t minimum;
+    uint8_t maximum;
+  };
   // [[MinimumFractionDigits]] and [[MaximumFractionDigits]] are non-negative
   // integer Number values indicating the minimum and maximum fraction digits to
   // be used. Numbers will be rounded or padded with trailing zeroes if
   // necessary. These properties are only used when [[RoundingType]] is
   // fractionDigits.
-  uint8_t minimumFractionDigits;
-  uint8_t maximumFractionDigits;
+  std::optional<NumDigits> fractionDigits;
   // [[MinimumSignificantDigits]] and [[MaximumSignificantDigits]] are positive
   // integer Number values indicating the minimum and maximum fraction digits to
   // be shown. If present, the formatter uses however many fraction digits are
   // required to display the specified number of significant digits. These
   // properties are only used when [[RoundingType]] is significantDigits.
-  uint8_t minimumSignificantDigits;
-  uint8_t maximumSignificantDigits;
+  std::optional<NumDigits> significantDigits;
   // [[UseGrouping]] is a Boolean value indicating whether a grouping separator
   // should be used.
   bool useGrouping;
@@ -1956,7 +1959,7 @@ struct NumberFormat::Impl {
   // specifying whether to display compact notation affixes in short form ("5K")
   // or long form ("5 thousand") if formatting with the "compact" notation. It
   // is only used when [[Notation]] has the value "compact".
-  std::u16string compactDisplay;
+  std::optional<std::u16string> compactDisplay;
   // [[SignDisplay]] is one of the String values "auto", "always", "never", or
   // "exceptZero", specifying whether to show the sign on negative numbers only,
   // positive and negative numbers including zero, neither positive nor negative
@@ -2078,18 +2081,19 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatUnitOptions(
   //  14. If style is "currency", then
   if (style == u"currency") {
     //  a. Let currency be the result of converting currency to upper case as
-    //  specified in 6.1. b. Set intlObj.[[Currency]] to currency. c. Set
-    //  intlObj.[[CurrencyDisplay]] to currencyDisplay. d. Set
-    //  intlObj.[[CurrencySign]] to currencySign.
+    //  specified in 6.1.
+    //  b. Set intlObj.[[Currency]] to currency.
     currency = toASCIIUppercase(*currencyOpt);
+    //  c. Set intlObj.[[CurrencyDisplay]] to currencyDisplay.
     currencyDisplay = *currencyDisplayOpt;
+    //  d. Set intlObj.[[CurrencySign]] to currencySign.
     currencySign = *currencySignOpt;
   }
   //  15. If style is "unit", then
   if (style == u"unit") {
     //  a. Set intlObj.[[Unit]] to unit.
     //  b. Set intlObj.[[UnitDisplay]] to unitDisplay.
-    unit = unitOpt.value_or(u"");
+    unit = *unitOpt;
     unitDisplay = *unitDisplayOpt;
   }
   return vm::ExecutionStatus::RETURNED;
@@ -2144,9 +2148,8 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatDigitOptions(
       return vm::ExecutionStatus::EXCEPTION;
     auto mxsdOpt = *mxsdRes;
     // d. Set intlObj.[[MinimumSignificantDigits]] to mnsd.
-    minimumSignificantDigits = *mnsdOpt;
     // e. Set intlObj.[[MaximumSignificantDigits]] to mxsd.
-    maximumSignificantDigits = *mxsdOpt;
+    significantDigits = {*mnsdOpt, *mxsdOpt};
     // 12. Else if mnfd is not undefined or mxfd is not undefined, then
   } else if (mnfdIt != options.end() || mxfdIt != options.end()) {
     // a. Set intlObj.[[RoundingType]] to fractionDigits.
@@ -2179,9 +2182,8 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatDigitOptions(
           "minimumFractionDigits is greater than maximumFractionDigits");
     }
     // g. Set intlObj.[[MinimumFractionDigits]] to mnfd.
-    minimumFractionDigits = *mnfdOpt;
     // h. Set intlObj.[[MaximumFractionDigits]] to mxfd.
-    maximumFractionDigits = *mxfdOpt;
+    fractionDigits = {*mnfdOpt, *mxfdOpt};
     // 13. Else if notation is "compact", then
   } else if (notation == u"compact") {
     // a. Set intlObj.[[RoundingType]] to compactRounding.
@@ -2191,9 +2193,8 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatDigitOptions(
     // a. Set intlObj.[[RoundingType]] to fractionDigits.
     roundingType = u"fractionDigits";
     // b. Set intlObj.[[MinimumFractionDigits]] to mnfdDefault.
-    minimumFractionDigits = mnfdDefault;
     // c. Set intlObj.[[MaximumFractionDigits]] to mxfdDefault.
-    maximumFractionDigits = mxfdDefault;
+    fractionDigits = {mnfdDefault, mxfdDefault};
   }
   return vm::ExecutionStatus::RETURNED;
 }
@@ -2265,7 +2266,7 @@ vm::ExecutionStatus NumberFormat::initialize(
   if (style == u"currency") {
     // a. Let currency be numberFormat.[[Currency]].
     // b. Let cDigits be CurrencyDigits(currency).
-    auto cDigits = getCurrencyDigits(impl_->currency);
+    auto cDigits = getCurrencyDigits(*impl_->currency);
     // c. Let mnfdDefault be cDigits.
     mnfdDefault = cDigits;
     // d. Let mxfdDefault be cDigits.
@@ -2337,26 +2338,35 @@ vm::ExecutionStatus NumberFormat::initialize(
 Options NumberFormat::resolvedOptions() noexcept {
   Options options;
   options.emplace(u"locale", impl_->locale);
-  options.emplace(u"dataLocale", impl_->dataLocale);
   options.emplace(u"style", impl_->style);
-  options.emplace(u"currency", impl_->currency);
-  options.emplace(u"currencyDisplay", impl_->currencyDisplay);
-  options.emplace(u"currencySign", impl_->currencySign);
-  options.emplace(u"unit", impl_->unit);
-  options.emplace(u"unitDisplay", impl_->unitDisplay);
+  if (impl_->currency)
+    options.emplace(u"currency", *impl_->currency);
+  if (impl_->currencyDisplay)
+    options.emplace(u"currencyDisplay", *impl_->currencyDisplay);
+  if (impl_->currencySign)
+    options.emplace(u"currencySign", *impl_->currencySign);
+  if (impl_->unit)
+    options.emplace(u"unit", *impl_->unit);
+  if (impl_->unitDisplay)
+    options.emplace(u"unitDisplay", *impl_->unitDisplay);
   options.emplace(u"minimumIntegerDigits", (double)impl_->minimumIntegerDigits);
-  options.emplace(
-      u"minimumFractionDigits", (double)impl_->minimumFractionDigits);
-  options.emplace(
-      u"maximumFractionDigits", (double)impl_->maximumFractionDigits);
-  options.emplace(
-      u"minimumSignificantDigits", (double)impl_->minimumSignificantDigits);
-  options.emplace(
-      u"maximumSignificantDigits", (double)impl_->maximumSignificantDigits);
+  if (impl_->fractionDigits) {
+    options.emplace(
+        u"minimumFractionDigits", (double)impl_->fractionDigits->minimum);
+    options.emplace(
+        u"maximumFractionDigits", (double)impl_->fractionDigits->maximum);
+  }
+  if (impl_->significantDigits) {
+    options.emplace(
+        u"minimumSignificantDigits", (double)impl_->significantDigits->minimum);
+    options.emplace(
+        u"maximumSignificantDigits", (double)impl_->significantDigits->maximum);
+  }
   options.emplace(u"useGrouping", impl_->useGrouping);
   options.emplace(u"roundingType", impl_->roundingType);
   options.emplace(u"notation", impl_->notation);
-  options.emplace(u"compactDisplay", impl_->compactDisplay);
+  if (impl_->compactDisplay)
+    options.emplace(u"compactDisplay", *impl_->compactDisplay);
   options.emplace(u"signDisplay", impl_->signDisplay);
   return options;
 }
@@ -2380,7 +2390,7 @@ std::u16string NumberFormat::Impl::format(double number) noexcept {
     }
   } else if (style == u"currency") {
     nf.numberStyle = NSNumberFormatterCurrencyStyle;
-    nf.currencyCode = u16StringToNSString(currency);
+    nf.currencyCode = u16StringToNSString(*currency);
     if (currencyDisplay == u"code") {
       nf.numberStyle = NSNumberFormatterCurrencyISOCodeStyle;
     } else if (currencyDisplay == u"symbol") {
@@ -2399,11 +2409,13 @@ std::u16string NumberFormat::Impl::format(double number) noexcept {
     nf.numberStyle = NSNumberFormatterNoStyle;
   }
   nf.minimumIntegerDigits = minimumIntegerDigits;
-  nf.minimumFractionDigits = minimumFractionDigits;
-  nf.maximumFractionDigits = maximumFractionDigits;
-  nf.minimumSignificantDigits = minimumSignificantDigits;
-  if (maximumSignificantDigits > 0) {
-    nf.maximumSignificantDigits = maximumSignificantDigits;
+  if (fractionDigits) {
+    nf.minimumFractionDigits = fractionDigits->minimum;
+    nf.maximumFractionDigits = fractionDigits->maximum;
+  }
+  if (significantDigits) {
+    nf.minimumSignificantDigits = significantDigits->minimum;
+    nf.maximumSignificantDigits = significantDigits->maximum;
   }
   nf.usesGroupingSeparator = useGrouping;
   if (style == u"unit") {
@@ -2417,7 +2429,7 @@ std::u16string NumberFormat::Impl::format(double number) noexcept {
     } else if (unitDisplay == u"long") {
       mf.unitStyle = NSFormattingUnitStyleLong;
     }
-    auto u = [[NSUnit alloc] initWithSymbol:u16StringToNSString(unit)];
+    auto u = [[NSUnit alloc] initWithSymbol:u16StringToNSString(*unit)];
     auto m = [[NSMeasurement alloc] initWithDoubleValue:number unit:u];
     return nsStringToU16String([mf stringFromMeasurement:m]);
   }
