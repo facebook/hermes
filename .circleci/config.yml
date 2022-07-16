@@ -43,6 +43,7 @@ workflows:
       - test-linux
       - test-e2e
       - test-e2e-intl
+      - test-macos-test262
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
@@ -331,12 +332,6 @@ jobs:
             cmake -S hermes -B build -GXcode
             cmake --build ./build
             cmake --build ./build --target check-hermes
-      - run:
-          name: Test Apple Intl
-          command: |
-            cmake -S hermes -B build_intl -GXcode -DHERMES_ENABLE_INTL=ON
-            cmake --build ./build_intl
-            cmake --build ./build_intl --target check-hermes
 
   windows:
     executor:
@@ -578,3 +573,25 @@ jobs:
           run-logcat: true
           additional-emulator-args: -timezone Europe/Paris
           test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+
+  test-macos-test262:
+    macos:
+      xcode: 13.4.1
+    steps:
+      - checkout:
+          path: hermes
+      - run:
+          name: Setup dependencies
+          command: |
+            brew install cmake ninja
+            # Check out test262 at a pinned revision to reduce flakiness
+            git clone https://github.com/tc39/test262
+            cd test262
+            git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
+      - run:
+          name: Run Hermes tests and test262 with Intl
+          command: |
+            cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON
+            cmake --build ./build
+            cmake --build ./build --target check-hermes
+            python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
