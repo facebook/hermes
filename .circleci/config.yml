@@ -297,18 +297,13 @@ jobs:
             cmake --build ./build_hdb  --target hdb check-hermes
       - run:
           name: Create CLI tarball
+          environment:
+            TAR_NAME: hermes-cli-darwin.tar.gz
           command: |
             mkdir output
-            tar -czvf output/hermes-cli-darwin-${CIRCLE_BRANCH}.tar.gz \
-              build/bin/hermes build/bin/hvm build/bin/hbcdump build/bin/hermesc build_dbg/bin/hdb
-      - run:
-          name: Checksum artifacts
-          command: |
-            cd output
-            for file in *
-            do
-              sha256sum "$file" > "$file.sha256"
-            done
+            tar -czvf output/${TAR_NAME} build/bin/hermes build/bin/hvm \
+              build/bin/hbcdump build/bin/hermesc build_hdb/bin/hdb
+            sha256sum output/${TAR_NAME} > output/${TAR_NAME}.sha256
       - store_artifacts:
           path: output
       - persist_to_workspace:
