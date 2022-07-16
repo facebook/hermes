@@ -303,7 +303,7 @@ jobs:
             mkdir output
             tar -czvf output/${TAR_NAME} build/bin/hermes build/bin/hvm \
               build/bin/hbcdump build/bin/hermesc build_hdb/bin/hdb
-            sha256sum output/${TAR_NAME} > output/${TAR_NAME}.sha256
+            shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
       - store_artifacts:
           path: output
       - persist_to_workspace:
