@@ -46,7 +46,7 @@ workflows:
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
   macos:
-    xcode: 12.4.0
+    xcode: 13.4.1
   resource_class: macos.x86.medium.gen2
   working_directory: ~/hermes
   environment:
