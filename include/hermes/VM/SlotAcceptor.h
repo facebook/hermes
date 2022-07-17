@@ -17,6 +17,7 @@ namespace hermes {
 namespace vm {
 
 class GCPointerBase;
+class HeapSnapshot;
 class WeakRefBase;
 class WeakRootBase;
 class GCCell;
