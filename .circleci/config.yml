@@ -300,9 +300,10 @@ jobs:
           environment:
             TAR_NAME: hermes-cli-darwin.tar.gz
           command: |
-            mkdir output
-            tar -czvf output/${TAR_NAME} build/bin/hermes build/bin/hvm \
-              build/bin/hbcdump build/bin/hermesc build_hdb/bin/hdb
+            mkdir output staging
+            cp build/bin/hermes build/bin/hvm build/bin/hbcdump \
+              build/bin/hermesc build_hdb/bin/hdb staging
+            tar -C staging -czvf output/${TAR_NAME} .
             shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
       - store_artifacts:
           path: output
