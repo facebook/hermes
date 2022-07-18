@@ -43,7 +43,7 @@ const char *hostFunctionNameAndParamsTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
-      "propID": 22,
+      "propID": "propIDTag:22",
       "propName": "foo",
       "value": "object:10"
     },

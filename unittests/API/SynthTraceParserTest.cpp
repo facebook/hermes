@@ -23,7 +23,7 @@ struct SynthTraceParserTest : public ::testing::Test {
 TEST_F(SynthTraceParserTest, ParseHeader) {
   const char *src = R"(
 {
-  "version": 3,
+  "version": 4,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -75,7 +75,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   const char *src = R"(
 {
-  "version": 3,
+  "version": 4,
   "globalObjID": 258,
   "runtimeConfig": {},
   "env": {
@@ -116,7 +116,7 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
 TEST_F(SynthTraceParserTest, ParsePropID) {
   const char *src = R"(
 {
-  "version": 3,
+  "version": 4,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -132,7 +132,7 @@ TEST_F(SynthTraceParserTest, ParsePropID) {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 0,
-      "propID": 111,
+      "propID": "propNameID:111",
       "propName": "prop111",
       "value": "number:0x0"
     },

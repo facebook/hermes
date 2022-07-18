@@ -42,7 +42,7 @@ const char *hostFunctionCachesObjectTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
-      "propID": 22,
+      "propID": "propIDTag:22",
       "propName": "foo",
       "value": "object:10"
     },
@@ -72,7 +72,7 @@ const char *hostFunctionCachesObjectTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
-      "propID": 23,
+      "propID": "propIDTag:23",
       "propName": "a",
       "value": "undefined:"
     },
@@ -92,7 +92,7 @@ const char *hostFunctionCachesObjectTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 11,
-      "propID": 23,
+      "propID": "propIDTag:23",
       "propName": "a",
       "value": "bool:true"
     },

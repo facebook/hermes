@@ -29,7 +29,7 @@ const char *nativeSetsConstantTrace() {
       "type": "SetPropertyRecord",
       "time": 0,
       "objID": 1,
-      "propID": 22,
+      "propID": "propIDTag:22",
       "propName": "foo",
       "value": "number:0x4000000000000000"
     },

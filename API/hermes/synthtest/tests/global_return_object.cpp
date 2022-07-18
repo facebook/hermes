@@ -38,7 +38,7 @@ const char *globalReturnObjectTrace() {
       "type": "GetPropertyRecord",
       "time": 0,
       "objID": 10,
-      "propID": 2,
+      "propID": "propIDTag:2",
       "propName": "a",
       "value": "object:11"
     },
