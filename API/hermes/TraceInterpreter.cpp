@@ -1270,19 +1270,15 @@ Value TraceInterpreter::execFunction(
             // the result.
             jsi::Value value;
             const auto &obj = getObjForUse(gpr.objID_);
-            auto propIDValOpt = getJSIValueForUseOpt(gpr.propID_.getUID());
-            // TODO(T111638575): We have to check whether the value is a string,
-            // because we cannot disambiguate Symbols from PropNameIDs.
-            // TraceValue does have a member that indicates the type, but it is
-            // not yet reliable; both strings and propNameIDs may be tagged as
-            // propNameID for now.
-            if (propIDValOpt && propIDValOpt->isString()) {
-              const jsi::String propString = (*propIDValOpt).asString(rt_);
+            if (gpr.propID_.isString()) {
+              const jsi::String propString =
+                  getJSIValueForUse(gpr.propID_.getUID()).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == gpr.propNameDbg_);
 #endif
               value = obj.getProperty(rt_, propString);
             } else {
+              assert(gpr.propID_.isPropNameID());
               auto propNameID = getPropNameIDForUse(gpr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propNameID.utf8(rt_) == gpr.propNameDbg_);
@@ -1298,10 +1294,9 @@ Value TraceInterpreter::execFunction(
                 static_cast<const SynthTrace::SetPropertyRecord &>(*rec);
             auto obj = getObjForUse(spr.objID_);
             // Call set property on the object specified and give it the value.
-            auto propIDValOpt = getJSIValueForUseOpt(spr.propID_.getUID());
-            // TODO(T111638575)
-            if (propIDValOpt && propIDValOpt->isString()) {
-              const jsi::String propString = (*propIDValOpt).asString(rt_);
+            if (spr.propID_.isString()) {
+              const jsi::String propString =
+                  getJSIValueForUse(spr.propID_.getUID()).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == spr.propNameDbg_);
 #endif
@@ -1311,6 +1306,7 @@ Value TraceInterpreter::execFunction(
                   traceValueToJSIValue(
                       rt_, trace_, getJSIValueForUse, spr.value_));
             } else {
+              assert(spr.propID_.isPropNameID());
               auto propNameID = getPropNameIDForUse(spr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propNameID.utf8(rt_) == spr.propNameDbg_);
@@ -1327,15 +1323,15 @@ Value TraceInterpreter::execFunction(
             const auto &hpr =
                 static_cast<const SynthTrace::HasPropertyRecord &>(*rec);
             auto obj = getObjForUse(hpr.objID_);
-            auto propIDValOpt = getJSIValueForUseOpt(hpr.propID_.getUID());
-            // TODO(T111638575)
-            if (propIDValOpt && propIDValOpt->isString()) {
-              const jsi::String propString = (*propIDValOpt).asString(rt_);
+            if (hpr.propID_.isString()) {
+              const jsi::String propString =
+                  getJSIValueForUse(hpr.propID_.getUID()).asString(rt_);
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propString.utf8(rt_) == hpr.propNameDbg_);
 #endif
               obj.hasProperty(rt_, propString);
             } else {
+              assert(hpr.propID_.isPropNameID());
               auto propNameID = getPropNameIDForUse(hpr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
               assert(propNameID.utf8(rt_) == hpr.propNameDbg_);
