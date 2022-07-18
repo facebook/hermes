@@ -130,7 +130,7 @@ TEST_F(SynthTraceSerializationTest, ReturnEncodeUTF8String) {
 TEST_F(SynthTraceSerializationTest, GetProperty) {
   const std::string ex =
       std::string(
-          R"({"type":"GetPropertyRecord","time":0,"objID":1,"propID":1111,)") +
+          R"({"type":"GetPropertyRecord","time":0,"objID":1,"propID":"propNameID:1111",)") +
 #ifdef HERMESVM_API_TRACE_DEBUG
       R"("propName":"x",)" +
 #endif
@@ -138,7 +138,7 @@ TEST_F(SynthTraceSerializationTest, GetProperty) {
   auto testRec = SynthTrace::GetPropertyRecord(
       dummyTime,
       1,
-      1111,
+      SynthTrace::encodePropNameID(1111),
 #ifdef HERMESVM_API_TRACE_DEBUG
       "x",
 #endif
@@ -149,7 +149,7 @@ TEST_F(SynthTraceSerializationTest, GetProperty) {
 TEST_F(SynthTraceSerializationTest, SetProperty) {
   const std::string ex =
       std::string(
-          R"({"type":"SetPropertyRecord","time":0,"objID":1,"propID":1111,)") +
+          R"({"type":"SetPropertyRecord","time":0,"objID":1,"propID":"string:1111",)") +
 #ifdef HERMESVM_API_TRACE_DEBUG
       R"("propName":"x",)" +
 #endif
@@ -157,7 +157,7 @@ TEST_F(SynthTraceSerializationTest, SetProperty) {
   auto testRec = SynthTrace::SetPropertyRecord(
       dummyTime,
       1,
-      1111,
+      SynthTrace::encodeString(1111),
 #ifdef HERMESVM_API_TRACE_DEBUG
       "x",
 #endif
@@ -168,7 +168,7 @@ TEST_F(SynthTraceSerializationTest, SetProperty) {
 TEST_F(SynthTraceSerializationTest, HasProperty) {
   const std::string ex =
       std::string(
-          R"({"type":"HasPropertyRecord","time":0,"objID":1,"propID":1111)") +
+          R"({"type":"HasPropertyRecord","time":0,"objID":1,"propID":"string:1111")") +
 #ifdef HERMESVM_API_TRACE_DEBUG
       R"(,"propName":"a")" +
 #endif
@@ -176,9 +176,9 @@ TEST_F(SynthTraceSerializationTest, HasProperty) {
   auto testRec = SynthTrace::HasPropertyRecord(
       dummyTime,
       1,
-      1111
+      SynthTrace::encodeString(1111)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      ,
+          ,
       "a"
 #endif
   );
@@ -372,7 +372,10 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
       record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
   EXPECT_TRUE(record.getProperty(*rt, "time").isNumber());
   EXPECT_EQ(objID, record.getProperty(*rt, "objID").asNumber());
-  EXPECT_EQ(stringID, record.getProperty(*rt, "propID").asNumber());
+  EXPECT_EQ(
+      SynthTrace::encodeString(stringID),
+      SynthTrace::decode(
+          record.getProperty(*rt, "propID").asString(*rt).utf8(*rt)));
   EXPECT_EQ(
       "undefined:", record.getProperty(*rt, "value").asString(*rt).utf8(*rt));
 }

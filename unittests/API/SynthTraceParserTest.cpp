@@ -113,6 +113,52 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
   ASSERT_THROW(parseSynthTrace(bufFromStr(src)), std::invalid_argument);
 }
 
+TEST_F(SynthTraceParserTest, ParsePropID) {
+  const char *src = R"(
+{
+  "version": 3,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "env": {
+    "callsToHermesInternalGetInstrumentedStats": [],
+  },
+  "trace": [
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 0,
+      "propID": 111,
+      "propName": "prop111",
+      "value": "number:0x0"
+    },
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 0,
+      "propID": "string:222",
+      "propName": "prop222",
+      "value": "number:0x0"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 = dynamic_cast<const SynthTrace::GetPropertyRecord &>(
+      *trace.records().at(0));
+  ASSERT_EQ(SynthTrace::encodePropNameID(111), record0.propID_);
+
+  auto record1 = dynamic_cast<const SynthTrace::GetPropertyRecord &>(
+      *trace.records().at(1));
+  ASSERT_EQ(SynthTrace::encodeString(222), record1.propID_);
+}
+
 TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
   const char *src = R"(
 {

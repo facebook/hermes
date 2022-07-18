@@ -112,7 +112,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   auto gprExpect = SynthTrace::GetPropertyRecord(
       dummyTime,
       globalObjID,
-      identityID,
+      SynthTrace::encodeString(identityID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       identityStr,
 #endif
@@ -236,7 +236,7 @@ TEST_F(SynthTraceTest, GetProperty) {
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      aStringID,
+      SynthTrace::encodeString(aStringID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       a,
 #endif
@@ -249,7 +249,7 @@ TEST_F(SynthTraceTest, GetProperty) {
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      aPropID,
+      SynthTrace::encodePropNameID(aPropID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       a,
 #endif
@@ -261,7 +261,7 @@ TEST_F(SynthTraceTest, GetProperty) {
   auto gprExpect2 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      bPropID,
+      SynthTrace::encodePropNameID(bPropID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       b,
 #endif
@@ -297,7 +297,7 @@ TEST_F(SynthTraceTest, SetProperty) {
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
       objID,
-      aStringID,
+      SynthTrace::encodeString(aStringID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       a,
 #endif
@@ -309,7 +309,7 @@ TEST_F(SynthTraceTest, SetProperty) {
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       dummyTime,
       objID,
-      bPropID,
+      SynthTrace::encodePropNameID(bPropID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       b,
 #endif
@@ -349,9 +349,9 @@ TEST_F(SynthTraceTest, HasProperty) {
   auto hprExpect0 = SynthTrace::HasPropertyRecord(
       dummyTime,
       objID,
-      aStringID
+      SynthTrace::encodeString(aStringID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      ,
+          ,
       a
 #endif
   );
@@ -362,9 +362,9 @@ TEST_F(SynthTraceTest, HasProperty) {
   auto hprExpect1 = SynthTrace::HasPropertyRecord(
       dummyTime,
       objID,
-      bPropID
+      SynthTrace::encodePropNameID(bPropID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      ,
+          ,
       b
 #endif
   );
@@ -495,7 +495,7 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
   auto gprExpect = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      aStringID,
+      SynthTrace::encodeString(aStringID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       a,
 #endif
@@ -647,7 +647,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
-      getHappenedPropNameID,
+      SynthTrace::encodePropNameID(getHappenedPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.getHappened,
 #endif
@@ -660,7 +660,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      xPropNameID,
+      SynthTrace::encodePropNameID(xPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.x,
 #endif
@@ -670,7 +670,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       dummyTime,
       objID,
-      xPropNameID,
+      SynthTrace::encodePropNameID(xPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.x,
 #endif
@@ -687,7 +687,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto sprExpect2 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
-      setHappenedPropNameID,
+      SynthTrace::encodePropNameID(setHappenedPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.setHappened,
 #endif
@@ -702,7 +702,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto sprExpect4 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
-      getHappenedPropNameID,
+      SynthTrace::encodePropNameID(getHappenedPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.getHappened,
 #endif
@@ -715,7 +715,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
-      xPropNameID,
+      SynthTrace::encodePropNameID(xPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.x,
 #endif
@@ -815,7 +815,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
-      oPropNameID,
+      SynthTrace::encodePropNameID(oPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.o,
 #endif
@@ -830,7 +830,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
-      hoPropNameID,
+      SynthTrace::encodePropNameID(hoPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       ho,
 #endif
@@ -852,7 +852,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
-      oPropNameID,
+      SynthTrace::encodePropNameID(oPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.o,
 #endif
@@ -861,7 +861,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
       oObjID,
-      observedXPropNameUID,
+      SynthTrace::encodePropNameID(observedXPropNameUID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       x,
 #endif
@@ -884,7 +884,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect2 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
-      oPropNameID,
+      SynthTrace::encodePropNameID(oPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.o,
 #endif
@@ -893,7 +893,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto sprExpect = SynthTrace::SetPropertyRecord(
       dummyTime,
       oObjID,
-      observedYPropNameUID,
+      SynthTrace::encodePropNameID(observedYPropNameUID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       y,
 #endif
@@ -915,7 +915,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect3 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
-      xResPropNameID,
+      SynthTrace::encodePropNameID(xResPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       xRes,
 #endif
@@ -924,7 +924,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect4 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
-      yResPropNameID,
+      SynthTrace::encodePropNameID(yResPropNameID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       yRes,
 #endif

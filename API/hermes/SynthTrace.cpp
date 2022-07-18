@@ -553,7 +553,7 @@ void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
-  json.emitKeyValue("propID", propID_);
+  json.emitKeyValue("propID", encode(propID_));
 #ifdef HERMESVM_API_TRACE_DEBUG
   json.emitKeyValue("propName", propNameDbg_);
 #endif
@@ -563,7 +563,7 @@ void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
 void SynthTrace::HasPropertyRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
-  json.emitKeyValue("propID", propID_);
+  json.emitKeyValue("propID", encode(propID_));
 #ifdef HERMESVM_API_TRACE_DEBUG
   json.emitKeyValue("propName", propNameDbg_);
 #endif

@@ -427,7 +427,7 @@ jsi::Value TracingRuntime::getProperty(
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name),
+      SynthTrace::encodeString(getUniqueID(name)),
 #ifdef HERMESVM_API_TRACE_DEBUG
       name.utf8(*this),
 #endif
@@ -442,7 +442,7 @@ jsi::Value TracingRuntime::getProperty(
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name),
+      SynthTrace::encodePropNameID(getUniqueID(name)),
 #ifdef HERMESVM_API_TRACE_DEBUG
       name.utf8(*this),
 #endif
@@ -456,7 +456,7 @@ bool TracingRuntime::hasProperty(
   trace_.emplace_back<SynthTrace::HasPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name)
+      SynthTrace::encodeString(getUniqueID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
           ,
       name.utf8(*this)
@@ -471,7 +471,7 @@ bool TracingRuntime::hasProperty(
   trace_.emplace_back<SynthTrace::HasPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name)
+      SynthTrace::encodePropNameID(getUniqueID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
           ,
       name.utf8(*this)
@@ -487,7 +487,7 @@ void TracingRuntime::setPropertyValue(
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name),
+      SynthTrace::encodeString(getUniqueID(name)),
 #ifdef HERMESVM_API_TRACE_DEBUG
       name.utf8(*this),
 #endif
@@ -502,7 +502,7 @@ void TracingRuntime::setPropertyValue(
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
       getTimeSinceStart(),
       getUniqueID(obj),
-      getUniqueID(name),
+      SynthTrace::encodePropNameID(getUniqueID(name)),
 #ifdef HERMESVM_API_TRACE_DEBUG
       name.utf8(*this),
 #endif

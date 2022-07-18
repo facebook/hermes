@@ -607,8 +607,7 @@ class SynthTrace {
 
   struct GetOrSetPropertyRecord : public Record {
     const ObjectID objID_;
-    // This may be the ID of a String or a PropNameID.
-    const ObjectID propID_{0};
+    const TraceValue propID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
 #endif
@@ -617,7 +616,7 @@ class SynthTrace {
     GetOrSetPropertyRecord(
         TimeSinceStart time,
         ObjectID objID,
-        ObjectID propID,
+        TraceValue propID,
 #ifdef HERMESVM_API_TRACE_DEBUG
         const std::string &propNameDbg,
 #endif
@@ -634,7 +633,9 @@ class SynthTrace {
     bool operator==(const Record &that) const final;
 
     std::vector<ObjectID> uses() const override {
-      return {objID_, propID_};
+      std::vector<ObjectID> vec{objID_};
+      pushIfTrackedValue(propID_, vec);
+      return vec;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
@@ -695,13 +696,12 @@ class SynthTrace {
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
 #endif
-    // This may be the ID of a String or a PropNameID.
-    const ObjectID propID_{0};
+    const TraceValue propID_;
 
     HasPropertyRecord(
         TimeSinceStart time,
         ObjectID objID,
-        ObjectID propID
+        TraceValue propID
 #ifdef HERMESVM_API_TRACE_DEBUG
         ,
         const std::string &propNameDbg
@@ -722,7 +722,9 @@ class SynthTrace {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      return {objID_, propID_};
+      std::vector<ObjectID> vec{objID_};
+      pushIfTrackedValue(propID_, vec);
+      return vec;
     }
   };
 
