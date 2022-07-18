@@ -134,45 +134,35 @@ fn test_visit() {
         let gc = GCLock::new(&mut ctx);
         NodeRc::from_node(
             &gc,
-            builder::BlockStatement::build_template(
-                &gc,
-                template::BlockStatement {
-                    metadata: Default::default(),
-                    body: NodeList::from_iter(
-                        &gc,
-                        [
-                            builder::ExpressionStatement::build_template(
-                                &gc,
-                                template::ExpressionStatement {
-                                    metadata: Default::default(),
-                                    expression: builder::NumericLiteral::build_template(
-                                        &gc,
-                                        template::NumericLiteral {
-                                            metadata: Default::default(),
-                                            value: 1.0,
-                                        },
-                                    ),
-                                    directive: None,
-                                },
-                            ),
-                            builder::ExpressionStatement::build_template(
-                                &gc,
-                                template::ExpressionStatement {
-                                    metadata: Default::default(),
-                                    expression: builder::NumericLiteral::build_template(
-                                        &gc,
-                                        template::NumericLiteral {
-                                            metadata: Default::default(),
-                                            value: 2.0,
-                                        },
-                                    ),
-                                    directive: None,
-                                },
-                            ),
-                        ],
-                    ),
-                },
-            ),
+            template::BlockStatement {
+                metadata: Default::default(),
+                body: NodeList::from_iter(
+                    &gc,
+                    [
+                        template::ExpressionStatement {
+                            metadata: Default::default(),
+                            expression: template::NumericLiteral {
+                                metadata: Default::default(),
+                                value: 1.0,
+                            }
+                            .build(&gc),
+                            directive: None,
+                        }
+                        .build(&gc),
+                        template::ExpressionStatement {
+                            metadata: Default::default(),
+                            expression: template::NumericLiteral {
+                                metadata: Default::default(),
+                                value: 2.0,
+                            }
+                            .build(&gc),
+                            directive: None,
+                        }
+                        .build(&gc),
+                    ],
+                ),
+            }
+            .build(&gc),
         )
     };
 

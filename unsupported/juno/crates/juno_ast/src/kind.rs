@@ -346,6 +346,15 @@ macro_rules! gen_nodekind_enum {
                 // Create each field that's meant for just this node kind.
                 $($(pub $field : $type,)*)?
             }
+
+            impl<'a> $kind<'a> {
+                /// Build this template.
+                /// This function just calls `build_template` for the corresponding builder
+                /// in `builder`, but allows type inference to avoid repeating the name.
+                pub fn build(self, lock: &'a super::GCLock) -> &'a Node<'a> {
+                    super::builder::$kind::build_template(lock, self)
+                }
+            }
             )*
         }
 
