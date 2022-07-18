@@ -6,6 +6,8 @@
  */
 
 // RUN: %juno --gen-js -O %s | %FileCheck %s --match-full-lines
+// Transform is currently disabled because it's unsafe.
+// XFAIL: true
 
 function foo() {
   x + -y;

@@ -32,10 +32,7 @@ impl PassManager {
     /// Pipeline containing a list of standard passes.
     pub fn standard() -> Self {
         Self {
-            passes: vec![
-                Box::new(add_negative::AddNegative::new()),
-                Box::new(reduce_conditional::ReduceConditional::new()),
-            ],
+            passes: vec![Box::new(reduce_conditional::ReduceConditional::new())],
         }
     }
 
