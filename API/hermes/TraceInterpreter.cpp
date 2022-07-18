@@ -1013,9 +1013,8 @@ Value TraceInterpreter::execFunction(
 #endif
   for (const TraceInterpreter::Call::Piece &piece : call.pieces) {
     uint64_t globalRecordNum = piece.start;
-    const auto getJSIValueForUseOpt =
-        [this, &call, &locals, &globalRecordNum](
-            ObjectID obj) -> llvh::Optional<Value> {
+    const auto getJSIValueForUse =
+        [this, &call, &locals, &globalRecordNum](ObjectID obj) -> Value {
       // Check locals, then globals.
       auto it = locals.find(obj);
       if (it != locals.end()) {
@@ -1034,29 +1033,20 @@ Value TraceInterpreter::execFunction(
         return val;
       }
       auto defAndUse = globalDefsAndUses_.find(obj);
-      // Since the use might not be a jsi::Value, it might be found in the
-      // locals table for non-Values, and therefore might not be in the global
-      // use/def table.
-      if (defAndUse == globalDefsAndUses_.end()) {
-        return llvh::None;
-      }
+      assert(
+          defAndUse != globalDefsAndUses_.end() &&
+          "All global uses must have a global definition");
       it = gom_.find(obj);
-      if (it != gom_.end()) {
-        Value val{rt_, it->second};
-        assert(val.isObject() || val.isString() || val.isSymbol());
-        // If it was the last global use, delete that object id from globals.
-        if (defAndUse->second.lastUse == globalRecordNum) {
-          gom_.erase(it);
-        }
-        return val;
+      assert(
+          it != gom_.end() &&
+          "If there is a global definition, it must exist in one of the maps");
+      Value val{rt_, it->second};
+      assert(val.isObject() || val.isString() || val.isSymbol());
+      // If it was the last global use, delete that object id from globals.
+      if (defAndUse->second.lastUse == globalRecordNum) {
+        gom_.erase(it);
       }
-      return llvh::None;
-    };
-    const auto getJSIValueForUse =
-        [&getJSIValueForUseOpt](ObjectID obj) -> Value {
-      auto valOpt = getJSIValueForUseOpt(obj);
-      assert(valOpt && "There must be a definition for all uses.");
-      return std::move(*valOpt);
+      return val;
     };
     const auto getObjForUse = [this,
                                getJSIValueForUse](ObjectID obj) -> Object {
