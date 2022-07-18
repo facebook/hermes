@@ -537,6 +537,41 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, NativeStateTest) {
+  class C : public facebook::jsi::NativeState {
+   public:
+    int *dtors;
+    C(int *_dtors) : dtors(_dtors) {}
+    virtual ~C() override {
+      ++*dtors;
+    }
+  };
+  int dtors1 = 0;
+  int dtors2 = 0;
+  {
+    Object obj = eval("({one: 1})").getObject(*rt);
+    ASSERT_FALSE(obj.hasNativeState<C>(*rt));
+    {
+      // Set some state.
+      obj.setNativeState(*rt, std::make_shared<C>(&dtors1));
+      ASSERT_TRUE(obj.hasNativeState<C>(*rt));
+      auto ptr = obj.getNativeState<C>(*rt);
+      EXPECT_EQ(ptr->dtors, &dtors1);
+    }
+    {
+      // Overwrite the state.
+      obj.setNativeState(*rt, std::make_shared<C>(&dtors2));
+      ASSERT_TRUE(obj.hasNativeState<C>(*rt));
+      auto ptr = obj.getNativeState<C>(*rt);
+      EXPECT_EQ(ptr->dtors, &dtors2);
+    }
+  } // closing scope -> obj unreachable
+  // should finalize both
+  eval("gc()");
+  EXPECT_EQ(1, dtors1);
+  EXPECT_EQ(1, dtors2);
+}
+
 TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {
   auto strProp = PropNameID::forAscii(*rt, "a");
   auto secretProp = PropNameID::forSymbol(

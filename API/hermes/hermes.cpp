@@ -28,6 +28,7 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
@@ -734,6 +735,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
   std::shared_ptr<jsi::HostObject> getHostObject(const jsi::Object &) override;
   jsi::HostFunctionType &getHostFunction(const jsi::Function &) override;
+  bool hasNativeState(const jsi::Object &) override;
+  std::shared_ptr<jsi::NativeState> getNativeState(
+      const jsi::Object &) override;
+  void setNativeState(const jsi::Object &, std::shared_ptr<jsi::NativeState>)
+      override;
   jsi::Value getProperty(const jsi::Object &, const jsi::PropNameID &name)
       override;
   jsi::Value getProperty(const jsi::Object &, const jsi::String &name) override;
@@ -1734,6 +1740,83 @@ std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
   const vm::HostObjectProxy *proxy =
       vm::vmcast<vm::HostObject>(phv(obj))->getProxy();
   return static_cast<const JsiProxy *>(proxy)->ho_;
+}
+
+bool HermesRuntimeImpl::hasNativeState(const jsi::Object &obj) {
+  vm::GCScope gcScope(runtime_);
+  auto h = handle(obj);
+  if (h->isProxyObject() || h->isHostObject()) {
+    return false;
+  }
+  vm::NamedPropertyDescriptor desc;
+  return vm::JSObject::getOwnNamedDescriptor(
+      h,
+      runtime_,
+      vm::Predefined::getSymbolID(vm::Predefined::InternalPropertyNativeState),
+      desc);
+}
+
+static void deleteShared(void *context) {
+  delete reinterpret_cast<std::shared_ptr<void> *>(context);
+}
+
+void HermesRuntimeImpl::setNativeState(
+    const jsi::Object &obj,
+    std::shared_ptr<jsi::NativeState> state) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(runtime_);
+    auto h = handle(obj);
+    if (h->isProxyObject()) {
+      throw jsi::JSINativeException("native state unsupported on Proxy");
+    } else if (h->isHostObject()) {
+      throw jsi::JSINativeException("native state unsupported on HostObject");
+    }
+    // Allocate a shared_ptr on the C++ heap and use it as context of
+    // NativeState.
+    std::shared_ptr<void> *ptr = new std::shared_ptr<void>(state);
+    auto ns = runtime_.makeHandle(
+        vm::NativeState::create(runtime_, ptr, deleteShared));
+    auto res = vm::JSObject::defineOwnProperty(
+        h,
+        runtime_,
+        vm::Predefined::getSymbolID(
+            vm::Predefined::InternalPropertyNativeState),
+        vm::DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        ns);
+    // NB: If setting the property failed, then the NativeState cell will soon
+    // be unreachable, and when it's later finalized, the shared_ptr will be
+    // deleted.
+    checkStatus(res.getStatus());
+    if (!*res) {
+      throw jsi::JSINativeException(
+          "failed to define internal native state property");
+    }
+  });
+}
+
+std::shared_ptr<jsi::NativeState> HermesRuntimeImpl::getNativeState(
+    const jsi::Object &obj) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(runtime_);
+    assert(hasNativeState(obj) && "object lacks native state");
+    auto h = handle(obj);
+    vm::NamedPropertyDescriptor desc;
+    bool exists = vm::JSObject::getOwnNamedDescriptor(
+        h,
+        runtime_,
+        vm::Predefined::getSymbolID(
+            vm::Predefined::InternalPropertyNativeState),
+        desc);
+    (void)exists;
+    assert(exists && "hasNativeState lied");
+    // Raw pointers below.
+    vm::NoAllocScope scope(runtime_);
+    vm::NativeState *ns = vm::vmcast<vm::NativeState>(
+        vm::JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
+            .getObject(runtime_));
+    return std::shared_ptr(
+        *reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(ns->context()));
+  });
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(

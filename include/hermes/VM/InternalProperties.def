@@ -28,6 +28,7 @@ PROP(6)
 NAMED_PROP(NamedPropForUnitTestOnly)
 NAMED_PROP(CapturedError)
 NAMED_PROP(IntlNativeType)
+NAMED_PROP(NativeState)
 
 #undef PROP
 #undef NAMED_PROP
