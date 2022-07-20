@@ -2262,25 +2262,11 @@ CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value) {
 }
 
 CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
-  switch (value->getTag()) {
-    default:
-      break;
-
-    case HermesValue::Tag::BigInt:
-      return *value;
-
-    case HermesValue::Tag::Object:
-      if (auto jsBigInt = Handle<JSBigInt>::dyn_vmcast(value)) {
-        if (value->getRaw() != runtime.bigintPrototype.getRaw()) {
-          BigIntPrimitive *bigint =
-              JSBigInt::getPrimitiveBigInt(jsBigInt.get(), runtime);
-          assert(bigint && "boxed bigint is missing its primitive");
-          return HermesValue::encodeBigIntValue(bigint);
-        }
-      }
-      break;
-  }
-
+  if (value->isBigInt())
+    return *value;
+  if (auto *jsBigInt = dyn_vmcast<JSBigInt>(*value))
+    return HermesValue::encodeBigIntValue(
+        JSBigInt::getPrimitiveBigInt(jsBigInt, runtime));
   return runtime.raiseTypeError("value is not a bigint");
 }
 

@@ -412,12 +412,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of BigInt.prototype. Its properties will be
   // populated later.
-  runtime.bigintPrototype =
-      JSBigInt::create(
-          runtime,
-          BigIntPrimitive::fromSignedNoThrow(runtime, 0),
-          Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+  runtime.bigintPrototype = JSObject::create(runtime).getHermesValue();
 
   // "Forward declaration" of Number.prototype. Its properties will be
   // populated later.
