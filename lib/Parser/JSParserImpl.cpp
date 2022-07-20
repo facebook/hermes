@@ -2348,10 +2348,6 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             startLoc, endLoc, new (context_) ESTree::CoverEmptyArgsNode());
       }
 
-#if HERMES_PARSE_FLOW
-      SMLoc startLocAfterParen = tok_->getStartLoc();
-#endif
-
       ESTree::Node *expr;
       if (check(TokenKind::dotdotdot)) {
         auto optRest = parseBindingRestElement(ParamIn);
@@ -2371,11 +2367,17 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
 
 #if HERMES_PARSE_FLOW
       if (context_.getParseFlow()) {
+        // In both these cases, we set the location to encompass the `()`.
+        // (x: T)
+        // ^^^^^^
+        // by using `startLoc` and `tok_` as the start/end.
+        // If `tok_` is not `)`, then we'll error on the `eat` call immediately
+        // after these checks.
         if (auto *cover = dyn_cast<ESTree::CoverTypedIdentifierNode>(expr)) {
           if (cover->_right && !cover->_optional) {
             expr = setLocation(
-                expr,
-                getPrevTokenEndLoc(),
+                startLoc,
+                tok_,
                 new (context_) ESTree::TypeCastExpressionNode(
                     cover->_left, cover->_right));
           }
@@ -2386,8 +2388,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             return None;
           ESTree::Node *type = *optType;
           expr = setLocation(
-              startLocAfterParen,
-              getPrevTokenEndLoc(),
+              startLoc,
+              tok_,
               new (context_) ESTree::TypeCastExpressionNode(expr, type));
         }
       }
