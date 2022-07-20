@@ -361,7 +361,7 @@ macro_rules! nodekind_defs {
             },
             ExportNamedDeclaration[Declaration] {
                 declaration: Option<&'a Node<'a>>[Declaration, Identifier],
-                specifiers: NodeList<'a>[ExportSpecifier],
+                specifiers: NodeList<'a>[ExportSpecifier, ExportNamespaceSpecifier],
                 source: Option<&'a Node<'a>>[StringLiteral],
                 export_kind: ExportKind,
             },

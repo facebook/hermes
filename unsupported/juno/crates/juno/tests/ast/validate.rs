@@ -185,6 +185,15 @@ fn test_calls() {
 }
 
 #[test]
+fn test_import_export() {
+    validate_src("import * as foo from 'foo'").unwrap();
+    validate_src("import {x} from 'foo'").unwrap();
+    validate_src("import {x as y} from 'foo'").unwrap();
+    validate_src("export var x;").unwrap();
+    validate_src("export * as x from 'foo';").unwrap();
+}
+
+#[test]
 fn test_jsx() {
     validate_src_jsx("<foo />").unwrap();
     validate_src_jsx("<foo bar={1} />").unwrap();
