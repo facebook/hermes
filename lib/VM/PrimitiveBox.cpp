@@ -291,7 +291,7 @@ void JSBigIntBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField(&self->primitiveValue_);
 }
 
-CallResult<Handle<JSBigInt>> JSBigInt::create(
+Handle<JSBigInt> JSBigInt::create(
     Runtime &runtime,
     Handle<BigIntPrimitive> value,
     Handle<JSObject> parentHandle) {
