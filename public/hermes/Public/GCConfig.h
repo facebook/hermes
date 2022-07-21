@@ -184,6 +184,9 @@ enum class GCEventKind {
   /* old gen (false). */                                                  \
   F(constexpr, bool, AllocInYoung, true)                                  \
                                                                           \
+  /* Whether to fill the YG with invalid data after each collection. */   \
+  F(constexpr, bool, OverwriteDeadYGObjects, false)                       \
+                                                                          \
   /* Whether to revert, if necessary, to young-gen allocation at TTI. */  \
   F(constexpr, bool, RevertToYGAtTTI, false)                              \
                                                                           \

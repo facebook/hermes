@@ -743,6 +743,10 @@ class HadesGC final : public GCBase {
   /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
   bool revertToYGAtTTI_;
 
+  /// If true, overwrite the allocation region in the YG with kInvalidHeapValue
+  /// at the end of each YG collection.
+  bool overwriteDeadYGObjects_;
+
   /// Target OG occupancy ratio at the end of an OG collection.
   const double occupancyTarget_;
 

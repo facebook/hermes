@@ -1296,6 +1296,7 @@ HadesGC::HadesGC(
           kConcurrentGC ? std::make_unique<Executor>() : nullptr},
       promoteYGToOG_{!gcConfig.getAllocInYoung()},
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
+      overwriteDeadYGObjects_{gcConfig.getOverwriteDeadYGObjects()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalBytes_{
           /*weight*/ 0.5,
@@ -2503,6 +2504,10 @@ void HadesGC::youngGenCollection(
     // This was modified by debitExternalMemoryFromFinalizer, called by
     // finalizers. The difference in the value before to now was the swept bytes
     externalBytes.after = getYoungGenExternalBytes();
+
+    if (overwriteDeadYGObjects_)
+      memset(yg.start(), kInvalidHeapValue, yg.used());
+
     // Now the copy list is drained, and all references point to the old
     // gen. Clear the level of the young gen.
     yg.resetLevel();
