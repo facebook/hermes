@@ -740,7 +740,7 @@ class HadesGC final : public GCBase {
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
 
-  /// If true, turn off promoteYGToOG_ as soon as the first OG GC occurs.
+  /// If true, turn off promoteYGToOG_ as soon as ttiReached() is called.
   bool revertToYGAtTTI_;
 
   /// If true, overwrite the allocation region in the YG with kInvalidHeapValue

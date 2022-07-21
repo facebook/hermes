@@ -1554,11 +1554,9 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
   ogCollectionStats_->setBeforeSizes(
       oldGen_.allocatedBytes(), oldGen_.externalBytes(), segmentFootprint());
 
-  if (revertToYGAtTTI_) {
-    // If we've reached the first OG collection, and reverting behavior is
-    // requested, switch back to YG mode.
-    promoteYGToOG_ = false;
-  }
+  // If we've reached the first OG collection, switch back to YG mode.
+  promoteYGToOG_ = false;
+
   // First, clear any mark bits that were set by a previous collection or
   // direct-to-OG allocation, they aren't needed anymore.
   for (HeapSegment &seg : oldGen_)
@@ -2184,7 +2182,8 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
 }
 
 void HadesGC::ttiReached() {
-  promoteYGToOG_ = false;
+  if (revertToYGAtTTI_)
+    promoteYGToOG_ = false;
 }
 
 #ifndef NDEBUG
