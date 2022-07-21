@@ -41,12 +41,6 @@ void FreelistBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&HadesGC::OldGen::FreelistCell::vt);
 }
 
-HadesGC::HeapSegment::HeapSegment(AlignedStorage storage)
-    : AlignedHeapSegment{std::move(storage)} {
-  // Make sure end() is at the maxSize.
-  growToLimit();
-}
-
 GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   incrementAllocatedBytes(sz);
@@ -2217,14 +2211,14 @@ void *HadesGC::allocSlow(uint32_t sz) {
   // Failed to alloc in young gen, do a young gen collection.
   youngGenCollection(
       kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
-  res = youngGen().bumpAlloc(sz);
+  res = youngGen().alloc(sz);
   if (res.success)
     return res.ptr;
 
   // Still fails after YG collection, perhaps it is a large alloc, try growing
   // the YG to full size.
   youngGen().clearExternalMemoryCharge();
-  res = youngGen().bumpAlloc(sz);
+  res = youngGen().alloc(sz);
   if (res.success)
     return res.ptr;
 
@@ -2268,7 +2262,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   llvh::ErrorOr<HeapSegment> seg = gc_.createSegment();
   if (seg) {
     // Complete this allocation using a bump alloc.
-    AllocResult res = seg->bumpAlloc(sz);
+    AllocResult res = seg->alloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
@@ -3014,7 +3008,7 @@ void HadesGC::OldGen::addSegment(HeapSegment seg) {
   // Add the remainder of the segment to the freelist.
   uint32_t sz = newSeg.available();
   if (sz >= minAllocationSize()) {
-    auto res = newSeg.bumpAlloc(sz);
+    auto res = newSeg.alloc(sz);
     assert(res.success);
     auto bucket = getFreelistBucket(sz);
     addCellToFreelist(res.ptr, sz, &segmentBuckets_.back()[bucket]);

@@ -251,10 +251,6 @@ class AlignedHeapSegment {
   ///     this \c AlignedHeapSegment.
   inline bool contains(const void *ptr) const;
 
-  /// Assumes that the segment's card object boundaries may not have been
-  /// maintained, and recreates it, ensuring that it's valid.
-  void recreateCardTableBoundaries();
-
   /// Mark a set of pages as unused.
   ///
   /// \pre start and end must be aligned to the page boundary.
@@ -275,30 +271,6 @@ class AlignedHeapSegment {
   /// \post this->level() == this->start();
   template <AdviseUnused MU = AdviseUnused::No>
   void resetLevel();
-
-  /// Increase the size of the allocation region in this segment by the minimum
-  /// amount such that this.size() >= desired.
-  ///
-  /// \pre \p desired is page-aligned.
-  /// \pre desired <= AlignedHeapSegment::maxSize()
-  void growTo(size_t desired);
-
-  /// Decrease the size of the allocation region in this segment by the minimum
-  /// amount such that this.size() <= desired.
-  ///
-  /// \pre \p desired is page-aligned.
-  /// \pre 0 < desired <= AlignedHeapSegment::maxSize()
-  void shrinkTo(size_t desired);
-
-  /// Grow the allocation region as big as possible.
-  inline void growToLimit();
-
-  /// Try to increase the size of the allocation region in this segment so that
-  /// at least \p amount bytes become available. Updates the bounds of the
-  /// segment and \returns true on success, and \returns false otherwise (If the
-  /// request would cause the allocation region to grow bigger than the
-  /// underlying storage).
-  bool growToFit(size_t amount);
 
 #ifndef NDEBUG
   /// Returns true iff \p lvl could refer to a level within this segment.
@@ -328,22 +300,7 @@ class AlignedHeapSegment {
   /// The upper limit of the space that we can currently allocated into;
   /// this may be decreased when externally allocated memory is credited to
   /// the generation owning this space.
-  char *effectiveEnd_{start()};
-
-  /// The end of the allocation region.  Initially set to the start (making the
-  /// allocation region empty), but fixed up in the body of the constructor.
-  char *end_{start()};
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// Support summarization of the vtables in the segment.
-  /// TODO(T56364255): remove this when the problem is diagnosed.
-
-  /// The level at the time we last summarized, or start(), if we
-  /// haven't previously summarized.
-  char *lastVTableSummaryLevel_{start()};
-  /// The value of the last summary, or else 0 if there has been no summary.
-  size_t lastVTableSummary_{0};
-#endif
+  char *effectiveEnd_{end()};
 };
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
@@ -448,7 +405,7 @@ char *AlignedHeapSegment::effectiveEnd() const {
 }
 
 char *AlignedHeapSegment::end() const {
-  return end_;
+  return start() + maxSize();
 }
 
 char *AlignedHeapSegment::level() const {
@@ -485,11 +442,6 @@ AlignedHeapSegment::operator bool() const {
 
 bool AlignedHeapSegment::contains(const void *ptr) const {
   return storage_.contains(ptr);
-}
-
-void AlignedHeapSegment::growToLimit() {
-  growTo(AlignedHeapSegment::maxSize());
-  clearExternalMemoryCharge();
 }
 
 } // namespace vm

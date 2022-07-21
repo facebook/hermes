@@ -40,8 +40,6 @@ struct AlignedHeapSegmentTest : public ::testing::Test {
 };
 
 TEST_F(AlignedHeapSegmentTest, AllocTest) {
-  s.growToLimit();
-
   const size_t INIT_BYTES = heapAlignSize(sizeof(GCCell));
   const size_t STEP_BYTES = HeapAlign;
 
@@ -83,8 +81,6 @@ TEST_F(AlignedHeapSegmentTest, AllocTest) {
 }
 
 TEST_F(AlignedHeapSegmentTest, FullSize) {
-  s.growToLimit();
-
   EXPECT_EQ(s.size(), AlignedHeapSegment::maxSize());
   EXPECT_EQ(s.size(), s.available());
   EXPECT_EQ(s.size(), s.hiLim() - s.start());
@@ -96,25 +92,7 @@ TEST_F(AlignedHeapSegmentTest, FullSize) {
   EXPECT_TRUE(nullptr != res.ptr);
 }
 
-TEST_F(AlignedHeapSegmentTest, SmallSize) {
-  const size_t PS = oscompat::page_size();
-  s.growTo(PS);
-  s.clearExternalMemoryCharge();
-
-  EXPECT_GE(PS, s.size());
-
-  AllocResult failed = s.alloc(heapAlignSize(s.available() + 1));
-  EXPECT_FALSE(failed.success);
-  EXPECT_TRUE(nullptr == failed.ptr);
-
-  AllocResult res = s.alloc(PS);
-  EXPECT_TRUE(res.ptr);
-  EXPECT_TRUE(nullptr != res.ptr);
-}
-
 TEST_F(AlignedHeapSegmentTest, ResetLevel) {
-  s.growToLimit();
-
   // Make the level different from the start of the region.
   AllocResult res = s.alloc(cellSize<GCCell>());
   ASSERT_TRUE(res.success);
@@ -122,57 +100,6 @@ TEST_F(AlignedHeapSegmentTest, ResetLevel) {
 
   s.resetLevel();
   EXPECT_EQ(s.start(), s.level());
-}
-
-TEST_F(AlignedHeapSegmentTest, SuccessfulGrowTo) {
-  const size_t PS = oscompat::page_size();
-
-  s.growTo(PS);
-  EXPECT_EQ(PS, s.size());
-
-  s.growTo(2 * PS);
-  EXPECT_EQ(2 * PS, s.size());
-}
-
-TEST_F(AlignedHeapSegmentTest, GrowToSmaller) {
-  const size_t PS = oscompat::page_size();
-
-  s.growTo(2 * PS);
-  EXPECT_EQ(2 * PS, s.size());
-
-  s.growTo(PS);
-  EXPECT_EQ(2 * PS, s.size());
-}
-
-TEST_F(AlignedHeapSegmentTest, SuccessfulGrowToFit) {
-  const size_t PS = oscompat::page_size();
-
-  EXPECT_TRUE(s.growToFit(PS));
-  EXPECT_LE(PS, s.size());
-}
-
-TEST_F(AlignedHeapSegmentTest, GrowToFitTooBig) {
-  const size_t TOO_BIG = heapAlignSize(AlignedStorage::size() + 1);
-
-  EXPECT_FALSE(s.growToFit(TOO_BIG));
-  EXPECT_EQ(0, s.size());
-}
-
-TEST_F(AlignedHeapSegmentTest, PageAlignedGrowToFit) {
-  const size_t PS = oscompat::page_size();
-
-  EXPECT_TRUE(s.growToFit(PS / 2));
-  EXPECT_EQ(0, reinterpret_cast<uintptr_t>(s.end()) % PS);
-}
-
-TEST_F(AlignedHeapSegmentTest, GrowToFitUnnecessary) {
-  const size_t PS = oscompat::page_size();
-
-  s.growTo(PS);
-
-  auto sizeBefore = s.size();
-  EXPECT_TRUE(s.growToFit(PS / 2));
-  EXPECT_EQ(sizeBefore, s.size());
 }
 
 #ifndef NDEBUG
@@ -184,13 +111,6 @@ TEST_F(AlignedHeapSegmentDeathTest, NullAlloc) {
   AlignedHeapSegment s;
   constexpr uint32_t SIZE = heapAlignSize(sizeof(GCCell));
   EXPECT_DEATH_IF_SUPPORTED({ s.alloc(SIZE); }, "null segment");
-}
-
-TEST_F(AlignedHeapSegmentDeathTest, GrowToTooBig) {
-  const size_t PS = oscompat::page_size();
-
-  EXPECT_DEATH_IF_SUPPORTED(
-      { s.growTo(AlignedHeapSegment::maxSize() + PS); }, "max size");
 }
 #endif // !NDEBUG
 

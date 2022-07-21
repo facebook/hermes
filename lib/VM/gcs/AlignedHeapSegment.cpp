@@ -43,6 +43,9 @@ AlignedHeapSegment::AlignedHeapSegment(AlignedStorage storage)
   if (*this) {
     new (contents()) Contents();
     contents()->protectGuardPage(oscompat::ProtectMode::None);
+#ifndef NDEBUG
+    clear();
+#endif
   }
 }
 
@@ -95,10 +98,6 @@ template void AlignedHeapSegment::setLevel<AdviseUnused::No>(char *lvl);
 template <AdviseUnused MU>
 void AlignedHeapSegment::resetLevel() {
   setLevel<MU>(start());
-#ifdef HERMES_EXTRA_DEBUG
-  lastVTableSummaryLevel_ = start();
-  lastVTableSummary_ = 0;
-#endif
 }
 
 /// Explicit template instantiations for resetLevel
@@ -115,68 +114,6 @@ void AlignedHeapSegment::setEffectiveEnd(char *effectiveEnd) {
 
 void AlignedHeapSegment::clearExternalMemoryCharge() {
   setEffectiveEnd(end());
-}
-
-void AlignedHeapSegment::growTo(size_t desired) {
-  assert(desired <= maxSize() && "Cannot request more than the max size");
-  assert(
-      isSizeHeapAligned(desired) &&
-      "Cannot grow to a size that's not heap aligned");
-
-  if (size() >= desired) {
-    return;
-  }
-
-  char *newEnd = start() + desired;
-#ifndef NDEBUG
-  clear(end_, newEnd);
-#endif
-
-  end_ = newEnd;
-}
-
-void AlignedHeapSegment::shrinkTo(size_t desired) {
-  assert(desired > 0 && "precondition");
-  assert(desired <= maxSize() && "Cannot request more than the max size");
-  assert(desired >= used() && "Cannot shrink to less than used data.");
-
-  if (size() <= desired) {
-    return;
-  }
-
-  end_ = start() + desired;
-}
-
-bool AlignedHeapSegment::growToFit(size_t amount) {
-  assert(
-      isSizeHeapAligned(amount) &&
-      "Cannot grow by a size that's not heap aligned");
-  // Insufficient space
-  if (static_cast<size_t>(hiLim() - level_) < amount) {
-    return false;
-  }
-
-  growTo(llvh::alignTo(used() + amount, oscompat::page_size()));
-  return true;
-}
-
-void AlignedHeapSegment::recreateCardTableBoundaries() {
-  const char *ptr = start();
-  const char *const lim = level();
-  CardTable::Boundary boundary = cardTable().nextBoundary(ptr);
-
-  assert(
-      cardTable().indexToAddress(cardTable().addressToIndex(ptr)) == ptr &&
-      "ptr must be card aligned.");
-
-  while (ptr < lim) {
-    const GCCell *cell = reinterpret_cast<const GCCell *>(ptr);
-    const char *nextPtr = ptr + cell->getAllocatedSize();
-    if (boundary.address() < nextPtr) {
-      cardTable().updateBoundaries(&boundary, ptr, nextPtr);
-    }
-    ptr = nextPtr;
-  }
 }
 
 #ifndef NDEBUG

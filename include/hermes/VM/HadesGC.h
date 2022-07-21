@@ -353,13 +353,9 @@ class HadesGC final : public GCBase {
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
    public:
-    explicit HeapSegment(AlignedStorage storage);
+    explicit HeapSegment(AlignedStorage storage)
+        : AlignedHeapSegment(std::move(storage)) {}
     HeapSegment() = default;
-
-    /// Allocate space by bumping a level.
-    AllocResult bumpAlloc(uint32_t sz) {
-      return AlignedHeapSegment::alloc(sz);
-    }
 
     /// Record the head of this cell so it can be found by the card scanner.
     static void setCellHead(const GCCell *start, const size_t sz);
@@ -1130,7 +1126,7 @@ void *HadesGC::allocWork(uint32_t sz) {
     youngGenCollection(
         kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
   }
-  AllocResult res = youngGen().bumpAlloc(sz);
+  AllocResult res = youngGen().alloc(sz);
   void *resPtr = LLVM_UNLIKELY(!res.success) ? allocSlow(sz) : res.ptr;
   if (hasFinalizer == HasFinalizer::Yes)
     youngGenFinalizables_.emplace_back(static_cast<GCCell *>(resPtr));
