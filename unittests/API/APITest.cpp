@@ -570,6 +570,16 @@ TEST_F(HermesRuntimeTest, NativeStateTest) {
   eval("gc()");
   EXPECT_EQ(1, dtors1);
   EXPECT_EQ(1, dtors2);
+
+  // Trying to set native state on frozen object should throw.
+  {
+    Object frozen = eval("Object.freeze({one: 1})").getObject(*rt);
+    ASSERT_THROW(
+        frozen.setNativeState(*rt, std::make_shared<C>(&dtors1)), JSIException);
+  }
+  // Make sure any NativeState cells are finalized before leaving, since they
+  // point to local variables. Otherwise ASAN will complain.
+  eval("gc()");
 }
 
 TEST_F(HermesRuntimeTest, PropNameIDFromSymbol) {

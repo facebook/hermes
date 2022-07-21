@@ -1757,7 +1757,7 @@ bool HermesRuntimeImpl::hasNativeState(const jsi::Object &obj) {
 }
 
 static void deleteShared(void *context) {
-  delete reinterpret_cast<std::shared_ptr<void> *>(context);
+  delete reinterpret_cast<std::shared_ptr<jsi::NativeState> *>(context);
 }
 
 void HermesRuntimeImpl::setNativeState(
@@ -1773,7 +1773,7 @@ void HermesRuntimeImpl::setNativeState(
     }
     // Allocate a shared_ptr on the C++ heap and use it as context of
     // NativeState.
-    std::shared_ptr<void> *ptr = new std::shared_ptr<void>(state);
+    auto *ptr = new std::shared_ptr<jsi::NativeState>(std::move(state));
     auto ns = runtime_.makeHandle(
         vm::NativeState::create(runtime_, ptr, deleteShared));
     auto res = vm::JSObject::defineOwnProperty(
