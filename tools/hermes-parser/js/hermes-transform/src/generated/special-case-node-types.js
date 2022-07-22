@@ -15,16 +15,24 @@ list in `scripts/genTransformNodeTypes` to ensure there's no duplicates
 */
 
 import type {
-  ESNode,
   ArrowFunctionExpression as ArrowFunctionExpressionType,
   BigIntLiteral as BigIntLiteralType,
   BlockComment as BlockCommentType,
   BooleanLiteral as BooleanLiteralType,
   ClassDeclaration as ClassDeclarationType,
+  DestructuringObjectProperty as DestructuringObjectPropertyType,
+  DestructuringObjectPropertyWithComputedName as DestructuringObjectPropertyWithComputedNameType,
+  DestructuringObjectPropertyWithNonShorthandStaticName as DestructuringObjectPropertyWithNonShorthandStaticNameType,
+  DestructuringObjectPropertyWithShorthandStaticName as DestructuringObjectPropertyWithShorthandStaticNameType,
+  ESNode,
   Identifier as IdentifierType,
   LineComment as LineCommentType,
   NullLiteral as NullLiteralType,
   NumericLiteral as NumericLiteralType,
+  ObjectProperty as ObjectPropertyType,
+  ObjectPropertyWithComputedName as ObjectPropertyWithComputedNameType,
+  ObjectPropertyWithNonShorthandStaticName as ObjectPropertyWithNonShorthandStaticNameType,
+  ObjectPropertyWithShorthandStaticName as ObjectPropertyWithShorthandStaticNameType,
   RegExpLiteral as RegExpLiteralType,
   StringLiteral as StringLiteralType,
   TemplateElement as TemplateElementType,
@@ -286,5 +294,196 @@ export function BlockComment(props: BlockCommentProps): BlockCommentType {
   return detachedProps<BlockCommentType>(undefined, {
     type: 'Block',
     value: props.value,
+  });
+}
+
+export type DestructuringObjectPropertyProps = {
+  +key: MaybeDetachedNode<DestructuringObjectPropertyType['key']>,
+  +value: MaybeDetachedNode<DestructuringObjectPropertyType['value']>,
+  +computed: DestructuringObjectPropertyType['computed'],
+  +shorthand: DestructuringObjectPropertyType['shorthand'],
+};
+export function DestructuringObjectProperty(props: {
+  ...$ReadOnly<DestructuringObjectPropertyProps>,
+  +parent?: ESNode,
+}): DetachedNode<DestructuringObjectPropertyType> {
+  return detachedProps<DestructuringObjectPropertyType>(props.parent, {
+    type: 'Property',
+    kind: 'init',
+    method: false,
+    key: asDetachedNode(props.key),
+    value: asDetachedNode(props.value),
+    computed: props.computed,
+    shorthand: props.shorthand,
+  });
+}
+
+export type DestructuringObjectPropertyWithNonShorthandStaticNameProps = {
+  +key: MaybeDetachedNode<
+    DestructuringObjectPropertyWithNonShorthandStaticNameType['key'],
+  >,
+  +value: MaybeDetachedNode<
+    DestructuringObjectPropertyWithNonShorthandStaticNameType['value'],
+  >,
+};
+export function DestructuringObjectPropertyWithNonShorthandStaticName(props: {
+  ...$ReadOnly<DestructuringObjectPropertyWithNonShorthandStaticNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<DestructuringObjectPropertyWithNonShorthandStaticNameType> {
+  return detachedProps<DestructuringObjectPropertyWithNonShorthandStaticNameType>(
+    props.parent,
+    {
+      type: 'Property',
+      kind: 'init',
+      method: false,
+      key: asDetachedNode(props.key),
+      value: asDetachedNode(props.value),
+      computed: false,
+      shorthand: false,
+    },
+  );
+}
+
+export type DestructuringObjectPropertyWithShorthandStaticNameProps = {
+  +key: MaybeDetachedNode<
+    DestructuringObjectPropertyWithShorthandStaticNameType['key'],
+  >,
+  +value: MaybeDetachedNode<
+    DestructuringObjectPropertyWithShorthandStaticNameType['value'],
+  >,
+};
+export function DestructuringObjectPropertyWithShorthandStaticName(props: {
+  ...$ReadOnly<DestructuringObjectPropertyWithShorthandStaticNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<DestructuringObjectPropertyWithShorthandStaticNameType> {
+  return detachedProps<DestructuringObjectPropertyWithShorthandStaticNameType>(
+    props.parent,
+    {
+      type: 'Property',
+      kind: 'init',
+      method: false,
+      key: asDetachedNode(props.key),
+      value: asDetachedNode(props.value),
+      computed: false,
+      shorthand: true,
+    },
+  );
+}
+
+export type DestructuringObjectPropertyWithComputedNameProps = {
+  +key: MaybeDetachedNode<
+    DestructuringObjectPropertyWithComputedNameType['key'],
+  >,
+  +value: MaybeDetachedNode<
+    DestructuringObjectPropertyWithComputedNameType['value'],
+  >,
+};
+export function DestructuringObjectPropertyWithComputedName(props: {
+  ...$ReadOnly<DestructuringObjectPropertyWithComputedNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<DestructuringObjectPropertyWithComputedNameType> {
+  return detachedProps<DestructuringObjectPropertyWithComputedNameType>(
+    props.parent,
+    {
+      type: 'Property',
+      kind: 'init',
+      method: false,
+      key: asDetachedNode(props.key),
+      value: asDetachedNode(props.value),
+      computed: true,
+      shorthand: false,
+    },
+  );
+}
+
+export type ObjectPropertyProps = {
+  +key: MaybeDetachedNode<ObjectPropertyType['key']>,
+  +value: MaybeDetachedNode<ObjectPropertyType['value']>,
+  +kind: ObjectPropertyType['kind'],
+  +computed: ObjectPropertyType['computed'],
+  +method: ObjectPropertyType['method'],
+  +shorthand: ObjectPropertyType['shorthand'],
+};
+export function ObjectProperty(props: {
+  ...$ReadOnly<ObjectPropertyProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectPropertyType> {
+  return detachedProps<ObjectPropertyType>(props.parent, {
+    type: 'Property',
+    key: asDetachedNode(props.key),
+    kind: props.kind,
+    value: asDetachedNode(props.value),
+    computed: props.computed,
+    method: props.method,
+    shorthand: props.shorthand,
+  });
+}
+
+export type ObjectPropertyWithNonShorthandStaticNameProps = {
+  +key: MaybeDetachedNode<ObjectPropertyWithNonShorthandStaticNameType['key']>,
+  +value: MaybeDetachedNode<
+    ObjectPropertyWithNonShorthandStaticNameType['value'],
+  >,
+  +kind: ObjectPropertyWithNonShorthandStaticNameType['kind'],
+  +method: ObjectPropertyWithNonShorthandStaticNameType['method'],
+};
+export function ObjectPropertyWithNonShorthandStaticName(props: {
+  ...$ReadOnly<ObjectPropertyWithNonShorthandStaticNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectPropertyWithNonShorthandStaticNameType> {
+  return detachedProps<ObjectPropertyWithNonShorthandStaticNameType>(
+    props.parent,
+    {
+      type: 'Property',
+      key: asDetachedNode(props.key),
+      kind: props.kind,
+      value: asDetachedNode(props.value),
+      computed: false,
+      method: props.method,
+      shorthand: false,
+    },
+  );
+}
+
+export type ObjectPropertyWithShorthandStaticNameProps = {
+  +key: MaybeDetachedNode<ObjectPropertyWithShorthandStaticNameType['key']>,
+  +value: MaybeDetachedNode<ObjectPropertyWithShorthandStaticNameType['value']>,
+};
+export function ObjectPropertyWithShorthandStaticName(props: {
+  ...$ReadOnly<ObjectPropertyWithShorthandStaticNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectPropertyWithShorthandStaticNameType> {
+  return detachedProps<ObjectPropertyWithShorthandStaticNameType>(
+    props.parent,
+    {
+      type: 'Property',
+      key: asDetachedNode(props.key),
+      kind: 'init',
+      value: asDetachedNode(props.value),
+      computed: false,
+      method: false,
+      shorthand: true,
+    },
+  );
+}
+
+export type ObjectPropertyWithComputedNameProps = {
+  +key: MaybeDetachedNode<ObjectPropertyWithComputedNameType['key']>,
+  +value: MaybeDetachedNode<ObjectPropertyWithComputedNameType['value']>,
+  +kind: ObjectPropertyWithComputedNameType['kind'],
+  +method: ObjectPropertyWithComputedNameType['method'],
+};
+export function ObjectPropertyWithComputedName(props: {
+  ...$ReadOnly<ObjectPropertyWithComputedNameProps>,
+  +parent?: ESNode,
+}): DetachedNode<ObjectPropertyWithComputedNameType> {
+  return detachedProps<ObjectPropertyWithComputedNameType>(props.parent, {
+    type: 'Property',
+    key: asDetachedNode(props.key),
+    kind: props.kind,
+    value: asDetachedNode(props.value),
+    computed: true,
+    method: props.method,
+    shorthand: false,
   });
 }

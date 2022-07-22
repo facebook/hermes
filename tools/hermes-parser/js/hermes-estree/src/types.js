@@ -471,7 +471,7 @@ export interface ObjectPropertyWithShorthandStaticName
   // shorthand values *must* be identifiers (that look the same as the key)
   +value: Identifier;
   +kind: 'init';
-  +method: boolean;
+  +method: false;
   +shorthand: true;
 }
 export interface ObjectPropertyWithComputedName extends ObjectPropertyBase {
