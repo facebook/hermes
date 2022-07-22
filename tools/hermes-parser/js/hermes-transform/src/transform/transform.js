@@ -14,9 +14,9 @@ import type {ESNode} from 'hermes-estree';
 import type {Visitor} from '../traverse/traverse';
 import type {TransformContextAdditions} from './TransformContext';
 
+import {SimpleTraverser} from 'hermes-parser';
 import * as prettier from 'prettier';
 import {getTransformedAST} from './getTransformedAST';
-import {SimpleTraverser} from '../traverse/SimpleTraverser';
 
 export type TransformVisitor = Visitor<TransformContextAdditions>;
 

@@ -54,25 +54,6 @@ describe('traverse', () => {
     ]);
   });
 
-  it('sets the parent pointers', () => {
-    const code = 'const x = 1;';
-    const {ast, scopeManager} = parseForESLint(code);
-
-    expect(ast.body[0]).not.toHaveProperty('parent');
-    traverse(code, ast, scopeManager, () => ({
-      '*'(node) {
-        expect(node).toHaveProperty('parent');
-        if (node.type === 'Program') {
-          // eslint-disable-next-line jest/no-conditional-expect
-          expect(node.parent).toBeNull();
-        } else {
-          // eslint-disable-next-line jest/no-conditional-expect
-          expect(node.parent).toHaveProperty('type');
-        }
-      },
-    }));
-  });
-
   it('passes an immutable context object', () => {
     const code = 'const x = 1;';
     const {ast, scopeManager} = parseForESLint(code);

@@ -12,7 +12,7 @@
 
 import type {ESNode} from 'hermes-estree';
 
-import {getVisitorKeys, isNode} from '../getVisitorKeys';
+import {getVisitorKeys, isNode} from './getVisitorKeys';
 
 export type TraverserCallback = (node: ESNode, parent: ?ESNode) => void;
 export type TraverserOptions = $ReadOnly<{

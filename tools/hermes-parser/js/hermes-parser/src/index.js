@@ -83,3 +83,5 @@ export function parse(
 }
 
 export type {ParserOptions} from './ParserOptions';
+export * from './traverse/SimpleTraverser';
+export * from './traverse/getVisitorKeys';

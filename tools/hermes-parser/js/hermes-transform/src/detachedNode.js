@@ -10,8 +10,7 @@
 
 import type {BaseNode, ESNode} from 'hermes-estree';
 
-import {getVisitorKeys, isNode} from './getVisitorKeys';
-import {SimpleTraverser} from './traverse/SimpleTraverser';
+import {SimpleTraverser, getVisitorKeys, isNode} from 'hermes-parser';
 
 export opaque type DetachedNode<+T> = T;
 export type MaybeDetachedNode<+T> = T | DetachedNode<T>;

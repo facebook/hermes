@@ -9,10 +9,8 @@
  */
 
 import type {Comment, Program} from 'hermes-estree';
-import {
-  SimpleTraverser,
-  SimpleTraverserBreak,
-} from '../../traverse/SimpleTraverser';
+
+import {SimpleTraverser, SimpleTraverserBreak} from 'hermes-parser';
 import {getCommentsForNode, setCommentsOnNode} from '../comments/comments';
 
 export type RemoveCommentMutation = $ReadOnly<{

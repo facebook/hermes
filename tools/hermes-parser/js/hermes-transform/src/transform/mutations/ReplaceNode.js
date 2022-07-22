@@ -12,11 +12,11 @@ import type {ESNode} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
+import {getVisitorKeys, isNode} from 'hermes-parser';
 import {replaceInArray} from './utils/arrayUtils';
 import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import {getOriginalNode} from '../../detachedNode';
-import {getVisitorKeys, isNode} from '../../getVisitorKeys';
 
 export type ReplaceNodeMutation = $ReadOnly<{
   type: 'replaceNode',

@@ -13,7 +13,7 @@
 import type {ESNode, Program} from 'hermes-estree';
 
 import {parseForESLint} from 'hermes-eslint';
-import {SimpleTraverser} from '../../src/traverse/SimpleTraverser';
+import {SimpleTraverser} from 'hermes-parser';
 import {SafeEmitter} from '../../src/traverse/SafeEmitter';
 import {NodeEventGenerator} from '../../src/traverse/NodeEventGenerator';
 

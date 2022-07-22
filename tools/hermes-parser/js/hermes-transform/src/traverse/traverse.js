@@ -15,7 +15,7 @@ import type {EmitterListener} from './SafeEmitter';
 import {codeFrameColumns} from '@babel/code-frame';
 import {NodeEventGenerator} from './NodeEventGenerator';
 import {SafeEmitter} from './SafeEmitter';
-import {SimpleTraverser} from './SimpleTraverser';
+import {SimpleTraverser} from 'hermes-parser';
 
 export type TraversalContextBase = $ReadOnly<{
   /**
@@ -81,11 +81,9 @@ export function traverseWithContext<T = TraversalContextBase>(
 
   let currentNode: ESNode = ast;
 
-  // set parent pointers and build up the traversal queue
+  // build up the traversal queue
   SimpleTraverser.traverse(ast, {
-    enter(node, parent) {
-      // $FlowExpectedError[cannot-write] - hermes doesn't set this
-      node.parent = parent;
+    enter(node) {
       nodeQueue.push({isEntering: true, node});
     },
     leave(node) {

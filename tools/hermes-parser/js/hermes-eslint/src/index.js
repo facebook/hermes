@@ -60,6 +60,16 @@ function parseForESLint(
   visitorKeys: VisitorKeysType,
 } {
   const ast = parse(code, options);
+
+  // set the parent pointers
+  HermesParser.SimpleTraverser.traverse(ast, {
+    enter(node, parent) {
+      // $FlowExpectedError[cannot-write]
+      node.parent = parent;
+    },
+    leave() {},
+  });
+
   const scopeManager = analyze(ast, options);
 
   return {
