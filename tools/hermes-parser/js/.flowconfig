@@ -22,10 +22,10 @@ module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/
 
 enums=true
 experimental.enforce_local_inference_annotations=true
-experimental.env_mode=ssa
+experimental.env_mode=resolved
 
 [version]
-^0.180.1
+^0.183.0
 
 [lints]
 untyped-type-import=error
