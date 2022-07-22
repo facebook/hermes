@@ -21,7 +21,6 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Optional chaining and nullish coalescing (`?.` and `??`)
 - Reflection (`Reflect` and `Proxy`) starting from [v0.7.0](https://github.com/facebook/hermes/releases/tag/v0.7.0)
 - [`Intl`, or Internationalization APIs](IntlAPIs.md)
-  - currently Android only
 - ES6 Promise (with incompatibilities documented below)
 - All ES6 JS library functions
   - Set/Map
