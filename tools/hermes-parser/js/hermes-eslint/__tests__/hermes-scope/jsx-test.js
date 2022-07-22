@@ -442,6 +442,7 @@ describe('jsx', () => {
           `
             import React from 'react';
             import fbt from 'fbt';
+            let foo;
             <fbt:foo />;
           `,
           [
@@ -459,6 +460,12 @@ describe('jsx', () => {
                   type: DefinitionType.ImportBinding,
                   // fbt is a direct, not indirect reference
                   referenceCount: 1,
+                },
+                {
+                  name: 'foo',
+                  type: DefinitionType.Variable,
+                  // the namespace name shouldn't reference the variable
+                  referenceCount: 0,
                 },
               ],
             },

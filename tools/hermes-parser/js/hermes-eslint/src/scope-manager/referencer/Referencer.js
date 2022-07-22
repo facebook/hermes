@@ -49,6 +49,7 @@ import type {
   JSXFragment,
   JSXIdentifier,
   JSXMemberExpression,
+  JSXNamespacedName,
   JSXOpeningElement,
   JSXTagNameExpression,
   LabeledStatement,
@@ -555,6 +556,12 @@ class Referencer extends Visitor {
   JSXMemberExpression(node: JSXMemberExpression): void {
     this.visit(node.object);
     // we don't ever reference the property as it's always going to be a property on the thing
+  }
+
+  JSXNamespacedName(node: JSXNamespacedName): void {
+    this.visit(node.namespace);
+    // namespace:name
+    // the "name" doesn't reference a variable so it should be ignored, like a member expression
   }
 
   JSXOpeningElement(node: JSXOpeningElement): void {
