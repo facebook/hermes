@@ -261,6 +261,41 @@ describe('Comments', () => {
       `);
     });
 
+    test('docblock - directives with "reserved" names shouldn\'t crash the parser', () => {
+      const source = `
+        /**
+         * @constructor
+         * @toString
+         * @toLocaleString
+         * @hasOwnProperty
+         * @valueOf
+         * @__proto__
+         */
+      `;
+      expect(parse(source).docblock?.directives).toMatchInlineSnapshot(`
+        Object {
+          "__proto__": Array [
+            "",
+          ],
+          "constructor": Array [
+            "",
+          ],
+          "hasOwnProperty": Array [
+            "",
+          ],
+          "toLocaleString": Array [
+            "",
+          ],
+          "toString": Array [
+            "",
+          ],
+          "valueOf": Array [
+            "",
+          ],
+        }
+      `);
+    });
+
     it('handles the case where eslint converts a shebang to a line comment', () => {
       const source = `\
 #!scripts/third-party/node
