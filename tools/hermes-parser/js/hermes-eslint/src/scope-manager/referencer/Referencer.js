@@ -118,9 +118,6 @@ class Referencer extends Visitor {
   +_jsxPragma: string | null;
   +_jsxFragmentName: string | null;
   +_fbtSupport: boolean | null;
-  _hasReferencedJsxFactory = false;
-  _hasReferencedJsxFragmentFactory = false;
-
   +scopeManager: ScopeManager;
 
   constructor(
@@ -177,44 +174,20 @@ class Referencer extends Visitor {
     });
   }
 
-  /**
-   * Searches for a variable named "name" in the upper scopes and adds a pseudo-reference from itself to itself
-   */
-  _referenceInSomeUpperScope(name: string): boolean {
-    let scope = this.scopeManager.currentScope;
-    while (scope) {
-      const variable = scope.set.get(name);
-      if (!variable) {
-        scope = scope.upper;
-        continue;
-      }
-
-      scope.referenceValue(variable.identifiers[0]);
-      return true;
-    }
-
-    return false;
-  }
-
   _referenceJsxPragma(): void {
-    if (this._jsxPragma == null || this._hasReferencedJsxFactory) {
+    const jsxPragma = this._jsxPragma;
+    if (jsxPragma == null) {
       return;
     }
-    this._hasReferencedJsxFactory = this._referenceInSomeUpperScope(
-      this._jsxPragma,
-    );
+    this.currentScope().indirectlyReferenceValue(jsxPragma);
   }
 
   _referenceJsxFragment(): void {
-    if (
-      this._jsxFragmentName == null ||
-      this._hasReferencedJsxFragmentFactory
-    ) {
+    const jsxFragmentName = this._jsxFragmentName;
+    if (jsxFragmentName == null) {
       return;
     }
-    this._hasReferencedJsxFragmentFactory = this._referenceInSomeUpperScope(
-      this._jsxFragmentName,
-    );
+    this.currentScope().indirectlyReferenceValue(jsxFragmentName);
   }
 
   ///////////////////
