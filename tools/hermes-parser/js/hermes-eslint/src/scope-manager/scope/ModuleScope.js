@@ -16,6 +16,7 @@ import type {ScopeManager} from '../ScopeManager';
 
 import {ScopeBase} from './ScopeBase';
 import {ScopeType} from './ScopeType';
+import {DefinitionType} from '../definition/DefinitionType';
 
 class ModuleScope extends ScopeBase<typeof ScopeType.Module, Program, Scope> {
   declare +type: typeof ScopeType.Module;
@@ -26,6 +27,42 @@ class ModuleScope extends ScopeBase<typeof ScopeType.Module, Program, Scope> {
     block: ModuleScope['block'],
   ) {
     super(scopeManager, ScopeType.Module, upperScope, block, false);
+  }
+
+  close(scopeManager: ScopeManager): Scope | null {
+    const result = super.close(scopeManager);
+
+    // handle this case:
+    /*
+    declare function foo(): void;
+    declare function foo(arg: string): string;
+    export function foo(arg?: string) {
+      return arg;
+    }
+    */
+
+    for (const variable of this.variables) {
+      if (variable.defs.length <= 1) {
+        continue;
+      }
+
+      for (const def of variable.defs) {
+        if (def.type !== DefinitionType.FunctionName) {
+          break;
+        }
+
+        if (
+          def.node.type === 'FunctionDeclaration' &&
+          (def.node.parent.type === 'ExportNamedDeclaration' ||
+            def.node.parent.type === 'ExportDefaultDeclaration')
+        ) {
+          variable.eslintUsed = true;
+          break;
+        }
+      }
+    }
+
+    return result;
   }
 }
 
