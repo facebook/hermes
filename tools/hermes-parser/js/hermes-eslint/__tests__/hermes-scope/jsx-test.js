@@ -24,7 +24,7 @@ describe('jsx', () => {
     const parserOptions = {jsxPragma: 'CustomReact'};
     const pragmaComment = `\x40jsx PragmaReact.foo`;
 
-    test('Defaults', () => {
+    describe('Defaults', () => {
       verifyHasScopes(
         `
           /**
@@ -55,7 +55,7 @@ describe('jsx', () => {
         ],
       );
     });
-    test('Explicit Option', () => {
+    describe('Explicit Option', () => {
       verifyHasScopes(
         `
           /**
@@ -87,7 +87,7 @@ describe('jsx', () => {
         parserOptions,
       );
     });
-    test('Comment pragma overrides defaults', () => {
+    describe('Comment pragma overrides defaults', () => {
       verifyHasScopes(
         `
           /**
@@ -119,7 +119,7 @@ describe('jsx', () => {
         ],
       );
     });
-    test('Comment pragma overrides explicit option', () => {
+    describe('Comment pragma overrides explicit option', () => {
       verifyHasScopes(
         `
           /**
@@ -171,7 +171,7 @@ describe('jsx', () => {
       * \x40jsxFrag PragmaFragment.bar
     `;
 
-    test('Defaults', () => {
+    describe('Defaults', () => {
       verifyHasScopes(
         `
           /**
@@ -212,7 +212,7 @@ describe('jsx', () => {
         ],
       );
     });
-    test('Explicit Option', () => {
+    describe('Explicit Option', () => {
       verifyHasScopes(
         `
           /**
@@ -254,7 +254,7 @@ describe('jsx', () => {
         parserOptions,
       );
     });
-    test('Comment pragma overrides defaults', () => {
+    describe('Comment pragma overrides defaults', () => {
       verifyHasScopes(
         `
           /**
@@ -296,7 +296,7 @@ describe('jsx', () => {
         ],
       );
     });
-    test('Comment pragma overrides explicit option', () => {
+    describe('Comment pragma overrides explicit option', () => {
       verifyHasScopes(
         `
           /**
@@ -343,7 +343,7 @@ describe('jsx', () => {
 
   describe('fbt', () => {
     describe('with option', () => {
-      test('identifier', () => {
+      describe('identifier', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -372,7 +372,7 @@ describe('jsx', () => {
           },
         );
       });
-      test('identifier - fbs', () => {
+      describe('identifier - fbs', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -401,7 +401,7 @@ describe('jsx', () => {
           },
         );
       });
-      test('namespace', () => {
+      describe('namespace', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -430,7 +430,7 @@ describe('jsx', () => {
           },
         );
       });
-      test('member expr', () => {
+      describe('member expr', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -461,7 +461,7 @@ describe('jsx', () => {
       });
     });
     describe('without option', () => {
-      test('identifier', () => {
+      describe('identifier', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -490,7 +490,7 @@ describe('jsx', () => {
           },
         );
       });
-      test('namespace', () => {
+      describe('namespace', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -521,7 +521,7 @@ describe('jsx', () => {
           },
         );
       });
-      test('member expr', () => {
+      describe('member expr', () => {
         verifyHasScopes(
           `
             import React from 'react';
@@ -556,7 +556,7 @@ describe('jsx', () => {
   });
 
   describe('Component name references', () => {
-    test('Upper-case references name', () => {
+    describe('Upper-case references name', () => {
       verifyHasScopes(
         `
           import React from 'react';
@@ -583,7 +583,7 @@ describe('jsx', () => {
       );
     });
 
-    test('Lower-case does not reference name', () => {
+    describe('Lower-case does not reference name', () => {
       verifyHasScopes(
         `
           import React from 'react';
@@ -610,7 +610,7 @@ describe('jsx', () => {
       );
     });
 
-    test('Member expressions are referenced regardless of casing', () => {
+    describe('Member expressions are referenced regardless of casing', () => {
       verifyHasScopes(
         `
           import React from 'react';

@@ -31,7 +31,7 @@ export function verifyHasScopes(
     type: ScopeTypeType,
     variables: $ReadOnlyArray<{
       name: string,
-      type: ?DefinitionTypeType,
+      type: ?DefinitionTypeType | $ReadOnlyArray<DefinitionTypeType>,
       referenceCount: ?number,
       eslintUsed?: boolean,
     }>,
@@ -40,56 +40,94 @@ export function verifyHasScopes(
 ) {
   const {scopeManager} = parseForESLint(code, parserOptions);
 
-  // report as an array so that it's easier to debug the tests
-  // otherwise you get a cryptic failure that just says "expected 1 but received 2"
-  expect(scopeManager.scopes.map(s => s.type)).toEqual([
-    // Global scope (at index 0 of actual scopes) is not passed as an expected scope
-    'global',
-    ...expectedScopes.map(s => s.type),
-  ]);
+  it('should have the correct scopes', () => {
+    // report as an array so that it's easier to debug the tests
+    // otherwise you get a cryptic failure that just says "expected 1 but received 2"
+    expect(scopeManager.scopes.map(s => s.type)).toEqual([
+      // Global scope (at index 0 of actual scopes) is not passed as an expected scope
+      'global',
+      ...expectedScopes.map(s => s.type),
+    ]);
+  });
 
   for (let i = 0; i < expectedScopes.length; i++) {
     const actualScope = scopeManager.scopes[i + 1];
     const expectedScope = expectedScopes[i];
 
-    expect(actualScope.type).toEqual(expectedScope.type);
-    // report as an object so that it's easier to debug the tests
-    expect({
-      type: actualScope.type,
-      variables: actualScope.variables.map(v => v.name),
-    }).toEqual({
-      type: actualScope.type,
-      variables: expectedScope.variables.map(v => v.name),
-    });
+    describe(`${i}th scope - ${expectedScope.type}`, () => {
+      it('has the correct type', () => {
+        expect(actualScope.type).toEqual(expectedScope.type);
+      });
 
-    for (let j = 0; j < expectedScope.variables.length; j++) {
-      const expectedVariable = expectedScope.variables[j];
-      const actualVariable = actualScope.variables[j];
-
-      expect(actualVariable.name).toEqual(expectedVariable.name);
-
-      if (expectedVariable.referenceCount != null) {
-        const cnt = expectedVariable.referenceCount;
+      it('has the expected variable names', () => {
         // report as an object so that it's easier to debug the tests
         expect({
-          type: expectedVariable.type,
-          name: actualVariable.name,
-          refCount: actualVariable.references.length,
+          type: actualScope.type,
+          variables: actualScope.variables.map(v => v.name),
         }).toEqual({
-          type: expectedVariable.type,
-          name: actualVariable.name,
-          refCount: cnt,
+          type: actualScope.type,
+          variables: expectedScope.variables.map(v => v.name),
         });
-      }
+      });
 
-      if (expectedVariable.type != null) {
-        expect(actualVariable.defs).toHaveLength(1);
-        expect(actualVariable.defs[0].type).toEqual(expectedVariable.type);
-      }
+      describe('variables', () => {
+        for (let j = 0; j < expectedScope.variables.length; j++) {
+          const expectedVariable = expectedScope.variables[j];
+          const actualVariable = actualScope.variables[j];
+          describe(`${j}th variable - ${expectedVariable.name}`, () => {
+            it('has the expected name', () => {
+              expect(actualVariable.name).toEqual(expectedVariable.name);
+            });
 
-      if (expectedVariable.eslintUsed != null) {
-        expect(actualVariable.eslintUsed).toBe(expectedVariable.eslintUsed);
-      }
-    }
+            if (expectedVariable.referenceCount != null) {
+              it('has the expected reference count', () => {
+                const cnt = expectedVariable.referenceCount;
+                // report as an object so that it's easier to debug the tests
+                expect({
+                  type: expectedVariable.type,
+                  name: actualVariable.name,
+                  refCount: actualVariable.references.length,
+                }).toEqual({
+                  type: expectedVariable.type,
+                  name: actualVariable.name,
+                  refCount: cnt,
+                });
+              });
+            } else {
+              it.skip('has the expected reference count', () => {});
+            }
+
+            if (expectedVariable.type != null) {
+              it('has the expected definition type(s)', () => {
+                if (Array.isArray(expectedVariable.type)) {
+                  expect(actualVariable.defs.map(d => d.type)).toEqual(
+                    expectedVariable.type,
+                  );
+                } else {
+                  expect(actualVariable.defs).toHaveLength(1);
+                  expect(actualVariable.defs[0].type).toEqual(
+                    expectedVariable.type,
+                  );
+                }
+              });
+            } else {
+              it('has no definitions', () => {
+                expect(actualVariable.defs).toHaveLength(0);
+              });
+            }
+
+            if (expectedVariable.eslintUsed != null) {
+              it('has the expected eslintUsed value', () => {
+                expect(actualVariable.eslintUsed).toBe(
+                  expectedVariable.eslintUsed,
+                );
+              });
+            } else {
+              it.skip('has the expected eslintUsed value', () => {});
+            }
+          });
+        }
+      });
+    });
   }
 }

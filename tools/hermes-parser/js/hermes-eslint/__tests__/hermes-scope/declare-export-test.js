@@ -14,7 +14,7 @@ import {DefinitionType, ScopeType} from '../../src';
 import {verifyHasScopes} from '../../__test_utils__/verifyHasScopes';
 
 describe('declare export', () => {
-  it('variable', () => {
+  describe('variable', () => {
     verifyHasScopes(
       `
         declare export var foo: string;
@@ -34,7 +34,7 @@ describe('declare export', () => {
       ],
     );
   });
-  it('function', () => {
+  describe('function', () => {
     verifyHasScopes(
       `
         declare export function foo(): void;
@@ -54,7 +54,7 @@ describe('declare export', () => {
       ],
     );
   });
-  it('type', () => {
+  describe('type', () => {
     // you can only declare export types within a module
     verifyHasScopes(
       `
@@ -82,7 +82,7 @@ describe('declare export', () => {
       ],
     );
   });
-  it('opaque type', () => {
+  describe('opaque type', () => {
     verifyHasScopes(
       `
         declare export opaque type foo: 1;
@@ -102,7 +102,7 @@ describe('declare export', () => {
       ],
     );
   });
-  it('interface', () => {
+  describe('interface', () => {
     verifyHasScopes(
       `
         declare export interface foo {};
