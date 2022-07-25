@@ -258,7 +258,7 @@ BasicBlock::BasicBlock(Function *parent)
   Parent->addBlock(this);
 }
 
-void BasicBlock::dump(llvh::raw_ostream &os) {
+void BasicBlock::dump(llvh::raw_ostream &os) const {
   IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
@@ -269,7 +269,7 @@ void BasicBlock::printAsOperand(llvh::raw_ostream &OS, bool) const {
   OS << "BB#" << std::to_string(Num);
 }
 
-void Instruction::dump(llvh::raw_ostream &os) {
+void Instruction::dump(llvh::raw_ostream &os) const {
   IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
@@ -671,7 +671,7 @@ int Parameter::getIndexInParamList() const {
   llvm_unreachable("Cannot find parameter in the function");
 }
 
-void Function::dump(llvh::raw_ostream &os) {
+void Function::dump(llvh::raw_ostream &os) const {
   IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
@@ -739,7 +739,7 @@ void Module::viewGraph() {
   }
 }
 
-void Module::dump(llvh::raw_ostream &os) {
+void Module::dump(llvh::raw_ostream &os) const {
   IRPrinter D(getContext(), os);
   D.visit(*this);
 }

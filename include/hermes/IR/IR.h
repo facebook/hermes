@@ -1064,7 +1064,7 @@ class Instruction
 
   /// A debug utility that dumps the textual representation of the IR to the
   /// given ostream, defaults to stdout.
-  void dump(llvh::raw_ostream &os = llvh::outs());
+  void dump(llvh::raw_ostream &os = llvh::outs()) const;
 
   /// Replace the first operand from \p From to \p To. The value \p From must
   /// be an operand of the instruction. The method only replaces the first
@@ -1182,7 +1182,7 @@ class BasicBlock : public llvh::ilist_node_with_parent<BasicBlock, Function>,
 
   /// A debug utility that dumps the textual representation of the IR to \p os,
   /// defaults to stdout.
-  void dump(llvh::raw_ostream &os = llvh::outs());
+  void dump(llvh::raw_ostream &os = llvh::outs()) const;
 
   /// Used by LLVM's graph trait.
   void printAsOperand(llvh::raw_ostream &OS, bool) const;
@@ -1584,7 +1584,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// A debug utility that dumps the textual representation of the IR to \p os,
   /// defaults to stdout.
-  void dump(llvh::raw_ostream &os = llvh::outs());
+  void dump(llvh::raw_ostream &os = llvh::outs()) const;
 
   /// Return the kind of function: constructor, arrow, etc.
   DefinitionKind getDefinitionKind() const {
@@ -2153,7 +2153,7 @@ class Module : public Value {
   }
 
   void viewGraph();
-  void dump(llvh::raw_ostream &os = llvh::outs());
+  void dump(llvh::raw_ostream &os = llvh::outs()) const;
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ModuleKind;
