@@ -124,3 +124,7 @@ assert(typeof new Number().toLocaleString() === 'string');
 assert(typeof 'a'.localeCompare('b') === 'number');
 assert(typeof 'A'.toLocaleLowerCase() === 'string');
 assert(typeof 'a'.toLocaleUpperCase() === 'string');
+
+// Validate that locale normalization can handle ill-formed input.
+try { Intl.Collator({length: 0xffffffffffffffff}); }
+catch (e) { assert(e.message === "Incorrect object type") }

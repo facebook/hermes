@@ -206,8 +206,6 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
     return ExecutionStatus::EXCEPTION;
   }
 
-  ret.reserve(*lengthRes);
-
   bool isProxy = localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
           createListFromArrayLike(
