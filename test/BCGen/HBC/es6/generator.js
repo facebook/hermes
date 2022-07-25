@@ -19,7 +19,7 @@ function *loop(x) {
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadConstUndefined r1
 // CHECK-NEXT:     StoreNPToEnvironment r0, 0, r1
-// CHECK-NEXT:     CreateGenerator   r2, r0, 2
+// CHECK-NEXT:     CreateGenerator   r2, r0, Function<?anon_0_loop>
 // CHECK-NEXT:     Ret               r2
 
 // CHECK-LABEL: Function<?anon_0_loop>(2 params, 14 registers, 2 symbols):
@@ -70,7 +70,7 @@ function *args() {
 
 // CHECK-LABEL: NCFunction<args>(1 params, 3 registers, 0 symbols):
 // CHECK-NEXT:     CreateEnvironment r0
-// CHECK-NEXT:     CreateGenerator   r1, r0, 4
+// CHECK-NEXT:     CreateGenerator   r1, r0, Function<?anon_0_args>
 // CHECK-NEXT:     Ret               r1
 
 // CHECK-LABEL: Function<?anon_0_args>(1 params, 7 registers, 0 symbols):

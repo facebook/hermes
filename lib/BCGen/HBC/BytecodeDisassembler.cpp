@@ -21,6 +21,7 @@
 
 #include "llvh/Support/Endian.h"
 #include "llvh/Support/ErrorHandling.h"
+#include "llvh/Support/raw_ostream.h"
 
 using namespace hermes::inst;
 using SLG = hermes::hbc::SerializedLiteralGenerator;
@@ -32,6 +33,7 @@ enum class BytecodeTable {
   None,
   String,
   BigInt,
+  Function,
 };
 
 /// \return a BytecodeTable other than BytecodeTable::None value if
@@ -40,17 +42,48 @@ enum class BytecodeTable {
 static BytecodeTable getBytecodeTableForOperand(
     OpCode opCode,
     unsigned operandIndex) {
-#define OPERAND_STRING_ID(name, operandNumber)                     \
-  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
-    return BytecodeTable::String;
-
 #define OPERAND_BIGINT_ID(name, operandNumber)                     \
   if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
     return BytecodeTable::BigInt;
 
+#define OPERAND_FUNCTION_ID(name, operandNumber)                   \
+  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
+    return BytecodeTable::Function;
+
+#define OPERAND_STRING_ID(name, operandNumber)                     \
+  if (opCode == OpCode::name && operandIndex == operandNumber - 1) \
+    return BytecodeTable::String;
+
 #include "hermes/BCGen/HBC/BytecodeList.def"
 
   return BytecodeTable::None;
+}
+
+static void dumpFunctionName(
+    llvh::raw_ostream &OS,
+    hbc::BCProvider &bcProvider,
+    unsigned funcId,
+    const RuntimeFunctionHeader &functionHeader,
+    DisassemblyOptions options) {
+  switch (functionHeader.flags().prohibitInvoke) {
+    case FunctionHeaderFlag::ProhibitCall:
+      OS << "Constructor";
+      break;
+    case FunctionHeaderFlag::ProhibitConstruct:
+      OS << "NCFunction";
+      break;
+    default:
+      OS << "Function";
+      break;
+  }
+
+  auto functionName =
+      bcProvider.getStringRefFromID(functionHeader.functionName());
+  OS << "<" << functionName << ">";
+  if ((options & DisassemblyOptions::IncludeFunctionIds) ==
+      DisassemblyOptions::IncludeFunctionIds) {
+    OS << funcId;
+  }
 }
 
 /// Check if the zero based \p operandIndex in instruction \p opCode is a
@@ -632,6 +665,14 @@ void PrettyDisassembleVisitor::dumpOperandBigInt(
      << "n";
 }
 
+void PrettyDisassembleVisitor::dumpOperandFunction(
+    unsigned functionID,
+    raw_ostream &OS) {
+  RuntimeFunctionHeader functionHeader =
+      bcProvider_->getFunctionHeader(functionID);
+  dumpFunctionName(OS, *bcProvider_, functionID, functionHeader, options_);
+}
+
 /// Dump a string table entry referenced by an opcode operand. It is truncated
 /// to about 16 characters (by appending "...") and all non-ASCII values are
 /// escaped.
@@ -767,6 +808,8 @@ void PrettyDisassembleVisitor::visitOperand(
       dumpOperandString(operandVal, os_);                           \
     } else if (bytecodeTable == BytecodeTable::BigInt) {            \
       dumpOperandBigInt(operandVal, os_);                           \
+    } else if (bytecodeTable == BytecodeTable::Function) {          \
+      dumpOperandFunction(operandVal, os_);                         \
     } else if (operandType == OperandType::Double) {                \
       char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];                  \
       (void)hermes::numberToString(operandVal, buf, sizeof(buf));   \
@@ -1212,27 +1255,7 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
     RuntimeFunctionHeader functionHeader =
         bcProvider_->getFunctionHeader(funcId);
 
-    auto functionName =
-        bcProvider_->getStringRefFromID(functionHeader.functionName());
-
-    StringRef defKindStr{};
-    switch (functionHeader.flags().prohibitInvoke) {
-      case FunctionHeaderFlag::ProhibitCall:
-        defKindStr = "Constructor";
-        break;
-      case FunctionHeaderFlag::ProhibitConstruct:
-        defKindStr = "NCFunction";
-        break;
-      default:
-        defKindStr = "Function";
-        break;
-    }
-
-    OS << defKindStr << "<" << functionName << ">";
-    if ((options_ & DisassemblyOptions::IncludeFunctionIds) ==
-        DisassemblyOptions::IncludeFunctionIds) {
-      OS << funcId;
-    }
+    dumpFunctionName(OS, *bcProvider_, funcId, functionHeader, options_);
     OS << "(" << functionHeader.paramCount() << " params, "
        << functionHeader.frameSize() << " registers, "
        << static_cast<unsigned int>(functionHeader.environmentSize())

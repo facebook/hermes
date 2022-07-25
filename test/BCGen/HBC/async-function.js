@@ -17,7 +17,7 @@ async function simpleReturn() {
 // CHECK-NEXT:    LoadThisNS        r1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r3, r2
-// CHECK-NEXT:    CreateGeneratorClosure r4, r0, 2
+// CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleReturn>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArguments    r3
 // CHECK-NEXT:    Mov               r6, r3
@@ -30,11 +30,11 @@ async function simpleReturn() {
 
 // CHECK-LABEL:NCFunction<?anon_0_simpleReturn>(1 params, 3 registers, 0 symbols):
 // CHECK-NEXT:    CreateEnvironment r0
-// CHECK-NEXT:    CreateGenerator   r1, r0, 3
+// CHECK-NEXT:    CreateGenerator   r1, r0, Function<?anon_0_?anon_0_simpleReturn>
 // CHECK-NEXT:    Ret               r1
 
 // CHECK-LABEL:Function<?anon_0_?anon_0_simpleReturn>(1 params, 6 registers, 0 symbols):
-// CHECK-NEXT:    StartGenerator   
+// CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUInt8    r0, 1
 // CHECK-NEXT:    LoadConstUndefined r1
@@ -59,7 +59,7 @@ async function simpleAwait() {
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r3, r2
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r2
-// CHECK-NEXT:    CreateGeneratorClosure r4, r0, 5
+// CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleAwait>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArguments    r3
 // CHECK-NEXT:    Mov               r6, r3
@@ -74,7 +74,7 @@ async function simpleAwait() {
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r1
-// CHECK-NEXT:    CreateGenerator   r2, r0, 6
+// CHECK-NEXT:    CreateGenerator   r2, r0, Function<?anon_0_?anon_0_simpleAwait>
 // CHECK-NEXT:    Ret               r2
 
 // CHECK-LABEL:Function<?anon_0_?anon_0_simpleAwait>(1 params, 8 registers, 1 symbols):
@@ -116,7 +116,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r3, r2
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r2
-// CHECK-NEXT:    CreateGeneratorClosure r4, r0, 8
+// CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleAsyncFE>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArguments    r3
 // CHECK-NEXT:    Mov               r6, r3
@@ -131,12 +131,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r1
-// CHECK-NEXT:    CreateGenerator   r2, r0, 9
+// CHECK-NEXT:    CreateGenerator   r2, r0, Function<?anon_0_?anon_0_simpleAsyncFE>
 // CHECK-NEXT:    Ret               r2
 
 // CHECK-LABEL:Function<?anon_0_?anon_0_simpleAsyncFE>(1 params, 8 registers, 1 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x0000
-// CHECK-NEXT:    StartGenerator   
+// CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    LoadConstUInt8    r2, 2

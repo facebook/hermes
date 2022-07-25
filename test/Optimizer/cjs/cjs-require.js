@@ -25,7 +25,7 @@ exports.bar = bar;
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
 //CHKOPT-NEXT:    Call1             r0, r0, r1
 //CHKOPT-NEXT:    CreateEnvironment r0
-//CHKOPT-NEXT:    CreateClosure     r1, r0, 2
+//CHKOPT-NEXT:    CreateClosure     r1, r0, Function<bar>
 //CHKOPT-NEXT:    LoadParam         r0, 1
 //CHKOPT-NEXT:    PutById           r0, r1, 1, "bar"
 //CHKOPT-NEXT:    LoadConstUndefined r0
@@ -52,7 +52,7 @@ exports.bar = bar;
 //CHKDBG-NEXT:     StoreToEnvironment r0, 2, r1
 //CHKDBG-NEXT:     StoreToEnvironment r0, 3, r2
 //CHKDBG-NEXT:     StoreToEnvironment r0, 4, r3
-//CHKDBG-NEXT:     CreateClosure     r6, r0, 2
+//CHKDBG-NEXT:     CreateClosure     r6, r0, Function<bar>
 //CHKDBG-NEXT:     StoreToEnvironment r0, 1, r6
 //CHKDBG-NEXT:     LoadFromEnvironment r7, r0, 3
 //CHKDBG-NEXT:     Mov               r13, r5

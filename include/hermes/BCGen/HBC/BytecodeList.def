@@ -57,6 +57,9 @@
 #ifndef OPERAND_BIGINT_ID
 #define OPERAND_BIGINT_ID(name, operandNumber)
 #endif
+#ifndef OPERAND_FUNCTION_ID
+#define OPERAND_FUNCTION_ID(name, operandNumber)
+#endif
 #ifndef OPERAND_STRING_ID
 #define OPERAND_STRING_ID(name, operandNumber)
 #endif
@@ -414,6 +417,7 @@ DEFINE_RET_TARGET(Call1)
 /// Arg3 is index in the function table.
 /// Note that we expect the variable-sized argument to be last.
 DEFINE_OPCODE_3(CallDirect, Reg8, UInt8, UInt16)
+OPERAND_FUNCTION_ID(CallDirect, 3)
 DEFINE_RET_TARGET(CallDirect)
 
 /// Call a function with two args.
@@ -536,6 +540,8 @@ DEFINE_OPCODE_1(ProfilePoint, UInt16)
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
+OPERAND_FUNCTION_ID(CreateClosure, 3)
+OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 
 /// Create a closure for a GeneratorFunction.
 /// Arg1 is the register in which to store the closure.
@@ -543,6 +549,8 @@ DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateGeneratorClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
+OPERAND_FUNCTION_ID(CreateGeneratorClosure, 3)
+OPERAND_FUNCTION_ID(CreateGeneratorClosureLongIndex, 3)
 
 /// Create a closure for an AsyncFunction.
 /// Arg1 is the register in which to store the closure.
@@ -550,6 +558,8 @@ DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateAsyncClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateAsyncClosureLongIndex, Reg8, Reg8, UInt32)
+OPERAND_FUNCTION_ID(CreateAsyncClosure, 3)
+OPERAND_FUNCTION_ID(CreateAsyncClosureLongIndex, 3)
 
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 /// Arg1 is the destination register.
@@ -700,6 +710,8 @@ DEFINE_OPCODE_0(CompleteGenerator)
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateGenerator, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorLongIndex, Reg8, Reg8, UInt32)
+OPERAND_FUNCTION_ID(CreateGenerator, 3)
+OPERAND_FUNCTION_ID(CreateGeneratorLongIndex, 3)
 
 /// Arg1 [out] is the result iterator or index.
 /// Arg2 [in/out] is the source. Output for either the source or next method.
@@ -860,4 +872,5 @@ ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 #undef ASSERT_EQUAL_LAYOUT4
 #undef ASSERT_MONOTONE_INCREASING
 #undef OPERAND_BIGINT_ID
+#undef OPERAND_FUNCTION_ID
 #undef OPERAND_STRING_ID

@@ -203,6 +203,9 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
   /// truncated to about 8 uint8_t (by appending "...") at the end.
   void dumpOperandBigInt(BigIntID bigintID, raw_ostream &OS);
 
+  /// Dump the function name referenced by an opcode operand.
+  void dumpOperandFunction(unsigned functionID, raw_ostream &OS);
+
  protected:
   void beforeStart(unsigned funcId, const uint8_t *bytecodeStart);
   void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length);

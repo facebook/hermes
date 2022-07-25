@@ -46,7 +46,7 @@ function foo() {
 // CHECK-NEXT:     StoreToEnvironment r0, 4, r1
 // CHECK-NEXT:     LoadConstString   r1, "temp string"
 // CHECK-NEXT:     StoreToEnvironment r0, 5, r1
-// CHECK-NEXT:     CreateClosure     r0, r0, 2
+// CHECK-NEXT:     CreateClosure     r0, r0, Function<bar>
 // CHECK-NEXT:     Ret               r0
 
 // CHECK: Function<bar>(1 params, 13 registers, 0 symbols):
