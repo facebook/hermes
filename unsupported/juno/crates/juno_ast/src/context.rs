@@ -261,8 +261,8 @@ impl<'ast> Context<'ast> {
             entry.ctx_id_markbit.set(self.id);
             entry.set_markbit(!self.markbit_marked);
             entry.inner = node;
+            entry.next.set(std::ptr::null());
             if let Some(prev) = prev {
-                entry.next.set(std::ptr::null());
                 prev.next.set(entry as *const _);
             }
             entry

@@ -126,6 +126,80 @@ fn test_list_elements() {
     }
 }
 
+/// Tests to ensure that list elements allocated off the free list are valid.
+#[test]
+fn test_list_elements_from_freelist() {
+    let mut ctx = Context::new();
+    // First, allocate a two-element list.
+    {
+        let gc = GCLock::new(&mut ctx);
+        let ast = builder::Program::build_template(
+            &gc,
+            template::Program {
+                metadata: Default::default(),
+                body: NodeList::from_iter(
+                    &gc,
+                    [
+                        builder::NullLiteral::build_template(
+                            &gc,
+                            template::NullLiteral {
+                                metadata: Default::default(),
+                            },
+                        ),
+                        builder::BooleanLiteral::build_template(
+                            &gc,
+                            template::BooleanLiteral {
+                                metadata: Default::default(),
+                                value: false,
+                            },
+                        ),
+                    ],
+                ),
+            },
+        );
+        assert_eq!(node_cast!(Node::Program, ast).body.len(), 2);
+    }
+    // Free both elements.
+    ctx.gc();
+    // Allocate two one-element lists to ensure they both have one element
+    // and the old connection between the two elements was not retained.
+    {
+        let gc = GCLock::new(&mut ctx);
+        let ast = builder::Program::build_template(
+            &gc,
+            template::Program {
+                metadata: Default::default(),
+                body: NodeList::from_iter(
+                    &gc,
+                    [builder::NullLiteral::build_template(
+                        &gc,
+                        template::NullLiteral {
+                            metadata: Default::default(),
+                        },
+                    )],
+                ),
+            },
+        );
+        assert_eq!(node_cast!(Node::Program, ast).body.len(), 1);
+        let ast = builder::Program::build_template(
+            &gc,
+            template::Program {
+                metadata: Default::default(),
+                body: NodeList::from_iter(
+                    &gc,
+                    [builder::NullLiteral::build_template(
+                        &gc,
+                        template::NullLiteral {
+                            metadata: Default::default(),
+                        },
+                    )],
+                ),
+            },
+        );
+        assert_eq!(node_cast!(Node::Program, ast).body.len(), 1);
+    }
+}
+
 #[test]
 #[allow(clippy::float_cmp)]
 fn test_visit() {
