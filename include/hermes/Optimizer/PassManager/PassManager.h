@@ -77,12 +77,12 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        llvh::outs() << "*** INITIAL STATE\n\n";
+        dbgs() << "*** INITIAL STATE\n\n";
       } else {
-        llvh::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
-      F->dump();
+      F->dump(dbgs());
       lastPass = newPass;
     };
 
@@ -115,12 +115,12 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        llvh::outs() << "*** INITIAL STATE\n\n";
+        dbgs() << "*** INITIAL STATE\n\n";
       } else {
-        llvh::outs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
-      M->dump();
+      M->dump(dbgs());
       lastPass = newPass;
     };
 

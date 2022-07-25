@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes -O %s
-// RUN: %hermes -O -Xdump-between-passes %s | %FileCheck --match-full-lines %s --check-prefix CHKIR
+// RUN: %hermes -O -Xdump-between-passes %s 2>&1 | %FileCheck --match-full-lines %s --check-prefix CHKIR
 // RUN: %hermes -O -dump-ra %s | %FileCheck --match-full-lines %s --check-prefix CHKRA
 
 // This test exercises an issue found in LowerArgumentsArray in which PHI nodes

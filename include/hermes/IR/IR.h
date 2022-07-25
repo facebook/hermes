@@ -1180,8 +1180,9 @@ class BasicBlock : public llvh::ilist_node_with_parent<BasicBlock, Function>,
  public:
   explicit BasicBlock(Function *parent);
 
-  /// A debug utility that dumps the textual representation of the IR to stdout.
-  void dump();
+  /// A debug utility that dumps the textual representation of the IR to \p os,
+  /// defaults to stdout.
+  void dump(llvh::raw_ostream &os = llvh::outs());
 
   /// Used by LLVM's graph trait.
   void printAsOperand(llvh::raw_ostream &OS, bool) const;
@@ -1581,8 +1582,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// However this does not deallocate (destroy) the memory of this function.
   void eraseFromParentNoDestroy();
 
-  /// A debug utility that dumps the textual representation of the IR to stdout.
-  void dump();
+  /// A debug utility that dumps the textual representation of the IR to \p os,
+  /// defaults to stdout.
+  void dump(llvh::raw_ostream &os = llvh::outs());
 
   /// Return the kind of function: constructor, arrow, etc.
   DefinitionKind getDefinitionKind() const {
@@ -2151,7 +2153,7 @@ class Module : public Value {
   }
 
   void viewGraph();
-  void dump();
+  void dump(llvh::raw_ostream &os = llvh::outs());
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ModuleKind;

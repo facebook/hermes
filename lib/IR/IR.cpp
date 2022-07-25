@@ -258,8 +258,8 @@ BasicBlock::BasicBlock(Function *parent)
   Parent->addBlock(this);
 }
 
-void BasicBlock::dump() {
-  IRPrinter D(getParent()->getContext(), llvh::outs());
+void BasicBlock::dump(llvh::raw_ostream &os) {
+  IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
@@ -671,8 +671,8 @@ int Parameter::getIndexInParamList() const {
   llvm_unreachable("Cannot find parameter in the function");
 }
 
-void Function::dump() {
-  IRPrinter D(getParent()->getContext(), llvh::outs());
+void Function::dump(llvh::raw_ostream &os) {
+  IRPrinter D(getParent()->getContext(), os);
   D.visit(*this);
 }
 
@@ -739,10 +739,9 @@ void Module::viewGraph() {
   }
 }
 
-void Module::dump() {
-  for (auto &F : *this) {
-    F.dump();
-  }
+void Module::dump(llvh::raw_ostream &os) {
+  IRPrinter D(getContext(), os);
+  D.visit(*this);
 }
 
 LiteralNumber *Module::getLiteralNumber(double value) {
