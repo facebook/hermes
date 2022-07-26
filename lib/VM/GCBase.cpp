@@ -980,6 +980,19 @@ std::vector<detail::WeakRefKey *> GCBase::buildKeyList(
   return res;
 }
 
+WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
+  // The weak ref mutex doesn't need to be held since we are only accessing free
+  // slots, which the background thread cannot access.
+  if (auto *slot = firstFreeWeak_) {
+    assert(slot->state() == WeakSlotState::Free && "invalid free slot state");
+    firstFreeWeak_ = firstFreeWeak_->nextFree();
+    slot->reset(ptr);
+    return slot;
+  }
+  weakSlots_.push_back({ptr});
+  return &weakSlots_.back();
+}
+
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return getObjectID(CompressedPointer::encodeNonNull(

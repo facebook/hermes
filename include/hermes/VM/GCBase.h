@@ -946,7 +946,7 @@ class GCBase {
     return true;
   }
 
-  virtual WeakRefSlot *allocWeakSlot(CompressedPointer ptr) = 0;
+  WeakRefSlot *allocWeakSlot(CompressedPointer ptr);
 
 #ifndef NDEBUG
   /// \name Debug APIs
@@ -1355,6 +1355,12 @@ class GCBase {
     acceptor.endRootSection();
   }
 
+  /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
+  void freeWeakSlot(WeakRefSlot *slot) {
+    slot->free(firstFreeWeak_);
+    firstFreeWeak_ = slot;
+  }
+
   /// Print the cumulative statistics.
   virtual void printStats(JSONEmitter &json);
 
@@ -1505,8 +1511,13 @@ class GCBase {
   /// weakSlots_ is a list of all the weak pointers in the system. They are
   /// invalidated if they point to an object that is dead, and do not count
   /// towards whether an object is live or dead.
-  /// Protected by weakRefMutex_.
+  /// The state enum of a WeakRefSlot that is not free may be modified
+  /// concurrently, those values are protected by the weakRefMutex_.
   std::deque<WeakRefSlot> weakSlots_;
+
+  /// Pointer to the first free weak reference slot. Free weak refs are chained
+  /// together in a linked list.
+  WeakRefSlot *firstFreeWeak_{nullptr};
 
   /// Any thread that modifies a WeakRefSlot or a data structure containing
   /// WeakRefs that the GC will mark must hold this mutex. The GC will hold this

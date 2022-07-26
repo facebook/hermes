@@ -281,8 +281,6 @@ class HadesGC final : public GCBase {
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size) override;
 
-  WeakRefSlot *allocWeakSlot(CompressedPointer ptr) override;
-
   /// Iterate over all objects in the heap, and call \p callback on them.
   /// \param callback A function to call on each found object.
   void forAllObjs(const std::function<void(GCCell *)> &callback) override;
@@ -762,10 +760,6 @@ class HadesGC final : public GCBase {
   /// collection, as well as the time an OG collection takes.
   std::unique_ptr<CollectionStats> ogCollectionStats_;
 
-  /// Pointer to the first free weak reference slot. Free weak refs are chained
-  /// together in a linked list.
-  WeakRefSlot *firstFreeWeak_{nullptr};
-
   /// The weighted average of the number of bytes that are promoted to the OG in
   /// each YG collection.
   ExponentialMovingAverage ygAverageSurvivalBytes_;
@@ -870,9 +864,6 @@ class HadesGC final : public GCBase {
   /// Allocate directly in the old generation (doing a full collection if
   /// necessary to create room).
   void *allocLongLived(uint32_t sz);
-
-  /// Frees the weak slot, so it can be re-used by future WeakRef allocations.
-  void freeWeakSlot(WeakRefSlot *slot);
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
   /// to the OG.

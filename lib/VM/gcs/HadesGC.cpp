@@ -2118,28 +2118,6 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
 
-WeakRefSlot *HadesGC::allocWeakSlot(CompressedPointer ptr) {
-  assert(
-      !calledByBackgroundThread() &&
-      "allocWeakSlot should only be called from the mutator");
-  // The weak ref mutex doesn't need to be held since weakSlots_ and
-  // firstFreeWeak_ are only modified while the world is stopped.
-  if (auto *slot = firstFreeWeak_) {
-    assert(slot->state() == WeakSlotState::Free && "invalid free slot state");
-    firstFreeWeak_ = firstFreeWeak_->nextFree();
-    slot->reset(ptr);
-    return slot;
-  }
-  weakSlots_.push_back({ptr});
-  return &weakSlots_.back();
-}
-
-void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
-  // Sets the given WeakRefSlot to point to firstFreeWeak_ instead of a cell.
-  slot->free(firstFreeWeak_);
-  firstFreeWeak_ = slot;
-}
-
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   std::lock_guard<Mutex> lk{gcMutex_};
   youngGen().forAllObjs(callback);
