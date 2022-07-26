@@ -170,6 +170,7 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
       CompressedPointer::encode(static_cast<GCCell *>(obj), rt);
 
   WeakRefSlot s(ptr);
+  s.unmark();
   EXPECT_EQ(WeakSlotState::Unmarked, s.state());
   EXPECT_TRUE(s.hasValue());
   EXPECT_EQ(ptr, s.getNoBarrierUnsafe());

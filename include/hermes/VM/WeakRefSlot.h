@@ -87,7 +87,7 @@ class WeakRefSlot {
   }
 
   void mark() {
-    assert(state() == Unmarked && "already marked");
+    assert(state() != Free && "Cannot mark a free slot.");
     state_ = Marked;
   }
 
@@ -112,10 +112,8 @@ class WeakRefSlot {
 
   /// Re-initialize a freed slot.
   void reset(CompressedPointer ptr) {
-    static_assert(Unmarked == 0, "unmarked state should not need tagging");
-    state_ = Unmarked;
+    state_ = Marked;
     value_.root = ptr;
-    assert(state() == Unmarked && "initial state should be unmarked");
   }
 
  private:

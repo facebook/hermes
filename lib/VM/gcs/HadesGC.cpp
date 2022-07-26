@@ -800,9 +800,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor,
     assert(
         slot->state() != WeakSlotState::Free &&
         "marking a freed weak ref slot");
-    if (slot->state() != WeakSlotState::Marked) {
-      slot->mark();
-    }
+    slot->mark();
   }
 
   /// Set the drain rate that'll be used for any future calls to drain APIs.
@@ -2126,26 +2124,14 @@ WeakRefSlot *HadesGC::allocWeakSlot(CompressedPointer ptr) {
       "allocWeakSlot should only be called from the mutator");
   // The weak ref mutex doesn't need to be held since weakSlots_ and
   // firstFreeWeak_ are only modified while the world is stopped.
-  WeakRefSlot *slot;
-  if (firstFreeWeak_) {
-    assert(
-        firstFreeWeak_->state() == WeakSlotState::Free &&
-        "invalid free slot state");
-    slot = firstFreeWeak_;
+  if (auto *slot = firstFreeWeak_) {
+    assert(slot->state() == WeakSlotState::Free && "invalid free slot state");
     firstFreeWeak_ = firstFreeWeak_->nextFree();
     slot->reset(ptr);
-  } else {
-    weakSlots_.push_back({ptr});
-    slot = &weakSlots_.back();
+    return slot;
   }
-  if (ogMarkingBarriers_) {
-    // During the mark phase, if a WeakRef is created, it might not be marked
-    // if the object holding this new WeakRef has already been visited.
-    // This doesn't need the WeakRefMutex because nothing is using this slot
-    // yet.
-    slot->mark();
-  }
-  return slot;
+  weakSlots_.push_back({ptr});
+  return &weakSlots_.back();
 }
 
 void HadesGC::freeWeakSlot(WeakRefSlot *slot) {
