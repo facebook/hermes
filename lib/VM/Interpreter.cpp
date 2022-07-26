@@ -843,7 +843,7 @@ CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
   if (id >= NUM_PROFILER_SYMBOLS) {
     id = NUM_PROFILER_SYMBOLS - 1; // Overflow entry.
   }
-  return interpWrappers[id](this, newCodeBlock);
+  return interpWrappers[id](*this, newCodeBlock);
 #else
   return interpretFunctionImpl(newCodeBlock);
 #endif

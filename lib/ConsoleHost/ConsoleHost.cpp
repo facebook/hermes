@@ -383,9 +383,9 @@ bool executeHBCBytecodeImpl(
 
 #ifdef HERMESVM_PROFILER_EXTERN
   if (options.patchProfilerSymbols) {
-    patchProfilerSymbols(runtime.get());
+    patchProfilerSymbols(*runtime);
   } else {
-    dumpProfilerSymbolMap(runtime.get(), options.profilerSymbolsFile);
+    dumpProfilerSymbolMap(*runtime, options.profilerSymbolsFile);
   }
 #endif
 
