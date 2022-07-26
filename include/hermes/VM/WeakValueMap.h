@@ -103,15 +103,6 @@ class WeakValueMap {
     return true;
   }
 
-  /// Insert key/value into the map. Used by deserialization.
-  /// Use WeakRefSlot* to initialize WeakRefs directly. Don't prune entries.
-  void insertUnsafe(const KeyT &key, WeakRefSlot *ptr) {
-    auto res = map_.try_emplace(key, WeakRef<ValueT>(ptr)).second;
-    if (!res) {
-      hermes_fatal("shouldn't fail to insert during deserialization");
-    }
-  }
-
   /// This method should be invoked during garbage collection. It calls
   /// the acceptor with every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {

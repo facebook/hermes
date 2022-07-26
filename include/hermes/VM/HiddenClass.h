@@ -198,9 +198,6 @@ class TransitionMap {
     return large()->insertNewLocked(runtime, key, value);
   }
 
-  /// Insert key/value into the map. Used by deserialization.
-  void insertUnsafe(Runtime &runtime, const Transition &key, WeakRefSlot *ptr);
-
   /// Accepts every valid WeakRef in the map.
   void markWeakRefs(WeakRefAcceptor &acceptor) {
     if (isLarge()) {

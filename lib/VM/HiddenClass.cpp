@@ -60,20 +60,6 @@ void TransitionMap::snapshotUntrackMemory(GC &gc) {
 }
 #endif
 
-void TransitionMap::insertUnsafe(
-    Runtime &runtime,
-    const Transition &key,
-    WeakRefSlot *ptr) {
-  if (isClean()) {
-    smallKey_ = key;
-    smallValue() = WeakRef<HiddenClass>(ptr);
-    return;
-  }
-  if (!isLarge())
-    uncleanMakeLarge(runtime);
-  large()->insertUnsafe(key, ptr);
-}
-
 size_t TransitionMap::getMemorySize() const {
   // Inline slot is not counted here (it counts as part of the HiddenClass).
   return isLarge() ? sizeof(*large()) + large()->getMemorySize() : 0;
