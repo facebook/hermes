@@ -132,7 +132,7 @@ var inputs = [
     dest: "linux64-bin"
   },
   {
-    name: "hermes-cli-darwin-v" + releaseVersion + ".tar.gz",
+    name: "hermes-cli-darwin.tar.gz",
     dest: "osx-bin"
   }
 ]

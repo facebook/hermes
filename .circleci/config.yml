@@ -21,6 +21,7 @@ workflows:
     jobs:
       - android
       - linux
+      - macos
       - build-apple-runtime
       - test-macos
       - test-apple-runtime:
@@ -37,6 +38,7 @@ workflows:
             - linux
             - package-apple-runtime
             - windows
+            - macos
       - test-emscripten
       - test-linux
       - test-e2e
@@ -260,15 +262,6 @@ jobs:
 
             tar -C /tmp/cocoapods-package-root/ -czvf /tmp/hermes/output/hermes-runtime-darwin-v$(get_release_version).tar.gz .
       - run:
-          name: Package the CLI
-          command: |
-            . ./utils/build-apple-framework.sh
-
-            mkdir -p /tmp/hermes-cli-root
-            cp -R ./destroot/bin/* /tmp/hermes-cli-root
-
-            tar -C /tmp/hermes-cli-root/ -czvf /tmp/hermes/output/hermes-cli-darwin-v$(get_release_version).tar.gz .
-      - run:
           name: Checksum artifacts
           command: |
             cd /tmp/hermes/output
@@ -280,6 +273,42 @@ jobs:
           path: /tmp/hermes/output/
       - persist_to_workspace:
           root: /tmp/hermes/output/
+          paths:
+            - .
+
+  macos:
+    macos:
+      xcode: 13.4.1
+    steps:
+      - checkout:
+          path: hermes
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Build macOS CLI
+          environment:
+            RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64
+          command: |
+            cmake -S hermes -B build -G Ninja ${RELEASE_FLAGS} -DHERMES_ENABLE_DEBUGGER=False
+            cmake --build ./build --target hermes hvm hbcdump hermesc check-hermes
+            cmake -S hermes -B build_hdb -G Ninja ${RELEASE_FLAGS}
+            cmake --build ./build_hdb --target hdb check-hermes
+      - run:
+          name: Create CLI tarball
+          environment:
+            TAR_NAME: hermes-cli-darwin.tar.gz
+          command: |
+            mkdir output staging
+            cp build/bin/hermes build/bin/hvm build/bin/hbcdump \
+              build/bin/hermesc build_hdb/bin/hdb staging
+            tar -C staging -czvf output/${TAR_NAME} .
+            shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
+      - store_artifacts:
+          path: output
+      - persist_to_workspace:
+          root: output
           paths:
             - .
 
