@@ -234,6 +234,17 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   // class in the .cpp file.
 };
 
+/// Return a RuntimeConfig that is more suited for running untrusted JS than
+/// the default config. Disables some language features and may trade off some
+/// performance for security.
+///
+/// Can serve as a starting point with tweaks to re-enable needed features:
+///   auto conf = hardenedHermesRuntimeConfig().rebuild();
+///   conf.withArrayBuffer(true);
+///   ...
+///   auto runtime = makeHermesRuntime(conf.build());
+HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();
+
 HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());

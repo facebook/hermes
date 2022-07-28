@@ -2330,6 +2330,19 @@ class HermesMutex : public std::recursive_mutex {
 
 } // namespace
 
+vm::RuntimeConfig hardenedHermesRuntimeConfig() {
+  vm::RuntimeConfig::Builder config;
+  config.withEnableEval(false);
+  config.withArrayBuffer(false);
+  config.withES6Proxy(false);
+
+  // This flag is misnamed - it doesn't only apply to eval() calls but to
+  // all compilation performed by the HermesRuntime, so it should be enabled
+  // even when eval() is disabled, to ensure that watchTimeLimit works.
+  config.withAsyncBreakCheckInEval(true);
+  return config.build();
+}
+
 std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
   // This is insurance against someone adding data members to
