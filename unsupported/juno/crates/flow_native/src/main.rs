@@ -7,6 +7,9 @@
 
 use anyhow::Context;
 use anyhow::{self};
+use command_line::CommandLine;
+use command_line::Opt;
+use command_line::OptDesc;
 use juno::ast;
 use juno::ast::node_cast;
 use juno::ast::NodeRc;
@@ -30,11 +33,34 @@ use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
 
+use std::fs::File;
 use std::io::stdout;
 use std::io::BufWriter;
 use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::exit;
 use std::rc::Rc;
+
+struct Options {
+    /// Input file to parse.
+    input_path: Opt<PathBuf>,
+}
+
+impl Options {
+    pub fn new(cl: &mut CommandLine) -> Options {
+        Options {
+            input_path: Opt::<PathBuf>::new(
+                cl,
+                OptDesc {
+                    desc: Some("'input-path'"),
+                    min_count: 1,
+                    ..Default::default()
+                },
+            ),
+        }
+    }
+}
 
 /// Print to the output stream if no errors have been seen so far.
 /// `$compiler` is a mutable reference to the Compiler struct.
@@ -1110,15 +1136,23 @@ impl Compiler<'_> {
 }
 
 /// Read the specified file or stdin into a null terminated buffer.
-fn read_stdin() -> anyhow::Result<NullTerminatedBuf> {
-    let stdin = std::io::stdin();
-    let mut handle = stdin.lock();
-    NullTerminatedBuf::from_reader(&mut handle).context("stdin")
+fn read_file_or_stdin(input: &Path) -> anyhow::Result<NullTerminatedBuf> {
+    if input == Path::new("-") {
+        let stdin = std::io::stdin();
+        let mut handle = stdin.lock();
+        NullTerminatedBuf::from_reader(&mut handle).context("stdin")
+    } else {
+        let mut file = File::open(input).with_context(|| input.display().to_string())?;
+        NullTerminatedBuf::from_file(&mut file).with_context(|| input.display().to_string())
+    }
 }
 
-fn run() -> anyhow::Result<()> {
+fn run(opt: &Options) -> anyhow::Result<()> {
     let mut ctx = ast::Context::new();
-    let file_id = ctx.sm_mut().add_source("program", read_stdin()?);
+    let file_id = ctx.sm_mut().add_source(
+        opt.input_path.display().to_string(),
+        read_file_or_stdin(&*opt.input_path)?,
+    );
     let buf = ctx.sm().source_buffer_rc(file_id);
 
     let parsed = hparser::ParsedJS::parse(
@@ -1156,7 +1190,11 @@ fn run() -> anyhow::Result<()> {
 }
 
 fn main() {
-    if let Err(e) = run() {
+    let mut cl = CommandLine::new("Flow Native");
+    let opt = Options::new(&mut cl);
+    cl.parse_env_args();
+
+    if let Err(e) = run(&opt) {
         eprintln!("{:#}", e);
         exit(1);
     }
