@@ -353,7 +353,7 @@ impl Compiler<'_> {
             result
         );
         self.param_list_for_arg_count(params.len());
-        out!(self, "){{");
+        out!(self, ") -> FNValue {{");
         out!(
             self,
             "\nScope{scope} *scope{scope} = (Scope{scope}*)parent_scope;"
@@ -370,6 +370,7 @@ impl Compiler<'_> {
         for stmt in body.iter() {
             self.gen_stmt(stmt, fn_scope, lock);
         }
+        out!(self, "\n  return FNValue::encodeUndefined();\n");
         out!(self, "}}), scope{scope}}});");
         result
     }
