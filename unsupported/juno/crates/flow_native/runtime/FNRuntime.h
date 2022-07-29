@@ -9,6 +9,7 @@
 #define FNRUNTIME_H
 
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <vector>
