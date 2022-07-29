@@ -9,9 +9,10 @@
 
 #include <limits>
 
-const FNString fn_prototype_str{"prototype"};
+FNStringTable g_fnStringTable{};
+std::vector<FNUniqueString> g_fnCompilerStrings{};
 
-FNValue FNObject::getByName(const std::string &key) {
+FNValue FNObject::getByName(FNUniqueString key) {
   auto *cur = this;
   do {
     auto it = cur->props.find(key);
@@ -22,13 +23,13 @@ FNValue FNObject::getByName(const std::string &key) {
   return FNValue::encodeUndefined();
 }
 
-void FNObject::putByName(const std::string &key, FNValue val) {
+void FNObject::putByName(FNUniqueString key, FNValue val) {
   props[key] = val;
 }
 
 FNValue FNObject::getByVal(FNValue key) {
   if (key.isString()) {
-    return getByName(key.getString()->str);
+    return getByName(g_fnStringTable.uniqueString(key.getString()->str));
   } else {
     auto &arr = static_cast<FNArray *>(this)->arr;
     double n = key.getNumber();
@@ -40,7 +41,7 @@ FNValue FNObject::getByVal(FNValue key) {
 
 void FNObject::putByVal(FNValue key, FNValue val) {
   if (key.isString()) {
-    putByName(key.getString()->str, val);
+    putByName(g_fnStringTable.uniqueString(key.getString()->str), val);
   } else {
     auto &arr = static_cast<FNArray *>(this)->arr;
     double n = key.getNumber();
@@ -50,32 +51,25 @@ void FNObject::putByVal(FNValue key, FNValue val) {
   }
 }
 
-static const FNString kUndefinedStr{"undefined"};
-static const FNString kObjectStr{"object"};
-static const FNString kBooleanStr{"boolean"};
-static const FNString kFunctionStr{"function"};
-static const FNString kStringStr{"string"};
-static const FNString kNumberStr{"number"};
-static const FNString kSymbolStr{"symbol"};
-
 const FNString *FNValue::typeOf(FNValue v) {
   switch (v.tag) {
     case FNType::Undefined:
-      return &kUndefinedStr;
+      return g_fnStringTable.fnString(FNPredefined::undefined);
     case FNType::Null:
-      return &kObjectStr;
     case FNType::Object:
-      return &kObjectStr;
+      return g_fnStringTable.fnString(FNPredefined::object);
     case FNType::Bool:
-      return &kBooleanStr;
+      return g_fnStringTable.fnString(FNPredefined::boolean);
     case FNType::Closure:
-      return &kFunctionStr;
+      return g_fnStringTable.fnString(FNPredefined::function);
     case FNType::String:
-      return &kStringStr;
+      return g_fnStringTable.fnString(FNPredefined::string);
     case FNType::Number:
-      return &kNumberStr;
+      return g_fnStringTable.fnString(FNPredefined::number);
     case FNType::Symbol:
-      return &kSymbolStr;
+      return g_fnStringTable.fnString(FNPredefined::symbol);
+    default:
+      abort();
   }
 }
 
@@ -106,20 +100,22 @@ static FNValue arrayConstructor(void *, FNValue, FNValue size) {
 static FNObject *createGlobalObject() {
   auto *global = new FNObject();
   auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
-  global->props["print"] = FNValue::encodeClosure(printClosure);
+  global->props[g_fnStringTable.uniqueString("print")] =
+      FNValue::encodeClosure(printClosure);
   auto *arrayConstructorClosure =
       new FNClosure((void (*)(void))arrayConstructor, nullptr);
-  global->props["Array"] = FNValue::encodeClosure(arrayConstructorClosure);
-  global->props["undefined"] = FNValue::encodeUndefined();
-  global->props["Infinity"] =
+  global->props[g_fnStringTable.uniqueString("Array")] =
+      FNValue::encodeClosure(arrayConstructorClosure);
+  global->props[FNPredefined::undefined] = FNValue::encodeUndefined();
+  global->props[g_fnStringTable.uniqueString("Infinity")] =
       FNValue::encodeNumber(std::numeric_limits<double>::infinity());
-  global->props["NaN"] =
+  global->props[g_fnStringTable.uniqueString("NaN")] =
       FNValue::encodeNumber(std::numeric_limits<double>::quiet_NaN());
   return global;
 }
 
-// Use a per-process global object for now, but we will need to support multiple
-// instances in the same process eventually.
+// Use a per-process global object for now, but we will need to support
+// multiple instances in the same process eventually.
 FNObject *global() {
   static FNObject *global = createGlobalObject();
   return global;
@@ -149,9 +145,9 @@ int32_t truncateToInt32SlowPath(double d) {
     // Check if the shift would push all bits out. Additionally this catches
     // Infinity and NaN.
     // Cast to int64 here to avoid UB for the case where sign is negative one
-    // and m << exp is exactly INT32_MIN, since a 32-bit signed int cannot hold
-    // the resulting INT32_MAX + 1. When it is returned, it will be correctly
-    // set to INT32_MIN.
+    // and m << exp is exactly INT32_MIN, since a 32-bit signed int cannot
+    // hold the resulting INT32_MAX + 1. When it is returned, it will be
+    // correctly set to INT32_MIN.
     return exp <= 31 ? sign * (int64_t)(m << exp) : 0;
   } else {
     // Check if the shift would push out the entire mantissa.
@@ -177,4 +173,28 @@ void *fnMalloc(size_t sz) {
     level = (char *)malloc(blockSize);
     end = level + blockSize;
   }
+}
+
+FNStringTable::FNStringTable() {
+#define FN_PREDEFINED(n)                 \
+  do {                                   \
+    FNUniqueString n = uniqueString(#n); \
+    (void)n;                             \
+    assert(n == FNPredefined::n);        \
+  } while (0);
+#include "predefined.def"
+}
+
+FNStringTable::~FNStringTable() noexcept = default;
+
+FNUniqueString FNStringTable::uniqueString(std::string_view s) {
+  auto it = map_.find(s);
+  if (it != map_.end())
+    return it->second;
+
+  auto *newStr = new FNString{std::string(s)};
+  strings_.push_back(newStr);
+  FNUniqueString res = strings_.size() - 1;
+  map_.emplace(newStr->str, res);
+  return res;
 }

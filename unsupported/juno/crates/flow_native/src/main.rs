@@ -24,7 +24,10 @@ use juno_support::atom_table::Atom;
 use juno_support::atom_table::AtomU16;
 use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::fmt;
 
 use std::io::stdout;
@@ -143,6 +146,42 @@ impl LRef {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+struct CompilerString(u32);
+
+/// A map from a string literal (Atom16) to a string index known at compile time.
+/// At runtime it is an index in a per-compilation unit array, which resolves to
+/// the actual runtime string.
+#[derive(Debug, Default)]
+struct CompilerStrings {
+    /// Map from a string atom to a unique compiler string index.
+    map: HashMap<AtomU16, CompilerString>,
+    /// The strings in insertion order.
+    ordered: Vec<AtomU16>,
+}
+
+impl CompilerStrings {
+    /// Return the unique compiler string index corresponding to an Atom16.
+    /// Either an existing index is returned, or a new compiler string is added.
+    fn add(&mut self, atom: AtomU16) -> CompilerString {
+        match self.map.entry(atom) {
+            Entry::Occupied(o) => *o.get(),
+            Entry::Vacant(v) => {
+                let res =
+                    CompilerString(u32::try_from(self.ordered.len()).expect("too many strings"));
+                self.ordered.push(atom);
+                v.insert(res);
+                res
+            }
+        }
+    }
+
+    /// Return an iterator over the strings in insertion order.
+    fn iter(&self) -> std::slice::Iter<'_, AtomU16> {
+        self.ordered.iter()
+    }
+}
+
 struct Compiler<'w> {
     writer: Writer<'w>,
     sem: Rc<SemContext>,
@@ -150,6 +189,7 @@ struct Compiler<'w> {
     /// to give a unique index to each one.
     num_values: usize,
     escaped_decls: HashSet<DeclId>,
+    compiler_strings: CompilerStrings,
 }
 
 impl Compiler<'_> {
@@ -180,6 +220,7 @@ impl Compiler<'_> {
             sem,
             num_values: 0,
             escaped_decls,
+            compiler_strings: Default::default(),
         };
         comp.gen_program(ast.node(&lock), &lock)
     }
@@ -195,14 +236,23 @@ impl Compiler<'_> {
         use ast::*;
         out!(self, "#include \"FNRuntime.h\"\n");
         self.gen_context();
+        out!(self, "static void init_strings();\n");
         out!(self, "int main(){{\n");
+        out!(self, "  init_strings();\n");
         let scope = self.sem.node_scope(NodeRc::from_node(lock, node)).unwrap();
         let Module { body, .. } = node_cast!(Node::Module, node);
         self.create_scope(scope);
         for stmt in body.iter() {
             self.gen_stmt(stmt, scope, lock);
         }
-        out!(self, "return 0;\n}}")
+        out!(self, "return 0;\n}}");
+        // Emit the compiler strings.
+        out!(self, "static void init_strings() {{\n");
+        for (index, atom) in self.compiler_strings.iter().enumerate() {
+            let str = String::from_utf16_lossy(lock.str_u16(*atom));
+            out!(self, "  fnAddCompilerString({:?}, {});\n", str, index);
+        }
+        out!(self, "}}\n");
     }
 
     fn gen_context(&mut self) {
@@ -314,7 +364,7 @@ impl Compiler<'_> {
             let lref = self.new_lref(param, fn_scope, lock);
             let val = self.new_value();
             out!(self, "FNValue {}=param{};", val, i);
-            self.gen_store(lref, val, scope, lock);
+            self.gen_store(lref, val, scope);
         }
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
         for stmt in body.iter() {
@@ -461,7 +511,7 @@ impl Compiler<'_> {
     }
 
     /// Returns a tuple containing an optional base object and value when loading from an LRef
-    fn gen_load(&mut self, lref: LRef, cur_scope: LexicalScopeId, lock: &ast::GCLock) -> ValueId {
+    fn gen_load(&mut self, lref: LRef, cur_scope: LexicalScopeId) -> ValueId {
         let res = self.new_value();
         match lref {
             LRef::Var(decl_id) => {
@@ -474,13 +524,13 @@ impl Compiler<'_> {
                 object,
                 property_name,
             } => {
-                let name = String::from_utf16_lossy(lock.str_u16(property_name));
+                let cs = self.compiler_strings.add(property_name);
                 out!(
                     self,
-                    "FNValue {} = {}.getObject()->getByName({:?});",
+                    "FNValue {} = {}.getObject()->getByName(fnCompilerUniqueString({}));",
                     res,
                     object,
-                    name
+                    cs.0
                 );
                 res
             }
@@ -498,13 +548,7 @@ impl Compiler<'_> {
     }
 
     /// Stores a value to the lref.
-    fn gen_store(
-        &mut self,
-        lref: LRef,
-        value: ValueId,
-        cur_scope: LexicalScopeId,
-        lock: &ast::GCLock,
-    ) {
+    fn gen_store(&mut self, lref: LRef, value: ValueId, cur_scope: LexicalScopeId) {
         match lref {
             LRef::Var(decl_id) => {
                 self.gen_var(decl_id, cur_scope);
@@ -514,12 +558,12 @@ impl Compiler<'_> {
                 object,
                 property_name,
             } => {
-                let name = String::from_utf16_lossy(lock.str_u16(property_name));
+                let cs = self.compiler_strings.add(property_name);
                 out!(
                     self,
-                    "{}.getObject()->putByName({:?}, {});",
+                    "{}.getObject()->putByName(fnCompilerUniqueString({}), {});",
                     object,
-                    name,
+                    cs.0,
                     value
                 );
             }
@@ -582,7 +626,7 @@ impl Compiler<'_> {
                         _ => panic!("Unexpected property key: {:?}", key.variant()),
                     };
                     let value = self.gen_expr(value, scope, lock);
-                    self.gen_store(lref, value, scope, lock);
+                    self.gen_store(lref, value, scope);
                 }
                 object
             }
@@ -614,7 +658,7 @@ impl Compiler<'_> {
                         // For member expressions, the this parameter is the
                         // object being accessed.
                         let lref = self.new_lref(*callee, scope, lock);
-                        let callee = self.gen_load(lref, scope, lock);
+                        let callee = self.gen_load(lref, scope);
                         // unwrap() must return an object for MemberExpression.
                         (callee, lref.get_base_object().unwrap())
                     }
@@ -638,7 +682,7 @@ impl Compiler<'_> {
                 out!(self, "FNObject* {}=new FNObject();", new_obj,);
                 out!(
                     self,
-                    "{}->parent={}.getClosure()->getByName(\"prototype\").getObject();",
+                    "{}->parent={}.getClosure()->getByName(FNPredefined::prototype).getObject();",
                     new_obj,
                     callee
                 );
@@ -659,7 +703,7 @@ impl Compiler<'_> {
             Node::MemberExpression(..) | Node::Identifier(..) => {
                 // Generate an LRef for the expression and load from it.
                 let lref = self.new_lref(node, scope, lock);
-                self.gen_load(lref, scope, lock)
+                self.gen_load(lref, scope)
             }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
@@ -672,7 +716,7 @@ impl Compiler<'_> {
                 // Helper to apply the given mathematical operator to the left
                 // and right sides.
                 let mut update_op = |op: &str| {
-                    let old_val = self.gen_load(lref, scope, lock);
+                    let old_val = self.gen_load(lref, scope);
                     let new_val = self.new_value();
                     out!(
                         self,
@@ -696,7 +740,7 @@ impl Compiler<'_> {
                 };
                 // Store the updated value and return it as the result of this
                 // expression.
-                self.gen_store(lref, new_val, scope, lock);
+                self.gen_store(lref, new_val, scope);
                 new_val
             }
             Node::LogicalExpression(LogicalExpression {
@@ -883,7 +927,7 @@ impl Compiler<'_> {
                 ..
             }) => {
                 let lref = self.new_lref(argument, scope, lock);
-                let old_val = self.gen_load(lref, scope, lock);
+                let old_val = self.gen_load(lref, scope);
                 let new_val = self.new_value();
                 let op = match operator {
                     UpdateExpressionOperator::Increment => "+1",
@@ -899,7 +943,7 @@ impl Compiler<'_> {
                 );
                 // Store the updated value and return the old or new value,
                 // depending on whether this is a postfix or prefix operator.
-                self.gen_store(lref, new_val, scope, lock);
+                self.gen_store(lref, new_val, scope);
                 if *prefix { new_val } else { old_val }
             }
             Node::ThisExpression(..) => {
@@ -918,13 +962,13 @@ impl Compiler<'_> {
                 result
             }
             Node::StringLiteral(StringLiteral { value, .. }) => {
-                let val_str = String::from_utf16_lossy(lock.str_u16(*value));
+                let cs = self.compiler_strings.add(*value);
                 let result = self.new_value();
                 out!(
                     self,
-                    "FNValue {}=FNValue::encodeString(new FNString{{{:?}}});",
+                    "FNValue {}=FNValue::encodeString(fnCompilerFNString({}));",
                     result,
-                    val_str
+                    cs.0
                 );
                 result
             }
@@ -967,7 +1011,7 @@ impl Compiler<'_> {
                     // Initialize the variable with init.
                     let lref = self.new_lref(ident, scope, lock);
                     let init = self.gen_expr(init, scope, lock);
-                    self.gen_store(lref, init, scope, lock);
+                    self.gen_store(lref, init, scope);
                 }
             }
             Node::FunctionDeclaration(FunctionDeclaration {
@@ -982,7 +1026,7 @@ impl Compiler<'_> {
                     // Initialize the identifier for the function with the
                     // generated value.
                     let lref = self.new_lref(ident, scope, lock);
-                    self.gen_store(lref, fn_id, scope, lock);
+                    self.gen_store(lref, fn_id, scope);
                 }
             }
 
@@ -1048,7 +1092,7 @@ impl Compiler<'_> {
                     let lref = self.new_lref(param, new_scope, lock);
                     let ex_val = self.new_value();
                     out!(self, "FNValue {}=ex;", ex_val);
-                    self.gen_store(lref, ex_val, scope, lock);
+                    self.gen_store(lref, ex_val, scope);
                 }
                 for stmt in body.iter() {
                     self.gen_stmt(stmt, new_scope, lock);

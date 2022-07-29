@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -27,6 +28,17 @@ enum class FNType {
   Symbol,
   Object,
   Closure
+};
+
+/// A unique string index.
+typedef unsigned FNUniqueString;
+
+struct FNPredefined {
+  enum : FNUniqueString {
+#define FN_PREDEFINED(n) n,
+#include "predefined.def"
+    _LAST
+  };
 };
 
 // WARNING: This implementation is TEMPORARY and purely for development
@@ -156,11 +168,11 @@ struct FNString {
   }
 };
 struct FNObject {
-  std::unordered_map<std::string, FNValue> props;
+  std::unordered_map<FNUniqueString, FNValue> props;
   FNObject *parent{};
 
-  FNValue getByName(const std::string &key);
-  void putByName(const std::string &key, FNValue val);
+  FNValue getByName(FNUniqueString key);
+  void putByName(FNUniqueString key, FNValue val);
   FNValue getByVal(FNValue key);
   void putByVal(FNValue key, FNValue val);
 
@@ -170,7 +182,7 @@ struct FNObject {
 };
 struct FNClosure : public FNObject {
   explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {
-    props["prototype"] = FNValue::encodeObject(new FNObject());
+    props[FNPredefined::prototype] = FNValue::encodeObject(new FNObject());
   }
 
   void (*func)(void);
@@ -203,6 +215,53 @@ inline int32_t truncateToInt32(double d) {
   return truncateToInt32SlowPath(d);
 }
 
-extern const FNString fn_prototype_str;
+/// A table of unique strings.
+class FNStringTable {
+ public:
+  FNStringTable();
+  ~FNStringTable() noexcept;
+
+  /// Return an existing unique string index or create a new one.
+  FNUniqueString uniqueString(std::string_view s);
+
+  // Return the FNString corresponding to a unique string index;
+  const FNString *fnString(FNUniqueString index) {
+    assert(index < strings_.size() && "Invalid unique string index");
+    return strings_[index];
+  }
+
+ private:
+  std::unordered_map<std::string_view, FNUniqueString> map_{};
+  std::vector<const FNString *> strings_{};
+};
+
+/// Global unique string table per runtime.
+extern FNStringTable g_fnStringTable;
+
+/// Map from a compile-time string index to a runtime unique string index.
+/// Ordinarily this would be per compile-time unit.
+extern std::vector<FNUniqueString> g_fnCompilerStrings;
+
+/// Obtain the unique string of an existing compiler string.
+inline FNUniqueString fnCompilerUniqueString(unsigned i) {
+  assert(i < g_fnCompilerStrings.size() && "Invalid compiler string index");
+  return g_fnCompilerStrings[i];
+}
+
+/// Obtain the FNString of an existing compiler string.
+inline const FNString *fnCompilerFNString(unsigned i) {
+  return g_fnStringTable.fnString(fnCompilerUniqueString(i));
+}
+
+/// Register a new, possibly non-unique, compiler string.
+/// The expected parameter enforces that the compiler notion of indexes is
+/// correct.
+inline void fnAddCompilerString(std::string_view str, unsigned expected) {
+  g_fnCompilerStrings.push_back(g_fnStringTable.uniqueString(str));
+  assert(
+      expected == g_fnCompilerStrings.size() - 1 &&
+      "unexpected compiler string index");
+  (void)expected;
+}
 
 #endif // FNRUNTIME_H
