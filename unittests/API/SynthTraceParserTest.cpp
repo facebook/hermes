@@ -9,6 +9,8 @@
 
 #include <gtest/gtest.h>
 
+#include <sstream>
+
 namespace {
 
 using namespace facebook::hermes::tracing;
@@ -189,6 +191,155 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
     "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
+}
+  )";
+  EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));
+}
+
+TEST_F(SynthTraceParserTest, CreateBigIntRecord) {
+  const char *src = R"(
+{
+  "globalObjID": 258,
+  "runtimeConfig": {
+  },
+  "env": {
+    "callsToHermesInternalGetInstrumentedStats": [],
+  },
+  "trace": [
+    {
+      "type": "CreateBigIntRecord",
+      "time": 0,
+      "objID": 0,
+      "method": "FromInt64",
+      "bits": "999999999999"
+    },
+    {
+      "type": "CreateBigIntRecord",
+      "time": 0,
+      "objID": 0,
+      "method": "FromUint64",
+      "bits": "123456789"
+    }
+  ]
+}
+  )";
+  EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));
+}
+
+TEST_F(SynthTraceParserTest, CreateBigIntRecordFailures) {
+  auto createBigIntRecord = [](const char *record) -> std::string {
+    std::stringstream src;
+
+    src << R"(
+{
+  "globalObjID": 258,
+  "runtimeConfig": {
+  },
+  "env": {
+    "callsToHermesInternalGetInstrumentedStats": [],
+  },
+  "trace": [
+)" << record
+        << R"(
+  ]
+}
+  )";
+
+    return src.str();
+  };
+
+  struct Test {
+    const char *description;
+    const char *createBigIntRecord;
+  } shouldThrowInvalidArgument[] = {
+      {"missing bits field",
+       R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64"
+        }
+        )"},
+      {"bits field is not a string",
+       R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64",
+          "bits": 123456
+        }
+        )"},
+      {"bits has non-digit charaters",
+       R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64",
+          "bits": "123456!"
+        })"},
+      {"bits field is empty",
+       R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64",
+          "bits": ""
+        }
+        )"},
+      {"bits is not a number",
+       R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64",
+          "bits": "I am not a number"
+        })"},
+  };
+
+  for (const auto &test : shouldThrowInvalidArgument) {
+    EXPECT_THROW(
+        parseSynthTrace(
+            bufFromStr(createBigIntRecord(test.createBigIntRecord))),
+        std::invalid_argument)
+        << test.description;
+  }
+
+  EXPECT_THROW(
+      parseSynthTrace(bufFromStr(createBigIntRecord(R"(
+        {
+          "type": "CreateBigIntRecord",
+          "time": 0,
+          "objID": 0,
+          "method": "FromUint64",
+          "bits": "9999999999999999999999999999999999999999999"
+        })"))),
+      std::out_of_range)
+      << "bits is out-of-range";
+}
+
+TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
+  const char *src = R"(
+{
+  "globalObjID": 258,
+  "runtimeConfig": {
+  },
+  "env": {
+    "callsToHermesInternalGetInstrumentedStats": [],
+  },
+  "trace": [
+    {
+      "type": "BigIntToStringRecord",
+      "time": 0,
+      "strID": 0,
+      "bigintID": 0,
+      "radix": 20
+    }
+  ]
 }
   )";
   EXPECT_NO_THROW(parseSynthTrace(bufFromStr(src)));

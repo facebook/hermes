@@ -65,6 +65,10 @@ class SynthTrace {
       return tag_ == Tag::Object;
     }
 
+    bool isBigInt() const {
+      return tag_ == Tag::BigInt;
+    }
+
     bool isString() const {
       return tag_ == Tag::String;
     }
@@ -78,7 +82,8 @@ class SynthTrace {
     }
 
     bool isUID() const {
-      return isObject() || isString() || isPropNameID() || isSymbol();
+      return isObject() || isBigInt() || isString() || isPropNameID() ||
+          isSymbol();
     }
 
     static TraceValue encodeUndefinedValue() {
@@ -99,6 +104,10 @@ class SynthTrace {
 
     static TraceValue encodeObjectValue(uint64_t uid) {
       return TraceValue(Tag::Object, uid);
+    }
+
+    static TraceValue encodeBigIntValue(uint64_t uid) {
+      return TraceValue(Tag::BigInt, uid);
     }
 
     static TraceValue encodeStringValue(uint64_t uid) {
@@ -139,7 +148,8 @@ class SynthTrace {
       Object,
       String,
       PropNameID,
-      Symbol
+      Symbol,
+      BigInt,
     };
 
     explicit TraceValue(Tag tag) : tag_(tag) {}
@@ -197,6 +207,8 @@ class SynthTrace {
     SetPropertyNativeReturn,
     GetNativePropertyNames,
     GetNativePropertyNamesReturn,
+    CreateBigInt,
+    BigIntToString,
   };
 
   /// A Record is one element of a trace.
@@ -290,6 +302,8 @@ class SynthTrace {
   static TraceValue encodeNumber(double value);
   /// Encodes an object for the trace as a unique id.
   static TraceValue encodeObject(ObjectID objID);
+  /// Encodes a bigint for the trace as a unique id.
+  static TraceValue encodeBigInt(ObjectID objID);
   /// Encodes a string for the trace as a unique id.
   static TraceValue encodeString(ObjectID objID);
   /// Encodes a PropNameID for the trace as a unique id.
@@ -458,6 +472,74 @@ class SynthTrace {
 
     std::vector<ObjectID> uses() const override {
       return {};
+    }
+  };
+
+  /// A CreateBigIntRecord is an event where a jsi::BigInt (and thus a
+  /// Hermes BigIntPrimitive) is created by the native code.
+  struct CreateBigIntRecord : public Record {
+    static constexpr RecordType type{RecordType::CreateBigInt};
+    const ObjectID objID_;
+    enum class Method {
+      FromInt64,
+      FromUint64,
+    };
+    Method method_;
+    uint64_t bits_;
+
+    CreateBigIntRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        Method m,
+        uint64_t bits)
+        : Record(time), objID_(objID), method_(m), bits_(bits) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
+    }
+  };
+
+  /// A BigIntToString is an event where a jsi::BigInt is converted to a
+  /// string by native code
+  struct BigIntToStringRecord : public Record {
+    static constexpr RecordType type{RecordType::BigIntToString};
+    const ObjectID strID_;
+    const ObjectID bigintID_;
+    int radix_;
+
+    BigIntToStringRecord(
+        TimeSinceStart time,
+        ObjectID strID,
+        ObjectID bigintID,
+        int radix)
+        : Record(time), strID_(strID), bigintID_(bigintID), radix_(radix) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {strID_};
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {bigintID_};
     }
   };
 

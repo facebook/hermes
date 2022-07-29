@@ -76,6 +76,29 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   }
 }
 
+/// Parses the json \p value (which must be a string) as a uint64_t. Throws if
+/// std::stoull throws, or if it fails to parse the entire string.
+uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
+  if (!val) {
+    throw std::invalid_argument("value doesn't exist");
+  }
+
+  auto str = llvh::dyn_cast<JSONString>(val);
+  if (!str) {
+    throw std::invalid_argument("value is not a string");
+  }
+
+  llvh::StringRef r = str->str();
+  std::size_t numProcessed;
+  uint64_t ret = std::stoull(std::string{r.data(), r.size()}, &numProcessed);
+  if (numProcessed < r.size()) {
+    throw std::invalid_argument(
+        std::string("failed to convert jsonString '") + r.data() +
+        "' to uint64_t");
+  }
+  return ret;
+}
+
 ::hermes::vm::GCConfig::Builder getGCConfig(JSONObject *rtConfig) {
   // This function should extract all fields from GCConfig that can affect
   // performance metrics. Configs for debugging can be ignored.
@@ -306,6 +329,32 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         int maxMicrotasksHint = getNumberAs<int>(obj->get("maxMicrotasksHint"));
         trace.emplace_back<SynthTrace::DrainMicrotasksRecord>(
             timeFromStart, maxMicrotasksHint);
+        break;
+      }
+      case RecordType::CreateBigInt: {
+        auto method = llvh::dyn_cast<JSONString>(obj->get("method"));
+        SynthTrace::CreateBigIntRecord::Method creationMethod =
+            SynthTrace::CreateBigIntRecord::Method::FromUint64;
+        if (method->str() == "FromInt64") {
+          creationMethod = SynthTrace::CreateBigIntRecord::Method::FromInt64;
+        } else {
+          assert(method->str() == "FromUint64");
+        }
+        trace.emplace_back<SynthTrace::CreateBigIntRecord>(
+            timeFromStart,
+            objID->getValue(),
+            creationMethod,
+            jsonStringToUint64(obj->get("bits")));
+        break;
+      }
+      case RecordType::BigIntToString: {
+        auto *strID = llvh::dyn_cast<JSONNumber>(obj->get("strID"));
+        auto *bigintID = llvh::dyn_cast<JSONNumber>(obj->get("bigintID"));
+        trace.emplace_back<SynthTrace::BigIntToStringRecord>(
+            timeFromStart,
+            strID->getValue(),
+            bigintID->getValue(),
+            getNumberAs<int>(obj->get("radix")));
         break;
       }
       case RecordType::CreateString: {

@@ -932,6 +932,49 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   EXPECT_EQ_RECORD(gprExpect4, *records[19]);
 }
 
+TEST_F(SynthTraceTest, CreateBigInt) {
+  SynthTrace::ObjectID fromInt64ID =
+      rt->getUniqueID(jsi::BigInt::fromInt64(*rt, 0xffffffffffffffff));
+  SynthTrace::ObjectID fromUint64ID =
+      rt->getUniqueID(jsi::BigInt::fromUint64(*rt, 0xffffffffffffffff));
+
+  const auto &records = rt->trace().records();
+  ASSERT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateBigIntRecord(
+          dummyTime,
+          fromInt64ID,
+          SynthTrace::CreateBigIntRecord::Method::FromInt64,
+          0xffffffffffffffff),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateBigIntRecord(
+          dummyTime,
+          fromUint64ID,
+          SynthTrace::CreateBigIntRecord::Method::FromUint64,
+          0xffffffffffffffff),
+      *records[1]);
+}
+
+TEST_F(SynthTraceTest, BigIntToString) {
+  jsi::BigInt b = jsi::BigInt::fromInt64(*rt, -42);
+  SynthTrace::ObjectID bID = rt->getUniqueID(b);
+  jsi::String str = b.toString(*rt, 16);
+  SynthTrace::ObjectID strID = rt->getUniqueID(str);
+
+  const auto &records = rt->trace().records();
+  ASSERT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateBigIntRecord(
+          dummyTime,
+          bID,
+          SynthTrace::CreateBigIntRecord::Method::FromInt64,
+          -42),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::BigIntToStringRecord(dummyTime, strID, bID, 16), *records[1]);
+}
+
 // These tests fail on Windows.
 #if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
 TEST(SynthTraceDeathTest, HostFunctionThrowsExceptionFails) {
@@ -1063,6 +1106,33 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
     EXPECT_EQ(eval(rt, "x.c").asString(rt).utf8(rt), "coconut");
     EXPECT_EQ(eval(rt, "x[symD]").asString(rt).utf8(rt), "durian");
     EXPECT_EQ(eval(rt, "x[symE]").asString(rt).utf8(rt), "eggplant");
+  }
+}
+
+TEST_F(SynthTraceReplayTest, BigIntCreate) {
+  {
+    auto &rt = *traceRt;
+
+    auto fromInt64 = jsi::BigInt::fromInt64(rt, -1ll);
+    rt.global().setProperty(rt, "int64BigInt", fromInt64);
+    rt.global().setProperty(rt, "int64String", fromInt64.toString(rt, 16));
+    auto fromUint64 = jsi::BigInt::fromUint64(rt, ~0ull);
+    rt.global().setProperty(rt, "uint64BigInt", fromUint64);
+    rt.global().setProperty(rt, "uint64String", fromUint64.toString(rt, 8));
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto int64BigInt = rt.global().getProperty(rt, "int64BigInt").asBigInt(rt);
+    auto int64String = rt.global().getProperty(rt, "int64String").asString(rt);
+    auto uint64BigInt =
+        rt.global().getProperty(rt, "uint64BigInt").asBigInt(rt);
+    auto uint64String =
+        rt.global().getProperty(rt, "uint64String").asString(rt);
+    EXPECT_EQ(int64BigInt.getInt64(rt), -1ll);
+    EXPECT_EQ(int64String.utf8(rt), "-1");
+    EXPECT_EQ(uint64BigInt.getUint64(rt), ~0ull);
+    EXPECT_EQ(uint64String.utf8(rt), "1777777777777777777777");
   }
 }
 

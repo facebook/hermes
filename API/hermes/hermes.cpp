@@ -1239,6 +1239,10 @@ uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
 }
+uint64_t HermesRuntime::getUniqueID(const jsi::BigInt &s) const {
+  return impl(this)->runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(impl(this)->phv(s).getBigInt()));
+}
 uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
   return impl(this)->runtime_.getHeap().getObjectID(
       static_cast<vm::GCCell *>(impl(this)->phv(s).getString()));

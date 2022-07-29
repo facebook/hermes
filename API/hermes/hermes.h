@@ -130,6 +130,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// static throughout that object's (or string's, or PropNameID's)
   /// lifetime.
   uint64_t getUniqueID(const jsi::Object &o) const;
+  uint64_t getUniqueID(const jsi::BigInt &s) const;
   uint64_t getUniqueID(const jsi::String &s) const;
   uint64_t getUniqueID(const jsi::PropNameID &pni) const;
   uint64_t getUniqueID(const jsi::Symbol &sym) const;

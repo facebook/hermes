@@ -365,17 +365,32 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
 }
 
 jsi::BigInt TracingRuntime::createBigIntFromInt64(int64_t value) {
-  throw std::logic_error("Not implemented");
+  jsi::BigInt res = RD::createBigIntFromInt64(value);
+  trace_.emplace_back<SynthTrace::CreateBigIntRecord>(
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::CreateBigIntRecord::Method::FromInt64,
+      value);
+  return res;
 }
 
 jsi::BigInt TracingRuntime::createBigIntFromUint64(uint64_t value) {
-  throw std::logic_error("Not implemented");
+  jsi::BigInt res = RD::createBigIntFromUint64(value);
+  trace_.emplace_back<SynthTrace::CreateBigIntRecord>(
+      getTimeSinceStart(),
+      getUniqueID(res),
+      SynthTrace::CreateBigIntRecord::Method::FromUint64,
+      value);
+  return res;
 }
 
 jsi::String TracingRuntime::bigintToString(
     const jsi::BigInt &bigint,
     int radix) {
-  throw std::logic_error("Not implemented");
+  jsi::String res = RD::bigintToString(bigint, radix);
+  trace_.emplace_back<SynthTrace::BigIntToStringRecord>(
+      getTimeSinceStart(), getUniqueID(res), getUniqueID(bigint), radix);
+  return res;
 }
 
 jsi::String TracingRuntime::createStringFromAscii(
@@ -721,6 +736,8 @@ SynthTrace::TraceValue TracingRuntime::toTraceValue(const jsi::Value &value) {
     return SynthTrace::encodeBool(value.getBool());
   } else if (value.isNumber()) {
     return SynthTrace::encodeNumber(value.getNumber());
+  } else if (value.isBigInt()) {
+    return trace_.encodeBigInt(getUniqueID(value.getBigInt(*this)));
   } else if (value.isString()) {
     return trace_.encodeString(getUniqueID(value.getString(*this)));
   } else if (value.isObject()) {

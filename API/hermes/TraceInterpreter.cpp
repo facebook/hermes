@@ -370,7 +370,8 @@ Value traceValueToJSIValue(
   if (value.isBool()) {
     return Value(value.getBool());
   }
-  if (value.isObject() || value.isString() || value.isSymbol()) {
+  if (value.isObject() || value.isBigInt() || value.isString() ||
+      value.isSymbol()) {
     return getJSIValueForUse(value.getUID());
   }
   llvm_unreachable("Unrecognized value type encountered");
@@ -1020,7 +1021,9 @@ Value TraceInterpreter::execFunction(
       if (it != locals.end()) {
         // Satisfiable locally
         Value val{rt_, it->second};
-        assert(val.isObject() || val.isString() || val.isSymbol());
+        assert(
+            val.isObject() || val.isBigInt() || val.isString() ||
+            val.isSymbol());
         // If it was the last local use, delete that object id from locals.
         auto defAndUse = call.locals.find(obj);
         if (defAndUse != call.locals.end() &&
@@ -1160,6 +1163,39 @@ Value TraceInterpreter::execFunction(
             // Make an empty object to be used.
             addJSIValueToDefs(
                 call, cor.objID_, globalRecordNum, Object(rt_), locals);
+            break;
+          }
+          case RecordType::CreateBigInt: {
+            const auto &cbr =
+                static_cast<const SynthTrace::CreateBigIntRecord &>(*rec);
+            Value bigint;
+            switch (cbr.method_) {
+              case SynthTrace::CreateBigIntRecord::Method::FromInt64:
+                bigint =
+                    BigInt::fromInt64(rt_, static_cast<int64_t>(cbr.bits_));
+                assert(
+                    bigint.asBigInt(rt_).getInt64(rt_) ==
+                    static_cast<int64_t>(cbr.bits_));
+                break;
+              case SynthTrace::CreateBigIntRecord::Method::FromUint64:
+                bigint = BigInt::fromUint64(rt_, cbr.bits_);
+                assert(bigint.asBigInt(rt_).getUint64(rt_) == cbr.bits_);
+                break;
+            }
+            addJSIValueToDefs(
+                call, cbr.objID_, globalRecordNum, std::move(bigint), locals);
+            break;
+          }
+          case RecordType::BigIntToString: {
+            const auto &bts =
+                static_cast<const SynthTrace::BigIntToStringRecord &>(*rec);
+            BigInt obj = getJSIValueForUse(bts.bigintID_).asBigInt(rt_);
+            addJSIValueToDefs(
+                call,
+                bts.strID_,
+                globalRecordNum,
+                obj.toString(rt_, bts.radix_),
+                locals);
             break;
           }
           case RecordType::CreateString: {

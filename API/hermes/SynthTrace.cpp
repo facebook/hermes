@@ -221,6 +221,10 @@ SynthTrace::TraceValue SynthTrace::encodeObject(ObjectID objID) {
   return TraceValue::encodeObjectValue(objID);
 }
 
+SynthTrace::TraceValue SynthTrace::encodeBigInt(ObjectID objID) {
+  return TraceValue::encodeBigIntValue(objID);
+}
+
 SynthTrace::TraceValue SynthTrace::encodeString(ObjectID objID) {
   return TraceValue::encodeStringValue(objID);
 }
@@ -241,6 +245,8 @@ std::string SynthTrace::encode(TraceValue value) {
     return "null:";
   } else if (value.isObject()) {
     return std::string("object:") + std::to_string(value.getUID());
+  } else if (value.isBigInt()) {
+    return std::string("bigint:") + std::to_string(value.getUID());
   } else if (value.isString()) {
     return std::string("string:") + std::to_string(value.getUID());
   } else if (value.isPropNameID()) {
@@ -278,6 +284,8 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
     return encodeObject(decodeID(rest));
   } else if (tag == "string") {
     return encodeString(decodeID(rest));
+  } else if (tag == "bigint") {
+    return encodeBigInt(decodeID(rest));
   } else if (tag == "propNameID") {
     return encodePropNameID(decodeID(rest));
   } else if (tag == "symbol") {
@@ -335,6 +343,24 @@ bool SynthTrace::DrainMicrotasksRecord::operator==(const Record &that) const {
   }
   const auto &thatCasted = dynamic_cast<const DrainMicrotasksRecord &>(that);
   return maxMicrotasksHint_ == thatCasted.maxMicrotasksHint_;
+}
+
+bool SynthTrace::CreateBigIntRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const CreateBigIntRecord &>(that);
+  return objID_ == thatCasted.objID_ && method_ == thatCasted.method_ &&
+      bits_ == thatCasted.bits_;
+}
+
+bool SynthTrace::BigIntToStringRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const BigIntToStringRecord &>(that);
+  return strID_ == thatCasted.strID_ && bigintID_ == thatCasted.bigintID_ &&
+      radix_ == thatCasted.radix_;
 }
 
 bool SynthTrace::CreateStringRecord::operator==(const Record &that) const {
@@ -514,6 +540,36 @@ void SynthTrace::MarkerRecord::toJSONInternal(JSONEmitter &json) const {
 void SynthTrace::CreateObjectRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
+}
+
+static std::string createBigIntMethodToString(
+    SynthTrace::CreateBigIntRecord::Method m) {
+  switch (m) {
+    case SynthTrace::CreateBigIntRecord::Method::FromInt64:
+      return "FromInt64";
+    case SynthTrace::CreateBigIntRecord::Method::FromUint64:
+      return "FromUint64";
+    default:
+      llvm_unreachable("No other valid CreateBigInt::Method.");
+  }
+}
+
+void SynthTrace::CreateBigIntRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("method", createBigIntMethodToString(method_));
+  // bits is potentially an invalid number (i.e., > 53 bits), so emit it
+  // as a string.
+  json.emitKeyValue("bits", std::to_string(bits_));
+}
+
+void SynthTrace::BigIntToStringRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("strID", strID_);
+  json.emitKeyValue("bigintID", bigintID_);
+  json.emitKeyValue("radix", radix_);
 }
 
 static std::string encodingName(bool isASCII) {
@@ -802,6 +858,8 @@ llvh::raw_ostream &operator<<(
     CASE(SetPropertyNativeReturn);
     CASE(GetNativePropertyNames);
     CASE(GetNativePropertyNamesReturn);
+    CASE(CreateBigInt);
+    CASE(BigIntToString);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -845,8 +903,13 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(SetPropertyNativeReturn)
   CASE(GetNativePropertyNames)
   CASE(GetNativePropertyNamesReturn)
+  CASE(CreateBigInt)
+  CASE(BigIntToString)
 #undef CASE
-  return is;
+
+  llvm_unreachable(
+      "failed to parse SynthTrace::RecordType. Make sure all enum values are "
+      "handled.");
 }
 
 } // namespace tracing
