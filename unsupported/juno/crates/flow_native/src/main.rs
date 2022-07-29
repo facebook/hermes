@@ -119,7 +119,7 @@ impl fmt::Display for ValueId {
 #[derive(Clone, Copy, Debug)]
 enum LRef {
     Member { object: ValueId, property: ValueId },
-    Var(ValueId),
+    Var(DeclId),
 }
 
 struct Compiler<'w> {
@@ -293,7 +293,7 @@ impl Compiler<'_> {
             let lref = self.new_lref(param, fn_scope, lock);
             let val = self.new_value();
             out!(self, "FNValue {}=param{};", val, i);
-            self.gen_store(lref, val);
+            self.gen_store(lref, scope, val);
         }
         let BlockStatement { body, .. } = node_cast!(Node::BlockStatement, block);
         for stmt in body.iter() {
@@ -428,15 +428,7 @@ impl Compiler<'_> {
                         let property = self.gen_prop(false, node, scope, lock);
                         LRef::Member { object, property }
                     }
-                    _ => {
-                        // For local variables, store a pointer to their
-                        // location, so they can be easily updated.
-                        let var_id = self.new_value();
-                        out!(self, "FNValue *{} = &", var_id);
-                        self.gen_var(decl_id, scope);
-                        out!(self, ";");
-                        LRef::Var(var_id)
-                    }
+                    _ => LRef::Var(decl_id),
                 }
             }
             _ => unimplemented!("Unimplemented lvalue: {:?}", node.variant()),
@@ -444,11 +436,13 @@ impl Compiler<'_> {
     }
 
     /// Returns a value corresponding to the result of loading from the lref.
-    fn gen_load(&mut self, lref: LRef) -> ValueId {
+    fn gen_load(&mut self, lref: LRef, cur_scope: LexicalScopeId) -> ValueId {
         let res = self.new_value();
         match lref {
-            LRef::Var(var_id) => {
-                out!(self, "FNValue {} = *{};", res, var_id);
+            LRef::Var(decl_id) => {
+                out!(self, "FNValue {} = ", res);
+                self.gen_var(decl_id, cur_scope);
+                out!(self, ";");
             }
             LRef::Member { object, property } => {
                 out!(
@@ -464,10 +458,11 @@ impl Compiler<'_> {
     }
 
     /// Stores a value to the lref.
-    fn gen_store(&mut self, lref: LRef, value: ValueId) {
+    fn gen_store(&mut self, lref: LRef, cur_scope: LexicalScopeId, value: ValueId) {
         match lref {
-            LRef::Var(var) => {
-                out!(self, "*{} = {};", var, value);
+            LRef::Var(decl_id) => {
+                self.gen_var(decl_id, cur_scope);
+                out!(self, " = {};", value);
             }
             LRef::Member { object, property } => {
                 out!(self, "{}->putByVal({}, {});", object, property, value);
@@ -598,7 +593,7 @@ impl Compiler<'_> {
             Node::MemberExpression(..) | Node::Identifier(..) => {
                 // Generate an LRef for the expression and load from it.
                 let lref = self.new_lref(node, scope, lock);
-                self.gen_load(lref)
+                self.gen_load(lref, scope)
             }
             Node::AssignmentExpression(AssignmentExpression {
                 left,
@@ -611,7 +606,7 @@ impl Compiler<'_> {
                 // Helper to apply the given mathematical operator to the left
                 // and right sides.
                 let mut update_op = |op: &str| {
-                    let old_val = self.gen_load(lref);
+                    let old_val = self.gen_load(lref, scope);
                     let new_val = self.new_value();
                     out!(
                         self,
@@ -635,7 +630,7 @@ impl Compiler<'_> {
                 };
                 // Store the updated value and return it as the result of this
                 // expression.
-                self.gen_store(lref, new_val);
+                self.gen_store(lref, scope, new_val);
                 new_val
             }
             Node::LogicalExpression(LogicalExpression {
@@ -822,7 +817,7 @@ impl Compiler<'_> {
                 ..
             }) => {
                 let lref = self.new_lref(argument, scope, lock);
-                let old_val = self.gen_load(lref);
+                let old_val = self.gen_load(lref, scope);
                 let new_val = self.new_value();
                 let op = match operator {
                     UpdateExpressionOperator::Increment => "+1",
@@ -838,7 +833,7 @@ impl Compiler<'_> {
                 );
                 // Store the updated value and return the old or new value,
                 // depending on whether this is a postfix or prefix operator.
-                self.gen_store(lref, new_val);
+                self.gen_store(lref, scope, new_val);
                 if *prefix { new_val } else { old_val }
             }
             Node::ThisExpression(..) => {
@@ -906,7 +901,7 @@ impl Compiler<'_> {
                     // Initialize the variable with init.
                     let lref = self.new_lref(ident, scope, lock);
                     let init = self.gen_expr(init, scope, lock);
-                    self.gen_store(lref, init);
+                    self.gen_store(lref, scope, init);
                 }
             }
             Node::FunctionDeclaration(FunctionDeclaration {
@@ -921,7 +916,7 @@ impl Compiler<'_> {
                     // Initialize the identifier for the function with the
                     // generated value.
                     let lref = self.new_lref(ident, scope, lock);
-                    self.gen_store(lref, fn_id);
+                    self.gen_store(lref, scope, fn_id);
                 }
             }
 
@@ -987,7 +982,7 @@ impl Compiler<'_> {
                     let lref = self.new_lref(param, new_scope, lock);
                     let ex_val = self.new_value();
                     out!(self, "FNValue {}=ex;", ex_val);
-                    self.gen_store(lref, ex_val);
+                    self.gen_store(lref, scope, ex_val);
                 }
                 for stmt in body.iter() {
                     self.gen_stmt(stmt, new_scope, lock);
