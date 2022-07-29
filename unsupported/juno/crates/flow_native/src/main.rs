@@ -577,7 +577,7 @@ impl Compiler<'_> {
                 out!(self, "FNObject* {}=new FNObject();", new_obj,);
                 out!(
                     self,
-                    "{}->parent={}.getClosure()->getByVal(FNValue::encodeString(new FNString{{\"prototype\"}})).getObject();",
+                    "{}->parent={}.getClosure()->getByVal(FNValue::encodeString(&fn_prototype_str)).getObject();",
                     new_obj,
                     callee
                 );

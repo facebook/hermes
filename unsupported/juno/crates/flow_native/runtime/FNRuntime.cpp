@@ -9,6 +9,8 @@
 
 #include <limits>
 
+const FNString fn_prototype_str{"prototype"};
+
 FNValue FNObject::getByVal(FNValue key) {
   if (key.isString()) {
     auto *cur = this;

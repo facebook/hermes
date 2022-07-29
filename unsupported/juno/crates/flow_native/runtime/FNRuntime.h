@@ -206,4 +206,6 @@ inline int32_t truncateToInt32(double d) {
   return truncateToInt32SlowPath(d);
 }
 
+extern const FNString fn_prototype_str;
+
 #endif // FNRUNTIME_H
