@@ -169,18 +169,12 @@ struct FNClosure : public FNObject {
   explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {
     props["prototype"] = FNValue::encodeObject(new FNObject());
   }
-  void *operator new(size_t sz) {
-    return fnMalloc(sz);
-  }
 
   void (*func)(void);
   void *env;
 };
 struct FNArray : public FNObject {
   explicit FNArray(std::vector<FNValue> arr) : arr(std::move(arr)) {}
-  void *operator new(size_t sz) {
-    return fnMalloc(sz);
-  }
 
   std::vector<FNValue> arr;
 };
