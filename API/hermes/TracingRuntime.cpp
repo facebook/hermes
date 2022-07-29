@@ -364,6 +364,20 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
   return obj;
 }
 
+jsi::BigInt TracingRuntime::createBigIntFromInt64(int64_t value) {
+  throw std::logic_error("Not implemented");
+}
+
+jsi::BigInt TracingRuntime::createBigIntFromUint64(uint64_t value) {
+  throw std::logic_error("Not implemented");
+}
+
+jsi::String TracingRuntime::bigintToString(
+    const jsi::BigInt &bigint,
+    int radix) {
+  throw std::logic_error("Not implemented");
+}
+
 jsi::String TracingRuntime::createStringFromAscii(
     const char *str,
     size_t length) {

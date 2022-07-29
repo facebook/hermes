@@ -277,6 +277,18 @@ asIntN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src);
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs);
 
+/// \return Whether \p src can be losslessly trucated to a single
+/// SignedBigIntDigitType (if signedTruncation == true) or BigIntDigitType
+/// (signedTruncation == false) digit.
+bool isSingleDigitTruncationLossless(
+    ImmutableBigIntRef src,
+    bool signedTruncation);
+
+/// \return The first digit in \p src, or 0 if src.numDigits == 0.
+inline BigIntDigitType truncateToSingleDigit(ImmutableBigIntRef src) {
+  return src.numDigits == 0 ? 0 : src.digits[0];
+}
+
 /// \return number of digits needed to perform \p - src
 uint32_t unaryMinusResultSize(ImmutableBigIntRef src);
 

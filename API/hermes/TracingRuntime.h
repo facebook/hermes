@@ -50,6 +50,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   // Note that the NativeState methods do not need to be traced since they
   // cannot be observed in JS.
 
+  jsi::BigInt createBigIntFromInt64(int64_t value) override;
+  jsi::BigInt createBigIntFromUint64(uint64_t value) override;
+  jsi::String bigintToString(const jsi::BigInt &bigint, int radix) override;
+
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
 

@@ -10,6 +10,8 @@
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 
+#include <tuple>
+
 using namespace facebook::jsi;
 using namespace facebook::hermes;
 
@@ -710,6 +712,137 @@ TEST_F(HermesRuntimeTest, DiagnosticHandlerTestWarning) {
   ASSERT_EQ(1, diagHandler.ds[1].ranges.size());
   EXPECT_EQ(2, diagHandler.ds[1].ranges[0].first);
   EXPECT_EQ(5, diagHandler.ds[1].ranges[0].second);
+}
+
+TEST_F(HermesRuntimeTest, BigIntJSI) {
+  Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
+  auto BigInt = [&](const char *v) { return bigintCtor.call(*rt, eval(v)); };
+
+  auto v0 = BigInt("0");
+  auto b0 = v0.asBigInt(*rt);
+  EXPECT_EQ(v0.toString(*rt).utf8(*rt), "0");
+  EXPECT_EQ(b0.toString(*rt).utf8(*rt), "0");
+
+  auto vffffffffffffffff = BigInt("0xffffffffffffffffn");
+  auto bffffffffffffffff = vffffffffffffffff.asBigInt(*rt);
+  EXPECT_EQ(vffffffffffffffff.toString(*rt).utf8(*rt), "18446744073709551615");
+  EXPECT_EQ(bffffffffffffffff.toString(*rt, 16).utf8(*rt), "ffffffffffffffff");
+  EXPECT_EQ(bffffffffffffffff.toString(*rt, 36).utf8(*rt), "3w5e11264sgsf");
+
+  auto vNeg1 = BigInt("-1");
+  auto bNeg1 = vNeg1.asBigInt(*rt);
+  EXPECT_EQ(vNeg1.toString(*rt).utf8(*rt), "-1");
+  EXPECT_EQ(bNeg1.toString(*rt, 16).utf8(*rt), "-1");
+  EXPECT_EQ(bNeg1.toString(*rt, 36).utf8(*rt), "-1");
+
+  EXPECT_TRUE(BigInt::strictEquals(*rt, b0, b0));
+  EXPECT_TRUE(BigInt::strictEquals(*rt, bffffffffffffffff, bffffffffffffffff));
+  EXPECT_FALSE(BigInt::strictEquals(*rt, bNeg1, bffffffffffffffff));
+}
+
+TEST_F(HermesRuntimeTest, BigIntJSIFromScalar) {
+  Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
+  auto BigInt = [&](const char *v) {
+    return bigintCtor.call(*rt, eval(v)).asBigInt(*rt);
+  };
+
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt("0"), BigInt::fromUint64(*rt, 0)));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt("0"), BigInt::fromInt64(*rt, 0)));
+  EXPECT_TRUE(BigInt::strictEquals(
+      *rt, BigInt("0xdeadbeef"), BigInt::fromUint64(*rt, 0xdeadbeef)));
+  EXPECT_TRUE(BigInt::strictEquals(
+      *rt, BigInt("0xc0ffee"), BigInt::fromInt64(*rt, 0xc0ffee)));
+  EXPECT_TRUE(BigInt::strictEquals(
+      *rt, BigInt("0xffffffffffffffffn"), BigInt::fromUint64(*rt, ~0ull)));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt("-1"), BigInt::fromInt64(*rt, ~0ull)));
+}
+
+TEST_F(HermesRuntimeTest, BigIntJSIToString) {
+  auto b = BigInt::fromUint64(*rt, 1);
+  // Test all possible radixes.
+  for (int radix = 2; radix <= 36; ++radix) {
+    EXPECT_EQ(b.toString(*rt, radix).utf8(*rt), "1") << radix;
+  }
+
+  // Test some invaild radixes.
+  EXPECT_THROW(b.toString(*rt, -1), JSIException);
+  EXPECT_THROW(b.toString(*rt, 0), JSIException);
+  EXPECT_THROW(b.toString(*rt, 1), JSIException);
+  EXPECT_THROW(b.toString(*rt, 37), JSIException);
+  EXPECT_THROW(b.toString(*rt, 100), JSIException);
+
+  Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
+  auto BigInt = [&](int value) {
+    return bigintCtor.call(*rt, value).asBigInt(*rt);
+  };
+
+  // Now test that the radix is being passed to the VM.
+  for (int radix = 2; radix <= 36; ++radix) {
+    EXPECT_EQ(BigInt(radix + 1).toString(*rt, radix).utf8(*rt), "11") << radix;
+    EXPECT_EQ(BigInt(-(radix + 1)).toString(*rt, radix).utf8(*rt), "-11")
+        << radix;
+  }
+}
+
+TEST_F(HermesRuntimeTest, BigIntJSITruncation) {
+  auto lossless = [](uint64_t value) { return std::make_tuple(value, true); };
+  auto lossy = [](uint64_t value) { return std::make_tuple(value, false); };
+
+  auto toInt64 = [this](const BigInt &b) {
+    return std::make_tuple(b.getInt64(*rt), b.isInt64(*rt));
+  };
+
+  auto toUint64 = [this](const BigInt &b) {
+    return std::make_tuple(b.getUint64(*rt), b.isUint64(*rt));
+  };
+
+  Function bigintCtor = rt->global().getPropertyAsFunction(*rt, "BigInt");
+  auto BigInt = [&](const char *v) {
+    return bigintCtor.call(*rt, eval(v)).asBigInt(*rt);
+  };
+
+  // 0n can be truncated losslessly to either int64_t and uint64_t
+  auto b = BigInt::fromUint64(*rt, 0);
+  EXPECT_EQ(toUint64(b), lossless(0));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt::fromUint64(*rt, b.getUint64(*rt)), b));
+  EXPECT_EQ(toInt64(b), lossless(0));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt::fromInt64(*rt, b.getInt64(*rt)), b));
+
+  // Creating BigInt from an ~0ull. This value can't be truncated losslessly to
+  // int64_t.
+  b = BigInt::fromUint64(*rt, ~0ull);
+  EXPECT_EQ(toUint64(b), lossless(~0ull));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt::fromUint64(*rt, b.getUint64(*rt)), b));
+  EXPECT_EQ(toInt64(b), lossy(~0ull));
+
+  // Creating BigInt from an -1ull. This value can't be truncated losslessly to
+  // int64_t.
+  b = BigInt::fromInt64(*rt, -1ull);
+  EXPECT_EQ(toUint64(b), lossy(-1ull));
+  EXPECT_EQ(toInt64(b), lossless(-1ull));
+  EXPECT_TRUE(
+      BigInt::strictEquals(*rt, BigInt::fromInt64(*rt, b.getInt64(*rt)), b));
+
+  // 0x10000000000000000n can't be truncated to int64_t nor uint64_t.
+  b = BigInt("0x10000000000000000n");
+  EXPECT_EQ(toUint64(b), lossy(0));
+  EXPECT_EQ(toInt64(b), lossy(0));
+
+  // -0x10000000000000000n can't be truncated to int64_t nor uint64_t.
+  b = BigInt("-0x10000000000000000n");
+  EXPECT_EQ(toUint64(b), lossy(0));
+  EXPECT_EQ(toInt64(b), lossy(0));
+
+  // (1n << 65n) - 1n can't be truncated to int64_t nor uint64_t.
+  b = BigInt("(1n << 65n) - 1n");
+  EXPECT_EQ(toUint64(b), lossy(~0ull));
+  EXPECT_EQ(toInt64(b), lossy(~0ull));
 }
 
 } // namespace

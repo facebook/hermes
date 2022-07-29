@@ -178,6 +178,18 @@ class BigIntPrimitive final
     return bigint::compare(this->getImmutableRefUnsafe(), value);
   }
 
+  /// \return The first this BigInt's first digit.
+  DigitType truncateToSingleDigit() const {
+    return bigint::truncateToSingleDigit(this->getImmutableRefUnsafe());
+  }
+
+  /// \return Whehter truncating this BigInt to a DigitType (signedTruncation ==
+  /// false) or a SignedDigitType (signedTruncation == true) is lossless.
+  bool isTruncationToSingleDigitLossless(bool signedTruncation) {
+    return bigint::isSingleDigitTruncationLossless(
+        this->getImmutableRefUnsafe(), signedTruncation);
+  }
+
   // Supported Math Operations
 
   /// \return - \p src

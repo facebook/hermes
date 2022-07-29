@@ -10,6 +10,7 @@
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/BigIntTestHelpers.h"
 
+#include <tuple>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -608,5 +609,111 @@ TEST(BigIntTest, UniquingBigIntTable) {
     EXPECT_EQ(byIndex(test.expectedIndex), test.expectedBytes)
         << "test[" << (&test - kTests) << "].str = " << test.str;
   }
+}
+
+TEST(BigIntTest, truncateToSingleDigitTest) {
+  constexpr bool signedTruncation = true;
+  constexpr bool unsignedTruncation = false;
+  std::vector<BigIntDigitType> buffer;
+  auto toImmutableRef = [&buffer](LeftToRightVector &&v) {
+    buffer.resize(
+        std::max<uint32_t>(1u, numDigitsForSizeInBytes(v.data.size())));
+    uint32_t numDigits = buffer.size();
+    auto res =
+        initWithBytes(MutableBigIntRef{buffer.data(), numDigits}, v.data);
+    EXPECT_EQ(res, OperationStatus::RETURNED);
+    return ImmutableBigIntRef{buffer.data(), numDigits};
+  };
+
+  auto lossless = [](BigIntDigitType d) { return std::make_tuple(d, true); };
+  auto lossy = [](BigIntDigitType d) { return std::make_tuple(d, false); };
+  auto truncateToSingleDigit = [&](ImmutableBigIntRef src,
+                                   bool signedTruncation) {
+    return std::make_tuple(
+        bigint::truncateToSingleDigit(src),
+        bigint::isSingleDigitTruncationLossless(src, signedTruncation));
+  };
+
+  EXPECT_EQ(
+      truncateToSingleDigit(toImmutableRef(noDigits()), unsignedTruncation),
+      lossless(0));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(toImmutableRef(noDigits()), signedTruncation),
+      lossless(0));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(digit(0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff)),
+          unsignedTruncation),
+      lossless(0x7fffffffffffffffull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(digit(0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff)),
+          signedTruncation),
+      lossless(0x7fffffffffffffffull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          unsignedTruncation),
+      lossy(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          signedTruncation),
+      lossless(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x00) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          unsignedTruncation),
+      lossless(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x00) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          signedTruncation),
+      lossy(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x01) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          unsignedTruncation),
+      lossy(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x01) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          signedTruncation),
+      lossy(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x01) +
+              digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          unsignedTruncation),
+      lossy(0x8000000000000000ull));
+
+  EXPECT_EQ(
+      truncateToSingleDigit(
+          toImmutableRef(
+              digit(0x01) +
+              digit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) +
+              digit(0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+          signedTruncation),
+      lossy(0x8000000000000000ull));
 }
 } // namespace

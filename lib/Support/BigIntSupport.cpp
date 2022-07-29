@@ -874,6 +874,28 @@ int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs) {
   return compare(lhs, makeImmutableRefFromSignedDigit(rhs));
 }
 
+bool isSingleDigitTruncationLossless(
+    ImmutableBigIntRef src,
+    bool signedTruncation) {
+  if (src.numDigits == 0) {
+    // 0n can be represented in either signed or unsigned digits.
+    return true;
+  }
+
+  if (signedTruncation) {
+    // converting src to int64_t: any single digit bigint is truncated
+    // losslessly.
+    return src.numDigits == 1;
+  }
+  // converting src to uint64_t:
+  // * any single digit bigint in the range [0, 0x8000000000000000)
+  // * any two digit bigint whose second digit is used for zero-extension is
+  //   truncated losslessly.
+  return (src.numDigits == 1 &&
+          src.digits[0] <= std::numeric_limits<int64_t>::max()) ||
+      (src.numDigits == 2 && src.digits[1] == 0);
+}
+
 namespace {
 /// Helper adapter for calling getSignExtValue with *BigIntRefs.
 template <typename AnyBigIntRef>

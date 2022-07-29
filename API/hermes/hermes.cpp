@@ -724,6 +724,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   std::string symbolToString(const jsi::Symbol &) override;
 
+  jsi::BigInt createBigIntFromInt64(int64_t) override;
+  jsi::BigInt createBigIntFromUint64(uint64_t) override;
+  bool bigintIsInt64(const jsi::BigInt &) override;
+  bool bigintIsUint64(const jsi::BigInt &) override;
+  uint64_t truncate(const jsi::BigInt &) override;
+  jsi::String bigintToString(const jsi::BigInt &, int) override;
+
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
   std::string utf8(const jsi::String &) override;
@@ -1669,6 +1676,62 @@ std::string HermesRuntimeImpl::symbolToString(const jsi::Symbol &sym) {
   return toStdString(runtime_, res.getValue());
 }
 
+jsi::BigInt HermesRuntimeImpl::createBigIntFromInt64(int64_t value) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(runtime_);
+    vm::CallResult<vm::HermesValue> res =
+        vm::BigIntPrimitive::fromSigned(runtime_, value);
+    checkStatus(res.getStatus());
+    return add<jsi::BigInt>(*res);
+  });
+}
+
+jsi::BigInt HermesRuntimeImpl::createBigIntFromUint64(uint64_t value) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(runtime_);
+    vm::CallResult<vm::HermesValue> res =
+        vm::BigIntPrimitive::fromUnsigned(runtime_, value);
+    checkStatus(res.getStatus());
+    return add<jsi::BigInt>(*res);
+  });
+}
+
+bool HermesRuntimeImpl::bigintIsInt64(const jsi::BigInt &bigint) {
+  constexpr bool signedTruncation = true;
+  return phv(bigint).getBigInt()->isTruncationToSingleDigitLossless(
+      signedTruncation);
+}
+
+bool HermesRuntimeImpl::bigintIsUint64(const jsi::BigInt &bigint) {
+  constexpr bool signedTruncation = false;
+  return phv(bigint).getBigInt()->isTruncationToSingleDigitLossless(
+      signedTruncation);
+}
+
+uint64_t HermesRuntimeImpl::truncate(const jsi::BigInt &bigint) {
+  auto digit = phv(bigint).getBigInt()->truncateToSingleDigit();
+  static_assert(
+      sizeof(digit) == sizeof(uint64_t),
+      "BigInt digit is no longer sizeof(uint64_t) bytes.");
+  return digit;
+}
+
+jsi::String HermesRuntimeImpl::bigintToString(
+    const jsi::BigInt &bigint,
+    int radix) {
+  if (radix < 2 || radix > 36) {
+    throw makeJSError(*this, "Invalid radix ", radix, " to BigInt.toString");
+  }
+
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(runtime_);
+    vm::CallResult<vm::HermesValue> toStringRes =
+        phv(bigint).getBigInt()->toString(runtime_, radix);
+    checkStatus(toStringRes.getStatus());
+    return add<jsi::String>(*toStringRes);
+  });
+}
+
 jsi::String HermesRuntimeImpl::createStringFromAscii(
     const char *str,
     size_t length) {
@@ -2190,10 +2253,7 @@ bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
 
 bool HermesRuntimeImpl::strictEquals(const jsi::BigInt &a, const jsi::BigInt &b)
     const {
-  throw jsi::JSError(
-      *const_cast<HermesRuntimeImpl *>(this),
-      "unimplemented: "
-      "HermesRuntime::strictEquals(const BigInt &, const BigInt &)");
+  return phv(a).getBigInt()->compare(phv(b).getBigInt()) == 0;
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::String &a, const jsi::String &b)
