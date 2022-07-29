@@ -12,11 +12,111 @@
 FNStringTable g_fnStringTable{};
 std::vector<FNUniqueString> g_fnCompilerStrings{};
 
+FNPropMap::FNPropMap() : data_((value_type *)small_) {
+  static_assert(FNPredefined::_EMPTY == 0, "_EMPTY state must be 0");
+  memset(small_, 0, sizeof(small_));
+}
+
+// NOTE: we are leaking the table!
+FNPropMap::~FNPropMap() noexcept = default;
+
+void FNPropMap::erase(value_type *pos) {
+  if (!pos)
+    return;
+  assert(FNPredefined::isValid(pos->first) && "erasing an invalid entry");
+  pos->~value_type();
+  pos->first = FNPredefined::_DELETED;
+}
+
+void FNPropMap::assign(FNUniqueString key, FNValue value) {
+  {
+    // Ensure that we can always find at least one empty slot.
+    assert(limit_ < capacity_);
+    assert(occupiedSlots_ <= limit_);
+
+    auto [found, it] = lookup(key);
+    if (found) {
+      new (&it->second) FNValue(std::move(value));
+      return;
+    }
+
+    // Increase the occupied slots, unless we are overwriting a deleted slot.
+    if (it->first != FNPredefined::_DELETED)
+      ++occupiedSlots_;
+    // Write the new pair.
+    new (it) value_type(key, std::move(value));
+
+    // If we don't have to grow, we are done.
+    if (occupiedSlots_ <= limit_)
+      return;
+  }
+
+  // We need to grow the table. Allocate double the capacity.
+  size_type newCapa = capacity_ * 2;
+  if (newCapa <= capacity_)
+    abort(); // Capacity overflow.
+  value_type *newData = (value_type *)fnMalloc(sizeof(value_type) * newCapa);
+  if (!newData)
+    abort(); // OOM.
+  memset(newData, 0, sizeof(value_type) * newCapa);
+
+  // Save the current data and install the new table as the current one.
+  value_type *oldData = data_;
+  value_type *oldEnd = data_ + capacity_;
+  data_ = newData;
+  capacity_ = newCapa;
+  occupiedSlots_ = 0;
+  limit_ = capacity_ / 4 * 3;
+
+  // Copy all valid entries.
+  for (auto *cur = oldData; cur != oldEnd; ++cur) {
+    if (!FNPredefined::isValid(cur->first))
+      continue;
+    auto res = lookup(cur->first);
+    assert(
+        !res.first && "lookup when copying new hash table must never succeed");
+    new (res.second) value_type(cur->first, std::move(cur->second));
+    ++occupiedSlots_;
+  }
+  // Note that we are not freeing the old data.
+}
+
+std::pair<bool, FNPropMap::value_type *> FNPropMap::lookup(FNUniqueString key) {
+  size_type const mask = capacity_ - 1;
+  size_type index = key & mask;
+
+  // Probing step.
+  size_type step = 1;
+  // Save the address of the start of the table to avoid recalculating it.
+  value_type *const tableStart = data_;
+  // The first deleted entry we found.
+  value_type *deleted = nullptr;
+
+  for (;;) {
+    value_type *curEntry = tableStart + index;
+
+    if (curEntry->first == key) {
+      return {true, curEntry};
+    } else if (curEntry->first == FNPredefined::_EMPTY) {
+      // If we encountered an empty pair, the search is over - we failed.
+      // Return either this entry or a deleted one, if we encountered one.
+      return {false, deleted ? deleted : curEntry};
+    } else if (curEntry->first == FNPredefined::_DELETED) {
+      // The first time we encounter a deleted entry, record it so we can
+      // potentially reuse it for insertion.
+      if (!deleted)
+        deleted = curEntry;
+    }
+
+    index = (index + step) & mask;
+    ++step;
+  }
+}
+
 FNValue FNObject::getByName(FNUniqueString key) {
   auto *cur = this;
   do {
-    auto it = cur->props.find(key);
-    if (it != cur->props.end())
+    if (auto it = cur->props.findOrNull(key))
       return it->second;
     cur = cur->parent;
   } while (cur);
@@ -24,7 +124,7 @@ FNValue FNObject::getByName(FNUniqueString key) {
 }
 
 void FNObject::putByName(FNUniqueString key, FNValue val) {
-  props[key] = val;
+  props.assign(key, val);
 }
 
 FNValue FNObject::getByVal(FNValue key) {
@@ -100,17 +200,21 @@ static FNValue arrayConstructor(void *, FNValue, FNValue size) {
 static FNObject *createGlobalObject() {
   auto *global = new FNObject();
   auto *printClosure = new FNClosure((void (*)(void))print, nullptr);
-  global->props[g_fnStringTable.uniqueString("print")] =
-      FNValue::encodeClosure(printClosure);
+  global->props.assign(
+      g_fnStringTable.uniqueString("print"),
+      FNValue::encodeClosure(printClosure));
   auto *arrayConstructorClosure =
       new FNClosure((void (*)(void))arrayConstructor, nullptr);
-  global->props[g_fnStringTable.uniqueString("Array")] =
-      FNValue::encodeClosure(arrayConstructorClosure);
-  global->props[FNPredefined::undefined] = FNValue::encodeUndefined();
-  global->props[g_fnStringTable.uniqueString("Infinity")] =
-      FNValue::encodeNumber(std::numeric_limits<double>::infinity());
-  global->props[g_fnStringTable.uniqueString("NaN")] =
-      FNValue::encodeNumber(std::numeric_limits<double>::quiet_NaN());
+  global->props.assign(
+      g_fnStringTable.uniqueString("Array"),
+      FNValue::encodeClosure(arrayConstructorClosure));
+  global->props.assign(FNPredefined::undefined, FNValue::encodeUndefined());
+  global->props.assign(
+      g_fnStringTable.uniqueString("Infinity"),
+      FNValue::encodeNumber(std::numeric_limits<double>::infinity()));
+  global->props.assign(
+      g_fnStringTable.uniqueString("NaN"),
+      FNValue::encodeNumber(std::numeric_limits<double>::quiet_NaN()));
   return global;
 }
 
@@ -176,6 +280,9 @@ void *fnMalloc(size_t sz) {
 }
 
 FNStringTable::FNStringTable() {
+  // Skip the empty and deleted strings.
+  strings_.push_back(nullptr);
+  strings_.push_back(nullptr);
 #define FN_PREDEFINED(n)                 \
   do {                                   \
     FNUniqueString n = uniqueString(#n); \

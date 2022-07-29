@@ -31,14 +31,22 @@ enum class FNType {
 };
 
 /// A unique string index.
-typedef unsigned FNUniqueString;
+typedef uint32_t FNUniqueString;
 
 struct FNPredefined {
   enum : FNUniqueString {
+    // Index 0 is reserved for empty hash table slots.
+    _EMPTY,
+    // Index 1 is reserved for deleted hash table slots.
+    _DELETED,
 #define FN_PREDEFINED(n) n,
 #include "predefined.def"
     _LAST
   };
+
+  static inline bool isValid(FNUniqueString x) {
+    return x > _DELETED;
+  }
 };
 
 // WARNING: This implementation is TEMPORARY and purely for development
@@ -158,6 +166,54 @@ class FNValue {
   static const FNString *typeOf(FNValue v);
 };
 
+class FNPropMap {
+ public:
+  using key_type = FNUniqueString;
+  using mapped_type = FNValue;
+  using value_type = std::pair<FNUniqueString, FNValue>;
+
+  FNPropMap();
+  ~FNPropMap() noexcept;
+
+  /// Return a pointer to the pair with the specified key, or nullptr.
+  value_type *findOrNull(FNUniqueString key) {
+    auto [found, it] = lookup(key);
+    return found ? it : nullptr;
+  }
+
+  /// Erase the specified entry. Do nothing if pos is nullptr.
+  void erase(value_type *pos);
+
+  /// Overwrite the value, if the key is present, or insert a new key/value
+  /// pair.
+  void assign(FNUniqueString key, FNValue value);
+
+ private:
+  using size_type = uint32_t;
+  static constexpr size_type kSmallSize = 4;
+
+  bool isSmall() const {
+    return capacity_ == kSmallSize;
+  }
+
+  /// Search the hash table for \p key. If found, return true and the
+  /// and a pointer to the pair. If not found, return false and a pointer
+  /// to the pair where it ought to be inserted.
+  std::pair<bool, value_type *> lookup(FNUniqueString key);
+
+ private:
+  /// Capacity of the hash table. Always a power of 2.
+  size_type capacity_ = kSmallSize;
+  /// Number of occupied slots, including deleted.
+  size_type occupiedSlots_ = 0;
+  /// We need to grow the table if occupiedSlots_ would exced this limit.
+  size_type limit_ = kSmallSize / 4 * 3;
+  /// The table itself.
+  value_type *data_;
+  /// "Inline" storage for small tables.
+  alignas(value_type) char small_[sizeof(value_type) * kSmallSize];
+};
+
 void *fnMalloc(size_t);
 
 struct FNString {
@@ -168,7 +224,7 @@ struct FNString {
   }
 };
 struct FNObject {
-  std::unordered_map<FNUniqueString, FNValue> props;
+  FNPropMap props{};
   FNObject *parent{};
 
   FNValue getByName(FNUniqueString key);
@@ -182,7 +238,8 @@ struct FNObject {
 };
 struct FNClosure : public FNObject {
   explicit FNClosure(void (*func)(void), void *env) : func(func), env(env) {
-    props[FNPredefined::prototype] = FNValue::encodeObject(new FNObject());
+    props.assign(
+        FNPredefined::prototype, FNValue::encodeObject(new FNObject()));
   }
 
   void (*func)(void);
@@ -226,7 +283,9 @@ class FNStringTable {
 
   // Return the FNString corresponding to a unique string index;
   const FNString *fnString(FNUniqueString index) {
-    assert(index < strings_.size() && "Invalid unique string index");
+    assert(
+        index > FNPredefined::_DELETED && index < strings_.size() &&
+        "Invalid unique string index");
     return strings_[index];
   }
 

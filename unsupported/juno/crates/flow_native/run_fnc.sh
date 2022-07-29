@@ -11,4 +11,4 @@ fi
 
 FNRUNTIME_DIR=$(dirname ${0})/runtime
 
-"${1}" < "${2}" | c++ -x c++ -I "${FNRUNTIME_DIR}" "${FNRUNTIME_DIR}/FNRuntime.cpp" - -O3 -std=c++14 -o "${3}"
+"${1}" < "${2}" | c++ -x c++ -I "${FNRUNTIME_DIR}" "${FNRUNTIME_DIR}/FNRuntime.cpp" - -O3 -std=c++17 -o "${3}"
