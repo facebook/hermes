@@ -63,6 +63,22 @@ println(rshift(18832, 0x82));
 println(rshift(0xdeadbeef, 16));
 // CHECK-NEXT: -8531.000000
 
+function urshift(x, y) {
+  return x >>> y;
+}
+
+println('unsigned right shift');
+// CHECK-LABEL: unsigned right shift
+
+println(urshift(-14, 2));
+// CHECK-NEXT: 1073741820.000000
+
+println(urshift(8, 2));
+// CHECK-NEXT: 2.000000
+
+println(urshift(-1, 0));
+// CHECK-NEXT: 4294967295.000000
+
 function band(x, y) {
   return x & y;
 }

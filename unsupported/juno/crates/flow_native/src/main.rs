@@ -726,6 +726,12 @@ impl Compiler<'_> {
                         left,
                         right
                     ),
+                    BinaryExpressionOperator::RShift3 => out!(
+                        self,
+                        "FNValue::encodeNumber((uint32_t)truncateToInt32({}.getNumber()) >> (truncateToInt32({}.getNumber()) & 0x1f));",
+                        left,
+                        right
+                    ),
                     BinaryExpressionOperator::BitAnd
                     | BinaryExpressionOperator::BitOr
                     | BinaryExpressionOperator::BitXor => {
