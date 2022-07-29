@@ -19,6 +19,42 @@ struct FNString;
 struct FNObject;
 struct FNClosure;
 
+void *fnMalloc(size_t);
+
+/// Replacement for std::allocator<> based on fnMalloc.
+template <typename T>
+struct fn_allocator {
+  typedef T value_type;
+  typedef std::size_t size_type;
+  typedef std::ptrdiff_t difference_type;
+  typedef std::true_type propagate_on_container_move_assignment;
+  typedef std::true_type is_always_equal;
+
+  T *address(T &x) const noexcept {
+    return &x;
+  }
+  const T *address(const T &x) const noexcept {
+    return &x;
+  }
+  T *allocate(size_type n) {
+    return (T *)fnMalloc(n * sizeof(T));
+  }
+  T *allocate(size_type n, const void * /*hint*/) {
+    return (T *)fnMalloc(n * sizeof(T));
+  }
+  void deallocate(T *, size_type) {}
+  size_type max_size() const noexcept {
+    return std::numeric_limits<size_type>::max() / sizeof(T);
+  }
+};
+
+/// Replacement for std::string using fn_allocator.
+using fn_string =
+    std::basic_string<char, std::char_traits<char>, fn_allocator<char>>;
+/// Replacement for std::vector using fn_allocator.
+template <typename T>
+using fn_vector = std::vector<T, fn_allocator<T>>;
+
 enum class FNType {
   Undefined,
   Null,
@@ -214,10 +250,8 @@ class FNPropMap {
   alignas(value_type) char small_[sizeof(value_type) * kSmallSize];
 };
 
-void *fnMalloc(size_t);
-
 struct FNString {
-  std::string str;
+  fn_string str;
 
   void *operator new(size_t sz) {
     return fnMalloc(sz);
@@ -246,9 +280,9 @@ struct FNClosure : public FNObject {
   void *env;
 };
 struct FNArray : public FNObject {
-  explicit FNArray(std::vector<FNValue> arr) : arr(std::move(arr)) {}
+  explicit FNArray(fn_vector<FNValue> arr) : arr(std::move(arr)) {}
 
-  std::vector<FNValue> arr;
+  fn_vector<FNValue> arr;
 };
 
 FNObject *global();
@@ -291,7 +325,7 @@ class FNStringTable {
 
  private:
   std::unordered_map<std::string_view, FNUniqueString> map_{};
-  std::vector<const FNString *> strings_{};
+  fn_vector<const FNString *> strings_{};
 };
 
 /// Global unique string table per runtime.
@@ -299,7 +333,7 @@ extern FNStringTable g_fnStringTable;
 
 /// Map from a compile-time string index to a runtime unique string index.
 /// Ordinarily this would be per compile-time unit.
-extern std::vector<FNUniqueString> g_fnCompilerStrings;
+extern fn_vector<FNUniqueString> g_fnCompilerStrings;
 
 /// Obtain the unique string of an existing compiler string.
 inline FNUniqueString fnCompilerUniqueString(unsigned i) {

@@ -10,7 +10,7 @@
 #include <limits>
 
 FNStringTable g_fnStringTable{};
-std::vector<FNUniqueString> g_fnCompilerStrings{};
+fn_vector<FNUniqueString> g_fnCompilerStrings{};
 
 FNPropMap::FNPropMap() : data_((value_type *)small_) {
   static_assert(FNPredefined::_EMPTY == 0, "_EMPTY state must be 0");
@@ -299,7 +299,7 @@ FNUniqueString FNStringTable::uniqueString(std::string_view s) {
   if (it != map_.end())
     return it->second;
 
-  auto *newStr = new FNString{std::string(s)};
+  auto *newStr = new FNString{fn_string(s)};
   strings_.push_back(newStr);
   FNUniqueString res = strings_.size() - 1;
   map_.emplace(newStr->str, res);
