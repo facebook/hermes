@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use anyhow;
 use anyhow::Context;
-use anyhow::{self};
 use command_line::CommandLine;
 use command_line::Opt;
 use command_line::OptDesc;
@@ -26,6 +26,7 @@ use juno::sema::SemContext;
 use juno_support::atom_table::Atom;
 use juno_support::atom_table::AtomU16;
 use juno_support::source_manager::SourceId;
+use juno_support::source_manager::SourceRange;
 use juno_support::NullTerminatedBuf;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -1194,7 +1195,23 @@ fn read_file_or_stdin(input: &Path) -> anyhow::Result<NullTerminatedBuf> {
     }
 }
 
-fn run(opt: &Options) -> anyhow::Result<()> {
+/// TransformStatus indicates whether there were parse or validation errors
+/// when processing the input.
+///
+/// This may be a little confusing at first - why not just use std::Result like
+/// a normal person??? The key is to understand that even though parse or
+/// validation errors are called "errors", they are actually legitimately
+/// expected output of a compiler. They are unlike, for example, a missing file
+/// or an invalid URL. They have their own UI (that may display multiple errors,
+/// colorize them, etc) and don't go through the std::error::Error flow.
+enum TransformStatus {
+    // Compilation completed successfully.
+    Success,
+    // There were parse or validation errors.
+    Error,
+}
+
+fn run(opt: &Options) -> anyhow::Result<TransformStatus> {
     let mut ctx = ast::Context::new();
     let file_id = ctx.sm_mut().add_source(
         opt.input_path.display().to_string(),
@@ -1211,6 +1228,10 @@ fn run(opt: &Options) -> anyhow::Result<()> {
         },
         &buf,
     );
+    if let Some(e) = parsed.first_error() {
+        ctx.sm().error(SourceRange::from_loc(file_id, e.0), e.1);
+        return Ok(TransformStatus::Error);
+    }
 
     // Convert to Juno AST.
     let (ast, sem) = {
@@ -1232,8 +1253,20 @@ fn run(opt: &Options) -> anyhow::Result<()> {
             sema::resolve_module(&lock, module, SourceId(0), &resolver),
         )
     };
+
+    if ctx.sm().num_errors() != 0 || ctx.sm().num_warnings() != 0 {
+        eprintln!(
+            "{} error(s), {} warning(s)",
+            ctx.sm().num_errors(),
+            ctx.sm().num_warnings()
+        );
+    }
+    if ctx.sm().num_errors() != 0 {
+        return Ok(TransformStatus::Error);
+    }
+
     Compiler::compile(*opt.debug, &mut stdout(), ctx, ast, Rc::new(sem));
-    Ok(())
+    Ok(TransformStatus::Success)
 }
 
 fn main() {
