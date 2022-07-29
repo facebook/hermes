@@ -45,6 +45,9 @@ use std::rc::Rc;
 struct Options {
     /// Input file to parse.
     input_path: Opt<PathBuf>,
+
+    /// Whether to emit #line statements.
+    debug: Opt<bool>,
 }
 
 impl Options {
@@ -55,6 +58,16 @@ impl Options {
                 OptDesc {
                     desc: Some("'input-path'"),
                     min_count: 1,
+                    ..Default::default()
+                },
+            ),
+
+            debug: Opt::new_flag(
+                cl,
+                OptDesc {
+                    short: Some("g"),
+                    desc: Some("Emit #line statements"),
+                    init: Some(false),
                     ..Default::default()
                 },
             ),
@@ -211,6 +224,12 @@ impl CompilerStrings {
 struct Compiler<'w> {
     writer: Writer<'w>,
     sem: Rc<SemContext>,
+    /// Whether to emit line statements or just comments.
+    debug: bool,
+    /// File of last emitted statement.
+    last_stmt_file: SourceId,
+    /// Start line of last emitted statement.
+    last_stmt_line: u32,
     /// The number of ValueIds that have been created so far. This is also used
     /// to give a unique index to each one.
     num_values: usize,
@@ -235,7 +254,13 @@ impl Compiler<'_> {
         find_escapes.escaped_decls
     }
 
-    pub fn compile(out: &mut dyn Write, mut ctx: ast::Context, ast: NodeRc, sem: Rc<SemContext>) {
+    pub fn compile(
+        debug: bool,
+        out: &mut dyn Write,
+        mut ctx: ast::Context,
+        ast: NodeRc,
+        sem: Rc<SemContext>,
+    ) {
         let lock = ast::GCLock::new(&mut ctx);
         let writer = Writer {
             out: BufWriter::new(out),
@@ -244,6 +269,9 @@ impl Compiler<'_> {
         let mut comp = Compiler {
             writer,
             sem,
+            debug,
+            last_stmt_file: SourceId::INVALID,
+            last_stmt_line: 0,
             num_values: 0,
             escaped_decls,
             compiler_strings: Default::default(),
@@ -1014,6 +1042,25 @@ impl Compiler<'_> {
         scope: LexicalScopeId,
         lock: &'gc ast::GCLock,
     ) {
+        let r = *node.range();
+        if r.file.is_valid()
+            && r.start.line != 0
+            && (r.file != self.last_stmt_file || r.start.line != self.last_stmt_line)
+        {
+            out!(
+                self,
+                "\n{} {}",
+                if self.debug { "#line" } else { "// line" },
+                r.start.line
+            );
+            if r.file != self.last_stmt_file {
+                out!(self, " {:?}", lock.sm().source_name(r.file));
+            }
+            out!(self, "\n");
+            self.last_stmt_file = r.file;
+            self.last_stmt_line = r.start.line;
+        }
+
         use ast::*;
         match node {
             Node::BlockStatement(BlockStatement { body, .. }) => {
@@ -1185,7 +1232,7 @@ fn run(opt: &Options) -> anyhow::Result<()> {
             sema::resolve_module(&lock, module, SourceId(0), &resolver),
         )
     };
-    Compiler::compile(&mut stdout(), ctx, ast, Rc::new(sem));
+    Compiler::compile(*opt.debug, &mut stdout(), ctx, ast, Rc::new(sem));
     Ok(())
 }
 
