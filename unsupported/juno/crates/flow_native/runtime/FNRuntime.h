@@ -159,6 +159,8 @@ struct FNObject {
   std::unordered_map<std::string, FNValue> props;
   FNObject *parent{};
 
+  FNValue getByName(const std::string &key);
+  void putByName(const std::string &key, FNValue val);
   FNValue getByVal(FNValue key);
   void putByVal(FNValue key, FNValue val);
 

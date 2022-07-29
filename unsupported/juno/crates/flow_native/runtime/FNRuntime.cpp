@@ -11,16 +11,24 @@
 
 const FNString fn_prototype_str{"prototype"};
 
+FNValue FNObject::getByName(const std::string &key) {
+  auto *cur = this;
+  do {
+    auto it = cur->props.find(key);
+    if (it != cur->props.end())
+      return it->second;
+    cur = cur->parent;
+  } while (cur);
+  return FNValue::encodeUndefined();
+}
+
+void FNObject::putByName(const std::string &key, FNValue val) {
+  props[key] = val;
+}
+
 FNValue FNObject::getByVal(FNValue key) {
   if (key.isString()) {
-    auto *cur = this;
-    do {
-      auto it = cur->props.find(key.getString()->str);
-      if (it != cur->props.end())
-        return it->second;
-      cur = cur->parent;
-    } while (cur);
-    return FNValue::encodeUndefined();
+    return getByName(key.getString()->str);
   } else {
     auto &arr = static_cast<FNArray *>(this)->arr;
     double n = key.getNumber();
@@ -31,9 +39,9 @@ FNValue FNObject::getByVal(FNValue key) {
 }
 
 void FNObject::putByVal(FNValue key, FNValue val) {
-  if (key.isString())
-    props[key.getString()->str] = val;
-  else {
+  if (key.isString()) {
+    putByName(key.getString()->str, val);
+  } else {
     auto &arr = static_cast<FNArray *>(this)->arr;
     double n = key.getNumber();
     if (arr.size() <= n)
