@@ -89,15 +89,16 @@ struct FNPredefined {
 // purposes. It will mostly be deleted once we have real type checking.
 class FNValue {
   FNType tag;
-  uint64_t value;
+  union {
+    double num;
+    uint64_t u64;
+    FNObject *obj;
+    const FNString *str;
+  } value;
 
   static_assert(
       sizeof(value) >= sizeof(uintptr_t),
       "Value must be able to fit a pointer.");
-
-  void *getPointer() const {
-    return reinterpret_cast<FNString *>(static_cast<uintptr_t>(value));
-  }
 
  public:
   bool isUndefined() const {
@@ -127,76 +128,74 @@ class FNValue {
 
   double getNumber() const {
     assert(isNumber());
-    double num;
-    memcpy(&num, &value, sizeof(double));
-    return num;
+    return value.num;
   }
   bool getBool() const {
     assert(isBool() || isNumber() || isUndefined() || isNull());
-    return value;
+    uint64_t r;
+    memcpy(&r, &value, sizeof(r));
+    return r;
   }
   const FNString *getString() const {
     assert(isString());
-    return reinterpret_cast<const FNString *>(value);
+    return value.str;
   }
   FNObject *getObject() const {
     assert(isObject() || isClosure());
-    return reinterpret_cast<FNObject *>(value);
+    return value.obj;
   }
-  FNClosure *getClosure() const {
-    assert(isClosure());
-    return reinterpret_cast<FNClosure *>(value);
-  }
+  inline FNClosure *getClosure() const;
 
   static FNValue encodeUndefined() {
     FNValue ret;
     ret.tag = FNType::Undefined;
     // Explicitly initialize value so we can reliably test for equality.
-    ret.value = 0;
+    ret.value.u64 = 0;
     return ret;
   }
   static FNValue encodeNull() {
     FNValue ret;
     ret.tag = FNType::Null;
     // Explicitly initialize value so we can reliably test for equality.
-    ret.value = 0;
+    ret.value.u64 = 0;
     return ret;
   }
   static FNValue encodeNumber(double num) {
     FNValue ret;
     ret.tag = FNType::Number;
-    uint64_t bits;
-    memcpy(&bits, &num, sizeof(double));
-    ret.value = bits;
+    ret.value.num = num;
     return ret;
   }
   static FNValue encodeBool(bool b) {
     FNValue ret;
     ret.tag = FNType::Bool;
-    ret.value = b;
+    ret.value.u64 = b;
     return ret;
   }
   static FNValue encodeString(const FNString *str) {
     FNValue ret;
     ret.tag = FNType::String;
-    ret.value = reinterpret_cast<uint64_t>(str);
+    ret.value.str = str;
     return ret;
   }
   static FNValue encodeObject(FNObject *obj) {
     FNValue ret;
     ret.tag = FNType::Object;
-    ret.value = reinterpret_cast<uint64_t>(obj);
+    ret.value.obj = obj;
     return ret;
   }
-  static FNValue encodeClosure(FNClosure *closure) {
-    FNValue ret;
-    ret.tag = FNType::Closure;
-    ret.value = reinterpret_cast<uint64_t>(closure);
-    return ret;
-  }
+  static inline FNValue encodeClosure(FNClosure *closure);
 
   static bool isEqual(FNValue a, FNValue b) {
-    return a.tag == b.tag && a.value == b.value;
+    // return a.tag == b.tag && memcmp(a.v, b.v, sizeof(a.v)) == 0;
+    // NOTE: had to use this clumsier version because old GCC versions don't
+    // inline memcmp().
+    if (a.tag != b.tag)
+      return false;
+    uint64_t x, y;
+    memcpy(&x, &a.value, sizeof(x));
+    memcpy(&y, &b.value, sizeof(y));
+    return x == y;
   }
 
   static const FNString *typeOf(FNValue v);
@@ -284,6 +283,17 @@ struct FNArray : public FNObject {
 
   fn_vector<FNValue> arr;
 };
+
+inline FNClosure *FNValue::getClosure() const {
+  assert(isClosure());
+  return static_cast<FNClosure *>(value.obj);
+}
+inline FNValue FNValue::encodeClosure(FNClosure *closure) {
+  FNValue ret;
+  ret.tag = FNType::Closure;
+  ret.value.obj = closure;
+  return ret;
+}
 
 FNObject *global();
 
