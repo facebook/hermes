@@ -71,14 +71,6 @@ static opt<int64_t, false, RandomSeedParser> GCSanitizeRandomSeed(
 #endif
 );
 
-static opt<bool> GCRandomizeAllocSpace(
-    "gc-randomize-alloc-space",
-    desc(
-        "For GC's, like GenGC, that can allocate in different spaces, randomize "
-        "the choice of space."),
-    cat(GCCategory),
-    init(false));
-
 static opt<MemorySize, false, MemorySizeParser> MinHeapSize(
     "gc-min-heap",
     desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),

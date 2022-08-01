@@ -796,12 +796,6 @@ class GCBase {
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
 
-  /// \return true if the "target space" for allocations should be randomized
-  /// (for GCs where that concept makes sense).
-  bool shouldRandomizeAllocSpace() const {
-    return randomizeAllocSpace_;
-  }
-
   /// Name to identify this heap in logs.
   const std::string &getName() const {
     return name_;
@@ -1575,14 +1569,6 @@ class GCBase {
 
   /// True if the tripwire has already been called on this heap.
   bool tripwireCalled_{false};
-
-/// Whether to randomize the "target space" for allocations, for GC's in which
-/// this concept makes sense. Only available in debug builds.
-#ifndef NDEBUG
-  bool randomizeAllocSpace_{false};
-#else
-  static const bool randomizeAllocSpace_{false};
-#endif
 };
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM

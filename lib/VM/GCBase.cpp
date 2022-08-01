@@ -60,12 +60,7 @@ GCBase::GCBase(
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
-      tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
-#ifndef NDEBUG
-      ,
-      randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
-#endif
-{
+      tripwireLimit_(gcConfig.getTripwireConfig().getLimit()) {
   for (unsigned i = 0; i < (unsigned)XorPtrKeyID::_NumKeys; ++i) {
     pointerEncryptionKey_[i] = std::random_device()();
     if constexpr (sizeof(uintptr_t) >= 8) {

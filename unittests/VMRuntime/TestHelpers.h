@@ -38,10 +38,8 @@ static constexpr uint32_t kInitHeapLarge = 1 << 20;
 static constexpr uint32_t kMaxHeapLarge = 1 << 24;
 
 static const GCConfig::Builder kTestGCConfigBaseBuilder =
-    GCConfig::Builder()
-        .withSanitizeConfig(
-            vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build())
-        .withShouldRandomizeAllocSpace(false);
+    GCConfig::Builder().withSanitizeConfig(
+        vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build());
 
 static const GCConfig kTestGCConfigSmall =
     GCConfig::Builder(kTestGCConfigBaseBuilder)
