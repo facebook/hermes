@@ -337,13 +337,6 @@ class GCBase {
 #endif
   };
 
-  /// Struct that keeps a reference to a GC.  Useful, for example, as a base
-  /// class of Acceptors that need access to the GC.
-  struct GCRef {
-    GC &gc;
-    GCRef(GC &gc) : gc(gc) {}
-  };
-
   /// Stats for collections. Time unit, where applicable, is seconds.
   struct CumulativeHeapStats {
     unsigned numCollections{0};
@@ -765,13 +758,6 @@ class GCBase {
     /// node.
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
   };
-
-#ifndef NDEBUG
-  /// Whether the last allocation was fixed size.  For long-lived
-  /// allocations, we do not declare whether they are fixed size;
-  /// Unknown is used in that case.
-  enum class FixedSizeValue { Yes, No, Unknown };
-#endif
 
   enum class HeapKind { HadesGC, MallocGC };
 
@@ -1279,18 +1265,6 @@ class GCBase {
   /// \p getObjectID for that.
   uint64_t nextObjectID();
 #endif
-
-  using TimePoint = std::chrono::steady_clock::time_point;
-  /// Return the difference between the two time points (end - start)
-  /// as a double representing the number of seconds in the duration.
-  static double clockDiffSeconds(TimePoint start, TimePoint end);
-
-  /// Return the difference between the two durations (end - start) given in
-  /// microseconds as a double representing the number of seconds in the
-  /// difference.
-  static double clockDiffSeconds(
-      std::chrono::microseconds start,
-      std::chrono::microseconds end);
 
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.

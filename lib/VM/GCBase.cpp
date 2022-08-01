@@ -17,7 +17,6 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
-#include "hermes/VM/WeakRefSlot-inline.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"
@@ -1070,20 +1069,6 @@ uint64_t GCBase::nextObjectID() {
 
 const GCExecTrace &GCBase::getGCExecTrace() const {
   return execTrace_;
-}
-
-/*static*/
-double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
-  std::chrono::duration<double> elapsed = (end - start);
-  return elapsed.count();
-}
-
-/*static*/
-double GCBase::clockDiffSeconds(
-    std::chrono::microseconds start,
-    std::chrono::microseconds end) {
-  std::chrono::duration<double> elapsed = (end - start);
-  return elapsed.count();
 }
 
 llvh::raw_ostream &operator<<(
