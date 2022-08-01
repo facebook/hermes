@@ -1487,6 +1487,10 @@ class GCBase {
   /// Whether or not a GC cycle is currently occurring.
   bool inGC_{false};
 
+  /// Whether the GC has OOMed. Currently only useful for understanding crash
+  /// dumps, particularly when HERMESVM_EXCEPTION_ON_OOM is set.
+  bool hasOOMed_{false};
+
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end
   /// and subtract.  The "runtimeWillExecute" method is called at

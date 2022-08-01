@@ -875,6 +875,7 @@ void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
 }
 
 void GCBase::oom(std::error_code reason) {
+  hasOOMed_ = true;
   char detailBuffer[400];
   oomDetail(detailBuffer, reason);
 #ifdef HERMESVM_EXCEPTION_ON_OOM

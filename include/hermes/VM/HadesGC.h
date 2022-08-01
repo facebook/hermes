@@ -760,6 +760,10 @@ class HadesGC final : public GCBase {
   /// collection, as well as the time an OG collection takes.
   std::unique_ptr<CollectionStats> ogCollectionStats_;
 
+  /// Cumulative stats for each type of collection.
+  CumulativeHeapStats ogCumulativeStats_;
+  CumulativeHeapStats ygCumulativeStats_;
+
   /// The weighted average of the number of bytes that are promoted to the OG in
   /// each YG collection.
   ExponentialMovingAverage ygAverageSurvivalBytes_;
@@ -840,6 +844,9 @@ class HadesGC final : public GCBase {
   /// progress, this shared_ptr will keep the compactee segment alive until the
   /// end of sweeping.
   std::shared_ptr<HeapSegment> compacteeHandleForSweep_;
+
+  /// The number of compactions this GC has performed.
+  size_t numCompactions_{0};
 
   struct NativeIDs {
     HeapSnapshot::NodeID ygFinalizables{IDTracker::kInvalidNode};

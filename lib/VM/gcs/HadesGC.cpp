@@ -1453,6 +1453,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.emitKeyValue("collector", getKindAsStr());
   json.emitKey("stats");
   json.openDict();
+  json.emitKeyValue("Num compactions", numCompactions_);
   json.closeDict();
   json.closeDict();
 }
@@ -1540,8 +1541,6 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
-  if (ogCollectionStats_)
-    recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
   ogCollectionStats_ =
       std::make_unique<CollectionStats>(*this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
@@ -2480,6 +2479,7 @@ void HadesGC::youngGenCollection(
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
+      numCompactions_++;
       ygCollectionStats_->addCollectionType("compact");
       // We can use the total amount of external memory in the OG before and
       // after running finalizers to measure how much external memory has been
@@ -2579,7 +2579,9 @@ void HadesGC::youngGenCollection(
 #endif
   ygCollectionStats_->setEndTime();
   ygCollectionStats_->endCPUTimeSection();
-  recordGCStats(std::move(*ygCollectionStats_).getEvent(), true);
+  auto statsEvent = std::move(*ygCollectionStats_).getEvent();
+  recordGCStats(statsEvent, true);
+  recordGCStats(statsEvent, &ygCumulativeStats_, true);
   ygCollectionStats_.reset();
 }
 
@@ -2643,7 +2645,9 @@ void HadesGC::checkTripwireAndSubmitStats() {
   // We use the amount of live data from after a GC completed as the minimum
   // bound of what is live.
   checkTripwire(usedBytes);
-  recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
+  auto event = std::move(*ogCollectionStats_).getEvent();
+  recordGCStats(event, false);
+  recordGCStats(event, &ogCumulativeStats_, false);
   ogCollectionStats_.reset();
 }
 
