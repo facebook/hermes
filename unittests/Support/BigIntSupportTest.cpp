@@ -379,39 +379,37 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
   EXPECT_TRUE(dropExtraSignBits(llvh::ArrayRef<uint8_t>()).empty());
 
   // Special cases: sequence of zeros => empty sequence
-  EXPECT_TRUE(dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0})).empty());
+  EXPECT_TRUE(dropExtraSignBits(llvh::ArrayRef<uint8_t>({0})).empty());
 
-  EXPECT_TRUE(dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0, 0})).empty());
+  EXPECT_TRUE(dropExtraSignBits(llvh::ArrayRef<uint8_t>({0, 0})).empty());
 
-  EXPECT_TRUE(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0, 0, 0})).empty());
+  EXPECT_TRUE(dropExtraSignBits(llvh::ArrayRef<uint8_t>({0, 0, 0})).empty());
 
-  EXPECT_TRUE(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0, 0, 0, 0})).empty());
+  EXPECT_TRUE(dropExtraSignBits(llvh::ArrayRef<uint8_t>({0, 0, 0, 0})).empty());
 
   EXPECT_TRUE(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0, 0, 0, 0, 0})).empty());
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>({0, 0, 0, 0, 0})).empty());
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0x7f})),
-      llvh::makeArrayRef<uint8_t>({0x7f}));
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>({0x7f})),
+      llvh::ArrayRef<uint8_t>({0x7f}));
 
   EXPECT_EQ(
       dropExtraSignBits(
-          llvh::makeArrayRef<uint8_t>({0x7f, 0x00, 0x00, 0x00, 0x00})),
-      llvh::makeArrayRef<uint8_t>({0x7f}));
+          llvh::ArrayRef<uint8_t>({0x7f, 0x00, 0x00, 0x00, 0x00})),
+      llvh::ArrayRef<uint8_t>({0x7f}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff})),
-      llvh::makeArrayRef<uint8_t>({0xff}));
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff})),
+      llvh::ArrayRef<uint8_t>({0xff}));
 
   EXPECT_EQ(
       dropExtraSignBits(
-          llvh::makeArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff})),
-      llvh::makeArrayRef<uint8_t>({0xff}));
+          llvh::ArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff})),
+      llvh::ArrayRef<uint8_t>({0xff}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>(
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
           {0x00,
            0x01,
            0x02,
@@ -426,11 +424,11 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
            0x00,
            0x00,
            0x00})),
-      llvh::makeArrayRef<uint8_t>(
+      llvh::ArrayRef<uint8_t>(
           {0x00, 0x01, 0x02, 0x03, 0x03, 0x00, 0x00, 0x00, 0x02}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>(
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
           {0x80,
            0x81,
            0x82,
@@ -445,16 +443,16 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
            0xff,
            0xff,
            0xff})),
-      llvh::makeArrayRef<uint8_t>(
+      llvh::ArrayRef<uint8_t>(
           {0x80, 0x81, 0x82, 0x83, 0x89, 0x00, 0x00, 0x00, 0x8a}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>(
-          {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f})),
-      llvh::makeArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}));
+      dropExtraSignBits(
+          llvh::ArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f})),
+      llvh::ArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::makeArrayRef<uint8_t>(
+      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
           {0x00,
            0x00,
            0x00,
@@ -468,7 +466,7 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
            0x00,
            0x00,
            0x80})),
-      llvh::makeArrayRef<uint8_t>(
+      llvh::ArrayRef<uint8_t>(
           {0x00,
            0x00,
            0x00,
