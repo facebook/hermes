@@ -326,7 +326,7 @@ class JSObject : public GCCell {
       NeedsBarriers needsBarriers)
       : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
         clazz_(runtime, clazz, runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
+        propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -338,7 +338,7 @@ class JSObject : public GCCell {
       NeedsBarriers needsBarriers)
       : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
         clazz_(runtime, *clazz, runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
+        propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
