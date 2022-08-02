@@ -13,7 +13,7 @@ namespace hermes {
 namespace irgen {
 
 void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
-  LLVM_DEBUG(dbgs() << "IRGen 'try' statement\n");
+  LLVM_DEBUG(llvh::dbgs() << "IRGen 'try' statement\n");
 
   // try-catch-finally statements must have been transformed by the validator
   // into two nested try statements with only "catch" or "finally" each.

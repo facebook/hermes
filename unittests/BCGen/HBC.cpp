@@ -27,6 +27,8 @@
 
 #define DEBUG_TYPE "hbc-unittests"
 
+using llvh::dbgs;
+
 using namespace hermes;
 using namespace hermes::hbc;
 

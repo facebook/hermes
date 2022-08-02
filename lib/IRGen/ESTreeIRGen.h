@@ -20,7 +20,6 @@
 // Use this value to enable debug logging from the command line.
 #define DEBUG_TYPE "irgen"
 
-using llvh::dbgs;
 using llvh::dyn_cast_or_null;
 
 namespace hermes {

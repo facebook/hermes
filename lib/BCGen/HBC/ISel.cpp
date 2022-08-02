@@ -22,6 +22,7 @@
 using namespace hermes;
 using namespace hbc;
 
+using llvh::dbgs;
 using llvh::Optional;
 
 #define INCLUDE_HBC_INSTRS

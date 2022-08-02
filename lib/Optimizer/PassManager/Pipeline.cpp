@@ -19,6 +19,8 @@
 
 #define DEBUG_TYPE "pipeline"
 
+using llvh::dbgs;
+
 bool hermes::runCustomOptimizationPasses(
     Module &M,
     const std::vector<std::string> &Opts) {
