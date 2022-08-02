@@ -8,17 +8,15 @@
 #ifndef HERMES_SUPPORT_SCOPECHAIN_H
 #define HERMES_SUPPORT_SCOPECHAIN_H
 
-#include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <vector>
 
 namespace hermes {
-using llvh::StringRef;
-
 /// A ScopeChainItem represents variables available in a scope.
 struct ScopeChainItem {
   /// List of variables in this function.
-  std::vector<StringRef> variables;
+  std::vector<llvh::StringRef> variables;
 };
 /// A ScopeChain is a sequence of nested ScopeChainItems, from innermost to
 /// outermost scopes.

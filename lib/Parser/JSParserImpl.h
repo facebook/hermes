@@ -19,6 +19,7 @@
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
 #include "llvh/Support/DataTypes.h"
 
 #include <utility>
@@ -90,7 +91,7 @@ class JSParserImpl {
 
   explicit JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass);
 
-  JSParserImpl(Context &context, StringRef input)
+  JSParserImpl(Context &context, llvh::StringRef input)
       : JSParserImpl(
             context,
             llvh::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}

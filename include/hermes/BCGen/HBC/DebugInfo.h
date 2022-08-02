@@ -17,6 +17,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
+#include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Format.h"
 
 #include <string>
@@ -208,7 +209,7 @@ class DebugInfo {
 
   /// Read variable names at \p offset into the lexical data section
   /// of the debug info. \return the list of variable names.
-  llvh::SmallVector<StringRef, 4> getVariableNames(uint32_t offset) const;
+  llvh::SmallVector<llvh::StringRef, 4> getVariableNames(uint32_t offset) const;
 
   /// Reads out the parent function ID of the function whose lexical debug data
   /// starts at \p offset. \return the ID of the parent function, or None if

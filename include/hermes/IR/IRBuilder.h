@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -72,7 +73,7 @@ class IRBuilder {
 
   /// Create a new Function and add it to the Module.
   Function *createFunction(
-      StringRef OriginalName,
+      llvh::StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
       SourceVisibility sourceVisibility = SourceVisibility::Default,
@@ -130,14 +131,14 @@ class IRBuilder {
       bool declared);
   /// Create a new global object property.
   GlobalObjectProperty *createGlobalObjectProperty(
-      StringRef name,
+      llvh::StringRef name,
       bool declared);
 
   /// Add a new parameter to function \p Parent.
   Parameter *createParameter(Function *Parent, Identifier Name);
 
   /// Add a new parameter to function \p Parent.
-  Parameter *createParameter(Function *Parent, StringRef Name);
+  Parameter *createParameter(Function *Parent, llvh::StringRef Name);
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(
@@ -149,7 +150,7 @@ class IRBuilder {
   Variable *createVariable(
       VariableScope *Parent,
       Variable::DeclKind declKind,
-      StringRef Name);
+      llvh::StringRef Name);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
@@ -167,7 +168,7 @@ class IRBuilder {
   LiteralBigInt *getLiteralBigInt(UniqueString *value);
 
   /// Create a new literal string of value \p value.
-  LiteralString *getLiteralString(StringRef value);
+  LiteralString *getLiteralString(llvh::StringRef value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);
@@ -190,8 +191,8 @@ class IRBuilder {
   /// Return the EmptySentinel value.
   EmptySentinel *getEmptySentinel();
 
-  /// Convert StringRef to Identifier.
-  Identifier createIdentifier(StringRef str);
+  /// Convert llvh::StringRef to Identifier.
+  Identifier createIdentifier(llvh::StringRef str);
 
   //--------------------------------------------------------------------------//
   //                          Statefull APIs.                                 //
@@ -269,7 +270,7 @@ class IRBuilder {
 
   ReturnInst *createReturnInst(Value *Val);
 
-  AllocStackInst *createAllocStackInst(StringRef varName);
+  AllocStackInst *createAllocStackInst(llvh::StringRef varName);
 
   AllocStackInst *createAllocStackInst(Identifier varName);
 
@@ -353,16 +354,18 @@ class IRBuilder {
       PropEnumerable isEnumerable);
   DeletePropertyInst *createDeletePropertyInst(
       Value *object,
-      StringRef property);
+      llvh::StringRef property);
 
-  LoadPropertyInst *createLoadPropertyInst(Value *object, StringRef property);
+  LoadPropertyInst *createLoadPropertyInst(
+      Value *object,
+      llvh::StringRef property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
-      StringRef property);
+      llvh::StringRef property);
 
   StorePropertyInst *createStorePropertyInst(
       Value *storedValue,
       Value *object,
-      StringRef property);
+      llvh::StringRef property);
 
   DeletePropertyInst *createDeletePropertyInst(
       Value *object,

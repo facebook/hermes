@@ -356,7 +356,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
     else
       newLength = Builder.getLiteralNumber(count);
     Builder.createStorePropertyInst(
-        newLength, allocArrayInst, StringRef("length"));
+        newLength, allocArrayInst, llvh::StringRef("length"));
   }
   return allocArrayInst;
 }
@@ -652,7 +652,7 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
 }
 
 /// Convert a property key node to its JavaScript string representation.
-static StringRef propertyKeyAsString(
+static llvh::StringRef propertyKeyAsString(
     llvh::SmallVectorImpl<char> &storage,
     ESTree::Node *Key) {
   // Handle String Literals.
@@ -674,11 +674,11 @@ static StringRef propertyKeyAsString(
     LLVM_DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     storage.resize(NUMBER_TO_STRING_BUF_SIZE);
     auto len = numberToString(Lit->_value, storage.data(), storage.size());
-    return StringRef(storage.begin(), len);
+    return llvh::StringRef(storage.begin(), len);
   }
 
   llvm_unreachable("Don't know this kind of property key");
-  return StringRef();
+  return llvh::StringRef();
 }
 
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
@@ -837,7 +837,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       // iteration.
       stringStorage.clear();
 
-      StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+      llvh::StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
       auto *Key = Builder.getLiteralString(keyStr);
       assert(
           propMap[keyStr].valueNode == prop->_value &&
@@ -922,7 +922,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       continue;
     }
 
-    StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+    llvh::StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
 
     if (prop == protoProperty) {
       // This is the first definition of __proto__. If we already used it
@@ -1672,7 +1672,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
   LLVM_DEBUG(
       dbgs() << "Found variable " << StrName << " in function \""
              << (llvh::isa<GlobalObjectProperty>(Var)
-                     ? StringRef("global")
+                     ? llvh::StringRef("global")
                      : cast<Variable>(Var)
                            ->getParent()
                            ->getFunction()

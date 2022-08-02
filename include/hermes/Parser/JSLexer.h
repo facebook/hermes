@@ -17,6 +17,7 @@
 
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/SmallString.h"
+#include "llvh/ADT/StringRef.h"
 
 #include <functional>
 #include <utility>
@@ -131,8 +132,8 @@ class Token {
     return range_;
   }
 
-  StringRef inputStr() const {
-    return StringRef(
+  llvh::StringRef inputStr() const {
+    return llvh::StringRef(
         range_.Start.getPointer(),
         range_.End.getPointer() - range_.Start.getPointer());
   }
@@ -306,21 +307,21 @@ class StoredComment {
   }
 
   /// \return the comment with delimiters (//, /*, */, #!) stripped,
-  /// as a StringRef which points into the source buffer.
-  StringRef getString() const {
+  /// as a llvh::StringRef which points into the source buffer.
+  llvh::StringRef getString() const {
     // Ignore opening delimiter.
     const char *start = range_.Start.getPointer() + 2;
     // Conditionally ignore closing delimiter.
     const char *end = kind_ == Kind::Block ? range_.End.getPointer() - 2
                                            : range_.End.getPointer();
     assert(end >= start && "invalid comment range");
-    return StringRef{start, (size_t)(end - start)};
+    return llvh::StringRef{start, (size_t)(end - start)};
   }
 
   /// \return the comment with delimiters (//, /*, */, #!) included,
-  /// as a StringRef which points into the source buffer.
-  StringRef getFullString() const {
-    return StringRef{
+  /// as a llvh::StringRef which points into the source buffer.
+  llvh::StringRef getFullString() const {
+    return llvh::StringRef{
         range_.Start.getPointer(),
         (size_t)(range_.End.getPointer() - range_.Start.getPointer())};
   }
@@ -377,7 +378,7 @@ class JSLexer {
 
 #if HERMES_PARSE_JSX
   /// Table of HTML entity names to their corresponding unicode code point.
-  const llvh::DenseMap<StringRef, uint32_t> &htmlEntities_;
+  const llvh::DenseMap<llvh::StringRef, uint32_t> &htmlEntities_;
 #endif
 
   bool strictMode_;
@@ -449,7 +450,7 @@ class JSLexer {
 
   /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
-      StringRef input,
+      llvh::StringRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
@@ -595,11 +596,11 @@ class JSLexer {
   ///   otherwise return None.
   OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
 
-  UniqueString *getIdentifier(StringRef name) {
+  UniqueString *getIdentifier(llvh::StringRef name) {
     return strTab_.getString(name);
   }
 
-  UniqueString *getStringLiteral(StringRef str) {
+  UniqueString *getStringLiteral(llvh::StringRef str) {
     if (LLVM_UNLIKELY(convertSurrogates_)) {
       return convertSurrogatesInString(str);
     }
@@ -926,7 +927,7 @@ class JSLexer {
 
   /// Convert the surrogates into \p str into a valid UTF-8 sequence, and unique
   /// it into the string table.
-  UniqueString *convertSurrogatesInString(StringRef str);
+  UniqueString *convertSurrogatesInString(llvh::StringRef str);
 
   /// Set the current token kind to \p kind without any checks and seek to
   /// \p loc.

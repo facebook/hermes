@@ -61,13 +61,13 @@ void Value::destroy(Value *V) {
   }
 }
 
-StringRef Value::getKindStr() const {
+llvh::StringRef Value::getKindStr() const {
   switch (Kind) {
     default:
       llvm_unreachable("Invalid kind");
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
-    return StringRef(#XX);
+    return llvh::StringRef(#XX);
 #include "hermes/IR/ValueKinds.def"
   }
 }
@@ -406,7 +406,7 @@ void Function::eraseFromParentNoDestroy() {
   getParent()->getFunctionList().remove(getIterator());
 }
 
-StringRef Instruction::getName() {
+llvh::StringRef Instruction::getName() {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");

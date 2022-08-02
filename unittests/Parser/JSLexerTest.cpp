@@ -199,7 +199,7 @@ TEST(JSLexerTest, NumberTest) {
     const Token *tok = lex.advance();                                    \
     ASSERT_EQ(TokenKind::numeric_literal, tok->getKind());               \
                                                                          \
-    StringRef(#num).getAsInteger(0, ival);                               \
+    llvh::StringRef(#num).getAsInteger(0, ival);                         \
     fval.convertFromAPInt(ival, false, APFloat::rmNearestTiesToEven);    \
     fval.toString(expected);                                             \
     APFloat(tok->getNumericLiteral()).toString(actual);                  \

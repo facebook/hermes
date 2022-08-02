@@ -12,6 +12,7 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Timer.h"
 
+#include "llvh/ADT/StringRef.h"
 #include "llvh/ADT/StringSwitch.h"
 #include "llvh/Support/Debug.h"
 
@@ -44,7 +45,7 @@ class PassManager {
 #include "Passes.def"
 
   /// Add a pass by name.
-  bool addPassForName(StringRef name) {
+  bool addPassForName(llvh::StringRef name) {
 #define PASS(ID, NAME, DESCRIPTION) \
   if (name == NAME) {               \
     add##ID();                      \

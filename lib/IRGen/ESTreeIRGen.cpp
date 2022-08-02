@@ -602,7 +602,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
 }
 
 Value *ESTreeIRGen::genHermesInternalCall(
-    StringRef name,
+    llvh::StringRef name,
     Value *thisValue,
     ArrayRef<Value *> args) {
   return Builder.createCallInst(
@@ -618,7 +618,7 @@ Value *ESTreeIRGen::genBuiltinCall(
   return Builder.createCallBuiltinInst(builtinIndex, args);
 }
 
-void ESTreeIRGen::emitEnsureObject(Value *value, StringRef message) {
+void ESTreeIRGen::emitEnsureObject(Value *value, llvh::StringRef message) {
   // TODO: use "thisArg" when builtins get fixed to support it.
   genBuiltinCall(
       BuiltinMethod::HermesBuiltin_ensureObject,

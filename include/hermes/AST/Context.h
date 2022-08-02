@@ -13,6 +13,8 @@
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 
+#include "llvh/ADT/StringRef.h"
+
 namespace hermes {
 
 namespace hbc {
@@ -288,7 +290,7 @@ class Context {
   }
 
   /// Return the textual representation of the identifier.
-  StringRef toString(Identifier iden) {
+  llvh::StringRef toString(Identifier iden) {
     return iden.str();
   }
 

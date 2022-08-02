@@ -1537,10 +1537,10 @@ class UnaryOperatorInst : public SingleOperandInst {
 
   // Convert the operator string \p into the enum representation or assert
   // fail if the string is invalud.
-  static OpKind parseOperator(StringRef op);
+  static OpKind parseOperator(llvh::StringRef op);
 
   /// \return the string representation of the operator.
-  StringRef getOperatorStr() {
+  llvh::StringRef getOperatorStr() {
     return opStringRepr[static_cast<int>(op_)];
   }
 
@@ -1628,18 +1628,18 @@ class BinaryOperatorInst : public Instruction {
 
   // Convert the operator string \p into the enum representation or assert
   // fail if the string is invalud.
-  static OpKind parseOperator(StringRef op);
+  static OpKind parseOperator(llvh::StringRef op);
 
   // Convert the assignment operator string \p into the enum representation or
   // assert fail if the string is invalud.
-  static OpKind parseAssignmentOperator(StringRef op);
+  static OpKind parseAssignmentOperator(llvh::StringRef op);
 
   // Get the operator that allows you to swap the operands, if one exists.
   // >= becomes <= and + becomes +.
   static llvh::Optional<OpKind> tryGetReverseOperator(OpKind op);
 
   /// \return the string representation of the operator.
-  StringRef getOperatorStr() {
+  llvh::StringRef getOperatorStr() {
     return opStringRepr[static_cast<int>(op_)];
   }
 
@@ -3028,7 +3028,7 @@ class CompareBranchInst : public TerminatorInst {
   }
 
   /// \return the string representation of the operator.
-  StringRef getOperatorStr() {
+  llvh::StringRef getOperatorStr() {
     return BinaryOperatorInst::opStringRepr[static_cast<int>(op_)];
   }
 

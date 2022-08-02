@@ -43,7 +43,7 @@ FunctionContext::~FunctionContext() {
   irGen_->functionContext_ = oldContext_;
 }
 
-Identifier FunctionContext::genAnonymousLabelName(StringRef hint) {
+Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
   llvh::SmallString<16> buf;
   llvh::raw_svector_ostream nameBuilder{buf};
   nameBuilder << "?anon_" << anonymousLabelCounter++ << "_" << hint;
@@ -638,7 +638,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
     Module *M,
     Identifier originalName,
     SMRange sourceRange,
-    StringRef error) {
+    llvh::StringRef error) {
   IRBuilder builder{M};
 
   Function *function = builder.createFunction(

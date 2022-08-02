@@ -24,6 +24,7 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/RegExpSerialization.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace hbc {
@@ -153,7 +154,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Add filename to the filename table.
   /// \return the index of the string.
-  uint32_t addFilename(StringRef filename);
+  uint32_t addFilename(llvh::StringRef filename);
 
   void addExceptionHandler(HBCExceptionHandlerInfo info);
 
@@ -366,18 +367,18 @@ class BytecodeModuleGenerator {
   /// \returns the index of the bigint in this module's bigint table if it
   /// exists.  If the bigint does not exist will trigger an assertion failure
   /// if assertions are enabled.
-  unsigned getBigIntID(StringRef str) const;
+  unsigned getBigIntID(llvh::StringRef str) const;
 
   /// \returns the index of the string in this module's string table if it
   /// exists.  If the string does not exist will trigger an assertion failure
   /// if assertions are enabled.
-  unsigned getStringID(StringRef str) const;
+  unsigned getStringID(llvh::StringRef str) const;
 
   /// \returns the index of the string in this module's string table, assuming
   /// it exists and is an identifier.  If the string does not exist in the
   /// table, or it is not marked as an identifier, an assertion failure will be
   /// triggered, if assertions are enabled.
-  unsigned getIdentifierID(StringRef str) const;
+  unsigned getIdentifierID(llvh::StringRef str) const;
 
   /// Set the string table this generator uses to find the IDs for strings.
   /// Once it is set, this table will not be further modified -- all strings
@@ -395,7 +396,7 @@ class BytecodeModuleGenerator {
 
   /// Add filename to the filename table.
   /// \return the index of the string.
-  uint32_t addFilename(StringRef str);
+  uint32_t addFilename(llvh::StringRef str);
 
   /// Set the segment ID for this module.
   void setSegmentID(uint32_t id) {
