@@ -2396,9 +2396,13 @@ class HermesMutex : public std::recursive_mutex {
 
 vm::RuntimeConfig hardenedHermesRuntimeConfig() {
   vm::RuntimeConfig::Builder config;
+  // Disable optional JS features.
   config.withEnableEval(false);
   config.withArrayBuffer(false);
   config.withES6Proxy(false);
+
+  // Enabled hardening options.
+  config.withRandomizeMemoryLayout(true);
 
   // This flag is misnamed - it doesn't only apply to eval() calls but to
   // all compilation performed by the HermesRuntime, so it should be enabled
