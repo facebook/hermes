@@ -261,6 +261,12 @@ class GCCell {
 #endif
   }
 
+#ifndef NDEBUG
+  void setDebugAllocationIdInGC(uint32_t id) {
+    _debugAllocationId_ = id;
+  }
+#endif
+
   /// Returns whether the cell's mark bit is set.
   bool isMarked() const {
     return forwardingPointer_.getRaw() & 0x1;
