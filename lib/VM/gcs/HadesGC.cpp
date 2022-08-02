@@ -1782,12 +1782,6 @@ void HadesGC::finalizeCompactee() {
 }
 
 void HadesGC::updateOldGenThreshold() {
-  // TODO: Dynamic threshold is not used in incremental mode because
-  // getDrainRate computes the mark rate directly based on the threshold. This
-  // means that increasing the threshold would operate like a one way ratchet.
-  if (!kConcurrentGC)
-    return;
-
   const double markedBytes = oldGenMarker_->markedBytes();
   const double preAllocated = ogCollectionStats_->beforeAllocatedBytes();
   assert(markedBytes <= preAllocated && "Cannot mark more than was allocated");
@@ -3057,24 +3051,17 @@ size_t HadesGC::getDrainRate() {
   // OG faster than it fills up.
   assert(!kConcurrentGC);
 
-  // We want to make progress so that we are able to complete marking over all
-  // YG collections before OG fills up.
-  uint64_t totalAllocated = oldGen_.allocatedBytes() + oldGen_.externalBytes();
-  // Must be >0 to avoid division by zero below.
-  uint64_t bytesToFill =
-      std::max(oldGen_.targetSizeBytes(), totalAllocated + 1) - totalAllocated;
-  uint64_t preAllocated = ogCollectionStats_->beforeAllocatedBytes();
-  uint64_t markedBytes = oldGenMarker_->markedBytes();
-  assert(
-      markedBytes <= preAllocated &&
-      "Cannot mark more bytes than were initially allocated");
-  uint64_t bytesToMark = preAllocated - markedBytes;
-  // The drain rate is calculated from:
-  //   bytesToMark / (collections until full)
-  // = bytesToMark / (bytesToFill / ygAverageSurvivalBytes_)
-  uint64_t drainRate = bytesToMark * ygAverageSurvivalBytes_ / bytesToFill;
-  // If any of the above calculations end up being a tiny drain rate, make
-  // the lower limit at least 8 KB, to ensure collections eventually end.
+  // Set a fixed floor on the mark rate, regardless of the pause time budget.
+  // yieldToOldGen may operate in multiples of this drain rate if it fits in the
+  // budget. Pinning the mark rate in this way helps us keep the dynamically
+  // computed OG collection threshold in a reasonable range. On a slow device,
+  // where we can only do one iteration of this drain rate, the OG threshold
+  // will be ~75%. And by not increasing the drain rate when the threshold is
+  // high, we avoid having a one-way ratchet effect that hurts pause times.
+  constexpr size_t baseMarkRate = 3;
+  uint64_t drainRate = baseMarkRate * ygAverageSurvivalBytes_;
+  // In case the allocation rate is extremely low, set a lower bound to ensure
+  // the collection eventually ends.
   constexpr uint64_t byteDrainRateMin = 8192;
   return std::max(drainRate, byteDrainRateMin);
 }
