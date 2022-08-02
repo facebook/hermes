@@ -215,6 +215,8 @@ class MallocGC final : public GCBase {
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
+
+  bool needsWriteBarrier(void *loc, GCCell *value) override;
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

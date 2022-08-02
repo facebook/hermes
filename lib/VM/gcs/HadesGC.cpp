@@ -2167,6 +2167,10 @@ bool HadesGC::dbgContains(const void *p) const {
 }
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
+
+bool HadesGC::needsWriteBarrier(void *loc, GCCell *value) {
+  return !inYoungGen(loc);
+}
 #endif
 
 void *HadesGC::allocSlow(uint32_t sz) {

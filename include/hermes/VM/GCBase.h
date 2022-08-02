@@ -939,6 +939,7 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
+  virtual bool needsWriteBarrier(void *loc, GCCell *value) = 0;
   /// \}
 #endif
 
@@ -1024,12 +1025,6 @@ class GCBase {
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
-#endif
-
-#ifndef NDEBUG
-  virtual bool needsWriteBarrier(void *loc, GCCell *value) {
-    return false;
-  }
 #endif
 
   /// @name Marking APIs

@@ -331,6 +331,7 @@ class HadesGC final : public GCBase {
   /// found reachable in a full GC.
   void trackReachable(CellKind kind, unsigned sz) override;
 
+  bool needsWriteBarrier(void *loc, GCCell *value) override;
   /// \}
 #endif
 
