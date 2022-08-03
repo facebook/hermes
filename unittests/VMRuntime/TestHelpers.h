@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Public/GCConfig.h"
+#include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"

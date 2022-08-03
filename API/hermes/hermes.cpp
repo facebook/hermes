@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
+#include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/SimpleDiagHandler.h"

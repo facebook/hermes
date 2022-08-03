@@ -8,6 +8,7 @@
 #include "hermes/Public/Buffer.h"
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCTripwireContext.h"
+#include "hermes/Public/JSOutOfMemoryError.h"
 
 /// This file provides "key functions" for types in the API that have virtual
 /// methods. This ensures that the type information for these types is only
@@ -20,5 +21,6 @@ namespace vm {
 GCTripwireContext::~GCTripwireContext() {}
 CrashManager::~CrashManager() {}
 NopCrashManager::~NopCrashManager() {}
+JSOutOfMemoryError::~JSOutOfMemoryError() {}
 } // namespace vm
 } // namespace hermes

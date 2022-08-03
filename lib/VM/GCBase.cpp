@@ -9,6 +9,7 @@
 #include "hermes/VM/GC.h"
 
 #include "hermes/Platform/Logging.h"
+#include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
