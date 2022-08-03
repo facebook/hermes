@@ -15,17 +15,10 @@
 #include <ostream>
 #include <string>
 
+#include <hermes/Public/HermesExport.h>
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
 #include <unordered_map>
-
-#ifndef HERMES_EXPORT
-#ifdef _MSC_VER
-#define HERMES_EXPORT __declspec(dllexport)
-#else // _MSC_VER
-#define HERMES_EXPORT __attribute__((visibility("default")))
-#endif // _MSC_VER
-#endif // !defined(HERMES_EXPORT)
 
 struct HermesTestHelper;
 
