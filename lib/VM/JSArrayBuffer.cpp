@@ -71,7 +71,7 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
       runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
-  if (arr->createDataBlock(runtime, srcSize, false) ==
+  if (createDataBlock(runtime, arr, srcSize, false) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -178,18 +178,21 @@ void JSArrayBuffer::freeInternalBuffer(GC &gc) {
   free(data);
 }
 
-void JSArrayBuffer::detach(GC &gc) {
-  if (!attached())
+void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
+  if (!self->attached())
     return;
-  freeInternalBuffer(gc);
+  self->freeInternalBuffer(runtime.getHeap());
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
-  attached_ = false;
+  self->attached_ = false;
 }
 
-ExecutionStatus
-JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
-  detach(runtime.getHeap());
+ExecutionStatus JSArrayBuffer::createDataBlock(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self,
+    size_type size,
+    bool zero) {
+  detach(runtime, self);
   uint8_t *data = nullptr;
   if (size > 0) {
     // If an external allocation of this size would exceed the GC heap size,
@@ -209,10 +212,10 @@ JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
     }
   }
 
-  attached_ = true;
-  data_.set(runtime, data);
-  size_ = size;
-  runtime.getHeap().creditExternalMemory(this, size);
+  self->attached_ = true;
+  self->data_.set(runtime, data);
+  self->size_ = size;
+  runtime.getHeap().creditExternalMemory(*self, size);
   return ExecutionStatus::RETURNED;
 }
 

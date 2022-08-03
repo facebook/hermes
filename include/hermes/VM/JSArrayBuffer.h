@@ -60,8 +60,11 @@ class JSArrayBuffer final : public JSObject {
   /// \p zero if true, zero out the data in the block, else leave it
   ///   uninitialized.
   /// \return ExecutionStatus::RETURNED iff the allocation was successful.
-  ExecutionStatus
-  createDataBlock(Runtime &runtime, size_type size, bool zero = true);
+  static ExecutionStatus createDataBlock(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self,
+      size_type size,
+      bool zero = true);
 
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null
@@ -95,7 +98,7 @@ class JSArrayBuffer final : public JSObject {
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
-  void detach(GC &gc);
+  static void detach(Runtime &runtime, Handle<JSArrayBuffer> self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);

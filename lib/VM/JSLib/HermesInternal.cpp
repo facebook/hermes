@@ -43,7 +43,7 @@ hermesInternalDetachArrayBuffer(void *, Runtime &runtime, NativeArgs args) {
         "Cannot use detachArrayBuffer on something which "
         "is not an ArrayBuffer foo");
   }
-  buffer->detach(runtime.getHeap());
+  JSArrayBuffer::detach(runtime, buffer);
   // "void" return
   return HermesValue::encodeUndefinedValue();
 }
