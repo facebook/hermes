@@ -9,6 +9,7 @@
 #define HERMES_VM_JSARRAYBUFFER_H
 
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/NativeState.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -66,6 +67,18 @@ class JSArrayBuffer final : public JSObject {
       size_type size,
       bool zero = true);
 
+  /// Sets the data block used by this JSArrayBuffer to be \p data, with size
+  /// \p size. Ensures that \p finalizePtr is invoked with argument \p context
+  /// at some point after this JSArrayBuffer has been garbage collected.
+  /// \return ExecutionStatus::RETURNED iff the data block was successfully set.
+  static ExecutionStatus setExternalDataBlock(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self,
+      uint8_t *data,
+      size_type size,
+      void *context,
+      FinalizeNativeStatePtr finalizePtr);
+
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
@@ -98,7 +111,7 @@ class JSArrayBuffer final : public JSObject {
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
-  static void detach(Runtime &runtime, Handle<JSArrayBuffer> self);
+  static ExecutionStatus detach(Runtime &runtime, Handle<JSArrayBuffer> self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);
@@ -109,9 +122,17 @@ class JSArrayBuffer final : public JSObject {
 #endif
 
  private:
-  /// data_ and size_ are only valid when attached_ is true.
+  /// Set the internal property that retains the NativeState owning the external
+  /// buffer to \p value.
+  static ExecutionStatus setExternalFinalizer(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self,
+      Handle<> value);
+
+  /// data_, size_, and external_ are only valid when attached_ is true.
   XorPtr<uint8_t, XorPtrKeyID::ArrayBufferData> data_;
   size_type size_;
+  bool external_;
   bool attached_;
 
  public:
