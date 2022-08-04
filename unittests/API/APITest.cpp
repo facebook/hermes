@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <hermes/BCGen/HBC/BytecodeFileFormat.h>
 #include <hermes/CompileJS.h>
+#include <hermes/Public/JSOutOfMemoryError.h>
 #include <hermes/hermes.h>
 
 #include <tuple>
@@ -844,5 +845,43 @@ TEST_F(HermesRuntimeTest, BigIntJSITruncation) {
   EXPECT_EQ(toUint64(b), lossy(~0ull));
   EXPECT_EQ(toInt64(b), lossy(~0ull));
 }
+
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+class HermesRuntimeTestSmallHeap : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTestSmallHeap()
+      : HermesRuntimeTestBase(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withGCConfig(::hermes::vm::GCConfig::Builder()
+                                  .withInitHeapSize(8 << 20)
+                                  .withMaxHeapSize(8 << 20)
+                                  .build())
+                .build()) {}
+};
+
+TEST_F(HermesRuntimeTestSmallHeap, OOMExceptionTest) {
+  auto func = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, ""),
+      1,
+      [](Runtime &rt, const Value &, const Value *args, unsigned long count) {
+        assert(count > 0);
+        auto func = args[0].asObject(rt).asFunction(rt);
+        return func.call(rt, args + 1, count - 1);
+      });
+
+  auto makeOOM = eval(R"#(
+(function (){
+  var outer = [];
+  while(true){
+    var inner = [];
+    for (var i = 0; i < 10000; i++) inner.push({});
+    outer.push(inner);
+  }
+})
+)#");
+  EXPECT_THROW(func.call(*rt, makeOOM), ::hermes::vm::JSOutOfMemoryError);
+}
+#endif
 
 } // namespace

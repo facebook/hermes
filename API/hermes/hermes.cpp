@@ -787,7 +787,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
       jsi::Value ret;
       try {
         ret = ho_->get(rt_, sym);
-      } catch (const jsi::JSError &error) {
+      }
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+      catch (const vm::JSOutOfMemoryError &) {
+        throw;
+      }
+#endif
+      catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
         return rt_.runtime_.setThrownValue(hvFromValue(
@@ -819,7 +825,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
           rt_.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
       try {
         ho_->set(rt_, sym, rt_.valueFromHermesValue(value));
-      } catch (const jsi::JSError &error) {
+      }
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+      catch (const vm::JSOutOfMemoryError &) {
+        throw;
+      }
+#endif
+      catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
         return rt_.runtime_.setThrownValue(hvFromValue(
@@ -865,7 +877,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
         }
 
         return arrayHandle;
-      } catch (const jsi::JSError &error) {
+      }
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+      catch (const vm::JSOutOfMemoryError &) {
+        throw;
+      }
+#endif
+      catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
         return rt_.runtime_.setThrownValue(hvFromValue(
@@ -910,7 +928,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
             rt.valueFromHermesValue(hvArgs.getThisArg()),
             args,
             apiArgs.size());
-      } catch (const jsi::JSError &error) {
+      }
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+      catch (const vm::JSOutOfMemoryError &) {
+        throw;
+      }
+#endif
+      catch (const jsi::JSError &error) {
         return runtime.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
         return rt.runtime_.setThrownValue(hvFromValue(
