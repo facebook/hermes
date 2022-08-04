@@ -72,7 +72,7 @@ void Runtime::dumpOpcodeStats(llvh::raw_ostream &os) const {
 }
 #endif
 
-#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
+#if defined(HERMESVM_PROFILER_JSFUNCTION)
 std::atomic<ProfilerID> Runtime::nextProfilerId;
 
 ProfilerID Runtime::getProfilerID(CodeBlock *block) {

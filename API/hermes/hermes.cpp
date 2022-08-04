@@ -566,15 +566,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
 #endif
   }
 
-  // Overridden from jsi::Instrumentation
   void dumpProfilerSymbolsToFile(const std::string &fileName) const override {
-#ifdef HERMESVM_PROFILER_EXTERN
-    dumpProfilerSymbolMap(&runtime_, fileName);
-#else
     throw std::logic_error(
         "Cannot dump profiler symbols out if Hermes wasn't built with "
         "hermes.profiler=EXTERN");
-#endif
   }
 
   // These are all methods which do pointer type gymnastics and should

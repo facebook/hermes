@@ -132,14 +132,6 @@ struct ExecuteOptions {
   /// Stop after creating the RuntimeModule.
   bool stopAfterInit{false};
 
-#ifdef HERMESVM_PROFILER_EXTERN
-  /// Patch the symbols so that the external profiler can be used.
-  bool patchProfilerSymbols{false};
-
-  /// Dump the symbols in given file name.
-  std::string profilerSymbolsFile;
-#endif
-
   /// Execution time limit.
   uint32_t timeLimit{0};
 

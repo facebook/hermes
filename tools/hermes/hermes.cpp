@@ -117,10 +117,6 @@ static int executeHBCBytecodeFromCL(
   options.basicBlockProfiling = cl::BasicBlockProfiling;
 
   options.stopAfterInit = false;
-#ifdef HERMESVM_PROFILER_EXTERN
-  options.patchProfilerSymbols = cl::PatchProfilerSymbols;
-  options.profilerSymbolsFile = cl::ProfilerSymbolsFile;
-#endif
   options.timeLimit = cl::ExecutionTimeLimit;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;

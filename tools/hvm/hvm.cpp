@@ -130,10 +130,6 @@ int main(int argc, char **argv) {
 
   options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.stopAfterInit = cl::StopAfterInit;
-#ifdef HERMESVM_PROFILER_EXTERN
-  options.patchProfilerSymbols = cl::PatchProfilerSymbols;
-  options.profilerSymbolsFile = cl::ProfilerSymbolsFile;
-#endif
 
   bool success;
   if (Repeat <= 1) {

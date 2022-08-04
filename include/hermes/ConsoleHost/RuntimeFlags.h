@@ -101,22 +101,6 @@ static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     cat(GCCategory),
     init(MemorySize{1024 * 1024 * 1024}));
 
-#ifdef HERMESVM_PROFILER_EXTERN
-static opt<bool> PatchProfilerSymbols(
-    "patch-profiler-symbols",
-    desc("Patch profiler symbols in the executable at exit, "
-         "instead of writing to symbol_dump.map file."),
-    init(false),
-    cat(RuntimeCategory));
-
-static opt<std::string> ProfilerSymbolsFile(
-    "profiler-symbols-file",
-    desc("Dump profiler symbols in specified file at exit, "
-         "instead of writing the symbol_dump.map file."),
-    init("symbol_dump.map"),
-    cat(RuntimeCategory));
-#endif
-
 static opt<bool> ES6Promise(
     "Xes6-promise",
     desc("Enable support for ES6 Promise"),

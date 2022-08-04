@@ -166,11 +166,6 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   void dumpOpcodeStats(std::ostream &os) const;
 #endif
 
-#ifdef HERMESVM_PROFILER_EXTERN
-  /// Dump map of profiler symbols to given file name.
-  void dumpProfilerSymbolsToFile(const std::string &fileName) const;
-#endif
-
 #ifdef HERMES_ENABLE_DEBUGGER
   /// \return a reference to the Debugger for this Runtime.
   debugger::Debugger &getDebugger();

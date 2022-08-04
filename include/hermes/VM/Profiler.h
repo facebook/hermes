@@ -31,35 +31,7 @@
 
 #endif
 
-#if defined(HERMESVM_PROFILER_EXTERN)
-#include "hermes/Support/Macro10k.h"
-
-// Symbols have the form "JS_[0-9][0-9][0-9][0-9]_xxx...xxx" and the suffix is
-// later replaced with the name of the JS function having that ProfilerID.
-// Entry 9999 is used as overflow entry if there are >= 10K JS functions.
-
-constexpr int NUM_PROFILER_SYMBOLS_DIGITS = 4;
-constexpr int NUM_PROFILER_SYMBOLS = 10e4;
-#define PROFILER_SYMBOLS(V) MACRO_10K(V, JS, xxxxxxxxxxxxxxxxxxxxxx)
-constexpr int PROFILER_SYMBOL_SUFFIX_LENGTH =
-    2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2;
-
-namespace hermes {
-namespace vm {
-class Runtime;
-
-/// Patch the running executable using function metadata from 'runtime'.
-void patchProfilerSymbols(Runtime &runtime);
-
-/// Write to \p fileOut mapping between Hermes symbols and JS function names
-/// with "<symbol> <JS function>" on each line.
-void dumpProfilerSymbolMap(Runtime &runtime, const std::string &fileOut);
-
-} // namespace vm
-} // namespace hermes
-#endif
-
-#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
+#if defined(HERMESVM_PROFILER_JSFUNCTION)
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/VM/SymbolID.h"
 
