@@ -1102,7 +1102,8 @@ struct DateTimeFormat::Impl {
   // (11.4.3).
   // NOTE: Pattern and RangePatterns are not implemented. BoundFormat is
   // implemented in Intl.cpp.
-  NSDateFormatter *getNSDateFormatter() noexcept;
+  NSDateFormatter *nsDateFormatter;
+  void initializeNSDateFormatter() noexcept;
 };
 
 DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
@@ -1449,6 +1450,7 @@ vm::ExecutionStatus DateTimeFormat::initialize(
   // 41. Set dateTimeFormat.[[Pattern]] to pattern.
   // 42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
   // 43. Return dateTimeFormat.
+  impl_->initializeNSDateFormatter();
   return vm::ExecutionStatus::RETURNED;
 }
 // Implementer note: This method corresponds roughly to
@@ -1535,53 +1537,53 @@ static enum_string formatDate(std::u16string const &inString) {
   return eNull;
 };
 
-NSDateFormatter *DateTimeFormat::Impl::getNSDateFormatter() noexcept {
-  NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+void DateTimeFormat::Impl::initializeNSDateFormatter() noexcept {
+  nsDateFormatter = [[NSDateFormatter alloc] init];
   if (timeStyle.has_value()) {
     switch (formatDate(*timeStyle)) {
       case eFull:
-        dateFormatter.timeStyle = NSDateFormatterFullStyle;
+        nsDateFormatter.timeStyle = NSDateFormatterFullStyle;
         break;
       case eLong:
-        dateFormatter.timeStyle = NSDateFormatterLongStyle;
+        nsDateFormatter.timeStyle = NSDateFormatterLongStyle;
         break;
       case eMedium:
-        dateFormatter.timeStyle = NSDateFormatterMediumStyle;
+        nsDateFormatter.timeStyle = NSDateFormatterMediumStyle;
         break;
       case eShort:
-        dateFormatter.timeStyle = NSDateFormatterShortStyle;
+        nsDateFormatter.timeStyle = NSDateFormatterShortStyle;
         break;
       default:
-        dateFormatter.timeStyle = NSDateFormatterShortStyle;
+        nsDateFormatter.timeStyle = NSDateFormatterShortStyle;
     }
   }
   if (dateStyle.has_value()) {
     switch (formatDate(*dateStyle)) {
       case eFull:
-        dateFormatter.dateStyle = NSDateFormatterFullStyle;
+        nsDateFormatter.dateStyle = NSDateFormatterFullStyle;
         break;
       case eLong:
-        dateFormatter.dateStyle = NSDateFormatterLongStyle;
+        nsDateFormatter.dateStyle = NSDateFormatterLongStyle;
         break;
       case eMedium:
-        dateFormatter.dateStyle = NSDateFormatterMediumStyle;
+        nsDateFormatter.dateStyle = NSDateFormatterMediumStyle;
         break;
       case eShort:
-        dateFormatter.dateStyle = NSDateFormatterShortStyle;
+        nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
         break;
       default:
-        dateFormatter.dateStyle = NSDateFormatterShortStyle;
+        nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
     }
   }
-  dateFormatter.timeZone =
+  nsDateFormatter.timeZone =
       [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone)];
-  dateFormatter.locale =
+  nsDateFormatter.locale =
       [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(locale)];
   if (calendar)
-    dateFormatter.calendar = [[NSCalendar alloc]
+    nsDateFormatter.calendar = [[NSCalendar alloc]
         initWithCalendarIdentifier:u16StringToNSString(*calendar)];
   if (timeStyle.has_value() || dateStyle.has_value())
-    return dateFormatter;
+    return;
   // The following options cannot be used in conjunction with timeStyle or
   // dateStyle
   // Form a custom format string It will be reordered according to
@@ -1780,19 +1782,16 @@ NSDateFormatter *DateTimeFormat::Impl::getNSDateFormatter() noexcept {
   // automatically separate the order) Only set a template format if it isn't
   // empty
   if (customFormattedDate.length > 0) {
-    [dateFormatter setLocalizedDateFormatFromTemplate:customFormattedDate];
+    [nsDateFormatter setLocalizedDateFormatFromTemplate:customFormattedDate];
   } else {
-    dateFormatter.dateStyle = NSDateFormatterShortStyle;
+    nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
   }
-
-  return dateFormatter;
 }
 
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
   auto timeInSeconds = jsTimeValue / 1000;
   NSDate *date = [NSDate dateWithTimeIntervalSince1970:timeInSeconds];
-  NSDateFormatter *dateFormatter = impl_->getNSDateFormatter();
-  return nsStringToU16String([dateFormatter stringFromDate:date]);
+  return nsStringToU16String([impl_->nsDateFormatter stringFromDate:date]);
 }
 
 static std::u16string returnTypeOfDate(const char16_t &c16) {
@@ -1827,7 +1826,7 @@ std::vector<Part> DateTimeFormat::formatToParts(double x) noexcept {
   // NOTE: We dont have access to localeData.patterns. Instead we use
   // NSDateFormatter's foramt string, and break it into components.
   // 1. Let parts be ? PartitionDateTimePattern(dateTimeFormat, x).
-  auto fmt = nsStringToU16String(impl_->getNSDateFormatter().dateFormat);
+  auto fmt = nsStringToU16String(impl_->nsDateFormatter.dateFormat);
   std::unique(fmt.begin(), fmt.end());
   auto formattedDate = format(x);
   // 2. Let result be ArrayCreate(0).
