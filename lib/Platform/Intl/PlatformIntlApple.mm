@@ -631,6 +631,17 @@ std::u16string getDefaultHourCycle(NSLocale *locale) {
   return u"h24";
 }
 
+/// Helper to lookup a \p key in a map represented as a sorted array of pairs.
+template <typename K, typename V, size_t N>
+std::optional<V> pairMapLookup(const std::pair<K, V> (&arr)[N], const K &key) {
+  HERMES_SLOW_ASSERT(std::is_sorted(std::begin(arr), std::end(arr)));
+  auto it = llvh::lower_bound(
+      arr, key, [](const auto &a, const K &b) { return a.first < b; });
+  if (it != std::end(arr) && it->first == key)
+    return it->second;
+  return std::nullopt;
+}
+
 template <size_t N, size_t P = 0>
 static constexpr bool isSorted(const std::u16string_view (&v)[N]) {
   if constexpr (P < N - 1) {
@@ -717,22 +728,9 @@ bool isWellFormedCurrencyCode(std::u16string_view currencyCode) {
   return true;
 }
 
-struct CurrencyInfo {
-  std::u16string_view code;
-  uint8_t digits;
-};
-
-template <size_t N, size_t P = 0>
-static constexpr bool isSorted(const CurrencyInfo (&v)[N]) {
-  if constexpr (P < N - 1) {
-    return v[P].code < v[P + 1].code && isSorted<N, P + 1>(v);
-  }
-  return true;
-}
-
 uint8_t getCurrencyDigits(std::u16string_view code) {
   //  https://en.wikipedia.org/wiki/ISO_4217#Active_codes
-  static constexpr CurrencyInfo currencies[] = {
+  static constexpr std::pair<std::u16string_view, uint8_t> currencies[] = {
       {u"BHD", 3}, {u"BIF", 0}, {u"CLF", 4}, {u"CLP", 0}, {u"DJF", 0},
       {u"GNF", 0}, {u"IQD", 3}, {u"ISK", 0}, {u"JOD", 3}, {u"JPY", 0},
       {u"KMF", 0}, {u"KRW", 0}, {u"KWD", 3}, {u"LYD", 3}, {u"OMR", 3},
@@ -742,11 +740,9 @@ uint8_t getCurrencyDigits(std::u16string_view code) {
   //  1. If the ISO 4217 currency and funds code list contains currency as an
   //  alphabetic code, return the minor unit value corresponding to the currency
   //  from the list; otherwise, return 2.
-  static_assert(isSorted(currencies), "keep currencies sorted by their code");
-  auto it = llvh::lower_bound(currencies, code, [](auto currency, auto toFind) {
-    return currency.code < toFind;
-  });
-  return (it != std::end(currencies) && it->code == code) ? it->digits : 2;
+  if (auto digitsOpt = pairMapLookup(currencies, code))
+    return *digitsOpt;
+  return 2;
 }
 }
 
