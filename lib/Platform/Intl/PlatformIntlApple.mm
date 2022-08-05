@@ -1491,88 +1491,39 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   return options;
 }
 
-enum enum_string {
-  eLong,
-  eShort,
-  eNarrow,
-  eMedium,
-  eFull,
-  eBasic,
-  eBestFit,
-  eNumeric,
-  eTwoDigit,
-  eShortOffset,
-  eLongOffset,
-  eShortGeneric,
-  eLongGeneric,
-  eNull
-};
-static enum_string formatDate(std::u16string const &inString) {
-  if (inString == u"long")
-    return eLong;
-  if (inString == u"short")
-    return eShort;
-  if (inString == u"narrow")
-    return eNarrow;
-  if (inString == u"medium")
-    return eMedium;
-  if (inString == u"full")
-    return eFull;
-  if (inString == u"basic")
-    return eBasic;
-  if (inString == u"best fit")
-    return eBestFit;
-  if (inString == u"numeric")
-    return eNumeric;
-  if (inString == u"2-digit")
-    return eTwoDigit;
-  if (inString == u"shortOffset")
-    return eShortOffset;
-  if (inString == u"longOffset")
-    return eLongOffset;
-  if (inString == u"shortGeneric")
-    return eShortGeneric;
-  if (inString == u"longGeneric")
-    return eLongGeneric;
-  return eNull;
-};
-
 void DateTimeFormat::Impl::initializeNSDateFormatter() noexcept {
+  static constexpr std::u16string_view kLong = u"long", kShort = u"short",
+                                       kNarrow = u"narrow", kMedium = u"medium",
+                                       kFull = u"full", kNumeric = u"numeric",
+                                       kTwoDigit = u"2-digit",
+                                       kShortOffset = u"shortOffset",
+                                       kLongOffset = u"longOffset",
+                                       kShortGeneric = u"shortGeneric",
+                                       kLongGeneric = u"longGeneric";
+
   nsDateFormatter = [[NSDateFormatter alloc] init];
   if (timeStyle.has_value()) {
-    switch (formatDate(*timeStyle)) {
-      case eFull:
-        nsDateFormatter.timeStyle = NSDateFormatterFullStyle;
-        break;
-      case eLong:
-        nsDateFormatter.timeStyle = NSDateFormatterLongStyle;
-        break;
-      case eMedium:
-        nsDateFormatter.timeStyle = NSDateFormatterMediumStyle;
-        break;
-      case eShort:
-        nsDateFormatter.timeStyle = NSDateFormatterShortStyle;
-        break;
-      default:
-        nsDateFormatter.timeStyle = NSDateFormatterShortStyle;
+    if (*timeStyle == kFull) {
+      nsDateFormatter.timeStyle = NSDateFormatterFullStyle;
+    } else if (*timeStyle == kLong) {
+      nsDateFormatter.timeStyle = NSDateFormatterLongStyle;
+    } else if (*timeStyle == kMedium) {
+      nsDateFormatter.timeStyle = NSDateFormatterMediumStyle;
+    } else {
+      assert(*timeStyle == kShort && "No other valid timeStyle.");
+      nsDateFormatter.timeStyle = NSDateFormatterShortStyle;
     }
   }
   if (dateStyle.has_value()) {
-    switch (formatDate(*dateStyle)) {
-      case eFull:
-        nsDateFormatter.dateStyle = NSDateFormatterFullStyle;
-        break;
-      case eLong:
-        nsDateFormatter.dateStyle = NSDateFormatterLongStyle;
-        break;
-      case eMedium:
-        nsDateFormatter.dateStyle = NSDateFormatterMediumStyle;
-        break;
-      case eShort:
-        nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
-        break;
-      default:
-        nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
+    if (*dateStyle == kFull) {
+      nsDateFormatter.dateStyle = NSDateFormatterFullStyle;
+    } else if (*dateStyle == kLong) {
+      nsDateFormatter.dateStyle = NSDateFormatterLongStyle;
+    } else if (*dateStyle == kMedium) {
+      nsDateFormatter.dateStyle = NSDateFormatterMediumStyle;
+    } else {
+      assert(*dateStyle == kShort && "No other valid dateStyle.");
+      nsDateFormatter.dateStyle = NSDateFormatterShortStyle;
     }
   }
   nsDateFormatter.timeZone =
@@ -1590,102 +1541,69 @@ void DateTimeFormat::Impl::initializeNSDateFormatter() noexcept {
   // locale later
   NSMutableString *customFormattedDate = [[NSMutableString alloc] init];
   if (timeZoneName.has_value()) {
-    switch (formatDate(*timeZoneName)) {
-      case eShort:
-        [customFormattedDate appendString:@"z"];
-        break;
-      case eLong:
-        [customFormattedDate appendString:@"zzzz"];
-        break;
-      case eShortOffset:
-        [customFormattedDate appendString:@"O"];
-        break;
-      case eLongOffset:
-        [customFormattedDate appendString:@"OOOO"];
-        break;
-      case eShortGeneric:
-        [customFormattedDate appendString:@"v"];
-        break;
-      case eLongGeneric:
-        [customFormattedDate appendString:@"vvvv"];
-        break;
-      default:
-        [customFormattedDate appendString:@"z"];
+    if (*timeZoneName == kShort) {
+      [customFormattedDate appendString:@"z"];
+    } else if (*timeZoneName == kLong) {
+      [customFormattedDate appendString:@"zzzz"];
+    } else if (*timeZoneName == kShortOffset) {
+      [customFormattedDate appendString:@"O"];
+    } else if (*timeZoneName == kLongOffset) {
+      [customFormattedDate appendString:@"OOOO"];
+    } else if (*timeZoneName == kShortGeneric) {
+      [customFormattedDate appendString:@"v"];
+    } else {
+      assert(*timeZoneName == kLongGeneric && "No other valid timeZoneName");
+      [customFormattedDate appendString:@"vvvv"];
     }
   }
   if (era.has_value()) {
-    switch (formatDate(*era)) {
-      case eNarrow:
-        [customFormattedDate appendString:@"GGGGG"];
-        break;
-      case eShort:
-        [customFormattedDate appendString:@"G"];
-        break;
-      case eLong:
-        [customFormattedDate appendString:@"GGGG"];
-        break;
-      default:
-        [customFormattedDate appendString:@"G"];
+    if (*era == kNarrow) {
+      [customFormattedDate appendString:@"GGGGG"];
+    } else if (*era == kShort) {
+      [customFormattedDate appendString:@"G"];
+    } else {
+      assert(*era == kLong && "No other valid era.");
+      [customFormattedDate appendString:@"GGGG"];
     }
   }
   if (year.has_value()) {
-    switch (formatDate(*year)) {
-      case eNumeric:
-        [customFormattedDate appendString:@"yyyy"];
-        break;
-      case eTwoDigit:
-        [customFormattedDate appendString:@"yy"];
-        break;
-      default:
-        [customFormattedDate appendString:@"yyyy"];
+    if (*year == kNumeric) {
+      [customFormattedDate appendString:@"yyyy"];
+    } else {
+      assert(*year == kTwoDigit && "No other valid year.");
+      [customFormattedDate appendString:@"yy"];
     }
   }
   if (month.has_value()) {
-    switch (formatDate(*month)) {
-      case eNarrow:
-        [customFormattedDate appendString:@"MMMMM"];
-        break;
-      case eNumeric:
-        [customFormattedDate appendString:@"M"];
-        break;
-      case eTwoDigit:
-        [customFormattedDate appendString:@"MM"];
-        break;
-      case eShort:
-        [customFormattedDate appendString:@"MMM"];
-        break;
-      case eLong:
-        [customFormattedDate appendString:@"MMMM"];
-        break;
-      default:
-        [customFormattedDate appendString:@"MMM"];
+    if (*month == kNarrow) {
+      [customFormattedDate appendString:@"MMMMM"];
+    } else if (*month == kNumeric) {
+      [customFormattedDate appendString:@"M"];
+    } else if (*month == kTwoDigit) {
+      [customFormattedDate appendString:@"MM"];
+    } else if (*month == kShort) {
+      [customFormattedDate appendString:@"MMM"];
+    } else {
+      assert(*month == kLong && "No other valid month.");
+      [customFormattedDate appendString:@"MMMM"];
     }
   }
   if (weekday.has_value()) {
-    switch (formatDate(*weekday)) {
-      case eNarrow:
-        [customFormattedDate appendString:@"EEEEE"];
-        break;
-      case eShort:
-        [customFormattedDate appendString:@"E"];
-        break;
-      case eLong:
-        [customFormattedDate appendString:@"EEEE"];
-        break;
-      default:
-        [customFormattedDate appendString:@"E"];
+    if (*weekday == kNarrow) {
+      [customFormattedDate appendString:@"EEEEE"];
+    } else if (*weekday == kShort) {
+      [customFormattedDate appendString:@"E"];
+    } else {
+      assert(*weekday == kLong && "No other valid weekday.");
+      [customFormattedDate appendString:@"EEEE"];
     }
   }
   if (day.has_value()) {
-    switch (formatDate(*day)) {
-      case eNumeric:
-        [customFormattedDate appendString:@"d"];
-        break;
-      case eTwoDigit:
-        [customFormattedDate appendString:@"dd"];
-        break;
-      default:
-        [customFormattedDate appendString:@"dd"];
+    if (*day == kNumeric) {
+      [customFormattedDate appendString:@"d"];
+    } else {
+      assert(*day == kTwoDigit && "No other valid day.");
+      [customFormattedDate appendString:@"dd"];
     }
   }
   if (hour.has_value()) {
@@ -1697,73 +1615,49 @@ void DateTimeFormat::Impl::initializeNSDateFormatter() noexcept {
     // H = h23 = 0-23
     // k = h24 = 1-24
     if (hourCycle == u"h12") {
-      switch (formatDate(*hour)) {
-        case eNumeric:
-          [customFormattedDate appendString:@"h"];
-          break;
-        case eTwoDigit:
-          [customFormattedDate appendString:@"hh"];
-          break;
-        default:
-          [customFormattedDate appendString:@"hh"];
+      if (*hour == kNumeric) {
+        [customFormattedDate appendString:@"h"];
+      } else {
+        assert(*hour == kTwoDigit && "No other valid hour.");
+        [customFormattedDate appendString:@"hh"];
       }
     } else if (hourCycle == u"h24") {
-      switch (formatDate(*hour)) {
-        case eNumeric:
-          [customFormattedDate appendString:@"k"];
-          break;
-        case eTwoDigit:
-          [customFormattedDate appendString:@"kk"];
-          break;
-        default:
-          [customFormattedDate appendString:@"kk"];
+      if (*hour == kNumeric) {
+        [customFormattedDate appendString:@"k"];
+      } else {
+        assert(*hour == kTwoDigit && "No other valid hour.");
+        [customFormattedDate appendString:@"kk"];
       }
     } else if (hourCycle == u"h11") {
-      switch (formatDate(*hour)) {
-        case eNumeric:
-          [customFormattedDate appendString:@"K"];
-          break;
-        case eTwoDigit:
-          [customFormattedDate appendString:@"KK"];
-          break;
-        default:
-          [customFormattedDate appendString:@"KK"];
+      if (*hour == kNumeric) {
+        [customFormattedDate appendString:@"K"];
+      } else {
+        assert(*hour == kTwoDigit && "No other valid hour.");
+        [customFormattedDate appendString:@"KK"];
       }
     } else { // h23
-      switch (formatDate(*hour)) {
-        case eNumeric:
-          [customFormattedDate appendString:@"H"];
-          break;
-        case eTwoDigit:
-          [customFormattedDate appendString:@"HH"];
-          break;
-        default:
-          [customFormattedDate appendString:@"HH"];
+      if (*hour == kNumeric) {
+        [customFormattedDate appendString:@"H"];
+      } else {
+        assert(*hour == kTwoDigit && "No other valid hour.");
+        [customFormattedDate appendString:@"HH"];
       }
     }
   }
   if (minute.has_value()) {
-    switch (formatDate(*minute)) {
-      case eNumeric:
-        [customFormattedDate appendString:@"m"];
-        break;
-      case eTwoDigit:
-        [customFormattedDate appendString:@"mm"];
-        break;
-      default:
-        [customFormattedDate appendString:@"m"];
+    if (*minute == kNumeric) {
+      [customFormattedDate appendString:@"m"];
+    } else {
+      assert(*minute == kTwoDigit && "No other valid minute.");
+      [customFormattedDate appendString:@"mm"];
     }
   }
   if (second.has_value()) {
-    switch (formatDate(*second)) {
-      case eNumeric:
-        [customFormattedDate appendString:@"s"];
-        break;
-      case eTwoDigit:
-        [customFormattedDate appendString:@"ss"];
-        break;
-      default:
-        [customFormattedDate appendString:@"s"];
+    if (*second == kNumeric) {
+      [customFormattedDate appendString:@"s"];
+    } else {
+      assert(*second == kTwoDigit && "No other valid second.");
+      [customFormattedDate appendString:@"ss"];
     }
   }
   if (fractionalSecondDigits.has_value()) {
