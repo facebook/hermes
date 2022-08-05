@@ -712,6 +712,58 @@ bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
   return true;
 }
 
+/// Helper to convert from a well-formed unit identifier \p id, to one of the
+/// supported built-in NSUnit types provided by Foundation.
+NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
+  static const std::pair<std::u16string_view, NSUnit *> units[] = {
+      {u"acre", NSUnitArea.acres},
+      {u"bit", NSUnitInformationStorage.bits},
+      {u"byte", NSUnitInformationStorage.bytes},
+      {u"celsius", NSUnitTemperature.celsius},
+      {u"centimeter", NSUnitLength.centimeters},
+      {u"degree", NSUnitAngle.degrees},
+      {u"fahrenheit", NSUnitTemperature.fahrenheit},
+      {u"fluid-ounce", NSUnitVolume.fluidOunces},
+      {u"foot", NSUnitLength.feet},
+      {u"gallon", NSUnitVolume.gallons},
+      {u"gigabit", NSUnitInformationStorage.gigabits},
+      {u"gigabyte", NSUnitInformationStorage.gigabytes},
+      {u"gram", NSUnitMass.grams},
+      {u"gram-per-liter", NSUnitConcentrationMass.gramsPerLiter},
+      {u"hectare", NSUnitArea.hectares},
+      {u"hour", NSUnitDuration.hours},
+      {u"inch", NSUnitLength.inches},
+      {u"kilobit", NSUnitInformationStorage.kilobits},
+      {u"kilobyte", NSUnitInformationStorage.kilobytes},
+      {u"kilogram", NSUnitMass.kilograms},
+      {u"kilometer", NSUnitLength.kilometers},
+      {u"kilometer-per-hour", NSUnitSpeed.kilometersPerHour},
+      {u"liter", NSUnitVolume.liters},
+      {u"megabit", NSUnitInformationStorage.megabits},
+      {u"megabyte", NSUnitInformationStorage.megabytes},
+      {u"meter", NSUnitLength.meters},
+      {u"meter-per-second", NSUnitSpeed.metersPerSecond},
+      {u"mile", NSUnitLength.miles},
+      {u"mile-per-gallon", NSUnitFuelEfficiency.milesPerGallon},
+      {u"mile-per-hour", NSUnitSpeed.milesPerHour},
+      {u"mile-scandinavian", NSUnitLength.scandinavianMiles},
+      {u"milliliter", NSUnitVolume.milliliters},
+      {u"millimeter", NSUnitLength.millimeters},
+      {u"millisecond", NSUnitDuration.milliseconds},
+      {u"minute", NSUnitDuration.minutes},
+      {u"ounce", NSUnitMass.ounces},
+      {u"petabyte", NSUnitInformationStorage.petabytes},
+      {u"pound", NSUnitMass.poundsMass},
+      {u"second", NSUnitDuration.seconds},
+      {u"stone", NSUnitMass.stones},
+      {u"terabit", NSUnitInformationStorage.terabits},
+      {u"terabyte", NSUnitInformationStorage.terabytes},
+      {u"yard", NSUnitLength.yards}};
+  if (auto nsUnitOpt = pairMapLookup(units, std::u16string_view(unitId)))
+    return *nsUnitOpt;
+  return [[NSUnit alloc] initWithSymbol:u16StringToNSString(unitId)];
+}
+
 // https://402.ecma-international.org/8.0/#sec-iswellformedcurrencycode
 bool isWellFormedCurrencyCode(std::u16string_view currencyCode) {
   //  1. Let normalized be the result of mapping currency to upper case as
@@ -2319,7 +2371,7 @@ void NumberFormat::Impl::initializeNSFormatters() noexcept {
     } else if (unitDisplay == u"long") {
       nsMeasurementFormatter.unitStyle = NSFormattingUnitStyleLong;
     }
-    nsUnit = [[NSUnit alloc] initWithSymbol:u16StringToNSString(*unit)];
+    nsUnit = unitIdentifierToNSUnit(*unit);
   }
 }
 
