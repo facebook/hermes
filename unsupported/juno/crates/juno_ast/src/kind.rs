@@ -405,6 +405,14 @@ macro_rules! gen_nodekind_enum {
                 pub(super) inner: super::$kind<'a>,
             }
 
+            impl<'a> From<$kind<'a>> for Builder<'a> {
+                /// Simple conversion which goes from the individual builder structs
+                /// to the actual `Builder` enum.
+                fn from(kind: $kind<'a>) -> Self {
+                    Builder::$kind(kind)
+                }
+            }
+
             impl<'a> $kind<'a> {
                 /// Initialize the builder from `node`.
                 pub fn from_node(node: &'a super::$kind<'a>) -> Self {
