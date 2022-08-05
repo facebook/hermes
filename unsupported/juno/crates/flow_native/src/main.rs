@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow;
 use anyhow::Context;
 use command_line::CommandLine;
 use command_line::Opt;
@@ -33,7 +32,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
-
 use std::fs::File;
 use std::io::stdout;
 use std::io::BufWriter;
