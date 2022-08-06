@@ -2313,6 +2313,25 @@ CallResult<bool> JSObject::defineOwnComputed(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
 }
 
+std::string JSObject::getNameIfExists(PointerBase &base) {
+  // Try "displayName" first, if it is defined.
+  if (auto nameVal = tryGetNamedNoAlloc(
+          this, base, Predefined::getSymbolID(Predefined::displayName))) {
+    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
+      return converter(name);
+    }
+  }
+  // Next, use "name" if it is defined.
+  if (auto nameVal = tryGetNamedNoAlloc(
+          this, base, Predefined::getSymbolID(Predefined::name))) {
+    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
+      return converter(name);
+    }
+  }
+  // There is no other way to access the "name" property on an object.
+  return "";
+}
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string JSObject::getHeuristicTypeName(GC &gc) {
   PointerBase &base = gc.getPointerBase();
@@ -2391,25 +2410,6 @@ std::string JSObject::getHeuristicTypeName(GC &gc) {
   }
   name += ")";
   return name;
-}
-
-std::string JSObject::getNameIfExists(PointerBase &base) {
-  // Try "displayName" first, if it is defined.
-  if (auto nameVal = tryGetNamedNoAlloc(
-          this, base, Predefined::getSymbolID(Predefined::displayName))) {
-    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
-      return converter(name);
-    }
-  }
-  // Next, use "name" if it is defined.
-  if (auto nameVal = tryGetNamedNoAlloc(
-          this, base, Predefined::getSymbolID(Predefined::name))) {
-    if (auto *name = dyn_vmcast<StringPrimitive>(nameVal->unboxToHV(base))) {
-      return converter(name);
-    }
-  }
-  // There is no other way to access the "name" property on an object.
-  return "";
 }
 
 std::string JSObject::_snapshotNameImpl(GCCell *cell, GC &gc) {
