@@ -76,6 +76,13 @@ void SamplingProfiler::registerDomain(Domain *domain) {
     domains_.push_back(domain);
 }
 
+void SamplingProfiler::markRootsForCompleteMarking(RootAcceptor &acceptor) {
+  std::lock_guard<std::mutex> lockGuard(runtimeDataLock_);
+  for (Domain *&domain : domains_) {
+    acceptor.acceptPtr(domain);
+  }
+}
+
 void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
   std::lock_guard<std::mutex> lockGuard(runtimeDataLock_);
   for (Domain *&domain : domains_) {

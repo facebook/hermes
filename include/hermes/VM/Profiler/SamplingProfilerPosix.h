@@ -293,6 +293,9 @@ class SamplingProfiler {
   explicit SamplingProfiler(Runtime &runtime);
   ~SamplingProfiler();
 
+  /// See documentation on \c GCBase::GCCallbacks.
+  void markRootsForCompleteMarking(RootAcceptor &acceptor);
+
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor);
 
