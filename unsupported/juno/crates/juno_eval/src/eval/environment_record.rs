@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::rc::Rc;
+
 use super::completion_record::*;
 use super::jsvalue::*;
 use super::runtime::*;
 use crate::eval::jsobject::PropertyDescriptor;
 use crate::eval::operations::to_boolean;
-use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Binding {

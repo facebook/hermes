@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::path::Path;
+
 use super::opt::*;
 use crate::cl::CommandLine;
-use std::path::Path;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum CommandLineIntent {

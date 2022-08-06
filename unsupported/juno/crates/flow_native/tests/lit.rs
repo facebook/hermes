@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use assert_cmd::Command;
 use std::env;
+
+use assert_cmd::Command;
 
 #[test]
 #[cfg(any(target_os = "macos", target_os = "linux"))]

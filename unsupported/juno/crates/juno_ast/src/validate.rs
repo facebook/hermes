@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use thiserror::Error;
+
 use super::kind::*;
 use super::AssignmentExpressionOperator;
 use super::BinaryExpressionOperator;
@@ -26,8 +28,6 @@ use super::UnaryExpressionOperator;
 use super::UpdateExpressionOperator;
 use super::VariableDeclarationKind;
 use super::Visitor;
-
-use thiserror::Error;
 
 macro_rules! gen_validate_fn {
     ($name:ident {

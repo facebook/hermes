@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::eval::*;
 use juno_ast::NodeRc;
+
+use crate::eval::*;
 
 #[allow(dead_code)]
 mod eval;

@@ -5,14 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::cmp::Ordering;
+use std::collections::HashMap;
+
+use juno_support::declare_opaque_id;
+
 use super::completion_record::*;
 use super::function::*;
 use super::operations::*;
 use super::runtime::*;
 use crate::eval::jsvalue::JSValue;
-use juno_support::declare_opaque_id;
-use std::cmp::Ordering;
-use std::collections::HashMap;
 
 declare_opaque_id!(PropertyIndex);
 

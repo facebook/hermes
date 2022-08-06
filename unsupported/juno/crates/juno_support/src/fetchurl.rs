@@ -14,10 +14,11 @@
 //! This all could be made flexible and configurable with providers and so on,
 //! but I see no point to complicate it at this point.
 
-use anyhow;
-use base64;
 use std::fs::File;
 use std::io::Read;
+
+use anyhow;
+use base64;
 use thiserror;
 use url::Url;
 

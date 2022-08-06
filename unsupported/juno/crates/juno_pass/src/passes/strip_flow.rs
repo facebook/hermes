@@ -7,8 +7,9 @@
 
 //! Pass to strip the Flow type declarations from code.
 
-use crate::Pass;
 use juno::ast::*;
+
+use crate::Pass;
 
 #[derive(Default)]
 pub struct StripFlow {}

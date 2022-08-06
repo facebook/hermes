@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use num::Zero;
+
 use super::jsvalue::*;
 use crate::eval::completion_record::CompletionRecord;
 use crate::eval::completion_record::NormalCompletion;
 use crate::eval::runtime::Runtime;
-use num::Zero;
 
 /// https://262.ecma-international.org/11.0/#array-index
 ///

@@ -5,13 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::cl::CommandLine;
 use std::cell::Cell;
 use std::cell::UnsafeCell;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::str::FromStr;
+
+use crate::cl::CommandLine;
 
 /// This enum controls whether an option can have a value.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
