@@ -137,11 +137,11 @@ jobs:
               -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
               -DHERMES_ENABLE_DEBUGGER=False
-            cmake --build ./build --target hermes hvm hbcdump hermesc check-hermes
+            cmake --build build --target check-hermes hermes hvm hbcdump hermesc
             cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
-            cmake --build ./build_hdb --target hdb check-hermes
+            cmake --build build_hdb --target check-hermes hdb
       - run:
           name: Create CLI tarball
           environment:
@@ -403,10 +403,8 @@ jobs:
             cmake --build ./build_release --target hvm --config Release
             cmake --build ./build_release --target hbcdump --config Release
             cmake --build ./build_release --target hermesc --config Release
-            cmake --build ./build_release --target check-hermes --config Release
             if (-not $?) { throw "Failed to build Hermes" }
             cmake --build ./build_hdb --target hdb
-            cmake --build ./build_hdb --target check-hermes
             if (-not $?) { throw "Failed to build Hermes" }
 
       - run:
