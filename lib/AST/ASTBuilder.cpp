@@ -57,29 +57,29 @@ class ASTBuilder {
 
   bool extractNodeLabel(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       UniqueString *&result);
   bool extractNodeString(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       UniqueString *&result) {
     return extractNodeLabel(jsObj, name, result);
   }
   bool extractNodeBoolean(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       bool &result);
   bool extractNodeNumber(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       double &result);
   bool extractNodePtr(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       NodePtr &result);
   bool extractNodeList(
       const parser::JSONObject *jsObj,
-      StringRef name,
+      llvh::StringRef name,
       NodeList &result);
 
   /// Convert an ESTree Literal node into a type-specific tttLiteral node.
@@ -94,7 +94,7 @@ class ASTBuilder {
 
 bool ASTBuilder::extractNodeLabel(
     const JSONObject *jsObj,
-    StringRef name,
+    llvh::StringRef name,
     UniqueString *&result) {
   auto strObj = dyn_cast<JSONString>(jsObj->get(name));
   if (!strObj)
@@ -106,7 +106,7 @@ bool ASTBuilder::extractNodeLabel(
 
 bool ASTBuilder::extractNodeBoolean(
     const JSONObject *jsObj,
-    StringRef name,
+    llvh::StringRef name,
     bool &result) {
   auto boolObj = dyn_cast<JSONBoolean>(jsObj->get(name));
   if (!boolObj)
@@ -118,7 +118,7 @@ bool ASTBuilder::extractNodeBoolean(
 
 bool ASTBuilder::extractNodeNumber(
     const JSONObject *jsObj,
-    StringRef name,
+    llvh::StringRef name,
     double &result) {
   auto numberObj = dyn_cast<JSONNumber>(jsObj->get(name));
   if (!numberObj)
@@ -130,7 +130,7 @@ bool ASTBuilder::extractNodeNumber(
 
 bool ASTBuilder::extractNodePtr(
     const JSONObject *jsObj,
-    StringRef name,
+    llvh::StringRef name,
     NodePtr &result) {
   auto obj = dyn_cast_or_null<JSONObject>(jsObj->get(name));
   if (!obj)
@@ -146,7 +146,7 @@ bool ASTBuilder::extractNodePtr(
 
 bool ASTBuilder::extractNodeList(
     const JSONObject *jsObj,
-    StringRef name,
+    llvh::StringRef name,
     NodeList &result) {
   auto arr = dyn_cast<JSONArray>(jsObj->get(name));
   if (!arr)
@@ -256,7 +256,7 @@ llvh::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
 
   // Read the name of the property.
   assert(isa<JSONString>((*TypeItr).second) && "invalid 'type' property");
-  StringRef Typename = dyn_cast<JSONString>((*TypeItr).second)->str();
+  llvh::StringRef Typename = dyn_cast<JSONString>((*TypeItr).second)->str();
 
   /*  // Ignore the following nodes as they are not supported.
     if (Typename == "CommentLine" || Typename == "CommentBlock") {

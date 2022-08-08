@@ -337,13 +337,6 @@ class GCBase {
 #endif
   };
 
-  /// Struct that keeps a reference to a GC.  Useful, for example, as a base
-  /// class of Acceptors that need access to the GC.
-  struct GCRef {
-    GC &gc;
-    GCRef(GC &gc) : gc(gc) {}
-  };
-
   /// Stats for collections. Time unit, where applicable, is seconds.
   struct CumulativeHeapStats {
     unsigned numCollections{0};
@@ -766,13 +759,6 @@ class GCBase {
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
   };
 
-#ifndef NDEBUG
-  /// Whether the last allocation was fixed size.  For long-lived
-  /// allocations, we do not declare whether they are fixed size;
-  /// Unknown is used in that case.
-  enum class FixedSizeValue { Yes, No, Unknown };
-#endif
-
   enum class HeapKind { HadesGC, MallocGC };
 
   GCBase(
@@ -809,12 +795,6 @@ class GCBase {
       LongLived longLived = LongLived::No,
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
-
-  /// \return true if the "target space" for allocations should be randomized
-  /// (for GCs where that concept makes sense).
-  bool shouldRandomizeAllocSpace() const {
-    return randomizeAllocSpace_;
-  }
 
   /// Name to identify this heap in logs.
   const std::string &getName() const {
@@ -959,6 +939,7 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
+  virtual bool needsWriteBarrier(void *loc, GCCell *value) = 0;
   /// \}
 #endif
 
@@ -1044,12 +1025,6 @@ class GCBase {
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void weakRefReadBarrier(GCCell *value);
-#endif
-
-#ifndef NDEBUG
-  virtual bool needsWriteBarrier(void *loc, GCCell *value) {
-    return false;
-  }
 #endif
 
   /// @name Marking APIs
@@ -1280,18 +1255,6 @@ class GCBase {
   uint64_t nextObjectID();
 #endif
 
-  using TimePoint = std::chrono::steady_clock::time_point;
-  /// Return the difference between the two time points (end - start)
-  /// as a double representing the number of seconds in the duration.
-  static double clockDiffSeconds(TimePoint start, TimePoint end);
-
-  /// Return the difference between the two durations (end - start) given in
-  /// microseconds as a double representing the number of seconds in the
-  /// difference.
-  static double clockDiffSeconds(
-      std::chrono::microseconds start,
-      std::chrono::microseconds end);
-
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.
 #if defined(UNIT_TEST) || defined(_MSC_VER)
@@ -1487,6 +1450,10 @@ class GCBase {
   /// Whether or not a GC cycle is currently occurring.
   bool inGC_{false};
 
+  /// Whether the GC has OOMed. Currently only useful for understanding crash
+  /// dumps, particularly when HERMESVM_EXCEPTION_ON_OOM is set.
+  bool hasOOMed_{false};
+
   /// The block of fields below records values of various metrics at
   /// the start of execution, so that we can get the values at the end
   /// and subtract.  The "runtimeWillExecute" method is called at
@@ -1597,25 +1564,7 @@ class GCBase {
 
   /// True if the tripwire has already been called on this heap.
   bool tripwireCalled_{false};
-
-/// Whether to randomize the "target space" for allocations, for GC's in which
-/// this concept makes sense. Only available in debug builds.
-#ifndef NDEBUG
-  bool randomizeAllocSpace_{false};
-#else
-  static const bool randomizeAllocSpace_{false};
-#endif
 };
-
-#ifdef HERMESVM_EXCEPTION_ON_OOM
-/// A std::runtime_error class for out-of-memory.
-class JSOutOfMemoryError : public std::runtime_error {
- public:
-  JSOutOfMemoryError(const std::string &what_arg)
-      : std::runtime_error(what_arg) {}
-  JSOutOfMemoryError(const char *what_arg) : std::runtime_error(what_arg) {}
-};
-#endif
 
 // Utilities for formatting time durations and memory sizes.
 

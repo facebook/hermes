@@ -110,7 +110,7 @@ Function *IRBuilder::createTopLevelFunction(
 }
 
 Function *IRBuilder::createFunction(
-    StringRef OriginalName,
+    llvh::StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
     SourceVisibility sourceVisibility,
@@ -158,7 +158,7 @@ GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
   return M->addGlobalProperty(name, declared);
 }
 GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
-    StringRef name,
+    llvh::StringRef name,
     bool declared) {
   return createGlobalObjectProperty(
       M->getContext().getIdentifier(name), declared);
@@ -168,7 +168,7 @@ Parameter *IRBuilder::createParameter(Function *Parent, Identifier Name) {
   return new Parameter(Parent, Name);
 }
 
-Parameter *IRBuilder::createParameter(Function *Parent, StringRef Name) {
+Parameter *IRBuilder::createParameter(Function *Parent, llvh::StringRef Name) {
   return createParameter(Parent, createIdentifier(Name));
 }
 
@@ -182,7 +182,7 @@ Variable *IRBuilder::createVariable(
 Variable *IRBuilder::createVariable(
     VariableScope *Parent,
     Variable::DeclKind declKind,
-    StringRef Name) {
+    llvh::StringRef Name) {
   return createVariable(Parent, declKind, createIdentifier(Name));
 }
 
@@ -207,7 +207,7 @@ LiteralBigInt *IRBuilder::getLiteralBigInt(UniqueString *value) {
   return M->getLiteralBigInt(value);
 }
 
-LiteralString *IRBuilder::getLiteralString(StringRef value) {
+LiteralString *IRBuilder::getLiteralString(llvh::StringRef value) {
   Identifier Iden = createIdentifier(value);
   return getLiteralString(Iden);
 }
@@ -240,7 +240,7 @@ EmptySentinel *IRBuilder::getEmptySentinel() {
   return M->getEmptySentinel();
 }
 
-Identifier IRBuilder::createIdentifier(StringRef str) {
+Identifier IRBuilder::createIdentifier(llvh::StringRef str) {
   return M->getContext().getIdentifier(str);
 }
 
@@ -300,7 +300,7 @@ TryEndInst *IRBuilder::createTryEndInst() {
   return I;
 }
 
-AllocStackInst *IRBuilder::createAllocStackInst(StringRef varName) {
+AllocStackInst *IRBuilder::createAllocStackInst(llvh::StringRef varName) {
   Identifier Iden = createIdentifier(varName);
   return createAllocStackInst(Iden);
 }
@@ -490,27 +490,27 @@ StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
 
 DeletePropertyInst *IRBuilder::createDeletePropertyInst(
     Value *object,
-    StringRef property) {
+    llvh::StringRef property) {
   Identifier Iden = createIdentifier(property);
   return createDeletePropertyInst(object, Iden);
 }
 
 LoadPropertyInst *IRBuilder::createLoadPropertyInst(
     Value *object,
-    StringRef property) {
+    llvh::StringRef property) {
   Identifier Iden = createIdentifier(property);
   return createLoadPropertyInst(object, Iden);
 }
 
 TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
-    StringRef property) {
+    llvh::StringRef property) {
   return createTryLoadGlobalPropertyInst(createIdentifier(property));
 }
 
 StorePropertyInst *IRBuilder::createStorePropertyInst(
     Value *storedValue,
     Value *object,
-    StringRef property) {
+    llvh::StringRef property) {
   Identifier Iden = createIdentifier(property);
   return createStorePropertyInst(storedValue, object, Iden);
 }

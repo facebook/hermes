@@ -29,6 +29,7 @@ NAMED_PROP(NamedPropForUnitTestOnly)
 NAMED_PROP(CapturedError)
 NAMED_PROP(IntlNativeType)
 NAMED_PROP(NativeState)
+NAMED_PROP(ArrayBufferExternalFinalizer)
 
 #undef PROP
 #undef NAMED_PROP

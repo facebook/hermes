@@ -71,7 +71,7 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
       runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
-  if (arr->createDataBlock(runtime, srcSize, false) ==
+  if (createDataBlock(runtime, arr, srcSize, false) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -118,7 +118,7 @@ JSArrayBuffer::JSArrayBuffer(
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
-  if (self->attached())
+  if (self->attached() && !self->external_)
     self->freeInternalBuffer(gc);
   self->~JSArrayBuffer();
 }
@@ -134,7 +134,7 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->attached()) {
+  if (!self->attached() || self->external_) {
     return;
   }
   if (uint8_t *data = self->data_.get(gc)) {
@@ -151,7 +151,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
     GC &gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->attached()) {
+  if (!self->attached() || self->external_) {
     return;
   }
   if (uint8_t *data = self->data_.get(gc)) {
@@ -171,6 +171,7 @@ void JSArrayBuffer::freeInternalBuffer(GC &gc) {
   uint8_t *data = data_.get(gc);
   assert(attached() && "Buffer must be attached");
   assert((data || size_ == 0) && "Null buffers must have zero size");
+  assert(!external_ && "External buffer cannot be freed");
 
   // Need to untrack the native memory that may have been tracked by snapshots.
   gc.debitExternalMemory(this, size_);
@@ -178,18 +179,32 @@ void JSArrayBuffer::freeInternalBuffer(GC &gc) {
   free(data);
 }
 
-void JSArrayBuffer::detach(GC &gc) {
-  if (!attached())
-    return;
-  freeInternalBuffer(gc);
+ExecutionStatus JSArrayBuffer::detach(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  if (!self->attached())
+    return ExecutionStatus::RETURNED;
+  if (!self->external_)
+    self->freeInternalBuffer(runtime.getHeap());
+  else {
+    auto res = setExternalFinalizer(
+        runtime, self, HandleRootOwner::getUndefinedValue());
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
-  attached_ = false;
+  self->attached_ = false;
+  return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus
-JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
-  detach(runtime.getHeap());
+ExecutionStatus JSArrayBuffer::createDataBlock(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self,
+    size_type size,
+    bool zero) {
+  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   uint8_t *data = nullptr;
   if (size > 0) {
     // If an external allocation of this size would exceed the GC heap size,
@@ -209,10 +224,52 @@ JSArrayBuffer::createDataBlock(Runtime &runtime, size_type size, bool zero) {
     }
   }
 
-  attached_ = true;
-  data_.set(runtime, data);
-  size_ = size;
-  runtime.getHeap().creditExternalMemory(this, size);
+  self->attached_ = true;
+  self->data_.set(runtime, data);
+  self->size_ = size;
+  self->external_ = false;
+  runtime.getHeap().creditExternalMemory(*self, size);
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus JSArrayBuffer::setExternalFinalizer(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self,
+    Handle<> value) {
+  auto res = JSObject::defineOwnProperty(
+      self,
+      runtime,
+      Predefined::getSymbolID(
+          Predefined::InternalPropertyArrayBufferExternalFinalizer),
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      value);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(!*res))
+    return runtime.raiseTypeError("Cannot modify external buffer.");
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus JSArrayBuffer::setExternalDataBlock(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self,
+    uint8_t *data,
+    size_type size,
+    void *context,
+    FinalizeNativeStatePtr finalizePtr) {
+  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  // Set the external finalizer first, so that if it throws, the buffer is not
+  // left in an attached state.
+  auto *ns = NativeState::create(runtime, context, finalizePtr);
+  auto res = setExternalFinalizer(runtime, self, runtime.makeHandle(ns));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  self->attached_ = true;
+  self->size_ = size;
+  self->external_ = true;
+  self->data_.set(runtime, data);
   return ExecutionStatus::RETURNED;
 }
 

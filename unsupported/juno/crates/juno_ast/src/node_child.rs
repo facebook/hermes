@@ -10,6 +10,12 @@
 
 use std::marker::PhantomData;
 
+use juno_support::atom_table::Atom;
+use juno_support::atom_table::AtomU16;
+use juno_support::source_manager::SourceId;
+use juno_support::source_manager::SourceLoc;
+use juno_support::source_manager::SourceRange;
+
 use crate::builder;
 use crate::context::NodeListElement;
 use crate::template;
@@ -19,11 +25,6 @@ use crate::Path;
 use crate::TransformResult;
 use crate::Visitor;
 use crate::VisitorMut;
-use juno_support::atom_table::Atom;
-use juno_support::atom_table::AtomU16;
-use juno_support::source_manager::SourceId;
-use juno_support::source_manager::SourceLoc;
-use juno_support::source_manager::SourceRange;
 
 /// Metadata common to all AST nodes.
 ///
@@ -490,8 +491,9 @@ impl<'gc> NodeChild<'gc> for NodeList<'gc> {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use std::collections::HashMap;
+
+    use crate::*;
 
     #[test]
     fn test_node_ref() {

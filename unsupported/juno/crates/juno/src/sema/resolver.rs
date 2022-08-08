@@ -5,6 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::rc::Rc;
+
+use juno_support::atom_table::Atom;
+use juno_support::source_manager::SourceId;
+use juno_support::source_manager::SourceRange;
+use juno_support::ScopedHashMap;
+use smallvec::SmallVec;
+
 use super::sem_context::*;
 use crate::ast;
 use crate::ast::builder;
@@ -30,14 +40,6 @@ use crate::sema::decl_collector::DeclCollector;
 use crate::sema::decl_collector::ScopeDecls;
 use crate::sema::keywords::Keywords;
 use crate::sema::known_globals::KNOWN_GLOBALS;
-use juno_support::atom_table::Atom;
-use juno_support::source_manager::SourceId;
-use juno_support::source_manager::SourceRange;
-use juno_support::ScopedHashMap;
-use smallvec::SmallVec;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::rc::Rc;
 
 #[derive(Debug)]
 struct Binding<'gc> {

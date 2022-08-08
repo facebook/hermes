@@ -5,14 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::uref::URef;
-use crate::uref_intrusive_adapter;
-use intrusive_collections::LinkedList;
-use intrusive_collections::LinkedListLink;
 use std::cell::Cell;
 use std::cell::UnsafeCell;
 use std::mem;
 use std::mem::MaybeUninit;
+
+use intrusive_collections::LinkedList;
+use intrusive_collections::LinkedListLink;
+
+use crate::uref::URef;
+use crate::uref_intrusive_adapter;
 
 pub(crate) struct Value {
     user_list: UnsafeCell<LinkedList<UseNodeAdapter>>,

@@ -94,7 +94,7 @@ class UsageCounter : public BytecodeVisitor {
   uintptr_t opcodeEnd_;
   uintptr_t functionEnd_;
 
-  llvh::DenseMap<std::pair<StringRef, unsigned>, unsigned> emitted_;
+  llvh::DenseMap<std::pair<llvh::StringRef, unsigned>, unsigned> emitted_;
 
   /// Indices into the bytecode's string table corresponding to the (exclusive)
   /// end of each string kind entry.
@@ -109,7 +109,7 @@ class UsageCounter : public BytecodeVisitor {
     }
 
     // Do one pass of deduplication while emitting. This cuts output in half.
-    std::pair<StringRef, unsigned> key = {type, dedupKey};
+    std::pair<llvh::StringRef, unsigned> key = {type, dedupKey};
     if (emitted_.count(key)) {
       assert(emitted_[key] == size && "Expected deduped entry to be same size");
       return;

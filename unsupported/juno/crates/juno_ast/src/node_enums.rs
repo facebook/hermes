@@ -7,9 +7,10 @@
 
 //! Simple enums used as children in AST nodes.
 
-use crate::node_child::NodeChild;
 use juno_support::define_str_enum;
 use thiserror::Error;
+
+use crate::node_child::NodeChild;
 
 #[derive(Debug, Copy, Clone, Error)]
 #[error("Invalid string property for AST node")]

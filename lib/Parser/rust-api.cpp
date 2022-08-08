@@ -17,6 +17,7 @@
 #include "hermes/Parser/FlowHelpers.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/SimpleDiagHandler.h"
+#include "llvh/ADT/StringRef.h"
 
 // As explained above, we don't have a header with prototypes for this file.
 #if defined(__GNUC__) && defined(__clang__)
@@ -518,7 +519,7 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
     return parserCtx.release();
   }
 
-  parserCtx->setInputBuffer(StringRef(source, len));
+  parserCtx->setInputBuffer(llvh::StringRef(source, len));
 
   parserCtx->context_.setParseTS(false);
   parserCtx->context_.setParseFlow(hermes::ParseFlowSetting::NONE);
@@ -638,7 +639,7 @@ extern "C" DataRef hermes_parser_get_magic_comment(
   if (!parserCtx->haveBufferId() || !parserCtx->ast_)
     return {nullptr, 0};
 
-  StringRef res{};
+  llvh::StringRef res{};
   switch (kind) {
     case MagicCommentKind::SourceUrl:
       res = parserCtx->context_.getSourceErrorManager().getSourceUrl(

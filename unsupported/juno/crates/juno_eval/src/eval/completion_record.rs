@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::rc::Rc;
+
 use super::jsvalue::*;
 use super::reference::Reference;
-use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum AbruptCompletion {

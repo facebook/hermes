@@ -21,6 +21,7 @@
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/ADT/SmallVector.h"
+#include "llvh/ADT/StringRef.h"
 #include "llvh/ADT/Twine.h"
 #include "llvh/ADT/ilist_node.h"
 #include "llvh/ADT/iterator_range.h"
@@ -72,7 +73,7 @@ class Type {
   };
 
   /// Return the string representation of the type at index \p idx.
-  StringRef getKindStr(TypeKind idx) const {
+  llvh::StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
     static const char *const names[] = {
         "empty",
@@ -508,7 +509,7 @@ class Value {
   }
 
   /// \returns the string representation of the Value kind.
-  StringRef getKindStr() const;
+  llvh::StringRef getKindStr() const;
 
   /// Sets a new type \p type to the value.
   void setType(Type type) {
@@ -1081,7 +1082,7 @@ class Instruction
   void eraseFromParent();
 
   /// Return the name of the instruction.
-  StringRef getName();
+  llvh::StringRef getName();
 
   /// \returns true if the instruction has some side effect.
   bool hasSideEffect() {
@@ -1544,7 +1545,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   /// \returns the string representation of internal name.
-  StringRef getInternalNameStr() const {
+  llvh::StringRef getInternalNameStr() const {
     return internalName_.str();
   }
 

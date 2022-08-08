@@ -44,6 +44,7 @@ TEST(SamplingProfilerPosixTest, Invariants) {
   EXPECT_EQ(owningThread(*rt->samplingProfiler), pthread_self());
 }
 
+#ifndef __APPLE__
 TEST(SamplingProfilerPosixTest, MultipleRuntimes) {
   auto rt0 = makeRuntime(withSamplingProfilerEnabled);
   auto rt1 = makeRuntime(withSamplingProfilerEnabled);
@@ -64,6 +65,7 @@ TEST(SamplingProfilerPosixTest, MultipleProfilers) {
   EXPECT_EQ(owningThread(*sp1), pthread_self());
   EXPECT_EQ(owningThread(*sp2), pthread_self());
 }
+#endif
 
 } // namespace
 

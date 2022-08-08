@@ -115,7 +115,7 @@ class ESTreeJSONDumper {
     }
   }
 
-  void visit(Node *node, StringRef type) {
+  void visit(Node *node, llvh::StringRef type) {
     json_.openDict();
     json_.emitKeyValue("type", type);
     dumpChildren(node);
@@ -123,7 +123,7 @@ class ESTreeJSONDumper {
     json_.closeDict();
   }
 
-  void visit(NumericLiteralNode *node, StringRef type) {
+  void visit(NumericLiteralNode *node, llvh::StringRef type) {
     json_.openDict();
     json_.emitKeyValue("type", type);
     dumpChildren(node);
@@ -131,7 +131,7 @@ class ESTreeJSONDumper {
     if (sr.isValid() && rawProp_ == ESTreeRawProp::Include) {
       json_.emitKeyValue(
           "raw",
-          StringRef{
+          llvh::StringRef{
               sr.Start.getPointer(),
               (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
     }

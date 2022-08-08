@@ -43,7 +43,7 @@ FunctionContext::~FunctionContext() {
   irGen_->functionContext_ = oldContext_;
 }
 
-Identifier FunctionContext::genAnonymousLabelName(StringRef hint) {
+Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
   llvh::SmallString<16> buf;
   llvh::raw_svector_ostream nameBuilder{buf};
   nameBuilder << "?anon_" << anonymousLabelCounter++ << "_" << hint;
@@ -63,7 +63,7 @@ void ESTreeIRGen::genFunctionDeclaration(
 
   // Find the name of the function.
   Identifier functionName = getNameFieldFromID(func->_id);
-  LLVM_DEBUG(dbgs() << "IRGen function \"" << functionName << "\".\n");
+  LLVM_DEBUG(llvh::dbgs() << "IRGen function \"" << functionName << "\".\n");
 
   auto *funcStorage = nameTable_.lookup(functionName);
   assert(
@@ -90,9 +90,9 @@ Value *ESTreeIRGen::genFunctionExpression(
   }
 
   LLVM_DEBUG(
-      dbgs() << "Creating anonymous closure. "
-             << Builder.getInsertionBlock()->getParent()->getInternalName()
-             << ".\n");
+      llvh::dbgs()
+      << "Creating anonymous closure. "
+      << Builder.getInsertionBlock()->getParent()->getInternalName() << ".\n");
 
   NameTableScopeTy newScope(nameTable_);
   Variable *tempClosureVar = nullptr;
@@ -133,9 +133,9 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
     ESTree::ArrowFunctionExpressionNode *AF,
     Identifier nameHint) {
   LLVM_DEBUG(
-      dbgs() << "Creating arrow function. "
-             << Builder.getInsertionBlock()->getParent()->getInternalName()
-             << ".\n");
+      llvh::dbgs()
+      << "Creating arrow function. "
+      << Builder.getInsertionBlock()->getParent()->getInternalName() << ".\n");
 
   if (AF->_async) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -481,9 +481,9 @@ void ESTreeIRGen::emitFunctionPrologue(
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   LLVM_DEBUG(
-      dbgs() << "Hoisting "
-             << (semInfo->varDecls.size() + semInfo->closures.size())
-             << " variable decls.\n");
+      llvh::dbgs() << "Hoisting "
+                   << (semInfo->varDecls.size() + semInfo->closures.size())
+                   << " variable decls.\n");
 
   Builder.setLocation(newFunc->getSourceRange().Start);
 
@@ -547,12 +547,12 @@ void ESTreeIRGen::emitFunctionPrologue(
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
 
-  LLVM_DEBUG(dbgs() << "IRGen function parameters.\n");
+  LLVM_DEBUG(llvh::dbgs() << "IRGen function parameters.\n");
 
   // Create a variable for every parameter.
   for (auto paramDecl : funcNode->getSemInfo()->paramNames) {
     Identifier paramName = getNameFieldFromID(paramDecl.identifier);
-    LLVM_DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
+    LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << paramName << "\n");
     auto *paramStorage = Builder.createVariable(
         newFunc->getFunctionScope(), Variable::DeclKind::Var, paramName);
     // Register the storage for the parameter.
@@ -638,7 +638,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
     Module *M,
     Identifier originalName,
     SMRange sourceRange,
-    StringRef error) {
+    llvh::StringRef error) {
   IRBuilder builder{M};
 
   Function *function = builder.createFunction(

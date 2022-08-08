@@ -93,7 +93,7 @@ class CodeBlock final
   }
 
  public:
-#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
+#if defined(HERMESVM_PROFILER_JSFUNCTION)
   /// ID written/read by JS function profiler on first/later function events.
   ProfilerID profilerID{NO_PROFILER_ID};
 #endif

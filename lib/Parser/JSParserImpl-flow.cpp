@@ -1207,7 +1207,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       if (check(TokenKind::numeric_literal)) {
         // Negate the literal.
         double value = -tok_->getNumericLiteral();
-        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+        UniqueString *raw = lexer_.getStringLiteral(llvh::StringRef(
             start.getPointer(),
             tok_->getEndLoc().getPointer() - start.getPointer()));
         return setLocation(
@@ -1215,7 +1215,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::NumberLiteralTypeAnnotationNode(value, raw));
       } else if (check(TokenKind::bigint_literal)) {
-        UniqueString *raw = lexer_.getStringLiteral(StringRef(
+        UniqueString *raw = lexer_.getStringLiteral(llvh::StringRef(
             start.getPointer(),
             tok_->getEndLoc().getPointer() - start.getPointer()));
         return setLocation(

@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::generated_cvt::cvt_node_ptr;
-use crate::ast;
-use crate::ast::SourceId;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::str::FromStr;
+
 use hermes::parser::DataRef;
 use hermes::parser::HermesParser;
 use hermes::parser::NodeLabel;
@@ -23,9 +24,10 @@ use hermes::utf::is_utf8_continuation;
 use hermes::utf::utf8_with_surrogates_to_string;
 use hermes::utf::utf8_with_surrogates_to_utf16;
 use juno_support::atom_table;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::str::FromStr;
+
+use super::generated_cvt::cvt_node_ptr;
+use crate::ast;
+use crate::ast::SourceId;
 
 /// A cache to speed up finding locations. The assumption is that most lookups
 /// happen either in the current or the next source line, which would happen

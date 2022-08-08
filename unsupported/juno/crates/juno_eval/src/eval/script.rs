@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use juno_ast::NodeRc;
+
 use super::completion_record::*;
 use super::execution_context::*;
 use super::jsvalue::*;
 use super::runtime::*;
-use juno_ast::NodeRc;
 
 /// https://262.ecma-international.org/11.0/#script-record
 #[derive(Debug)]

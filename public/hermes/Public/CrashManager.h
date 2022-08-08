@@ -8,6 +8,8 @@
 #ifndef HERMES_PUBLIC_CRASHMANAGER_H
 #define HERMES_PUBLIC_CRASHMANAGER_H
 
+#include <hermes/Public/HermesExport.h>
+
 #include <cstddef>
 #include <functional>
 
@@ -16,7 +18,7 @@ namespace vm {
 
 /// A CrashManager provides functions that determine what memory and data is
 /// included in dumps in case of crashes.
-class CrashManager {
+class HERMES_EXPORT CrashManager {
  public:
   /// CallbackKey is the type of an identifier for a callback supplied to the
   /// CrashManager.
@@ -79,11 +81,11 @@ class CrashManager {
   /// \param heapInfo The current heap information
   virtual void setHeapInfo(const HeapInformation &heapInfo) = 0;
 
-  virtual ~CrashManager() {}
+  virtual ~CrashManager();
 };
 
 /// A CrashManager that does nothing.
-class NopCrashManager final : public CrashManager {
+class HERMES_EXPORT NopCrashManager final : public CrashManager {
  public:
   void registerMemory(void *, size_t) override {}
   void unregisterMemory(void *) override {}
@@ -97,7 +99,7 @@ class NopCrashManager final : public CrashManager {
   void unregisterCallback(CallbackKey /*key*/) override {}
   void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
 
-  ~NopCrashManager() override {}
+  ~NopCrashManager() override;
 };
 
 } // namespace vm

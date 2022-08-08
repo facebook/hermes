@@ -10,12 +10,13 @@
 //! A re-implementation of intrusive_collections::UnsafeRef that implements
 //! the `Copy` trait.
 
-use intrusive_collections::PointerOps;
 use std::borrow::Borrow;
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::NonNull;
+
+use intrusive_collections::PointerOps;
 
 pub(crate) struct URef<T: ?Sized> {
     ptr: NonNull<T>,

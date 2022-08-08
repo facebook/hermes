@@ -8,6 +8,8 @@
 #ifndef HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 #define HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 
+#include <hermes/Public/HermesExport.h>
+
 #include <iosfwd>
 #include <string>
 #include <system_error>
@@ -16,9 +18,9 @@ namespace hermes {
 namespace vm {
 
 /// Interface passed to the GC tripwire callback when it fires.
-class GCTripwireContext {
+class HERMES_EXPORT GCTripwireContext {
  public:
-  virtual ~GCTripwireContext() = default;
+  virtual ~GCTripwireContext();
 
   /// Captures the heap to a file.
   /// \param path to save the heap capture.

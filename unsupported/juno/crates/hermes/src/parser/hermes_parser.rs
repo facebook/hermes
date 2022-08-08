@@ -5,18 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::fmt::Formatter;
+use std::marker::PhantomData;
+use std::mem::MaybeUninit;
+use std::os::raw::c_char;
+use std::os::raw::c_uint;
+
+use juno_support::NullTerminatedBuf;
+
 use super::node::Node;
 use super::node::NodePtr;
 use super::node::NodePtrOpt;
 use super::node::SMLoc;
 use super::node::StringRef;
 use crate::utf::utf8_with_surrogates_to_string_lossy;
-use juno_support::NullTerminatedBuf;
-use std::fmt::Formatter;
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-use std::os::raw::c_char;
-use std::os::raw::c_uint;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]

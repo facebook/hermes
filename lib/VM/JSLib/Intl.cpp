@@ -1006,12 +1006,8 @@ intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(dateRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  CallResult<std::u16string> formatRes = dateTimeFormat->format(*dateRes);
-  if (LLVM_UNLIKELY(formatRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return StringPrimitive::createEfficient(runtime, std::move(*formatRes));
+  return StringPrimitive::createEfficient(
+      runtime, dateTimeFormat->format(*dateRes));
 }
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
@@ -1287,13 +1283,8 @@ intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  CallResult<std::u16string> formatRes =
-      numberFormat->format(xRes->getNumber());
-  if (LLVM_UNLIKELY(formatRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return StringPrimitive::createEfficient(runtime, std::move(*formatRes));
+  return StringPrimitive::createEfficient(
+      runtime, numberFormat->format(xRes->getNumber()));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
@@ -1449,12 +1440,7 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     // Naively, the spec requires TimeClip to be called here, but
     // since in this code path, x comes from a Date slot which has
     // already been clipped, there's no reason to do it again.
-
-    CallResult<std::u16string> formatRes = dtf.format(x);
-    if (LLVM_UNLIKELY(formatRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    str = std::move(*formatRes);
+    str = dtf.format(x);
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(str));
@@ -1524,13 +1510,7 @@ intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  CallResult<std::u16string> formatRes = nf.format(x);
-  if (LLVM_UNLIKELY(formatRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return StringPrimitive::createEfficient(runtime, std::move(*formatRes));
+  return StringPrimitive::createEfficient(runtime, nf.format(x));
 }
 
 CallResult<HermesValue>

@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use super::generated_ffi::NodeKind;
 use std::convert::AsRef;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
+
+use super::generated_ffi::NodeKind;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

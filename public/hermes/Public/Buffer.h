@@ -8,19 +8,21 @@
 #ifndef HERMES_PUBLIC_BUFFER_H
 #define HERMES_PUBLIC_BUFFER_H
 
+#include <hermes/Public/HermesExport.h>
+
 #include <cstddef>
 #include <cstdint>
 
 namespace hermes {
 
 /// A generic buffer interface.  E.g. for memmapped bytecode.
-class Buffer {
+class HERMES_EXPORT Buffer {
  public:
   Buffer() : data_(nullptr), size_(0) {}
 
   Buffer(const uint8_t *data, size_t size) : data_(data), size_(size) {}
 
-  virtual ~Buffer() {}
+  virtual ~Buffer();
 
   const uint8_t *data() const {
     return data_;

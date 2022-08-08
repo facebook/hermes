@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::HeapSize;
 use std::cell::Cell;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::ptr::null;
+
+use crate::HeapSize;
 
 /// Type used to hold a string index internally.
 type NumIndex = u32;

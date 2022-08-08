@@ -199,7 +199,7 @@ ExecutionStatus JSTypedArrayBase::createBuffer(
         "Cannot allocate a data block for the ArrayBuffer");
   }
   JSArrayBuffer::size_type bufferSize = length * selfObj->getByteWidth();
-  if (tmpbuf->createDataBlock(runtime, bufferSize) ==
+  if (JSArrayBuffer::createDataBlock(runtime, tmpbuf, bufferSize) ==
       ExecutionStatus::EXCEPTION) {
     // Failed to allocate, don't modify what it currently points to.
     return ExecutionStatus::EXCEPTION;

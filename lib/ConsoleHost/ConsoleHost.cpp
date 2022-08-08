@@ -381,14 +381,6 @@ bool executeHBCBytecodeImpl(
   runtime->dumpJSFunctionStats();
 #endif
 
-#ifdef HERMESVM_PROFILER_EXTERN
-  if (options.patchProfilerSymbols) {
-    patchProfilerSymbols(*runtime);
-  } else {
-    dumpProfilerSymbolMap(*runtime, options.profilerSymbolsFile);
-  }
-#endif
-
 #ifdef HERMESVM_PROFILER_NATIVECALL
   runtime->dumpNativeCallStats(llvh::outs());
 #endif

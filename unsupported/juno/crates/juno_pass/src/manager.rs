@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::passes::*;
 use juno::ast::Context;
 use juno::ast::GCLock;
 use juno::ast::Node;
 use juno::ast::NodeRc;
 use juno::ast::TransformResult;
+
+use crate::passes::*;
 
 /// Manager to create pipelines of multiple passes over the AST.
 #[derive(Default)]

@@ -5,7 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use anyhow;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::convert::TryFrom;
+use std::fmt;
+use std::fs::File;
+use std::io::stdout;
+use std::io::BufWriter;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::exit;
+use std::rc::Rc;
+
 use anyhow::Context;
 use command_line::CommandLine;
 use command_line::Opt;
@@ -28,20 +41,6 @@ use juno_support::atom_table::AtomU16;
 use juno_support::source_manager::SourceId;
 use juno_support::source_manager::SourceRange;
 use juno_support::NullTerminatedBuf;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::convert::TryFrom;
-use std::fmt;
-
-use std::fs::File;
-use std::io::stdout;
-use std::io::BufWriter;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::exit;
-use std::rc::Rc;
 
 struct Options {
     /// Input file to parse.

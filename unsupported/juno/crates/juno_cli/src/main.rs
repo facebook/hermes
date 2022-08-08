@@ -5,6 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::ops::DerefMut;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::exit;
+use std::rc::Rc;
+use std::str::FromStr;
+
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
@@ -33,15 +43,6 @@ use juno_support::HeapSize;
 use juno_support::NullTerminatedBuf;
 use juno_support::Timer;
 use sourcemap::SourceMap;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::ops::DerefMut;
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::exit;
-use std::rc::Rc;
-use std::str::FromStr;
 use url::Url;
 
 #[derive(Debug, Copy, Clone, PartialEq)]

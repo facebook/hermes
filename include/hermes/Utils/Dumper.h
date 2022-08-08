@@ -11,6 +11,7 @@
 #include <map>
 
 #include "hermes/IR/IRVisitor.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace llvh {
 class raw_ostream;
@@ -81,10 +82,10 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   }
 
   /// Quote the string if it has spaces.
-  std::string quoteStr(StringRef name);
+  std::string quoteStr(llvh::StringRef name);
 
   /// Escapes the string if it has non-printable characters.
-  std::string escapeStr(StringRef name);
+  std::string escapeStr(llvh::StringRef name);
 
   /// Declare the functions we are going to reimplement.
   void visitInstruction(const Instruction &I);

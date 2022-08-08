@@ -9,6 +9,7 @@
 #include "hermes/VM/GC.h"
 
 #include "hermes/Platform/Logging.h"
+#include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
@@ -17,7 +18,6 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
-#include "hermes/VM/WeakRefSlot-inline.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/FileSystem.h"
@@ -61,12 +61,7 @@ GCBase::GCBase(
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate()),
 #endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
-      tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
-#ifndef NDEBUG
-      ,
-      randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
-#endif
-{
+      tripwireLimit_(gcConfig.getTripwireConfig().getLimit()) {
   for (unsigned i = 0; i < (unsigned)XorPtrKeyID::_NumKeys; ++i) {
     pointerEncryptionKey_[i] = std::random_device()();
     if constexpr (sizeof(uintptr_t) >= 8) {
@@ -875,6 +870,7 @@ void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
 }
 
 void GCBase::oom(std::error_code reason) {
+  hasOOMed_ = true;
   char detailBuffer[400];
   oomDetail(detailBuffer, reason);
 #ifdef HERMESVM_EXCEPTION_ON_OOM
@@ -1069,20 +1065,6 @@ uint64_t GCBase::nextObjectID() {
 
 const GCExecTrace &GCBase::getGCExecTrace() const {
   return execTrace_;
-}
-
-/*static*/
-double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {
-  std::chrono::duration<double> elapsed = (end - start);
-  return elapsed.count();
-}
-
-/*static*/
-double GCBase::clockDiffSeconds(
-    std::chrono::microseconds start,
-    std::chrono::microseconds end) {
-  std::chrono::duration<double> elapsed = (end - start);
-  return elapsed.count();
 }
 
 llvh::raw_ostream &operator<<(

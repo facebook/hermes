@@ -71,14 +71,6 @@ static opt<int64_t, false, RandomSeedParser> GCSanitizeRandomSeed(
 #endif
 );
 
-static opt<bool> GCRandomizeAllocSpace(
-    "gc-randomize-alloc-space",
-    desc(
-        "For GC's, like GenGC, that can allocate in different spaces, randomize "
-        "the choice of space."),
-    cat(GCCategory),
-    init(false));
-
 static opt<MemorySize, false, MemorySizeParser> MinHeapSize(
     "gc-min-heap",
     desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
@@ -108,22 +100,6 @@ static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
     cat(GCCategory),
     init(MemorySize{1024 * 1024 * 1024}));
-
-#ifdef HERMESVM_PROFILER_EXTERN
-static opt<bool> PatchProfilerSymbols(
-    "patch-profiler-symbols",
-    desc("Patch profiler symbols in the executable at exit, "
-         "instead of writing to symbol_dump.map file."),
-    init(false),
-    cat(RuntimeCategory));
-
-static opt<std::string> ProfilerSymbolsFile(
-    "profiler-symbols-file",
-    desc("Dump profiler symbols in specified file at exit, "
-         "instead of writing the symbol_dump.map file."),
-    init("symbol_dump.map"),
-    cat(RuntimeCategory));
-#endif
 
 static opt<bool> ES6Promise(
     "Xes6-promise",

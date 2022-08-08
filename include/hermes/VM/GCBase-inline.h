@@ -71,6 +71,9 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
       static_cast<GC *>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
           size, std::forward<Args>(args)...);
 #endif
+#ifndef NDEBUG
+  ptr->setDebugAllocationIdInGC(nextObjectID());
+#endif
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   newAlloc(ptr, size);
 #endif

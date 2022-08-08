@@ -1453,6 +1453,7 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.emitKeyValue("collector", getKindAsStr());
   json.emitKey("stats");
   json.openDict();
+  json.emitKeyValue("Num compactions", numCompactions_);
   json.closeDict();
   json.closeDict();
 }
@@ -1540,8 +1541,6 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif
-  if (ogCollectionStats_)
-    recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
   ogCollectionStats_ =
       std::make_unique<CollectionStats>(*this, std::move(cause), "old");
   // NOTE: Leave CPU time as zero if the collection isn't concurrent, as the
@@ -1783,12 +1782,6 @@ void HadesGC::finalizeCompactee() {
 }
 
 void HadesGC::updateOldGenThreshold() {
-  // TODO: Dynamic threshold is not used in incremental mode because
-  // getDrainRate computes the mark rate directly based on the threshold. This
-  // means that increasing the threshold would operate like a one way ratchet.
-  if (!kConcurrentGC)
-    return;
-
   const double markedBytes = oldGenMarker_->markedBytes();
   const double preAllocated = ogCollectionStats_->beforeAllocatedBytes();
   assert(markedBytes <= preAllocated && "Cannot mark more than was allocated");
@@ -2168,6 +2161,10 @@ bool HadesGC::dbgContains(const void *p) const {
 }
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
+
+bool HadesGC::needsWriteBarrier(void *loc, GCCell *value) {
+  return !inYoungGen(loc);
+}
 #endif
 
 void *HadesGC::allocSlow(uint32_t sz) {
@@ -2480,6 +2477,7 @@ void HadesGC::youngGenCollection(
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
+      numCompactions_++;
       ygCollectionStats_->addCollectionType("compact");
       // We can use the total amount of external memory in the OG before and
       // after running finalizers to measure how much external memory has been
@@ -2579,7 +2577,9 @@ void HadesGC::youngGenCollection(
 #endif
   ygCollectionStats_->setEndTime();
   ygCollectionStats_->endCPUTimeSection();
-  recordGCStats(std::move(*ygCollectionStats_).getEvent(), true);
+  auto statsEvent = std::move(*ygCollectionStats_).getEvent();
+  recordGCStats(statsEvent, true);
+  recordGCStats(statsEvent, &ygCumulativeStats_, true);
   ygCollectionStats_.reset();
 }
 
@@ -2643,7 +2643,9 @@ void HadesGC::checkTripwireAndSubmitStats() {
   // We use the amount of live data from after a GC completed as the minimum
   // bound of what is live.
   checkTripwire(usedBytes);
-  recordGCStats(std::move(*ogCollectionStats_).getEvent(), false);
+  auto event = std::move(*ogCollectionStats_).getEvent();
+  recordGCStats(event, false);
+  recordGCStats(event, &ogCumulativeStats_, false);
   ogCollectionStats_.reset();
 }
 
@@ -3049,24 +3051,17 @@ size_t HadesGC::getDrainRate() {
   // OG faster than it fills up.
   assert(!kConcurrentGC);
 
-  // We want to make progress so that we are able to complete marking over all
-  // YG collections before OG fills up.
-  uint64_t totalAllocated = oldGen_.allocatedBytes() + oldGen_.externalBytes();
-  // Must be >0 to avoid division by zero below.
-  uint64_t bytesToFill =
-      std::max(oldGen_.targetSizeBytes(), totalAllocated + 1) - totalAllocated;
-  uint64_t preAllocated = ogCollectionStats_->beforeAllocatedBytes();
-  uint64_t markedBytes = oldGenMarker_->markedBytes();
-  assert(
-      markedBytes <= preAllocated &&
-      "Cannot mark more bytes than were initially allocated");
-  uint64_t bytesToMark = preAllocated - markedBytes;
-  // The drain rate is calculated from:
-  //   bytesToMark / (collections until full)
-  // = bytesToMark / (bytesToFill / ygAverageSurvivalBytes_)
-  uint64_t drainRate = bytesToMark * ygAverageSurvivalBytes_ / bytesToFill;
-  // If any of the above calculations end up being a tiny drain rate, make
-  // the lower limit at least 8 KB, to ensure collections eventually end.
+  // Set a fixed floor on the mark rate, regardless of the pause time budget.
+  // yieldToOldGen may operate in multiples of this drain rate if it fits in the
+  // budget. Pinning the mark rate in this way helps us keep the dynamically
+  // computed OG collection threshold in a reasonable range. On a slow device,
+  // where we can only do one iteration of this drain rate, the OG threshold
+  // will be ~75%. And by not increasing the drain rate when the threshold is
+  // high, we avoid having a one-way ratchet effect that hurts pause times.
+  constexpr size_t baseMarkRate = 3;
+  uint64_t drainRate = baseMarkRate * ygAverageSurvivalBytes_;
+  // In case the allocation rate is extremely low, set a lower bound to ensure
+  // the collection eventually ends.
   constexpr uint64_t byteDrainRateMin = 8192;
   return std::max(drainRate, byteDrainRateMin);
 }

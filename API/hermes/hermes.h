@@ -15,17 +15,10 @@
 #include <ostream>
 #include <string>
 
+#include <hermes/Public/HermesExport.h>
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
 #include <unordered_map>
-
-#ifndef HERMES_EXPORT
-#ifdef _MSC_VER
-#define HERMES_EXPORT __declspec(dllexport)
-#else // _MSC_VER
-#define HERMES_EXPORT __attribute__((visibility("default")))
-#endif // _MSC_VER
-#endif // !defined(HERMES_EXPORT)
 
 struct HermesTestHelper;
 
@@ -171,11 +164,6 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
   void dumpOpcodeStats(std::ostream &os) const;
-#endif
-
-#ifdef HERMESVM_PROFILER_EXTERN
-  /// Dump map of profiler symbols to given file name.
-  void dumpProfilerSymbolsToFile(const std::string &fileName) const;
 #endif
 
 #ifdef HERMES_ENABLE_DEBUGGER

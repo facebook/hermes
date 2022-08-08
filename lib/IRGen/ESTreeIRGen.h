@@ -14,12 +14,12 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 
+#include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Debug.h"
 
 // Use this value to enable debug logging from the command line.
 #define DEBUG_TYPE "irgen"
 
-using llvh::dbgs;
 using llvh::dyn_cast_or_null;
 
 namespace hermes {
@@ -165,7 +165,7 @@ class FunctionContext {
 
   /// Generate a unique string that represents a temporary value. The string
   /// \p hint appears in the name.
-  Identifier genAnonymousLabelName(StringRef const hint);
+  Identifier genAnonymousLabelName(llvh::StringRef const hint);
 
   /// Initialize an empty goto label. All labels in JavaScript a structured, so
   /// a label is guaranteed to be visited and initialized before it is used.
@@ -369,7 +369,7 @@ class ESTreeIRGen {
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
-  Identifier genAnonymousLabelName(StringRef hint) {
+  Identifier genAnonymousLabelName(llvh::StringRef hint) {
     return curFunction()->genAnonymousLabelName(hint);
   }
 
@@ -408,7 +408,7 @@ class ESTreeIRGen {
       Module *M,
       Identifier originalName,
       SMRange sourceRange,
-      StringRef error);
+      llvh::StringRef error);
 
  private:
   /// @name statements
@@ -868,7 +868,7 @@ class ESTreeIRGen {
   /// Generate a call to a method of HermesInternal with the specified name \p
   /// name.
   Value *genHermesInternalCall(
-      StringRef name,
+      llvh::StringRef name,
       Value *thisValue,
       ArrayRef<Value *> args);
 
@@ -879,7 +879,7 @@ class ESTreeIRGen {
 
   /// Generate code to ensure that \p value is an object and it it isn't, throw
   /// a type error with the specified message.
-  void emitEnsureObject(Value *value, StringRef message);
+  void emitEnsureObject(Value *value, llvh::StringRef message);
 
   /// \return the internal value @@iterator
   Value *emitIteratorSymbol();

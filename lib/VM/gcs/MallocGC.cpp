@@ -538,6 +538,10 @@ bool MallocGC::dbgContains(const void *p) const {
   isValid = isValid || newPointers_.find(header) != newPointers_.end();
   return isValid;
 }
+
+bool MallocGC::needsWriteBarrier(void *loc, GCCell *value) {
+  return false;
+}
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

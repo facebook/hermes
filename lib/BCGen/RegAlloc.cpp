@@ -304,7 +304,7 @@ void RegisterAllocator::calculateLocalLiveness(
 #ifndef NDEBUG
 static void dumpVector(
     const BitVector &bv,
-    StringRef text,
+    llvh::StringRef text,
     llvh::raw_ostream &ost = llvh::errs()) {
   ost << text;
   for (unsigned i = 0; i < bv.size(); i++) {

@@ -55,7 +55,9 @@ llvh::Optional<NumericOrder> getNumericOrder(Literal *LHS, Literal *RHS) {
   return NumericOrder::Equal;
 }
 
-SmallString<256> buildString(const StringRef &a, const StringRef &b) {
+SmallString<256> buildString(
+    const llvh::StringRef &a,
+    const llvh::StringRef &b) {
   SmallString<256> result;
   result.append(a);
   result.append(b);
@@ -630,7 +632,7 @@ LiteralString *hermes::evalToString(IRBuilder &builder, Literal *operand) {
   if (auto *num = llvh::dyn_cast<LiteralNumber>(operand)) {
     char buf[NUMBER_TO_STRING_BUF_SIZE];
     auto len = numberToString(num->getValue(), buf, sizeof(buf));
-    return builder.getLiteralString(StringRef(buf, len));
+    return builder.getLiteralString(llvh::StringRef(buf, len));
   }
   return nullptr;
 }

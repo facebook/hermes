@@ -138,6 +138,10 @@ void IdentifierHashTable::remove(const StringPrimitive *str) {
 }
 
 void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
+  // Guard against potential overflow in the calculation of new capacity.
+  if (LLVM_UNLIKELY(newCapacity <= capacity())) {
+    hermes_fatal("too many identifiers created");
+  }
   assert(llvh::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
   CompactTable tmpTable(newCapacity, table_.getCurrentScale());
   tmpTable.swap(table_);

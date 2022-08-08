@@ -32,6 +32,10 @@
 #include <profilo/ExternalApi.h>
 #endif
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#include <FBLoom/ExternalApi/ExternalApi.h>
+#endif
+
 namespace hermes {
 namespace vm {
 
@@ -140,7 +144,8 @@ class SamplingProfiler {
     /// registered.
     std::unordered_set<SamplingProfiler *> profilers_;
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
     /// Per-thread profiler instance for loom profiling.
     /// Limitations: No recursive runtimes in one thread.
     ThreadLocal<SamplingProfiler> threadLocalProfilerForLoom_;
@@ -197,6 +202,14 @@ class SamplingProfiler {
     /// Implementation of SamplingProfiler::enable/disable.
     bool enable();
     bool disable();
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+    /// Modified version of enable/disable, designed to be called by
+    /// SamplingProfiler::collectStackForLoom.
+    bool enableForLoomCollection();
+    bool disableForLoomCollection();
+#endif
+
     /// \return true if the sampling profiler is enabled, false otherwise.
     bool enabled();
 
@@ -285,6 +298,12 @@ class SamplingProfiler {
       uint16_t max_depth);
 #endif
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  /// Registered loom callback for collecting stack frames.
+  static FBLoomStackCollectionRetcode
+  collectStackForLoom(int64_t *frames, uint16_t *depth, uint16_t max_depth);
+#endif
+
   /// Clear previous stored samples.
   /// Note: caller should take the lock before calling.
   void clear();
@@ -292,6 +311,9 @@ class SamplingProfiler {
  public:
   explicit SamplingProfiler(Runtime &runtime);
   ~SamplingProfiler();
+
+  /// See documentation on \c GCBase::GCCallbacks.
+  void markRootsForCompleteMarking(RootAcceptor &acceptor);
 
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(RootAcceptor &acceptor);

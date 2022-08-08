@@ -812,7 +812,7 @@ llvh::StringRef getStringFromEntry(
       offset + length <= storage.size() && offset + length >= offset &&
       "Invalid entry");
   if (!entry.isUTF16()) {
-    return StringRef{(const char *)storage.data() + offset, length};
+    return llvh::StringRef{(const char *)storage.data() + offset, length};
   } else {
     const char16_t *s =
         reinterpret_cast<const char16_t *>(storage.data() + offset);

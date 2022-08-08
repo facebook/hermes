@@ -12,12 +12,11 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Timer.h"
 
+#include "llvh/ADT/StringRef.h"
 #include "llvh/ADT/StringSwitch.h"
 #include "llvh/Support/Debug.h"
 
 #define DEBUG_TYPE "passmanager"
-
-using llvh::dbgs;
 
 namespace hermes {
 
@@ -44,7 +43,7 @@ class PassManager {
 #include "Passes.def"
 
   /// Add a pass by name.
-  bool addPassForName(StringRef name) {
+  bool addPassForName(llvh::StringRef name) {
 #define PASS(ID, NAME, DESCRIPTION) \
   if (name == NAME) {               \
     add##ID();                      \
@@ -77,12 +76,12 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        dbgs() << "*** INITIAL STATE\n\n";
+        llvh::dbgs() << "*** INITIAL STATE\n\n";
       } else {
-        dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
-      F->dump(dbgs());
+      F->dump(llvh::dbgs());
       lastPass = newPass;
     };
 
@@ -92,10 +91,10 @@ class PassManager {
 
       auto *FP = llvh::dyn_cast<FunctionPass>(P);
       assert(FP && "Invalid pass kind");
-      LLVM_DEBUG(dbgs() << "Running the pass " << FP->getName() << "\n");
+      LLVM_DEBUG(llvh::dbgs() << "Running the pass " << FP->getName() << "\n");
       LLVM_DEBUG(
-          dbgs() << "Optimizing the function " << F->getInternalNameStr()
-                 << "\n");
+          llvh::dbgs() << "Optimizing the function " << F->getInternalNameStr()
+                       << "\n");
       FP->runOnFunction(F);
     }
     dumpLastPass(nullptr);
@@ -115,12 +114,12 @@ class PassManager {
         return;
 
       if (!lastPass) {
-        dbgs() << "*** INITIAL STATE\n\n";
+        llvh::dbgs() << "*** INITIAL STATE\n\n";
       } else {
-        dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
+        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
       }
 
-      M->dump(dbgs());
+      M->dump(llvh::dbgs());
       lastPass = newPass;
     };
 
@@ -136,15 +135,16 @@ class PassManager {
       /// Handle function passes:
       if (auto *FP = llvh::dyn_cast<FunctionPass>(P)) {
         LLVM_DEBUG(
-            dbgs() << "Running the function pass " << FP->getName() << "\n");
+            llvh::dbgs() << "Running the function pass " << FP->getName()
+                         << "\n");
 
         for (auto &I : *M) {
           Function *F = &I;
           if (F->isLazy())
             continue;
           LLVM_DEBUG(
-              dbgs() << "Optimizing the function " << F->getInternalNameStr()
-                     << "\n");
+              llvh::dbgs() << "Optimizing the function "
+                           << F->getInternalNameStr() << "\n");
           FP->runOnFunction(F);
         }
 
@@ -155,7 +155,8 @@ class PassManager {
       /// Handle module passes:
       if (auto *MP = llvh::dyn_cast<ModulePass>(P)) {
         LLVM_DEBUG(
-            dbgs() << "Running the module pass " << MP->getName() << "\n");
+            llvh::dbgs() << "Running the module pass " << MP->getName()
+                         << "\n");
         MP->runOnModule(M);
         // Move to the next pass.
         continue;

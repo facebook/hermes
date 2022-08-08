@@ -295,7 +295,7 @@ void ResolveStaticRequireImpl::resolveRequireCall(
 /// This assumes that the target is given relative to the current dirname.
 static void canonicalizePath(
     llvh::SmallVectorImpl<char> &dirname,
-    StringRef target) {
+    llvh::StringRef target) {
   if (!target.empty() && target[0] == '/') {
     // If the target is absolute (starts with a '/'), resolve from the module
     // root (disregard the dirname).

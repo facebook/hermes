@@ -82,7 +82,7 @@ struct FunctionDebugInfoDeserializer {
 
 /// Decodes a string at offset \p offset in \p data, updating offset in-place.
 /// \return the decoded string.
-static StringRef decodeString(
+static llvh::StringRef decodeString(
     uint32_t *inoutOffset,
     llvh::ArrayRef<uint8_t> data) {
   // The string is represented as its LEB-encoded length, followed by
@@ -99,7 +99,7 @@ static StringRef decodeString(
   const unsigned char *ptr = data.data() + offset;
   offset += strSize;
   *inoutOffset = offset;
-  return StringRef(reinterpret_cast<const char *>(ptr), size_t(strSize));
+  return llvh::StringRef(reinterpret_cast<const char *>(ptr), size_t(strSize));
 }
 
 OptValue<uint32_t> DebugInfo::getFilenameForAddress(
@@ -208,7 +208,7 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
 
 /// Read \p count variable names from \p offset into the variable name section
 /// of the debug info. \return the list of variable names.
-llvh::SmallVector<StringRef, 4> DebugInfo::getVariableNames(
+llvh::SmallVector<llvh::StringRef, 4> DebugInfo::getVariableNames(
     uint32_t offset) const {
   // Incoming offset is given relative to our lexical region.
   llvh::ArrayRef<uint8_t> data = lexicalData();
@@ -220,7 +220,7 @@ llvh::SmallVector<StringRef, 4> DebugInfo::getVariableNames(
   assert(signedCount >= 0 && "Invalid variable name count");
   size_t count = size_t(signedCount);
 
-  llvh::SmallVector<StringRef, 4> result;
+  llvh::SmallVector<llvh::StringRef, 4> result;
   result.reserve(count);
   for (size_t i = 0; i < count; i++)
     result.push_back(decodeString(&offset, data));
@@ -308,7 +308,7 @@ void DebugInfo::disassembleLexicalData(llvh::raw_ostream &OS) const {
     OS << ", variable count: " << varNamesCount;
     OS << '\n';
     for (int64_t i = 0; i < varNamesCount; i++) {
-      StringRef name = decodeString(&offset, lexData);
+      llvh::StringRef name = decodeString(&offset, lexData);
       OS << "    \"";
       OS.write_escaped(name);
       OS << '"' << '\n';

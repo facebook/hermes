@@ -787,7 +787,7 @@ class Runtime : public PointerBase,
   void dumpOpcodeStats(llvh::raw_ostream &os) const;
 #endif
 
-#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
+#if defined(HERMESVM_PROFILER_JSFUNCTION)
   static std::atomic<ProfilerID> nextProfilerId;
 
   std::vector<ProfilerFunctionInfo> functionInfo{};
@@ -959,11 +959,7 @@ class Runtime : public PointerBase,
   void getInlineCacheProfilerInfo(llvh::raw_ostream &ostream);
 #endif
 
-#if defined(HERMESVM_PROFILER_EXTERN)
- public:
-#else
  private:
-#endif
   /// Only called internally or by the wrappers used for profiling.
   CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
 

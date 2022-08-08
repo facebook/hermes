@@ -326,7 +326,7 @@ class JSObject : public GCCell {
       NeedsBarriers needsBarriers)
       : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
         clazz_(runtime, clazz, runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
+        propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -338,7 +338,7 @@ class JSObject : public GCCell {
       NeedsBarriers needsBarriers)
       : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
         clazz_(runtime, *clazz, runtime.getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, runtime.getHeap(), needsBarriers) {
+        propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
 
@@ -1239,11 +1239,11 @@ class JSObject : public GCCell {
   /// There is no one definitive type name for an object. If no heuristic is
   /// able to produce a name, the empty string is returned.
   std::string getHeuristicTypeName(GC &gc);
+#endif
 
   /// Accesses the name property on an object, returns the empty string if it
   /// doesn't exist or isn't a string.
   std::string getNameIfExists(PointerBase &base);
-#endif
 
  protected:
   /// @name Virtual function implementations

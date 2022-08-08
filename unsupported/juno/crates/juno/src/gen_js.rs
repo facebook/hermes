@@ -5,20 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::*;
-use crate::sema::DeclKind;
-use crate::sema::Resolution;
-use crate::sema::SemContext;
-use juno_support::convert;
-use juno_support::source_manager::SourceLoc;
-use sourcemap::RawToken;
-use sourcemap::SourceMap;
-use sourcemap::SourceMapBuilder;
 use std::fmt;
 use std::io;
 use std::io::BufWriter;
 use std::io::Write;
 use std::rc::Rc;
+
+use juno_support::convert;
+use juno_support::source_manager::SourceLoc;
+use sourcemap::RawToken;
+use sourcemap::SourceMap;
+use sourcemap::SourceMapBuilder;
+
+use crate::ast::*;
+use crate::sema::DeclKind;
+use crate::sema::Resolution;
+use crate::sema::SemContext;
 
 /// Options for JS generation.
 pub struct Opt<'s> {

@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::ast::GCLock;
-use juno_support::source_manager::SourceId;
-use juno_support::source_manager::SourceManager;
 use std::collections::HashMap;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
+
+use juno_support::source_manager::SourceId;
+use juno_support::source_manager::SourceManager;
+
+use crate::ast::GCLock;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DependencyKind {

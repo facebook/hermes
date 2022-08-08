@@ -18,8 +18,9 @@
 //! x - y
 //! ```
 
-use crate::Pass;
 use juno::ast::*;
+
+use crate::Pass;
 
 #[derive(Default)]
 pub struct AddNegative {}

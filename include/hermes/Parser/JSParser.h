@@ -13,6 +13,7 @@
 #include "hermes/Parser/JSLexer.h"
 
 #include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 namespace parser {
@@ -43,7 +44,7 @@ class JSParser {
 
   explicit JSParser(Context &context, uint32_t bufferId, ParserPass pass);
 
-  JSParser(Context &context, StringRef input)
+  JSParser(Context &context, llvh::StringRef input)
       : JSParser(
             context,
             llvh::MemoryBuffer::getMemBuffer(input, "JavaScript")) {}

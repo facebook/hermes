@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::HeapSize;
-use crate::NullTerminatedBuf;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+use crate::HeapSize;
+use crate::NullTerminatedBuf;
 
 /// A source range within a single JS file.
 ///

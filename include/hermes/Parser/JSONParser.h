@@ -30,8 +30,6 @@
 namespace hermes {
 namespace parser {
 
-using llvh::StringRef;
-
 class JSONFactory;
 class JSONParser;
 
@@ -127,10 +125,10 @@ class JSONString : public JSONScalar, public llvh::FoldingSetNode {
     return value_;
   }
 
-  const StringRef &str() const {
+  const llvh::StringRef &str() const {
     return value_->str();
   }
-  explicit operator StringRef() const {
+  explicit operator llvh::StringRef() const {
     return value_->str();
   }
   const char *c_str() const {
@@ -184,10 +182,10 @@ class JSONHiddenClass {
   JSONString *keys_[];
 
   struct NameComparator {
-    bool operator()(StringRef a, JSONString *b) const {
+    bool operator()(llvh::StringRef a, JSONString *b) const {
       return a < b->str();
     }
-    bool operator()(JSONString *a, StringRef b) const {
+    bool operator()(JSONString *a, llvh::StringRef b) const {
       return a->str() < b;
     }
   };
@@ -224,7 +222,7 @@ class JSONHiddenClass {
     return keys_ + size_;
   }
 
-  llvh::Optional<size_t> find(StringRef name) {
+  llvh::Optional<size_t> find(llvh::StringRef name) {
     auto e = end();
     auto it = std::lower_bound(begin(), e, name, NameComparator{});
     if (it != e && (*it)->str() == name)
@@ -285,7 +283,7 @@ class JSONObject : public JSONValue {
   }
 
   /// Obtain a value, or return nullptr if not found.
-  JSONValue *get(StringRef name) const {
+  JSONValue *get(llvh::StringRef name) const {
     if (auto res = hiddenClass_->find(name))
       return values()[res.getValue()];
     else
@@ -294,7 +292,7 @@ class JSONObject : public JSONValue {
 
   /// Obtain a value. If the value is not found, debug builds assert; in release
   /// builds the behavior is undefined.
-  JSONValue *at(StringRef name) const {
+  JSONValue *at(llvh::StringRef name) const {
     if (auto res = hiddenClass_->find(name))
       return values()[res.getValue()];
 
@@ -303,11 +301,11 @@ class JSONObject : public JSONValue {
   }
 
   /// Obtain a value by name, Behavior is undefined if the name is not found.
-  JSONValue *operator[](StringRef name) const {
+  JSONValue *operator[](llvh::StringRef name) const {
     return values()[hiddenClass_->find(name).getValue()];
   }
   /// Obtain a value by name, Behavior is undefined if the name is not found.
-  JSONValue *&operator[](StringRef name) {
+  JSONValue *&operator[](llvh::StringRef name) {
     return values()[hiddenClass_->find(name).getValue()];
   }
   /// Obtain a value by index.
@@ -322,7 +320,7 @@ class JSONObject : public JSONValue {
   }
 
   /// Check for the presence of a key.
-  size_t count(StringRef name) const {
+  size_t count(llvh::StringRef name) const {
     return hiddenClass_->find(name) ? 1 : 0;
   }
 
@@ -439,13 +437,13 @@ class JSONObject : public JSONValue {
     return const_iterator(this, size());
   }
 
-  iterator find(StringRef name) {
+  iterator find(llvh::StringRef name) {
     if (auto res = hiddenClass_->find(name))
       return iterator(this, res.getValue());
     else
       return end();
   }
-  const_iterator find(StringRef name) const {
+  const_iterator find(llvh::StringRef name) const {
     if (auto res = hiddenClass_->find(name))
       return const_iterator(this, res.getValue());
     else
@@ -573,7 +571,7 @@ class JSONFactory {
   // same object.
 
   JSONString *getString(UniqueString *lit);
-  JSONString *getString(StringRef str);
+  JSONString *getString(llvh::StringRef str);
   JSONNumber *getNumber(double value);
   static JSONBoolean *getBoolean(bool v) {
     return JSONBoolean::getInstance(v);
@@ -644,7 +642,7 @@ class JSONParser {
 
   JSONParser(
       JSONFactory &factory,
-      StringRef input,
+      llvh::StringRef input,
       SourceErrorManager &sm,
       bool convertSurrogates = false)
       : JSONParser(
