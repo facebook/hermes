@@ -32,6 +32,10 @@
 #include <profilo/ExternalApi.h>
 #endif
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#include <FBLoom/ExternalApi/ExternalApi.h>
+#endif
+
 namespace hermes {
 namespace vm {
 
@@ -140,7 +144,8 @@ class SamplingProfiler {
     /// registered.
     std::unordered_set<SamplingProfiler *> profilers_;
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
     /// Per-thread profiler instance for loom profiling.
     /// Limitations: No recursive runtimes in one thread.
     ThreadLocal<SamplingProfiler> threadLocalProfilerForLoom_;
@@ -283,6 +288,12 @@ class SamplingProfiler {
       int64_t *frames,
       uint16_t *depth,
       uint16_t max_depth);
+#endif
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  /// Registered loom callback for collecting stack frames.
+  static FBLoomStackCollectionRetcode
+  collectStackForLoom(int64_t *frames, uint16_t *depth, uint16_t max_depth);
 #endif
 
   /// Clear previous stored samples.

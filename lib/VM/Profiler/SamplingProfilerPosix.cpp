@@ -45,7 +45,8 @@ void SamplingProfiler::GlobalProfiler::registerRuntime(
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
   assert(
       threadLocalProfilerForLoom_.get() == nullptr &&
       "multiple hermes runtime in the same thread");
@@ -62,7 +63,8 @@ void SamplingProfiler::GlobalProfiler::unregisterRuntime(
   assert(succeed && "How can runtime not registered yet?");
   (void)succeed;
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
   // TODO(T125910634): re-introduce the requirement for unregistering the
   // runtime in the same thread it was registered.
   threadLocalProfilerForLoom_.set(nullptr);
@@ -319,6 +321,11 @@ SamplingProfiler::GlobalProfiler::GlobalProfiler() {
   profilo_api()->register_external_tracer_callback(
       TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
 #endif
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  fbloom_profilo_api()->fbloom_register_external_tracer_callback(
+      1, collectStackForLoom);
+#endif
 }
 
 bool SamplingProfiler::GlobalProfiler::enabled() {
@@ -405,6 +412,15 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     return StackCollectionRetcode::EMPTY_STACK;
   }
   return StackCollectionRetcode::SUCCESS;
+}
+#endif
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+/*static*/ FBLoomStackCollectionRetcode SamplingProfiler::collectStackForLoom(
+    int64_t *frames,
+    uint16_t *depth,
+    uint16_t max_depth) {
+  return FBLoomStackCollectionRetcode::SUCCESS;
 }
 #endif
 
