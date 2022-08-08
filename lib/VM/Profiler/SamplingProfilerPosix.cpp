@@ -420,6 +420,60 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     int64_t *frames,
     uint16_t *depth,
     uint16_t max_depth) {
+  auto profilerInstance = GlobalProfiler::get();
+  if (!profilerInstance->enableForLoomCollection()) {
+    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+  }
+  if (!profilerInstance->sampleStack()) {
+    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+  }
+  if (!profilerInstance->disableForLoomCollection()) {
+    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+  }
+  std::lock_guard<std::mutex> lk(profilerInstance->profilerLock_);
+  *depth = 0;
+  int index = 0;
+  auto *localProfiler = *profilerInstance->profilers_.begin();
+  constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
+  for (unsigned i = 0; i < localProfiler->sampledStacks_.size(); ++i) {
+    auto &sample = localProfiler->sampledStacks_[i];
+    for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
+         ++iter) {
+      const StackFrame &frame = *iter;
+      switch (frame.kind) {
+        case StackFrame::FrameKind::JSFunction: {
+          auto *bcProvider = frame.jsFrame.module->getBytecode();
+          uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
+                                       frame.jsFrame.functionId) +
+              frame.jsFrame.offset;
+          uint32_t segmentID = bcProvider->getSegmentID();
+          uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
+          frames[index++] = static_cast<int64_t>(frameAddress);
+          (*depth)++;
+          break;
+        }
+
+        case StackFrame::FrameKind::NativeFunction: {
+          frames[index++] = ((uint64_t)frame.nativeFrame | kNativeFrameMask);
+          (*depth)++;
+          break;
+        }
+
+        case StackFrame::FrameKind::FinalizableNativeFunction: {
+          frames[index++] =
+              ((uint64_t)frame.finalizableNativeFrame | kNativeFrameMask);
+          (*depth)++;
+          break;
+        }
+
+        default:;
+      }
+    }
+  }
+  localProfiler->clear();
+  if (*depth == 0) {
+    return FBLoomStackCollectionRetcode::EMPTY_STACK;
+  }
   return FBLoomStackCollectionRetcode::SUCCESS;
 }
 #endif
@@ -528,6 +582,23 @@ bool SamplingProfiler::GlobalProfiler::enable() {
   return true;
 }
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+bool SamplingProfiler::GlobalProfiler::enableForLoomCollection() {
+  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  if (enabled_) {
+    return true;
+  }
+  if (!samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
+    return false;
+  }
+  if (!registerSignalHandlers()) {
+    return false;
+  }
+  enabled_ = true;
+  return true;
+}
+#endif
+
 bool SamplingProfiler::disable() {
   return GlobalProfiler::get()->disable();
 }
@@ -557,6 +628,30 @@ bool SamplingProfiler::GlobalProfiler::disable() {
   timerThread_.join();
   return true;
 }
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+bool SamplingProfiler::GlobalProfiler::disableForLoomCollection() {
+  {
+    std::lock_guard<std::mutex> lockGuard(profilerLock_);
+    if (!enabled_) {
+      // Already disabled.
+      return true;
+    }
+    if (!samplingDoneSem_.close()) {
+      return false;
+    }
+    // Unregister handlers before shutdown.
+    if (!unregisterSignalHandler()) {
+      return false;
+    }
+    // Telling timer thread to exit.
+    enabled_ = false;
+  }
+  // Notify the timer thread that it has been disabled.
+  enabledCondVar_.notify_all();
+  return true;
+}
+#endif
 
 void SamplingProfiler::clear() {
   sampledStacks_.clear();

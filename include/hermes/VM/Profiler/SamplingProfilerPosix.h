@@ -202,6 +202,14 @@ class SamplingProfiler {
     /// Implementation of SamplingProfiler::enable/disable.
     bool enable();
     bool disable();
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+    /// Modified version of enable/disable, designed to be called by
+    /// SamplingProfiler::collectStackForLoom.
+    bool enableForLoomCollection();
+    bool disableForLoomCollection();
+#endif
+
     /// \return true if the sampling profiler is enabled, false otherwise.
     bool enabled();
 
