@@ -243,17 +243,15 @@ constexpr int kTimeDefault = 1 << 3;
 // To normalize options, we need to know the valid options names, and
 // the expected type of each.
 struct OptionData {
-  const char16_t *name;
+  std::u16string_view name;
   platform_intl::Option::Kind kind;
   int flags;
 };
 
-const OptionData kSupportedLocalesOfOptions[] = {
-    {u"localeMatcher", platform_intl::Option::Kind::String, 0},
-    // Iteration over OptionData expects arrays to be name-nullptr-terminated.
-    {nullptr, platform_intl::Option::Kind::Bool, 0}};
+constexpr OptionData kSupportedLocalesOfOptions[] = {
+    {u"localeMatcher", platform_intl::Option::Kind::String, 0}};
 
-const OptionData kCollatorOptions[] = {
+constexpr OptionData kCollatorOptions[] = {
     {u"usage", platform_intl::Option::Kind::String, 0},
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
     {u"numeric", platform_intl::Option::Kind::Bool, 0},
@@ -261,10 +259,9 @@ const OptionData kCollatorOptions[] = {
     {u"sensitivity", platform_intl::Option::Kind::String, 0},
     {u"ignorePunctuation", platform_intl::Option::Kind::Bool, 0},
     {u"collation", platform_intl::Option::Kind::String, 0},
-    {nullptr, platform_intl::Option::Kind::Bool, 0},
 };
 
-const OptionData kDTFOptions[] = {
+constexpr OptionData kDTFOptions[] = {
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
     {u"calendar", platform_intl::Option::Kind::String, 0},
     {u"numberingSystem", platform_intl::Option::Kind::String, 0},
@@ -294,10 +291,9 @@ const OptionData kDTFOptions[] = {
     {u"dateStyle", platform_intl::Option::Kind::String, 0},
     {u"timeStyle", platform_intl::Option::Kind::String, 0},
     {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
-    {nullptr, platform_intl::Option::Kind::Bool, 0},
 };
 
-const OptionData kNumberFormatOptions[] = {
+constexpr OptionData kNumberFormatOptions[] = {
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
     {u"numberingSystem", platform_intl::Option::Kind::String, 0},
     {u"style", platform_intl::Option::Kind::String, 0},
@@ -315,13 +311,12 @@ const OptionData kNumberFormatOptions[] = {
     {u"compactDisplay", platform_intl::Option::Kind::String, 0},
     {u"useGrouping", platform_intl::Option::Kind::Bool, 0},
     {u"signDisplay", platform_intl::Option::Kind::String, 0},
-    {nullptr, platform_intl::Option::Kind::Bool, 0},
 };
 
 CallResult<platform_intl::Options> normalizeOptions(
     Runtime &runtime,
     Handle<> options,
-    const OptionData optionData[]) {
+    llvh::ArrayRef<OptionData> optionData) {
   platform_intl::Options ret;
 
   if (options->isNull())
@@ -336,10 +331,10 @@ CallResult<platform_intl::Options> normalizeOptions(
   MutableHandle<> value{runtime};
   MutableHandle<StringPrimitive> strValue{runtime};
   GCScopeMarkerRAII marker{runtime};
-  for (const OptionData *pod = optionData; pod->name; ++pod) {
+  for (const OptionData &pod : optionData) {
     marker.flush();
-    CallResult<HermesValue> nameRes =
-        StringPrimitive::createEfficient(runtime, createUTF16Ref(pod->name));
+    CallResult<HermesValue> nameRes = StringPrimitive::createEfficient(
+        runtime, UTF16Ref{pod.name.data(), pod.name.size()});
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -355,20 +350,19 @@ CallResult<platform_intl::Options> normalizeOptions(
       continue;
     }
 
-    if (pod->kind == platform_intl::Option::Kind::Bool) {
+    if (pod.kind == platform_intl::Option::Kind::Bool) {
       ret.emplace(
-          pod->name,
-          platform_intl::Option(toBoolean(valRes->getHermesValue())));
-    } else if (pod->kind == platform_intl::Option::Kind::Number) {
+          pod.name, platform_intl::Option(toBoolean(valRes->getHermesValue())));
+    } else if (pod.kind == platform_intl::Option::Kind::Number) {
       value = std::move(*valRes);
       CallResult<HermesValue> numRes = toNumber_RJS(runtime, value);
       if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      ret.emplace(pod->name, platform_intl::Option(numRes->getNumber()));
+      ret.emplace(pod.name, platform_intl::Option(numRes->getNumber()));
     } else {
       assert(
-          pod->kind == platform_intl::Option::Kind::String &&
+          pod.kind == platform_intl::Option::Kind::String &&
           "Unknown option kind");
       value = std::move(*valRes);
       CallResult<PseudoHandle<StringPrimitive>> strRes =
@@ -379,7 +373,7 @@ CallResult<platform_intl::Options> normalizeOptions(
       strValue = std::move(*strRes);
       auto view = StringPrimitive::createStringView(runtime, strValue);
       ret.emplace(
-          pod->name,
+          pod.name,
           platform_intl::Option(std::u16string(view.begin(), view.end())));
     }
   }
@@ -425,7 +419,7 @@ template <typename T>
 CallResult<HermesValue> intlServiceConstructor(
     Runtime &runtime,
     NativeArgs args,
-    const OptionData optionData[],
+    llvh::ArrayRef<OptionData> optionData,
     Handle<JSObject> servicePrototype,
     unsigned int additionalSlots) {
   CallResult<std::vector<std::u16string>> localesRes =
@@ -1382,15 +1376,15 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
   // the default options behavior of format will not apply.
 
   bool needDefaults = true;
-  for (const OptionData *pod = kDTFOptions; pod->name; ++pod) {
-    if (dtoFlags & kDTODate && pod->flags & kDateRequired &&
-        options.find(pod->name) != options.end()) {
+  for (const OptionData &pod : kDTFOptions) {
+    if (dtoFlags & kDTODate && pod.flags & kDateRequired &&
+        options.find(std::u16string(pod.name)) != options.end()) {
       needDefaults = false;
       break;
     }
     if (needDefaults) {
-      if (dtoFlags & kDTOTime && pod->flags & kTimeRequired &&
-          options.find(pod->name) != options.end()) {
+      if (dtoFlags & kDTOTime && pod.flags & kTimeRequired &&
+          options.find(std::u16string(pod.name)) != options.end()) {
         needDefaults = false;
         break;
       }
@@ -1399,10 +1393,10 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
   if (!needDefaults) {
     return;
   }
-  for (const OptionData *pod = kDTFOptions; pod->name; ++pod) {
-    if ((dtoFlags & kDTODate && pod->flags & kDateDefault) ||
-        (dtoFlags & kDTOTime && pod->flags & kTimeDefault)) {
-      options.emplace(pod->name, std::u16string(u"numeric"));
+  for (const OptionData &pod : kDTFOptions) {
+    if ((dtoFlags & kDTODate && pod.flags & kDateDefault) ||
+        (dtoFlags & kDTOTime && pod.flags & kTimeDefault)) {
+      options.emplace(pod.name, std::u16string(u"numeric"));
     }
   }
 }
