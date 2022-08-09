@@ -5177,6 +5177,9 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     body = *optBody;
     expression = false;
   } else {
+    // It's possible to recurse onto parseAssignmentExpression directly
+    // and get stuck without a depth check if we don't have one here.
+    CHECK_RECURSION;
     auto optConcise = parseAssignmentExpression(
         param.get(ParamIn),
         allowTypedArrowFunction,
