@@ -133,15 +133,15 @@ jobs:
       - run:
           name: Build linux CLI
           command: |
+            cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
+              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
             cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
               -DHERMES_ENABLE_DEBUGGER=False
+            cmake --build build_hdb --target hdb
             cmake --build build --target check-hermes hermes hvm hbcdump hermesc
-            cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
-              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
-            cmake --build build_hdb --target check-hermes hdb
       - run:
           name: Create CLI tarball
           environment:
@@ -411,22 +411,20 @@ jobs:
           name: Create CLI tarball
           command: |
             cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "build_release\bin\hermes" -Destination "staging"
-            Copy-Item -Path "build_release\bin\hvm" -Destination "staging"
-            Copy-Item -Path "build_release\bin\hbcdump" -Destination "staging"
-            Copy-Item -Path "build_release\bin\hermesc" -Destination "staging"
-            Copy-Item -Path "build_hdb\bin\hdb" -Destination "staging"
-            7za a -ttar -so archive.tar source_files | 7za a -si $Env:HERMES_WS_DIR\output\$Env:TAR_NAME
+            Copy-Item -Path "build_release\bin\Release\hermes.exe" -Destination "staging"
+            Copy-Item -Path "build_release\bin\Release\hvm.exe" -Destination "staging"
+            Copy-Item -Path "build_release\bin\Release\hbcdump.exe" -Destination "staging"
+            Copy-Item -Path "build_release\bin\Release\hermesc.exe" -Destination "staging"
+            Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
+            cmake -E tar zcf .\output\$Env:TAR_NAME .\staging\hbcdump.exe .\staging\hdb.exe .\staging\hermes.exe .\staging\hermesc.exe .\staging\hvm.exe
 
       - run:
           name: Checksum artifacts
           command: |
             cd $Env:HERMES_WS_DIR\output
-            foreach($file in Get-ChildItem) {
-              $hash = Get-FileHash -Path $file -Algorithm SHA256
-              Write-Output ($hash.Hash + "  " + $file.Name) |
-                  Out-File -Encoding ASCII -FilePath ($file.Name +".sha256")
-            }
+            $hash = Get-FileHash -Path $Env:TAR_NAME -Algorithm SHA256
+            Write-Output ($hash.Hash + "  " + $Env:TAR_NAME) |
+                  Out-File -Encoding ASCII -FilePath ($Env:TAR_NAME +".sha256")
 
       - store_artifacts:
           path: c:\tmp\hermes\output
