@@ -69,8 +69,10 @@ OptValue<hbc::DebugSourceLocation> getSourceLocation(
 }
 } // namespace
 
-ChromeTraceSerializer::ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace)
-    : trace_(std::move(chromeTrace)) {
+ChromeTraceSerializer::ChromeTraceSerializer(
+    const SamplingProfiler &sp,
+    ChromeTraceFormat &&chromeTrace)
+    : samplingProfiler_(sp), trace_(std::move(chromeTrace)) {
   firstEventTimeStamp_ = trace_.getSampledEvents().empty()
       ? std::chrono::steady_clock::now()
       : trace_.getSampledEvents()[0].getTimeStamp();
@@ -166,7 +168,7 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
 }
 
 void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
-  trace_.getRoot().dfsWalk([&json](
+  trace_.getRoot().dfsWalk([&samplingProfiler = samplingProfiler_, &json](
                                const ChromeStackFrameNode &node,
                                const ChromeStackFrameNode *parent) {
     json.emitKey(std::to_string(node.getId()));
@@ -232,16 +234,15 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
       }
 
       case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
-        frameName =
-            std::string("[Native] ") + getFunctionName(frame.nativeFrame);
+        frameName = std::string("[Native] ") +
+            samplingProfiler.getNativeFunctionName(frame);
         categoryName = "Native";
         break;
       }
 
       case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction: {
-        // TODO: find a way to get host function name out of
-        // FinalizableNativeFunction.
-        frameName = "[HostFunction]";
+        frameName = std::string("[HostFunction] ") +
+            samplingProfiler.getNativeFunctionName(frame);
         categoryName = "Native";
         break;
       }
@@ -319,19 +320,24 @@ class ProfilerProfileSerializer {
 
  public:
   ProfilerProfileSerializer(
+      const SamplingProfiler &sp,
       JSONEmitter &emitter,
       ChromeTraceFormat &&chromeTrace)
-      : json_(emitter), chromeTrace_(std::move(chromeTrace)) {}
+      : samplingProfiler_(sp),
+        json_(emitter),
+        chromeTrace_(std::move(chromeTrace)) {}
 
   void serialize() const;
 
  private:
+  void processNode(const ChromeStackFrameNode &node) const;
   void emitNodes() const;
   void emitStartTime() const;
   void emitEndTime() const;
   void emitSamples() const;
   void emitTimeDeltas() const;
 
+  const SamplingProfiler &samplingProfiler_;
   JSONEmitter &json_;
   ChromeTraceFormat chromeTrace_;
 };
@@ -395,7 +401,8 @@ static void emitProfileNode(
   json.closeDict(); // node
 }
 
-static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
+void ProfilerProfileSerializer::processNode(
+    const ChromeStackFrameNode &node) const {
   std::string name;
   std::string url;
   uint32_t scriptId = 0;
@@ -427,13 +434,15 @@ static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
     }
 
     case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
-      name = std::string("[Native] ") + getFunctionName(frame.nativeFrame);
+      name = std::string("[Native] ") +
+          samplingProfiler_.getNativeFunctionName(frame);
       url = "[native]";
       break;
     }
 
     case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction: {
-      name = "[Host Function]";
+      name = std::string("[Host Function] ") +
+          samplingProfiler_.getNativeFunctionName(frame);
       url = "[host]";
       break;
     }
@@ -449,7 +458,7 @@ static void processNode(JSONEmitter &json, const ChromeStackFrameNode &node) {
       llvm_unreachable("Unknown frame kind");
   }
 
-  emitProfileNode(json, node, name, scriptId, url, lineNumber, columnNumber);
+  emitProfileNode(json_, node, name, scriptId, url, lineNumber, columnNumber);
 }
 
 void ProfilerProfileSerializer::emitNodes() const {
@@ -467,7 +476,7 @@ void ProfilerProfileSerializer::emitNodes() const {
     if (&node == root) {
       assert(!parent && "root node should not have parent");
     } else {
-      processNode(json_, node);
+      processNode(node);
     }
   });
 
@@ -539,11 +548,12 @@ void ProfilerProfileSerializer::emitTimeDeltas() const {
 } // namespace
 
 void serializeAsProfilerProfile(
+    const SamplingProfiler &sp,
     llvh::raw_ostream &os,
     ChromeTraceFormat &&chromeTrace) {
   JSONEmitter json(os);
 
-  ProfilerProfileSerializer s(json, std::move(chromeTrace));
+  ProfilerProfileSerializer s(sp, json, std::move(chromeTrace));
   s.serialize();
 }
 } // namespace vm

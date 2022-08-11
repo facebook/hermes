@@ -11,6 +11,7 @@
 #include "hermes/Support/Semaphore.h"
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/Runtime.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -61,9 +62,11 @@ class SamplingProfiler {
     uint32_t offset;
   };
   /// Captured NativeFunction frame information for symbolication.
-  using NativeFunctionFrameInfo = NativeFunctionPtr;
-  /// Captured FinalizableNativeFunction frame information for symbolication.
-  using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
+  using LoomNativeFrameInfo = NativeFunctionPtr;
+  /// Captured NativeFunction frame information for symbolication that hasn't
+  /// been registered with the sampling profiler yet, and therefore can be moved
+  /// by the GC.
+  using NativeFunctionFrameInfo = size_t;
   /// GC frame info. Pointing to string in suspendEventExtraInfoSet_.
   using SuspendFrameInfo = const std::string *;
 
@@ -84,10 +87,10 @@ class SamplingProfiler {
     union {
       /// Pure JS function frame info.
       JSFunctionFrameInfo jsFrame;
-      /// Native function frame info.
+      /// Native function frame info storage used for loom profiling.
+      LoomNativeFrameInfo nativeFunctionPtrForLoom;
+      /// Native function frame info storage used for "regular" profiling.
       NativeFunctionFrameInfo nativeFrame;
-      /// Host function frame info.
-      FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
       /// Suspend frame info. Pointing to string
       /// in suspendExtraInfoSet_; it is optional and
       /// can be null to indicate no extra info.
@@ -121,6 +124,35 @@ class SamplingProfiler {
     return currentThread_;
   }
 #endif // UNIT_TEST
+
+  /// \returns the NativeFunctionPtr for \p stackFrame. Caller must hold
+  /// runtimeDataLock_.
+  NativeFunctionPtr getNativeFunctionPtr(const StackFrame &stackFrame) const {
+    assert(
+        stackFrame.kind == StackFrame::FrameKind::NativeFunction &&
+        "unexpected stack frame kind");
+    return nativeFunctions_[stackFrame.nativeFrame]->getFunctionPtr();
+  }
+
+  /// \returns the name (if one exists) for \p stackFrame. Caller must hold
+  /// runtimeDataLock_.
+  std::string getNativeFunctionName(const StackFrame &stackFrame) const {
+    if (stackFrame.kind == StackFrame::FrameKind::NativeFunction) {
+      // FrameKing::NativeFunction frames may be JS functions that are internal
+      // to hermes -- e.g., Array.prototype.sort. For those functions, return
+      // the native function name as defined in NativeFunctions.def.
+      const char *name =
+          hermes::vm::getFunctionName(getNativeFunctionPtr(stackFrame));
+      if (strcmp(name, "")) {
+        return name;
+      }
+    }
+
+    // For all other FrameKind::NativeFunction frames, as well as
+    // FrameKing::FinalizableNativeFunction ones, return the native function
+    // name attribute, if one is available.
+    return nativeFunctions_[stackFrame.nativeFrame]->getNameIfExists(runtime_);
+  }
 
  private:
   /// Max size of sampleStorage_.
@@ -262,6 +294,10 @@ class SamplingProfiler {
   /// runtimeDataLock_.
   std::vector<Domain *> domains_;
 
+  /// NativeFunctions to be kept alive for sampled NativeFunctionFrameInfo.
+  /// Protected by runtimeDataLock_.
+  std::vector<NativeFunction *> nativeFunctions_;
+
   Runtime &runtime_;
 
  private:
@@ -270,22 +306,26 @@ class SamplingProfiler {
   /// Refer to Domain.h for relationship between Domain and RuntimeModule.
   void registerDomain(Domain *domain);
 
-  enum class SaveDomains { No, Yes };
+  /// Hold \p nativeFunction so native function names can be added to the stack
+  /// traces.
+  NativeFunctionFrameInfo registerNativeFunction(
+      NativeFunction *nativeFunction);
+
+  enum class InLoom { No, Yes };
 
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
   /// rules of signal handler(no lock, no memory allocation etc...)
   /// \param startIndex specifies the start index in \p sampleStorage to fill.
-  /// \param saveDomains specifies whether domains should be registered, so that
-  /// they are available when dumping a trace.
+  /// \param inLoom specifies this function is being invoked in a Loom callback.
   /// \return total number of stack frames captured in \p sampleStorage
   /// including existing frames before \p startIndex.
   uint32_t walkRuntimeStack(
       StackTrace &sampleStorage,
-      SaveDomains saveDomains,
+      InLoom inLoom,
       uint32_t startIndex = 0);
 
-  /// Record JS stack at time of suspension, , caller must hold
+  /// Record JS stack at time of suspension, caller must hold
   /// runtimeDataLock_.
   void recordPreSuspendStack(std::string_view extraInfo);
 

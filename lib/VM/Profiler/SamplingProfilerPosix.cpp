@@ -78,6 +78,19 @@ void SamplingProfiler::registerDomain(Domain *domain) {
     domains_.push_back(domain);
 }
 
+SamplingProfiler::NativeFunctionFrameInfo
+SamplingProfiler::registerNativeFunction(NativeFunction *nativeFunction) {
+  // If nativeFunction is not already registered, add it to the list.
+  auto it = std::find(
+      nativeFunctions_.begin(), nativeFunctions_.end(), nativeFunction);
+  if (it != nativeFunctions_.end()) {
+    return it - nativeFunctions_.begin();
+  }
+
+  nativeFunctions_.push_back(nativeFunction);
+  return nativeFunctions_.size() - 1;
+}
+
 void SamplingProfiler::markRootsForCompleteMarking(RootAcceptor &acceptor) {
   std::lock_guard<std::mutex> lockGuard(runtimeDataLock_);
   for (Domain *&domain : domains_) {
@@ -89,6 +102,10 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
   std::lock_guard<std::mutex> lockGuard(runtimeDataLock_);
   for (Domain *&domain : domains_) {
     acceptor.acceptPtr(domain);
+  }
+
+  for (NativeFunction *&fn : nativeFunctions_) {
+    acceptor.acceptPtr(fn);
   }
 }
 
@@ -156,7 +173,7 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
       "sampling profiler should be suspended before GC");
   (void)curThreadRuntime;
   profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
-      profilerInstance->sampleStorage_, SaveDomains::Yes);
+      profilerInstance->sampleStorage_, InLoom::No);
   // Ensure that writes made in the handler are visible to the timer thread.
   profilerForSig_.store(nullptr);
 
@@ -192,6 +209,13 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
       size_t domainCapacityBefore = localProfiler->domains_.capacity();
       (void)domainCapacityBefore;
 
+      // Ditto for native functions.
+      localProfiler->nativeFunctions_.reserve(
+          localProfiler->nativeFunctions_.size() + kMaxStackDepth);
+      size_t nativeFunctionsCapacityBefore =
+          localProfiler->nativeFunctions_.capacity();
+      (void)nativeFunctionsCapacityBefore;
+
       // Guarantee that the runtime thread will not proceed until it has
       // acquired the updates to domains_.
       profilerForSig_.store(localProfiler, std::memory_order_release);
@@ -212,6 +236,11 @@ bool SamplingProfiler::GlobalProfiler::sampleStack() {
 
       assert(
           localProfiler->domains_.capacity() == domainCapacityBefore &&
+          "Must not dynamically allocate in signal handler");
+
+      assert(
+          localProfiler->nativeFunctions_.capacity() ==
+              nativeFunctionsCapacityBefore &&
           "Must not dynamically allocate in signal handler");
     }
 
@@ -257,7 +286,7 @@ void SamplingProfiler::GlobalProfiler::timerLoop() {
 
 uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
-    SaveDomains saveDomains,
+    InLoom inLoom,
     uint32_t startIndex) {
   unsigned count = startIndex;
 
@@ -279,7 +308,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       frameStorage.jsFrame.module = module;
       // Don't execute a read or write barrier here because this is a signal
       // handler.
-      if (saveDomains == SaveDomains::Yes)
+      if (inLoom != InLoom::Yes)
         registerDomain(module->getDomainForSamplingProfiler(runtime_));
     } else if (
         auto *nativeFunction =
@@ -287,7 +316,12 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
           ? StackFrame::FrameKind::FinalizableNativeFunction
           : StackFrame::FrameKind::NativeFunction;
-      frameStorage.nativeFrame = nativeFunction->getFunctionPtr();
+      if (inLoom != InLoom::Yes) {
+        frameStorage.nativeFrame = registerNativeFunction(nativeFunction);
+      } else {
+        frameStorage.nativeFunctionPtrForLoom =
+            nativeFunction->getFunctionPtr();
+      }
     } else {
       // TODO: handle BoundFunction.
       capturedFrame = false;
@@ -362,7 +396,7 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
     sampledStackDepth = localProfiler->walkRuntimeStack(
-        profilerInstance->sampleStorage_, SaveDomains::No);
+        profilerInstance->sampleStorage_, InLoom::Yes);
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -395,13 +429,11 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
       }
 
       case StackFrame::FrameKind::NativeFunction:
-        frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
+      case StackFrame::FrameKind::FinalizableNativeFunction: {
+        NativeFunctionPtr nativeFrame = stackFrame.nativeFunctionPtrForLoom;
+        frames[i] = ((uint64_t)nativeFrame | kNativeFrameMask);
         break;
-
-      case StackFrame::FrameKind::FinalizableNativeFunction:
-        frames[i] =
-            ((uint64_t)stackFrame.finalizableNativeFrame | kNativeFrameMask);
-        break;
+      }
 
       default:
         llvm_unreachable("Loom: unknown frame kind");
@@ -453,20 +485,16 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
           break;
         }
 
-        case StackFrame::FrameKind::NativeFunction: {
-          frames[index++] = ((uint64_t)frame.nativeFrame | kNativeFrameMask);
-          (*depth)++;
-          break;
-        }
-
+        case StackFrame::FrameKind::NativeFunction:
         case StackFrame::FrameKind::FinalizableNativeFunction: {
-          frames[index++] =
-              ((uint64_t)frame.finalizableNativeFrame | kNativeFrameMask);
-          (*depth)++;
+          NativeFunctionPtr nativeFrame =
+              localProfiler->getNativeFunctionPtr(frame);
+          frames[i] = ((uint64_t)nativeFrame | kNativeFrameMask);
           break;
         }
 
-        default:;
+        default:
+          llvm_unreachable("Loom: unknown frame kind");
       }
     }
   }
@@ -519,12 +547,14 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
              << frame.jsFrame.offset;
           break;
 
-        case StackFrame::FrameKind::NativeFunction:
-          OS << "[Native] " << reinterpret_cast<uintptr_t>(frame.nativeFrame);
+        case StackFrame::FrameKind::NativeFunction: {
+          NativeFunctionPtr nativeFrame = getNativeFunctionPtr(frame);
+          OS << "[Native] " << reinterpret_cast<uintptr_t>(nativeFrame);
           break;
+        }
 
         case StackFrame::FrameKind::FinalizableNativeFunction:
-          OS << "[HostFunction]";
+          OS << "[HostFunction] " << getNativeFunctionName(frame);
           break;
 
         default:
@@ -549,7 +579,7 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   auto pid = getpid();
   ChromeTraceSerializer serializer(
-      ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
+      *this, ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
   serializer.serialize(OS);
   clear();
 }
@@ -557,7 +587,9 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
 void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   hermes::vm::serializeAsProfilerProfile(
-      OS, ChromeTraceFormat::create(getpid(), threadNames_, sampledStacks_));
+      *this,
+      OS,
+      ChromeTraceFormat::create(getpid(), threadNames_, sampledStacks_));
   clear();
 }
 
@@ -655,8 +687,9 @@ bool SamplingProfiler::GlobalProfiler::disableForLoomCollection() {
 
 void SamplingProfiler::clear() {
   sampledStacks_.clear();
-  // Release all strong roots to domains.
+  // Release all strong roots.
   domains_.clear();
+  nativeFunctions_.clear();
   // TODO: keep thread names that are still in use.
   threadNames_.clear();
 }
@@ -695,7 +728,7 @@ void SamplingProfiler::recordPreSuspendStack(std::string_view extraInfo) {
 
   // Leaf frame slot has been used, filling from index 1.
   preSuspendStackDepth_ =
-      walkRuntimeStack(preSuspendStackStorage_, SaveDomains::Yes, 1);
+      walkRuntimeStack(preSuspendStackStorage_, InLoom::No, 1);
 }
 
 bool operator==(
@@ -710,10 +743,8 @@ bool operator==(
           left.jsFrame.offset == right.jsFrame.offset;
 
     case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
-      return left.nativeFrame == right.nativeFrame;
-
     case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
-      return left.finalizableNativeFrame == right.finalizableNativeFrame;
+      return left.nativeFrame == right.nativeFrame;
 
     case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
       return left.suspendFrame == right.suspendFrame;

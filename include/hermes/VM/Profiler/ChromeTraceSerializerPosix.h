@@ -200,6 +200,7 @@ class ChromeTraceFormat {
 /// Serialize input ChromeTraceFormat to output stream.
 class ChromeTraceSerializer {
  private:
+  const SamplingProfiler &samplingProfiler_;
   ChromeTraceFormat trace_;
   SamplingProfiler::TimeStampType firstEventTimeStamp_;
 
@@ -218,7 +219,9 @@ class ChromeTraceSerializer {
       SamplingProfiler::TimeStampType timeStamp);
 
  public:
-  explicit ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace);
+  explicit ChromeTraceSerializer(
+      const SamplingProfiler &sp,
+      ChromeTraceFormat &&chromeTrace);
 
   /// Serialize chrome trace to \p OS.
   void serialize(llvh::raw_ostream &OS) const;
@@ -230,6 +233,7 @@ class ChromeTraceSerializer {
 /// https://chromedevtools.github.io/devtools-protocol/tot/Profiler/#type-Profile
 ///
 void serializeAsProfilerProfile(
+    const SamplingProfiler &sp,
     llvh::raw_ostream &os,
     ChromeTraceFormat &&chromeTrace);
 
