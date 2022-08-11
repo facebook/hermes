@@ -716,49 +716,64 @@ bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
 /// supported built-in NSUnit types provided by Foundation.
 NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
   static const std::pair<std::u16string_view, NSUnit *> units[] = {
-      {u"acre", NSUnitArea.acres},
-      {u"bit", NSUnitInformationStorage.bits},
-      {u"byte", NSUnitInformationStorage.bytes},
-      {u"celsius", NSUnitTemperature.celsius},
-      {u"centimeter", NSUnitLength.centimeters},
-      {u"degree", NSUnitAngle.degrees},
-      {u"fahrenheit", NSUnitTemperature.fahrenheit},
-      {u"fluid-ounce", NSUnitVolume.fluidOunces},
-      {u"foot", NSUnitLength.feet},
-      {u"gallon", NSUnitVolume.gallons},
-      {u"gigabit", NSUnitInformationStorage.gigabits},
-      {u"gigabyte", NSUnitInformationStorage.gigabytes},
-      {u"gram", NSUnitMass.grams},
-      {u"gram-per-liter", NSUnitConcentrationMass.gramsPerLiter},
-      {u"hectare", NSUnitArea.hectares},
-      {u"hour", NSUnitDuration.hours},
-      {u"inch", NSUnitLength.inches},
-      {u"kilobit", NSUnitInformationStorage.kilobits},
-      {u"kilobyte", NSUnitInformationStorage.kilobytes},
-      {u"kilogram", NSUnitMass.kilograms},
-      {u"kilometer", NSUnitLength.kilometers},
-      {u"kilometer-per-hour", NSUnitSpeed.kilometersPerHour},
-      {u"liter", NSUnitVolume.liters},
-      {u"megabit", NSUnitInformationStorage.megabits},
-      {u"megabyte", NSUnitInformationStorage.megabytes},
-      {u"meter", NSUnitLength.meters},
-      {u"meter-per-second", NSUnitSpeed.metersPerSecond},
-      {u"mile", NSUnitLength.miles},
-      {u"mile-per-gallon", NSUnitFuelEfficiency.milesPerGallon},
-      {u"mile-per-hour", NSUnitSpeed.milesPerHour},
-      {u"mile-scandinavian", NSUnitLength.scandinavianMiles},
-      {u"milliliter", NSUnitVolume.milliliters},
-      {u"millimeter", NSUnitLength.millimeters},
-      {u"millisecond", NSUnitDuration.milliseconds},
-      {u"minute", NSUnitDuration.minutes},
-      {u"ounce", NSUnitMass.ounces},
-      {u"petabyte", NSUnitInformationStorage.petabytes},
-      {u"pound", NSUnitMass.poundsMass},
-      {u"second", NSUnitDuration.seconds},
-      {u"stone", NSUnitMass.stones},
-      {u"terabit", NSUnitInformationStorage.terabits},
-      {u"terabyte", NSUnitInformationStorage.terabytes},
-      {u"yard", NSUnitLength.yards}};
+    {u"acre", NSUnitArea.acres},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"bit", NSUnitInformationStorage.bits},
+    {u"byte", NSUnitInformationStorage.bytes},
+#endif
+    {u"celsius", NSUnitTemperature.celsius},
+    {u"centimeter", NSUnitLength.centimeters},
+    {u"degree", NSUnitAngle.degrees},
+    {u"fahrenheit", NSUnitTemperature.fahrenheit},
+    {u"fluid-ounce", NSUnitVolume.fluidOunces},
+    {u"foot", NSUnitLength.feet},
+    {u"gallon", NSUnitVolume.gallons},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"gigabit", NSUnitInformationStorage.gigabits},
+    {u"gigabyte", NSUnitInformationStorage.gigabytes},
+#endif
+    {u"gram", NSUnitMass.grams},
+    {u"gram-per-liter", NSUnitConcentrationMass.gramsPerLiter},
+    {u"hectare", NSUnitArea.hectares},
+    {u"hour", NSUnitDuration.hours},
+    {u"inch", NSUnitLength.inches},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"kilobit", NSUnitInformationStorage.kilobits},
+    {u"kilobyte", NSUnitInformationStorage.kilobytes},
+#endif
+    {u"kilogram", NSUnitMass.kilograms},
+    {u"kilometer", NSUnitLength.kilometers},
+    {u"kilometer-per-hour", NSUnitSpeed.kilometersPerHour},
+    {u"liter", NSUnitVolume.liters},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"megabit", NSUnitInformationStorage.megabits},
+    {u"megabyte", NSUnitInformationStorage.megabytes},
+#endif
+    {u"meter", NSUnitLength.meters},
+    {u"meter-per-second", NSUnitSpeed.metersPerSecond},
+    {u"mile", NSUnitLength.miles},
+    {u"mile-per-gallon", NSUnitFuelEfficiency.milesPerGallon},
+    {u"mile-per-hour", NSUnitSpeed.milesPerHour},
+    {u"mile-scandinavian", NSUnitLength.scandinavianMiles},
+    {u"milliliter", NSUnitVolume.milliliters},
+    {u"millimeter", NSUnitLength.millimeters},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"millisecond", NSUnitDuration.milliseconds},
+#endif
+    {u"minute", NSUnitDuration.minutes},
+    {u"ounce", NSUnitMass.ounces},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"petabyte", NSUnitInformationStorage.petabytes},
+#endif
+    {u"pound", NSUnitMass.poundsMass},
+    {u"second", NSUnitDuration.seconds},
+    {u"stone", NSUnitMass.stones},
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+    {u"terabit", NSUnitInformationStorage.terabits},
+    {u"terabyte", NSUnitInformationStorage.terabytes},
+#endif
+    {u"yard", NSUnitLength.yards}
+  };
   if (auto nsUnitOpt = pairMapLookup(units, std::u16string_view(unitId)))
     return *nsUnitOpt;
   return [[NSUnit alloc] initWithSymbol:u16StringToNSString(unitId)];
