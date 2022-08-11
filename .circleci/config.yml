@@ -416,7 +416,7 @@ jobs:
             Copy-Item -Path "build_release\bin\Release\hbcdump.exe" -Destination "staging"
             Copy-Item -Path "build_release\bin\Release\hermesc.exe" -Destination "staging"
             Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
-            cmake -E tar zcf .\output\$Env:TAR_NAME .\staging\hbcdump.exe .\staging\hdb.exe .\staging\hermes.exe .\staging\hermesc.exe .\staging\hvm.exe
+            & 'C:\Program Files\CMake\bin\cmake.exe' -E tar zcf .\output\$Env:TAR_NAME .\staging\hbcdump.exe .\staging\hdb.exe .\staging\hermes.exe .\staging\hermesc.exe .\staging\hvm.exe
 
       - run:
           name: Checksum artifacts
