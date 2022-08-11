@@ -344,7 +344,7 @@ jobs:
       - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
-      - RELEASE_FLAGS: 'C:\Program Files\CMake\bin'
+      - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
       - TAR_NAME: 'hermes-cli-windows.tar.gz'
     steps:
       - checkout
@@ -376,8 +376,6 @@ jobs:
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
-            choco install --no-progress 7zip
-            if (-not $?) { throw "Failed to install Python" }
 
       - run:
           name: Assemble Windows runtime dependencies
@@ -395,14 +393,11 @@ jobs:
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
+            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
-            cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
+            cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
-            cmake --build ./build_release --target hermes --config Release
-            cmake --build ./build_release --target hvm --config Release
-            cmake --build ./build_release --target hbcdump --config Release
-            cmake --build ./build_release --target hermesc --config Release
+            cmake --build ./build_release --config Release
             if (-not $?) { throw "Failed to build Hermes" }
             cmake --build ./build_hdb --target hdb
             if (-not $?) { throw "Failed to build Hermes" }
