@@ -410,13 +410,16 @@ jobs:
       - run:
           name: Create CLI tarball
           command: |
+            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             cd $Env:HERMES_WS_DIR
             Copy-Item -Path "build_release\bin\Release\hermes.exe" -Destination "staging"
             Copy-Item -Path "build_release\bin\Release\hvm.exe" -Destination "staging"
             Copy-Item -Path "build_release\bin\Release\hbcdump.exe" -Destination "staging"
             Copy-Item -Path "build_release\bin\Release\hermesc.exe" -Destination "staging"
             Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
-            & 'C:\Program Files\CMake\bin\cmake.exe' -E tar zcf .\output\$Env:TAR_NAME .\staging\hbcdump.exe .\staging\hdb.exe .\staging\hermes.exe .\staging\hermesc.exe .\staging\hvm.exe
+            Copy-Item -Path "deps\*" -Destination "staging"
+            cd staging
+            cmake -E tar zcf ..\output\$Env:TAR_NAME .
 
       - run:
           name: Checksum artifacts
