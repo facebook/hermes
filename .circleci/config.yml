@@ -344,7 +344,7 @@ jobs:
       - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
-      - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
+      - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
       - TAR_NAME: 'hermes-cli-windows.tar.gz'
     steps:
       - checkout
@@ -356,7 +356,6 @@ jobs:
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\icu
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\staging
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\output
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR\deps
             New-Item -ItemType SymbolicLink -Target . -Path $Env:HERMES_WS_DIR -Name hermes
 
       - run:
@@ -381,11 +380,11 @@ jobs:
           name: Assemble Windows runtime dependencies
           command: |
             cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "deps"
+            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "staging"
             # Include MSVC++ 2015 redistributables
-            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "deps"
-            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "deps"
-            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "deps"
+            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "staging"
+            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "staging"
+            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "staging"
 
       - run:
           name: Build Windows CLI
@@ -412,7 +411,6 @@ jobs:
             Copy-Item -Path "build\bin\Release\hbcdump.exe" -Destination "staging"
             Copy-Item -Path "build\bin\Release\hermesc.exe" -Destination "staging"
             Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
-            Copy-Item -Path "deps\*" -Destination "staging"
             cd staging
             cmake -E tar zcf ..\output\$Env:TAR_NAME .
 
