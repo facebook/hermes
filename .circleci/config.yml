@@ -393,11 +393,11 @@ jobs:
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
+            cmake -S hermes -B build -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
             cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
-            cmake --build ./build_release --config Release
+            cmake --build ./build --config Release
             if (-not $?) { throw "Failed to build Hermes" }
             cmake --build ./build_hdb --target hdb
             if (-not $?) { throw "Failed to build Hermes" }
@@ -407,10 +407,10 @@ jobs:
           command: |
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "build_release\bin\Release\hermes.exe" -Destination "staging"
-            Copy-Item -Path "build_release\bin\Release\hvm.exe" -Destination "staging"
-            Copy-Item -Path "build_release\bin\Release\hbcdump.exe" -Destination "staging"
-            Copy-Item -Path "build_release\bin\Release\hermesc.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hermes.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hvm.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hbcdump.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hermesc.exe" -Destination "staging"
             Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
             Copy-Item -Path "deps\*" -Destination "staging"
             cd staging
