@@ -398,7 +398,7 @@ jobs:
             if (-not $?) { throw "Failed to configure Hermes" }
             cmake --build ./build --config Release
             if (-not $?) { throw "Failed to build Hermes" }
-            cmake --build ./build_hdb --target hdb
+            cmake --build ./build_hdb --config Release --target hdb
             if (-not $?) { throw "Failed to build Hermes" }
 
       - run:
@@ -410,7 +410,7 @@ jobs:
             Copy-Item -Path "build\bin\Release\hvm.exe" -Destination "staging"
             Copy-Item -Path "build\bin\Release\hbcdump.exe" -Destination "staging"
             Copy-Item -Path "build\bin\Release\hermesc.exe" -Destination "staging"
-            Copy-Item -Path "build_hdb\bin\Debug\hdb.exe" -Destination "staging"
+            Copy-Item -Path "build_hdb\bin\Release\hdb.exe" -Destination "staging"
             cd staging
             cmake -E tar zcf ..\output\$Env:TAR_NAME .
 
