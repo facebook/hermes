@@ -102,8 +102,11 @@ class CallResult {
   CallResult(CallResult &&cr) = default;
   CallResult &operator=(CallResult &&cr) = default;
 
-  /* implicit */ CallResult(const T &value) : value_(value) {}
-  /* implicit */ CallResult(T &&value) : value_(std::move(value)) {}
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<std::is_convertible<U, T>::value>::type>
+  /* implicit */ CallResult(U &&value) : value_(std::forward<U>(value)) {}
 
   /* implicit */ CallResult(ExecutionStatus status) : value_(llvh::None) {
     assert(status != ExecutionStatus::RETURNED);
