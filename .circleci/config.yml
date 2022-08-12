@@ -371,7 +371,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            choco install --no-progress cmake --version 3.14.7
+            choco install --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
@@ -389,7 +389,7 @@ jobs:
       - run:
           name: Build Windows CLI
           command: |
-            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
+            $Env:PATH += ";$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
             cmake -S hermes -B build -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
@@ -404,7 +404,6 @@ jobs:
       - run:
           name: Create CLI tarball
           command: |
-            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             cd $Env:HERMES_WS_DIR
             Copy-Item -Path "build\bin\Release\hermes.exe" -Destination "staging"
             Copy-Item -Path "build\bin\Release\hvm.exe" -Destination "staging"
