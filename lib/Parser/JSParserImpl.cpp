@@ -4223,12 +4223,15 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
   }
 #endif
 
+  // Calls to parseAssignmentExpression may recursively invoke
+  // parseConditionalExpression.
+  CHECK_RECURSION;
+
   // Only try with AllowTypedArrowFunction::No if we haven't already set
   // up the consequent using AllowTypedArrowFunction::Yes.
   if (!consequent) {
     // Consume the '?' (either for the first time or after savePoint.restore()).
     advance();
-    CHECK_RECURSION;
     auto optConsequent = parseAssignmentExpression(
         ParamIn, AllowTypedArrowFunction::No, CoverTypedParameters::No);
     if (!optConsequent)
