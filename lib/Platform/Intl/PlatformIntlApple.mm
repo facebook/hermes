@@ -11,6 +11,8 @@
 #import <Foundation/Foundation.h>
 #include <unordered_set>
 
+static_assert(__has_feature(objc_arc), "arc must be enabled");
+
 namespace hermes {
 namespace platform_intl {
 namespace {

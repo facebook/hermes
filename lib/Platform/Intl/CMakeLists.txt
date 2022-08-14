@@ -20,6 +20,7 @@ if(HERMES_ENABLE_INTL)
     )
     # Work around a bug in unity builds where it tries to build Obj-C as C++.
     set_target_properties(hermesPlatformIntl PROPERTIES UNITY_BUILD false)
+    target_compile_options(hermesPlatformIntl PRIVATE -fobjc-arc)
   else()
     add_hermes_library(hermesPlatformIntl STATIC PlatformIntlDummy.cpp LINK_LIBS hermesPublic)
   endif()
