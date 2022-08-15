@@ -131,21 +131,27 @@ jobs:
       - checkout:
           path: hermes
       - run:
-          name: Build Hermes for Linux
+          name: Build linux CLI
           command: |
-            cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
+            cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive"
-            cmake --build build --target check-hermes github-cli-release -j 4
-            mkdir output && cp build/github/hermes-cli-*.tar.gz output
+            cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
+              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
+              -DHERMES_ENABLE_DEBUGGER=False
+            cmake --build build_hdb --target hdb
+            cmake --build build --target check-hermes hermes hvm hbcdump hermesc
       - run:
-          name: Checksum artifacts
+          name: Create CLI tarball
+          environment:
+            TAR_NAME: hermes-cli-linux.tar.gz
           command: |
-            cd output
-            for file in *
-            do
-              sha256sum "$file" > "$file.sha256"
-            done
+            mkdir output staging
+            cp build/bin/hermes build/bin/hvm build/bin/hbcdump \
+              build/bin/hermesc build_hdb/bin/hdb staging
+            tar -C staging -czvf output/${TAR_NAME} .
+            shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
       - store_artifacts:
           path: output
       - persist_to_workspace:
@@ -338,6 +344,8 @@ jobs:
       - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
+      - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
+      - TAR_NAME: 'hermes-cli-windows.tar.gz'
     steps:
       - checkout
 
@@ -346,8 +354,8 @@ jobs:
           command: |
             New-Item -ItemType Directory $Env:HERMES_WS_DIR
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\icu
+            New-Item -ItemType Directory $Env:HERMES_WS_DIR\staging
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\output
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR\deps
             New-Item -ItemType SymbolicLink -Target . -Path $Env:HERMES_WS_DIR -Name hermes
 
       - run:
@@ -363,7 +371,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            choco install --no-progress cmake --version 3.14.7
+            choco install --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
@@ -372,39 +380,46 @@ jobs:
           name: Assemble Windows runtime dependencies
           command: |
             cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "deps"
+            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "staging"
             # Include MSVC++ 2015 redistributables
-            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "deps"
-            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "deps"
-            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "deps"
+            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "staging"
+            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "staging"
+            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "staging"
 
       - run:
-          name: Build Hermes for Windows
+          name: Build Windows CLI
           command: |
-            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
+            $Env:PATH += ";$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            cmake -S hermes -B build_release -G 'Visual Studio 16 2019' -Ax64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR="$Env:HERMES_WS_DIR\deps"
+            cmake -S hermes -B build -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
             if (-not $?) { throw "Failed to configure Hermes" }
-            cd build_release
-            cmake --build . --target github-cli-release --config Release
+            cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 $Env:RELEASE_FLAGS
+            if (-not $?) { throw "Failed to configure Hermes" }
+            cmake --build ./build --config Release
+            if (-not $?) { throw "Failed to build Hermes" }
+            cmake --build ./build_hdb --config Release --target hdb
             if (-not $?) { throw "Failed to build Hermes" }
 
       - run:
-          name: Copy artifacts
+          name: Create CLI tarball
           command: |
             cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "build_release\github\hermes-cli-*.tar.gz" -Destination "output"
+            Copy-Item -Path "build\bin\Release\hermes.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hvm.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hbcdump.exe" -Destination "staging"
+            Copy-Item -Path "build\bin\Release\hermesc.exe" -Destination "staging"
+            Copy-Item -Path "build_hdb\bin\Release\hdb.exe" -Destination "staging"
+            cd staging
+            cmake -E tar zcf ..\output\$Env:TAR_NAME .
 
       - run:
           name: Checksum artifacts
           command: |
             cd $Env:HERMES_WS_DIR\output
-            foreach($file in Get-ChildItem) {
-              $hash = Get-FileHash -Path $file -Algorithm SHA256
-              Write-Output ($hash.Hash + "  " + $file.Name) |
-                  Out-File -Encoding ASCII -FilePath ($file.Name +".sha256")
-            }
+            $hash = Get-FileHash -Path $Env:TAR_NAME -Algorithm SHA256
+            Write-Output ($hash.Hash + "  " + $Env:TAR_NAME) |
+                  Out-File -Encoding ASCII -FilePath ($Env:TAR_NAME +".sha256")
 
       - store_artifacts:
           path: c:\tmp\hermes\output
