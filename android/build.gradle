@@ -9,7 +9,7 @@
 // - CMakeLists.txt
 // - npm/package.json
 // - hermes-engine.podspec
-def release_version = "0.11.0"
+def release_version = "0.12.0"
 
 buildscript {
   ext {
