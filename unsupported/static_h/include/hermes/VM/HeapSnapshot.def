@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/// Describes the structure of various parts of the V8 Heap Snapshot format
+
+#ifndef V8_SNAPSHOT_SECTION
+#define V8_SNAPSHOT_SECTION(enumerand, label)
+#endif
+
+#ifndef V8_NODE_TYPE
+#define V8_NODE_TYPE(enumerand, label)
+#endif
+
+#ifndef V8_EDGE_TYPE
+#define V8_EDGE_TYPE(enumerand, label)
+#endif
+
+#ifndef V8_NODE_FIELD
+#define V8_NODE_FIELD(label, type)
+#endif
+
+#ifndef V8_EDGE_FIELD
+#define V8_EDGE_FIELD(label, type)
+#endif
+
+#ifndef V8_LOCATION_FIELD
+#define V8_LOCATION_FIELD(label)
+#endif
+
+#ifndef V8_TRACE_FUNCTION_INFO_FIELD
+#define V8_TRACE_FUNCTION_INFO_FIELD(name)
+#endif
+
+#ifndef V8_TRACE_NODE_FIELD
+#define V8_TRACE_NODE_FIELD(name)
+#endif
+
+#ifndef V8_SAMPLE_FIELD
+#define V8_SAMPLE_FIELD(name)
+#endif
+
+/// V8 Heap Snapshots look like JSON, but the parser expects fields in a
+/// specific order.  They are also all expected to exist, whether not they
+/// contain useful information.  The sections are given below in their expected
+/// order.
+V8_SNAPSHOT_SECTION(Nodes, "nodes")
+V8_SNAPSHOT_SECTION(Edges, "edges")
+V8_SNAPSHOT_SECTION(TraceFunctionInfos, "trace_function_infos")
+V8_SNAPSHOT_SECTION(TraceTree, "trace_tree")
+V8_SNAPSHOT_SECTION(Samples, "samples")
+V8_SNAPSHOT_SECTION(Locations, "locations")
+V8_SNAPSHOT_SECTION(Strings, "strings")
+
+/// Special sentinel end section (not emitted).
+V8_SNAPSHOT_SECTION(END, "__END__")
+
+/// The highest-level categorization of the type of an object.  Given in the
+/// order they will be emitted.
+/// NOTE: These types are chosen to align with v8's types, not what Hermes
+/// actually uses.
+V8_NODE_TYPE(Hidden, "hidden")
+V8_NODE_TYPE(Array, "array")
+V8_NODE_TYPE(String, "string")
+V8_NODE_TYPE(Object, "object")
+V8_NODE_TYPE(Code, "code")
+V8_NODE_TYPE(Closure, "closure")
+V8_NODE_TYPE(Regexp, "regexp")
+V8_NODE_TYPE(Number, "number")
+V8_NODE_TYPE(Native, "native")
+
+// Synthetic means it's not shown to the user, but only exists to meet the
+// requirements of a graph (for example, the GC roots are synthetic).
+V8_NODE_TYPE(Synthetic, "synthetic")
+V8_NODE_TYPE(ConcatenatedString, "concatenated string")
+V8_NODE_TYPE(SlicedString, "sliced string")
+V8_NODE_TYPE(Symbol, "symbol")
+V8_NODE_TYPE(BigInt, "bigint")
+
+// Fields associated with a node record.  Note that the first field is assumed
+// to be the node's type, represented as an index into the list of types above.
+V8_NODE_FIELD(name, string)
+V8_NODE_FIELD(id, number)
+V8_NODE_FIELD(self_size, number)
+V8_NODE_FIELD(edge_count, number)
+V8_NODE_FIELD(trace_node_id, number)
+V8_NODE_FIELD(detachedness, number)
+
+/// The types of edges, again, aligned with V8's types.
+V8_EDGE_TYPE(Context, "context")
+V8_EDGE_TYPE(Element, "element")
+V8_EDGE_TYPE(Property, "property")
+V8_EDGE_TYPE(Internal, "internal")
+V8_EDGE_TYPE(Hidden, "hidden")
+V8_EDGE_TYPE(Shortcut, "shortcut")
+V8_EDGE_TYPE(Weak, "weak")
+
+// Fields associated with an edge record.  Note that the first field is assumed
+// to be the edge's type, represented as an index into the list of types above.
+V8_EDGE_FIELD(name_or_index, string_or_number)
+V8_EDGE_FIELD(to_node, node)
+
+// Fields associated with a location record. Locations don't have an associated
+// type.
+V8_LOCATION_FIELD(object_index)
+V8_LOCATION_FIELD(script_id)
+V8_LOCATION_FIELD(line)
+V8_LOCATION_FIELD(column)
+
+V8_TRACE_FUNCTION_INFO_FIELD(function_id)
+V8_TRACE_FUNCTION_INFO_FIELD(name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_name)
+V8_TRACE_FUNCTION_INFO_FIELD(script_id)
+V8_TRACE_FUNCTION_INFO_FIELD(line)
+V8_TRACE_FUNCTION_INFO_FIELD(column)
+
+V8_TRACE_NODE_FIELD(id)
+V8_TRACE_NODE_FIELD(function_info_index)
+V8_TRACE_NODE_FIELD(count)
+V8_TRACE_NODE_FIELD(size)
+V8_TRACE_NODE_FIELD(children)
+
+V8_SAMPLE_FIELD(timestamp_us)
+V8_SAMPLE_FIELD(last_assigned_id)
+
+#undef V8_SNAPSHOT_SECTION
+#undef V8_NODE_TYPE
+#undef V8_NODE_FIELD
+#undef V8_EDGE_TYPE
+#undef V8_EDGE_FIELD
+#undef V8_TRACE_FUNCTION_INFO_FIELD
+#undef V8_TRACE_NODE_FIELD
+#undef V8_LOCATION_FIELD
+#undef V8_SAMPLE_FIELD

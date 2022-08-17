@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros used for macro-metaprogramming with Hermes Passes.
+//
+//===----------------------------------------------------------------------===//
+
+/// PASS(Id, Name, Description)
+///   There exists a global function hermes::create##Id().
+///
+///   This macro must be defined by the includer.
+#ifndef PASS
+#error "Macro must be defined by includer"
+#endif
+
+PASS(DCE, "dce", "Eliminate dead code")
+PASS(FuncSigOpts, "funcsigopts", "Function Signature Optimizations")
+PASS(CSE, "cse", "Common subexpression elimination")
+PASS(CodeMotion, "codemotion", "Code Motion")
+PASS(Mem2Reg, "mem2reg", "Construct SSA")
+PASS(InstSimplify, "instsimplify", "Simplify instructions")
+PASS(SimplifyCFG, "simplifycfg", "Simplify CFG")
+PASS(StackPromotion, "stackpromotion", "Stack promotion")
+PASS(TypeInference, "typeinference", "Type inference")
+PASS(Inlining, "inlining", "Inlining")
+PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
+PASS(
+    HoistStartGenerator,
+    "hoiststartgenerator",
+    "Move StartGenerator to start of function")
+PASS(Auditor, "auditor", "Auditor")
+PASS(TDZDedup, "tdzdedup", "TDZ Deduplication")
+
+#undef PASS

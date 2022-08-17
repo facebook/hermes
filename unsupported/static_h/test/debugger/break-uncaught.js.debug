@@ -1,0 +1,4 @@
+set pauseOnThrow uncaught
+continue
+backtrace
+continue

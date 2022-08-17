@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "@rollup/plugin-commonjs": "~15.0.0",
+    "@rollup/plugin-node-resolve": "~9.0.0",
+    "promise": "8.0.3"
+  },
+  "scripts": {
+    "start": "yarn run rollup --config rollup.config.js index.js"
+  },
+  "devDependencies": {
+    "rollup": "~2.27.0"
+  }
+}

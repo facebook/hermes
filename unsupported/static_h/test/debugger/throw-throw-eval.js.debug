@@ -1,0 +1,4 @@
+set pauseOnThrow on
+continue
+exec throw new Error("Bar")
+continue

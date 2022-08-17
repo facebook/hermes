@@ -1,0 +1,4 @@
+break 12 3
+disable 1
+info breakpoints
+continue

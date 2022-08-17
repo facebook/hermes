@@ -1,0 +1,13 @@
+source 'https://cdn.cocoapods.org/'
+
+target 'ApplePlatformsIntegrationMobileTests' do
+  use_frameworks!
+  platform :ios, '11'
+  pod 'hermes-engine', :path => '../../'
+end
+
+target 'ApplePlatformsIntegrationMacTests' do
+  use_frameworks!
+  platform :osx, '10.14'
+  pod 'hermes-engine', :path => '../../'
+end

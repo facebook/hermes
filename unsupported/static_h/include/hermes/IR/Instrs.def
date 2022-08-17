@@ -1,0 +1,154 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#ifndef DEF_VALUE
+#define DEF_VALUE(NAME, PARENT)
+#endif
+#ifndef MARK_FIRST
+#define MARK_FIRST(NAME)
+#endif
+#ifndef MARK_LAST
+#define MARK_LAST(NAME)
+#endif
+
+#ifndef TERMINATOR
+#define TERMINATOR(NAME, PARENT) DEF_VALUE(NAME, PARENT)
+#endif
+
+#if defined(INCLUDE_ALL_INSTRS) || defined(INCLUDE_HBC_INSTRS)
+#define INCLUDE_HBC_BACKEND
+#endif
+
+MARK_FIRST(SingleOperandInst)
+DEF_VALUE(SingleOperandInst, Instruction)
+DEF_VALUE(AddEmptyStringInst, SingleOperandInst)
+DEF_VALUE(AsNumberInst, SingleOperandInst)
+DEF_VALUE(AsNumericInst, SingleOperandInst)
+DEF_VALUE(AsInt32Inst, SingleOperandInst)
+DEF_VALUE(LoadStackInst, SingleOperandInst)
+DEF_VALUE(MovInst, SingleOperandInst)
+DEF_VALUE(ImplicitMovInst, Instruction)
+DEF_VALUE(CoerceThisNSInst, SingleOperandInst)
+DEF_VALUE(UnaryOperatorInst, SingleOperandInst)
+DEF_VALUE(DirectEvalInst, SingleOperandInst)
+DEF_VALUE(LoadFrameInst, SingleOperandInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
+DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
+DEF_VALUE(HBCResolveEnvironment, SingleOperandInst)
+DEF_VALUE(HBCGetArgumentsLengthInst, SingleOperandInst)
+DEF_VALUE(HBCReifyArgumentsInst, SingleOperandInst)
+DEF_VALUE(HBCSpillMovInst, SingleOperandInst)
+#endif
+MARK_LAST(SingleOperandInst)
+
+DEF_VALUE(PhiInst, Instruction)
+DEF_VALUE(BinaryOperatorInst, Instruction)
+MARK_FIRST(StorePropertyInst)
+DEF_VALUE(StorePropertyInst, Instruction)
+DEF_VALUE(TryStoreGlobalPropertyInst, StorePropertyInst)
+MARK_LAST(StorePropertyInst)
+
+MARK_FIRST(StoreOwnPropertyInst)
+DEF_VALUE(StoreOwnPropertyInst, Instruction)
+DEF_VALUE(StoreNewOwnPropertyInst, StoreOwnPropertyInst)
+MARK_LAST(StoreOwnPropertyInst)
+
+DEF_VALUE(StoreGetterSetterInst, Instruction)
+DEF_VALUE(DeletePropertyInst, Instruction)
+MARK_FIRST(LoadPropertyInst)
+DEF_VALUE(LoadPropertyInst, Instruction)
+DEF_VALUE(TryLoadGlobalPropertyInst, LoadPropertyInst)
+MARK_LAST(LoadPropertyInst)
+DEF_VALUE(StoreStackInst, Instruction)
+DEF_VALUE(StoreFrameInst, Instruction)
+DEF_VALUE(AllocStackInst, Instruction)
+DEF_VALUE(AllocObjectInst, Instruction)
+DEF_VALUE(AllocArrayInst, Instruction)
+DEF_VALUE(AllocObjectLiteralInst, Instruction)
+DEF_VALUE(CreateArgumentsInst, Instruction)
+DEF_VALUE(CatchInst, Instruction)
+DEF_VALUE(DebuggerInst, Instruction)
+DEF_VALUE(CreateRegExpInst, Instruction)
+DEF_VALUE(TryEndInst, Instruction)
+DEF_VALUE(GetNewTargetInst, Instruction)
+DEF_VALUE(ThrowIfEmptyInst, Instruction)
+DEF_VALUE(IteratorBeginInst, Instruction)
+DEF_VALUE(IteratorNextInst, Instruction)
+DEF_VALUE(IteratorCloseInst, Instruction)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
+DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
+#endif
+DEF_VALUE(UnreachableInst, Instruction)
+
+MARK_FIRST(CreateFunctionInst)
+DEF_VALUE(CreateFunctionInst, Instruction)
+DEF_VALUE(CreateGeneratorInst, Instruction)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
+DEF_VALUE(HBCCreateGeneratorInst, Instruction)
+#endif
+MARK_LAST(CreateFunctionInst)
+#ifdef HERMES_RUN_WASM
+DEF_VALUE(CallIntrinsicInst, Instruction)
+#endif
+
+MARK_FIRST(TerminatorInst)
+DEF_VALUE(TerminatorInst, Instruction)
+TERMINATOR(BranchInst, TerminatorInst)
+TERMINATOR(ReturnInst, TerminatorInst)
+TERMINATOR(ThrowInst, TerminatorInst)
+TERMINATOR(SwitchInst, TerminatorInst)
+TERMINATOR(CondBranchInst, TerminatorInst)
+TERMINATOR(GetPNamesInst, TerminatorInst)
+TERMINATOR(GetNextPNameInst, TerminatorInst)
+TERMINATOR(CheckHasInstanceInst, TerminatorInst)
+TERMINATOR(TryStartInst, TerminatorInst)
+TERMINATOR(CompareBranchInst, TerminatorInst)
+TERMINATOR(SwitchImmInst, TerminatorInst)
+TERMINATOR(SaveAndYieldInst, TerminatorInst)
+MARK_LAST(TerminatorInst)
+
+MARK_FIRST(CallInst)
+DEF_VALUE(CallInst, Instruction)
+DEF_VALUE(ConstructInst, CallInst)
+DEF_VALUE(CallBuiltinInst, CallInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCConstructInst, CallInst)
+DEF_VALUE(HBCCallDirectInst, CallInst)
+DEF_VALUE(HBCCallNInst, CallInst)
+#endif
+MARK_LAST(CallInst)
+
+DEF_VALUE(GetBuiltinClosureInst, Instruction)
+DEF_VALUE(StartGeneratorInst, Instruction)
+DEF_VALUE(ResumeGeneratorInst, Instruction)
+
+// These are target dependent instructions:
+
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
+DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
+DEF_VALUE(HBCGetThisNSInst, Instruction)
+DEF_VALUE(HBCCreateThisInst, Instruction)
+DEF_VALUE(HBCGetArgumentsPropByValInst, Instruction)
+DEF_VALUE(HBCGetConstructedObjectInst, Instruction)
+DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
+DEF_VALUE(HBCProfilePointInst, Instruction)
+#endif
+
+#undef INCLUDE_HBC_BACKEND
+
+// Don't undef these if this file is being included in ValueKinds.def, since
+// these macros are still used after the #include.
+#ifndef INCLUDED_FROM_VALUEKINDS
+#undef DEF_VALUE
+#undef MARK_FIRST
+#undef MARK_LAST
+#undef TERMINATOR
+#endif

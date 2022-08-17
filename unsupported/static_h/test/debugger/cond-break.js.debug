@@ -1,0 +1,11 @@
+break 16 if i > 5 || i === 3
+delete 1
+break 16 3 if i > 5 || i === 3
+delete 2
+break cond-break.js 16 3 if i > 5 || i === 3
+continue
+continue
+continue
+continue
+continue
+continue

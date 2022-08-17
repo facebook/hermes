@@ -1,0 +1,16 @@
+{
+  "segments": {
+    "0": [
+      "cjs-subdir-main.js",
+      "cjs-subdir-2.js",
+      "bar/cjs-subdir-bar.js",
+      "foo/cjs-subdir-foo.js"
+    ]
+  },
+  "moduleIDs": {
+    "cjs-subdir-main.js": 99,
+    "cjs-subdir-2.js": 10,
+    "bar/cjs-subdir-bar.js": 20,
+    "foo/cjs-subdir-foo.js": 30
+  }
+}

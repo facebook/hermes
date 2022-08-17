@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+///===----------------------------------------------------------------------===
+/// \file
+/// Define Hermes builtin functions.
+///
+/// All builtin functions in Hermes are registered in a vector of `Callable *`
+/// in the runtime with an index as its builtin method id.
+///
+/// There are 3 kinds of builtins in Hermes:
+/// 1. (Public Native) Builtins: those are global objects and methods of JSLib
+///   implemented natively which the compiler can assume have not been
+///   overwritten and can be treated as builtins under the "static builtin"
+///   optimizations (`-fstatic-builtins` flag).
+///
+/// 2. Private (Native) Builtins: those are native functions meant to be only
+///   called internally by the compiler to help with implementing JS features
+///   without introducing extra opcodes. They are notationally written as
+///   `HermesBuiltin_name`.
+///
+/// 3. (Private) JS Builtins: those are JS functions returned from the result of
+///   executing internal bytecode. They are also there to help with implementing
+///   JS features.
+///
+/// At this moment,
+/// Native builtins are invoked via `CallBuiltin` instruction.
+/// JS builtins are invoked via `GetBuiltinClosure` followed by a `Call`.
+///
+/// We might separate them in the future.
+///
+/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/// IMPORTANT: DO NOT FORGET TO INCREASE THE BYTECODE FILE FORMAT VERSION IF
+/// YOU MODIFY THIS FILE.
+/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+///===----------------------------------------------------------------------===
+
+#ifndef BUILTIN_OBJECT
+#define BUILTIN_OBJECT(object)
+#endif
+#ifndef BUILTIN_METHOD
+#define BUILTIN_METHOD(object, name)
+#endif
+#ifndef PRIVATE_BUILTIN
+#define PRIVATE_BUILTIN(name)
+#endif
+#ifndef MARK_FIRST_PRIVATE_BUILTIN
+#define MARK_FIRST_PRIVATE_BUILTIN(name)
+#endif
+#ifndef JS_BUILTIN
+#define JS_BUILTIN(name)
+#endif
+#ifndef MARK_FIRST_JS_BUILTIN
+#define MARK_FIRST_JS_BUILTIN(name)
+#endif
+
+BUILTIN_OBJECT(Array)
+// BUILTIN_METHOD(Array, from)
+BUILTIN_METHOD(Array, isArray)
+
+BUILTIN_METHOD(Date, UTC)
+BUILTIN_METHOD(Date, parse)
+
+// BUILTIN_OBJECT(HermesInternal)
+// BUILTIN_METHOD(HermesInternal, getEpilogues)
+
+BUILTIN_OBJECT(JSON)
+BUILTIN_METHOD(JSON, parse)
+BUILTIN_METHOD(JSON, stringify)
+
+BUILTIN_OBJECT(Math)
+BUILTIN_METHOD(Math, abs)
+BUILTIN_METHOD(Math, acos)
+BUILTIN_METHOD(Math, asin)
+BUILTIN_METHOD(Math, atan)
+BUILTIN_METHOD(Math, atan2)
+BUILTIN_METHOD(Math, ceil)
+BUILTIN_METHOD(Math, cos)
+BUILTIN_METHOD(Math, exp)
+BUILTIN_METHOD(Math, floor)
+BUILTIN_METHOD(Math, hypot)
+BUILTIN_METHOD(Math, imul)
+BUILTIN_METHOD(Math, log)
+BUILTIN_METHOD(Math, max)
+BUILTIN_METHOD(Math, min)
+BUILTIN_METHOD(Math, pow)
+BUILTIN_METHOD(Math, round)
+BUILTIN_METHOD(Math, sin)
+BUILTIN_METHOD(Math, sqrt)
+BUILTIN_METHOD(Math, tan)
+BUILTIN_METHOD(Math, trunc)
+
+// BUILTIN_OBJECT(Number)
+// BUILTIN_METHOD(Number, isNaN)
+
+BUILTIN_OBJECT(Object)
+BUILTIN_METHOD(Object, create)
+BUILTIN_METHOD(Object, defineProperties)
+BUILTIN_METHOD(Object, defineProperty)
+// BUILTIN_METHOD(Object, entries)
+BUILTIN_METHOD(Object, freeze)
+BUILTIN_METHOD(Object, getOwnPropertyDescriptor)
+BUILTIN_METHOD(Object, getOwnPropertyNames)
+// BUILTIN_METHOD(Object, getOwnPropertySymbols)
+BUILTIN_METHOD(Object, getPrototypeOf)
+BUILTIN_METHOD(Object, isExtensible)
+BUILTIN_METHOD(Object, isFrozen)
+BUILTIN_METHOD(Object, keys)
+BUILTIN_METHOD(Object, seal)
+// BUILTIN_METHOD(Object, setPrototypeOf)
+// BUILTIN_METHOD(Object, values)
+
+BUILTIN_OBJECT(String)
+BUILTIN_METHOD(String, fromCharCode)
+
+PRIVATE_BUILTIN(silentSetPrototypeOf)
+MARK_FIRST_PRIVATE_BUILTIN(silentSetPrototypeOf)
+PRIVATE_BUILTIN(requireFast)
+PRIVATE_BUILTIN(getTemplateObject)
+PRIVATE_BUILTIN(ensureObject)
+PRIVATE_BUILTIN(getMethod)
+PRIVATE_BUILTIN(throwTypeError)
+PRIVATE_BUILTIN(generatorSetDelegated)
+PRIVATE_BUILTIN(copyDataProperties)
+PRIVATE_BUILTIN(copyRestArgs)
+PRIVATE_BUILTIN(arraySpread)
+PRIVATE_BUILTIN(apply)
+PRIVATE_BUILTIN(exportAll)
+PRIVATE_BUILTIN(exponentiationOperator)
+
+JS_BUILTIN(spawnAsync)
+MARK_FIRST_JS_BUILTIN(spawnAsync)
+
+#undef BUILTIN_OBJECT
+#undef BUILTIN_METHOD
+#undef PRIVATE_BUILTIN
+#undef MARK_FIRST_PRIVATE_BUILTIN
+#undef JS_BUILTIN
+#undef MARK_FIRST_JS_BUILTIN

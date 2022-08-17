@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#ifndef DEF_VALUE
+#define DEF_VALUE(NAME, PARENT)
+#endif
+#ifndef MARK_FIRST
+#define MARK_FIRST(NAME)
+#endif
+#ifndef MARK_LAST
+#define MARK_LAST(NAME)
+#endif
+#ifndef MARK_VALUE
+#define MARK_VALUE(NAME)
+#endif
+
+MARK_FIRST(Value)
+MARK_VALUE(Value)
+
+MARK_FIRST(Instruction)
+DEF_VALUE(Instruction, Value)
+#define INCLUDED_FROM_VALUEKINDS
+#include "hermes/IR/Instrs.def"
+#undef INCLUDED_FROM_VALUEKINDS
+MARK_LAST(Instruction)
+
+MARK_FIRST(Literal)
+DEF_VALUE(Literal, Value)
+DEF_VALUE(LiteralEmpty, Literal)
+DEF_VALUE(LiteralUndefined, Literal)
+DEF_VALUE(LiteralNull, Literal)
+DEF_VALUE(LiteralNumber, Literal)
+DEF_VALUE(LiteralBigInt, Literal)
+DEF_VALUE(LiteralString, Literal)
+DEF_VALUE(LiteralBool, Literal)
+DEF_VALUE(GlobalObject, Literal)
+MARK_LAST(Literal)
+
+DEF_VALUE(EmptySentinel, Value)
+DEF_VALUE(Label, Value)
+DEF_VALUE(GlobalObjectProperty, Value)
+DEF_VALUE(Variable, Value)
+DEF_VALUE(Parameter, Value)
+DEF_VALUE(BasicBlock, Value)
+MARK_FIRST(VariableScope)
+DEF_VALUE(VariableScope, Value)
+DEF_VALUE(ExternalScope, VariableScope)
+MARK_LAST(VariableScope)
+MARK_FIRST(Function)
+DEF_VALUE(Function, Value)
+DEF_VALUE(GeneratorFunction, Function)
+DEF_VALUE(GeneratorInnerFunction, Function)
+DEF_VALUE(AsyncFunction, Function)
+MARK_LAST(Function)
+DEF_VALUE(Module, Value)
+
+MARK_LAST(Value)
+
+#undef DEF_VALUE
+#undef MARK_FIRST
+#undef MARK_LAST
+#undef MARK_VALUE

@@ -1,0 +1,178 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#ifndef TOK
+#define TOK(name, str)
+#endif
+
+#ifndef RESWORD
+#define RESWORD(name) TOK(rw_##name, #name)
+#endif
+
+#ifndef PUNCTUATOR
+#define PUNCTUATOR(name, str) TOK(name, str)
+#endif
+
+#ifndef PUNCTUATOR_FLOW
+#define PUNCTUATOR_FLOW(name, str) TOK(name, str)
+#endif
+
+#ifndef BINOP
+#define BINOP(name, str, precedence) PUNCTUATOR(name, str)
+#endif
+
+#ifndef TEMPLATE
+#define TEMPLATE(name, str) TOK(name, str)
+#endif
+
+#ifndef RANGE_MARKER
+#define RANGE_MARKER(name) TOK(name, "<" #name ">")
+#endif
+
+// clang-format off
+
+TOK(none, "<none>")
+TOK(identifier, "identifier")
+TOK(private_identifier, "private identifier")
+
+RANGE_MARKER(_first_resword)
+RESWORD(function)
+RESWORD(for)
+RESWORD(if)
+RESWORD(in)
+RESWORD(var)
+RESWORD(break)
+RESWORD(continue)
+RESWORD(return)
+RESWORD(switch)
+RESWORD(this)
+
+RESWORD(true)
+RESWORD(false)
+RESWORD(null)
+RESWORD(case)
+RESWORD(catch)
+RESWORD(const)
+RESWORD(debugger)
+RESWORD(default)
+RESWORD(delete)
+RESWORD(do)
+RESWORD(else)
+RESWORD(finally)
+RESWORD(instanceof)
+RESWORD(new)
+RESWORD(throw)
+RESWORD(try)
+RESWORD(typeof)
+RESWORD(void)
+RESWORD(while)
+RESWORD(with)
+
+RESWORD(export)
+RESWORD(import)
+
+RESWORD(class)
+RESWORD(static)
+RESWORD(extends)
+RESWORD(super)
+
+// Future reserved words
+RESWORD(enum)
+
+// Strict mode future reserved words
+RESWORD(implements)
+RESWORD(interface)
+RESWORD(package)
+RESWORD(private)
+RESWORD(protected)
+RESWORD(public)
+RESWORD(yield)
+RANGE_MARKER(_last_resword)
+
+PUNCTUATOR(l_brace,             "{")
+PUNCTUATOR_FLOW(l_bracepipe,    "{|")
+PUNCTUATOR(r_brace,             "}")
+PUNCTUATOR_FLOW(piper_brace,    "|}")
+PUNCTUATOR(l_paren,             "(")
+PUNCTUATOR(r_paren,             ")")
+PUNCTUATOR(l_square,            "[")
+PUNCTUATOR(r_square,            "]")
+PUNCTUATOR(period,              ".")
+PUNCTUATOR(questiondot,         "?.")
+PUNCTUATOR(dotdotdot,           "...")
+PUNCTUATOR(semi,                ";")
+PUNCTUATOR(comma,               ",")
+PUNCTUATOR(plusplus,            "++")
+PUNCTUATOR(minusminus,          "--")
+RANGE_MARKER(_first_binary)
+BINOP(     starstar,            "**",  12)
+BINOP(     star,                "*",   11)
+BINOP(     percent,             "%",   11)
+BINOP(     slash,               "/",   11)
+BINOP(     plus,                "+",   10)
+BINOP(     minus,               "-",   10)
+BINOP(     lessless,            "<<",   9)
+BINOP(     greatergreater,      ">>",   9)
+BINOP(     greatergreatergreater,">>>", 9)
+BINOP(     less,                "<",    8)
+BINOP(     greater,             ">",    8)
+BINOP(     lessequal,           "<=",   8)
+BINOP(     greaterequal,        ">=",   8)
+BINOP(     equalequal,          "==",   7)
+BINOP(     exclaimequal,        "!=",   7)
+BINOP(     equalequalequal,     "===",  7)
+BINOP(     exclaimequalequal,   "!==",  7)
+BINOP(     amp,                 "&",    6)
+BINOP(     caret,               "^",    5)
+BINOP(     pipe,                "|",    4)
+BINOP(     ampamp,              "&&",   3)
+BINOP(     pipepipe,            "||",   2)
+BINOP(     questionquestion,    "??",   1)
+RANGE_MARKER(_last_binary)
+PUNCTUATOR(exclaim,             "!")
+PUNCTUATOR(tilde,               "~")
+PUNCTUATOR(question,            "?")
+PUNCTUATOR(colon,               ":")
+PUNCTUATOR(equal,               "=")
+PUNCTUATOR(plusequal,           "+=")
+PUNCTUATOR(minusequal,          "-=")
+PUNCTUATOR(starequal,           "*=")
+PUNCTUATOR(starstarequal,       "**=")
+PUNCTUATOR(percentequal,        "%=")
+PUNCTUATOR(slashequal,          "/=")
+PUNCTUATOR(lesslessequal,       "<<=")
+PUNCTUATOR(greatergreaterequal, ">>=")
+PUNCTUATOR(greatergreatergreaterequal, ">>>=")
+PUNCTUATOR(ampequal,            "&=")
+PUNCTUATOR(pipeequal,           "|=")
+PUNCTUATOR(ampampequal,         "&&=")
+PUNCTUATOR(pipepipeequal,       "||=")
+PUNCTUATOR(questionquestionequal, "\?\?=")
+PUNCTUATOR(caretequal,          "^=")
+PUNCTUATOR(equalgreater,        "=>")
+
+TOK(numeric_literal, "number")
+TOK(string_literal, "string")
+TOK(regexp_literal, "regexp")
+TOK(jsx_text, "JSX text")
+TOK(bigint_literal, "bigint")
+
+TEMPLATE(no_substitution_template, "template literal")
+TEMPLATE(template_head, "template literal start")
+TEMPLATE(template_middle, "template literal resume")
+TEMPLATE(template_tail, "template literal end")
+
+TOK(eof, "<eof>")
+RANGE_MARKER(_last_token)
+
+#undef TOK
+#undef RESWORD
+#undef PUNCTUATOR
+#undef PUNCTUATOR_FLOW
+#undef BINOP
+#undef TEMPLATE
+#undef RANGE_MARKER

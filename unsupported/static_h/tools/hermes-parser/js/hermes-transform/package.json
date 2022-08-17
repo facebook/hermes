@@ -1,0 +1,29 @@
+{
+  "name": "hermes-transform",
+  "version": "0.9.0",
+  "description": "Tools built on top of Hermes-ESTree to enable codebase transformation",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:facebook/hermes.git"
+  },
+  "dependencies": {
+    "@babel/code-frame": "^7.16.0",
+    "esquery": "^1.4.0",
+    "flow-enums-runtime": "^0.0.6",
+    "hermes-eslint": "0.9.0",
+    "hermes-estree": "0.9.0",
+    "hermes-parser": "0.9.0"
+  },
+  "peerDependencies": {
+    "prettier": "^2.4.1"
+  },
+  "files": [
+    "dist",
+    "LICENCE",
+    "ESLINT_LICENCE",
+    "PRETTIER_LICENCE",
+    "README.md"
+  ]
+}

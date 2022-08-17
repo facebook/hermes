@@ -1,0 +1,177 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+apply plugin: 'com.android.library'
+
+buildDir = "${rootProject.ext.hermes_ws}/build_android/hermes"
+buildDir.mkdirs()
+
+android {
+  compileSdkVersion = rootProject.ext.compileSdkVersion
+
+  defaultConfig {
+    minSdkVersion rootProject.ext.minSdkVersion
+
+    externalNativeBuild {
+      cmake {
+        arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+        arguments "-DANDROID_STL=c++_shared"
+        arguments "-DANDROID_PIE=True"
+        arguments "-DANDROID_LD=lld"
+        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DHERMES_BUILD_SHARED_JSI=True"
+        targets "libhermes"
+      }
+    }
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      version "3.18.1"
+      path "../../CMakeLists.txt"
+      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/hermes"
+      buildStagingDirectory.mkdirs()
+    }
+  }
+
+  buildTypes {
+    debug {
+      externalNativeBuild {
+        cmake {
+          // JS developers aren't VM developers. Give them a faster build.
+          arguments "-DCMAKE_BUILD_TYPE=Release"
+        }
+      }
+    }
+    release {
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_DEBUGGER=False"
+          arguments "-DCMAKE_BUILD_TYPE=MinSizeRel"
+        }
+      }
+    }
+  }
+
+  flavorDimensions "featureset"
+  productFlavors {
+    intl {
+      isDefault true
+      dimension "featureset"
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_INTL=True"
+        }
+      }
+    }
+    nointl {
+      dimension "featureset"
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_INTL=False"
+        }
+      }
+    }
+  }
+
+  sourceSets {
+    intl {
+      java {
+        srcDirs = [
+                "../../lib/Platform/Intl/java",
+        ]
+      }
+    }
+  }
+
+  // Allow using prefab so that we can import libfbjni.so.
+  buildFeatures {
+    prefab true
+  }
+
+  dependencies {
+    implementation 'com.facebook.fbjni:fbjni:0.2.2'
+    intlImplementation 'com.facebook.soloader:soloader:0.10.4'
+    intlImplementation 'com.facebook.yoga:proguard-annotations:1.19.0'
+    intlImplementation "androidx.annotation:annotation:1.3.0"
+  }
+
+  packagingOptions {
+    exclude "**/libc++_shared.so"
+    exclude "**/libjsi.so"
+    exclude "**/libfbjni.so"
+  }
+
+  afterEvaluate {
+    // Gradle 4/5.0 outputs android-debug.aar and android-release.aar
+    // Gradle 5.1 outputs android.aar for both
+    // Unify the two by renaming the files afterwards.
+    // Neither appear to care whether the original filename actually exists.
+    def aarDir = "$buildDir/outputs/aar"
+    tasks.named("assembleIntlDebug").configure {
+      doLast {
+        file("$aarDir/hermes-intl-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+      }
+    }
+    tasks.named("assembleIntlRelease").configure {
+      doLast {
+        file("$aarDir/hermes-intl-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+      }
+    }
+    tasks.named("assembleNointlDebug").configure {
+      doLast {
+        file("$aarDir/hermes-nointl-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+      }
+    }
+    tasks.named("assembleNointlRelease").configure {
+      doLast {
+        file("$aarDir/hermes-nointl-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+      }
+    }
+    tasks.named("mergeIntlDebugNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-debug")
+        }
+      }
+    }
+    tasks.named("mergeIntlReleaseNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-release")
+        }
+      }
+    }
+    tasks.named("mergeNointlDebugNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-debug")
+        }
+      }
+    }
+    tasks.named("mergeNointlReleaseNativeLibs").configure {
+      doLast { task ->
+        copy {
+          from(task)
+          into("${rootProject.ext.outputDir}/unstripped-release")
+        }
+      }
+    }
+  }
+}

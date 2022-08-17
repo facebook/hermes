@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// This must be consistent with the release_version in:
+// - CMakeLists.txt
+// - npm/package.json
+// - hermes-engine.podspec
+def release_version = "0.12.0"
+
+buildscript {
+  ext {
+    hermes_ws = System.getenv("HERMES_WS_DIR")
+    if (hermes_ws == null || hermes_ws == "") {
+      throw new InvalidUserDataException("HERMES_WS_DIR is not set")
+    }
+    outputDir = file("${hermes_ws}/build_android/outputs")
+    outputDir.mkdirs()
+    file("${outputDir}/aar").mkdirs()
+
+    facebookBuild = System.getenv("FACEBOOK") ?: "0"
+    hermesHostBuild = System.getenv("HERMES_WS_DIR")
+
+    // Look for a hermes host build, either debug or release
+    // This is used as part of the Hermes build process
+    hermesC = ""
+    for (f in [
+        "${hermesHostBuild}/build/ImportHermesc.cmake",
+        "${hermesHostBuild}/build_release/ImportHermesc.cmake"]) {
+      if(file(f).exists()) hermesC = f;
+    }
+    assert hermesC != "" : "Hermes host build not found"
+
+    // For Facebook internal use:
+    fbsource = System.getenv("FBSOURCE_DIR") ?:
+    System.getenv("HOME") + "/fbsource"
+
+    minSdkVersion = 16
+    compileSdkVersion = 28
+    abis = project.hasProperty('abis') ?
+         project.getProperty("abis").split(",") :
+         ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+  }
+  repositories {
+    google()
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:4.1.0'
+    classpath("de.undercouch:gradle-download-task:4.0.2")
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    jcenter()
+  }
+}
+
+
+buildDir = "${hermes_ws}/build_android"
+
+task copyApiHeaders(type: Copy) {
+  from "$projectDir/../API/hermes"
+  include '**/*.h'
+  into "$outputDir/include/hermes"
+}
+
+task copyJsiHeaders(type: Copy) {
+  from "$projectDir/../API/jsi/jsi"
+  include '**/*.h'
+  into "$outputDir/include/jsi"
+}
+
+task copyPublicHeaders(type: Copy) {
+  from "$projectDir/../public/hermes/Public"
+  include '**/*.h'
+  into "$outputDir/include/hermes/Public"
+}
+
+// TODO: With the Intl API implementation, we have  java class files inside the hermes library on Android,
+// Which has non-platform dependencies such as fbjni, facebook annotation library etc.
+// It is no longer appropriate or correct to publish hermes as a flat archive, instead we should publish as a maven library with proper POM file describing the dependencies.
+task githubRelease(dependsOn: ['hermes:assembleIntl', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
+  archiveBaseName = "hermes-runtime-android"
+  archiveVersion = "v" + release_version
+  archiveExtension = "tar.gz"
+  compression = Compression.GZIP
+  destinationDirectory = file("${hermes_ws}/build_android/distributions")
+  from "$outputDir"
+}
+
+task githubReleaseNoIntl(dependsOn: ['hermes:assembleNointl', 'cppruntime:build', 'copyApiHeaders', 'copyJsiHeaders', 'copyPublicHeaders'], type: Tar) {
+  archiveBaseName = "hermes-runtime-android-nointl"
+  archiveVersion = "v" + release_version
+  archiveExtension = "tar.gz"
+  compression = Compression.GZIP
+  destinationDirectory = file("${hermes_ws}/build_android/distributions")
+  from "$outputDir"
+}

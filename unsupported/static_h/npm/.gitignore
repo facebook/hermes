@@ -1,0 +1,11 @@
+*.tar.gz
+*.tgz
+*.sha256
+android
+node_modules
+osx-bin
+package-lock.json
+destroot
+LICENSE
+README.md
+hermes.podspec

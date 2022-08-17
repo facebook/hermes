@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+apply plugin: 'com.android.library'
+
+buildDir = "${rootProject.ext.hermes_ws}/build_android/cppruntime"
+buildDir.mkdirs()
+
+android {
+  compileSdkVersion = rootProject.ext.compileSdkVersion
+
+  defaultConfig {
+    minSdkVersion = rootProject.ext.minSdkVersion
+    externalNativeBuild {
+      cmake {
+        arguments "-DANDROID_STL=c++_shared"
+        arguments "-DANDROID_PIE=True"
+      }
+    }
+
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      version "3.18.1"
+      path "src/main/cpp/CMakeLists.txt"
+      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/cppruntime"
+      buildStagingDirectory.mkdirs()
+    }
+  }
+
+  packagingOptions {
+    exclude "**/libstub.so"
+  }
+
+  afterEvaluate {
+    // Gradle 4/5.0 outputs android-debug.aar and android-release.aar
+    // Gradle 5.1 outputs android.aar for both
+    // Unify the two by renaming the files afterwards.
+    // Neither appear to care whether the original filename actually exists.
+    def aarDir = "$buildDir/outputs/aar"
+    tasks.named("assembleDebug").configure {
+      doLast {
+        file("$aarDir/cppruntime-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-debug.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-debug.aar")
+      }
+    }
+    tasks.named("assembleRelease").configure {
+      doLast {
+        file("$aarDir/cppruntime-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-release.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-release.aar")
+      }
+    }
+  }
+}

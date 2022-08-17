@@ -1,0 +1,35 @@
+*~
+*#
+TAGS
+
+# Howtoeven
+.howtoeven
+
+# buck
+buck-out
+.buckd
+.buckconfig.local
+
+# Python
+*.pyc
+
+# Mac
+.DS_Store
+
+# CocoaPods testing
+build
+build_*
+destroot
+test/ApplePlatformsIntegrationTestApp/Podfile.lock
+test/ApplePlatformsIntegrationTestApp/Pods
+test/ApplePlatformsIntegrationTestApp/**/xcuserdata
+test/ApplePlatformsIntegrationTestApp/ApplePlatformsIntegrationTestApp.xcworkspace
+
+# Intl testing
+android/intltest/java/com/facebook/hermes/test/assets/**
+
+# VS Code and Visual Studio
+.vs
+.vscode
+
+.git/

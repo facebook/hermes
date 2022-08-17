@@ -1,0 +1,18 @@
+{
+  "resolutionTable": {
+  },
+  "segments": {
+    "0": [
+      "cjs-subdir-main.js"
+    ],
+    "5": [
+      "cjs-subdir-2.js",
+      "cjs-subdir-shared.js"
+    ],
+    "10": [
+      "bar/cjs-subdir-bar.js",
+      "foo/cjs-subdir-foo.js",
+      "cjs-subdir-shared.js"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+class X { async
+f(){} }

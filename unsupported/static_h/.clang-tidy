@@ -1,0 +1,21 @@
+Checks: >
+  modernize-use-nullptr,
+  readability-braces-around-statements,
+  readability-identifier-naming,
+  readability-inconsistent-declaration-parameter-name,
+  readability-static-accessed-through-instance,
+  -facebook-hte-MissingBraces,
+FormatStyle: file
+InheritParentConfig: true
+HeaderFilterRegex: include/hermes/.*
+CheckOptions:
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassMemberSuffix, value: '_' }
+  - { key: readability-identifier-naming.MethodCase, value: camelBack }
+  - { key: readability-identifier-naming.MemberCase, value: camelBack }
+  - { key: readability-identifier-naming.MemberSuffix, value: '_' }
+  - { key: readability-identifier-naming.PublicMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.PublicMemberSuffix, value: '' }
+  - { key: readability-braces-around-statements.ShortStatementLines, value: 3 }

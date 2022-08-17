@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// This file defines the opcodes that regex supports.
+// Clients are expected to #define the REOP macro, #include this file,
+// and then #undef the macro.
+
+REOP(Goal)
+REOP(LeftAnchor)
+REOP(RightAnchor)
+REOP(MatchAny)
+REOP(U16MatchAny)
+REOP(MatchAnyButNewline)
+REOP(U16MatchAnyButNewline)
+REOP(MatchChar8)
+REOP(MatchChar16)
+REOP(U16MatchChar32)
+REOP(MatchNChar8)
+REOP(MatchNCharICase8)
+REOP(MatchCharICase8)
+REOP(MatchCharICase16)
+REOP(U16MatchCharICase32)
+REOP(Alternation)
+REOP(Jump32)
+REOP(Bracket)
+REOP(U16Bracket)
+REOP(BeginMarkedSubexpression)
+REOP(EndMarkedSubexpression)
+REOP(BackRef)
+REOP(WordBoundary)
+REOP(Lookaround)
+REOP(BeginLoop)
+REOP(EndLoop)
+REOP(BeginSimpleLoop)
+REOP(EndSimpleLoop)
+REOP(Width1Loop)
+
+#undef REOP

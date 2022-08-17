@@ -1,0 +1,141 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// To run intltests, cd hermes/android and run:
+//   ./gradlew intl:connectedAndroidTest
+
+plugins {
+  id('com.android.library')
+  id("de.undercouch.download")
+}
+
+import de.undercouch.gradle.tasks.download.Download
+
+buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
+buildDir.mkdirs()
+
+def testDestination = "java/com/facebook/hermes/test/assets"
+
+task prepareTests() {
+  doLast {
+    def test262Dir = file(rootProject.ext.fbsource).exists() ?
+                 "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites/test262/" :
+                 "${rootProject.ext.hermes_ws}/test262"
+    assert file(test262Dir).exists() : "Test262 directory not found"
+    copy{
+      from(test262Dir) {
+        include("test/intl402/Collator/**/*.js")
+        include("test/intl402/DateTimeFormat/**/*.js")
+        include("test/intl402/NumberFormat/**/*.js")
+        include("test/intl402/String/**/*.js")
+        include("test/intl402/Number/**/*.js")
+        include("test/intl402/Array/**/*.js")
+        include("test/intl402/TypedArray/**/*.js")
+        include("test/intl402/Date/**/*.js")
+        include("test/intl402/Intl/**/*.js")
+        include("test/built-ins/String/prototype/toLocale**/*.js")
+        include("test/built-ins/String/prototype/localeCompare/**/*.js")
+        include("test/built-ins/Date/prototype/toLocale**/*.js")
+        include("test/built-ins/Number/prototype/toLocaleString/**/*.js")
+        include("test/built-ins/Array/prototype/toLocaleString/**/*.js")
+        include("harness/*.js")
+        includeEmptyDirs = false
+      }
+      into("${testDestination}/test262")
+    }
+    copy {
+      from("../../test/hermes/intl")
+      into("${testDestination}")
+    }
+  }
+}
+
+// TODO: Figure out how to deduplicate this file and intl/build.gradle
+android {
+  compileSdkVersion 24
+
+  defaultConfig {
+    minSdkVersion 16
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+    externalNativeBuild {
+      cmake {
+        arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+        arguments "-DANDROID_STL=c++_shared"
+        arguments "-DANDROID_PIE=True"
+        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DHERMES_SLOW_DEBUG=False"
+        arguments "-DHERMES_ENABLE_INTL=True"
+        targets "jsijni", "jsijniepi", "libhermes"
+      }
+    }
+    ndk {
+      abiFilters (*rootProject.ext.abis)
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      version "3.18.1"
+      path "../../CMakeLists.txt"
+      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intl"
+      buildStagingDirectory.mkdirs()
+    }
+  }
+
+  useLibrary 'android.test.base'
+
+  // Allow using prefab so that we can import libfbjni.so.
+  buildFeatures {
+    prefab true
+  }
+
+  dependencies {
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    androidTestImplementation 'org.easytesting:fest-assert-core:2.0M10'
+    androidTestImplementation 'com.facebook.soloader:soloader:0.10.4'
+    androidTestImplementation 'com.facebook.yoga:proguard-annotations:1.19.0'
+
+    implementation 'com.facebook.fbjni:fbjni:0.2.2'
+    implementation "androidx.annotation:annotation:1.3.0"
+    implementation "androidx.annotation:annotation-experimental:1.0.0"
+  }
+
+  // TODO: Revisit this if there is a better solution for deduplicating native
+  // libraries.
+  packagingOptions {
+    pickFirst "**/libfbjni.so"
+    pickFirst "**/libc++_shared.so"
+  }
+
+  sourceSets {
+    main {
+      java {
+        srcDirs = []
+      }
+    }
+    androidTest {
+      java {
+        srcDirs = [
+          "java",
+          // Include AndroidUnicodeUtils, which would normally come from RN
+          "../../lib/Platform/Unicode/java",
+          "../../lib/Platform/Intl/java",
+        ]
+      }
+      resources {
+        srcDir "java/com/facebook/hermes/test"
+      }
+    }
+  }
+}
