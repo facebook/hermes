@@ -17,6 +17,20 @@ using namespace ::hermes;
 namespace hermes {
 namespace platform_intl {
 
+namespace {
+/// A Dummy Intl object that's used by all dummy Intl APIs.
+template <typename T>
+struct DummyImpl : public T {
+  DummyImpl(std::u16string &&l) : locale(std::move(l)) {}
+  std::u16string locale;
+};
+
+template <typename IntlType>
+DummyImpl<IntlType> *impl(IntlType *self) {
+  return static_cast<DummyImpl<IntlType> *>(self);
+}
+} // namespace
+
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
@@ -36,12 +50,8 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
   return std::u16string(u"uppered");
 }
 
-struct Collator::Impl {
-  std::u16string locale;
-};
-
-Collator::Collator() : impl_(std::make_unique<Impl>()) {}
-Collator::~Collator() {}
+Collator::Collator() = default;
+Collator::~Collator() = default;
 
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -50,17 +60,16 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
-vm::ExecutionStatus Collator::initialize(
+vm::CallResult<std::unique_ptr<Collator>> Collator::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  impl_->locale = u"en-US";
-  return vm::ExecutionStatus::RETURNED;
+  return std::make_unique<DummyImpl<Collator>>(u"en-US");
 }
 
 Options Collator::resolvedOptions() noexcept {
   Options options;
-  options.emplace(u"locale", Option(impl_->locale));
+  options.emplace(u"locale", Option(impl(this)->locale));
   options.emplace(u"numeric", Option(false));
   return options;
 }
@@ -71,12 +80,8 @@ double Collator::compare(
   return x.compare(y);
 }
 
-struct DateTimeFormat::Impl {
-  std::u16string locale;
-};
-
-DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
-DateTimeFormat::~DateTimeFormat() {}
+DateTimeFormat::DateTimeFormat() = default;
+DateTimeFormat::~DateTimeFormat() = default;
 
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -85,17 +90,16 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
-vm::ExecutionStatus DateTimeFormat::initialize(
+vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  impl_->locale = u"en-US";
-  return vm::ExecutionStatus::RETURNED;
+  return std::make_unique<DummyImpl<DateTimeFormat>>(u"en-US");
 }
 
 Options DateTimeFormat::resolvedOptions() noexcept {
   Options options;
-  options.emplace(u"locale", Option(impl_->locale));
+  options.emplace(u"locale", Option(impl(this)->locale));
   options.emplace(u"numeric", Option(false));
   return options;
 }
@@ -115,12 +119,8 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
   return std::vector<std::unordered_map<std::u16string, std::u16string>>{part};
 }
 
-struct NumberFormat::Impl {
-  std::u16string locale;
-};
-
-NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
-NumberFormat::~NumberFormat() {}
+NumberFormat::NumberFormat() = default;
+NumberFormat::~NumberFormat() = default;
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -129,17 +129,16 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   return std::vector<std::u16string>{u"en-CA", u"de-DE"};
 }
 
-vm::ExecutionStatus NumberFormat::initialize(
+vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  impl_->locale = u"en-US";
-  return vm::ExecutionStatus::RETURNED;
+  return std::make_unique<DummyImpl<NumberFormat>>(u"en-US");
 }
 
 Options NumberFormat::resolvedOptions() noexcept {
   Options options;
-  options.emplace(u"locale", Option(impl_->locale));
+  options.emplace(u"locale", Option(impl(this)->locale));
   options.emplace(u"numeric", Option(false));
   return options;
 }
