@@ -22,43 +22,6 @@ namespace hermes {
 namespace platform_intl {
 
 namespace {
-/// Traits class used by the IntlBridge template below.
-template <typename IntlType>
-struct IntlBridgeTraits;
-
-/// Connects a native android intl object with a Hermes Intl API. The bridge has
-/// a single method named "native" which can then be used to invoke the native
-/// platform APIs.
-template <typename IntlType>
-class IntlBridge : public IntlType {
- public:
-  using NativeType = typename IntlBridgeTraits<IntlType>::NativeType;
-
-  template <typename... Args>
-  explicit IntlBridge(Args &&...args)
-      : native_(
-            jni::make_global(NativeType::create(std::forward<Args>(args)...))) {
-  }
-
-  ~IntlBridge() {
-    jni::ThreadScope::WithClassLoader([&] { native_.reset(); });
-  }
-
-  jni::global_ref<NativeType> &native() {
-    return native_;
-  }
-
- private:
-  jni::global_ref<NativeType> native_;
-};
-
-/// Helper function that extracts the "native" payload off of an IntlBridge
-/// object.
-template <typename IntlType>
-jni::global_ref<typename IntlBridge<IntlType>::NativeType> &native(
-    IntlType *self) {
-  return static_cast<IntlBridge<IntlType> *>(self)->native();
-}
 
 template <typename E = jobject>
 struct JArrayList : jni::JavaClass<JArrayList<E>, jni::JList<E>> {
@@ -355,9 +318,15 @@ class JCollator : public jni::JavaClass<JCollator> {
 
 } // namespace
 
-Collator::Collator() = default;
+struct Collator::Impl {
+  jni::global_ref<JCollator> jCollator_;
+};
 
-Collator::~Collator() = default;
+Collator::Collator() : impl_(std::make_unique<Impl>()) {}
+
+Collator::~Collator() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -373,31 +342,28 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
   }
 }
 
-template <>
-struct IntlBridgeTraits<Collator> {
-  using NativeType = JCollator;
-};
-
-vm::CallResult<std::unique_ptr<Collator>> Collator::create(
+vm::ExecutionStatus Collator::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
-    return std::make_unique<IntlBridge<Collator>>(
-        localesToJava(locales), optionsToJava(options));
+    impl_->jCollator_ = jni::make_global(
+        JCollator::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime.raiseRangeError(ex.what());
   }
+
+  return vm::ExecutionStatus::RETURNED;
 }
 
 Options Collator::resolvedOptions() noexcept {
-  return optionsFromJava(native(this)->resolvedOptions());
+  return optionsFromJava(impl_->jCollator_->resolvedOptions());
 }
 
 double Collator::compare(
     const std::u16string &x,
     const std::u16string &y) noexcept {
-  return native(this)->compare(stringToJava(x), stringToJava(y));
+  return impl_->jCollator_->compare(stringToJava(x), stringToJava(y));
 }
 
 namespace {
@@ -447,9 +413,15 @@ class JDateTimeFormat : public jni::JavaClass<JDateTimeFormat> {
 
 } // namespace
 
-DateTimeFormat::DateTimeFormat() = default;
+struct DateTimeFormat::Impl {
+  jni::global_ref<JDateTimeFormat> jDateTimeFormat_;
+};
 
-DateTimeFormat::~DateTimeFormat() = default;
+DateTimeFormat::DateTimeFormat() : impl_(std::make_unique<Impl>()) {}
+
+DateTimeFormat::~DateTimeFormat() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -465,25 +437,22 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   }
 }
 
-template <>
-struct IntlBridgeTraits<DateTimeFormat> {
-  using NativeType = JDateTimeFormat;
-};
-
-vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
+vm::ExecutionStatus DateTimeFormat::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
-    return std::make_unique<IntlBridge<DateTimeFormat>>(
-        localesToJava(locales), optionsToJava(options));
+    impl_->jDateTimeFormat_ = jni::make_global(JDateTimeFormat::create(
+        localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime.raiseRangeError(ex.what());
   }
+
+  return vm::ExecutionStatus::RETURNED;
 }
 
 Options DateTimeFormat::resolvedOptions() noexcept {
-  return optionsFromJava(native(this)->resolvedOptions());
+  return optionsFromJava(impl_->jDateTimeFormat_->resolvedOptions());
 }
 
 std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
@@ -492,11 +461,11 @@ std::u16string DateTimeFormat::format(double jsTimeValue) noexcept {
   // I am incorrect, this will need to add a try/catch and take a
   // runtime to call raiseRangeError on it.  This is true for all the
   // format methods.
-  return stringFromJava(native(this)->format(jsTimeValue));
+  return stringFromJava(impl_->jDateTimeFormat_->format(jsTimeValue));
 }
 
 std::vector<Part> DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
-  return partsFromJava(native(this)->formatToParts(jsTimeValue));
+  return partsFromJava(impl_->jDateTimeFormat_->formatToParts(jsTimeValue));
 }
 
 namespace {
@@ -546,9 +515,15 @@ class JNumberFormat : public jni::JavaClass<JNumberFormat> {
 
 } // namespace
 
-NumberFormat::NumberFormat() = default;
+struct NumberFormat::Impl {
+  jni::global_ref<JNumberFormat> jNumberFormat_;
+};
 
-NumberFormat::~NumberFormat() = default;
+NumberFormat::NumberFormat() : impl_(std::make_unique<Impl>()) {}
+
+NumberFormat::~NumberFormat() {
+  jni::ThreadScope::WithClassLoader([&] { impl_.reset(); });
+}
 
 vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
     vm::Runtime &runtime,
@@ -564,25 +539,22 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   }
 }
 
-template <>
-struct IntlBridgeTraits<NumberFormat> {
-  using NativeType = JNumberFormat;
-};
-
-vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
+vm::ExecutionStatus NumberFormat::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
-    return std::make_unique<IntlBridge<NumberFormat>>(
-        localesToJava(locales), optionsToJava(options));
+    impl_->jNumberFormat_ = jni::make_global(
+        JNumberFormat::create(localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime.raiseRangeError(ex.what());
   }
+
+  return vm::ExecutionStatus::RETURNED;
 }
 
 Options NumberFormat::resolvedOptions() noexcept {
-  return optionsFromJava(native(this)->resolvedOptions());
+  return optionsFromJava(impl_->jNumberFormat_->resolvedOptions());
 }
 
 std::u16string NumberFormat::format(double number) noexcept {
@@ -591,11 +563,11 @@ std::u16string NumberFormat::format(double number) noexcept {
   // I am incorrect, this will need to add a try/catch and take a
   // runtime to call raiseRangeError on it.  This is true for all the
   // format methods.
-  return stringFromJava(native(this)->format(number));
+  return stringFromJava(impl_->jNumberFormat_->format(number));
 }
 
 std::vector<Part> NumberFormat::formatToParts(double number) noexcept {
-  return partsFromJava(native(this)->formatToParts(number));
+  return partsFromJava(impl_->jNumberFormat_->formatToParts(number));
 }
 
 } // namespace platform_intl

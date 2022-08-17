@@ -441,12 +441,12 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<std::unique_ptr<T>> nativeRes =
-      T::create(runtime, *localesRes, *optionsRes);
-  if (LLVM_UNLIKELY(nativeRes == ExecutionStatus::EXCEPTION)) {
+  auto native = std::make_unique<T>();
+  if (LLVM_UNLIKELY(
+          native->initialize(runtime, *localesRes, *optionsRes) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  std::unique_ptr<T> native = std::move(*nativeRes);
 
   auto typeHandle = runtime.makeHandle(
       HermesValue::encodeNumberValue((uint32_t)T::getNativeType()));
@@ -1424,17 +1424,17 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     }
     toDateTimeOptions(*optionsRes, dtoFlags);
 
-    CallResult<std::unique_ptr<platform_intl::DateTimeFormat>> dtfRes =
-        platform_intl::DateTimeFormat::create(
-            runtime, *localesRes, *optionsRes);
-    if (LLVM_UNLIKELY(dtfRes == ExecutionStatus::EXCEPTION)) {
+    platform_intl::DateTimeFormat dtf;
+    if (LLVM_UNLIKELY(
+            dtf.initialize(runtime, *localesRes, *optionsRes) ==
+            ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     // Naively, the spec requires TimeClip to be called here, but
     // since in this code path, x comes from a Date slot which has
     // already been clipped, there's no reason to do it again.
-    str = (*dtfRes)->format(x);
+    str = dtf.format(x);
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(str));
@@ -1498,12 +1498,13 @@ intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<std::unique_ptr<platform_intl::NumberFormat>> nfRes =
-      platform_intl::NumberFormat::create(runtime, *localesRes, *optionsRes);
-  if (LLVM_UNLIKELY(nfRes == ExecutionStatus::EXCEPTION)) {
+  platform_intl::NumberFormat nf;
+  if (LLVM_UNLIKELY(
+          nf.initialize(runtime, *localesRes, *optionsRes) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return StringPrimitive::createEfficient(runtime, (*nfRes)->format(x));
+  return StringPrimitive::createEfficient(runtime, nf.format(x));
 }
 
 CallResult<HermesValue>
@@ -1533,14 +1534,14 @@ intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<std::unique_ptr<platform_intl::Collator>> collatorRes =
-      platform_intl::Collator::create(runtime, *localesRes, *optionsRes);
-  if (LLVM_UNLIKELY(collatorRes == ExecutionStatus::EXCEPTION)) {
+  platform_intl::Collator collator;
+  if (LLVM_UNLIKELY(
+          collator.initialize(runtime, *localesRes, *optionsRes) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeNumberValue(
-      (*collatorRes)->compare(*thisRes, *thatRes));
+  return HermesValue::encodeNumberValue(collator.compare(*thisRes, *thatRes));
 }
 
 CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(

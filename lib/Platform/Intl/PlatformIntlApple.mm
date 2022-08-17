@@ -905,11 +905,10 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
 }
 
 /// https://402.ecma-international.org/8.0/#sec-initializecollator
-vm::CallResult<std::unique_ptr<Collator>> Collator::create(
+vm::ExecutionStatus Collator::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  auto ret = std::make_unique<Collator>();
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
@@ -923,7 +922,7 @@ vm::CallResult<std::unique_ptr<Collator>> Collator::create(
   if (LLVM_UNLIKELY(usageRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 4. Set collator.[[Usage]] to usage.
-  ret->impl_->usage = std::move(**usageRes);
+  impl_->usage = std::move(**usageRes);
   // 5. If usage is "sort", then
   // a. Let localeData be %Collator%.[[SortLocaleData]].
   // 6. Else,
@@ -984,30 +983,30 @@ vm::CallResult<std::unique_ptr<Collator>> Collator::create(
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 20. Set collator.[[Locale]] to r.[[locale]].
-  ret->impl_->locale = std::move(r.locale);
+  impl_->locale = std::move(r.locale);
   // 21. Let collation be r.[[co]].
   auto coIt = r.extensions.find(u"co");
   // 22. If collation is null, let collation be "default".
   // 23. Set collator.[[Collation]] to collation.
   if (coIt == r.extensions.end())
-    ret->impl_->collation = u"default";
+    impl_->collation = u"default";
   else
-    ret->impl_->collation = std::move(coIt->second);
+    impl_->collation = std::move(coIt->second);
   // 24. If relevantExtensionKeys contains "kn", then
   // a. Set collator.[[Numeric]] to ! SameValue(r.[[kn]], "true").
   auto knIt = r.extensions.find(u"kn");
   if (knIt == r.extensions.end())
-    ret->impl_->numeric = false;
+    impl_->numeric = false;
   else
-    ret->impl_->numeric = (knIt->second == u"true");
+    impl_->numeric = (knIt->second == u"true");
 
   // 25. If relevantExtensionKeys contains "kf", then
   // a. Set collator.[[CaseFirst]] to r.[[kf]].
   auto kfIt = r.extensions.find(u"kf");
   if (kfIt == r.extensions.end())
-    ret->impl_->caseFirst = u"false";
+    impl_->caseFirst = u"false";
   else
-    ret->impl_->caseFirst = kfIt->second;
+    impl_->caseFirst = kfIt->second;
 
   // 26. Let sensitivity be ? GetOption(options, "sensitivity", "string", «
   // "base", "accent", "case", "variant" », undefined).
@@ -1026,43 +1025,43 @@ vm::CallResult<std::unique_ptr<Collator>> Collator::create(
   // iii. Let sensitivity be dataLocaleData.[[sensitivity]].
   // 28. Set collator.[[Sensitivity]] to sensitivity.
   if (auto &sensitivityOpt = *sensitivityRes)
-    ret->impl_->sensitivity = std::move(*sensitivityOpt);
+    impl_->sensitivity = std::move(*sensitivityOpt);
   else
-    ret->impl_->sensitivity = u"variant";
+    impl_->sensitivity = u"variant";
 
   // 29. Let ignorePunctuation be ? GetOption(options, "ignorePunctuation",
   // "boolean", undefined,false).
   auto ignorePunctuationOpt =
       getOptionBool(runtime, options, u"ignorePunctuation", false);
   // 30. Set collator.[[IgnorePunctuation]] to ignorePunctuation.
-  ret->impl_->ignorePunctuation = *ignorePunctuationOpt;
+  impl_->ignorePunctuation = *ignorePunctuationOpt;
 
   // Set up the state for calling into Obj-C APIs.
   NSStringCompareOptions cmpOpts = 0;
-  if (ret->impl_->numeric)
+  if (impl_->numeric)
     cmpOpts |= NSNumericSearch;
-  if (ret->impl_->sensitivity == u"base")
+  if (impl_->sensitivity == u"base")
     cmpOpts |= (NSDiacriticInsensitiveSearch | NSCaseInsensitiveSearch);
-  else if (ret->impl_->sensitivity == u"accent")
+  else if (impl_->sensitivity == u"accent")
     cmpOpts |= NSCaseInsensitiveSearch;
-  else if (ret->impl_->sensitivity == u"case")
+  else if (impl_->sensitivity == u"case")
     cmpOpts |= NSDiacriticInsensitiveSearch;
-  ret->impl_->nsCompareOptions = cmpOpts;
+  impl_->nsCompareOptions = cmpOpts;
 
   std::u16string nsLocaleExtensions;
-  if (ret->impl_->collation != u"default")
+  if (impl_->collation != u"default")
     nsLocaleExtensions.append(u"-co-").append(impl_->collation);
-  else if (ret->impl_->usage == u"search")
+  else if (impl_->usage == u"search")
     nsLocaleExtensions.append(u"-co-search");
-  if (ret->impl_->caseFirst != u"false")
+  if (impl_->caseFirst != u"false")
     nsLocaleExtensions.append(u"-kf-").append(impl_->caseFirst);
   auto nsLocaleIdentifier = r.dataLocale;
   if (!nsLocaleExtensions.empty())
     nsLocaleIdentifier.append(u"-u").append(nsLocaleExtensions);
-  ret->impl_->nsLocale = [NSLocale
+  impl_->nsLocale = [NSLocale
       localeWithLocaleIdentifier:u16StringToNSString(nsLocaleIdentifier)];
   // 31. Return collator.
-  return ret;
+  return vm::ExecutionStatus::RETURNED;
 }
 
 /// https://402.ecma-international.org/8.0/#sec-intl.collator.prototype.resolvedoptions
@@ -1191,11 +1190,10 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
 
 // Implementation of
 // https://402.ecma-international.org/8.0/#sec-initializedatetimeformat
-vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
+vm::ExecutionStatus DateTimeFormat::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &inputOptions) noexcept {
-  auto ret = std::make_unique<DateTimeFormat>();
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
@@ -1277,16 +1275,16 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
-  ret->impl_->locale = std::move(r.locale);
+  impl_->locale = std::move(r.locale);
   // 19. Let calendar be r.[[ca]].
   auto caIt = r.extensions.find(u"ca");
   // 20. Set dateTimeFormat.[[Calendar]] to calendar.
   if (caIt != r.extensions.end())
-    ret->impl_->calendar = std::move(caIt->second);
+    impl_->calendar = std::move(caIt->second);
   // 21. Set dateTimeFormat.[[HourCycle]] to r.[[hc]].
   auto hcIt = r.extensions.find(u"hc");
   if (hcIt != r.extensions.end())
-    ret->impl_->hourCycle = std::move(hcIt->second);
+    impl_->hourCycle = std::move(hcIt->second);
   // 22. Set dateTimeFormat.[[NumberingSystem]] to r.[[nu]].
   // 23. Let dataLocale be r.[[dataLocale]].
   auto dataLocale = r.dataLocale;
@@ -1310,7 +1308,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
     timeZone = canonicalizeTimeZoneName(timeZone);
   }
   // 27. Set dateTimeFormat.[[TimeZone]] to timeZone.
-  ret->impl_->timeZone = timeZone;
+  impl_->timeZone = timeZone;
   // 28. Let opt be a new Record.
   // 29. For each row of Table 4, except the header row, in table order, do
   // a. Let prop be the name given in the Property column of the row.
@@ -1334,7 +1332,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
   if (LLVM_UNLIKELY(dateStyleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
-  ret->impl_->dateStyle = *dateStyleRes;
+  impl_->dateStyle = *dateStyleRes;
   // 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
   static constexpr std::u16string_view timeStyles[] = {
@@ -1344,7 +1342,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
   if (LLVM_UNLIKELY(timeStyleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
-  ret->impl_->timeStyle = *timeStyleRes;
+  impl_->timeStyle = *timeStyleRes;
 
   // Initialize properties using values from the input options.
   static constexpr std::u16string_view weekdayValues[] = {
@@ -1353,21 +1351,21 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       getOptionString(runtime, inputOptions, u"weekday", weekdayValues, {});
   if (LLVM_UNLIKELY(weekdayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->weekday = *weekdayRes;
+  impl_->weekday = *weekdayRes;
 
   static constexpr std::u16string_view eraValues[] = {
       u"narrow", u"short", u"long"};
   auto eraRes = getOptionString(runtime, inputOptions, u"era", eraValues, {});
   if (LLVM_UNLIKELY(eraRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->era = *eraRes;
+  impl_->era = *eraRes;
 
   static constexpr std::u16string_view yearValues[] = {u"2-digit", u"numeric"};
   auto yearRes =
       getOptionString(runtime, inputOptions, u"year", yearValues, {});
   if (LLVM_UNLIKELY(yearRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->year = *yearRes;
+  impl_->year = *yearRes;
 
   static constexpr std::u16string_view monthValues[] = {
       u"2-digit", u"numeric", u"narrow", u"short", u"long"};
@@ -1375,13 +1373,13 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       getOptionString(runtime, inputOptions, u"month", monthValues, {});
   if (LLVM_UNLIKELY(monthRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->month = *monthRes;
+  impl_->month = *monthRes;
 
   static constexpr std::u16string_view dayValues[] = {u"2-digit", u"numeric"};
   auto dayRes = getOptionString(runtime, inputOptions, u"day", dayValues, {});
   if (LLVM_UNLIKELY(dayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->day = *dayRes;
+  impl_->day = *dayRes;
 
   static constexpr std::u16string_view dayPeriodValues[] = {
       u"narrow", u"short", u"long"};
@@ -1389,14 +1387,14 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       getOptionString(runtime, inputOptions, u"dayPeriod", dayPeriodValues, {});
   if (LLVM_UNLIKELY(dayPeriodRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->dayPeriod = *dayPeriodRes;
+  impl_->dayPeriod = *dayPeriodRes;
 
   static constexpr std::u16string_view hourValues[] = {u"2-digit", u"numeric"};
   auto hourRes =
       getOptionString(runtime, inputOptions, u"hour", hourValues, {});
   if (LLVM_UNLIKELY(hourRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->hour = *hourRes;
+  impl_->hour = *hourRes;
 
   static constexpr std::u16string_view minuteValues[] = {
       u"2-digit", u"numeric"};
@@ -1404,7 +1402,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       getOptionString(runtime, inputOptions, u"minute", minuteValues, {});
   if (LLVM_UNLIKELY(minuteRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->minute = *minuteRes;
+  impl_->minute = *minuteRes;
 
   static constexpr std::u16string_view secondValues[] = {
       u"2-digit", u"numeric"};
@@ -1412,14 +1410,14 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       getOptionString(runtime, inputOptions, u"second", secondValues, {});
   if (LLVM_UNLIKELY(secondRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->second = *secondRes;
+  impl_->second = *secondRes;
 
   auto fractionalSecondDigitsRes = getNumberOption(
       runtime, inputOptions, u"fractionalSecondDigits", 1, 3, {});
   if (LLVM_UNLIKELY(
           fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->fractionalSecondDigits = *fractionalSecondDigitsRes;
+  impl_->fractionalSecondDigits = *fractionalSecondDigitsRes;
 
   // NOTE: "shortOffset", "longOffset", "shortGeneric", "longGeneric"
   // are specified here:
@@ -1437,7 +1435,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       runtime, inputOptions, u"timeZoneName", timeZoneNameValues, {});
   if (LLVM_UNLIKELY(timeZoneNameRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
-  ret->impl_->timeZoneName = *timeZoneNameRes;
+  impl_->timeZoneName = *timeZoneNameRes;
   // NOTE: We don't have access to localeData, instead we'll defer to NSLocale
   // wherever it is needed.
   // 36. If dateStyle is not undefined or timeStyle is not undefined, then
@@ -1463,9 +1461,9 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
   // ii. Set dateTimeFormat's internal slot whose name is the Internal
   // Slot column of the row to p.
   // 39. If dateTimeFormat.[[Hour]] is undefined, then
-  if (!ret->impl_->hour.has_value()) {
+  if (!impl_->hour.has_value()) {
     // a. Set dateTimeFormat.[[HourCycle]] to undefined.
-    ret->impl_->hourCycle = std::nullopt;
+    impl_->hourCycle = std::nullopt;
     // b. Let pattern be bestFormat.[[pattern]].
     // c. Let rangePatterns be bestFormat.[[rangePatterns]].
     // 40. Else,
@@ -1473,7 +1471,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
     // a. Let hcDefault be dataLocaleData.[[hourCycle]].
     auto hcDefault = getDefaultHourCycle(localeData);
     // b. Let hc be dateTimeFormat.[[HourCycle]].
-    auto hc = ret->impl_->hourCycle;
+    auto hc = impl_->hourCycle;
     // c. If hc is null, then
     if (!hc.has_value())
       // i. Set hc to hcDefault.
@@ -1506,7 +1504,7 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
       }
     }
     // e. Set dateTimeFormat.[[HourCycle]] to hc.
-    ret->impl_->hourCycle = hc;
+    impl_->hourCycle = hc;
     // f. If dateTimeformat.[[HourCycle]] is "h11" or "h12", then
     // i. Let pattern be bestFormat.[[pattern12]].
     // ii. Let rangePatterns be bestFormat.[[rangePatterns12]].
@@ -1517,8 +1515,8 @@ vm::CallResult<std::unique_ptr<DateTimeFormat>> DateTimeFormat::create(
   // 41. Set dateTimeFormat.[[Pattern]] to pattern.
   // 42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
   // 43. Return dateTimeFormat.
-  ret->impl_->initializeNSDateFormatter();
-  return ret;
+  impl_->initializeNSDateFormatter();
+  return vm::ExecutionStatus::RETURNED;
 }
 // Implementer note: This method corresponds roughly to
 // https://402.ecma-international.org/8.0/#sec-intl.datetimeformat.prototype.resolvedoptions
@@ -2159,11 +2157,10 @@ vm::ExecutionStatus NumberFormat::Impl::setNumberFormatDigitOptions(
 }
 
 // https://402.ecma-international.org/8.0/#sec-initializenumberformat
-vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
+vm::ExecutionStatus NumberFormat::initialize(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  auto ret = std::make_unique<NumberFormat>();
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   const auto requestedLocales = canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocales == vm::ExecutionStatus::EXCEPTION))
@@ -2211,23 +2208,22 @@ vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocales, opt, relevantExtensionKeys);
   // 11. Set numberFormat.[[Locale]] to r.[[locale]].
-  ret->impl_->locale = r.locale;
+  impl_->locale = r.locale;
   // 12. Set numberFormat.[[DataLocale]] to r.[[dataLocale]].
-  ret->impl_->dataLocale = r.dataLocale;
+  impl_->dataLocale = r.dataLocale;
   // 13. Set numberFormat.[[NumberingSystem]] to r.[[nu]].
   // 14. Perform ? SetNumberFormatUnitOptions(numberFormat, options).
-  auto setUnitOptionsRes =
-      ret->impl_->setNumberFormatUnitOptions(runtime, options);
+  auto setUnitOptionsRes = impl_->setNumberFormatUnitOptions(runtime, options);
   if (LLVM_UNLIKELY(setUnitOptionsRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 15. Let style be numberFormat.[[Style]].
-  auto style = ret->impl_->style;
+  auto style = impl_->style;
   uint8_t mnfdDefault, mxfdDefault;
   // 16. If style is "currency", then
   if (style == u"currency") {
     // a. Let currency be numberFormat.[[Currency]].
     // b. Let cDigits be CurrencyDigits(currency).
-    auto cDigits = getCurrencyDigits(*ret->impl_->currency);
+    auto cDigits = getCurrencyDigits(*impl_->currency);
     // c. Let mnfdDefault be cDigits.
     mnfdDefault = cDigits;
     // d. Let mxfdDefault be cDigits.
@@ -2256,11 +2252,11 @@ vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
     return vm::ExecutionStatus::EXCEPTION;
   auto notationOpt = *notationRes;
   // 19. Set numberFormat.[[Notation]] to notation.
-  ret->impl_->notation = *notationOpt;
+  impl_->notation = *notationOpt;
   // Perform ? SetNumberFormatDigitOptions(numberFormat, options, mnfdDefault,
   // mxfdDefault, notation).
-  auto setDigitOptionsRes = ret->impl_->setNumberFormatDigitOptions(
-      runtime, options, mnfdDefault, mxfdDefault, ret->impl_->notation);
+  auto setDigitOptionsRes = impl_->setNumberFormatDigitOptions(
+      runtime, options, mnfdDefault, mxfdDefault, impl_->notation);
   if (LLVM_UNLIKELY(setDigitOptionsRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 21. Let compactDisplay be ? GetOption(options, "compactDisplay", "string",
@@ -2275,12 +2271,12 @@ vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
   // 22. If notation is "compact", then
   if (*notationOpt == u"compact")
     //   a. Set numberFormat.[[CompactDisplay]] to compactDisplay.
-    ret->impl_->compactDisplay = *compactDisplayOpt;
+    impl_->compactDisplay = *compactDisplayOpt;
   // 23. Let useGrouping be ? GetOption(options, "useGrouping", "boolean",
   // undefined, true).
   auto useGroupingOpt = getOptionBool(runtime, options, u"useGrouping", true);
   // 24. Set numberFormat.[[UseGrouping]] to useGrouping.
-  ret->impl_->useGrouping = *useGroupingOpt;
+  impl_->useGrouping = *useGroupingOpt;
   // 25. Let signDisplay be ? GetOption(options, "signDisplay", "string", «
   // "auto", "never", "always", "exceptZero" », "auto").
   static constexpr std::u16string_view signDisplayValues[] = {
@@ -2291,10 +2287,10 @@ vm::CallResult<std::unique_ptr<NumberFormat>> NumberFormat::create(
     return vm::ExecutionStatus::EXCEPTION;
   auto signDisplayOpt = *signDisplayRes;
   // 26. Set numberFormat.[[SignDisplay]] to signDisplay.
-  ret->impl_->signDisplay = *signDisplayOpt;
+  impl_->signDisplay = *signDisplayOpt;
 
-  ret->impl_->initializeNSFormatters();
-  return ret;
+  impl_->initializeNSFormatters();
+  return vm::ExecutionStatus::RETURNED;
 }
 
 // https://402.ecma-international.org/8.0/#sec-intl.numberformat.prototype.resolvedoptions
