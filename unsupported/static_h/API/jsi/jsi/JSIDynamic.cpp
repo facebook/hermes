@@ -20,19 +20,19 @@ namespace jsi {
 namespace {
 
 struct FromDynamic {
-  FromDynamic(const folly::dynamic* dynArg, Object objArg)
+  FromDynamic(const folly::dynamic *dynArg, Object objArg)
       : dyn(dynArg), obj(std::move(objArg)) {}
 
-  const folly::dynamic* dyn;
+  const folly::dynamic *dyn;
   Object obj;
 };
 
 // This converts one element.  If it's a collection, it gets pushed onto
 // the stack for later processing.
 Value valueFromDynamicShallow(
-    Runtime& runtime,
-    std::vector<FromDynamic>& stack,
-    const folly::dynamic& dyn) {
+    Runtime &runtime,
+    std::vector<FromDynamic> &stack,
+    const folly::dynamic &dyn) {
   switch (dyn.type()) {
     case folly::dynamic::NULLT:
       return Value::null();
@@ -62,7 +62,7 @@ Value valueFromDynamicShallow(
 
 } // namespace
 
-Value valueFromDynamic(Runtime& runtime, const folly::dynamic& dynInput) {
+Value valueFromDynamic(Runtime &runtime, const folly::dynamic &dynInput) {
   std::vector<FromDynamic> stack;
 
   Value ret = valueFromDynamicShallow(runtime, stack, dynInput);
@@ -84,7 +84,7 @@ Value valueFromDynamic(Runtime& runtime, const folly::dynamic& dynInput) {
       }
       case folly::dynamic::OBJECT: {
         Object obj = std::move(top.obj);
-        for (const auto& element : top.dyn->items()) {
+        for (const auto &element : top.dyn->items()) {
           if (element.first.isNumber() || element.first.isString()) {
             obj.setProperty(
                 runtime,
@@ -105,10 +105,10 @@ Value valueFromDynamic(Runtime& runtime, const folly::dynamic& dynInput) {
 namespace {
 
 struct FromValue {
-  FromValue(folly::dynamic* dynArg, Object objArg)
+  FromValue(folly::dynamic *dynArg, Object objArg)
       : dyn(dynArg), obj(std::move(objArg)) {}
 
-  folly::dynamic* dyn;
+  folly::dynamic *dyn;
   Object obj;
 };
 
@@ -117,10 +117,10 @@ struct FromValue {
 // mutating the output argument, because we need its actual pointer to
 // push onto the stack.
 void dynamicFromValueShallow(
-    Runtime& runtime,
-    std::vector<FromValue>& stack,
-    const jsi::Value& value,
-    folly::dynamic& output) {
+    Runtime &runtime,
+    std::vector<FromValue> &stack,
+    const jsi::Value &value,
+    folly::dynamic &output) {
   if (value.isUndefined() || value.isNull()) {
     output = nullptr;
   } else if (value.isBool()) {
@@ -145,7 +145,7 @@ void dynamicFromValueShallow(
 
 } // namespace
 
-folly::dynamic dynamicFromValue(Runtime& runtime, const Value& valueInput) {
+folly::dynamic dynamicFromValue(Runtime &runtime, const Value &valueInput) {
   std::vector<FromValue> stack;
   folly::dynamic ret;
 
@@ -186,7 +186,7 @@ folly::dynamic dynamicFromValue(Runtime& runtime, const Value& valueInput) {
         props.emplace_back(name.utf8(runtime), std::move(prop));
         top.dyn->insert(props.back().first, nullptr);
       }
-      for (const auto& prop : props) {
+      for (const auto &prop : props) {
         dynamicFromValueShallow(
             runtime, stack, prop.second, (*top.dyn)[prop.first]);
       }

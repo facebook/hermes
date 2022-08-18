@@ -26,7 +26,7 @@ namespace {
 constexpr size_t kErrorBufferSize = 512;
 
 __attribute__((format(printf, 1, 2))) void throwFormattedError(
-    const char* fmt,
+    const char *fmt,
     ...) {
   char logBuffer[kErrorBufferSize];
 
@@ -45,7 +45,7 @@ __attribute__((format(printf, 1, 2))) void throwFormattedError(
 
 class ScopedFile {
  public:
-  ScopedFile(const std::string& path)
+  ScopedFile(const std::string &path)
       : path_(path), fd_(::open(path.c_str(), O_RDONLY)) {
     if (fd_ == -1) {
       throwFormattedError(
@@ -66,22 +66,22 @@ class ScopedFile {
     return fileInfo.st_size;
   }
 
-  uint8_t* mmap(size_t size) {
-    void* result = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd_, 0);
+  uint8_t *mmap(size_t size) {
+    void *result = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd_, 0);
     if (result == MAP_FAILED) {
       throwFormattedError(
           "Could not mmap %s: %s", path_.c_str(), strerror(errno));
     }
-    return reinterpret_cast<uint8_t*>(result);
+    return reinterpret_cast<uint8_t *>(result);
   }
 
-  const std::string& path_;
+  const std::string &path_;
   const int fd_;
 };
 
 } // namespace
 
-FileBuffer::FileBuffer(const std::string& path) {
+FileBuffer::FileBuffer(const std::string &path) {
   ScopedFile file(path);
   size_ = file.size();
   data_ = file.mmap(size_);

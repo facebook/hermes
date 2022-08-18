@@ -12,7 +12,7 @@
 namespace facebook {
 namespace jsi {
 
-FileBuffer::FileBuffer(const std::string&) {
+FileBuffer::FileBuffer(const std::string &) {
   // TODO(T41045067) Implement this on Windows
   throw new JSINativeException("FileBuffer is not implemented on Windows");
 }
