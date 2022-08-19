@@ -1,6 +1,0 @@
-{
-    "index": 36,
-    "lineNumber": 1,
-    "column": 37,
-    "message": "Error: Line 1: Octal literals are not allowed in strict mode."
-}

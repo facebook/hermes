@@ -1,5 +1,0 @@
-function a() {
-  return `
-  	test
-  `;
-}

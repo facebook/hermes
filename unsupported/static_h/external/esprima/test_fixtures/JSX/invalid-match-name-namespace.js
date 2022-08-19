@@ -1,1 +1,0 @@
-<path></svg:path>

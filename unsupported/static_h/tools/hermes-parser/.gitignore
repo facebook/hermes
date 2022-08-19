@@ -1,5 +1,0 @@
-# Exclude dependencies
-node_modules
-
-# Exclude builds
-dist

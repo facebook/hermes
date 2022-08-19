@@ -1,1 +1,0 @@
-declare Module A {}

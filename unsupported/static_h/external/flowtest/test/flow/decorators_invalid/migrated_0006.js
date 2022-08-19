@@ -1,2 +1,0 @@
-@blah
-function foo() {}

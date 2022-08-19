@@ -1,2 +1,0 @@
-async (a)
-=> await a

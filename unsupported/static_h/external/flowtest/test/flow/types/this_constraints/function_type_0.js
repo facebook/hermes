@@ -1,1 +1,0 @@
-type Fn = (this: {...}) => void;
