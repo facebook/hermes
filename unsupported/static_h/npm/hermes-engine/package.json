@@ -1,0 +1,25 @@
+{
+  "name": "hermes-engine",
+  "version": "%VERSION%",
+  "private": false,
+  "description": "A JavaScript engine optimized for running React Native on Android",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:facebook/hermes.git"
+  },
+  "files": [
+    "README.md",
+    "android/hermes-debug.aar",
+    "android/hermes-release.aar",
+    "android/hermes-cppruntime-debug.aar",
+    "android/hermes-cppruntime-release.aar",
+    "android/include/**/*.h",
+    "linux64-bin/hermesc",
+    "osx-bin/hermesc",
+    "win64-bin/hermesc.exe",
+    "win64-bin/msvcp140.dll",
+    "win64-bin/vcruntime140.dll",
+    "win64-bin/vcruntime140_1.dll"
+  ]
+}
