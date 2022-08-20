@@ -1,1 +1,0 @@
-({x(eval){"use strict";}})

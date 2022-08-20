@@ -1,1 +1,0 @@
-var answer = 42,

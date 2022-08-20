@@ -1,9 +1,0 @@
-{
-  "segments": {
-    "0": ["main.js", "load12.js", "load34.js"],
-    "1": ["seg1.js", "shared12.js", "export12.js"],
-    "2": ["seg2.js", "shared12.js", "export12.js"],
-    "3": ["seg3.js", "shared34.js", "export34.js"],
-    "4": ["seg4.js", "shared34.js", "export34.js"]
-  }
-}

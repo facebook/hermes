@@ -1,1 +1,0 @@
-type x = (string)

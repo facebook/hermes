@@ -1,1 +1,0 @@
-<strong><em></em></strong>

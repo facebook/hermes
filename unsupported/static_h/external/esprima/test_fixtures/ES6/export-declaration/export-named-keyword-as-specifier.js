@@ -1,1 +1,0 @@
-export {try as bar};

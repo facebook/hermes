@@ -1,2 +1,0 @@
-class X { async
-f(){} }

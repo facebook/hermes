@@ -1,4 +1,0 @@
-exec this is not valid javascript
-exec "Next";
-exec eventuallyThrows(5);
-continue

@@ -1,1 +1,0 @@
-node = <strong></em>

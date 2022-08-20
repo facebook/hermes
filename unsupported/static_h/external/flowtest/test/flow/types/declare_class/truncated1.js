@@ -1,3 +1,0 @@
-declare class B {
-  static +
-}

@@ -1,5 +1,0 @@
-/*::
-type duck = {
-  quack(): string;
-};
-*/

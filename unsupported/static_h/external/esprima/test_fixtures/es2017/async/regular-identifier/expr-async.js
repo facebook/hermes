@@ -1,2 +1,0 @@
-a = async
-function f(){}

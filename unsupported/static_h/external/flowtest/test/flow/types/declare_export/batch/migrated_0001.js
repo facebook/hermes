@@ -1,1 +1,0 @@
-declare export * from "foo"

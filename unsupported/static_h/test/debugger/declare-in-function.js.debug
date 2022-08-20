@@ -1,4 +1,0 @@
-exec x
-exec x = 11;
-exec var prop = 20;
-continue

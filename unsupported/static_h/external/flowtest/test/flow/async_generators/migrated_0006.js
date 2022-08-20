@@ -1,1 +1,0 @@
-var e = async function *() {};

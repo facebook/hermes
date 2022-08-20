@@ -1,1 +1,0 @@
-a = async function f() {}
