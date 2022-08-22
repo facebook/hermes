@@ -18,7 +18,8 @@
 
 namespace hermes {
 namespace vm {
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 
 namespace {

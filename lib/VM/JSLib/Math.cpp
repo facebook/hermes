@@ -9,6 +9,7 @@
 /// \file
 /// ES5.1 15.8 Populate the Math object.
 //===----------------------------------------------------------------------===//
+
 #include "JSLibInternal.h"
 
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -24,7 +25,8 @@
 #include "hermes/Support/OSCompat.h"
 
 #include "llvh/Support/MathExtras.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

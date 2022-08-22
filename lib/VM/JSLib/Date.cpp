@@ -9,6 +9,7 @@
 /// \file
 /// ES5.1 15.9 Initialize the Date constructor.
 //===----------------------------------------------------------------------===//
+
 #include "JSLibInternal.h"
 
 #include "hermes/Support/OSCompat.h"
@@ -16,7 +17,8 @@
 #include "hermes/VM/JSLib/DateUtil.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/Operations.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

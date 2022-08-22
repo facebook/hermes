@@ -12,7 +12,8 @@
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -97,5 +98,6 @@ ExecutionStatus createListFromArrayLike(
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_ARRAYLIKE_H

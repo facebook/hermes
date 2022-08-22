@@ -23,6 +23,9 @@
 #include <limits>
 #include <type_traits>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 #ifdef __ANDROID_NDK__
 #include <android/api-level.h>
 #endif
@@ -850,5 +853,5 @@ SaturatingMultiplyAdd(T X, T Y, T A, bool *ResultOverflowed = nullptr) {
 /// Use this rather than HUGE_VALF; the latter causes warnings on MSVC.
 extern const float huge_valf;
 } // End llvm namespace
-
+#pragma GCC diagnostic pop
 #endif

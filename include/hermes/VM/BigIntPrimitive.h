@@ -17,7 +17,8 @@
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/Support/MathExtras.h"
 #include "llvh/Support/TrailingObjects.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 /// A variable size GCCell used to store the words that compose the bigint.
@@ -447,5 +448,6 @@ class BigIntPrimitive final
 };
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_BIGINTPRIMITIVE_H

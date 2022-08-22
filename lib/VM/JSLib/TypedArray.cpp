@@ -9,6 +9,7 @@
 /// \file
 /// ES7 22.2 TypedArray
 //===----------------------------------------------------------------------===//
+
 #include "JSLibInternal.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib/Sorting.h"
@@ -16,7 +17,8 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

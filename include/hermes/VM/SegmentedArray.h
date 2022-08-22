@@ -15,7 +15,8 @@
 #include "llvh/Support/TrailingObjects.h"
 
 #include <limits>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -647,4 +648,6 @@ static_assert(
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
+
 #endif

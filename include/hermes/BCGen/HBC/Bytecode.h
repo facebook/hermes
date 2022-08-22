@@ -22,7 +22,8 @@
 #include "hermes/Utils/Options.h"
 
 #include <memory>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 class SourceMapGenerator;
 
@@ -402,5 +403,6 @@ class BytecodeModule {
 
 } // namespace hbc
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif

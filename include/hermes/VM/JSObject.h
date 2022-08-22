@@ -19,6 +19,8 @@
 #include "hermes/VM/TypesafeFlags.h"
 #include "hermes/VM/VTable.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -2001,5 +2003,6 @@ inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_JSOBJECT_H

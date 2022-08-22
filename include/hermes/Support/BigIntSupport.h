@@ -20,7 +20,8 @@
 #include <optional>
 #include <string>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace bigint {
 
@@ -480,5 +481,6 @@ class UniquingBigIntTable {
 
 } // namespace bigint
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_SUPPORT_BIGINT_H

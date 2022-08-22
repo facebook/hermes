@@ -23,7 +23,8 @@
 
 #include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -475,5 +476,6 @@ class IdentifierTable {
 
 } // end namespace vm
 } // end namespace hermes
+#pragma GCC diagnostic pop
 
 #endif

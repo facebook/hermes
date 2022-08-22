@@ -15,7 +15,8 @@
 #include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/MathExtras.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 class IdentifierTable;
@@ -195,4 +196,6 @@ class IdentifierHashTable {
 } // namespace detail
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
+
 #endif // HERMES_VM_IDENTIFIERHASHTABLE_H

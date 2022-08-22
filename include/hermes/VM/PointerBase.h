@@ -15,7 +15,8 @@
 
 #include <cassert>
 #include <cstdint>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -258,5 +259,5 @@ inline void PointerBase::setSegment(unsigned idx, void *segStart) {
 
 } // namespace vm
 } // namespace hermes
-
+#pragma GCC diagnostic pop
 #endif

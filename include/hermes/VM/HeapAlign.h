@@ -11,7 +11,8 @@
 #include "hermes/Public/GCConfig.h"
 
 #include "llvh/Support/MathExtras.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -31,5 +32,6 @@ constexpr inline bool isSizeHeapAligned(gcheapsize_t size) {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_HEAP_ALIGN_H

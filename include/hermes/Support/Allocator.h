@@ -17,7 +17,8 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 
 /// A slab based BumpPtrAllocator where the pointer can be saved and restored.
@@ -149,5 +150,6 @@ class AllocationScope {
 // To more conveniently replace llvh::BumpPtrAllocator.
 using BumpPtrAllocator = BacktrackingBumpPtrAllocator;
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_SUPPORT_ALLOCATOR_H

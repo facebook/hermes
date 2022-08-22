@@ -19,7 +19,8 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -494,4 +495,5 @@ using GCSmallHermesValue = GCHermesValueBase<SmallHermesValue>;
 } // end namespace vm
 } // end namespace hermes
 
+#pragma GCC diagnostic pop
 #endif // HERMES_VM_HERMESVALUE_H

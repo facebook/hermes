@@ -19,7 +19,8 @@
 #include "hermes/VM/StringView.h"
 
 #include "llvh/ADT/ScopeExit.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 //===----------------------------------------------------------------------===//

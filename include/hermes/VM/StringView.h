@@ -13,7 +13,8 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/TwineChar16.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -433,4 +434,5 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const StringView &sv);
 } // namespace vm
 } // namespace hermes
 
+#pragma GCC diagnostic pop
 #endif // HERMES_VM_STRINGVIEW_H

@@ -16,6 +16,8 @@
 
 #include "llvh/ADT/SmallSet.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

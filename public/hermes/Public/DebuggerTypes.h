@@ -10,7 +10,8 @@
 
 #include <string>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 class Debugger;

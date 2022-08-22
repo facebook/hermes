@@ -14,7 +14,8 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Runtime-inline.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -1249,5 +1250,6 @@ class GeneratorInnerFunction final : public JSFunction {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_CALLABLE_H

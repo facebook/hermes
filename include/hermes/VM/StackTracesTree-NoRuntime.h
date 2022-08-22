@@ -22,7 +22,8 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -161,4 +162,6 @@ struct StackTracesTreeNode {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
+
 #endif // HERMES_STACK_TRACES_TREE_NO_RUNTIME_H

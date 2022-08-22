@@ -14,7 +14,8 @@
 #include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/TrailingObjects.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -605,4 +606,5 @@ inline ExecutionStatus DictPropertyMap::add(
 } // namespace vm
 } // namespace hermes
 
+#pragma GCC diagnostic pop
 #endif // HERMES_VM_DICTPROPERTYMAP_H

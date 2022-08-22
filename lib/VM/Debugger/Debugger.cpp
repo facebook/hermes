@@ -20,7 +20,8 @@
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #ifdef HERMES_ENABLE_DEBUGGER
 
 namespace hermes {

@@ -16,7 +16,8 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/StringPrimitive.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -146,5 +147,6 @@ double HermesValue32::getNumber(PointerBase &pb) const {
 }
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_SMALLHERMESVALUE_INLINE_H

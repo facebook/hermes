@@ -20,6 +20,9 @@
 #include "hermes/VM/PrimitiveBox.h"
 
 #include <limits>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

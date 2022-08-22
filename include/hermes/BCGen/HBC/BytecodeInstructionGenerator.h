@@ -11,7 +11,8 @@
 #include "hermes/Support/Conversions.h"
 
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace hbc {
 
@@ -160,5 +161,6 @@ class BytecodeInstructionGenerator {
 };
 } // namespace hbc
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif

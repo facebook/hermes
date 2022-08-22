@@ -23,6 +23,9 @@
 #include <cstdint>
 #include <utility>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 namespace llvh {
 
 template<typename T>
@@ -270,5 +273,7 @@ template <> struct DenseMapInfo<hash_code> {
 };
 
 } // end namespace llvh
+
+#pragma GCC diagnostic pop
 
 #endif // LLVM_ADT_DENSEMAPINFO_H

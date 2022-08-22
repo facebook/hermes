@@ -9,6 +9,7 @@
 /// \file
 /// ES6 24.1 ArrayBuffer
 //===----------------------------------------------------------------------===//
+
 #include "JSLibInternal.h"
 
 #include "hermes/VM/JSArrayBuffer.h"
@@ -16,7 +17,8 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringPrimitive.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

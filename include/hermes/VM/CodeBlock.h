@@ -23,7 +23,8 @@
 
 #include <memory>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -311,5 +312,6 @@ class CodeBlock final
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_CODEBLOCK_H

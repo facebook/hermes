@@ -9,6 +9,7 @@
 /// \file
 /// ES5.1 15.5 Initialize the String constructor.
 //===----------------------------------------------------------------------===//
+
 #include "JSLibInternal.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
@@ -28,7 +29,8 @@
 #endif
 
 #include <locale>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

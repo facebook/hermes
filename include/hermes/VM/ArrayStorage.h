@@ -14,7 +14,8 @@
 #include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/TrailingObjects.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -355,5 +356,6 @@ static_assert(
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_ARRAYSTORAGE_H

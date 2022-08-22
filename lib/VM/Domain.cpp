@@ -11,7 +11,8 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

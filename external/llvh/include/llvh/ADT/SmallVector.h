@@ -33,6 +33,9 @@
 #include <type_traits>
 #include <utility>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 namespace llvh {
 
 /// This is all the non-templated stuff common to all SmallVectors.
@@ -941,4 +944,5 @@ namespace std {
 
 } // end namespace std
 
+#pragma GCC diagnostic pop
 #endif // LLVM_ADT_SMALLVECTOR_H

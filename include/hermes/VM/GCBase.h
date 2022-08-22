@@ -49,7 +49,8 @@
 #include <random>
 #include <system_error>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -1592,5 +1593,6 @@ inline SizeFormatObj formatSize(uint64_t size) {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_GCBASE_H

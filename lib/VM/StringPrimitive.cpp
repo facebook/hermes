@@ -16,7 +16,8 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 #include "llvh/Support/ConvertUTF.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

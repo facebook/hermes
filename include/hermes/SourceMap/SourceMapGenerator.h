@@ -15,7 +15,8 @@
 
 #include <llvh/ADT/DenseMap.h>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 
 /// A class representing a JavaScript source map, version 3 only. It borrows
@@ -148,5 +149,6 @@ class SourceMapGenerator {
 };
 
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_SUPPORT_SOURCEMAPGENERATOR_H

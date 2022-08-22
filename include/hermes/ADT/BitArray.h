@@ -13,6 +13,9 @@
 #include <array>
 #include <bitset>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 namespace hermes {
 
 /// This serves as a replacement for std::bitset that provides fast search and
@@ -167,5 +170,6 @@ class BitArray {
   }
 };
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_ADT_BITARRAY_H

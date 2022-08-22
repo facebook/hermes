@@ -23,6 +23,9 @@
 #include <atomic>
 #include <thread>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 namespace hermes {
 namespace hbc {
 class BCProviderBase;
@@ -512,5 +515,6 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
 } // namespace hbc
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_BCGEN_HBC_BYTECODEDATAPROVIDER_H

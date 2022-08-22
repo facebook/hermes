@@ -20,7 +20,8 @@
 #include <limits>
 #include <random>
 #include <stack>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

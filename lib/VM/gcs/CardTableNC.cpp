@@ -15,7 +15,8 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 

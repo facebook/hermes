@@ -15,7 +15,8 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 
 /// Represent a source location in original JS source file.
@@ -184,5 +185,6 @@ class SourceMap {
 };
 
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif // HERMES_SUPPORT_SOURCEMAP_H

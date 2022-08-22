@@ -10,7 +10,8 @@
 
 #include "hermes/VM/SymbolID.h"
 #include "llvh/ADT/DenseMap.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace inst {
 struct Inst;
@@ -167,5 +168,6 @@ class InlineCacheProfiler {
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif

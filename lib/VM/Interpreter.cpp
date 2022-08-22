@@ -39,6 +39,8 @@
 
 #include "Interpreter-internal.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 using llvh::dbgs;
 using namespace hermes::inst;
 

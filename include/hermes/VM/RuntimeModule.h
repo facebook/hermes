@@ -19,6 +19,8 @@
 
 #include "llvh/ADT/simple_ilist.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace vm {
 
@@ -470,5 +472,6 @@ using RuntimeModuleList = llvh::simple_ilist<RuntimeModule>;
 
 } // namespace vm
 } // namespace hermes
+#pragma GCC diagnostic pop
 
 #endif

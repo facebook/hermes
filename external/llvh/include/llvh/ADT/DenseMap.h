@@ -30,6 +30,9 @@
 #include <type_traits>
 #include <utility>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+
 namespace llvh {
 
 namespace detail {
@@ -1220,5 +1223,6 @@ inline size_t capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
 }
 
 } // end namespace llvh
+#pragma GCC diagnostic pop
 
 #endif // LLVM_ADT_DENSEMAP_H

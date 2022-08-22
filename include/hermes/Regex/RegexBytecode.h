@@ -13,7 +13,8 @@
 
 #include <cstdint>
 #include <vector>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 namespace hermes {
 namespace regex {
 
@@ -375,4 +376,6 @@ struct isa_impl<
   }
 };
 } // namespace llvh
+#pragma GCC diagnostic pop
+
 #endif // HERMES_REGEX_REGEXBYTECODE_H

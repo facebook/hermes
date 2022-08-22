@@ -29,7 +29,8 @@
 #include <clocale>
 #include <stdexcept>
 #include <system_error>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 using llvh::format;
 
 namespace hermes {
