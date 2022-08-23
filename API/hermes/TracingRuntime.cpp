@@ -110,7 +110,10 @@ void TracingRuntime::setupDate() {
                      .asNumber();
   jsi::Function *origDateFunc = saveFunction({"Date"});
 
-  jsi::Function nativeDateCtor = jsi::Function::createFromHostFunction(
+  // We can't effectively trace objects, so we instead trace the value of
+  // Date.now(), and use that to deterministically reconstruct the Date object
+  // during replay.
+  jsi::Function nativeDateNow = jsi::Function::createFromHostFunction(
       *this,
       jsi::PropNameID::forAscii(*this, "Date"),
       lenProp,
@@ -119,24 +122,8 @@ void TracingRuntime::setupDate() {
           const jsi::Value &thisVal,
           const jsi::Value *args,
           size_t count) {
-        auto ret = origDateFunc->callAsConstructor(*runtime_);
-        // We cannot return this value here, because the trace would be
-        // invalid. `new Date()` returns an object, so returning it would mean
-        // returning an object that has never been defined. Therefore, we trace
-        // reconstructing a new Date with the argument being the getTime() value
-        // from the Date object created in the untraced runtime. Conceptually,
-        // we are transforming calls to the no-arg Date constructor:
-        // var myDate = new Date();
-        // -->
-        // var tmp = new Date();        <-- this is untraced
-        // var arg = tmp.getTime();     <-- this is untraced
-        // var myDate = new Date(arg);  <-- this is traced
-        auto obj = ret.asObject(*runtime_);
-        auto val = obj.getPropertyAsFunction(*runtime_, "getTime")
-                       .callWithThis(*runtime_, obj);
-        return this->global()
-            .getPropertyAsFunction(*this, "Date")
-            .callAsConstructor(*this, val);
+        return origDateFunc->getPropertyAsFunction(*runtime_, "now")
+            .call(*runtime_);
       });
 
   jsi::Function nativeDateFunc = jsi::Function::createFromHostFunction(
@@ -159,12 +146,12 @@ void TracingRuntime::setupDate() {
       });
 
   auto code = R"(
-(function(nativeDateCtor, nativeDateFunc){
+(function(nativeDateNow, nativeDateFunc){
   var DateReal = Date;
   function DateJSReplacement(...args){
     if (new.target){
       if (arguments.length == 0){
-        return nativeDateCtor();
+        return new DateReal(nativeDateNow());
       } else {
         // calling new Date with arguments is deterministic
         return new DateReal(...args);
@@ -185,7 +172,7 @@ void TracingRuntime::setupDate() {
       .call(*this, code)
       .asObject(*this)
       .asFunction(*this)
-      .call(*this, {std::move(nativeDateCtor), std::move(nativeDateFunc)});
+      .call(*this, {std::move(nativeDateNow), std::move(nativeDateFunc)});
   insertHostForwarder({"Date", "now"});
 }
 
