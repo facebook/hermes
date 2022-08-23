@@ -489,7 +489,8 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
         case StackFrame::FrameKind::FinalizableNativeFunction: {
           NativeFunctionPtr nativeFrame =
               localProfiler->getNativeFunctionPtr(frame);
-          frames[i] = ((uint64_t)nativeFrame | kNativeFrameMask);
+          frames[index++] = ((uint64_t)nativeFrame | kNativeFrameMask);
+          (*depth)++;
           break;
         }
 

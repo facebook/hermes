@@ -129,7 +129,8 @@ class SamplingProfiler {
   /// runtimeDataLock_.
   NativeFunctionPtr getNativeFunctionPtr(const StackFrame &stackFrame) const {
     assert(
-        stackFrame.kind == StackFrame::FrameKind::NativeFunction &&
+        (stackFrame.kind == StackFrame::FrameKind::NativeFunction ||
+         stackFrame.kind == StackFrame::FrameKind::FinalizableNativeFunction) &&
         "unexpected stack frame kind");
     return nativeFunctions_[stackFrame.nativeFrame]->getFunctionPtr();
   }
