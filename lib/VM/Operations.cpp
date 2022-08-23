@@ -2219,7 +2219,7 @@ CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value) {
     case HermesValue::ETag::Null:
       return runtime.raiseTypeError("invalid argument to BigInt()");
     case HermesValue::ETag::Bool:
-      return BigIntPrimitive::fromSigned(runtime, value->getBool() ? 1 : 0);
+      return BigIntPrimitive::fromSigned(runtime, prim->getBool() ? 1 : 0);
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2:
       return *prim;
