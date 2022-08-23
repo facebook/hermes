@@ -10,6 +10,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Public/JSOutOfMemoryError.h>
 #include <hermes/hermes.h>
+#include <jsi/instrumentation.h>
 
 #include <tuple>
 
@@ -103,6 +104,68 @@ TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   int32_t *buffer = reinterpret_cast<int32_t *>(arrayBuffer.data(*rt));
   EXPECT_EQ(buffer[0], 1234);
   EXPECT_EQ(buffer[1], 5678);
+}
+
+class HermesRuntimeTestMethodsTest : public HermesRuntimeTestBase {
+ public:
+  HermesRuntimeTestMethodsTest()
+      : HermesRuntimeTestBase(::hermes::vm::RuntimeConfig::Builder()
+                                  .withEnableHermesInternalTestMethods(true)
+                                  .build()) {}
+};
+
+TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
+  struct FixedBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return reinterpret_cast<uint8_t *>(arr.data());
+    }
+
+    std::array<uint32_t, 256> arr;
+  };
+
+  {
+    auto buf = std::make_shared<FixedBuffer>();
+    for (uint32_t i = 0; i < buf->arr.size(); i++)
+      buf->arr[i] = i;
+    auto arrayBuffer = ArrayBuffer(*rt, buf);
+    auto square = eval(
+        R"#(
+(function (buf) {
+  var view = new Uint32Array(buf);
+  for(var i = 0; i < view.length; i++) view[i] = view[i] * view[i];
+})
+)#");
+    square.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
+    for (uint32_t i = 0; i < 256; i++)
+      EXPECT_EQ(buf->arr[i], i * i);
+  }
+
+  {
+    auto buf = std::make_shared<FixedBuffer>();
+    std::weak_ptr<FixedBuffer> weakBuf(buf);
+    auto arrayBuffer = ArrayBuffer(*rt, std::move(buf));
+    auto detach = eval(
+        R"#(
+(function (buf) {
+  var view = new Uint32Array(buf);
+  HermesInternal.detachArrayBuffer(buf);
+  view[0] = 5;
+})
+)#");
+    try {
+      detach.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
+      FAIL() << "Expected JSIException";
+    } catch (const JSError &ex) {
+      EXPECT_TRUE(
+          strstr(ex.what(), "Cannot set a value into a detached ArrayBuffer") !=
+          nullptr);
+    }
+    rt->instrumentation().collectGarbage("");
+    EXPECT_TRUE(weakBuf.expired());
+  }
 }
 
 TEST_F(HermesRuntimeTest, BytecodeTest) {
