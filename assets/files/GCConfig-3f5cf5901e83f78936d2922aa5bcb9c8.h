@@ -143,66 +143,66 @@ enum class GCEventKind {
 
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
-#define GC_FIELDS(F)                                                      \
-  /* Minimum heap size hint. */                                           \
-  F(constexpr, gcheapsize_t, MinHeapSize, 0)                              \
-                                                                          \
-  /* Initial heap size hint. */                                           \
-  F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                      \
-                                                                          \
-  /* Maximum heap size hint. */                                           \
-  F(constexpr, gcheapsize_t, MaxHeapSize, 3u << 30)                       \
-                                                                          \
-  /* Sizing heuristic: fraction of heap to be occupied by live data. */   \
-  F(constexpr, double, OccupancyTarget, 0.5)                              \
-                                                                          \
-  /* Number of consecutive full collections considered to be an OOM. */   \
-  F(constexpr,                                                            \
-    unsigned,                                                             \
-    EffectiveOOMThreshold,                                                \
-    std::numeric_limits<unsigned>::max())                                 \
-                                                                          \
-  /* Sanitizer configuration for the GC. */                               \
-  F(constexpr, GCSanitizeConfig, SanitizeConfig)                          \
-                                                                          \
-  /* Whether the GC should spread allocations across all its "spaces". */ \
-  F(constexpr, bool, ShouldRandomizeAllocSpace, false)                    \
-                                                                          \
-  /* Whether to Keep track of GC Statistics. */                           \
-  F(constexpr, bool, ShouldRecordStats, false)                            \
-                                                                          \
-  /* How aggressively to return unused memory to the OS. */               \
-  F(constexpr, ReleaseUnused, ShouldReleaseUnused, kReleaseUnusedOld)     \
-                                                                          \
-  /* Name for this heap in logs. */                                       \
-  F(HERMES_NON_CONSTEXPR, std::string, Name, "")                          \
-                                                                          \
-  /* Configuration for the Heap Tripwire. */                              \
-  F(HERMES_NON_CONSTEXPR, GCTripwireConfig, TripwireConfig)               \
-                                                                          \
-  /* Whether to (initially) allocate from the young gen (true) or the */  \
-  /* old gen (false). */                                                  \
-  F(constexpr, bool, AllocInYoung, true)                                  \
-                                                                          \
-  /* Whether to revert, if necessary, to young-gen allocation at TTI. */  \
-  F(constexpr, bool, RevertToYGAtTTI, false)                              \
-                                                                          \
-  /* Whether to use mprotect on GC metadata between GCs. */               \
-  F(constexpr, bool, ProtectMetadata, false)                              \
-                                                                          \
-  /* Callout for an analytics event. */                                   \
-  F(HERMES_NON_CONSTEXPR,                                                 \
-    std::function<void(const GCAnalyticsEvent &)>,                        \
-    AnalyticsCallback,                                                    \
-    nullptr)                                                              \
-                                                                          \
-  /* Called at GC events (see GCEventKind enum for the list). The */      \
-  /* second argument contains human-readable details about the event. */  \
-  /* NOTE: The function MUST NOT invoke any methods on the Runtime. */    \
-  F(HERMES_NON_CONSTEXPR,                                                 \
-    std::function<void(GCEventKind, const char *)>,                       \
-    Callback,                                                             \
-    nullptr)                                                              \
+#define GC_FIELDS(F)                                                     \
+  /* Minimum heap size hint. */                                          \
+  F(constexpr, gcheapsize_t, MinHeapSize, 0)                             \
+                                                                         \
+  /* Initial heap size hint. */                                          \
+  F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                     \
+                                                                         \
+  /* Maximum heap size hint. */                                          \
+  F(constexpr, gcheapsize_t, MaxHeapSize, 3u << 30)                      \
+                                                                         \
+  /* Sizing heuristic: fraction of heap to be occupied by live data. */  \
+  F(constexpr, double, OccupancyTarget, 0.5)                             \
+                                                                         \
+  /* Number of consecutive full collections considered to be an OOM. */  \
+  F(constexpr,                                                           \
+    unsigned,                                                            \
+    EffectiveOOMThreshold,                                               \
+    std::numeric_limits<unsigned>::max())                                \
+                                                                         \
+  /* Sanitizer configuration for the GC. */                              \
+  F(constexpr, GCSanitizeConfig, SanitizeConfig)                         \
+                                                                         \
+  /* Whether to Keep track of GC Statistics. */                          \
+  F(constexpr, bool, ShouldRecordStats, false)                           \
+                                                                         \
+  /* How aggressively to return unused memory to the OS. */              \
+  F(constexpr, ReleaseUnused, ShouldReleaseUnused, kReleaseUnusedOld)    \
+                                                                         \
+  /* Name for this heap in logs. */                                      \
+  F(HERMES_NON_CONSTEXPR, std::string, Name, "")                         \
+                                                                         \
+  /* Configuration for the Heap Tripwire. */                             \
+  F(HERMES_NON_CONSTEXPR, GCTripwireConfig, TripwireConfig)              \
+                                                                         \
+  /* Whether to (initially) allocate from the young gen (true) or the */ \
+  /* old gen (false). */                                                 \
+  F(constexpr, bool, AllocInYoung, true)                                 \
+                                                                         \
+  /* Whether to fill the YG with invalid data after each collection. */  \
+  F(constexpr, bool, OverwriteDeadYGObjects, false)                      \
+                                                                         \
+  /* Whether to revert, if necessary, to young-gen allocation at TTI. */ \
+  F(constexpr, bool, RevertToYGAtTTI, false)                             \
+                                                                         \
+  /* Whether to use mprotect on GC metadata between GCs. */              \
+  F(constexpr, bool, ProtectMetadata, false)                             \
+                                                                         \
+  /* Callout for an analytics event. */                                  \
+  F(HERMES_NON_CONSTEXPR,                                                \
+    std::function<void(const GCAnalyticsEvent &)>,                       \
+    AnalyticsCallback,                                                   \
+    nullptr)                                                             \
+                                                                         \
+  /* Called at GC events (see GCEventKind enum for the list). The */     \
+  /* second argument contains human-readable details about the event. */ \
+  /* NOTE: The function MUST NOT invoke any methods on the Runtime. */   \
+  F(HERMES_NON_CONSTEXPR,                                                \
+    std::function<void(GCEventKind, const char *)>,                      \
+    Callback,                                                            \
+    nullptr)                                                             \
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
