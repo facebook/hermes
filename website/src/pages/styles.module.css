@@ -42,3 +42,23 @@
   height: 180px;
   width: 180px;
 }
+
+.banner {
+  font-weight: bold;
+  font-size: 20px;
+  padding: 20px;
+  max-width: 768px;
+  margin: 0 auto;
+  text-align: center;
+  color: white;
+}
+
+.banner a {
+  color: #f2f2f2;
+  text-decoration: underline;
+}
+
+.bannerWrapper {
+  padding: 0 0;
+  background-color: black;
+}
