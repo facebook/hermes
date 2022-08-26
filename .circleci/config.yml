@@ -523,6 +523,25 @@ jobs:
             cmake --build ./embuild --target hermesc -j 4
             cmake --build ./embuild --target emhermesc -j 4
             EMHERMESC="$PWD/embuild/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
+      - run:
+          name: Build Hermes for Website Playground
+          command: |
+            ./hermes/website/build-hermes.sh "$EMSDK/upstream" "." "$PWD/build_host_hermesc"
+      - run:
+          name: Create Playground tarball
+          environment:
+            TAR_NAME: hermes-playground-wasm.tar.gz
+          command: |
+            mkdir output staging
+            cp ./hermes/website/static/hermes.js ./hermes/website/static/hermes.wasm staging
+            tar -C staging -czvf output/${TAR_NAME} .
+            shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
+      - store_artifacts:
+          path: output
+      - persist_to_workspace:
+          root: output
+          paths:
+            - .
 
   test-e2e:
     executor:
