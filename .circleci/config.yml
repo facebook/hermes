@@ -39,7 +39,7 @@ workflows:
             - package-apple-runtime
             - windows
             - macos
-      - test-emscripten
+      - emscripten
       - test-linux
       - test-e2e
       - test-e2e-intl
@@ -493,8 +493,7 @@ jobs:
           paths:
             - .
 
-  # test to build with emscripten, not run
-  test-emscripten:
+  emscripten:
     docker:
       - image: emscripten/emsdk:2.0.9
     working_directory: /root
@@ -512,17 +511,43 @@ jobs:
             cmake -S hermes -B build_host_hermesc
             cmake --build ./build_host_hermesc --target hermesc -j 4
       - run:
-          name: Build Hermes with Emscripten
+          name: Build Hermes with Emscripten for Website Playground
+          environment:
+            LINKER_FLAGS: -s WASM=1 \
+                          -s ALLOW_MEMORY_GROWTH=0 \
+                          -s TOTAL_MEMORY=33554432 \
+                          -s MODULARIZE=1 \
+                          -s EXPORT_NAME=createHermes \
+                          -s INVOKE_RUN=0 \
+                          -s EXIT_RUNTIME=1 \
+                          -s NODERAWFS=0 \
+                          -s EXTRA_EXPORTED_RUNTIME_METHODS=[callMain,FS]
           command: |
-            cmake -S hermes -B embuild \
+            echo LINKER_FLAGS: $LINKER_FLAGS
+            cmake -S hermes -B playground \
                 -DCMAKE_BUILD_TYPE=Release  \
-                -DCMAKE_EXE_LINKER_FLAGS="-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s LLD_REPORT_UNDEFINED=1" \
+                -DCMAKE_EXE_LINKER_FLAGS="$LINKER_FLAGS" \
                 -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
                 -DIMPORT_HERMESC="$PWD/build_host_hermesc/ImportHermesc.cmake"
-            cmake --build ./embuild --target hermes -j 4
-            cmake --build ./embuild --target hermesc -j 4
-            cmake --build ./embuild --target emhermesc -j 4
-            EMHERMESC="$PWD/embuild/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
+            cmake --build ./playground --target hermes -j 4
+            cmake --build ./playground --target hermesc -j 4
+            cmake --build ./playground --target emhermesc -j 4
+            EMHERMESC="$PWD/playground/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
+      - run:
+          name: Create Playground tarball
+          environment:
+            TAR_NAME: hermes-cli-emscripten.tar.gz
+          command: |
+            mkdir output staging
+            cp ./playground/bin/hermes.js ./playground/bin/hermes.wasm staging
+            tar -C staging -czvf output/${TAR_NAME} .
+            shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
+      - store_artifacts:
+          path: output
+      - persist_to_workspace:
+          root: output
+          paths:
+            - .
 
   test-e2e:
     executor:
