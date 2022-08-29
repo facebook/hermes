@@ -397,6 +397,12 @@ if (GCC_COMPATIBLE)
   check_cxx_compiler_flag("-Wnoexcept-type" CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG)
   append_if(CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG "-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
+  # Enable the GCC pragma warning about 64-to-32 bit truncation, if supported.
+  check_cxx_compiler_flag("-Wshorten-64-to-32" CXX_SUPPORTS_SHORTEN_64_TO_32)
+  if (${CXX_SUPPORTS_SHORTEN_64_TO_32})
+    add_definitions(-DHERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32)
+  endif ()
+
   # Check if -Wnon-virtual-dtor warns even though the class is marked final.
   # If it does, don't add it. So it won't be added on clang 3.4 and older.
   # This also catches cases when -Wnon-virtual-dtor isn't supported by

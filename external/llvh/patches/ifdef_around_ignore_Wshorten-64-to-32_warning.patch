@@ -1,0 +1,126 @@
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/APInt.h b/xplat/hermes/external/llvh/include/llvh/ADT/APInt.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/APInt.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/APInt.h
+@@ -23,7 +23,10 @@
+ #include <string>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ class FoldingSetNodeID;
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/DenseMap.h b/xplat/hermes/external/llvh/include/llvh/ADT/DenseMap.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/DenseMap.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/DenseMap.h
+@@ -31,7 +31,10 @@
+ #include <utility>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/DenseMapInfo.h b/xplat/hermes/external/llvh/include/llvh/ADT/DenseMapInfo.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/DenseMapInfo.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/DenseMapInfo.h
+@@ -24,7 +24,10 @@
+ #include <utility>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/Hashing.h b/xplat/hermes/external/llvh/include/llvh/ADT/Hashing.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/Hashing.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/Hashing.h
+@@ -55,7 +55,10 @@
+ #include <utility>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/MapVector.h b/xplat/hermes/external/llvh/include/llvh/ADT/MapVector.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/MapVector.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/MapVector.h
+@@ -27,7 +27,10 @@
+ #include <vector>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/SmallVector.h b/xplat/hermes/external/llvh/include/llvh/ADT/SmallVector.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/SmallVector.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/SmallVector.h
+@@ -34,7 +34,10 @@
+ #include <utility>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/ADT/StringRef.h b/xplat/hermes/external/llvh/include/llvh/ADT/StringRef.h
+--- a/xplat/hermes/external/llvh/include/llvh/ADT/StringRef.h
++++ b/xplat/hermes/external/llvh/include/llvh/ADT/StringRef.h
+@@ -22,7 +22,10 @@
+ #include <utility>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/IR/InstrTypes.h b/xplat/hermes/external/llvh/include/llvh/IR/InstrTypes.h
+--- a/xplat/hermes/external/llvh/include/llvh/IR/InstrTypes.h
++++ b/xplat/hermes/external/llvh/include/llvh/IR/InstrTypes.h
+@@ -43,7 +43,10 @@
+ #include <vector>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ namespace llvh {
+ 
+diff --git a/xplat/hermes/external/llvh/include/llvh/Support/MathExtras.h b/xplat/hermes/external/llvh/include/llvh/Support/MathExtras.h
+--- a/xplat/hermes/external/llvh/include/llvh/Support/MathExtras.h
++++ b/xplat/hermes/external/llvh/include/llvh/Support/MathExtras.h
+@@ -24,7 +24,10 @@
+ #include <type_traits>
+ 
+ #pragma GCC diagnostic push
++
++#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
+ #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
++#endif
+ 
+ #ifdef __ANDROID_NDK__
+ #include <android/api-level.h>
