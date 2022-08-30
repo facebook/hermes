@@ -28,7 +28,7 @@ let hermesProfile = Profile(
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
-    disabledCodeGenerators: [],
+    disabledCodeGenerators: ["ClassGenerator"],
 
     additionalBuiltins: [
         "gc"                : .function([] => .undefined),
