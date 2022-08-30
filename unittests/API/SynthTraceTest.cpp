@@ -1024,17 +1024,16 @@ TEST(SynthTraceDeathTest, HostObjectThrowsExceptionFails) {
 
 /// @}
 
-/// @name Synth trace replay tests
-/// @{
-
-struct SynthTraceReplayTest : public ::testing::Test {
+struct SynthTraceRuntimeTest : public ::testing::Test {
   ::hermes::vm::RuntimeConfig config;
   std::string traceResult;
   std::unique_ptr<TracingHermesRuntime> traceRt;
-  std::unique_ptr<jsi::Runtime> replayRt;
 
-  SynthTraceReplayTest(::hermes::vm::RuntimeConfig conf)
-      : config(conf),
+  SynthTraceRuntimeTest()
+      : config(::hermes::vm::RuntimeConfig::Builder()
+                   .withTraceEnabled(true)
+                   .withMicrotaskQueue(true)
+                   .build()),
         traceRt(makeTracingHermesRuntime(
             makeHermesRuntime(config),
             config,
@@ -1042,20 +1041,50 @@ struct SynthTraceReplayTest : public ::testing::Test {
             std::make_unique<llvh::raw_string_ostream>(traceResult),
             /* forReplay */ false)) {}
 
-  SynthTraceReplayTest()
-      : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
-                                 .withTraceEnabled(true)
-                                 .build()) {}
+  jsi::Value eval(jsi::Runtime &rt, std::string code) {
+    return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
+  }
+};
+
+/// @name Synth trace environment tests
+/// @{
+
+/// These tests validate that parts of the environment that were modified by the
+/// TracingRuntime still appear the same to JS.
+struct SynthTraceEnvironmentTest : public SynthTraceRuntimeTest {
+  std::unique_ptr<jsi::Runtime> plainRt;
+
+  SynthTraceEnvironmentTest() : plainRt(makeHermesRuntime(config)) {}
+
+  std::vector<jsi::Runtime *> runtimes() {
+    return {plainRt.get(), traceRt.get()};
+  }
+};
+
+TEST_F(SynthTraceEnvironmentTest, NonDeterministicFunctionNames) {
+  for (auto *rt : runtimes()) {
+    auto getName = [&](std::string fn) {
+      return eval(*rt, fn + ".name").toString(*rt).utf8(*rt);
+    };
+    EXPECT_EQ(getName("Math.random"), "random");
+    EXPECT_EQ(getName("WeakRef"), "WeakRef");
+    EXPECT_EQ(getName("WeakRef.prototype.deref"), "deref");
+    EXPECT_EQ(getName("Date"), "Date");
+    EXPECT_EQ(getName("Date.now"), "now");
+  }
+}
+/// @}
+
+/// @name Synth trace replay tests
+/// @{
+struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
+  std::unique_ptr<jsi::Runtime> replayRt;
 
   void replay() {
     traceRt.reset();
     replayRt = makeHermesRuntime(config);
     tracing::TraceInterpreter::execFromMemoryBuffer(
         llvh::MemoryBuffer::getMemBuffer(traceResult), {}, *replayRt, {});
-  }
-
-  jsi::Value eval(jsi::Runtime &rt, const char *code) {
-    return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
   }
 };
 
@@ -1136,14 +1165,7 @@ TEST_F(SynthTraceReplayTest, BigIntCreate) {
   }
 }
 
-struct JobQueueReplayTest : public SynthTraceReplayTest {
-  JobQueueReplayTest()
-      : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
-                                 .withTraceEnabled(true)
-                                 .withEnableHermesInternal(true)
-                                 .withMicrotaskQueue(true)
-                                 .build()) {}
-};
+using JobQueueReplayTest = SynthTraceReplayTest;
 
 TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {
   {
@@ -1179,14 +1201,7 @@ HermesInternal.enqueueJob(inc);
   }
 }
 
-struct NonDeterminismReplayTest : public SynthTraceReplayTest {
-  NonDeterminismReplayTest()
-      : SynthTraceReplayTest(::hermes::vm::RuntimeConfig::Builder()
-                                 .withTraceEnabled(true)
-                                 .withEnableHermesInternal(true)
-                                 .withMicrotaskQueue(true)
-                                 .build()) {}
-};
+using NonDeterminismReplayTest = SynthTraceReplayTest;
 
 TEST_F(NonDeterminismReplayTest, DateNowTest) {
   eval(*traceRt, "var x = Date.now();");
