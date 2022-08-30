@@ -74,7 +74,7 @@ void TimeLimitMonitor::timerLoop() {
   cond_.notify_all();
 }
 
-void TimeLimitMonitor::watchRuntime(Runtime &runtime, int timeoutInMs) {
+void TimeLimitMonitor::watchRuntime(Runtime &runtime, uint32_t timeoutInMs) {
   {
     std::unique_lock<std::mutex> lock(timeoutMapMtx_);
     // Wait for any shutdown that's in progress.

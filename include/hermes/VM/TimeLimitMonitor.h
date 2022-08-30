@@ -29,7 +29,7 @@ class TimeLimitMonitor {
   static TimeLimitMonitor &getInstance();
 
   /// Watch \p runtime for timeout after \p timeoutInMs.
-  void watchRuntime(Runtime &runtime, int timeoutInMs);
+  void watchRuntime(Runtime &runtime, uint32_t timeoutInMs);
 
   /// Unwatch \p runtime.
   void unwatchRuntime(Runtime &runtime);
