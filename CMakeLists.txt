@@ -576,6 +576,13 @@ if (HERMES_MEMORY_INSTRUMENTATION)
   add_definitions(-DHERMES_MEMORY_INSTRUMENTATION)
 endif()
 
+# Disables the GCC 64-to-32 bit truncation diagnostic if the compiler supports
+# -Wshorten-64-to-32.
+check_cxx_compiler_flag("-Wshorten-64-to-32" CXX_SUPPORTS_SHORTEN_64_TO_32)
+if (${CXX_SUPPORTS_SHORTEN_64_TO_32})
+  add_definitions(-DHERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32)
+endif()
+
 set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17")
 
 # JSI_DIR has always priority over other folders.
