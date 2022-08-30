@@ -31,7 +31,38 @@ TracingRuntime::TracingRuntime(
       numPreambleRecords_(0) {}
 
 void TracingRuntime::replaceNondeterministicFuncs() {
-  insertHostForwarder({"Math", "random"});
+  // We trace non-deterministic functions by replacing them to call through a
+  // HostFunction instead. The call from the HostFunction to the original
+  // non-deterministic function is intentionally not traced. So the call and
+  // response get recorded as just a call to a HostFunction.
+  // This is a helper function to implement the above, it calls a given function
+  // without tracing, and returns the result.
+  jsi::Function callUntraced = jsi::Function::createFromHostFunction(
+      *this,
+      jsi::PropNameID::forAscii(*this, "callUntraced"),
+      1,
+      [this](
+          Runtime &rt,
+          const jsi::Value &thisVal,
+          const jsi::Value *args,
+          size_t count) {
+        auto fun = args[0].getObject(*runtime_).getFunction(*runtime_);
+        return fun.call(*runtime_);
+      });
+
+  auto code = R"(
+(function(callUntraced){
+  var mathRandomReal = Math.random;
+  Math.random = function random() { return callUntraced(mathRandomReal); };
+});
+)";
+  global()
+      .getPropertyAsFunction(*this, "eval")
+      .call(*this, code)
+      .asObject(*this)
+      .asFunction(*this)
+      .call(*this, {std::move(callUntraced)});
+
   setupDate();
   setUpWeakRef();
 
