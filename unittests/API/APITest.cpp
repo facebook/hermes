@@ -232,7 +232,7 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
   bool caught = false;
   try {
     rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), "");
-  } catch (const facebook::jsi::JSIException &err) {
+  } catch (const facebook::jsi::JSIException & /*err*/) {
     caught = true;
   }
   EXPECT_TRUE(caught) << "prepareJavaScript should have thrown an exception";
@@ -739,14 +739,14 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
     rt->evaluateJavaScript(
         std::make_unique<StringBuffer>("function* foo() {}"), "");
     FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
+  } catch (const facebook::jsi::JSIException & /*err*/) {
   }
 
   try {
     rt->evaluateJavaScript(
         std::make_unique<StringBuffer>("obj = {*foo() {}}"), "");
     FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
+  } catch (const facebook::jsi::JSIException & /*err*/) {
   }
 
   // async function depends on generator.
@@ -754,7 +754,7 @@ TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
     rt->evaluateJavaScript(
         std::make_unique<StringBuffer>("async function foo() {}"), "");
     FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
+  } catch (const facebook::jsi::JSIException & /*err*/) {
   }
 }
 
