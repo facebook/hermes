@@ -165,7 +165,7 @@ class BytecodeFormConverter {
       BytecodeForm sourceForm)
       : bytes_(bytes), fields_(fields) {
     auto res = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-        std::make_unique<Buffer>(bytes.data(), bytes.size()), sourceForm);
+        std::make_unique<const Buffer>(bytes.data(), bytes.size()), sourceForm);
     if (!res.first) {
       hermes_fatal(res.second.c_str());
     }
