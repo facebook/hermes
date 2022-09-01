@@ -97,7 +97,7 @@ inline unsigned constexpr maxCharsPerDigitInRadix(uint8_t radix) {
   // To compute the lower bound of bits in a BigIntDigitType "covered" by a
   // char. For power of 2 radixes, it is known (exactly) that each character
   // covers log2(radix) bits. For non-power of 2 radixes, a lower bound is
-  // log2(greates power of 2 that is less than radix).
+  // log2(greatest power of 2 that is less than radix).
   unsigned minNumBitsPerChar = radix < 4 ? 1
       : radix < 8                        ? 2
       : radix < 16                       ? 3
@@ -107,7 +107,8 @@ inline unsigned constexpr maxCharsPerDigitInRadix(uint8_t radix) {
   // With minNumBitsPerChar being the lower bound estimate of how many bits each
   // char can represent, the upper bound of how many chars "fit" in a bigint
   // digit is ceil(sizeofInBits(bigint digit) / minNumBitsPerChar).
-  unsigned numCharsPerDigits = BigIntDigitSizeInBits / (1 << minNumBitsPerChar);
+  unsigned numCharsPerDigits =
+      static_cast<unsigned>(BigIntDigitSizeInBits) / (1 << minNumBitsPerChar);
 
   return numCharsPerDigits;
 }
@@ -281,7 +282,7 @@ asIntN(MutableBigIntRef dst, uint64_t n, ImmutableBigIntRef src);
 int compare(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs);
 int compare(ImmutableBigIntRef lhs, SignedBigIntDigitType rhs);
 
-/// \return Whether \p src can be losslessly trucated to a single
+/// \return Whether \p src can be losslessly truncated to a single
 /// SignedBigIntDigitType (if signedTruncation == true) or BigIntDigitType
 /// (signedTruncation == false) digit.
 bool isSingleDigitTruncationLossless(
