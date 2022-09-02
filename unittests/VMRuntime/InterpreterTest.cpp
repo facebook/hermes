@@ -458,7 +458,7 @@ LLVM_ATTRIBUTE_NOINLINE static void testInterpreterStackSize(
   // Increase this only if you have a reason to grow the interpreter's frame.
 #ifdef _MSC_VER
   // TODO(T42117517) Understand why stack frame size is large on Windows
-  uintptr_t kStackFrameSizeLimit = 3300;
+  uintptr_t kStackFrameSizeLimit = 3700;
 #else
   uintptr_t kStackFrameSizeLimit = 1500;
 #endif
