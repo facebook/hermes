@@ -12,6 +12,7 @@
 // clang-format off
 const char libhermes[] =
 "var Array;"
+"var BigInt;"
 "var Boolean;"
 "var Date;"
 "var Error;"
