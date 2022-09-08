@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheck %s --match-full-lines
+// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
 // RUN: %hermes -hermes-parser -dump-ir %s -O
 
 function foo() {
@@ -20,23 +20,38 @@ function foo() {
 
 foo()
 
+// Auto-generated content below. Please do not modify manually.
 
-//CHECK: function foo()
-//CHECK: frame = []
-//CHECK:   %BB0:
-//CHECK:     %0 = ReturnInst "hi" : string
-//CHECK:   %BB1:
-//CHECK:     %1 = ReturnInst 2.312 : number
-//CHECK:   %BB2:
-//CHECK:     %2 = ReturnInst 12 : number
-//CHECK:   %BB3:
-//CHECK:     %3 = ReturnInst 18 : number
-//CHECK:   %BB4:
-//CHECK:     %4 = ReturnInst true : boolean
-//CHECK:   %BB5:
-//CHECK:     %5 = ReturnInst undefined : undefined
-//CHECK:   %BB6:
-//CHECK:     %6 = ReturnInst null : null
-//CHECK:   %BB7:
-//CHECK:     %7 = ReturnInst undefined : undefined
+// CHECK:function global()
+// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
+// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
+// CHECK-NEXT:  %6 = StoreStackInst %5, %2
+// CHECK-NEXT:  %7 = LoadStackInst %2
+// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:function_end
 
+// CHECK:function foo()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst "hi" : string
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %1 = ReturnInst 2.312 : number
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %2 = ReturnInst 12 : number
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %3 = ReturnInst 18 : number
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %4 = ReturnInst true : boolean
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %6 = ReturnInst null : null
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end

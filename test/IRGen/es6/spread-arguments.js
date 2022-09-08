@@ -5,47 +5,69 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -dump-ir -O %s | %FileCheck --match-full-lines -check-prefix=OPT %s
+// RUN: %hermes -dump-ir -O0 %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes -dump-ir -O %s | %FileCheckOrRegen --match-full-lines -check-prefix=OPT %s
 
 function foo(fn, x) {
   fn(...x);
   new fn(...x);
 }
-//CHECK-LABEL:function foo(fn, x)
-//CHECK-NEXT:frame = [fn, x]
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = StoreFrameInst %fn, [fn]
-//CHECK-NEXT:  %1 = StoreFrameInst %x, [x]
-//CHECK-NEXT:  %2 = LoadFrameInst [fn]
-//CHECK-NEXT:  %3 = AllocStackInst $nextIndex
-//CHECK-NEXT:  %4 = StoreStackInst 0 : number, %3
-//CHECK-NEXT:  %5 = LoadFrameInst [x]
-//CHECK-NEXT:  %6 = AllocArrayInst 0 : number
-//CHECK-NEXT:  %7 = LoadStackInst %3
-//CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %6 : object, %5, %7
-//CHECK-NEXT:  %9 = StoreStackInst %8, %3
-//CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %2, %6 : object, undefined : undefined
-//CHECK-NEXT:  %11 = LoadFrameInst [fn]
-//CHECK-NEXT:  %12 = AllocStackInst $nextIndex
-//CHECK-NEXT:  %13 = StoreStackInst 0 : number, %12
-//CHECK-NEXT:  %14 = LoadFrameInst [x]
-//CHECK-NEXT:  %15 = AllocArrayInst 0 : number
-//CHECK-NEXT:  %16 = LoadStackInst %12
-//CHECK-NEXT:  %17 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %15 : object, %14, %16
-//CHECK-NEXT:  %18 = StoreStackInst %17, %12
-//CHECK-NEXT:  %19 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %11, %15 : object
-//CHECK-NEXT:  %20 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
 
-//OPT-LABEL:function foo(fn, x) : undefined
-//OPT-NEXT:frame = []
-//OPT-NEXT:%BB0:
-//OPT-NEXT:  %0 = AllocArrayInst 0 : number
-//OPT-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %0 : object, %x, 0 : number
-//OPT-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %0 : object, undefined : undefined
-//OPT-NEXT:  %3 = AllocArrayInst 0 : number
-//OPT-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %3 : object, %x, 0 : number
-//OPT-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %3 : object
-//OPT-NEXT:  %6 = ReturnInst undefined : undefined
-//OPT-NEXT:function_end
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global()
+// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
+// CHECK-NEXT:  %4 = LoadStackInst %2
+// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:function_end
+
+// CHECK:function foo(fn, x)
+// CHECK-NEXT:frame = [fn, x]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst %fn, [fn]
+// CHECK-NEXT:  %1 = StoreFrameInst %x, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [fn]
+// CHECK-NEXT:  %3 = AllocStackInst $nextIndex
+// CHECK-NEXT:  %4 = StoreStackInst 0 : number, %3
+// CHECK-NEXT:  %5 = LoadFrameInst [x]
+// CHECK-NEXT:  %6 = AllocArrayInst 0 : number
+// CHECK-NEXT:  %7 = LoadStackInst %3
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %6 : object, %5, %7
+// CHECK-NEXT:  %9 = StoreStackInst %8, %3
+// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %2, %6 : object, undefined : undefined
+// CHECK-NEXT:  %11 = LoadFrameInst [fn]
+// CHECK-NEXT:  %12 = AllocStackInst $nextIndex
+// CHECK-NEXT:  %13 = StoreStackInst 0 : number, %12
+// CHECK-NEXT:  %14 = LoadFrameInst [x]
+// CHECK-NEXT:  %15 = AllocArrayInst 0 : number
+// CHECK-NEXT:  %16 = LoadStackInst %12
+// CHECK-NEXT:  %17 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %15 : object, %14, %16
+// CHECK-NEXT:  %18 = StoreStackInst %17, %12
+// CHECK-NEXT:  %19 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %11, %15 : object
+// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// OPT:function global() : undefined
+// OPT-NEXT:frame = [], globals = [foo]
+// OPT-NEXT:%BB0:
+// OPT-NEXT:  %0 = CreateFunctionInst %foo() : undefined
+// OPT-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// OPT-NEXT:  %2 = ReturnInst undefined : undefined
+// OPT-NEXT:function_end
+
+// OPT:function foo(fn, x) : undefined
+// OPT-NEXT:frame = []
+// OPT-NEXT:%BB0:
+// OPT-NEXT:  %0 = AllocArrayInst 0 : number
+// OPT-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %0 : object, %x, 0 : number
+// OPT-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %0 : object, undefined : undefined
+// OPT-NEXT:  %3 = AllocArrayInst 0 : number
+// OPT-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %3 : object, %x, 0 : number
+// OPT-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %3 : object
+// OPT-NEXT:  %6 = ReturnInst undefined : undefined
+// OPT-NEXT:function_end
