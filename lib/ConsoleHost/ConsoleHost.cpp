@@ -275,8 +275,9 @@ bool executeHBCBytecodeImpl(
   }
 
   if (options.timeLimit > 0) {
-    vm::TimeLimitMonitor::getInstance().watchRuntime(
-        *runtime, options.timeLimit);
+    runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();
+    runtime->timeLimitMonitor->watchRuntime(
+        *runtime, std::chrono::milliseconds(options.timeLimit));
   }
 
   if (shouldRecordGCStats) {
@@ -367,10 +368,6 @@ bool executeHBCBytecodeImpl(
       // Perform a microtask checkpoint at the end of every task tick.
       microtask::performCheckpoint(*runtime);
     }
-  }
-
-  if (options.timeLimit > 0) {
-    vm::TimeLimitMonitor::getInstance().unwatchRuntime(*runtime);
   }
 
 #ifdef HERMESVM_PROFILER_OPCODE

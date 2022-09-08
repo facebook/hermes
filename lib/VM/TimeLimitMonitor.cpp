@@ -7,133 +7,126 @@
 
 #include "hermes/VM/TimeLimitMonitor.h"
 
+#include "hermes/Support/OSCompat.h"
+#include "hermes/VM/Runtime.h"
+
+#include <algorithm>
+
 namespace hermes {
 namespace vm {
 
-const uint32_t kDefaultSleepMs = 5000;
+std::shared_ptr<TimeLimitMonitor> TimeLimitMonitor::getOrCreate() {
+  /// The singleton payload, intentionally leaked to avoid destruction order
+  /// fiasco.
+  static struct Singleton {
+    /// Synchronizes access to weakMonitor.
+    std::mutex guard;
 
-TimeLimitMonitor &TimeLimitMonitor::getInstance() {
-  static TimeLimitMonitor instance;
-  return instance;
-}
+    /// Holds a weak reference to the current TimeLimitMonitor. This ensure that
+    /// the monitor is destroyed when there are no more shared pointers to it,
+    /// while still allowing this method to re-use the same singleton for as
+    /// long as possible.
+    std::weak_ptr<TimeLimitMonitor> weakMonitor;
+  } *singleton = new Singleton();
 
-std::chrono::steady_clock::time_point TimeLimitMonitor::getNextDeadline() {
-  // A min-heap can be used to locate closest deadline more efficient, but did
-  // not do it for two reasons:
-  // 1. Total number of runtimes are not expected to be large.
-  // 2. Performance in TimeLimitMonitor is not the bottleneck.
-  auto nextDeadlineIter = std::min_element(
-      timeoutMap_.begin(),
-      timeoutMap_.end(),
-      [](const std::pair<Runtime *, std::chrono::steady_clock::time_point>
-             &elem1,
-         const std::pair<Runtime *, std::chrono::steady_clock::time_point>
-             &elem2) { return elem1.second < elem2.second; });
-  return nextDeadlineIter != timeoutMap_.end()
-      ? nextDeadlineIter->second
-      : std::chrono::steady_clock::now() +
-          std::chrono::milliseconds(kDefaultSleepMs);
-}
-
-void TimeLimitMonitor::processAndRemoveExpiredItems() {
-  auto now = std::chrono::steady_clock::now();
-  for (auto iter = timeoutMap_.begin(), end = timeoutMap_.end(); iter != end;) {
-    if (iter->second <= now) {
-      notifyRuntimeTimeout(iter->first);
-      iter = timeoutMap_.erase(iter);
-    } else {
-      ++iter;
-    }
+  std::lock_guard<std::mutex> singletonGuard{singleton->guard};
+  if (auto monitor = singleton->weakMonitor.lock()) {
+    return monitor;
   }
+
+  // Create the new monitor instance while saving a reference in the
+  // singleton's weakMonitor member.
+  auto monitor = std::make_shared<TimeLimitMonitor>();
+  singleton->weakMonitor = monitor;
+  return monitor;
 }
 
-void TimeLimitMonitor::timerLoop() {
+TimeLimitMonitor::TimeLimitMonitor() {
+  // Spawns a new thread that performs the time limit monitoring. This thread
+  // is joined in the destructor.
+  timerThread_ = std::thread(&TimeLimitMonitor::timerLoop, this);
+}
+
+TimeLimitMonitor::~TimeLimitMonitor() {
   {
-    std::unique_lock<std::mutex> lock(timeoutMapMtx_);
-    while (state_ == RUNNING) {
-      std::chrono::steady_clock::time_point wakeupTime = getNextDeadline();
-
-      // This wait can wakeup for three different reasons:
-      // 1. timeout
-      // 2. new request signal
-      // 3. stopping signal
-      // 4. condition variable spurious wakeup
-      //
-      // Regardless of the reasons we all wanted to do the same things:
-      // 1. Process expired work items
-      // 2. Wait for next closest deadline
-      cond_.wait_until(lock, wakeupTime);
-
-      processAndRemoveExpiredItems();
-    }
-    assert(state_ == STOPPING);
-    state_ = STOPPED;
+    std::unique_lock<std::mutex> lockGuard(lock_);
+    // Flipping enabled_ to false so the timeLoop thread will stop iterating and
+    // allow the thread to complete.
+    enabled_ = false;
   }
 
-  // Tell unwatchRuntime to join this thread.
-  cond_.notify_all();
+  // Tickle the timeLoop thread so it can terminate.
+  timerLoopCond_.notify_all();
+
+  /// And wait for the helper thread termination.
+  timerThread_.join();
 }
 
-void TimeLimitMonitor::watchRuntime(Runtime &runtime, uint32_t timeoutInMs) {
+void TimeLimitMonitor::watchRuntime(
+    Runtime &runtime,
+    std::chrono::milliseconds timeout) {
   {
-    std::unique_lock<std::mutex> lock(timeoutMapMtx_);
-    // Wait for any shutdown that's in progress.
-    cond_.wait(
-        lock, [this]() { return state_ == RUNNING || state_ == JOINED; });
-    if (state_ == JOINED) {
-      assert(!timerThread_.joinable());
-      timerThread_ = std::thread(&TimeLimitMonitor::timerLoop, this);
-      state_ = RUNNING;
-    }
-    auto deadline = std::chrono::steady_clock::now() +
-        std::chrono::milliseconds(timeoutInMs);
-    timeoutMap_[&runtime] = deadline;
+    std::lock_guard<std::mutex> lockGuard(lock_);
+    // The execution deadline for runtime.
+    auto runtimeDeadline = std::chrono::steady_clock::now() + timeout;
+
+    // Set runtime's deadline to runtimeDeadline. This overwrites the current
+    // deadline (if any).
+    watchedRuntimes_[&runtime] = runtimeDeadline;
   }
 
-  runtime.registerDestructionCallback(
-      [this](Runtime &runtime) { this->unwatchRuntime(runtime); });
-
-  // There is new work (and state may have changed).
-  cond_.notify_all();
+  // Notify the timer loop so it updates the wait timeout in case
+  // runtimeDeadline is earlier than the current earliest deadline being
+  // tracked.
+  timerLoopCond_.notify_all();
 }
 
 void TimeLimitMonitor::unwatchRuntime(Runtime &runtime) {
-  {
-    std::unique_lock<std::mutex> lock(timeoutMapMtx_);
-    // Wait for any shutdown that's in progress.
-    cond_.wait(
-        lock, [this]() { return state_ == RUNNING || state_ == JOINED; });
-    if (state_ == JOINED) {
-      // Everything expired and shutdown was done by someone else.
-      assert(timeoutMap_.empty() && "should not have work without a thread");
-      return;
+  std::lock_guard<std::mutex> lockGuard(lock_);
+  watchedRuntimes_.erase(&runtime);
+
+  // No need to notify the timer loop, even if runtime had the current earliest
+  // deadline being watched -- in which case the timerLoop will run once,
+  // figure out no runtimes timed out, and sleep again.
+}
+
+void TimeLimitMonitor::timerLoop() {
+  oscompat::set_thread_name("time-limit-monitor");
+
+  std::unique_lock<std::mutex> lockGuard(lock_);
+
+  // Indicates that there currently is no deadline being "watched" for, so the
+  // timerLoop should sleep until there's work to be done.
+  static constexpr Deadline NoDeadline = Deadline::max();
+
+  while (enabled_) {
+    // Assume there's no deadline in watchedRuntimes_ -- i.e., no Runtimes are
+    // being watched.
+    Deadline nextDeadline = NoDeadline;
+    Deadline now = std::chrono::steady_clock::now();
+
+    for (auto it = watchedRuntimes_.begin(), end = watchedRuntimes_.end();
+         it != end;) {
+      auto curr = it++;
+
+      if (curr->second <= now) {
+        // curr's deadline has elapsed; notify the VM.
+        curr->first->triggerTimeoutAsyncBreak();
+
+        // We're done watching the VM, so remove curr from watchedRuntimes_.
+        watchedRuntimes_.erase(curr);
+      } else {
+        // curr's deadline is in the future, but it could be ealier than the
+        // nextDeadline; Update the latter accordingly.
+        nextDeadline = std::min(nextDeadline, curr->second);
+      }
     }
-    // unwatchRuntime should be called at least once for every runtime
-    // that is watched. It orchestrates shutdown when it sees
-    // timeoutMap_ empty.  The timer loop itself never initiates
-    // shutdown, even if a timeout causes the timeoutMap_ to become
-    // empty. So we must NOT return early here even if timeoutMap_ is
-    // already empty.
-    if (timeoutMap_.find(&runtime) != timeoutMap_.end()) {
-      timeoutMap_.erase(&runtime);
-    }
-    // If there are other runtimes being watched, we're done.
-    if (!timeoutMap_.empty()) {
-      return;
-    }
-    // Else, we're responsible for shutdown (stop the loop and join the thread).
-    state_ = STOPPING;
-  }
-  // Notify the timer loop that it should stop...
-  cond_.notify_all();
-  {
-    std::unique_lock<std::mutex> lock(timeoutMapMtx_);
-    // ... and wait for its final release.
-    cond_.wait(lock, [this]() { return state_ == STOPPED; });
-    if (timerThread_.joinable()) {
-      timerThread_.join();
-    }
-    state_ = JOINED;
+
+    // Sleep until the next deadline is reached, or the a notification comes in
+    // (e.g., time limit monitoring has been disabled and the thread needs to
+    // terminate). Note that spurious wake ups are OK -- it just means that no
+    // timeouts will have passed, and the thread will go back to waiting.
+    timerLoopCond_.wait_until(lockGuard, nextDeadline);
   }
 }
 

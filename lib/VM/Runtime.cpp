@@ -409,6 +409,12 @@ Runtime::~Runtime() {
     delete &runtimeModuleList_.back();
   }
 
+  // Unwatch the runtime from the time limit monitor in case the latter still
+  // has any references to this.
+  if (timeLimitMonitor) {
+    timeLimitMonitor->unwatchRuntime(*this);
+  }
+
   for (auto callback : destructionCallbacks_) {
     callback(*this);
   }
