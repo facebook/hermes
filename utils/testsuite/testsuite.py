@@ -124,7 +124,7 @@ function v8pragma_StringCharCodeAt(s, i) {
 // debug variable sometimes used in mjsunit.
 // Implemented the same way JSC does.
 var debug = function(s) {
-  print('-->', s);
+  alert('-->', s);
 };
 
 // The idea here is that some pragmas are meaningless for our JS interpreter,
@@ -145,7 +145,7 @@ if (typeof HermesInternal === 'object') {
 }
 
 // Browser functions:
-var alert = print;
+var alert = typeof print !== 'undefined' ? print : console.log;
 
 """
 
