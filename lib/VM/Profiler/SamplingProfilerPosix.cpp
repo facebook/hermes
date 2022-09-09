@@ -355,11 +355,6 @@ SamplingProfiler::GlobalProfiler::GlobalProfiler() {
   profilo_api()->register_external_tracer_callback(
       TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
 #endif
-
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  fbloom_profilo_api()->fbloom_register_external_tracer_callback(
-      1, collectStackForLoom);
-#endif
 }
 
 bool SamplingProfiler::GlobalProfiler::enabled() {
@@ -451,7 +446,8 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
 /*static*/ FBLoomStackCollectionRetcode SamplingProfiler::collectStackForLoom(
     int64_t *frames,
     uint16_t *depth,
-    uint16_t max_depth) {
+    uint16_t max_depth,
+    void *profiler) {
   auto profilerInstance = GlobalProfiler::get();
   if (!profilerInstance->enableForLoomCollection()) {
     return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
@@ -465,7 +461,7 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
   std::lock_guard<std::mutex> lk(profilerInstance->profilerLock_);
   *depth = 0;
   int index = 0;
-  auto *localProfiler = *profilerInstance->profilers_.begin();
+  auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
   constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
   for (unsigned i = 0; i < localProfiler->sampledStacks_.size(); ++i) {
     auto &sample = localProfiler->sampledStacks_[i];
@@ -511,6 +507,10 @@ SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : currentThread_{pthread_self()}, runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
   GlobalProfiler::get()->registerRuntime(this);
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  fbloom_profilo_api()->fbloom_register_external_tracer_callback(
+      1, this, collectStackForLoom);
+#endif
 }
 
 SamplingProfiler::~SamplingProfiler() {
