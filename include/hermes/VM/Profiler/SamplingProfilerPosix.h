@@ -348,6 +348,10 @@ class SamplingProfiler {
       uint16_t *depth,
       uint16_t max_depth,
       void *profiler);
+  /// Modified version of enable/disable, designed to be called by
+  /// SamplingProfiler::collectStackForLoom.
+  static bool enableForLoom();
+  static bool disableForLoom();
 #endif
 
   /// Clear previous stored samples.
