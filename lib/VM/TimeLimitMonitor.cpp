@@ -122,11 +122,18 @@ void TimeLimitMonitor::timerLoop() {
       }
     }
 
-    // Sleep until the next deadline is reached, or the a notification comes in
-    // (e.g., time limit monitoring has been disabled and the thread needs to
-    // terminate). Note that spurious wake ups are OK -- it just means that no
-    // timeouts will have passed, and the thread will go back to waiting.
-    timerLoopCond_.wait_until(lockGuard, nextDeadline);
+    if (nextDeadline != NoDeadline) {
+      // Sleep until the next deadline is reached, or the notification comes in
+      // (e.g., time limit monitoring has been disabled and the thread needs to
+      // terminate). Note that spurious wake ups are OK -- it just means that no
+      // timeouts will have passed, and the thread will go back to waiting.
+      timerLoopCond_.wait_until(lockGuard, nextDeadline);
+    } else {
+      // Work around overflow issues in some libstdcxx implementations by using
+      // wait() when there's no active deadline. The timerLoop will be notified
+      // by the VM thread when a new Runtime is registered or destroyed.
+      timerLoopCond_.wait(lockGuard);
+    }
   }
 }
 
