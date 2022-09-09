@@ -184,75 +184,82 @@ void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-bool SamplingProfiler::GlobalProfiler::sampleStack() {
+bool SamplingProfiler::GlobalProfiler::sampleStacks() {
   for (SamplingProfiler *localProfiler : profilers_) {
-    auto targetThreadId = localProfiler->currentThread_;
     std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
+    if (!sampleStack(localProfiler)) {
+      return false;
+    }
+  }
+  return true;
+}
 
-    if (localProfiler->suspendCount_ > 0) {
-      // Sampling profiler is suspended. Copy pre-captured stack instead without
-      // interrupting the VM thread.
-      if (localProfiler->preSuspendStackDepth_ > 0) {
-        sampleStorage_ = localProfiler->preSuspendStackStorage_;
-        sampledStackDepth_ = localProfiler->preSuspendStackDepth_;
-      } else {
-        // This suspension didn't record a stack trace. For example, a GC (like
-        // mallocGC) did not record JS stack.
-        // TODO: fix this for all cases.
-        sampledStackDepth_ = 0;
-      }
+bool SamplingProfiler::GlobalProfiler::sampleStack(
+    SamplingProfiler *localProfiler) {
+  auto targetThreadId = localProfiler->currentThread_;
+  if (localProfiler->suspendCount_ > 0) {
+    // Sampling profiler is suspended. Copy pre-captured stack instead without
+    // interrupting the VM thread.
+    if (localProfiler->preSuspendStackDepth_ > 0) {
+      sampleStorage_ = localProfiler->preSuspendStackStorage_;
+      sampledStackDepth_ = localProfiler->preSuspendStackDepth_;
     } else {
-      // Ensure there are no allocations in the signal handler by keeping ample
-      // reserved space.
-      localProfiler->domains_.reserve(
-          localProfiler->domains_.size() + kMaxStackDepth);
-      size_t domainCapacityBefore = localProfiler->domains_.capacity();
-      (void)domainCapacityBefore;
+      // This suspension didn't record a stack trace. For example, a GC (like
+      // mallocGC) did not record JS stack.
+      // TODO: fix this for all cases.
+      sampledStackDepth_ = 0;
+    }
+  } else {
+    // Ensure there are no allocations in the signal handler by keeping ample
+    // reserved space.
+    localProfiler->domains_.reserve(
+        localProfiler->domains_.size() + kMaxStackDepth);
+    size_t domainCapacityBefore = localProfiler->domains_.capacity();
+    (void)domainCapacityBefore;
 
-      // Ditto for native functions.
-      localProfiler->nativeFunctions_.reserve(
-          localProfiler->nativeFunctions_.size() + kMaxStackDepth);
-      size_t nativeFunctionsCapacityBefore =
-          localProfiler->nativeFunctions_.capacity();
-      (void)nativeFunctionsCapacityBefore;
+    // Ditto for native functions.
+    localProfiler->nativeFunctions_.reserve(
+        localProfiler->nativeFunctions_.size() + kMaxStackDepth);
+    size_t nativeFunctionsCapacityBefore =
+        localProfiler->nativeFunctions_.capacity();
+    (void)nativeFunctionsCapacityBefore;
 
-      // Guarantee that the runtime thread will not proceed until it has
-      // acquired the updates to domains_.
-      profilerForSig_.store(localProfiler, std::memory_order_release);
+    // Guarantee that the runtime thread will not proceed until it has
+    // acquired the updates to domains_.
+    profilerForSig_.store(localProfiler, std::memory_order_release);
 
-      // Signal target runtime thread to sample stack.
-      pthread_kill(targetThreadId, SIGPROF);
+    // Signal target runtime thread to sample stack.
+    pthread_kill(targetThreadId, SIGPROF);
 
-      // Threading: samplingDoneSem_ will synchronise this thread with the
-      // signal handler, so that we only have one active signal at a time.
-      if (!samplingDoneSem_.wait()) {
-        return false;
-      }
+    // Threading: samplingDoneSem_ will synchronise this thread with the
+    // signal handler, so that we only have one active signal at a time.
+    if (!samplingDoneSem_.wait()) {
+      return false;
+    }
 
-      // Guarantee that this thread will observe all changes made to data
-      // structures in the signal handler.
-      while (profilerForSig_.load(std::memory_order_acquire) != nullptr) {
-      }
-
-      assert(
-          localProfiler->domains_.capacity() == domainCapacityBefore &&
-          "Must not dynamically allocate in signal handler");
-
-      assert(
-          localProfiler->nativeFunctions_.capacity() ==
-              nativeFunctionsCapacityBefore &&
-          "Must not dynamically allocate in signal handler");
+    // Guarantee that this thread will observe all changes made to data
+    // structures in the signal handler.
+    while (profilerForSig_.load(std::memory_order_acquire) != nullptr) {
     }
 
     assert(
-        sampledStackDepth_ <= sampleStorage_.stack.size() &&
-        "How can we sample more frames than storage?");
-    localProfiler->sampledStacks_.emplace_back(
-        sampleStorage_.tid,
-        sampleStorage_.timeStamp,
-        sampleStorage_.stack.begin(),
-        sampleStorage_.stack.begin() + sampledStackDepth_);
+        localProfiler->domains_.capacity() == domainCapacityBefore &&
+        "Must not dynamically allocate in signal handler");
+
+    assert(
+        localProfiler->nativeFunctions_.capacity() ==
+            nativeFunctionsCapacityBefore &&
+        "Must not dynamically allocate in signal handler");
   }
+
+  assert(
+      sampledStackDepth_ <= sampleStorage_.stack.size() &&
+      "How can we sample more frames than storage?");
+  localProfiler->sampledStacks_.emplace_back(
+      sampleStorage_.tid,
+      sampleStorage_.timeStamp,
+      sampleStorage_.stack.begin(),
+      sampleStorage_.stack.begin() + sampledStackDepth_);
   return true;
 }
 
@@ -271,7 +278,7 @@ void SamplingProfiler::GlobalProfiler::timerLoop() {
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
   while (enabled_) {
-    if (!sampleStack()) {
+    if (!sampleStacks()) {
       return;
     }
 
@@ -465,7 +472,7 @@ void SamplingProfiler::collectStackForLoomCommon(
   if (!profilerInstance->enableForLoomCollection()) {
     return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
   }
-  if (!profilerInstance->sampleStack()) {
+  if (!profilerInstance->sampleStacks()) {
     return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
   }
   if (!profilerInstance->disableForLoomCollection()) {

@@ -227,7 +227,9 @@ class SamplingProfiler {
 
     /// Main routine to take a sample of runtime stack.
     /// \return false for failure which timer loop thread should stop.
-    bool sampleStack();
+    bool sampleStacks();
+    /// Sample stack for a profiler.
+    bool sampleStack(SamplingProfiler *localProfiler);
 
     /// Timer loop thread main routine.
     void timerLoop();
