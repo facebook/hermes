@@ -24,7 +24,8 @@ FunctionContext::FunctionContext(
       oldContext_(irGen->functionContext_),
       builderSaveState_(irGen->Builder),
       function(function),
-      scope(irGen->nameTable_) {
+      scope(irGen->nameTable_),
+      anonymousIDs_(function->getContext().getStringTable()) {
   irGen->functionContext_ = this;
 
   // Initialize it to LiteralUndefined by default to avoid corner cases.
@@ -44,10 +45,7 @@ FunctionContext::~FunctionContext() {
 }
 
 Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
-  llvh::SmallString<16> buf;
-  llvh::raw_svector_ostream nameBuilder{buf};
-  nameBuilder << "?anon_" << anonymousLabelCounter++ << "_" << hint;
-  return function->getContext().getIdentifier(nameBuilder.str());
+  return anonymousIDs_.next(hint);
 }
 
 //===----------------------------------------------------------------------===//

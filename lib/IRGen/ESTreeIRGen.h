@@ -13,6 +13,7 @@
 #include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Support/InternalIdentifierMaker.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Debug.h"
@@ -115,9 +116,7 @@ class FunctionContext {
   /// Stack Register that will hold the return value of the global scope.
   AllocStackInst *globalReturnRegister{nullptr};
 
-  /// A running counter for anonymous closure. We append this number to some
-  /// label to create a unique number;
-  size_t anonymousLabelCounter{0};
+  InternalIdentifierMaker anonymousIDs_;
 
   /// This holds the CreateArguments instruction. We always insert it in the
   /// prologue and delete it in the epilogue if it wasn't used.
