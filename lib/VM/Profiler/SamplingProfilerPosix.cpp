@@ -507,6 +507,9 @@ SamplingProfiler::~SamplingProfiler() {
   // TODO(T125910634): re-introduce the requirement for destroying the sampling
   // profiler on the same thread in which it was created.
   GlobalProfiler::get()->unregisterRuntime(this);
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  fbloom_profilo_api()->fbloom_notify_profiler_destroy();
+#endif
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
