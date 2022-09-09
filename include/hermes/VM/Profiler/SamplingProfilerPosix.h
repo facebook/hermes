@@ -396,6 +396,16 @@ class SamplingProfiler {
   /// Resumes the sample profiling. There must have been a previous call to
   /// suspend() that hansn't been resume()d yet.
   void resume();
+
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
+  // Common code that is shared by the collectStackForLoom(), for both the
+  // Android and Apple versions.
+  void collectStackForLoomCommon(
+      const StackFrame &frame,
+      int64_t *frames,
+      uint32_t index);
+#endif
 };
 
 /// An RAII class for temporarily suspending (and auto-resuming) the sampling
