@@ -66,14 +66,14 @@ function daa(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a)
-// CHECK-NEXT:frame = [b, a]
+// CHECK-NEXT:frame = [a, b]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
-// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %1, [a]
+// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a]
+// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
 // CHECK-NEXT:  %6 = LoadPropertyInst %3 : object, "bar" : string
 // CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst %0, [a]
 // CHECK-NEXT:  %8 = CallInst %6, %2 : undefined, %7
@@ -85,14 +85,14 @@ function daa(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function daa(a)
-// CHECK-NEXT:frame = [b, daa_capture, a]
+// CHECK-NEXT:frame = [a, b, daa_capture]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
-// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %1, [a]
+// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a]
+// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
 // CHECK-NEXT:  %6 = HBCCreateFunctionInst %daa_capture(), %0
 // CHECK-NEXT:  %7 = HBCStoreToEnvironmentInst %0, %6 : closure, [daa_capture]
 // CHECK-NEXT:  %8 = HBCLoadFromEnvironmentInst %0, [a]

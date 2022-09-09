@@ -195,22 +195,22 @@ exports.bar = bar;
 // CHKDBG-NEXT:    LoadParam         r3, 3
 // CHKDBG-NEXT:    LoadConstUndefined r4
 // CHKDBG-NEXT:    LoadConstUInt8    r5, 1
-// CHKDBG-NEXT:    StoreNPToEnvironment r0, 0, r4
-// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r1
-// CHKDBG-NEXT:    StoreToEnvironment r0, 3, r2
-// CHKDBG-NEXT:    StoreToEnvironment r0, 4, r3
+// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r1
+// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r2
+// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
+// CHKDBG-NEXT:    StoreNPToEnvironment r0, 3, r4
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<bar>
-// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r6
-// CHKDBG-NEXT:    LoadFromEnvironment r7, r0, 3
+// CHKDBG-NEXT:    StoreToEnvironment r0, 4, r6
+// CHKDBG-NEXT:    LoadFromEnvironment r7, r0, 1
 // CHKDBG-NEXT:    Mov               r13, r5
 // CHKDBG-NEXT:    CallBuiltin       r7, "HermesBuiltin.requireFast", 2
-// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r7
-// CHKDBG-NEXT:    LoadFromEnvironment r8, r0, 0
+// CHKDBG-NEXT:    StoreToEnvironment r0, 3, r7
+// CHKDBG-NEXT:    LoadFromEnvironment r8, r0, 3
 // CHKDBG-NEXT:    GetByIdShort      r9, r8, 1, "foo"
 // CHKDBG-NEXT:    Mov               r14, r8
 // CHKDBG-NEXT:    Call              r10, r9, 1
-// CHKDBG-NEXT:    LoadFromEnvironment r10, r0, 2
-// CHKDBG-NEXT:    LoadFromEnvironment r11, r0, 1
+// CHKDBG-NEXT:    LoadFromEnvironment r10, r0, 0
+// CHKDBG-NEXT:    LoadFromEnvironment r11, r0, 4
 // CHKDBG-NEXT:    PutById           r10, r11, 1, "bar"
 // CHKDBG-NEXT:    Ret               r4
 
@@ -221,7 +221,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    LoadConstUInt8    r2, 2
 // CHKDBG-NEXT:    StoreNPToEnvironment r0, 0, r1
 // CHKDBG-NEXT:    GetEnvironment    r3, 0
-// CHKDBG-NEXT:    LoadFromEnvironment r4, r3, 3
+// CHKDBG-NEXT:    LoadFromEnvironment r4, r3, 1
 // CHKDBG-NEXT:    Mov               r8, r2
 // CHKDBG-NEXT:    CallBuiltin       r4, "HermesBuiltin.requireFast", 2
 // CHKDBG-NEXT:    StoreToEnvironment r0, 0, r4

@@ -54,10 +54,10 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(t)
-// CHECK-NEXT:frame = [a, t]
+// CHECK-NEXT:frame = [t, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %0 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %2 = LoadFrameInst [t]
 // CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -75,12 +75,12 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t)
-// CHECK-NEXT:frame = [a, b, rest, t]
+// CHECK-NEXT:frame = [t, a, b, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %3 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %0 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [b]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %4 = LoadFrameInst [t]
 // CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [a]
@@ -97,11 +97,11 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t)
-// CHECK-NEXT:frame = [a, rest, t]
+// CHECK-NEXT:frame = [t, a, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %0 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %3 = LoadFrameInst [t]
 // CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
@@ -113,11 +113,11 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(o, t)
-// CHECK-NEXT:frame = [a, o, t]
+// CHECK-NEXT:frame = [o, t, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %2 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
+// CHECK-NEXT:  %1 = StoreFrameInst %t, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %3 = LoadFrameInst [t]
 // CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
@@ -130,11 +130,11 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(o)
-// CHECK-NEXT:frame = [a, rest, o]
+// CHECK-NEXT:frame = [o, a, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = StoreFrameInst %o, [o]
+// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %3 = LoadFrameInst [o]
 // CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [a]

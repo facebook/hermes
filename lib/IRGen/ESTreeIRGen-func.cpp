@@ -492,6 +492,23 @@ void ESTreeIRGen::emitFunctionPrologue(
   // unused.
   curFunction()->createArgumentsInst = Builder.createCreateArgumentsInst();
 
+  // Always create the "this" parameter. It needs to be created before we
+  // initialized the ES5 capture state.
+  Builder.createParameter(newFunc, "this");
+
+  if (doInitES5CaptureState != InitES5CaptureState::No) {
+    initCaptureStateInES5FunctionHelper();
+  }
+
+  if (doEmitParameters != DoEmitParameters::No) {
+    // Create function parameters, register them in the scope, and initialize
+    // them with their income values.
+    emitParameters(funcNode);
+  } else {
+    newFunc->setExpectedParamCountIncludingThis(
+        countExpectedArgumentsIncludingThis(funcNode));
+  }
+
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
   for (auto decl : semInfo->varDecls) {
@@ -511,22 +528,6 @@ void ESTreeIRGen::emitFunctionPrologue(
   for (auto *fd : semInfo->closures) {
     declareVariableOrGlobalProperty(
         newFunc, VarDecl::Kind::Var, getNameFieldFromID(fd->_id));
-  }
-
-  // Always create the "this" parameter. It needs to be created before we
-  // initialized the ES5 capture state.
-  Builder.createParameter(newFunc, "this");
-
-  if (doInitES5CaptureState != InitES5CaptureState::No)
-    initCaptureStateInES5FunctionHelper();
-
-  // Construct the parameter list. Create function parameters and register
-  // them in the scope.
-  if (doEmitParameters == DoEmitParameters::Yes) {
-    emitParameters(funcNode);
-  } else {
-    newFunc->setExpectedParamCountIncludingThis(
-        countExpectedArgumentsIncludingThis(funcNode));
   }
 
   // Generate the code for import declarations before generating the rest of the

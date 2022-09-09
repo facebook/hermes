@@ -85,17 +85,17 @@ function *args() {
 // CHECK-NEXT:    ResumeGenerator   r7, r6
 // CHECK-NEXT:    Mov               r8, r6
 // CHECK-NEXT:    JmpTrue           L1, r8
-// CHECK-NEXT:    StoreNPToEnvironment r0, 0, r2
-// CHECK-NEXT:    StoreToEnvironment r0, 1, r1
-// CHECK-NEXT:    StoreNPToEnvironment r0, 0, r3
+// CHECK-NEXT:    StoreToEnvironment r0, 0, r1
+// CHECK-NEXT:    StoreNPToEnvironment r0, 1, r2
+// CHECK-NEXT:    StoreNPToEnvironment r0, 1, r3
 // CHECK-NEXT:    TryGetById        r6, r5, 1, "y"
 // CHECK-NEXT:    JmpFalse          L2, r6
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    LoadFromEnvironment r6, r0, 1
-// CHECK-NEXT:    LoadFromEnvironment r8, r0, 0
+// CHECK-NEXT:    LoadFromEnvironment r6, r0, 0
+// CHECK-NEXT:    LoadFromEnvironment r8, r0, 1
 // CHECK-NEXT:    ToNumeric         r9, r8
 // CHECK-NEXT:    Inc               r10, r9
-// CHECK-NEXT:    StoreToEnvironment r0, 0, r10
+// CHECK-NEXT:    StoreToEnvironment r0, 1, r10
 // CHECK-NEXT:    GetByVal          r11, r6, r9
 // CHECK-NEXT:    SaveGenerator     L3
 // CHECK-NEXT:    Ret               r11

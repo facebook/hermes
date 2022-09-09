@@ -152,7 +152,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param)
-// CHECK-NEXT:frame = [x, x]
+// CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
@@ -161,60 +161,59 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_iter
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_4_sourceOrNext
-// CHECK-NEXT:  %9 = StoreStackInst %?anon_2_param, %8
-// CHECK-NEXT:  %10 = IteratorBeginInst %8
-// CHECK-NEXT:  %11 = StoreStackInst %10, %7
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_5_iterDone
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = AllocStackInst $?anon_6_iterValue
-// CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
-// CHECK-NEXT:  %16 = BranchInst %BB3
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_3_iter
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_4_sourceOrNext
+// CHECK-NEXT:  %8 = StoreStackInst %?anon_2_param, %7
+// CHECK-NEXT:  %9 = IteratorBeginInst %7
+// CHECK-NEXT:  %10 = StoreStackInst %9, %6
+// CHECK-NEXT:  %11 = AllocStackInst $?anon_5_iterDone
+// CHECK-NEXT:  %12 = StoreStackInst undefined : undefined, %11
+// CHECK-NEXT:  %13 = AllocStackInst $?anon_6_iterValue
+// CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
+// CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %17 = ReturnInst %2
+// CHECK-NEXT:  %16 = ReturnInst %2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %18 = ResumeGeneratorInst %5
-// CHECK-NEXT:  %19 = LoadStackInst %5
-// CHECK-NEXT:  %20 = CondBranchInst %19, %BB5, %BB6
+// CHECK-NEXT:  %17 = ResumeGeneratorInst %5
+// CHECK-NEXT:  %18 = LoadStackInst %5
+// CHECK-NEXT:  %19 = CondBranchInst %18, %BB5, %BB6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %21 = IteratorNextInst %7, %8
-// CHECK-NEXT:  %22 = LoadStackInst %7
-// CHECK-NEXT:  %23 = BinaryOperatorInst '===', %22, undefined : undefined
-// CHECK-NEXT:  %24 = StoreStackInst %23, %12
-// CHECK-NEXT:  %25 = CondBranchInst %23, %BB7, %BB8
+// CHECK-NEXT:  %20 = IteratorNextInst %6, %7
+// CHECK-NEXT:  %21 = LoadStackInst %6
+// CHECK-NEXT:  %22 = BinaryOperatorInst '===', %21, undefined : undefined
+// CHECK-NEXT:  %23 = StoreStackInst %22, %11
+// CHECK-NEXT:  %24 = CondBranchInst %22, %BB7, %BB8
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %26 = StoreStackInst %21, %14
-// CHECK-NEXT:  %27 = BranchInst %BB7
+// CHECK-NEXT:  %25 = StoreStackInst %20, %13
+// CHECK-NEXT:  %26 = BranchInst %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %28 = LoadStackInst %14
-// CHECK-NEXT:  %29 = StoreFrameInst %28, [x]
-// CHECK-NEXT:  %30 = LoadStackInst %12
-// CHECK-NEXT:  %31 = CondBranchInst %30, %BB9, %BB10
+// CHECK-NEXT:  %27 = LoadStackInst %13
+// CHECK-NEXT:  %28 = StoreFrameInst %27, [x]
+// CHECK-NEXT:  %29 = LoadStackInst %11
+// CHECK-NEXT:  %30 = CondBranchInst %29, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %32 = IteratorCloseInst %7, false : boolean
-// CHECK-NEXT:  %33 = BranchInst %BB9
+// CHECK-NEXT:  %31 = IteratorCloseInst %6, false : boolean
+// CHECK-NEXT:  %32 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %34 = SaveAndYieldInst undefined : undefined, %BB4
+// CHECK-NEXT:  %33 = SaveAndYieldInst undefined : undefined, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %35 = LoadFrameInst [x]
-// CHECK-NEXT:  %36 = AllocStackInst $?anon_8_isReturn
-// CHECK-NEXT:  %37 = SaveAndYieldInst %35, %BB11
+// CHECK-NEXT:  %34 = LoadFrameInst [x]
+// CHECK-NEXT:  %35 = AllocStackInst $?anon_8_isReturn
+// CHECK-NEXT:  %36 = SaveAndYieldInst %34, %BB11
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %38 = ReturnInst %18
+// CHECK-NEXT:  %37 = ReturnInst %17
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %39 = ResumeGeneratorInst %36
-// CHECK-NEXT:  %40 = LoadStackInst %36
-// CHECK-NEXT:  %41 = CondBranchInst %40, %BB12, %BB13
+// CHECK-NEXT:  %38 = ResumeGeneratorInst %35
+// CHECK-NEXT:  %39 = LoadStackInst %35
+// CHECK-NEXT:  %40 = CondBranchInst %39, %BB12, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %42 = StoreFrameInst %39, [x]
-// CHECK-NEXT:  %43 = LoadFrameInst [x]
-// CHECK-NEXT:  %44 = ReturnInst %43
+// CHECK-NEXT:  %41 = StoreFrameInst %38, [x]
+// CHECK-NEXT:  %42 = LoadFrameInst [x]
+// CHECK-NEXT:  %43 = ReturnInst %42
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %45 = ReturnInst %39
+// CHECK-NEXT:  %44 = ReturnInst %38
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %46 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %45 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleAsyncFE()

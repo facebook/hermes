@@ -71,14 +71,14 @@ function bar() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo()
-// CHECK-NEXT:frame = [arrow1, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, ?anon_2_arguments, arrow1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow1]
-// CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
-// CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
+// CHECK-NEXT:  %2 = GetNewTargetInst
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
+// CHECK-NEXT:  %4 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [arrow1]
 // CHECK-NEXT:  %6 = CreateFunctionInst %arrow1()
 // CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [arrow1]
 // CHECK-NEXT:  %8 = LoadFrameInst [?anon_2_arguments]
@@ -129,14 +129,14 @@ function bar() {
 // CHECK-NEXT:function_end
 
 // CHECK:function inner()
-// CHECK-NEXT:frame = [arrow3, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, ?anon_2_arguments, arrow3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow3]
-// CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
-// CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
+// CHECK-NEXT:  %2 = GetNewTargetInst
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
+// CHECK-NEXT:  %4 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [arrow3]
 // CHECK-NEXT:  %6 = LoadFrameInst [?anon_2_arguments]
 // CHECK-NEXT:  %7 = LoadPropertyInst %6, 0 : number
 // CHECK-NEXT:  %8 = StorePropertyInst %7, globalObject : object, "dummy" : string

@@ -82,13 +82,13 @@ function test2(p1, p2) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1)
-// CHECK-NEXT:frame = [t, k, z, y, p1]
+// CHECK-NEXT:frame = [p1, t, k, z, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [t]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [k]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %4 = StoreFrameInst %p1, [p1]
+// CHECK-NEXT:  %0 = StoreFrameInst %p1, [p1]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [k]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [z]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [y]
 // CHECK-NEXT:  %5 = LoadFrameInst [p1]
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [t]
 // CHECK-NEXT:  %7 = LoadFrameInst [t]
@@ -104,11 +104,11 @@ function test2(p1, p2) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(p1, p2)
-// CHECK-NEXT:frame = [x, p1, p2]
+// CHECK-NEXT:frame = [p1, p2, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %p1, [p1]
-// CHECK-NEXT:  %2 = StoreFrameInst %p2, [p2]
+// CHECK-NEXT:  %0 = StoreFrameInst %p1, [p1]
+// CHECK-NEXT:  %1 = StoreFrameInst %p2, [p2]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %3 = LoadFrameInst [p1]
 // CHECK-NEXT:  %4 = LoadFrameInst [p2]
 // CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3, %4

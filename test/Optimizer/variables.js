@@ -45,14 +45,14 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1, p2, p3)
-// CHECK-NEXT:frame = [t, z, k, p1, p2, p3]
+// CHECK-NEXT:frame = [p1, p2, p3, t, z, k]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [t]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [k]
-// CHECK-NEXT:  %3 = StoreFrameInst %p1, [p1]
-// CHECK-NEXT:  %4 = StoreFrameInst %p2, [p2]
-// CHECK-NEXT:  %5 = StoreFrameInst %p3, [p3]
+// CHECK-NEXT:  %0 = StoreFrameInst %p1, [p1]
+// CHECK-NEXT:  %1 = StoreFrameInst %p2, [p2]
+// CHECK-NEXT:  %2 = StoreFrameInst %p3, [p3]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [t]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [z]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [k]
 // CHECK-NEXT:  %6 = LoadFrameInst [p1]
 // CHECK-NEXT:  %7 = LoadFrameInst [p2]
 // CHECK-NEXT:  %8 = BinaryOperatorInst '+', %6, %7

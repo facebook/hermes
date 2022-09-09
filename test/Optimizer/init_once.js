@@ -33,7 +33,7 @@ function main(p) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p) : closure
-// CHECK-NEXT:frame = [k, p]
+// CHECK-NEXT:frame = [p, k]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst %p, [p]
 // CHECK-NEXT:  %1 = CreateFunctionInst %bar() : undefined

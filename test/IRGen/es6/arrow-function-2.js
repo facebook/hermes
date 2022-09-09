@@ -40,13 +40,13 @@ function outer2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1()
-// CHECK-NEXT:frame = [innerArrow1, innerArrow2, ?anon_0_this, ?anon_1_new.target]
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, innerArrow1, innerArrow2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [innerArrow1]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [innerArrow2]
-// CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
+// CHECK-NEXT:  %1 = GetNewTargetInst
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [innerArrow1]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [innerArrow2]
 // CHECK-NEXT:  %5 = CreateFunctionInst %innerArrow1()
 // CHECK-NEXT:  %6 = StoreFrameInst %5 : closure, [innerArrow1]
 // CHECK-NEXT:  %7 = CreateFunctionInst %innerArrow2()
@@ -75,12 +75,12 @@ function outer2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2()
-// CHECK-NEXT:frame = [innerArrow4, inner3, ?anon_0_this, ?anon_1_new.target]
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, innerArrow4, inner3]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [innerArrow4]
-// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %2 = GetNewTargetInst
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
+// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
+// CHECK-NEXT:  %1 = GetNewTargetInst
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [innerArrow4]
 // CHECK-NEXT:  %4 = CreateFunctionInst %inner3()
 // CHECK-NEXT:  %5 = StoreFrameInst %4 : closure, [inner3]
 // CHECK-NEXT:  %6 = CreateFunctionInst %innerArrow4()

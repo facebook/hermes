@@ -28,7 +28,7 @@ function main(boop) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main(boop)
-// CHECK-NEXT:frame = [foo, boop]
+// CHECK-NEXT:frame = [boop, foo]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst %boop, [boop]
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo()

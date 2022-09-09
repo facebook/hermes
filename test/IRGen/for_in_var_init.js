@@ -29,10 +29,10 @@ function foo(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(obj)
-// CHECK-NEXT:frame = [x, obj]
+// CHECK-NEXT:frame = [obj, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_1_base
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_2_idx

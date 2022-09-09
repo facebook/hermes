@@ -136,7 +136,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_loop(x)
-// CHECK-NEXT:frame = [i, x]
+// CHECK-NEXT:frame = [x, i]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
@@ -144,8 +144,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %3 = LoadStackInst %1
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %6 = StoreFrameInst %x, [x]
+// CHECK-NEXT:  %5 = StoreFrameInst %x, [x]
+// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %7 = StoreFrameInst 0 : number, [i]
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB1:

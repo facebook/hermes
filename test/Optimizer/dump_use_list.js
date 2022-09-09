@@ -26,11 +26,11 @@ function foo(a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a, b)
-// CHECK-NEXT:frame = [c, a, b]
+// CHECK-NEXT:frame = [a, b, c]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [c]
-// CHECK-NEXT:  %1 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %2 = StoreFrameInst %b, [b]
+// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
+// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [c]
 // CHECK-NEXT:  %3 = LoadFrameInst [a] // users: %5
 // CHECK-NEXT:  %4 = LoadFrameInst [b] // users: %5
 // CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3, %4 // users: %6

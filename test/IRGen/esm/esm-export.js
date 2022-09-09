@@ -34,16 +34,16 @@ export * from 'foo.js';
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports, require, module)
-// CHECK-NEXT:frame = [x, y, z, longVariableName, a, myFun, exports, require, module]
+// CHECK-NEXT:frame = [exports, require, module, x, y, z, longVariableName, a, myFun]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [longVariableName]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %5 = StoreFrameInst %exports, [exports]
-// CHECK-NEXT:  %6 = StoreFrameInst %require, [require]
-// CHECK-NEXT:  %7 = StoreFrameInst %module, [module]
+// CHECK-NEXT:  %0 = StoreFrameInst %exports, [exports]
+// CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
+// CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [y]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [z]
+// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [longVariableName]
+// CHECK-NEXT:  %7 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %8 = CreateFunctionInst %myFun()
 // CHECK-NEXT:  %9 = StoreFrameInst %8 : closure, [myFun]
 // CHECK-NEXT:  %10 = LoadFrameInst [myFun]

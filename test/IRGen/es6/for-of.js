@@ -58,11 +58,11 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_normal(seq, cb)
-// CHECK-NEXT:frame = [i, seq, cb]
+// CHECK-NEXT:frame = [seq, cb, i]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %1 = StoreFrameInst %seq, [seq]
-// CHECK-NEXT:  %2 = StoreFrameInst %cb, [cb]
+// CHECK-NEXT:  %0 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %1 = StoreFrameInst %cb, [cb]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %3 = LoadFrameInst [seq]
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_sourceOrNext
@@ -95,11 +95,11 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_update(seq)
-// CHECK-NEXT:frame = [i, ar, seq]
+// CHECK-NEXT:frame = [seq, i, ar]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [ar]
-// CHECK-NEXT:  %2 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %0 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ar]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [i]
 // CHECK-NEXT:  %4 = AllocArrayInst 0 : number
 // CHECK-NEXT:  %5 = StoreFrameInst %4 : object, [ar]
@@ -140,11 +140,11 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_break(seq)
-// CHECK-NEXT:frame = [sum, i, seq]
+// CHECK-NEXT:frame = [seq, sum, i]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [sum]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %2 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %0 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [sum]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [sum]
 // CHECK-NEXT:  %4 = LoadFrameInst [seq]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
@@ -196,11 +196,11 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_continue(seq)
-// CHECK-NEXT:frame = [sum, i, seq]
+// CHECK-NEXT:frame = [seq, sum, i]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [sum]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %2 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %0 = StoreFrameInst %seq, [seq]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [sum]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [sum]
 // CHECK-NEXT:  %4 = LoadFrameInst [seq]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter

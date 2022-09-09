@@ -70,11 +70,11 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check2(p)
-// CHECK-NEXT:frame = [b, a, p]
+// CHECK-NEXT:frame = [p, b, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [a]
-// CHECK-NEXT:  %2 = StoreFrameInst %p, [p]
+// CHECK-NEXT:  %0 = StoreFrameInst %p, [p]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
+// CHECK-NEXT:  %2 = StoreFrameInst empty : empty, [a]
 // CHECK-NEXT:  %3 = LoadFrameInst [a]
 // CHECK-NEXT:  %4 = ThrowIfEmptyInst %3
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [b]

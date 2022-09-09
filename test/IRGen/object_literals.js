@@ -195,10 +195,10 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function spreadObjectLiteral(func)
-// CHECK-NEXT:frame = [obj, func]
+// CHECK-NEXT:frame = [func, obj]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj]
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst "a" : string, 10 : number, "b" : string, 20 : number
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : object, [obj]
 // CHECK-NEXT:  %4 = AllocObjectInst 1 : number, empty

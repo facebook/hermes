@@ -36,18 +36,18 @@ function fib(n) {
 // CHECK-NEXT:  $Reg5 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg4 @1 [2...19) 	%1 = HBCLoadConstInst 0 : number
 // CHECK-NEXT:  $Reg3 @2 [3...19) 	%2 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  $Reg2 @3 [4...9) 	%3 = MovInst %1 : number
-// CHECK-NEXT:  $Reg1 @4 [5...10) 	%4 = MovInst %2 : number
-// CHECK-NEXT:  $Reg5 @5 [6...11) 	%5 = MovInst %0
+// CHECK-NEXT:  $Reg2 @3 [4...10) 	%3 = MovInst %1 : number
+// CHECK-NEXT:  $Reg1 @4 [5...11) 	%4 = MovInst %2 : number
+// CHECK-NEXT:  $Reg5 @5 [6...9) 	%5 = MovInst %0
 // CHECK-NEXT:  $Reg0 @6 [7...20) 	%6 = MovInst %3 : number
 // CHECK-NEXT:  $Reg6 @7 [empty]	%7 = CompareBranchInst '>', %5, %6 : number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg2 @8 [4...12) [15...19) 	%8 = PhiInst %3 : number, %BB0, %14 : string|number|bigint, %BB1
-// CHECK-NEXT:  $Reg1 @9 [5...14) [16...19) 	%9 = PhiInst %4 : number, %BB0, %15 : string|number|bigint, %BB1
-// CHECK-NEXT:  $Reg5 @10 [1...19) 	%10 = PhiInst %5, %BB0, %17 : number, %BB1
-// CHECK-NEXT:  $Reg7 @11 [12...16) 	%11 = BinaryOperatorInst '+', %8 : string|number|bigint, %9 : string|number|bigint
-// CHECK-NEXT:  $Reg5 @12 [13...18) 	%12 = BinaryOperatorInst '-', %10, %2 : number
-// CHECK-NEXT:  $Reg6 @13 [14...17) 	%13 = MovInst %9 : string|number|bigint
+// CHECK-NEXT:  $Reg5 @8 [1...19) 	%8 = PhiInst %5, %BB0, %17 : number, %BB1
+// CHECK-NEXT:  $Reg2 @9 [4...12) [15...19) 	%9 = PhiInst %3 : number, %BB0, %14 : string|number|bigint, %BB1
+// CHECK-NEXT:  $Reg1 @10 [5...14) [16...19) 	%10 = PhiInst %4 : number, %BB0, %15 : string|number|bigint, %BB1
+// CHECK-NEXT:  $Reg7 @11 [12...16) 	%11 = BinaryOperatorInst '+', %9 : string|number|bigint, %10 : string|number|bigint
+// CHECK-NEXT:  $Reg5 @12 [13...18) 	%12 = BinaryOperatorInst '-', %8, %2 : number
+// CHECK-NEXT:  $Reg6 @13 [14...17) 	%13 = MovInst %10 : string|number|bigint
 // CHECK-NEXT:  $Reg2 @14 [15...18) 	%14 = MovInst %13 : string|number|bigint
 // CHECK-NEXT:  $Reg1 @15 [16...18) 	%15 = MovInst %11 : string|number|bigint
 // CHECK-NEXT:  $Reg0 @16 [17...20) 	%16 = MovInst %14 : string|number|bigint

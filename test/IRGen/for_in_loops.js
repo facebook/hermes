@@ -69,10 +69,10 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_in_loop(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
@@ -96,10 +96,10 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_break_continue(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
@@ -127,10 +127,10 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_named_break(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
@@ -158,10 +158,10 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_var_decl_for_in_loop(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_1_base
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_2_idx

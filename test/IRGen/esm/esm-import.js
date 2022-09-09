@@ -27,15 +27,15 @@ import 'bar.js';
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports, require, module)
-// CHECK-NEXT:frame = [Foo, defaultFoo, x, z, exports, require, module]
+// CHECK-NEXT:frame = [exports, require, module, Foo, defaultFoo, x, z]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [Foo]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [defaultFoo]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %4 = StoreFrameInst %exports, [exports]
-// CHECK-NEXT:  %5 = StoreFrameInst %require, [require]
-// CHECK-NEXT:  %6 = StoreFrameInst %module, [module]
+// CHECK-NEXT:  %0 = StoreFrameInst %exports, [exports]
+// CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
+// CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [Foo]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [defaultFoo]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [z]
 // CHECK-NEXT:  %7 = CallInst %require, undefined : undefined, "foo.js" : string
 // CHECK-NEXT:  %8 = StoreFrameInst %7, [Foo]
 // CHECK-NEXT:  %9 = CallInst %require, undefined : undefined, "foo.js" : string

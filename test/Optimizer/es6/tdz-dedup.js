@@ -42,10 +42,10 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_store(p)
-// CHECK-NEXT:frame = [x, p]
+// CHECK-NEXT:frame = [p, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %p, [p]
+// CHECK-NEXT:  %0 = StoreFrameInst %p, [p]
+// CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x]
 // CHECK-NEXT:  %2 = StoreFrameInst 10 : number, [x]
 // CHECK-NEXT:  %3 = LoadFrameInst [p]
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -120,10 +120,10 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_store(p) : undefined|number
-// CHKOPT-NEXT:frame = [x : empty|number, p]
+// CHKOPT-NEXT:frame = [p, x : empty|number]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = StoreFrameInst empty : empty, [x] : empty|number
-// CHKOPT-NEXT:  %1 = StoreFrameInst %p, [p]
+// CHKOPT-NEXT:  %0 = StoreFrameInst %p, [p]
+// CHKOPT-NEXT:  %1 = StoreFrameInst empty : empty, [x] : empty|number
 // CHKOPT-NEXT:  %2 = StoreFrameInst 10 : number, [x] : empty|number
 // CHKOPT-NEXT:  %3 = LoadFrameInst [p]
 // CHKOPT-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2

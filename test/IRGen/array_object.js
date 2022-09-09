@@ -32,11 +32,11 @@ function foo(param) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(param)
-// CHECK-NEXT:frame = [obj, foo, param]
+// CHECK-NEXT:frame = [param, obj, foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo]
-// CHECK-NEXT:  %2 = StoreFrameInst %param, [param]
+// CHECK-NEXT:  %0 = StoreFrameInst %param, [param]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [foo]
 // CHECK-NEXT:  %3 = LoadFrameInst [param]
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst "1" : string, 2 : number, "key" : string, %3
 // CHECK-NEXT:  %5 = StoreFrameInst %4 : object, [obj]

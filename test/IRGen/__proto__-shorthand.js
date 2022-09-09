@@ -56,10 +56,10 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthand(func)
-// CHECK-NEXT:frame = [__proto__, func]
+// CHECK-NEXT:frame = [func, __proto__]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [__proto__]
 // CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
 // CHECK-NEXT:  %3 = LoadFrameInst [__proto__]
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst "__proto__" : string, %3, "a" : string, 2 : number, "b" : string, 3 : number
@@ -69,10 +69,10 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup(func)
-// CHECK-NEXT:frame = [__proto__, func]
+// CHECK-NEXT:frame = [func, __proto__]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [__proto__]
 // CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
 // CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
 // CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
@@ -85,10 +85,10 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix1(func)
-// CHECK-NEXT:frame = [__proto__, func]
+// CHECK-NEXT:frame = [func, __proto__]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [__proto__]
 // CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
 // CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
 // CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
@@ -101,10 +101,10 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix2(func)
-// CHECK-NEXT:frame = [__proto__, func]
+// CHECK-NEXT:frame = [func, __proto__]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [__proto__]
 // CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
 // CHECK-NEXT:  %3 = AllocObjectInst 0 : number, empty
 // CHECK-NEXT:  %4 = AllocObjectInst 1 : number, %3 : object

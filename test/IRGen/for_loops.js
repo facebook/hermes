@@ -276,10 +276,10 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_init_update_exprs(param1)
-// CHECK-NEXT:frame = [i, param1]
+// CHECK-NEXT:frame = [param1, i]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %1 = StoreFrameInst %param1, [param1]
+// CHECK-NEXT:  %0 = StoreFrameInst %param1, [param1]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i]
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:%BB2:

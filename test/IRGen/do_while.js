@@ -114,10 +114,10 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_while_do_mixed_test(cond)
-// CHECK-NEXT:frame = [i, cond]
+// CHECK-NEXT:frame = [cond, i]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond]
+// CHECK-NEXT:  %0 = StoreFrameInst %cond, [cond]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i]
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
