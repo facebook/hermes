@@ -171,9 +171,12 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   BFG->emitGetGlobalObject(0);
   BFG->emitGetById(1, 0, 1, printID);
   BFG->emitLoadConstUndefined(3);
-  BFG->emitMov(static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
-  BFG->emitLoadConstString(static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg), resultID);
-  BFG->emitMov(static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg - 1), 2);
+  BFG->emitMov(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
+  BFG->emitLoadConstString(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg), resultID);
+  BFG->emitMov(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg - 1), 2);
   BFG->emitCall(3, 1, 3);
   BFG->emitRet(2);
   BFG->setHighestReadCacheIndex(1);
