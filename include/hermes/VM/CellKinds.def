@@ -91,6 +91,7 @@ CELL_CLASS(JSProxy, "Proxy")
 CELL_CLASS(JSBigInt, "BigInt")
 
 CELL_KIND(BoundFunction)
+CELL_KIND(SHLegacyFunction)
 CELL_KIND(NativeFunction)
 CELL_KIND(NativeConstructor)
 CELL_CLASS(JSCallableProxy, "CallableProxy")

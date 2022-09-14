@@ -159,6 +159,34 @@ SHLegacyValue _sh_catch(
 void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
 void _sh_throw(SHRuntime *shr, SHLegacyValue value) __attribute__((noreturn));
 
+/// Performs a function call. The new frame is at the top of the stack.
+/// Arguments, this, and callee must be populated.
+SHLegacyValue
+_sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
+
+/// Performs a function call. The new frame is at the top of the stack.
+/// Arguments, this, callee, and "new.target" must be populated.
+SHLegacyValue
+_sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
+
+/// Create a new environment with the specified size and the current function's
+/// environment as parent.
+/// \p result will contain the result on exit, but is also used as a temporary
+///     (thus is not `const`).
+void _sh_ljs_create_environment(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *result,
+    uint32_t size);
+
+/// \param env  Should be JSNull if there is no environment.
+SHLegacyValue _sh_ljs_create_closure(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    SHSymbolID name,
+    uint32_t paramCount);
+
 #ifdef __cplusplus
 }
 #endif

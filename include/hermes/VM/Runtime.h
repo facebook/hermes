@@ -1380,6 +1380,13 @@ class Runtime : public PointerBase,
   /// When assertions are enabled we track whether \c currentIP_ is "valid" by
   /// making it optional. If this is accessed when the optional value is cleared
   /// (the invalid state) we assert.
+  ///
+  /// It starts as *initialized*, but with a null pointer. It is only ever
+  /// cleared
+  //// (without a value) inside the interpreter between calls to CAPTURE_IP().
+  /// The interpreter itself saves and restores it on entry and exit.
+  /// The purpose of these games is to catch if the interpreter ever makes a JS
+  /// call without setting the IP.
   llvh::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
 #endif
 

@@ -14,6 +14,7 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/static_h.h"
 
 namespace hermes {
 namespace vm {
@@ -408,6 +409,204 @@ class BoundFunction final : public Callable {
       Handle<JSObject> parentHandle);
 
   /// Call the callable with arguments already on the stack.
+  static CallResult<PseudoHandle<>> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime &runtime);
+};
+
+/// A pointer to native function.
+typedef SHLegacyValue (*SHLegacyFunctionPtr)(SHRuntime *shr);
+
+/// This class represents a native function callable from JavaScript with
+/// context and the JavaScript arguments.
+class SHLegacyFunction : public Callable {
+ protected:
+  /// Pointer to the actual code.
+  const SHLegacyFunctionPtr functionPtr_;
+
+#ifdef HERMESVM_PROFILER_NATIVECALL
+  /// How many times the function was called.
+  uint32_t callCount_{0};
+  /// Total duration of all calls.
+  uint64_t callDuration_{0};
+#endif
+
+ public:
+  using Super = Callable;
+  static const CallableVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::SHLegacyFunctionKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::SHLegacyFunctionKind;
+  }
+
+  SHLegacyFunctionPtr getFunctionPtr() const {
+    return functionPtr_;
+  }
+
+#ifdef HERMESVM_PROFILER_NATIVECALL
+  uint32_t getCallCount() const {
+    return callCount_;
+  }
+  uint32_t getCallDuration() const {
+    return callDuration_;
+  }
+#else
+  uint32_t getCallCount() const {
+    return 0;
+  }
+  uint32_t getCallDuration() const {
+    return 0;
+  }
+#endif
+
+  /// This is a lightweight and unsafe wrapper intended to be used only by the
+  /// interpreter. Its purpose is to avoid needlessly exposing the private
+  /// fields.
+  static CallResult<PseudoHandle<>> _nativeCall(
+      SHLegacyFunction *self,
+      Runtime &runtime);
+
+  /// Call originating from LegacyJS.
+  static SHLegacyValue _legacyCall(SHRuntime *shr, SHLegacyFunction *self) {
+    return self->functionPtr_(shr);
+  }
+
+  /// Create an instance of SHLegacyFunction.
+  /// \param parentHandle object to use as [[Prototype]].
+  /// \param context the context to be passed to the function
+  /// \param functionPtr the native function
+  /// \param name the name property of the function.
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object (defaults to zero).
+  static Handle<SHLegacyFunction> create(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      SHLegacyFunctionPtr functionPtr,
+      SymbolID name,
+      unsigned paramCount,
+      Handle<JSObject> prototypeObjectHandle,
+      unsigned additionalSlotCount = 0);
+
+  /// Create an instance of SHLegacyFunction.
+  /// \param parentHandle object to use as [[Prototype]].
+  /// \param parentEnvHandle the parent environment
+  /// \param context the context to be passed to the function
+  /// \param functionPtr the native function
+  /// \param name the name property of the function.
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object (defaults to zero).
+  static Handle<SHLegacyFunction> create(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> parentEnvHandle,
+      SHLegacyFunctionPtr functionPtr,
+      SymbolID name,
+      unsigned paramCount,
+      Handle<JSObject> prototypeObjectHandle,
+      unsigned additionalSlotCount = 0);
+
+  /// Create an instance of SHLegacyFunction.
+  /// The prototype property will be null.
+  /// \param parentHandle object to use as [[Prototype]].
+  /// \param context the context to be passed to the function
+  /// \param functionPtr the native function
+  /// \param name the name property of the function.
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object (defaults to zero).
+  static Handle<SHLegacyFunction> createWithoutPrototype(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      SHLegacyFunctionPtr functionPtr,
+      SymbolID name,
+      unsigned paramCount,
+      unsigned additionalSlotCount = 0) {
+    return create(
+        runtime,
+        parentHandle,
+        functionPtr,
+        name,
+        paramCount,
+        runtime.makeNullHandle<JSObject>(),
+        additionalSlotCount);
+  }
+
+  /// Create an instance of SHLegacyFunction
+  /// The [[Prototype]] will be Function.prototype.
+  /// The prototype property wil be null;
+  /// \param context the context to be passed to the function
+  /// \param functionPtr the native function
+  /// \param name the name property of the function.
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object (defaults to zero).
+  static Handle<SHLegacyFunction> createWithoutPrototype(
+      Runtime &runtime,
+      SHLegacyFunctionPtr functionPtr,
+      SymbolID name,
+      unsigned paramCount,
+      unsigned additionalSlotCount = 0) {
+    return createWithoutPrototype(
+        runtime,
+        Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        functionPtr,
+        name,
+        paramCount,
+        additionalSlotCount);
+  }
+
+  /// \return the value in an additional slot.
+  /// \param index must be less than the \c additionalSlotCount passed to
+  /// the create method.
+  static SmallHermesValue getAdditionalSlotValue(
+      SHLegacyFunction *self,
+      Runtime &runtime,
+      unsigned index) {
+    return JSObject::getInternalProperty(
+        self, runtime, numOverlapSlots<SHLegacyFunction>() + index);
+  }
+
+  /// Set the value in an additional slot.
+  /// \param index must be less than the \c additionalSlotCount passed to
+  /// the create method.
+  static void setAdditionalSlotValue(
+      SHLegacyFunction *self,
+      Runtime &runtime,
+      unsigned index,
+      SmallHermesValue value) {
+    JSObject::setInternalProperty(
+        self, runtime, numOverlapSlots<SHLegacyFunction>() + index, value);
+  }
+
+ public:
+  SHLegacyFunction(
+      Runtime &runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      SHLegacyFunctionPtr functionPtr)
+      : Callable(runtime, *parent, *clazz), functionPtr_(functionPtr) {}
+  SHLegacyFunction(
+      Runtime &runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      SHLegacyFunctionPtr functionPtr)
+      : Callable(runtime, *parent, *clazz, environment),
+        functionPtr_(functionPtr) {}
+
+ protected:
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+  static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
+#endif
+
+  /// Call the native function with arguments already on the stack.
   static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime &runtime);

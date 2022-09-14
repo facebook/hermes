@@ -6,6 +6,8 @@
  */
 
 #include "StaticH-internal.h"
+#include "hermes/VM/Callable.h"
+#include "hermes/VM/Interpreter.h"
 #include "hermes/VM/StackFrame-inline.h"
 
 using namespace hermes;
@@ -146,4 +148,130 @@ extern "C" void _sh_throw(SHRuntime *shr, SHLegacyValue value) {
   Runtime &runtime = getRuntime(shr);
   runtime.setThrownValue(HermesValue::fromRaw(value.raw));
   _sh_throw_current(shr);
+}
+
+static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
+  if (vmisa<SHLegacyFunction>(*callTarget)) {
+    return SHLegacyFunction::_legacyCall(
+        getSHRuntime(runtime), vmcast<SHLegacyFunction>(*callTarget));
+  }
+
+  // FIXME: check for register stack overflow.
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  if (vmisa<NativeFunction>(*callTarget)) {
+    auto *native = vmcast<NativeFunction>(*callTarget);
+    res = NativeFunction::_nativeCall(native, runtime);
+  } else if (vmisa<BoundFunction>(*callTarget)) {
+    auto *bound = vmcast<BoundFunction>(*callTarget);
+    res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+  } else if (vmisa<Callable>(*callTarget)) {
+    auto callable = Handle<Callable>::vmcast(callTarget);
+    res = callable->call(callable, runtime);
+  } else {
+    res = runtime.raiseTypeErrorForValue(
+        Handle<>(callTarget), " is not a function");
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(getSHRuntime(runtime));
+  }
+
+  return res->getHermesValue();
+}
+
+extern "C" SHLegacyValue
+_sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr newFrame(runtime.getStackPointer());
+  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+  newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
+}
+
+extern "C" SHLegacyValue
+_sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr newFrame(runtime.getStackPointer());
+  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+  // Must be initialized by the caller:
+  // newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
+}
+
+extern "C" void _sh_ljs_create_environment(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *result,
+    uint32_t size) {
+  Runtime &runtime = getRuntime(shr);
+  auto framePtr = StackFramePtr(toPHV(frame));
+
+  auto *parentEnv = framePtr.getCalleeClosureUnsafe()->getEnvironment(runtime);
+  // We are not allowed to store null object pointers in locals, so we convert
+  // a null pointer to JS Null.
+  result->raw = parentEnv
+      ? HermesValue::encodeObjectValueUnsafe(parentEnv).getRaw()
+      : HermesValue::encodeNullValue().getRaw();
+
+  CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Environment::create(
+        runtime,
+        _sh_ljs_is_null(*result) ? runtime.makeNullHandle<Environment>()
+                                 : Handle<Environment>::vmcast(toPHV(result)),
+        size);
+  }
+  if (res == ExecutionStatus::EXCEPTION) {
+    _sh_throw_current(shr);
+  }
+  //#ifdef HERMES_ENABLE_DEBUGGER
+  //  framePtr.getDebugEnvironmentRef() = *res;
+  //#endif
+  result->raw = res->getRaw();
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_closure(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    SHSymbolID name,
+    uint32_t paramCount) {
+  Runtime &runtime = getRuntime(shr);
+  GCScopeMarkerRAII marker{runtime};
+
+  // TODO: make this lazy!
+  // Create empty object for prototype.
+  auto prototypeParent = /*vmisa<JSGeneratorFunction>(*jsFun)
+                         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
+                         :*/
+      Handle<JSObject>::vmcast(&runtime.objectPrototype);
+
+  // According to ES12 26.7.4, AsyncFunction instances do not have a
+  // 'prototype' property, hence we need to set an null handle here.
+  auto prototypeObjectHandle =
+      /*vmisa<JSAsyncFunction>(*jsFun)
+      ? Runtime::makeNullHandle<JSObject>()
+      :*/
+      runtime.makeHandle(JSObject::create(runtime, prototypeParent));
+
+  SHLegacyValue res =
+      SHLegacyFunction::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          _sh_ljs_is_null(*env) ? runtime.makeNullHandle<Environment>()
+                                : Handle<Environment>::vmcast(toPHV(env)),
+          func,
+          SymbolID::unsafeCreate(name),
+          paramCount,
+          prototypeObjectHandle,
+          0)
+          .getHermesValue();
+  return res;
 }

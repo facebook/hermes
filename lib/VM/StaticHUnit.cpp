@@ -7,6 +7,7 @@
 
 #include "StaticH-internal.h"
 
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/JSObject.h"
 
 using namespace hermes;
@@ -31,14 +32,39 @@ static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit);
 static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit);
 
 extern "C" bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...) {
+  Runtime &runtime = getRuntime(shr);
+  GCScope gcScope{runtime};
+
+  SHLocals locals;
+  SHLegacyValue *frame = runtime.getCurrentFrame().ptr();
+  SHLegacyValue *savedSP = _sh_push_locals(shr, &locals, 0);
+  locals.count = 1;
+  SHJmpBuf jbuf;
+  bool success = true;
+
   va_list ap;
   va_start(ap, count);
-  for (uint32_t i = 0; i != count; ++i) {
-    SHUnit *unit = va_arg(ap, SHUnit *);
-    (void)_sh_unit_init(shr, unit);
+
+  if (_sh_try(shr, &jbuf) == 0) {
+    for (uint32_t i = 0; i < count; ++i) {
+      SHUnit *unit = va_arg(ap, SHUnit *);
+      (void)_sh_unit_init(shr, unit);
+    }
+
+    _sh_end_try(shr, jbuf.prev);
+  } else {
+    SHLegacyValue exc = _sh_catch(shr, &locals, frame, savedSP - frame);
+    // Make sure stdout catches up to stderr.
+    llvh::outs().flush();
+    runtime.printException(
+        llvh::errs(), runtime.makeHandle(HermesValue::fromRaw(exc.raw)));
+    success = false;
   }
+
   va_end(ap);
-  return true;
+
+  _sh_pop_locals(shr, &locals, savedSP);
+  return success;
 }
 
 extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
@@ -78,7 +104,39 @@ extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
 }
 
 static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
-  return _sh_ljs_undefined();
+  Runtime &runtime = getRuntime(shr);
+  struct {
+    SHLocals head;
+    SHLegacyValue env;
+  } locals;
+  // NOTE: sh_unit_run() is not a function call, it executes in an existing
+  // frame.
+  SHLegacyValue *savedSP = _sh_push_locals(
+      shr, &locals.head, hbc::StackFrameLayout::callerOutgoingRegisters(0));
+  locals.head.count = 1;
+  locals.env = _sh_ljs_null();
+
+  SHLegacyValue closure = _sh_ljs_create_closure(
+      shr,
+      &locals.env,
+      unit->unit_main,
+      Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
+      0);
+
+  (void)StackFramePtr::initFrame(
+      runtime.getStackPointer(),
+      runtime.getCurrentFrame(),
+      nullptr,
+      nullptr,
+      0,
+      HermesValue::fromRaw(closure.raw),
+      HermesValue::encodeUndefinedValue());
+
+  SHLegacyValue res = SHLegacyFunction::_legacyCall(
+      shr, vmcast<SHLegacyFunction>(HermesValue::fromRaw(closure.raw)));
+
+  _sh_pop_locals(shr, &locals.head, savedSP);
+  return res;
 }
 
 static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit) {
