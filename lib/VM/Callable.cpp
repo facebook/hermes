@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Callable.h"
 
+#include "StaticH-internal.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSDataView.h"
@@ -24,6 +25,7 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/ArrayRef.h"
 
@@ -812,6 +814,176 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
   // Pass `nullptr` as the IP because this function is never called
   // from the interpreter, which should use `_boundCall` directly.
   return _boundCall(vmcast<BoundFunction>(selfHandle.get()), nullptr, runtime);
+}
+
+//===----------------------------------------------------------------------===//
+// class SHLegacyFunction
+
+const CallableVTable SHLegacyFunction::vt{
+    {
+        VTable(
+            CellKind::SHLegacyFunctionKind,
+            cellSize<SHLegacyFunction>(),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata {
+              HeapSnapshot::NodeType::Closure,
+                  SHLegacyFunction::_snapshotNameImpl,
+                  SHLegacyFunction::_snapshotAddEdgesImpl, nullptr, nullptr
+            }
+#endif
+            ),
+        SHLegacyFunction::_getOwnIndexedRangeImpl,
+        SHLegacyFunction::_haveOwnIndexedImpl,
+        SHLegacyFunction::_getOwnIndexedPropertyFlagsImpl,
+        SHLegacyFunction::_getOwnIndexedImpl,
+        SHLegacyFunction::_setOwnIndexedImpl,
+        SHLegacyFunction::_deleteOwnIndexedImpl,
+        SHLegacyFunction::_checkAllOwnIndexedImpl,
+    },
+    SHLegacyFunction::_newObjectImpl,
+    SHLegacyFunction::_callImpl};
+
+void SHLegacyFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<SHLegacyFunction>());
+  CallableBuildMeta(cell, mb);
+  mb.setVTable(&SHLegacyFunction::vt);
+}
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+std::string SHLegacyFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
+  return "SHLegacyFunction";
+}
+#endif
+
+Handle<SHLegacyFunction> SHLegacyFunction::create(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    SHLegacyFunctionPtr functionPtr,
+    SymbolID name,
+    unsigned paramCount,
+    Handle<JSObject> prototypeObjectHandle,
+    unsigned additionalSlotCount) {
+  size_t reservedSlots =
+      numOverlapSlots<SHLegacyFunction>() + additionalSlotCount;
+  auto *cell = runtime.makeAFixed<SHLegacyFunction>(
+      runtime,
+      parentHandle,
+      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
+      functionPtr);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  // Allocate a propStorage if the number of additional slots requires it.
+  runtime.ignoreAllocationFailure(
+      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
+
+  auto st = defineNameLengthAndPrototype(
+      selfHandle,
+      runtime,
+      name,
+      paramCount,
+      prototypeObjectHandle,
+      Callable::WritablePrototype::Yes,
+      false);
+  (void)st;
+  assert(
+      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
+
+  return selfHandle;
+}
+
+Handle<SHLegacyFunction> SHLegacyFunction::create(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> parentEnvHandle,
+    SHLegacyFunctionPtr functionPtr,
+    SymbolID name,
+    unsigned paramCount,
+    Handle<JSObject> prototypeObjectHandle,
+    unsigned additionalSlotCount) {
+  auto *cell = runtime.makeAFixed<SHLegacyFunction>(
+      runtime,
+      parentHandle,
+      runtime.getHiddenClassForPrototype(
+          *parentHandle,
+          numOverlapSlots<SHLegacyFunction>() + additionalSlotCount),
+      parentEnvHandle,
+      functionPtr);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  auto st = defineNameLengthAndPrototype(
+      selfHandle,
+      runtime,
+      name,
+      paramCount,
+      prototypeObjectHandle,
+      Callable::WritablePrototype::Yes,
+      false);
+  (void)st;
+  assert(
+      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
+
+  return selfHandle;
+}
+
+/// This is a lightweight and unsafe wrapper intended to be used only by the
+/// interpreter. Its purpose is to avoid needlessly exposing the private
+/// fields.
+CallResult<PseudoHandle<>> SHLegacyFunction::_nativeCall(
+    SHLegacyFunction *self,
+    Runtime &runtime) {
+  // ScopedNativeDepthTracker depthTracker{runtime};
+  // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+  //   return runtime.raiseStackOverflow(
+  //       Runtime::StackOverflowKind::NativeStack);
+  // }
+
+  StackFramePtr currentFrame = runtime.getCurrentFrame();
+  StackFramePtr newFrame{runtime.getStackPointer()};
+  newFrame.getSavedIPRef() =
+      HermesValue::encodeNativePointer(runtime.getCurrentIP());
+
+  SHJmpBuf jBuf;
+  SHLocals *locals = runtime.shLocals;
+  if (_sh_try(getSHRuntime(runtime), &jBuf) == 0) {
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    auto t1 = HERMESVM_RDTSC();
+#endif
+    SHLegacyValue res = self->functionPtr_(getSHRuntime(runtime));
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    self->callDuration_ = HERMESVM_RDTSC() - t1;
+    ++self->callCount_;
+#endif
+    _sh_end_try(getSHRuntime(runtime), jBuf.prev);
+
+    return createPseudoHandle(HermesValue::fromRaw(res.raw));
+  } else {
+    SHLegacyValue exc = _sh_catch(
+        getSHRuntime(runtime),
+        locals,
+        currentFrame.ptr(),
+        newFrame.ptr() - currentFrame.ptr());
+    runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
+    return ExecutionStatus::EXCEPTION;
+  }
+}
+
+CallResult<PseudoHandle<>> SHLegacyFunction::_callImpl(
+    Handle<Callable> selfHandle,
+    Runtime &runtime) {
+  // SHLJS code needs to run in the context of an existing GCScope:
+  // - When it is invoked from the interpreter, it uses the interpreter's
+  // GCScope.
+  // - When invoked directly from native as root, the caller must ensure a
+  // GCScope.
+  // - When invoked from an unknown context using this virtual call, we need
+  // a GCScope to ensure safety.
+  GCScope gcScope{runtime};
+  return _nativeCall(vmcast<SHLegacyFunction>(selfHandle.get()), runtime);
 }
 
 //===----------------------------------------------------------------------===//

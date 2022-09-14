@@ -263,11 +263,18 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
 CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     Runtime &runtime,
     PinnedHermesValue *callTarget) {
-  if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
+  if (vmisa<SHLegacyFunction>(*callTarget)) {
+    auto *legacy = vmcast<SHLegacyFunction>(*callTarget);
+    ++NumNativeFunctionCalls;
+    // Call the native function directly
+    return SHLegacyFunction::_nativeCall(legacy, runtime);
+  } else if (vmisa<NativeFunction>(*callTarget)) {
+    auto *native = vmcast<NativeFunction>(*callTarget);
     ++NumNativeFunctionCalls;
     // Call the native function directly
     return NativeFunction::_nativeCall(native, runtime);
-  } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
+  } else if (vmisa<BoundFunction>(*callTarget)) {
+    auto *bound = vmcast<BoundFunction>(*callTarget);
     ++NumBoundFunctionCalls;
     // Call the bound function.
     return BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);

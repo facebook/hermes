@@ -101,6 +101,7 @@
 #define HERMES_SH_LEGACY_VALUE_H
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -186,6 +187,9 @@ static inline SHLegacyValue _sh_ljs_encode_raw_etag(
     enum HVETag etag) {
   return (SHLegacyValue){val | ((uint64_t)etag << (kHV_NumDataBits - 1))};
 }
+static inline enum HVETag _sh_ljs_get_etag(SHLegacyValue v) {
+  return (enum HVETag)((int64_t)v.raw >> (kHV_NumDataBits - 1));
+}
 
 static inline SHLegacyValue _sh_ljs_double(double v) {
   union {
@@ -198,6 +202,13 @@ static inline SHLegacyValue _sh_ljs_double(double v) {
 
 static inline SHLegacyValue _sh_ljs_undefined() {
   return _sh_ljs_encode_raw_etag(0, HVETag_Undefined);
+}
+static inline SHLegacyValue _sh_ljs_null() {
+  return _sh_ljs_encode_raw_etag(0, HVETag_Null);
+}
+
+static inline bool _sh_ljs_is_null(SHLegacyValue v) {
+  return _sh_ljs_get_etag(v) == HVETag_Null;
 }
 
 #ifdef __cplusplus
