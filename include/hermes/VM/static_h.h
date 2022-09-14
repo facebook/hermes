@@ -187,6 +187,31 @@ SHLegacyValue _sh_ljs_create_closure(
     SHSymbolID name,
     uint32_t paramCount);
 
+SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
+void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
+
+double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
+
+bool _sh_ljs_less_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+bool _sh_ljs_greater_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+bool _sh_ljs_less_equal_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+bool _sh_ljs_greater_equal_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+
+SHLegacyValue
+_sh_ljs_add_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
 #ifdef __cplusplus
 }
 #endif

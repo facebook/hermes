@@ -8,6 +8,7 @@
 #include "StaticH-internal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JSObject.h"
 #include "hermes/VM/StackFrame-inline.h"
 
 using namespace hermes;
@@ -274,4 +275,48 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
           0)
           .getHermesValue();
   return res;
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
+  return getRuntime(shr).global_;
+}
+
+extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
+  Runtime &runtime = getRuntime(shr);
+  {
+    GCScopeMarkerRAII mark{runtime};
+
+    DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.configurable = 0;
+    // Do not overwrite existing globals with undefined.
+    dpf.setValue = 0;
+
+    auto res = JSObject::defineOwnProperty(
+        runtime.getGlobal(),
+        runtime,
+        SymbolID::unsafeCreate(name),
+        dpf,
+        Runtime::getUndefinedValue(),
+        PropOpFlags().plusThrowOnError());
+    if (res != ExecutionStatus::EXCEPTION)
+      return;
+    assert(
+        !runtime.getGlobal()->isProxyObject() &&
+        "global can't be a proxy object");
+    // If the property already exists, this should be a noop.
+    // Instead of incurring the cost to check every time, do it
+    // only if an exception is thrown, and swallow the exception
+    // if it exists, since we didn't want to make the call,
+    // anyway.  This most likely means the property is
+    // non-configurable.
+    NamedPropertyDescriptor desc;
+    auto res1 = JSObject::getOwnNamedDescriptor(
+        runtime.getGlobal(), runtime, SymbolID::unsafeCreate(name), desc);
+    if (res1) {
+      runtime.clearThrownValue();
+      return;
+    }
+    // fall through for exception
+  }
+  _sh_throw_current(shr);
 }

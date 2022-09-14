@@ -49,6 +49,14 @@ static SHLegacyValue sum(SHRuntime *shr) {
   locals.to = _sh_ljs_param(frame, 2);
   locals.sum = _sh_ljs_double(0);
 
+  if (!_sh_ljs_less_equal_rjs(shr, &locals.from, &locals.to))
+    goto L1;
+L2:
+  locals.sum = _sh_ljs_add_rjs(shr, &locals.sum, &locals.from);
+  locals.from = _sh_ljs_double(_sh_ljs_to_double_rjs(shr, &locals.from) + 1);
+  if (_sh_ljs_less_equal_rjs(shr, &locals.from, &locals.to))
+    goto L2;
+L1:
   _sh_leave(shr, &locals.head, frame);
   return locals.sum;
 }
@@ -65,8 +73,10 @@ static SHLegacyValue unit_main(SHRuntime *shr) {
   locals.t2 = _sh_ljs_undefined();
   locals.t3 = _sh_ljs_undefined();
 
+  _sh_ljs_declare_global_var(shr, s_symbols[0]);
   _sh_ljs_create_environment(shr, frame, &locals.t0, 0);
   locals.t1 = _sh_ljs_create_closure(shr, &locals.t0, sum, s_symbols[0], 2);
+  locals.t0 = _sh_ljs_get_global_object(shr);
   frame[5] = locals.t1;
   frame[4] = _sh_ljs_undefined(); // this
   frame[3] = _sh_ljs_double(1);
