@@ -71,6 +71,7 @@ set(source_files
   Metadata.cpp
   StaticH.cpp
   StaticH-internal.h
+  StaticHUnit.cpp
 
   detail/IdentifierHashTable.cpp
 
