@@ -170,6 +170,11 @@ NATIVE_FUNCTION(hermesInternalUseEngineQueue)
 NATIVE_FUNCTION(hermesInternalEnqueueJob)
 NATIVE_FUNCTION(hermesInternalDrainJobs)
 
+#ifdef HERMES_ENABLE_FUZZILLI
+NATIVE_FUNCTION(hermesInternalFuzzilli)
+#endif
+
+
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
 NATIVE_FUNCTION(shouldPauseOnThrow)
