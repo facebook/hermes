@@ -10,6 +10,7 @@
 #endif
 
 ROOT_SECTION(Registers)
+ROOT_SECTION(SHUnits)
 ROOT_SECTION(RuntimeInstanceVars)
 ROOT_SECTION(RuntimeModules)
 ROOT_SECTION(CharStrings)

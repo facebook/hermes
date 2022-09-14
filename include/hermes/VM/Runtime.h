@@ -53,6 +53,8 @@
 #include <type_traits>
 #include <vector>
 
+typedef struct SHUnit SHUnit;
+
 namespace hermes {
 // Forward declaration.
 class JSONEmitter;
@@ -758,6 +760,9 @@ class Runtime : public PointerBase,
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
+
+  /// [SH] units registered with this runtime.
+  std::vector<SHUnit *> shUnits{};
 
   /// Raw pointers to prototypes.
   JSObject *objectPrototypeRawPtr{};
