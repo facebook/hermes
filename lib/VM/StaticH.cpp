@@ -320,3 +320,309 @@ extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
   }
   _sh_throw_current(shr);
 }
+
+/// Calculate the default property access flags depending on the mode of the
+/// \c CodeBlock.
+#define DEFAULT_PROP_OP_FLAGS(strictMode) \
+  (strictMode ? PropOpFlags().plusThrowOnError() : PropOpFlags())
+
+template <bool tryProp, bool strictMode>
+static inline void putById_RJS(
+    Runtime &runtime,
+    const PinnedHermesValue *target,
+    SymbolID symID,
+    const PinnedHermesValue *value,
+    PropertyCacheEntry *cacheEntry) {
+  //++NumPutById;
+  if (LLVM_LIKELY(target->isObject())) {
+    SmallHermesValue shv = SmallHermesValue::encodeHermesValue(*value, runtime);
+    auto *obj = vmcast<JSObject>(*target);
+
+#ifdef HERMESVM_PROFILER_BB
+    {
+      HERMES_SLOW_ASSERT(
+          gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+          "unaccounted handles were created");
+      auto shvHandle = runtime.makeHandle(shv.toHV(runtime));
+      auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
+          cacheEntry->clazz.get(runtime, runtime.getHeap())));
+      CAPTURE_IP(runtime.recordHiddenClass(
+          curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
+      // shv/obj may be invalidated by recordHiddenClass
+      if (shv.isPointer())
+        shv.unsafeUpdatePointer(
+            static_cast<GCCell *>(shvHandle->getPointer()), runtime);
+      obj = vmcast<JSObject>(*target);
+    }
+    gcScope.flushToSmallCount(KEEP_HANDLES);
+#endif
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};
+    // If we have a cache hit, reuse the cached offset and immediately
+    // return the property.
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+      //++NumPutByIdCacheHits;
+      JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+          obj, runtime, cacheEntry->slot, shv);
+      return;
+    }
+    NamedPropertyDescriptor desc;
+    OptValue<bool> hasOwnProp =
+        JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
+    if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
+        !desc.flags.accessor && desc.flags.writable &&
+        !desc.flags.internalSetter) {
+      //++NumPutByIdFastPaths;
+
+      // cacheIdx == 0 indicates no caching so don't update the cache in
+      // those cases.
+      HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+      if (LLVM_LIKELY(!clazz->isDictionary())
+          /* && LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)*/) {
+#ifdef HERMES_SLOW_DEBUG
+        // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
+        //   ++NumPutByIdCacheEvicts;
+#else
+        //(void)NumPutByIdCacheEvicts;
+#endif
+        // Cache the class and property slot.
+        cacheEntry->clazz = clazzPtr;
+        cacheEntry->slot = desc.slot;
+      }
+
+      // This must be valid because an own property was already found.
+      JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
+      return;
+    }
+
+    CallResult<bool> putRes{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+      putRes = JSObject::putNamed_RJS(
+          Handle<JSObject>::vmcast(target),
+          runtime,
+          symID,
+          Handle<>(value),
+          !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist());
+    }
+    if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(getSHRuntime(runtime));
+  } else {
+    //++NumPutByIdTransient;
+    assert(!tryProp && "TryPutById can only be used on the global object");
+    ExecutionStatus retStatus;
+    {
+      GCScopeMarkerRAII marker{runtime};
+      retStatus = Interpreter::putByIdTransient_RJS(
+          runtime, Handle<>(target), symID, Handle<>(value), strictMode);
+    }
+    if (retStatus == ExecutionStatus::EXCEPTION)
+      _sh_throw_current(getSHRuntime(runtime));
+  }
+}
+
+extern "C" void _sh_ljs_put_by_id_loose_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *target,
+    SHSymbolID symID,
+    const SHLegacyValue *value,
+    char *propCacheEntry) {
+  putById_RJS<false, false>(
+      getRuntime(shr),
+      toPHV(target),
+      SymbolID::unsafeCreate(symID),
+      toPHV(value),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+extern "C" void _sh_ljs_put_by_id_strict_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *target,
+    SHSymbolID symID,
+    const SHLegacyValue *value,
+    char *propCacheEntry) {
+  putById_RJS<false, true>(
+      getRuntime(shr),
+      toPHV(target),
+      SymbolID::unsafeCreate(symID),
+      toPHV(value),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+template <bool tryProp>
+static inline HermesValue getById_RJS(
+    Runtime &runtime,
+    const PinnedHermesValue *source,
+    SymbolID symID,
+    PropertyCacheEntry *cacheEntry) {
+  //++NumGetById;
+  // NOTE: it is safe to use OnREG(GetById) here because all instructions
+  // have the same layout: opcode, registers, non-register operands, i.e.
+  // they only differ in the width of the last "identifier" field.
+  if (LLVM_LIKELY(source->isObject())) {
+    auto *obj = vmcast<JSObject>(*source);
+
+#ifdef HERMESVM_PROFILER_BB
+    {
+      HERMES_SLOW_ASSERT(
+          gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+          "unaccounted handles were created");
+      auto objHandle = runtime.makeHandle(obj);
+      auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
+          cacheEntry->clazz.get(runtime, runtime.getHeap())));
+      CAPTURE_IP(runtime.recordHiddenClass(
+          curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
+      // obj may be moved by GC due to recordHiddenClass
+      *obj = vmcast<JSObject>(*source);
+    }
+    gcScope.flushToSmallCount(KEEP_HANDLES);
+#endif
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};
+#ifndef NDEBUG
+    // if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
+    //   ++NumGetByIdDict;
+#else
+    //(void)NumGetByIdDict;
+#endif
+
+    // If we have a cache hit, reuse the cached offset and immediately
+    // return the property.
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+      //++NumGetByIdCacheHits;
+      return JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
+                 obj, runtime, cacheEntry->slot)
+          .unboxToHV(runtime);
+    }
+    NamedPropertyDescriptor desc;
+    OptValue<bool> fastPathResult =
+        JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
+    if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
+        !desc.flags.accessor) {
+      //++NumGetByIdFastPaths;
+
+      // cacheIdx == 0 indicates no caching so don't update the cache in
+      // those cases.
+      HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+      if (LLVM_LIKELY(!clazz->isDictionaryNoCache())
+          /*&& LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)*/) {
+#ifdef HERMES_SLOW_DEBUG
+        // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
+        //   ++NumGetByIdCacheEvicts;
+#else
+        //(void)NumGetByIdCacheEvicts;
+#endif
+        // Cache the class, id and property slot.
+        cacheEntry->clazz = clazzPtr;
+        cacheEntry->slot = desc.slot;
+      }
+
+      assert(
+          !obj->isProxyObject() &&
+          "tryGetOwnNamedDescriptorFast returned true on Proxy");
+      return JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
+          .unboxToHV(runtime);
+    }
+
+    // The cache may also be populated via the prototype of the object.
+    // This value is only reliable if the fast path was a definite
+    // not-found.
+    if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
+        LLVM_LIKELY(!obj->isProxyObject())) {
+      JSObject *parent = obj->getParent(runtime);
+      // TODO: This isLazy check is because a lazy object is reported as
+      // having no properties and therefore cannot contain the property.
+      // This check does not belong here, it should be merged into
+      // tryGetOwnNamedDescriptorFast().
+      if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
+          LLVM_LIKELY(!obj->isLazy())) {
+        //++NumGetByIdProtoHits;
+        // We've already checked that this isn't a Proxy.
+        return JSObject::getNamedSlotValueUnsafe(
+                   parent, runtime, cacheEntry->slot)
+            .unboxToHV(runtime);
+      }
+    }
+
+#ifdef HERMES_SLOW_DEBUG
+    // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
+    // by the IdentifierTable.
+    // JSObject *propObj = JSObject::getNamedDescriptorUnsafe(
+    //    Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc);
+    // if (propObj) {
+    //  if (desc.flags.accessor)
+    //    ++NumGetByIdAccessor;
+    //  else if (propObj != vmcast<JSObject>(O2REG(GetById)))
+    //    ++NumGetByIdProto;
+    //} else {
+    //  ++NumGetByIdNotFound;
+    //}
+#else
+    //(void)NumGetByIdAccessor;
+    //(void)NumGetByIdProto;
+    //(void)NumGetByIdNotFound;
+#endif
+#ifdef HERMES_SLOW_DEBUG
+    // auto *savedClass = true /*cacheIdx != hbc::PROPERTY_CACHING_DISABLED*/
+    //     ? cacheEntry->clazz.get(runtime, runtime.getHeap())
+    //     : nullptr;
+#endif
+    //++NumGetByIdSlow;
+    CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker(runtime);
+      const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
+      resPH = JSObject::getNamed_RJS(
+          Handle<JSObject>::vmcast(source),
+          runtime,
+          symID,
+          !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
+          true /*cacheIdx != hbc::PROPERTY_CACHING_DISABLED*/ ? cacheEntry
+                                                              : nullptr);
+    }
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(getSHRuntime(runtime));
+#ifdef HERMES_SLOW_DEBUG
+      // if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
+      //     cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
+      //   ++NumGetByIdCacheEvicts;
+      // }
+#endif
+    return resPH->get();
+  } else {
+    //++NumGetByIdTransient;
+    assert(!tryProp && "TryGetById can only be used on the global object");
+    /* Slow path. */
+    CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      resPH =
+          Interpreter::getByIdTransient_RJS(runtime, Handle<>(source), symID);
+    }
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(getSHRuntime(runtime));
+    return resPH->get();
+  }
+}
+
+extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    SHSymbolID symID,
+    char *propCacheEntry) {
+  return getById_RJS<true>(
+      getRuntime(shr),
+      toPHV(source),
+      SymbolID::unsafeCreate(symID),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    SHSymbolID symID,
+    char *propCacheEntry) {
+  return getById_RJS<false>(
+      getRuntime(shr),
+      toPHV(source),
+      SymbolID::unsafeCreate(symID),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}

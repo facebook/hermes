@@ -77,11 +77,31 @@ static SHLegacyValue unit_main(SHRuntime *shr) {
   _sh_ljs_create_environment(shr, frame, &locals.t0, 0);
   locals.t1 = _sh_ljs_create_closure(shr, &locals.t0, sum, s_symbols[0], 2);
   locals.t0 = _sh_ljs_get_global_object(shr);
-  frame[5] = locals.t1;
+  _sh_ljs_put_by_id_loose_rjs(
+      shr,
+      &locals.t0,
+      s_symbols[0],
+      &locals.t1,
+      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 0);
+  locals.t2 = _sh_ljs_try_get_by_id_rjs(
+      shr,
+      &locals.t0,
+      s_symbols[1],
+      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 1);
+  locals.t3 = _sh_ljs_get_by_id_rjs(
+      shr,
+      &locals.t0,
+      s_symbols[0],
+      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 0);
+  frame[5] = locals.t3;
   frame[4] = _sh_ljs_undefined(); // this
   frame[3] = _sh_ljs_double(1);
   frame[2] = _sh_ljs_double(100);
   locals.t0 = _sh_ljs_call(shr, frame, 2);
+  frame[5] = locals.t2;
+  frame[4] = _sh_ljs_undefined();
+  frame[3] = locals.t0;
+  locals.t0 = _sh_ljs_call(shr, frame, 1);
 
   _sh_leave(shr, &locals.head, frame);
   return locals.t0;
