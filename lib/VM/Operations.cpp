@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Operations.h"
 
+#include "StaticH-internal.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/BigIntPrimitive.h"
@@ -2272,3 +2273,67 @@ CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
 
 } // namespace vm
 } // namespace hermes
+
+//======= Static Hermes =======
+
+using namespace hermes::vm;
+
+extern "C" double _sh_ljs_to_double_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()))
+    return pn->getNumber();
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toNumber_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return cr->getDouble();
+}
+
+#define SH_COMPARISON_OP(name, call, oper)                              \
+  extern "C" bool name(                                                 \
+      SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) { \
+    auto *pa = toPHV(a);                                                \
+    auto *pb = toPHV(b);                                                \
+    if (LLVM_LIKELY(pa->isNumber() && pb->isNumber()))                  \
+      return pa->getNumber() oper pb->getNumber();                      \
+    Runtime &runtime = getRuntime(shr);                                 \
+    CallResult<bool> cr{false};                                         \
+    {                                                                   \
+      GCScopeMarkerRAII marker{runtime};                                \
+      cr = call(runtime, Handle<>::vmcast(pa), Handle<>::vmcast(pb));   \
+    }                                                                   \
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))                \
+      _sh_throw_current(shr);                                           \
+    return *cr;                                                         \
+  }
+
+SH_COMPARISON_OP(_sh_ljs_less_rjs, lessOp_RJS, <);
+SH_COMPARISON_OP(_sh_ljs_greater_rjs, greaterOp_RJS, >);
+SH_COMPARISON_OP(_sh_ljs_less_equal_rjs, lessEqualOp_RJS, <=);
+SH_COMPARISON_OP(_sh_ljs_greater_equal_rjs, greaterEqualOp_RJS, >=);
+
+/// Perform JS addition with a fastpath for doubles.
+extern "C" SHLegacyValue _sh_ljs_add_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  auto *pa = toPHV(a);
+  auto *pb = toPHV(b);
+  if (LLVM_LIKELY(pa->isNumber() && pb->isNumber()))
+    return HermesValue::encodeDoubleValue(pa->getNumber() + pb->getNumber());
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = addOp_RJS(runtime, Handle<>::vmcast(pa), Handle<>::vmcast(pb));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
