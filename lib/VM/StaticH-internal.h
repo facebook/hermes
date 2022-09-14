@@ -8,10 +8,17 @@
 #ifndef HERMES_VM_STATICH_INTERNAL_H
 #define HERMES_VM_STATICH_INTERNAL_H
 
-#include "hermes/VM/HermesValue.h"
+#include "hermes/VM/Runtime.h"
 #include "hermes/VM/static_h.h"
 
 namespace hermes::vm {
+
+inline Runtime &getRuntime(SHRuntime *shr) {
+  return *((Runtime *)(void *)shr);
+}
+inline SHRuntime *getSHRuntime(Runtime &runtime) {
+  return (SHRuntime *)(void *)&runtime;
+}
 
 inline PinnedHermesValue *toPHV(SHLegacyValue *shv) {
   return static_cast<PinnedHermesValue *>(shv);
