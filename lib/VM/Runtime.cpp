@@ -461,6 +461,16 @@ void Runtime::markRoots(
       acceptor.accept(*p);
     acceptor.endRootSection();
   }
+  {
+    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SHLocals);
+    acceptor.beginRootSection(RootAcceptor::Section::SHLocals);
+    for (auto *locals = shLocals; locals; locals = locals->prev) {
+      for (auto *p = locals->locals, *e = p + locals->count; p != e; ++p) {
+        acceptor.accept(*toPHV(p));
+      }
+    }
+    acceptor.endRootSection();
+  }
 
   {
     MarkRootsPhaseTimer timer(

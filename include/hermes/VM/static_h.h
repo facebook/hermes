@@ -10,6 +10,7 @@
 
 #include "hermes/VM/sh_legacy_value.h"
 
+#include <setjmp.h>
 #include <stdbool.h>
 
 #ifndef __cplusplus
@@ -83,6 +84,17 @@ typedef struct SHUnit {
 #define SH_PROPERTY_CACHE_ENTRY_SIZE 16
 #endif
 
+typedef struct SHLocals {
+  struct SHLocals *prev;
+  unsigned count;
+  SHLegacyValue locals[0];
+} SHLocals;
+
+typedef struct SHJmpBuf {
+  struct SHJmpBuf *prev;
+  jmp_buf buf;
+} SHJmpBuf;
+
 /// Create a runtime instance.
 SHRuntime *_sh_init(void);
 /// Destroy a runtime instance created by \c _sh_init();
@@ -115,6 +127,37 @@ void _sh_cache_template_object(
     SHUnit *unit,
     uint32_t templateObjID,
     SHLegacyValue templateObj);
+
+/// Add the locals to the gc list, allocate register stack, return a pointer to
+/// the frame.
+SHLegacyValue *_sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
+void _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame);
+
+/// Add a locals struct to the root stack, allocate the requested number of
+/// registers and return the previous register stack pointer.
+SHLegacyValue *
+_sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
+/// Pop the locals (which must be current), restore the register stack.
+void _sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP);
+
+/// Index 0 loads "this", 1 the first param, etc.
+SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index);
+
+#define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
+void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf);
+void _sh_end_try(SHRuntime *shr, SHJmpBuf *prev);
+
+/// \param frame the value that should be set to the current frame
+///     (Runtime::currentFrame_).
+/// \param stackSize <tt>frame + stackSize</tt> will be the new value of the
+///     register stack pointer.
+SHLegacyValue _sh_catch(
+    SHRuntime *shr,
+    SHLocals *locals,
+    SHLegacyValue *frame,
+    uint32_t stackSize);
+void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
+void _sh_throw(SHRuntime *shr, SHLegacyValue value) __attribute__((noreturn));
 
 #ifdef __cplusplus
 }
