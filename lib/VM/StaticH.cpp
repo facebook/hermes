@@ -238,6 +238,46 @@ extern "C" void _sh_ljs_create_environment(
   result->raw = res->getRaw();
 }
 
+extern "C" SHLegacyValue
+_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level) {
+  Runtime &runtime = getRuntime(shr);
+  Environment *curEnv = StackFramePtr(toPHV(frame))
+                            .getCalleeClosureUnsafe()
+                            ->getEnvironment(runtime);
+  while (level--) {
+    assert(curEnv && "invalid environment relative level");
+    curEnv = curEnv->getParentEnvironment(runtime);
+  }
+
+  return HermesValue::encodeObjectValue(curEnv);
+}
+
+extern "C" SHLegacyValue _sh_ljs_load_from_env(
+    SHLegacyValue env,
+    uint32_t index) {
+  return vmcast<Environment>(HermesValue::fromRaw(env.raw))->slot(index);
+}
+
+extern "C" void _sh_ljs_store_to_env(
+    SHRuntime *shr,
+    SHLegacyValue env,
+    SHLegacyValue val,
+    uint32_t index) {
+  vmcast<Environment>(HermesValue::fromRaw(env.raw))
+      ->slot(index)
+      .set(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
+}
+
+extern "C" void _sh_ljs_store_np_to_env(
+    SHRuntime *shr,
+    SHLegacyValue env,
+    SHLegacyValue val,
+    uint32_t index) {
+  vmcast<Environment>(HermesValue::fromRaw(env.raw))
+      ->slot(index)
+      .setNonPtr(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
+}
+
 extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,

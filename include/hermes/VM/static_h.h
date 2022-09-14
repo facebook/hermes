@@ -179,6 +179,30 @@ void _sh_ljs_create_environment(
     SHLegacyValue *result,
     uint32_t size);
 
+/// Get the enclosing LJS environment, \p level levels up, where 0 represents
+/// the environment of the current function.
+/// TODO: implement a "raw" version of this function returning a raw pointer,
+///       as well as raw version of the other env-related functions, as soon
+///       as we have the ability to mark unencoded pointers.
+SHLegacyValue
+_sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level);
+
+SHLegacyValue _sh_ljs_load_from_env(SHLegacyValue env, uint32_t index);
+
+void _sh_ljs_store_to_env(
+    SHRuntime *shr,
+    SHLegacyValue env,
+    SHLegacyValue val,
+    uint32_t index);
+
+/// Same as _sh_ljs_store_to_env(), but \p value is known to not be a pointer
+/// (though the old value being overwritten still might be).
+void _sh_ljs_store_np_to_env(
+    SHRuntime *shr,
+    SHLegacyValue env,
+    SHLegacyValue val,
+    uint32_t index);
+
 /// \param env  Should be JSNull if there is no environment.
 SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
