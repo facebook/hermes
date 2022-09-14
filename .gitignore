@@ -33,3 +33,5 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 .vscode
 
 .git/
+.idea/
+cmake-build*/
