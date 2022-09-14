@@ -36,8 +36,37 @@ static SHUnit s_this_unit = {
     .unit_name = "sh_api_use",
 };
 
+static SHLegacyValue sum(SHRuntime *shr) {
+  struct {
+    SHLocals head;
+    SHLegacyValue from;
+    SHLegacyValue to;
+    SHLegacyValue sum;
+  } locals;
+  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 0);
+  locals.head.count = 3;
+  locals.from = _sh_ljs_param(frame, 1);
+  locals.to = _sh_ljs_param(frame, 2);
+  locals.sum = _sh_ljs_double(0);
+
+  _sh_leave(shr, &locals.head, frame);
+  return locals.sum;
+}
+
 static SHLegacyValue unit_main(SHRuntime *shr) {
-  return _sh_ljs_undefined();
+  struct {
+    SHLocals head;
+    SHLegacyValue t0, t1, t2, t3;
+  } locals;
+  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 11);
+  locals.head.count = 4;
+  locals.t0 = _sh_ljs_undefined();
+  locals.t1 = _sh_ljs_undefined();
+  locals.t2 = _sh_ljs_undefined();
+  locals.t3 = _sh_ljs_undefined();
+
+  _sh_leave(shr, &locals.head, frame);
+  return locals.t0;
 }
 
 int main(int argc, char **argv) {

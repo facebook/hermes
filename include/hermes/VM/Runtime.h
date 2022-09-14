@@ -53,6 +53,8 @@
 #include <type_traits>
 #include <vector>
 
+typedef struct SHJmpBuf SHJmpBuf;
+typedef struct SHLocals SHLocals;
 typedef struct SHUnit SHUnit;
 
 namespace hermes {
@@ -500,13 +502,8 @@ class Runtime : public PointerBase,
     return currentFrame_;
   }
 
-  /// Set the current frame pointer to the current top of the stack and return
-  /// it.
-  /// \param topFrame a frame constructed at the top of stack. It must equal
-  ///   stackPointer_, but it is more efficient to pass it in if it already
-  ///   is in a register. It also provides some additional error checking in
-  ///   debug builds, ensuring that the stack hasn't changed unexpectedly.
-  inline void setCurrentFrameToTopOfStack(StackFramePtr topFrame);
+  /// Set the current frame pointer to the specified value.
+  inline void setCurrentFrame(StackFramePtr frame);
 
   /// Set the current frame pointer to the current top of the stack and return
   /// it.
@@ -760,6 +757,12 @@ class Runtime : public PointerBase,
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
+
+  /// [SH] exception handler.
+  SHJmpBuf *shCurJmpBuf{};
+
+  /// [SH] head of locals list.
+  SHLocals *shLocals{};
 
   /// [SH] units registered with this runtime.
   std::vector<SHUnit *> shUnits{};
@@ -1972,11 +1975,8 @@ inline void Runtime::popStack(uint32_t count) {
   stackPointer_ += count;
 }
 
-inline void Runtime::setCurrentFrameToTopOfStack(StackFramePtr topFrame) {
-  assert(
-      topFrame.ptr() == stackPointer_ &&
-      "topFrame must equal the top of stack");
-  currentFrame_ = topFrame;
+inline void Runtime::setCurrentFrame(StackFramePtr frame) {
+  currentFrame_ = frame;
 }
 
 /// Set the current frame pointer to the current top of the stack and return
