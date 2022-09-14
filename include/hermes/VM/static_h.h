@@ -190,6 +190,30 @@ SHLegacyValue _sh_ljs_create_closure(
 SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
 void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
 
+void _sh_ljs_put_by_id_loose_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *target,
+    SHSymbolID symID,
+    const SHLegacyValue *value,
+    char *propCacheEntry);
+void _sh_ljs_put_by_id_strict_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *target,
+    SHSymbolID symID,
+    const SHLegacyValue *value,
+    char *propCacheEntry);
+
+SHLegacyValue _sh_ljs_try_get_by_id_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    SHSymbolID symID,
+    char *propCacheEntry);
+SHLegacyValue _sh_ljs_get_by_id_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    SHSymbolID symID,
+    char *propCacheEntry);
+
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 
 bool _sh_ljs_less_rjs(
