@@ -229,13 +229,10 @@ var i = 0;
 
 TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
   const char *badSource = "this is definitely not valid javascript";
-  bool caught = false;
-  try {
-    rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), "");
-  } catch (const facebook::jsi::JSIException &err) {
-    caught = true;
-  }
-  EXPECT_TRUE(caught) << "prepareJavaScript should have thrown an exception";
+  EXPECT_THROW(
+      rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), ""),
+      facebook::jsi::JSIException)
+      << "prepareJavaScript should have thrown an exception";
 }
 
 TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceBufferPrefix) {
@@ -735,27 +732,24 @@ class HermesRuntimeTestWithDisableGenerator : public HermesRuntimeTestBase {
 };
 
 TEST_F(HermesRuntimeTestWithDisableGenerator, WithDisableGenerator) {
-  try {
-    rt->evaluateJavaScript(
-        std::make_unique<StringBuffer>("function* foo() {}"), "");
-    FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
-  }
+  EXPECT_THROW(
+      rt->evaluateJavaScript(
+          std::make_unique<StringBuffer>("function* foo() {}"), ""),
+      facebook::jsi::JSIException)
+      << "Expected JSIException";
 
-  try {
-    rt->evaluateJavaScript(
-        std::make_unique<StringBuffer>("obj = {*foo() {}}"), "");
-    FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
-  }
+  EXPECT_THROW(
+      rt->evaluateJavaScript(
+          std::make_unique<StringBuffer>("obj = {*foo() {}}"), ""),
+      facebook::jsi::JSIException)
+      << "Expected JSIException";
 
   // async function depends on generator.
-  try {
-    rt->evaluateJavaScript(
-        std::make_unique<StringBuffer>("async function foo() {}"), "");
-    FAIL() << "Expected JSIException";
-  } catch (const facebook::jsi::JSIException &err) {
-  }
+  EXPECT_THROW(
+      rt->evaluateJavaScript(
+          std::make_unique<StringBuffer>("async function foo() {}"), ""),
+      facebook::jsi::JSIException)
+      << "Expected JSIException";
 }
 
 TEST_F(HermesRuntimeTest, DiagnosticHandlerTestError) {
