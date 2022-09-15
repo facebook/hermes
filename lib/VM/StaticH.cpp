@@ -159,18 +159,21 @@ static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
 
   // FIXME: check for register stack overflow.
   CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
-  if (vmisa<NativeFunction>(*callTarget)) {
-    auto *native = vmcast<NativeFunction>(*callTarget);
-    res = NativeFunction::_nativeCall(native, runtime);
-  } else if (vmisa<BoundFunction>(*callTarget)) {
-    auto *bound = vmcast<BoundFunction>(*callTarget);
-    res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
-  } else if (vmisa<Callable>(*callTarget)) {
-    auto callable = Handle<Callable>::vmcast(callTarget);
-    res = callable->call(callable, runtime);
-  } else {
-    res = runtime.raiseTypeErrorForValue(
-        Handle<>(callTarget), " is not a function");
+  {
+    GCScopeMarkerRAII marker{runtime};
+    if (vmisa<NativeFunction>(*callTarget)) {
+      auto *native = vmcast<NativeFunction>(*callTarget);
+      res = NativeFunction::_nativeCall(native, runtime);
+    } else if (vmisa<BoundFunction>(*callTarget)) {
+      auto *bound = vmcast<BoundFunction>(*callTarget);
+      res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+    } else if (vmisa<Callable>(*callTarget)) {
+      auto callable = Handle<Callable>::vmcast(callTarget);
+      res = callable->call(callable, runtime);
+    } else {
+      res = runtime.raiseTypeErrorForValue(
+          Handle<>(callTarget), " is not a function");
+    }
   }
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
