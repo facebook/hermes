@@ -89,7 +89,8 @@ function build_apple_framework {
   if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
     (cd "./build_$1" && ninja install/strip)
   else
-    (cd "./build_$1" && make install/strip)
+    NUM_CORES=$(sysctl -n hw.ncpu)
+    (cd "./build_$1" && make install/strip -j "${NUM_CORES}")
   fi
 }
 
