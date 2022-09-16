@@ -34,6 +34,7 @@
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/SymbolID.h"
@@ -1370,6 +1371,21 @@ jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
   return impl(this)->evaluatePreparedJavaScript(
       impl(this)->prepareJavaScriptWithSourceMap(
           buffer, sourceMapBuf, sourceURL));
+}
+
+jsi::Value HermesRuntime::evaluateSHUnit(SHUnit *shUnit) {
+  vm::Runtime &runtime = impl(this)->runtime_;
+
+  SHLegacyValue resOrExc;
+  if (_sh_unit_init_guarded(vm::getSHRuntime(runtime), shUnit, &resOrExc)) {
+    return impl(this)->valueFromHermesValue(
+        vm::HermesValue::fromRaw(resOrExc.raw));
+  } else {
+    vm::GCScope gcScope{runtime};
+    runtime.setThrownValue(vm::HermesValue::fromRaw(resOrExc.raw));
+    impl(this)->checkStatus(vm::ExecutionStatus::EXCEPTION);
+    LLVM_BUILTIN_UNREACHABLE;
+  }
 }
 
 size_t HermesRuntime::rootsListLength() const {

@@ -70,7 +70,6 @@ set(source_files
   VTable.cpp
   Metadata.cpp
   StaticH.cpp
-  StaticH-internal.h
   StaticHUnit.cpp
 
   detail/IdentifierHashTable.cpp

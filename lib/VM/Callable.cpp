@@ -7,7 +7,6 @@
 
 #include "hermes/VM/Callable.h"
 
-#include "StaticH-internal.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSDataView.h"
@@ -24,6 +23,7 @@
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/static_h.h"
 

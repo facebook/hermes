@@ -7,7 +7,6 @@
 
 #include "hermes/VM/Operations.h"
 
-#include "StaticH-internal.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/BigIntPrimitive.h"
@@ -21,6 +20,7 @@
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"

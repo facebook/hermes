@@ -8,7 +8,6 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/Runtime.h"
 
-#include "StaticH-internal.h"
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
@@ -38,6 +37,7 @@
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StackTracesTree.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringView.h"
 
 #ifndef HERMESVM_LEAN

@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "StaticH-internal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StaticHUtils.h"
 
 using namespace hermes;
 using namespace hermes::vm;
