@@ -108,7 +108,7 @@ class Parser {
     re_->pushLoop(
         quant.min_,
         quant.max_,
-        move(quantifiedExpression),
+        std::move(quantifiedExpression),
         quant.startMarkedSubexprs_,
         quant.greedy_);
   }
