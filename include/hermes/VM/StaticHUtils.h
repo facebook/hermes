@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_VM_STATICH_INTERNAL_H
-#define HERMES_VM_STATICH_INTERNAL_H
+#ifndef HERMES_VM_STATICH_UTILS_H
+#define HERMES_VM_STATICH_UTILS_H
 
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/static_h.h"
@@ -46,4 +46,4 @@ void sh_unit_mark_long_lived_weak_roots(
 
 } // namespace hermes::vm
 
-#endif // HERMES_VM_STATICH_INTERNAL_H
+#endif // HERMES_VM_STATICH_UTILS_H

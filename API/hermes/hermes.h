@@ -21,6 +21,7 @@
 #include <unordered_map>
 
 struct HermesTestHelper;
+struct SHUnit;
 
 namespace hermes {
 namespace vm {
@@ -209,6 +210,11 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
       const std::string &sourceURL);
+
+  /// Associate the specified SHUnit with this runtime and run its
+  /// initialization code. The association persists until the runtime is
+  /// destroyed. The unit must not be already associated with another runtime.
+  jsi::Value evaluateSHUnit(SHUnit *shUnit);
 
  private:
   // Only HermesRuntimeImpl can subclass this.

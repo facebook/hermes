@@ -5,10 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "StaticH-internal.h"
-
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/StaticHUtils.h"
 
 using namespace hermes;
 using namespace hermes::vm;
@@ -33,6 +32,32 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit);
 
 extern "C" bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...) {
   Runtime &runtime = getRuntime(shr);
+  bool success = true;
+
+  va_list ap;
+  va_start(ap, count);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    SHUnit *unit = va_arg(ap, SHUnit *);
+    SHLegacyValue val;
+    if (!_sh_unit_init_guarded(shr, unit, &val)) {
+      GCScope gcScope{runtime};
+      // Make sure stdout catches up to stderr.
+      llvh::outs().flush();
+      runtime.printException(
+          llvh::errs(), runtime.makeHandle(HermesValue::fromRaw(val.raw)));
+      success = false;
+      break;
+    }
+  }
+
+  va_end(ap);
+  return success;
+}
+
+extern "C" bool
+_sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
+  Runtime &runtime = getRuntime(shr);
   GCScope gcScope{runtime};
 
   SHLocals locals;
@@ -42,26 +67,13 @@ extern "C" bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...) {
   SHJmpBuf jbuf;
   bool success = true;
 
-  va_list ap;
-  va_start(ap, count);
-
   if (_sh_try(shr, &jbuf) == 0) {
-    for (uint32_t i = 0; i < count; ++i) {
-      SHUnit *unit = va_arg(ap, SHUnit *);
-      (void)_sh_unit_init(shr, unit);
-    }
-
+    *resOrExc = _sh_unit_init(shr, unit);
     _sh_end_try(shr, jbuf.prev);
   } else {
-    SHLegacyValue exc = _sh_catch(shr, &locals, frame, savedSP - frame);
-    // Make sure stdout catches up to stderr.
-    llvh::outs().flush();
-    runtime.printException(
-        llvh::errs(), runtime.makeHandle(HermesValue::fromRaw(exc.raw)));
+    *resOrExc = _sh_catch(shr, &locals, frame, savedSP - frame);
     success = false;
   }
-
-  va_end(ap);
 
   _sh_pop_locals(shr, &locals, savedSP);
   return success;

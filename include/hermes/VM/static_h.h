@@ -105,6 +105,15 @@ void _sh_done(SHRuntime *shr);
 /// Execution of the unit initialization code might throw a JS exception.
 SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit);
 
+/// Execute \c _sh_unit_init and catch JS exceptions. \p resultOrExc is
+/// initialized to either the returned value or the thrown exception.
+///
+/// \return false if an exception was thrown.
+bool _sh_unit_init_guarded(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *resultOrExc);
+
 /// Initialize all units passed as arguments in order. If a unit throws a
 /// JS exception during initialization, print the exception and stop.
 ///
