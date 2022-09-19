@@ -270,6 +270,10 @@ SHLegacyValue _sh_ljs_get_by_val_rjs(
     SHLegacyValue *source,
     SHLegacyValue *key);
 
+/// Get the string associated with the given SHSymbolID. The caller is
+/// responsible for ensuring that \p symID is not garbage collected.
+SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
+
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 bool _sh_ljs_to_boolean(SHLegacyValue b);
 
