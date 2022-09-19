@@ -11,6 +11,7 @@
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
 
 using namespace hermes;
@@ -58,7 +59,134 @@ void constructCatchMap(
   }
 }
 
+/// Helper to unique and store the contents of strings.
+class SHStringTable {
+  StringSetVector strings_;
+
+  /// Append a printable representation of the character \p c, that when
+  /// enclosed in single quotes in a C file, will produce the same character.
+  /// NOTE: We deliberately print each character separately, since this emits a
+  /// mix of printable characters and hexadecimal escapes, which consume all
+  /// subsequent hexadecimal characters. For example, consider emitting the
+  /// escape '\x0' followed by the character '1', if we emitted them in a single
+  /// string literal, the compiler would parse them as the single escape '\x01'.
+  static void appendEscaped(std::string &out, char16_t c) {
+    // To improve the readability of the generated source, print certain
+    // characters directly. We consider the character printable if it is ASCII,
+    // returns true for isprint, and is not a ' or a \.
+    bool canPrint = c <= 127 && std::isprint(c) && c != u'\'' && c != u'\\';
+    if (canPrint) {
+      out += c;
+    } else {
+      // If the character is not printable, emit a hexadecimal escape sequence
+      // for it.
+      out += "\\x";
+      const char *hexdig = "0123456789ABCDEF";
+      out += hexdig[c >> 12];
+      out += hexdig[(c >> 8) & 0xF];
+      out += hexdig[(c >> 4) & 0xF];
+      out += hexdig[c & 0xF];
+    }
+  }
+
+ public:
+  /// \return the current number of strings in the table.
+  uint32_t size() const {
+    return strings_.size();
+  }
+
+  /// Add the string \p str to the table if it is not already in it.
+  /// \return the index associated with str.
+  uint32_t add(llvh::StringRef str) {
+    return strings_.insert(str);
+  }
+
+  /// Turn the table of strings into the SH C data structures that are necessary
+  /// to provide strings for the module.
+  void generate(llvh::raw_ostream &os) const {
+    struct StringEntry {
+      uint32_t offset, length, hash;
+    };
+    std::vector<StringEntry> stringEntries;
+    stringEntries.reserve(strings_.size());
+
+    // Buffers containing the escaped strings, which can be emitted directly
+    // into the C code.
+    std::string asciiStr, u16Str;
+    // The number of characters emitted so far in each of the buffers.
+    uint32_t asciiOffset = 0, u16Offset = 0;
+
+    for (const auto &str : strings_) {
+      StringEntry entry;
+      if (isAllASCII(str.begin(), str.end())) {
+        asciiStr += "  ";
+        // The given string is entirely ASCII. Emit the sequence of ASCII
+        // characters to asciiStr.
+        for (char c : str) {
+          asciiStr += '\'';
+          appendEscaped(asciiStr, c);
+          asciiStr += "', ";
+        }
+        // Strings are null terminated to make them easier to debug.
+        asciiStr += "'\\0',\n";
+        entry = {
+            asciiOffset,
+            (uint32_t)str.size(),
+            hashString(llvh::ArrayRef<char>{str.data(), str.size()})};
+        asciiOffset += str.size() + 1;
+      } else {
+        u16Str += "  ";
+        // If the string is non-ASCII, convert it to UTF-16, and then perform
+        // the same steps as the ASCII string above.
+        std::u16string strStorage;
+        convertUTF8WithSurrogatesToUTF16(
+            std::back_inserter(strStorage),
+            str.data(),
+            str.data() + str.size());
+        for (char16_t c : strStorage) {
+          u16Str += "u'";
+          appendEscaped(u16Str, c);
+          u16Str += "', ";
+        }
+        u16Str += "u'\\0',\n";
+        entry = {
+            u16Offset | (1 << 31),
+            (uint32_t)strStorage.size(),
+            hashString(llvh::ArrayRef<char16_t>{
+                strStorage.data(), strStorage.size()})};
+        u16Offset += strStorage.size() + 1;
+      }
+      stringEntries.push_back(entry);
+    }
+
+    // Example:
+    // static const char s_ascii_pool[] = {
+    //   'H', 'e', 'l', 'l', 'o', '\0',
+    //   'W', 'o', 'r', 'l', 'd', '\0',
+    // };
+    // static const char16_t s_u16_pool[] = {
+    // };
+    // static SHSymbolID s_symbols[2];
+    // static const uint32_t s_strings[] = {
+    //     0, 5, 0, 6, 5, 0,
+    // };
+
+    os << "static const char s_ascii_pool[] = {\n"
+       << asciiStr << "};\n"
+       << "static const char16_t s_u16_pool[] = {\n"
+       << u16Str << "};\n"
+       << "static SHSymbolID s_symbols[" << size() << "];\n"
+       << "static const uint32_t s_strings[] = {";
+    for (const auto &entry : stringEntries)
+      os << entry.offset << "," << entry.length << "," << entry.hash << ",";
+    os << "};\n";
+  }
+};
+
 struct ModuleGen {
+  /// Table containing uniqued strings for the current module.
+  SHStringTable stringTable;
+
   /// A map from functions to unique numbers for identificatio
   llvh::DenseMap<Function *, unsigned> funcMap;
 
@@ -623,6 +751,9 @@ void generateModule(
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     OS << R"(
 #include "hermes/VM/static_h.h"
+
+static SHSymbolID s_symbols[];
+static char s_prop_cache[];
 )";
 
     // Forward declare every JS function.
@@ -636,7 +767,17 @@ void generateModule(
   for (auto &F : *M)
     generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
 
-  OS << R"(
+  moduleGen.stringTable.generate(OS);
+
+  OS << "static char s_prop_cache[" << nextCacheIdx
+     << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
+     << "static SHUnit s_this_unit = { .num_symbols = "
+     << moduleGen.stringTable.size()
+     << ", .num_prop_cache_entries = " << nextCacheIdx
+     << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
+     << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
+     << ".unit_main = _0_global, .unit_name = \"sh_compiled\" };\n"
+     << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init();
   _sh_initialize_units(shr, 1, &s_this_unit);
