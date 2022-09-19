@@ -621,7 +621,9 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction TerminatorInst");
   }
   void generateBranchInst(BranchInst &inst) {
-    hermes_fatal("Unimplemented instruction BranchInst");
+    os_ << "  goto ";
+    generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
+    os_ << ";";
   }
   void generateReturnInst(ReturnInst &inst) {
     os_ << "  _sh_leave(shr, &locals.head, frame);\n  return ";
@@ -629,13 +631,21 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateThrowInst(ThrowInst &inst) {
-    hermes_fatal("Unimplemented instruction ThrowInst");
+    os_ << "  _sh_throw(shr, ";
+    generateValue(*inst.getThrownValue());
+    os_ << ");\n";
   }
   void generateSwitchInst(SwitchInst &inst) {
     hermes_fatal("Unimplemented instruction SwitchInst");
   }
   void generateCondBranchInst(CondBranchInst &inst) {
-    hermes_fatal("Unimplemented instruction CondBranchInst");
+    os_ << "  if(_sh_ljs_to_boolean(";
+    generateRegister(*inst.getCondition());
+    os_ << ")) goto ";
+    generateBasicBlockLabel(inst.getTrueDest(), os_, bbMap_);
+    os_ << ";\n  goto ";
+    generateBasicBlockLabel(inst.getFalseDest(), os_, bbMap_);
+    os_ << ";\n";
   }
   void generateGetPNamesInst(GetPNamesInst &inst) {
     hermes_fatal("Unimplemented instruction GetPNamesInst");
