@@ -421,6 +421,18 @@ class InstrGen {
       case OpKind::AddKind: // +   (+=)
         os_ << "_sh_ljs_add_rjs";
         break;
+      case OpKind::SubtractKind: // -   (-=)
+        os_ << "_sh_ljs_sub_rjs";
+        break;
+      case OpKind::MultiplyKind: // *   (*=)
+        os_ << "_sh_ljs_mul_rjs";
+        break;
+      case OpKind::DivideKind: // /   (/=)
+        os_ << "_sh_ljs_div_rjs";
+        break;
+      case OpKind::ModuloKind: // %   (%=)
+        os_ << "_sh_ljs_mod_rjs";
+        break;
       case OpKind::NotEqualKind: // !=
         os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
         eqOp = true;
