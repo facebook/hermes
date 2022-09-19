@@ -271,6 +271,35 @@ class InstrGen {
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
 
+  /// Helper to generate a value that must always have an allocated register,
+  /// for instance because we need to assign to it or take its address.
+  void generateRegister(Value &val) {
+    os_ << "locals.t" << ra_.getRegister(&val).getIndex();
+  }
+
+  /// Helper to generate an SHValue from a Value.
+  void generateValue(Value &val) {
+    if (llvh::isa<LiteralUndefined>(&val)) {
+      os_ << "_sh_ljs_undefined()";
+    } else if (llvh::isa<LiteralNull>(&val)) {
+      os_ << "_sh_ljs_null()";
+    } else if (auto B = llvh::dyn_cast<LiteralBool>(&val)) {
+      os_ << "_sh_ljs_bool(" << B->getValue() << ")";
+    } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
+      os_ << "_sh_ljs_double(";
+      if (LN->getValue() == static_cast<int>(LN->getValue()))
+        os_ << static_cast<int>(LN->getValue());
+      else
+        os_ << "((struct HermesValueBase){.raw = "
+            << llvh::DoubleToBits(LN->getValue()) << "}).f64";
+      os_ << ")";
+    } else if (auto *I = llvh::dyn_cast<Instruction>(&val)) {
+      generateRegister(val);
+    } else {
+      hermes_fatal("Unknown value");
+    }
+  }
+
   void generateInstruction(Instruction &inst) {
     hermes_fatal("Unimplemented instruction Instruction");
   }
