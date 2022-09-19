@@ -3,14 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-add_hermes_library(hermesBackend
+add_hermes_library(hermesSHBackend
   STATIC
-  RegAlloc.cpp
-  BCOpt.cpp
-  Lowering.cpp
-  Exceptions.cpp
-  LINK_LIBS hermesFrontend hermesOptimizer
+  SH.cpp
+  LINK_LIBS
+  hermesBackend
+  hermesInst
+  hermesSourceMap
+  hermesAST
+  hermesPublic
 )
-
-add_subdirectory(HBC)
-add_subdirectory(SH)

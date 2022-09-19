@@ -13,6 +13,7 @@ add_hermes_tool(hermesc
 target_link_libraries(hermesc
   hermesCompilerDriver
   hermesAST
+  hermesSHBackend
   hermesHBCBackend
   hermesBackend
   hermesInst
