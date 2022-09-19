@@ -9,6 +9,8 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/StaticHUtils.h"
 
+#include <cstdarg>
+
 using namespace hermes;
 using namespace hermes::vm;
 
