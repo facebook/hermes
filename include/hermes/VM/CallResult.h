@@ -373,6 +373,7 @@ class CallResult<
   ~CallResult() = default;
 
   /* implicit */ CallResult(CallResult &&value) = default;
+  CallResult &operator=(CallResult &&cr) = default;
 
   /* implicit */ CallResult(PseudoHandle<T> &&value)
       : valueOrStatus_(std::move(value)) {}
