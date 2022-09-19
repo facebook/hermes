@@ -244,6 +244,16 @@ void _sh_ljs_put_by_id_strict_rjs(
     SHSymbolID symID,
     const SHLegacyValue *value,
     char *propCacheEntry);
+void _sh_ljs_put_by_val_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
+void _sh_ljs_put_by_val_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
 
 SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
@@ -255,6 +265,10 @@ SHLegacyValue _sh_ljs_get_by_id_rjs(
     const SHLegacyValue *source,
     SHSymbolID symID,
     char *propCacheEntry);
+SHLegacyValue _sh_ljs_get_by_val_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *source,
+    SHLegacyValue *key);
 
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 bool _sh_ljs_to_boolean(SHLegacyValue b);

@@ -154,6 +154,35 @@ extern "C" SHLegacyValue _sh_ljs_load_this_ns(
   }
 }
 
+extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *source,
+    SHLegacyValue *key) {
+  Handle<> sourceHandle{toPHV(source)}, keyHandle{toPHV(key)};
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_LIKELY(sourceHandle->isObject())) {
+    CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      res = JSObject::getComputed_RJS(
+          Handle<JSObject>::vmcast(sourceHandle), runtime, keyHandle);
+    }
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(shr);
+    return res->getHermesValue();
+  }
+
+  // This is the "slow path".
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Interpreter::getByValTransient_RJS(runtime, sourceHandle, keyHandle);
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return res->getHermesValue();
+}
+
 extern "C" void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
   Runtime &runtime = getRuntime(shr);
   buf->prev = runtime.shCurJmpBuf;
@@ -537,6 +566,57 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
       SymbolID::unsafeCreate(symID),
       toPHV(value),
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+static inline void putByVal_RJS(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    bool strictMode) {
+  Handle<> targetHandle{toPHV(target)}, keyHandle{toPHV(key)},
+      valueHandle{toPHV(value)};
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_LIKELY(targetHandle->isObject())) {
+    const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+    CallResult<bool> res{false};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      res = JSObject::putComputed_RJS(
+          Handle<JSObject>::vmcast(targetHandle),
+          runtime,
+          keyHandle,
+          valueHandle,
+          defaultPropOpFlags);
+    }
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(shr);
+  }
+
+  // This is the "slow path".
+  ExecutionStatus res;
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Interpreter::putByValTransient_RJS(
+        runtime, targetHandle, keyHandle, valueHandle, strictMode);
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
+extern "C" void _sh_ljs_put_by_val_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  putByVal_RJS(shr, target, key, value, false);
+}
+extern "C" void _sh_ljs_put_by_val_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  putByVal_RJS(shr, target, key, value, true);
 }
 
 template <bool tryProp>

@@ -469,8 +469,18 @@ class InstrGen {
           << nextCacheIdx_++ << ");\n";
       return;
     }
-    llvh::errs() << "Cannot store by value yet\n";
-    std::abort();
+
+    if (isStrictMode_)
+      os_ << "_sh_ljs_put_by_val_strict_rjs";
+    else
+      os_ << "_sh_ljs_put_by_val_loose_rjs";
+    os_ << "(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ", &";
+    generateRegister(*inst.getStoredValue());
+    os_ << ");\n";
   }
   void generateTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst &inst) {
     hermes_fatal("Unimplemented instruction TryStoreGlobalPropertyInst");
@@ -499,7 +509,11 @@ class InstrGen {
           << nextCacheIdx_++ << ");\n";
       return;
     }
-    hermes_fatal("Cannot load by value yet.");
+    os_ << "_sh_ljs_get_by_val_rjs(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ");\n";
   }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
     os_.indent(2);
