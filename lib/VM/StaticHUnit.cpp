@@ -135,7 +135,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
       Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
       0);
 
-  (void)StackFramePtr::initFrame(
+  auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),
       runtime.getCurrentFrame(),
       nullptr,
@@ -143,6 +143,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
       0,
       HermesValue::fromRaw(closure.raw),
       HermesValue::encodeUndefinedValue());
+  frame.getThisArgRef() = runtime.global_;
 
   SHLegacyValue res = SHLegacyFunction::_legacyCall(
       shr, vmcast<SHLegacyFunction>(HermesValue::fromRaw(closure.raw)));
