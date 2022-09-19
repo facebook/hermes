@@ -301,6 +301,14 @@ bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b);
 
 SHLegacyValue
 _sh_ljs_add_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+SHLegacyValue
+_sh_ljs_sub_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+SHLegacyValue
+_sh_ljs_mul_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+SHLegacyValue
+_sh_ljs_div_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+SHLegacyValue
+_sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 
 #ifdef __cplusplus
 }

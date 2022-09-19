@@ -2338,6 +2338,121 @@ extern "C" SHLegacyValue _sh_ljs_add_rjs(
   return *cr;
 }
 
+namespace {
+inline double doDiv(double x, double y)
+    LLVM_NO_SANITIZE("float-divide-by-zero");
+double doDiv(double x, double y) {
+  // UBSan will complain about float divide by zero as our implementation
+  // of division depends on IEEE 754 float divide by zero. All modern
+  // compilers implement this and there is no trivial work-around without
+  // sacrificing performance and readability.
+  return x / y;
+}
+
+inline double doMod(double x, double y) {
+  // We use fmod here for simplicity. Theoretically fmod behaves slightly
+  // differently than the ECMAScript Spec. fmod applies round-towards-zero for
+  // the remainder when it's not representable by a double; while the spec
+  // requires round-to-nearest. As an example, 5 % 0.7 will give
+  // 0.10000000000000031 using fmod, but using the rounding style described by
+  // the spec, the output should really be 0.10000000000000053. Such difference
+  // can be ignored in practice.
+  return std::fmod(x, y);
+}
+
+inline double doMul(double x, double y) {
+  return x * y;
+}
+
+inline double doSub(double x, double y) {
+  return x - y;
+}
+
+using BigIntBinaryOp = CallResult<HermesValue>(
+    Runtime &,
+    Handle<BigIntPrimitive>,
+    Handle<BigIntPrimitive>);
+
+CallResult<HermesValue> doBigIntBinOp(
+    Runtime &runtime,
+    BigIntBinaryOp Oper,
+    Handle<BigIntPrimitive> lhs,
+    Handle<> rhs) {
+  // Cannot use ToBigInt here as it would incorrectly allow boolean/string rhs.
+  CallResult<HermesValue> res = toNumeric_RJS(runtime, rhs);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!res->isBigInt()) {
+    return runtime.raiseTypeErrorForValue("Cannot convert ", rhs, " to BigInt");
+  }
+  return Oper(runtime, lhs, runtime.makeHandle(res->getBigInt()));
+}
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue
+binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
+    return HermesValue::encodeDoubleValue(
+        Oper(lhs->getNumber(), rhs->getNumber()));
+
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes = toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lNumRes = toNumber_RJS(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lNumRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rNumRes = toNumber_RJS(runtime, rhs);
+      if (LLVM_UNLIKELY(rNumRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeDoubleValue(
+          Oper(lNumRes->getDouble(), rNumRes->getDouble()));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime, BigIntOper, runtime.makeHandle(lPrimRes->getBigInt()), rhs);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+} // namespace
+
+extern "C" SHLegacyValue _sh_ljs_sub_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doSub, BigIntPrimitive::subtract>(shr, a, b);
+}
+extern "C" SHLegacyValue _sh_ljs_mul_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doMul, BigIntPrimitive::multiply>(shr, a, b);
+}
+extern "C" SHLegacyValue _sh_ljs_div_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doDiv, BigIntPrimitive::divide>(shr, a, b);
+}
+extern "C" SHLegacyValue _sh_ljs_mod_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doMod, BigIntPrimitive::remainder>(shr, a, b);
+}
+
 extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {
   return toBoolean(HermesValue::fromRaw(b.raw));
 }
