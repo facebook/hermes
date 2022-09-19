@@ -2608,6 +2608,38 @@ extern "C" SHLegacyValue _sh_ljs_right_shift_rjs(
       BigIntPrimitive::signedRightShift>(shr, a, b);
 }
 
+extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  Handle<> nHandle{toPHV(n)};
+  // Fast path, nHandle is a number.
+  if (nHandle->isNumber())
+    return HermesValue::encodeDoubleValue(
+        ~hermes::truncateToInt32(nHandle->getNumber()));
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> CallResult<HermesValue> {
+    // Try converting nHandle to a numeric.
+    auto numRes = toNumeric_RJS(runtime, nHandle);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // Test for BigInt since it is cheaper than testing for number. If it is a
+    // number, truncate it and perform bitwise not.
+    if (LLVM_LIKELY(!numRes->isBigInt()))
+      return HermesValue::encodeDoubleValue(
+          ~hermes::truncateToInt32(numRes->getNumber()));
+
+    // The result is a BigInt, perform a BigInt bitwise not.
+    auto bigint = runtime.makeHandle(numRes->getBigInt());
+    auto notRes = BigIntPrimitive::unaryNOT(runtime, bigint);
+    if (LLVM_UNLIKELY(notRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return HermesValue::encodeBigIntValue(notRes->getBigInt());
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
 extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {
   return toBoolean(HermesValue::fromRaw(b.raw));
 }
