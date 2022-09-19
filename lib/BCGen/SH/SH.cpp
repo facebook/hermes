@@ -222,7 +222,8 @@ class InstrGen {
       FunctionScopeAnalysis &scopeAnalysis,
       llvh::DenseMap<BasicBlock *, CatchInst *> &catchMap,
       unsigned envSize,
-      uint32_t &nextCacheIdx)
+      uint32_t &nextCacheIdx,
+      bool isStrictMode)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
@@ -230,7 +231,8 @@ class InstrGen {
         scopeAnalysis_(scopeAnalysis),
         catchMap_(catchMap),
         envSize_(envSize),
-        nextCacheIdx_(nextCacheIdx) {}
+        nextCacheIdx_(nextCacheIdx),
+        isStrictMode_(isStrictMode) {}
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -270,6 +272,9 @@ class InstrGen {
 
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
+
+  /// True if the function being generated is in strict mode.
+  bool isStrictMode_;
 
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
@@ -407,7 +412,23 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateStorePropertyInst(StorePropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction StorePropertyInst");
+    os_.indent(2);
+    if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
+      if (isStrictMode_)
+        os_ << "_sh_ljs_put_by_id_strict_rjs";
+      else
+        os_ << "_sh_ljs_put_by_id_loose_rjs";
+      os_ << "(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
+          << "], &";
+      generateRegister(*inst.getStoredValue());
+      os_ << ", s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
+          << nextCacheIdx_++ << ");\n";
+      return;
+    }
+    llvh::errs() << "Cannot store by value yet\n";
+    std::abort();
   }
   void generateTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst &inst) {
     hermes_fatal("Unimplemented instruction TryStoreGlobalPropertyInst");
@@ -425,10 +446,29 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction DeletePropertyInst");
   }
   void generateLoadPropertyInst(LoadPropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction LoadPropertyInst");
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
+      os_ << "_sh_ljs_get_by_id_rjs(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
+          << "], s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
+          << nextCacheIdx_++ << ");\n";
+      return;
+    }
+    hermes_fatal("Cannot load by value yet.");
   }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction TryLoadGlobalPropertyInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    LiteralString *LS = inst.getProperty();
+    os_ << "_sh_ljs_try_get_by_id_rjs(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
+        << "], s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
+        << nextCacheIdx_++ << ");\n";
   }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("Unimplemented instruction StoreStackInst");
@@ -592,7 +632,9 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction ResumeGeneratorInst");
   }
   void generateHBCGetGlobalObjectInst(HBCGetGlobalObjectInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCGetGlobalObjectInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_global_object(shr);\n";
   }
   void generateHBCCreateEnvironmentInst(HBCCreateEnvironmentInst &inst) {
     hermes_fatal("Unimplemented instruction HBCCreateEnvironmentInst");
@@ -760,6 +802,14 @@ void generateFunction(
   for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
     OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
 
+  // Declare every "declared" global variable.
+  if (F.isGlobalScope())
+    for (auto *prop : F.getParent()->getGlobalProperties())
+      if (prop->isDeclared())
+        OS << "  _sh_ljs_declare_global_var(shr, s_symbols["
+           << moduleGen.stringTable.add(prop->getName()->getValue().str())
+           << "]);\n";
+
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
   for (auto &B : order) {
@@ -781,7 +831,8 @@ void generateFunction(
       scopeAnalysis,
       catchMap,
       envSize,
-      nextCacheIdx);
+      nextCacheIdx,
+      F.isStrictMode());
 
   for (auto &B : order) {
     OS << "\n";
@@ -831,6 +882,8 @@ void generateModule(
     return;
   }
 
+  // TODO: Share cache indices where the property name is the same and
+  // -reuse-prop-cache is passed in.
   uint32_t nextCacheIdx = 0;
   ModuleGen moduleGen;
 
