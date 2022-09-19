@@ -441,6 +441,15 @@ class InstrGen {
       case OpKind::XorKind: // ^   (^=)
         os_ << "_sh_ljs_bit_xor_rjs";
         break;
+      case OpKind::RightShiftKind: // >>  (>>=)
+        os_ << "_sh_ljs_right_shift_rjs";
+        break;
+      case OpKind::UnsignedRightShiftKind: // >>> (>>>=)
+        os_ << "_sh_ljs_unsigned_right_shift_rjs";
+        break;
+      case OpKind::LeftShiftKind: // <<  (<<=)
+        os_ << "_sh_ljs_left_shift_rjs";
+        break;
       case OpKind::NotEqualKind: // !=
         os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
         eqOp = true;

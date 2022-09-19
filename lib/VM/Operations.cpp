@@ -2380,6 +2380,18 @@ inline int32_t doBitXor(int32_t x, int32_t y) {
   return x ^ y;
 }
 
+inline int32_t doLShift(uint32_t x, uint32_t y) {
+  return x << y;
+}
+
+inline int32_t doRShift(int32_t x, uint32_t y) {
+  return x >> y;
+}
+
+inline uint32_t doURShift(uint32_t x, uint32_t y) {
+  return x >> y;
+}
+
 using BigIntBinaryOp = CallResult<HermesValue>(
     Runtime &,
     Handle<BigIntPrimitive>,
@@ -2476,6 +2488,50 @@ bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
     _sh_throw_current(shr);
   return *res;
 }
+
+template <auto Oper, auto ToIntegral, auto BigIntOper>
+SHLegacyValue
+shiftOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber())) {
+    auto lnum = hermes::truncateToInt32(lhs->getNumber());
+    uint32_t rnum = hermes::truncateToInt32(rhs->getNumber()) & 0x1f;
+    return HermesValue::encodeDoubleValue(Oper(lnum, rnum));
+  }
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes =
+        toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lIntRes = ToIntegral(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rIntRes = toUInt32_RJS(runtime, rhs);
+      if (LLVM_UNLIKELY(rIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto lnum = hermes::truncateToInt32(lIntRes->getNumber());
+      auto rnum = static_cast<uint32_t>(rIntRes->getNumber()) & 0x1f;
+      return HermesValue::encodeDoubleValue((*Oper)(lnum, rnum));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime,
+        BigIntOper,
+        runtime.makeHandle(lPrimRes->getBigInt()),
+        std::move(rhs));
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
 } // namespace
 
 extern "C" SHLegacyValue _sh_ljs_sub_rjs(
@@ -2522,6 +2578,34 @@ extern "C" SHLegacyValue _sh_ljs_bit_xor_rjs(
     const SHLegacyValue *a,
     const SHLegacyValue *b) {
   return bitOperImpl<doBitXor, BigIntPrimitive::bitwiseXOR>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_left_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<doLShift, toUInt32_RJS, BigIntPrimitive::leftShift>(
+      shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_unsigned_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<
+      doURShift,
+      toUInt32_RJS,
+      BigIntPrimitive::unsignedRightShift>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<
+      doRShift,
+      toInt32_RJS,
+      BigIntPrimitive::signedRightShift>(shr, a, b);
 }
 
 extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {

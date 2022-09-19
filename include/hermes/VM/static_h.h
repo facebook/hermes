@@ -322,6 +322,18 @@ SHLegacyValue _sh_ljs_bit_xor_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+SHLegacyValue _sh_ljs_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+SHLegacyValue _sh_ljs_unsigned_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+SHLegacyValue _sh_ljs_left_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
 
 #ifdef __cplusplus
 }
