@@ -380,7 +380,18 @@ class InstrGen {
         << static_cast<uint32_t>(inst.getIndex()->getValue()) << ");\n";
   }
   void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
-    hermes_fatal("Unimplemented instruction HBCResolveEnvironment");
+    llvh::Optional<int32_t> instScopeDepth =
+        scopeAnalysis_.getScopeDepth(inst.getScope());
+    llvh::Optional<int32_t> curScopeDepth = scopeAnalysis_.getScopeDepth(
+        inst.getParent()->getParent()->getFunctionScope());
+    if (!instScopeDepth || !curScopeDepth) {
+      // This function did not have any CreateFunctionInst, it is dead.
+      return;
+    }
+    int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue() - 1;
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_env(shr, frame, " << delta << ");\n";
   }
   void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
     hermes_fatal("Unimplemented instruction HBCGetArgumentsLengthInst");
@@ -523,10 +534,18 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction IteratorCloseInst");
   }
   void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCStoreToEnvironmentInst");
+    os_ << "  _sh_ljs_store_to_env(shr, ";
+    generateValue(*inst.getEnvironment());
+    os_ << ",";
+    generateValue(*inst.getStoredValue());
+    os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
   }
   void generateHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCLoadFromEnvironmentInst");
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = _sh_ljs_load_from_env(";
+    generateValue(*inst.getEnvironment());
+    os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
     hermes_fatal("Unimplemented instruction UnreachableInst");
@@ -677,7 +696,9 @@ class InstrGen {
     os_ << " = _sh_ljs_get_global_object(shr);\n";
   }
   void generateHBCCreateEnvironmentInst(HBCCreateEnvironmentInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCreateEnvironmentInst");
+    os_ << "  _sh_ljs_create_environment(shr, frame, &";
+    generateRegister(inst);
+    os_ << ", " << envSize_ << ");\n";
   }
   void generateHBCGetThisNSInst(HBCGetThisNSInst &inst) {
     hermes_fatal("Unimplemented instruction HBCGetThisNSInst");
