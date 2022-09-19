@@ -640,8 +640,9 @@ class InstrGen {
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     hermes_fatal("Unimplemented instruction SaveAndYieldInst");
   }
-  void generateCallInst(CallInst &inst) {
-    // Populate the outgoing registers that will not be set by _sh_ljs_call.
+  void setupCallStack(CallInst &inst) {
+    // Populate the outgoing registers that will not be set by _sh_ljs_call or
+    // _sh_ljs_construct.
     auto closureRegIdx =
         ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::CalleeClosureOrCB;
     os_ << "  frame[" << closureRegIdx << "] = ";
@@ -661,6 +662,9 @@ class InstrGen {
       generateValue(*inst.getArgument(i));
       os_ << ";\n";
     }
+  }
+  void generateCallInst(CallInst &inst) {
+    setupCallStack(inst);
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
@@ -673,7 +677,17 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction CallBuiltinInst");
   }
   void generateHBCConstructInst(HBCConstructInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCConstructInst");
+    // Populate the newTarget register, which is not set by setupCallStack.
+    auto newTargetRegIdx =
+        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::NewTarget;
+    os_ << "  frame[" << newTargetRegIdx << "] = ";
+    generateValue(*inst.getCallee());
+    os_ << ";\n";
+    setupCallStack(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_construct(shr, frame, " << inst.getNumArguments() - 1
+        << ");\n";
   }
   void generateHBCCallDirectInst(HBCCallDirectInst &inst) {
     hermes_fatal("Unimplemented instruction HBCCallDirectInst");
@@ -701,17 +715,33 @@ class InstrGen {
     os_ << ", " << envSize_ << ");\n";
   }
   void generateHBCGetThisNSInst(HBCGetThisNSInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCGetThisNSInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_load_this_ns(shr, frame);\n";
   }
   void generateHBCCreateThisInst(HBCCreateThisInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCreateThisInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_create_this(shr, &";
+    generateRegister(*inst.getPrototype());
+    os_ << ", &";
+    generateRegister(*inst.getClosure());
+    os_ << ");\n";
   }
   void generateHBCGetArgumentsPropByValInst(
       HBCGetArgumentsPropByValInst &inst) {
     hermes_fatal("Unimplemented instruction HBCGetArgumentsPropByValInst");
   }
   void generateHBCGetConstructedObjectInst(HBCGetConstructedObjectInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCGetConstructedObjectInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_is_object(";
+    generateRegister(*inst.getConstructorReturnValue());
+    os_ << ") ? ";
+    generateRegister(*inst.getConstructorReturnValue());
+    os_ << " : ";
+    generateRegister(*inst.getThisValue());
+    os_ << ";\n";
   }
   void generateHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst &inst) {

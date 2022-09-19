@@ -187,6 +187,9 @@ static inline SHLegacyValue _sh_ljs_encode_raw_etag(
     enum HVETag etag) {
   return (SHLegacyValue){val | ((uint64_t)etag << (kHV_NumDataBits - 1))};
 }
+static inline enum HVTag _sh_ljs_get_tag(SHLegacyValue v) {
+  return (enum HVTag)((int64_t)v.raw >> kHV_NumDataBits);
+}
 static inline enum HVETag _sh_ljs_get_etag(SHLegacyValue v) {
   return (enum HVETag)((int64_t)v.raw >> (kHV_NumDataBits - 1));
 }
@@ -209,6 +212,9 @@ static inline SHLegacyValue _sh_ljs_null() {
 
 static inline bool _sh_ljs_is_null(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Null;
+}
+static inline bool _sh_ljs_is_object(SHLegacyValue v) {
+  return _sh_ljs_get_tag(v) == HVTag_Object;
 }
 
 #ifdef __cplusplus
