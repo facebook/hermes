@@ -350,14 +350,14 @@ class InstrGen {
     using OpKind = UnaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
       case (OpKind::IncKind):
-        os_ << "_sh_ljs_double(_sh_ljs_to_double_rjs(shr, &";
+        os_ << "_sh_ljs_inc_rjs(shr, &";
         generateRegister(*inst.getSingleOperand());
-        os_ << ") + 1);\n";
+        os_ << ");\n";
         break;
       case (OpKind::DecKind):
-        os_ << "_sh_ljs_double(_sh_ljs_to_double_rjs(shr, &";
+        os_ << "_sh_ljs_dec_rjs(shr, &";
         generateRegister(*inst.getSingleOperand());
-        os_ << ") - 1);\n";
+        os_ << ");\n";
         break;
       case (OpKind::TildeKind):
         os_ << "_sh_ljs_bit_not_rjs(shr, &";

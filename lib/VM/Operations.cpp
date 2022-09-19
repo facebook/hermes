@@ -2368,6 +2368,14 @@ inline double doSub(double x, double y) {
   return x - y;
 }
 
+inline double doInc(double d) {
+  return d + 1;
+}
+
+inline double doDec(double d) {
+  return d - 1;
+}
+
 inline int32_t doBitAnd(int32_t x, int32_t y) {
   return x & y;
 }
@@ -2445,6 +2453,36 @@ binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
     // BigInt operation.
     return doBigIntBinOp(
         runtime, BigIntOper, runtime.makeHandle(lPrimRes->getBigInt()), rhs);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue incDecOperImpl(SHRuntime *shr, const SHLegacyValue *n) {
+  Handle<> nHandle{toPHV(n)};
+  if (LLVM_LIKELY(nHandle->isNumber()))
+    return HermesValue::encodeDoubleValue(Oper(nHandle->getNumber()));
+
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+
+    // Try converting the argument to a primitive.
+    auto primRes = toPrimitive_RJS(runtime, nHandle, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    // If the primitive is not a BigInt, perform a normal number inc/dec.
+    if (LLVM_LIKELY(!primRes->isBigInt())) {
+      auto numRes = toNumber_RJS(runtime, runtime.makeHandle(*primRes));
+      if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeNumberValue(Oper(numRes->getNumber()));
+    }
+
+    return BigIntOper(runtime, runtime.makeHandle(primRes->getBigInt()));
   }();
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -2557,6 +2595,17 @@ extern "C" SHLegacyValue _sh_ljs_mod_rjs(
     const SHLegacyValue *a,
     const SHLegacyValue *b) {
   return binOpImpl<doMod, BigIntPrimitive::remainder>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_inc_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  return incDecOperImpl<doInc, BigIntPrimitive::inc>(shr, n);
+}
+extern "C" SHLegacyValue _sh_ljs_dec_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  return incDecOperImpl<doDec, BigIntPrimitive::dec>(shr, n);
 }
 
 extern "C" SHLegacyValue _sh_ljs_bit_and_rjs(
