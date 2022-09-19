@@ -2368,6 +2368,18 @@ inline double doSub(double x, double y) {
   return x - y;
 }
 
+inline int32_t doBitAnd(int32_t x, int32_t y) {
+  return x & y;
+}
+
+inline int32_t doBitOr(int32_t x, int32_t y) {
+  return x | y;
+}
+
+inline int32_t doBitXor(int32_t x, int32_t y) {
+  return x ^ y;
+}
+
 using BigIntBinaryOp = CallResult<HermesValue>(
     Runtime &,
     Handle<BigIntPrimitive>,
@@ -2426,6 +2438,44 @@ binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
     _sh_throw_current(shr);
   return *res;
 }
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue
+bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
+    return HermesValue::encodeDoubleValue(Oper(
+        hermes::truncateToInt32(lhs->getNumber()),
+        hermes::truncateToInt32(rhs->getNumber())));
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes = toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lIntRes = toInt32_RJS(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rIntRes = toInt32_RJS(runtime, std::move(rhs));
+      if (LLVM_UNLIKELY(rIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeNumberValue(Oper(
+          lIntRes->getNumberAs<int32_t>(), rIntRes->getNumberAs<int32_t>()));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime, BigIntOper, runtime.makeHandle(lPrimRes->getBigInt()), rhs);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
 } // namespace
 
 extern "C" SHLegacyValue _sh_ljs_sub_rjs(
@@ -2451,6 +2501,27 @@ extern "C" SHLegacyValue _sh_ljs_mod_rjs(
     const SHLegacyValue *a,
     const SHLegacyValue *b) {
   return binOpImpl<doMod, BigIntPrimitive::remainder>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_bit_and_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitAnd, BigIntPrimitive::bitwiseAND>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_bit_or_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitOr, BigIntPrimitive::bitwiseOR>(shr, a, b);
+}
+
+extern "C" SHLegacyValue _sh_ljs_bit_xor_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitXor, BigIntPrimitive::bitwiseXOR>(shr, a, b);
 }
 
 extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {

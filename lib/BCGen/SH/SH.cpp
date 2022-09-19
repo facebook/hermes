@@ -432,6 +432,14 @@ class InstrGen {
         break;
       case OpKind::ModuloKind: // %   (%=)
         os_ << "_sh_ljs_mod_rjs";
+      case OpKind::OrKind: // |   (|=)
+        os_ << "_sh_ljs_bit_or_rjs";
+        break;
+      case OpKind::AndKind: // &   (&=)
+        os_ << "_sh_ljs_bit_and_rjs";
+        break;
+      case OpKind::XorKind: // ^   (^=)
+        os_ << "_sh_ljs_bit_xor_rjs";
         break;
       case OpKind::NotEqualKind: // !=
         os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
