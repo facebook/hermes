@@ -2337,3 +2337,27 @@ extern "C" SHLegacyValue _sh_ljs_add_rjs(
     _sh_throw_current(shr);
   return *cr;
 }
+
+extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {
+  return toBoolean(HermesValue::fromRaw(b.raw));
+}
+
+extern "C" bool _sh_ljs_equal_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  Handle<> aHandle{toPHV(a)}, bHandle{toPHV(b)};
+  CallResult<bool> eqRes{false};
+  {
+    GCScopeMarkerRAII marker(getRuntime(shr));
+    eqRes = abstractEqualityTest_RJS(getRuntime(shr), aHandle, bHandle);
+  }
+  if (LLVM_UNLIKELY(eqRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *eqRes;
+}
+
+extern "C" bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b) {
+  return strictEqualityTest(
+      HermesValue::fromRaw(a.raw), HermesValue::fromRaw(b.raw));
+}

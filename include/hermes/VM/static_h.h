@@ -257,6 +257,7 @@ SHLegacyValue _sh_ljs_get_by_id_rjs(
     char *propCacheEntry);
 
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
+bool _sh_ljs_to_boolean(SHLegacyValue b);
 
 bool _sh_ljs_less_rjs(
     SHRuntime *shr,
@@ -274,6 +275,11 @@ bool _sh_ljs_greater_equal_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+bool _sh_ljs_equal_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b);
+bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b);
 
 SHLegacyValue
 _sh_ljs_add_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
