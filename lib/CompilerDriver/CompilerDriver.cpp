@@ -15,6 +15,7 @@
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
+#include "hermes/BCGen/SH/SH.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/FlowParser/FlowParser.h"
 #include "hermes/IR/Analysis.h"
@@ -316,16 +317,16 @@ static list<std::string> IncludeGlobals(
          "specified more than once)"),
     value_desc("filename"));
 
-enum BytecodeFormatKind {
-  HBC,
-};
+enum BytecodeFormatKind { HBC, SH };
 
 // Enable Debug Options to be specified on the command line
 static opt<BytecodeFormatKind> BytecodeFormat(
     "target",
     init(HBC),
     desc("Set the bytecode format:"),
-    values(clEnumVal(HBC, "Emit HBC bytecode (default)")),
+    values(
+        clEnumVal(HBC, "Emit HBC bytecode (default)"),
+        clEnumVal(SH, "Emit Static Hermes source")),
     cat(CompilerCategory));
 
 static opt<std::string> BytecodeOutputFilename(
@@ -1739,6 +1740,12 @@ CompileResult generateBytecodeForSerialization(
       disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
           std::move(bytecodeModule)));
     }
+  } else if (cl::BytecodeFormat == cl::BytecodeFormatKind::SH) {
+    if (sourceMapGenOrNull) {
+      llvh::dbgs() << "Source maps not supported with SH";
+      return InvalidFlags;
+    }
+    sh::generateSH(&M, OS, genOptions);
   } else {
     llvm_unreachable("Invalid bytecode kind");
   }
@@ -1793,6 +1800,9 @@ CompileResult processSourceFiles(
   std::unique_ptr<llvh::MemoryBuffer> libBuffer;
   switch (cl::BytecodeFormat) {
     case cl::BytecodeFormatKind::HBC:
+      libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
+      break;
+    case cl::BytecodeFormatKind::SH:
       libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
       break;
   }
