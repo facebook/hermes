@@ -8,6 +8,7 @@
 #include "hermes/BCGen/SH/SH.h"
 
 #include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
@@ -373,7 +374,10 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateHBCLoadParamInst(HBCLoadParamInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCLoadParamInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_param(frame, "
+        << static_cast<uint32_t>(inst.getIndex()->getValue()) << ");\n";
   }
   void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
     hermes_fatal("Unimplemented instruction HBCResolveEnvironment");
@@ -534,7 +538,18 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction CreateGeneratorInst");
   }
   void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCreateFunctionInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_create_closure(shr, &";
+    generateRegister(*inst.getEnvironment());
+    os_ << ", ";
+    moduleGen_.generateFunctionLabel(inst.getFunctionCode(), os_);
+    os_ << ", s_symbols["
+        << moduleGen_.stringTable.add(
+               inst.getFunctionCode()->getOriginalOrInferredName().str())
+        << "], "
+        << inst.getFunctionCode()->getExpectedParamCountIncludingThis() - 1
+        << ");\n";
   }
   void generateHBCCreateGeneratorInst(HBCCreateGeneratorInst &inst) {
     hermes_fatal("Unimplemented instruction HBCCreateGeneratorInst");
@@ -546,7 +561,9 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction BranchInst");
   }
   void generateReturnInst(ReturnInst &inst) {
-    hermes_fatal("Unimplemented instruction ReturnInst");
+    os_ << "  _sh_leave(shr, &locals.head, frame);\n  return ";
+    generateValue(*inst.getValue());
+    os_ << ";\n";
   }
   void generateThrowInst(ThrowInst &inst) {
     hermes_fatal("Unimplemented instruction ThrowInst");
@@ -605,7 +622,30 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction SaveAndYieldInst");
   }
   void generateCallInst(CallInst &inst) {
-    hermes_fatal("Unimplemented instruction CallInst");
+    // Populate the outgoing registers that will not be set by _sh_ljs_call.
+    auto closureRegIdx =
+        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::CalleeClosureOrCB;
+    os_ << "  frame[" << closureRegIdx << "] = ";
+    generateValue(*inst.getCallee());
+    os_ << ";\n";
+    // Populate the arguments. In Hermes, where arguments and locals are on the
+    // same stack, the arguments would already be in the right positions,
+    // however, since we store locals in a separate structure, they need to be
+    // copied to the interpreter's register stack for the call. At the moment,
+    // the index of the local and the register would be the same, but this is an
+    // artefact of a shortcut in the implementation, so we deliberately
+    // re-calculate the register indices based on the parameter index.
+    auto thisRegIdx =
+        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::ThisArg;
+    for (size_t i = 0; i < inst.getNumArguments(); ++i) {
+      os_ << "  frame[" << thisRegIdx - i << "] = ";
+      generateValue(*inst.getArgument(i));
+      os_ << ";\n";
+    }
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
+        << ");\n";
   }
   void generateConstructInst(ConstructInst &inst) {
     hermes_fatal("Unimplemented instruction ConstructInst");
