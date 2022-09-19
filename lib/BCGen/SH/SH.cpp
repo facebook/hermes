@@ -411,20 +411,47 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
 
+    bool eqOp = false;
+    bool strictEqOp = false;
     using OpKind = BinaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
       case OpKind::AddKind: // +   (+=)
         os_ << "_sh_ljs_add_rjs";
         break;
+      case OpKind::NotEqualKind: // !=
+        os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
+        eqOp = true;
+        break;
+      case OpKind::EqualKind: // ==
+        os_ << "_sh_ljs_bool(_sh_ljs_equal_rjs";
+        eqOp = true;
+        break;
+      case OpKind::StrictlyNotEqualKind: // !==
+        os_ << "_sh_ljs_bool(!_sh_ljs_strict_equal";
+        strictEqOp = true;
+        break;
+      case OpKind::StrictlyEqualKind: // ===
+        os_ << "_sh_ljs_bool(_sh_ljs_strict_equal";
+        strictEqOp = true;
+        break;
       default:
         hermes_fatal("Unimplemented operator");
     }
-
-    os_ << "(shr, &";
-    generateRegister(*inst.getLeftHandSide());
-    os_ << ", &";
-    generateRegister(*inst.getRightHandSide());
-    os_ << ");\n";
+    if (strictEqOp) {
+      os_ << "(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ", ";
+      generateRegister(*inst.getRightHandSide());
+      os_ << "));\n";
+    } else {
+      os_ << "(shr, &";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ", &";
+      generateRegister(*inst.getRightHandSide());
+      if (eqOp)
+        os_ << ")";
+      os_ << ");\n";
+    }
   }
   void generateStorePropertyInst(StorePropertyInst &inst) {
     os_.indent(2);
@@ -607,6 +634,8 @@ class InstrGen {
   }
   void generateCompareBranchInst(CompareBranchInst &inst) {
     os_ << "  if(";
+
+    bool strictEqOp = false;
     using OpKind = BinaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
       case OpKind::LessThanKind: // <
@@ -621,14 +650,37 @@ class InstrGen {
       case OpKind::GreaterThanOrEqualKind: // >=
         os_ << "_sh_ljs_greater_equal_rjs";
         break;
+      case OpKind::EqualKind: // ==
+        os_ << "_sh_ljs_equal_rjs";
+        break;
+      case OpKind::NotEqualKind: // !=
+        os_ << "!_sh_ljs_equal_rjs";
+        break;
+      case OpKind::StrictlyEqualKind: // ===
+        os_ << "_sh_ljs_strict_equal";
+        strictEqOp = true;
+        break;
+      case OpKind::StrictlyNotEqualKind: // !==
+        os_ << "!_sh_ljs_strict_equal";
+        strictEqOp = true;
+        break;
       default:
         hermes_fatal("Invalid operator for CompareBranchInst");
     }
-    os_ << "(shr, &";
-    generateRegister(*inst.getLeftHandSide());
-    os_ << ", &";
-    generateRegister(*inst.getRightHandSide());
-    os_ << ")) goto ";
+    if (strictEqOp) {
+      os_ << "(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ", ";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ")";
+    } else {
+      os_ << "(shr, &";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ", &";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ")";
+    }
+    os_ << ") goto ";
     generateBasicBlockLabel(inst.getTrueDest(), os_, bbMap_);
     os_ << ";\n  goto ";
     generateBasicBlockLabel(inst.getFalseDest(), os_, bbMap_);
