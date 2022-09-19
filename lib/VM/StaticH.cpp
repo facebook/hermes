@@ -107,6 +107,53 @@ extern "C" SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index) {
   }
 }
 
+extern "C" SHLegacyValue _sh_ljs_create_this(
+    SHRuntime *shr,
+    SHLegacyValue *prototype,
+    SHLegacyValue *callable) {
+  Handle<> callableHandle{toPHV(callable)};
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*callableHandle))) {
+    (void)runtime.raiseTypeError("constructor is not callable");
+    _sh_throw_current(shr);
+  }
+  CallResult<PseudoHandle<JSObject>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Callable::newObject(
+        Handle<Callable>::vmcast(callableHandle),
+        runtime,
+        Handle<JSObject>::vmcast(
+            toPHV(prototype)->isObject() ? toPHV(prototype)
+                                         : &runtime.objectPrototype));
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return res->getHermesValue();
+}
+
+extern "C" SHLegacyValue _sh_ljs_load_this_ns(
+    SHRuntime *shr,
+    SHLegacyValue *frame) {
+  StackFramePtr framePtr(toPHV(frame));
+  if (LLVM_LIKELY(framePtr.getThisArgRef().isObject())) {
+    return framePtr.getThisArgRef();
+  } else if (
+      framePtr.getThisArgRef().isNull() ||
+      framePtr.getThisArgRef().isUndefined()) {
+    return getRuntime(shr).global_;
+  } else {
+    CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
+    {
+      GCScopeMarkerRAII marker{getRuntime(shr)};
+      res = toObject(getRuntime(shr), Handle<>(&framePtr.getThisArgRef()));
+    }
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(shr);
+    return *res;
+  }
+}
+
 extern "C" void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
   Runtime &runtime = getRuntime(shr);
   buf->prev = runtime.shCurJmpBuf;

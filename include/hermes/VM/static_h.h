@@ -152,6 +152,15 @@ void _sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP);
 /// Index 0 loads "this", 1 the first param, etc.
 SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index);
 
+/// Obtain the raw "this" value and coerce it to an object.
+SHLegacyValue _sh_ljs_load_this_ns(SHRuntime *shr, SHLegacyValue *frame);
+
+/// Allocate an empty, uninitialized object (immediately before a constructor).
+SHLegacyValue _sh_ljs_create_this(
+    SHRuntime *shr,
+    SHLegacyValue *prototype,
+    SHLegacyValue *callable);
+
 #define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
 void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf);
 void _sh_end_try(SHRuntime *shr, SHJmpBuf *prev);
