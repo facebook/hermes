@@ -310,6 +310,9 @@ _sh_ljs_div_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 
+SHLegacyValue _sh_ljs_inc_rjs(SHRuntime *shr, const SHLegacyValue *n);
+SHLegacyValue _sh_ljs_dec_rjs(SHRuntime *shr, const SHLegacyValue *n);
+
 SHLegacyValue _sh_ljs_bit_or_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
