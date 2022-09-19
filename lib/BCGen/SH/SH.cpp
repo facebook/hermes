@@ -299,6 +299,9 @@ class InstrGen {
         os_ << "((struct HermesValueBase){.raw = "
             << llvh::DoubleToBits(LN->getValue()) << "}).f64";
       os_ << ")";
+    } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
+      os_ << "_sh_ljs_get_string(shr, s_symbols["
+          << moduleGen_.stringTable.add(S->getValue().str()) << "])";
     } else if (auto *I = llvh::dyn_cast<Instruction>(&val)) {
       generateRegister(val);
     } else {

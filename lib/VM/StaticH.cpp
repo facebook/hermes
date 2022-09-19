@@ -796,3 +796,9 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
       SymbolID::unsafeCreate(symID),
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }
+
+extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
+  NoHandleScope noHandles{getRuntime(shr)};
+  return HermesValue::encodeStringValue(
+      getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
+}
