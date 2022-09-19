@@ -475,6 +475,11 @@ void generateFunction(
 
   RA.allocate(order);
 
+  if (options.format == DumpRA) {
+    RA.dump();
+    return;
+  }
+
   PassManager PM;
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(new hbc::LowerCalls(RA));
@@ -485,23 +490,49 @@ void generateFunction(
   }
   PM.run(&F);
 
-  if (options.format == DumpRA) {
+  if (options.format == DumpLRA) {
     RA.dump();
     return;
   }
 
-  OS << "static CallResult<HermesValue> ";
+  if (options.format == DumpPostRA) {
+    F.dump();
+    return;
+  }
+
+  assert(
+      (options.format == DumpBytecode || options.format == EmitBundle) &&
+      "All other dump formats must be handled before this.");
+
+  // Set up the entry to the function to look like:
+  // static SHLegacyValue _1_myFunc(SHRuntime *shr) {
+  //   struct {
+  //     SHLocals head;
+  //     SHLegacyValue t0;
+  //     SHLegacyValue t1;
+  //     SHLegacyValue t2;
+  //   } locals;
+  //   SHLegacyValue *frame = _sh_enter(shr, &locals.head, 3);
+  //   locals.head.count = 3;
+  //   locals.t0 = _sh_ljs_undefined();
+  //   locals.t1 = _sh_ljs_undefined();
+  //   locals.t2 = _sh_ljs_undefined();
+
+  OS << "static SHLegacyValue ";
   moduleGen.generateFunctionLabel(&F, OS);
-  OS << "(void *, Runtime &runtime, NativeArgs args) {\n"
-     << "  StackFramePtr frame = runtime.getCurrentFrame();\n"
-     << "  constexpr bool strictMode = " << F.isStrictMode() << ";\n"
-     << "  const PropOpFlags defaultPropOpFlags = "
-     << "strictMode ? PropOpFlags().plusThrowOnError() : PropOpFlags();\n"
-     << "  (void)defaultPropOpFlags;\n"
-     << "  runtime.checkAndAllocStack(" << RA.getMaxRegisterUsage()
-     << " + StackFrameLayout::CalleeExtraRegistersAtStart, "
-     << "HermesValue::encodeUndefinedValue());\n"
-     << "  GCScopeMarkerRAII marker{runtime};\n";
+  OS << "(SHRuntime *shr) {\n"
+     << "  struct {\n    SHLocals head;\n";
+
+  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
+    OS << "    SHLegacyValue t" << i << ";\n";
+
+  OS << "  } locals;\n"
+     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head,"
+     << RA.getMaxRegisterUsage() << ");\n"
+     << "  locals.head.count =" << RA.getMaxRegisterUsage() << ";\n";
+
+  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
+    OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
 
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
@@ -569,6 +600,11 @@ void generateModule(
   }
   PM.run(M);
 
+  if (options.format == DumpLIR) {
+    M->dump();
+    return;
+  }
+
   uint32_t nextCacheIdx = 0;
   ModuleGen moduleGen;
 
@@ -584,16 +620,30 @@ void generateModule(
 
   FunctionScopeAnalysis scopeAnalysis{topLevelFunc};
 
-  if (options.format != DumpRA) {
+  if (options.format == DumpBytecode || options.format == EmitBundle) {
+    OS << R"(
+#include "hermes/VM/static_h.h"
+)";
+
+    // Forward declare every JS function.
     for (auto &F : *M) {
-      OS << "static CallResult<HermesValue> ";
+      OS << "static SHLegacyValue ";
       moduleGen.generateFunctionLabel(&F, OS);
-      OS << "(void *, Runtime &runtime, NativeArgs args);\n\n";
+      OS << "(SHRuntime *shr);\n";
     }
   }
 
   for (auto &F : *M)
     generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
+
+  OS << R"(
+int main(int argc, char **argv) {
+  SHRuntime *shr = _sh_init();
+  _sh_initialize_units(shr, 1, &s_this_unit);
+  _sh_done(shr);
+  return 0;
+}
+)";
 }
 } // namespace
 
