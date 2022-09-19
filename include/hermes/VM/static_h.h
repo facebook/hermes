@@ -334,6 +334,7 @@ SHLegacyValue _sh_ljs_left_shift_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+SHLegacyValue _sh_ljs_bit_not_rjs(SHRuntime *shr, const SHLegacyValue *a);
 
 #ifdef __cplusplus
 }

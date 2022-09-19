@@ -359,6 +359,11 @@ class InstrGen {
         generateRegister(*inst.getSingleOperand());
         os_ << ") - 1);\n";
         break;
+      case (OpKind::TildeKind):
+        os_ << "_sh_ljs_bit_not_rjs(shr, &";
+        generateRegister(*inst.getSingleOperand());
+        os_ << ");\n";
+        break;
       default:
         hermes_fatal("Unimplemented unary operator.");
     }
