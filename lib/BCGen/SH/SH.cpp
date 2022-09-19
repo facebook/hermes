@@ -322,7 +322,11 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction LoadStackInst");
   }
   void generateMovInst(MovInst &inst) {
-    hermes_fatal("Unimplemented instruction MovInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    generateValue(*inst.getSingleOperand());
+    os_ << ";\n";
   }
   void generateImplicitMovInst(ImplicitMovInst &inst) {
     hermes_fatal("Unimplemented instruction ImplicitMovInst");
@@ -331,7 +335,24 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction CoerceThisNSInst");
   }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
-    hermes_fatal("Unimplemented instruction UnaryOperatorInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    using OpKind = UnaryOperatorInst::OpKind;
+    switch (inst.getOperatorKind()) {
+      case (OpKind::IncKind):
+        os_ << "_sh_ljs_double(_sh_ljs_to_double_rjs(shr, &";
+        generateRegister(*inst.getSingleOperand());
+        os_ << ") + 1);\n";
+        break;
+      case (OpKind::DecKind):
+        os_ << "_sh_ljs_double(_sh_ljs_to_double_rjs(shr, &";
+        generateRegister(*inst.getSingleOperand());
+        os_ << ") - 1);\n";
+        break;
+      default:
+        hermes_fatal("Unimplemented unary operator.");
+    }
   }
   void generateDirectEvalInst(DirectEvalInst &inst) {
     hermes_fatal("Unimplemented instruction DirectEvalInst");
@@ -340,7 +361,11 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction LoadFrameInst");
   }
   void generateHBCLoadConstInst(HBCLoadConstInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCLoadConstInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    generateValue(*inst.getConst());
+    os_ << ";\n";
   }
   void generateHBCLoadParamInst(HBCLoadParamInst &inst) {
     hermes_fatal("Unimplemented instruction HBCLoadParamInst");
@@ -358,10 +383,28 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction HBCSpillMovInst");
   }
   void generatePhiInst(PhiInst &inst) {
-    hermes_fatal("Unimplemented instruction PhiInst");
+    // PhiInst has been translated into a sequence of MOVs in RegAlloc
+    // Nothing to do here.
   }
   void generateBinaryOperatorInst(BinaryOperatorInst &inst) {
-    hermes_fatal("Unimplemented instruction BinaryOperatorInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+
+    using OpKind = BinaryOperatorInst::OpKind;
+    switch (inst.getOperatorKind()) {
+      case OpKind::AddKind: // +   (+=)
+        os_ << "_sh_ljs_add_rjs";
+        break;
+      default:
+        hermes_fatal("Unimplemented operator");
+    }
+
+    os_ << "(shr, &";
+    generateRegister(*inst.getLeftHandSide());
+    os_ << ", &";
+    generateRegister(*inst.getRightHandSide());
+    os_ << ");\n";
   }
   void generateStorePropertyInst(StorePropertyInst &inst) {
     hermes_fatal("Unimplemented instruction StorePropertyInst");
@@ -487,7 +530,33 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction TryStartInst");
   }
   void generateCompareBranchInst(CompareBranchInst &inst) {
-    hermes_fatal("Unimplemented instruction CompareBranchInst");
+    os_ << "  if(";
+    using OpKind = BinaryOperatorInst::OpKind;
+    switch (inst.getOperatorKind()) {
+      case OpKind::LessThanKind: // <
+        os_ << "_sh_ljs_less_rjs";
+        break;
+      case OpKind::LessThanOrEqualKind: // <=
+        os_ << "_sh_ljs_less_equal_rjs";
+        break;
+      case OpKind::GreaterThanKind: // >
+        os_ << "_sh_ljs_greater_rjs";
+        break;
+      case OpKind::GreaterThanOrEqualKind: // >=
+        os_ << "_sh_ljs_greater_equal_rjs";
+        break;
+      default:
+        hermes_fatal("Invalid operator for CompareBranchInst");
+    }
+    os_ << "(shr, &";
+    generateRegister(*inst.getLeftHandSide());
+    os_ << ", &";
+    generateRegister(*inst.getRightHandSide());
+    os_ << ")) goto ";
+    generateBasicBlockLabel(inst.getTrueDest(), os_, bbMap_);
+    os_ << ";\n  goto ";
+    generateBasicBlockLabel(inst.getFalseDest(), os_, bbMap_);
+    os_ << ";\n";
   }
   void generateSwitchImmInst(SwitchImmInst &inst) {
     hermes_fatal("Unimplemented instruction SwitchImmInst");
