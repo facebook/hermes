@@ -2663,3 +2663,7 @@ extern "C" bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b) {
   return strictEqualityTest(
       HermesValue::fromRaw(a.raw), HermesValue::fromRaw(b.raw));
 }
+
+extern "C" SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v) {
+  return typeOf(getRuntime(shr), Handle<>::vmcast(toPHV(v)));
+}
