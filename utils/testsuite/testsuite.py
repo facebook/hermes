@@ -73,7 +73,24 @@ except ImportError:
 
 ## The content of this string is prepended to the test files and is used to
 ## provide the basic test built-ins.
-test_builtins_content = """
+test262_harness = """
+// test262 requirements.
+// Leave the unimplemented features unset in $262.
+var $262 = {};
+$262.global = this;
+$262.evalScript = eval;
+if (typeof HermesInternal === 'object') {
+  $262.detachArrayBuffer = HermesInternal.detachArrayBuffer;
+}
+
+// Browser functions:
+var alert = print;
+
+"""
+
+## The content of this string is prepended to the test files and is used to
+## provide the basic test built-ins.
+v8_harness = """
 // v8 test harness:
 function internal_arraysEqual(a, b) {
   if (a === b) return true;
@@ -134,18 +151,6 @@ var debug = function(s) {
 function v8pragma_NopSentinel() {
   return nopSentinel;
 }
-
-// test262 requirements.
-// Leave the unimplemented features unset in $262.
-var $262 = {};
-$262.global = this;
-$262.evalScript = eval;
-if (typeof HermesInternal === 'object') {
-  $262.detachArrayBuffer = HermesInternal.detachArrayBuffer;
-}
-
-// Browser functions:
-var alert = print;
 
 """
 
@@ -279,12 +284,13 @@ def generateSource(content, strict, suite, flags):
                 filepath = path.join(suite, "harness", i)
                 with open(filepath, "rb") as f:
                     source += f.read().decode("utf-8") + "\n"
+            source += test262_harness
         if "mjsunit" in suite:
             filepath = path.join(suite, "mjsunit.js")
             with open(filepath, "rb") as f:
                 source += f.read().decode("utf-8") + "\n"
+            source += v8_harness
 
-    source += test_builtins_content
     source += content
     return (source, includes)
 
@@ -505,6 +511,7 @@ def runTest(
     hvm,
     esprima_runner,
     lazy,
+    shermes,
     test_intl,
 ):
     """
@@ -617,6 +624,10 @@ def runTest(
             run_vm = True
             fileToRun = js_source
             start = time.time()
+        elif shermes:
+            run_vm = True
+            fileToRun = js_source
+            start = time.time()
         else:
             errString = ""
             fileToRun = js_source + ".hbc"
@@ -693,10 +704,15 @@ def runTest(
         # If the compilation succeeded, run the bytecode with the specified VM.
         if run_vm:
             try:
-                printVerbose("Running with HBC VM: {}".format(filename))
+                if shermes:
+                    printVerbose("Running with SHermes: {}".format(filename))
+                else:
+                    printVerbose("Running with HBC VM: {}".format(filename))
                 # Run the hermes vm.
                 if lazy:
                     binary = path.join(binary_path, "hermes")
+                elif shermes:
+                    binary = path.join(binary_path, "shermes")
                 else:
                     binary = path.join(binary_path, hvm)
                 disableHandleSanFlag = (
@@ -704,29 +720,42 @@ def runTest(
                     if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
                     else []
                 )
-                args = (
-                    [binary, fileToRun]
-                    + es6_args
-                    + extra_run_args
-                    + disableHandleSanFlag
-                    + useMicrotasksFlag
-                )
+                if shermes:
+                    args = [binary, fileToRun]
+                else:
+                    args = (
+                        [binary, fileToRun]
+                        + es6_args
+                        + extra_run_args
+                        + disableHandleSanFlag
+                        + useMicrotasksFlag
+                    )
                 if lazy:
                     args.append("-lazy")
                     if strictEnabled:
                         args.append("-strict")
                     else:
                         args.append("-non-strict")
+                if shermes:
+                    args.append("-exec")
+                    if strictEnabled:
+                        args.append("-strict")
+
                 env = {"LC_ALL": "en_US.UTF-8"}
                 if sys.platform == "linux":
                     env["ICU_DATA"] = binary_path
+                if shermes:
+                    # Pass the PATH along so shermes can find `cc`.
+                    env["PATH"] = os.environ["PATH"]
                 printVerbose(" ".join(args))
                 subprocess.check_output(
                     args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
                 )
 
-                if (not lazy and negativePhase == "runtime") or (
-                    lazy and negativePhase != ""
+                if (
+                    (not lazy and negativePhase == "runtime")
+                    or (lazy and negativePhase != "")
+                    or (shermes and negativePhase != "")
                 ):
                     printVerbose("FAIL: Expected execution to throw")
                     return (
@@ -948,6 +977,13 @@ def get_arg_parser():
         help="Show intermediate output",
     )
     parser.add_argument(
+        "--shermes",
+        dest="shermes",
+        default=False,
+        action="store_true",
+        help="Run with shermes",
+    )
+    parser.add_argument(
         "--lazy",
         dest="lazy",
         default=False,
@@ -1027,6 +1063,7 @@ def run(
     generate_test_only,
     show_all,
     lazy,
+    shermes,
     test_intl,
 ):
     global count
@@ -1112,6 +1149,7 @@ def run(
                 hvm,
                 esprima_runner,
                 lazy,
+                shermes,
                 test_intl,
             ),
             onlyfiles,

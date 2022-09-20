@@ -36,6 +36,7 @@ def main():
         args.generate_test_only,
         args.show_all,
         args.lazy,
+        args.shermes,
         args.test_intl,
     )
 
