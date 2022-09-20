@@ -28,10 +28,6 @@ class EmitWasmIntrinsicsContext;
 struct CodeGenerationSettings {
   /// Whether we should emit TDZ checks.
   bool enableTDZ{false};
-  /// Whether we can assume there are unlimited number of registers.
-  /// This affects how we generate the IR, as we can decide whether
-  /// to hold as many temporary values as we like.
-  bool unlimitedRegisters{true};
   /// Dump registers assigned to instruction operands.
   bool dumpOperandRegisters{false};
   /// Print source location information in IR dumps.

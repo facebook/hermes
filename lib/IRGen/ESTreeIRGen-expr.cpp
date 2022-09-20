@@ -280,7 +280,6 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   }
 
   bool consecutive = true;
-  auto codeGenOpts = Mod->getContext().getCodeGenerationSettings();
   AllocArrayInst *allocArrayInst = nullptr;
   for (auto &E : list) {
     Value *value{nullptr};
@@ -293,9 +292,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
         value = genExpression(&E);
       }
     }
-    if (!value ||
-        (!llvh::isa<Literal>(value) && !codeGenOpts.unlimitedRegisters) ||
-        isSpread) {
+    if (!value || !llvh::isa<Literal>(value) || isSpread) {
       // This is either an elision,
       // or a non-literal in limited-register mode,
       // or a spread element.

@@ -535,11 +535,9 @@ void Verifier::visitAllocObjectInst(const hermes::AllocObjectInst &Inst) {
 void Verifier::visitAllocArrayInst(const hermes::AllocArrayInst &Inst) {
   LiteralNumber *size = Inst.getSizeHint();
   Assert(size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
-  if (!Ctx->getCodeGenerationSettings().unlimitedRegisters) {
-    Assert(
-        Inst.isLiteralArray(),
-        "Array elements must be literal when registers are limited");
-  }
+  Assert(
+      Inst.isLiteralArray(),
+      "Array elements must be literal when registers are limited");
 }
 
 void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {

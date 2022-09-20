@@ -28,7 +28,6 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   /* Parse source */
   SourceErrorManager sm;
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.unlimitedRegisters = false;
   OptimizationSettings optSettings;
   optSettings.staticBuiltins = flags.staticBuiltins;
   auto context = std::make_shared<Context>(sm, codeGenOpts, optSettings);

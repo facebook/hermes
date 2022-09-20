@@ -128,7 +128,6 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
       "The input buffer must be null terminated");
 
   CodeGenerationSettings codeGenOpts{};
-  codeGenOpts.unlimitedRegisters = false;
   codeGenOpts.instrumentIR = compileFlags.instrumentIR;
 
   OptimizationSettings optSettings;
