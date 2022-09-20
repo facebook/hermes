@@ -393,8 +393,9 @@ static inline bool kindIsA(ValueKind kind, ValueKind base) {
 /// should be captured from a function two levels down the lexical stack.
 class SerializedScope {
  public:
+  using Ptr = std::shared_ptr<const SerializedScope>;
   /// Parent scope, if any.
-  std::shared_ptr<const SerializedScope> parentScope;
+  Ptr parentScope;
   /// Original name of the function, if any.
   Identifier originalName;
   /// The generated name of the variable holding the function in the parent's
@@ -406,6 +407,8 @@ class SerializedScope {
   /// List of variable names in the frame.
   llvh::SmallVector<Identifier, 16> variables;
 };
+
+using SerializedScopePtr = SerializedScope::Ptr;
 
 #ifndef HERMESVM_LEAN
 /// The source of a lazy AST node.
@@ -1445,7 +1448,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   LazySource lazySource_;
 
   /// The SerializedScope of the lazyCompilationAst.
-  std::shared_ptr<SerializedScope> lazyScope_{};
+  SerializedScopePtr lazyScope_{};
 
   /// The parent's generated closure variable for this function. It is non-null
   /// only if there is an alias binding from \c originalOrInferredName_ (which
@@ -1653,10 +1656,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return lazySource_;
   }
 
-  void setLazyScope(std::shared_ptr<SerializedScope> vars) {
+  void setLazyScope(SerializedScopePtr vars) {
     lazyScope_ = std::move(vars);
   }
-  std::shared_ptr<SerializedScope> getLazyScope() const {
+  SerializedScopePtr getLazyScope() const {
     return lazyScope_;
   }
 

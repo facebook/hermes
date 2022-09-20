@@ -286,7 +286,7 @@ void ESTreeIRGen::doCJSModule(
       segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
-static int getDepth(const std::shared_ptr<SerializedScope> chain) {
+static int getDepth(const SerializedScopePtr &chain) {
   int depth = 0;
   const SerializedScope *current = chain.get();
   while (current) {
@@ -1171,9 +1171,9 @@ Value *ESTreeIRGen::emitOptionalInitialization(
       {value, defaultValue}, {currentBlock, defaultResultBlock});
 }
 
-std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
+SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     const ScopeChain &chain) {
-  std::shared_ptr<SerializedScope> current{};
+  SerializedScopePtr current{};
   for (auto it = chain.functions.rbegin(), end = chain.functions.rend();
        it < end;
        it++) {
@@ -1190,7 +1190,7 @@ std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
 
 void ESTreeIRGen::materializeScopesInChain(
     Function *wrapperFunction,
-    const std::shared_ptr<const SerializedScope> &scope,
+    const SerializedScopePtr &scope,
     int depth) {
   if (!scope)
     return;
@@ -1250,7 +1250,7 @@ void buildDummyLexicalParent(
 void ESTreeIRGen::addLexicalDebugInfo(
     Function *child,
     Function *global,
-    const std::shared_ptr<const SerializedScope> &scope) {
+    const SerializedScopePtr &scope) {
   if (!scope || !scope->parentScope) {
     buildDummyLexicalParent(Builder, global, child);
     return;
@@ -1273,7 +1273,7 @@ void ESTreeIRGen::addLexicalDebugInfo(
   addLexicalDebugInfo(current, global, scope->parentScope);
 }
 
-std::shared_ptr<SerializedScope> ESTreeIRGen::serializeScope(
+SerializedScopePtr ESTreeIRGen::serializeScope(
     FunctionContext *ctx,
     bool includeGlobal) {
   // Serialize the global scope if and only if it's the only scope.

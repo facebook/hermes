@@ -26,7 +26,7 @@ struct LazyCompilationData {
   std::shared_ptr<Context> context;
 
   /// The variables in scope at the point where the function is defined.
-  std::shared_ptr<SerializedScope> parentScope;
+  SerializedScopePtr parentScope;
 
   /// The original name of the function, as found in the source.
   Identifier originalName;
