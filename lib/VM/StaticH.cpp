@@ -18,11 +18,6 @@
 using namespace hermes;
 using namespace hermes::vm;
 
-/// The lifetime of a Runtime is managed by a smart pointer, but the C API wants
-/// to deal with a regular pointer. Keep all created runtimes here, so they can
-/// be destroyed from a pointer.
-static llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> s_runtimes{};
-
 /// Convert the given \p cr to a \c CallResult<HermesValue>.
 template <typename T>
 static inline CallResult<HermesValue> toCallResultHermesValue(
@@ -31,24 +26,6 @@ static inline CallResult<HermesValue> toCallResultHermesValue(
     return ExecutionStatus::EXCEPTION;
   }
   return cr.getValue().getHermesValue();
-}
-
-extern "C" SHRuntime *_sh_init(void) {
-  auto config = RuntimeConfig::Builder().build();
-  std::shared_ptr<Runtime> runtimePtr = Runtime::create(config);
-  // Get the pointer first, since order of argument evaluation is not defined.
-  Runtime *pRuntime = runtimePtr.get();
-  s_runtimes.try_emplace(pRuntime, std::move(runtimePtr));
-  return getSHRuntime(*pRuntime);
-}
-
-extern "C" void _sh_done(SHRuntime *shr) {
-  auto it = s_runtimes.find(&getRuntime(shr));
-  if (it == s_runtimes.end()) {
-    llvh::errs() << "SHRuntime not found\n";
-    abort();
-  }
-  s_runtimes.erase(it);
 }
 
 extern "C" SHLegacyValue *
