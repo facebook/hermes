@@ -958,7 +958,7 @@ CallResult<PseudoHandle<>> SHLegacyFunction::_nativeCall(
     self->callDuration_ = HERMESVM_RDTSC() - t1;
     ++self->callCount_;
 #endif
-    _sh_end_try(getSHRuntime(runtime), jBuf.prev);
+    _sh_end_try(getSHRuntime(runtime));
 
     return createPseudoHandle(HermesValue::fromRaw(res.raw));
   } else {

@@ -180,9 +180,9 @@ extern "C" void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
   runtime.shCurJmpBuf = buf;
 }
 
-extern "C" void _sh_end_try(SHRuntime *shr, SHJmpBuf *prev) {
+extern "C" void _sh_end_try(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
-  runtime.shCurJmpBuf = prev;
+  runtime.shCurJmpBuf = runtime.shCurJmpBuf->prev;
 }
 
 extern "C" SHLegacyValue _sh_catch(

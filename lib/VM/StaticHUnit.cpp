@@ -71,7 +71,7 @@ _sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
 
   if (_sh_try(shr, &jbuf) == 0) {
     *resOrExc = _sh_unit_init(shr, unit);
-    _sh_end_try(shr, jbuf.prev);
+    _sh_end_try(shr);
   } else {
     *resOrExc = _sh_catch(shr, &locals, frame, savedSP - frame);
     success = false;
