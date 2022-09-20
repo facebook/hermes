@@ -347,6 +347,19 @@ void _sh_ljs_put_own_getter_setter_by_val(
     SHLegacyValue *setter,
     bool isEnumerable);
 
+SHLegacyValue
+_sh_ljs_del_by_id_strict(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key);
+SHLegacyValue
+_sh_ljs_del_by_id_loose(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key);
+SHLegacyValue _sh_ljs_del_by_val_strict(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key);
+SHLegacyValue _sh_ljs_del_by_val_loose(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key);
+
 /// Get the string associated with the given SHSymbolID. The caller is
 /// responsible for ensuring that \p symID is not garbage collected.
 SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);

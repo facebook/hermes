@@ -993,6 +993,134 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
     _sh_throw_current(shr);
 }
 
+static HermesValue delById(
+    Runtime &runtime,
+    PinnedHermesValue *target,
+    SymbolID key,
+    bool strictMode) {
+  const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+  CallResult<bool> status{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(target->isObject())) {
+    {
+      GCScopeMarkerRAII marker{runtime};
+      status = JSObject::deleteNamed(
+          Handle<JSObject>::vmcast(toPHV(target)),
+          runtime,
+          key,
+          defaultPropOpFlags);
+    }
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
+  } else {
+    // This is the "slow path".
+    CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      res = toObject(runtime, Handle<>(target));
+    }
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      // If an exception is thrown, likely we are trying to convert
+      // undefined/null to an object. Passing over the name of the property
+      // so that we could emit more meaningful error messages.
+      // CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
+      //     runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    {
+      GCScopeMarkerRAII marker{runtime};
+      Handle tmpHandle{runtime, res.getValue()};
+      status = JSObject::deleteNamed(
+          Handle<JSObject>::vmcast(tmpHandle),
+          runtime,
+          key,
+          defaultPropOpFlags);
+    }
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
+  }
+}
+
+extern "C" SHLegacyValue _sh_ljs_del_by_id_strict(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key) {
+  return delById(
+      getRuntime(shr), toPHV(target), SymbolID::unsafeCreate(key), true);
+}
+extern "C" SHLegacyValue
+_sh_ljs_del_by_id_loose(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key) {
+  return delById(
+      getRuntime(shr), toPHV(target), SymbolID::unsafeCreate(key), false);
+}
+
+static HermesValue delByVal(
+    Runtime &runtime,
+    PinnedHermesValue *target,
+    PinnedHermesValue *key,
+    bool strictMode) {
+  const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+  CallResult<bool> status{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(target->isObject())) {
+    {
+      GCScopeMarkerRAII marker{runtime};
+      status = JSObject::deleteComputed(
+          Handle<JSObject>::vmcast(toPHV(target)),
+          runtime,
+          Handle<>(toPHV(key)),
+          defaultPropOpFlags);
+    }
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
+  } else {
+    // This is the "slow path".
+    CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+    {
+      GCScopeMarkerRAII marker{runtime};
+      res = toObject(runtime, Handle<>(target));
+    }
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      // If an exception is thrown, likely we are trying to convert
+      // undefined/null to an object. Passing over the name of the property
+      // so that we could emit more meaningful error messages.
+      // CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
+      //     runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    {
+      GCScopeMarkerRAII marker{runtime};
+      Handle tmpHandle{runtime, res.getValue()};
+      status = JSObject::deleteComputed(
+          Handle<JSObject>::vmcast(tmpHandle),
+          runtime,
+          Handle<>(toPHV(key)),
+          defaultPropOpFlags);
+    }
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      _sh_throw_current(getSHRuntime(runtime));
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
+  }
+}
+
+extern "C" SHLegacyValue _sh_ljs_del_by_val_strict(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key) {
+  return delByVal(getRuntime(shr), toPHV(target), toPHV(key), true);
+}
+extern "C" SHLegacyValue _sh_ljs_del_by_val_loose(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key) {
+  return delByVal(getRuntime(shr), toPHV(target), toPHV(key), false);
+}
+
 extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
   NoHandleScope noHandles{getRuntime(shr)};
   return HermesValue::encodeStringValue(
