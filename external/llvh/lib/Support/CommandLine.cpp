@@ -1199,6 +1199,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       if (!PositionalOpts.empty()) {
         PositionalVals.push_back(std::make_pair(StringRef(argv[i]), i));
 
+        // This incorrectly consumes all arguments after the file name.
+#if 0
         // All of the positional arguments have been fulfulled, give the rest to
         // the consume after option... if it's specified...
         //
@@ -1207,6 +1209,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
             PositionalVals.push_back(std::make_pair(StringRef(argv[i]), i));
           break; // Handle outside of the argument processing loop...
         }
+#endif
 
         // Delay processing positional arguments until the end...
         continue;

@@ -1,0 +1,20 @@
+diff --git a/lib/Support/CommandLine.cpp b/lib/Support/CommandLine.cpp
+--- a/lib/Support/CommandLine.cpp
++++ b/lib/Support/CommandLine.cpp
+@@ -1199,6 +1199,8 @@
+       if (!PositionalOpts.empty()) {
+         PositionalVals.push_back(std::make_pair(StringRef(argv[i]), i));
+ 
++        // This incorrectly consumes all arguments after the file name.
++#if 0
+         // All of the positional arguments have been fulfulled, give the rest to
+         // the consume after option... if it's specified...
+         //
+@@ -1207,6 +1209,7 @@
+             PositionalVals.push_back(std::make_pair(StringRef(argv[i]), i));
+           break; // Handle outside of the argument processing loop...
+         }
++#endif
+ 
+         // Delay processing positional arguments until the end...
+         continue;
