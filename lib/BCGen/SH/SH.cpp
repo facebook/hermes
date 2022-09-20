@@ -512,7 +512,7 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
 
-    bool eqOp = false;
+    bool boolConv = false;
     bool strictEqOp = false;
     using OpKind = BinaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
@@ -551,11 +551,11 @@ class InstrGen {
         break;
       case OpKind::NotEqualKind: // !=
         os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
-        eqOp = true;
+        boolConv = true;
         break;
       case OpKind::EqualKind: // ==
         os_ << "_sh_ljs_bool(_sh_ljs_equal_rjs";
-        eqOp = true;
+        boolConv = true;
         break;
       case OpKind::StrictlyNotEqualKind: // !==
         os_ << "_sh_ljs_bool(!_sh_ljs_strict_equal";
@@ -568,6 +568,26 @@ class InstrGen {
       case OpKind::InKind: // in
         os_ << "_sh_ljs_is_in";
         break;
+      case OpKind::InstanceOfKind:
+        os_ << "_sh_ljs_instance_of";
+        break;
+      case OpKind::LessThanKind:
+        os_ << "_sh_ljs_bool(_sh_ljs_less_rjs";
+        boolConv = true;
+        break;
+      case OpKind::LessThanOrEqualKind:
+        os_ << "_sh_ljs_bool(_sh_ljs_less_equal_rjs";
+        boolConv = true;
+        break;
+      case OpKind::GreaterThanKind:
+        os_ << "_sh_ljs_bool(_sh_ljs_greater_rjs";
+        boolConv = true;
+        break;
+      case OpKind::GreaterThanOrEqualKind:
+        os_ << "_sh_ljs_bool(_sh_ljs_greater_equal_rjs";
+        boolConv = true;
+        break;
+      case OpKind::ExponentiationKind:
       default:
         hermes_fatal("Unimplemented operator");
     }
@@ -582,7 +602,7 @@ class InstrGen {
       generateRegister(*inst.getLeftHandSide());
       os_ << ", &";
       generateRegister(*inst.getRightHandSide());
-      if (eqOp)
+      if (boolConv)
         os_ << ")";
       os_ << ");\n";
     }

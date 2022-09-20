@@ -406,6 +406,10 @@ SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHLegacyValue
 _sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj);
+SHLegacyValue _sh_ljs_instance_of(
+    SHRuntime *shr,
+    SHLegacyValue *object,
+    SHLegacyValue *constructor);
 
 SHLegacyValue _sh_ljs_inc_rjs(SHRuntime *shr, const SHLegacyValue *n);
 SHLegacyValue _sh_ljs_dec_rjs(SHRuntime *shr, const SHLegacyValue *n);
