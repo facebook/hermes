@@ -2805,3 +2805,19 @@ extern "C" SHLegacyValue _sh_ljs_add_empty_string_rjs(
     return *res;
   }
 }
+
+extern "C" SHLegacyValue _sh_ljs_instance_of(
+    SHRuntime *shr,
+    SHLegacyValue *object,
+    SHLegacyValue *constructor) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{false};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = instanceOfOperator_RJS(
+        runtime, Handle<>(toPHV(object)), Handle<>(toPHV(constructor)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return _sh_ljs_bool(*cr);
+}
