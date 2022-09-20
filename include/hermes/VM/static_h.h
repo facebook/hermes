@@ -346,6 +346,8 @@ SHLegacyValue _sh_ljs_new_object_with_parent(
     SHRuntime *shr,
     const SHLegacyValue *parent);
 
+/// \p sizeHint the size of the resultant array.
+SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint);
 #ifdef __cplusplus
 }
 #endif
