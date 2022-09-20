@@ -62,6 +62,7 @@ bool shermesCompile(
     const ShermesCompileParams &params,
     OutputLevelKind outputLevel,
     llvh::StringRef inputFilename,
-    llvh::StringRef outputFilename);
+    llvh::StringRef outputFilename,
+    llvh::ArrayRef<std::string> execArgs);
 
 #endif // SHERMES_COMPILE_H

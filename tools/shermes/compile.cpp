@@ -251,17 +251,14 @@ bool invokeCC(
 
   std::vector<llvh::StringRef> refArgs{};
   refArgs.reserve(args.size());
-  unsigned curArg = 0;
-  for (const auto &str : args) {
+  for (const auto &str : args)
     refArgs.emplace_back(str);
-    if (params.verbosity > 0) {
-      if (curArg++)
-        llvh::errs() << " ";
-      llvh::errs() << str;
-    }
-  }
-  if (params.verbosity > 0)
+
+  if (params.verbosity) {
+    for (size_t i = 0; i != refArgs.size(); ++i)
+      llvh::errs() << (i ? " " : "") << refArgs[i];
     llvh::errs() << "\n";
+  }
 
   std::string errMsg;
   if (llvh::sys::ExecuteAndWait(
@@ -340,7 +337,8 @@ bool execute(
     hermes::Context *context,
     hermes::Module &M,
     const ShermesCompileParams &params,
-    llvh::StringRef inputFilename) {
+    llvh::StringRef inputFilename,
+    llvh::ArrayRef<std::string> execArgs) {
   llvh::SmallString<32> tmpPath;
   if (auto EC = llvh::sys::fs::createTemporaryFile(
           llvh::sys::path::filename(inputFilename), {}, tmpPath)) {
@@ -365,13 +363,20 @@ bool execute(
     return false;
   }
 
-  llvh::StringRef arg(tmpPath);
-  if (params.verbosity)
-    llvh::errs() << arg << "\n";
+  llvh::SmallVector<llvh::StringRef, 1> args{};
+  args.emplace_back(tmpPath);
+  for (const auto &s : execArgs)
+    args.emplace_back(s);
+
+  if (params.verbosity) {
+    for (size_t i = 0; i != args.size(); ++i)
+      llvh::errs() << (i ? " " : "") << args[i];
+    llvh::errs() << "\n";
+  }
 
   std::string errMsg;
   if (llvh::sys::ExecuteAndWait(
-          arg, arg, llvh::None, {}, 0, 0, &errMsg, nullptr) == 0) {
+          tmpPath, args, llvh::None, {}, 0, 0, &errMsg, nullptr) == 0) {
     return true;
   }
 
@@ -388,7 +393,8 @@ bool shermesCompile(
     const ShermesCompileParams &params,
     OutputLevelKind outputLevel,
     llvh::StringRef inputFilename,
-    llvh::StringRef outputFilename) {
+    llvh::StringRef outputFilename,
+    llvh::ArrayRef<std::string> execArgs) {
   assert(
       outputLevel >= OutputLevelKind::IR &&
       "generateOutput() invoked needlessly");
@@ -406,7 +412,7 @@ bool shermesCompile(
         context, M, params, outputLevel, inputFilename, outputFilename);
   }
   if (outputLevel == OutputLevelKind::Run) {
-    return execute(context, M, params, inputFilename);
+    return execute(context, M, params, inputFilename, execArgs);
   }
 
   assert(false && "unsupported output level");
