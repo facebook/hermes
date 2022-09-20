@@ -341,6 +341,11 @@ SHLegacyValue _sh_ljs_bit_not_rjs(SHRuntime *shr, const SHLegacyValue *a);
 
 SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
 
+SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
+SHLegacyValue _sh_ljs_new_object_with_parent(
+    SHRuntime *shr,
+    const SHLegacyValue *parent);
+
 #ifdef __cplusplus
 }
 #endif

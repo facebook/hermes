@@ -802,3 +802,27 @@ extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
   return HermesValue::encodeStringValue(
       getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
 }
+
+extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
+  PseudoHandle<JSObject> result;
+  {
+    NoHandleScope noHandle{getRuntime(shr)};
+    result = JSObject::create(getRuntime(shr));
+  }
+  return result.getHermesValue();
+}
+extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
+    SHRuntime *shr,
+    const SHLegacyValue *parent) {
+  PseudoHandle<JSObject> result;
+  {
+    NoHandleScope noHandle{getRuntime(shr)};
+    result = JSObject::create(
+        getRuntime(shr),
+        toPHV(parent)->isObject() ? Handle<JSObject>::vmcast(toPHV(parent))
+            : toPHV(parent)->isNull()
+            ? Runtime::makeNullHandle<JSObject>()
+            : Handle<JSObject>::vmcast(&getRuntime(shr).objectPrototype));
+  }
+  return result.getHermesValue();
+}

@@ -578,13 +578,25 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction AllocStackInst");
   }
   void generateAllocObjectInst(AllocObjectInst &inst) {
-    hermes_fatal("Unimplemented instruction AllocObjectInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    // TODO: Utilize sizeHint.
+    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+      os_ << "_sh_ljs_new_object(shr)";
+    } else {
+      os_ << "_sh_ljs_new_object_with_parent(shr, &";
+      generateValue(*inst.getParentObject());
+      os_ << ")";
+    }
+    os_ << ";\n";
   }
   void generateAllocArrayInst(AllocArrayInst &inst) {
     hermes_fatal("Unimplemented instruction AllocArrayInst");
   }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
-    hermes_fatal("Unimplemented instruction AllocObjectLiteralInst");
+    // This instruction should not have reached this far.
+    hermes_fatal("AllocObjectLiteralInst should have been lowered.");
   }
   void generateCreateArgumentsInst(CreateArgumentsInst &inst) {
     hermes_fatal("Unimplemented instruction CreateArgumentsInst");
