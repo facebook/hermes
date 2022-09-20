@@ -8,8 +8,6 @@
 #ifndef HERMES_SUPPORT_MEMORYSIZEPARSER_H
 #define HERMES_SUPPORT_MEMORYSIZEPARSER_H
 
-#include "hermes/Public/GCConfig.h"
-
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
 
@@ -25,7 +23,7 @@ using llvh::cl::Option;
 using llvh::cl::parser;
 
 struct MemorySize {
-  hermes::vm::gcheapsize_t bytes;
+  unsigned bytes;
 };
 
 // Define a custom parser for memory size specifications.
