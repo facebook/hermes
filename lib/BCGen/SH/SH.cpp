@@ -336,11 +336,13 @@ class InstrGen {
       os_ << "_sh_ljs_bool(" << B->getValue() << ")";
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
       os_ << "_sh_ljs_double(";
-      if (LN->getValue() == static_cast<int>(LN->getValue()))
+      if (!LN->isNegativeZero() &&
+          LN->getValue() == static_cast<int>(LN->getValue())) {
         os_ << static_cast<int>(LN->getValue());
-      else
+      } else {
         os_ << "((struct HermesValueBase){.raw = "
             << llvh::DoubleToBits(LN->getValue()) << "u}).f64";
+      }
       os_ << ")";
     } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
       os_ << "_sh_ljs_get_string(shr, s_symbols["
