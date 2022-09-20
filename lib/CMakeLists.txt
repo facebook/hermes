@@ -3,10 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 add_hermes_library(hermesOptimizer
-  STATIC
   Optimizer/PassManager/Pipeline.cpp
   Optimizer/Scalar/SimplifyCFG.cpp
   Optimizer/Scalar/CSE.cpp
@@ -32,7 +29,6 @@ add_hermes_library(hermesOptimizer
 )
 
 add_hermes_library(hermesFrontend
-  STATIC
   IRGen/IRGen.cpp
   IRGen/ESTreeIRGen.cpp IRGen/ESTreeIRGen.h
   IRGen/ESTreeIRGen-expr.cpp
@@ -48,7 +44,7 @@ add_hermes_library(hermesFrontend
   Utils/Dumper.cpp
   Optimizer/Wasm/WasmIntrinsics.cpp
   Optimizer/Wasm/EmitWasmIntrinsics.cpp
-  LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
+  LINK_OBJLIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
 )
 
 add_subdirectory(VM)
@@ -68,3 +64,90 @@ add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
 add_subdirectory(InternalBytecode)
+
+# Define combined libraries from all components. Components are defined as object
+# libraries. It is tricky.
+#
+# The problem is that most of the componenents have dependencies on other components.
+# We can't simply add them as LINK_LIBRARIES because that transfers their tranisitive
+# dependency metadata to the combined library. The combined library ends up
+# containing the dependency and simultaneously depending on it.
+# So, we are forced to include just dependencies using $<TARGET_OBJECTS:component>.
+# But then theere is anothet problem: the TARGET_OBJECTS approach doesn't transfer
+# any metadata at all (include paths, external dependencies, etc).
+# Fortunately most components don't have external dependencies or include paths,
+# but some do.
+#
+# Our solution. If a component has external dependencies or other metadata we
+# need, we make sure it has not internal dependencies and add it to LINK_LIBRARIES
+# (this could make it harder to use in tests, but such is life).
+# The rest of the components we add with the TARGET_OBJECTS approach.
+
+add_library(hermescompiler STATIC)
+target_link_libraries(hermescompiler PUBLIC
+  LLVHSupport_obj
+  dtoa_obj
+  hermesADT_obj
+  hermesAST2JS_obj
+  hermesAST_obj
+  hermesBackend_obj
+  hermesFrontEndDefs_obj
+  hermesFrontend_obj
+  hermesHBCBackend_obj
+  hermesInst_obj
+  hermesOptimizer_obj
+  hermesParser_obj
+  hermesPlatformUnicode_obj
+  hermesPlatform_obj
+  hermesPublic_obj
+  hermesRegex_obj
+  hermesSHBackend_obj
+  hermesSourceMap_obj
+  hermesSupport_obj
+  zip_obj
+  )
+
+add_library(hermesvm STATIC)
+target_link_libraries(hermesvm PUBLIC
+  LLVHSupport_obj
+  dtoa_obj
+  hermesADT_obj
+  hermesAST2JS_obj
+  hermesAST_obj
+  hermesBackend_obj
+  hermesFrontEndDefs_obj
+  hermesFrontend_obj
+  hermesHBCBackend_obj
+  hermesInst_obj
+  hermesInstrumentation_obj
+  hermesInternalBytecode_obj
+  hermesOptimizer_obj
+  hermesParser_obj
+  hermesPlatformUnicode_obj
+  hermesPlatform_obj
+  hermesPublic_obj
+  hermesRegex_obj
+  hermesSHBackend_obj
+  hermesSourceMap_obj
+  hermesSupport_obj
+  hermesVMRuntime_obj
+  zip_obj
+  )
+
+add_library(hermesvmlean STATIC)
+target_link_libraries(hermesvmlean PUBLIC
+  LLVHSupport_obj
+  dtoa_obj
+  hermesADT_obj
+  hermesHBCBackendLean_obj
+  hermesInst_obj
+  hermesInstrumentation_obj
+  hermesInternalBytecode_obj
+  hermesPlatformUnicode_obj
+  hermesPlatform_obj
+  hermesPublic_obj
+  hermesRegex_obj
+  hermesSupport_obj
+  hermesVMRuntimeLean_obj
+  zip_obj
+  )

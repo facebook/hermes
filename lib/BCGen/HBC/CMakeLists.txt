@@ -4,7 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesHBCBackend
-  STATIC
   BackendContext.cpp
   HBC.cpp
   ISel.cpp
@@ -29,7 +28,7 @@ add_hermes_library(hermesHBCBackend
   Passes/InsertProfilePoint.cpp
   Passes/LowerBuiltinCalls.cpp
   Passes/OptEnvironmentInit.cpp
-  LINK_LIBS
+  LINK_OBJLIBS
   hermesBackend
   hermesInst
   hermesSourceMap
@@ -38,16 +37,15 @@ add_hermes_library(hermesHBCBackend
 )
 
 add_hermes_library(hermesHBCBackendLean
-  STATIC
   BytecodeDataProvider.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
   SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   UniquingFilenameTable.cpp
-  LINK_LIBS
+  LINK_OBJLIBS
   hermesSupport
   hermesPublic
 )
 
-target_compile_definitions(hermesHBCBackendLean PUBLIC HERMESVM_LEAN)
+target_compile_definitions(hermesHBCBackendLean_obj PUBLIC HERMESVM_LEAN)

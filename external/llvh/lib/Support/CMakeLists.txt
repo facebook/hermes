@@ -53,7 +53,7 @@ add_hermes_library(LLVHSupport
     Unicode.cpp
     Valgrind.cpp
     Watchdog.cpp
-    LINK_LIBS LLVHDemangle ${TERMINFO_LIBS}
+    LINK_OBJLIBS LLVHDemangle ${TERMINFO_LIBS}
 )
 
 if (LLVM_PTHREAD_LIB)

@@ -9,5 +9,5 @@ add_hermes_library(hermesSourceMap
     SourceMapGenerator.cpp
     SourceMapParser.cpp
     SourceMapTranslator.cpp
-    LINK_LIBS hermesParser
+    LINK_OBJLIBS hermesParser
 )

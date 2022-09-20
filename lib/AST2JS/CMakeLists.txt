@@ -5,5 +5,5 @@
 
 add_hermes_library(hermesAST2JS
     AST2JS.cpp
-    LINK_LIBS hermesAST
+    LINK_OBJLIBS hermesAST
 )

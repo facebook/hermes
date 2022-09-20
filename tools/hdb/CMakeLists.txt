@@ -5,19 +5,12 @@
 
 set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
-add_hermes_tool(hdb
-  hdb.cpp
-  ${ALL_HEADER_FILES}
-  )
+add_hermes_tool(hdb hdb.cpp LINK_LIBS hermesapi)
 
 set_target_properties(hdb PROPERTIES
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED ON
   )
-
-target_link_libraries(hdb
-  hermesapi
-)
 
 install(TARGETS hdb
   RUNTIME DESTINATION bin

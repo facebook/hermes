@@ -4,8 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 if (EMSCRIPTEN)
-  set(HERMES_LINK_COMPONENTS LLVHSupport)
-
   add_hermes_tool(hermes-parser-wasm
     hermes-parser-wasm.cpp
     HermesParserJSSerializer.cpp
@@ -15,6 +13,7 @@ if (EMSCRIPTEN)
   target_link_libraries(hermes-parser-wasm
     hermesAST
     hermesParser
+    LLVHSupport
   )
 
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODERAWFS=0 -s WASM=1")

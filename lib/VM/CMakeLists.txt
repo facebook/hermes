@@ -161,7 +161,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set_source_files_properties(DecoratedObject.cpp HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
 endif()
 
-set(link_libs
+set(LINK_OBJLIBS
   hermesADT
   hermesInst
   hermesSupport
@@ -172,21 +172,21 @@ set(link_libs
 )
 
 if(HERMES_ENABLE_INTL)
-  list(APPEND link_libs hermesPlatformIntl)
+  list(APPEND LINK_OBJLIBS hermesPlatformIntl)
 endif()
 
-add_hermes_library(hermesVMRuntime STATIC ${source_files}
-    LINK_LIBS
-    ${link_libs}
+add_hermes_library(hermesVMRuntime ${source_files}
+    LINK_OBJLIBS
+    ${LINK_OBJLIBS}
     hermesHBCBackend
     hermesParser
 )
 
-add_hermes_library(hermesVMRuntimeLean STATIC ${source_files}
-    LINK_LIBS
-    ${link_libs}
+add_hermes_library(hermesVMRuntimeLean ${source_files}
+    LINK_OBJLIBS
+    ${LINK_OBJLIBS}
     hermesHBCBackendLean
 )
-target_compile_definitions(hermesVMRuntimeLean PUBLIC HERMESVM_LEAN)
+target_compile_definitions(hermesVMRuntimeLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(Instrumentation)
