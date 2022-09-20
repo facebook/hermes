@@ -57,5 +57,5 @@ add_hermes_library(LLVHSupport
 )
 
 if (LLVM_PTHREAD_LIB)
-    target_link_libraries(LLVHSupport ${LLVM_PTHREAD_LIB})
+    target_link_libraries(LLVHSupport_obj ${LLVM_PTHREAD_LIB})
 endif()
