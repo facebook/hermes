@@ -666,6 +666,9 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
+    hermesvm
+    hermesvmlean
+    shermes
     )
 
   if(HERMES_BUILD_NODE_HERMES)
@@ -700,6 +703,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
     coverage=${coverage_directory}
+    shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     )
 
   set(LLVH_LIT_ARGS "-sv")
@@ -712,4 +716,12 @@ if(HERMES_ENABLE_TEST_SUITE)
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+
+  add_lit_testsuite(check-shermes "Running the Static Hermes regression tests"
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/shermes
+    PARAMS ${HERMES_LIT_TEST_PARAMS}
+    DEPENDS ${HERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(check-shermes PROPERTIES FOLDER "Static Hermes regression tests")
 endif()
