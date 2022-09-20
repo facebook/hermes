@@ -391,19 +391,39 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction Instruction");
   }
   void generateSingleOperandInst(SingleOperandInst &inst) {
-    hermes_fatal("Unimplemented instruction SingleOperandInst");
+    hermes_fatal("This is not a concrete instruction");
   }
   void generateAddEmptyStringInst(AddEmptyStringInst &inst) {
-    hermes_fatal("Unimplemented instruction AddEmptyStringInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_add_empty_string_rjs(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
   }
   void generateAsNumberInst(AsNumberInst &inst) {
-    hermes_fatal("Unimplemented instruction AsNumberInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_double(_sh_ljs_to_double_rjs(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << "));\n";
   }
   void generateAsNumericInst(AsNumericInst &inst) {
-    hermes_fatal("Unimplemented instruction AsNumericInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_to_numeric_rjs(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
   }
   void generateAsInt32Inst(AsInt32Inst &inst) {
-    hermes_fatal("Unimplemented instruction AsInt32Inst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_to_int32_rjs(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
   }
   void generateLoadStackInst(LoadStackInst &inst) {
     hermes_fatal("Unimplemented instruction LoadStackInst");

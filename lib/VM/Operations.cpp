@@ -2295,6 +2295,40 @@ extern "C" double _sh_ljs_to_double_rjs(
   return cr->getDouble();
 }
 
+extern "C" SHLegacyValue _sh_ljs_to_numeric_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()) || LLVM_LIKELY(pn->isBigInt()))
+    return *pn;
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toNumeric_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
+
+extern "C" SHLegacyValue _sh_ljs_to_int32_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()))
+    return _sh_ljs_double(hermes::truncateToInt32(pn->getNumber()));
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toInt32_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
+
 #define SH_COMPARISON_OP(name, call, oper)                              \
   extern "C" bool name(                                                 \
       SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) { \
@@ -2715,4 +2749,31 @@ extern "C" bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b) {
 
 extern "C" SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v) {
   return typeOf(getRuntime(shr), Handle<>::vmcast(toPHV(v)));
+}
+
+extern "C" SHLegacyValue _sh_ljs_add_empty_string_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *val) {
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_LIKELY(toPHV(val)->isString())) {
+    return *val;
+  } else {
+    // Slow path, convert to primitive then call toString.
+    auto res = [&runtime, val]() -> CallResult<HermesValue> {
+      GCScopeMarkerRAII marker{runtime};
+      auto res =
+          toPrimitive_RJS(runtime, Handle<>(toPHV(val)), PreferredType::NONE);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      Handle<> tmpHandle = runtime.makeHandle(*res);
+      auto strRes = toString_RJS(runtime, tmpHandle);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+
+      return strRes->getHermesValue();
+    }();
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(shr);
+    return *res;
+  }
 }
