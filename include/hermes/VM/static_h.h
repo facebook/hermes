@@ -188,7 +188,7 @@ SHLegacyValue _sh_ljs_create_this(
 
 #define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
 void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf);
-void _sh_end_try(SHRuntime *shr, SHJmpBuf *prev);
+void _sh_end_try(SHRuntime *shr);
 
 /// \param frame the value that should be set to the current frame
 ///     (Runtime::currentFrame_).

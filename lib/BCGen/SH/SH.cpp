@@ -304,6 +304,9 @@ class InstrGen {
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
 
+  /// Indices used to generate unique names for the jump buffers.
+  uint32_t nextJBufIdx_{0};
+
   /// True if the function being generated is in strict mode.
   bool isStrictMode_;
 
@@ -834,7 +837,10 @@ class InstrGen {
     hermes_fatal("CreateArgumentsInst should have been lowered.");
   }
   void generateCatchInst(CatchInst &inst) {
-    hermes_fatal("Unimplemented instruction CatchInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_catch(shr, (SHLocals*)&locals, frame, "
+        << ra_.getMaxRegisterUsage() << ");\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
     hermes_fatal("Unimplemented instruction DebuggerInst");
@@ -869,7 +875,10 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
-    hermes_fatal("Unimplemented instruction TryEndInst");
+    // TODO(T132354002): Properly understand the nesting of try blocks so we can
+    // directly pass in the corresponding SHJmpBuf here instead of retrieving it
+    // from shr.
+    os_ << "_sh_end_try(shr);";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     hermes_fatal("Unimplemented instruction GetNewTargetInst");
@@ -966,7 +975,16 @@ class InstrGen {
     hermes_fatal("This instruction is not in use in HBC.");
   }
   void generateTryStartInst(TryStartInst &inst) {
-    hermes_fatal("Unimplemented instruction TryStartInst");
+    // TODO(T132354002): Properly understand the nesting of try blocks so we can
+    // reuse SHJmpBufs.
+    os_ << "  SHJmpBuf jBuf" << nextJBufIdx_ << ";\n";
+    os_ << "  if(_sh_try(shr, &jBuf" << nextJBufIdx_ << ") == 0) goto ";
+    generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
+    os_ << ";\n";
+    os_ << "  goto ";
+    generateBasicBlockLabel(inst.getCatchTarget(), os_, bbMap_);
+    os_ << ";\n";
+    nextJBufIdx_++;
   }
   void generateCompareBranchInst(CompareBranchInst &inst) {
     os_ << "  if(";
@@ -1335,7 +1353,10 @@ void generateFunction(
   for (auto &B : order) {
     OS << "\n";
     generateBasicBlockLabel(B, OS, bbMap);
-    OS << ":\n";
+    OS << ":\n"
+       // Print a no-op expression, since the line after a label must be an
+       // expression (as opposed to a declaration).
+       << "  ;\n";
 
     for (auto &I : *B) {
       instrGen.generate(I);
