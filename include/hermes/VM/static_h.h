@@ -109,7 +109,7 @@ typedef struct SHJmpBuf {
 } SHJmpBuf;
 
 /// Create a runtime instance.
-SHRuntime *_sh_init(void);
+SHRuntime *_sh_init(int argc, char **argv);
 /// Destroy a runtime instance created by \c _sh_init();
 void _sh_done(SHRuntime *shr);
 

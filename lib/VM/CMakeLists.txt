@@ -70,6 +70,7 @@ set(source_files
   VTable.cpp
   Metadata.cpp
   StaticH.cpp
+  StaticHInit.cpp
   StaticHUnit.cpp
   SHSerializedLiteralParser.cpp
 
