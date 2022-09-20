@@ -50,19 +50,19 @@ bool invokeBackend(
   return true;
 }
 
-/// Derive an output filename from the input filename by replacing the input
-/// extension with \p newExt, unless for some crazy reason it already happens to
-/// be that.
+/// Derive an output filename from the input filename by removing the path and
+/// replacing the input extension with \p newExt, unless for some crazy reason
+/// it already happens to be that.
 ///
 /// \param input input filename
 /// \param storage storage where the manipulated name is kept
 /// \param newExt the new output extension
 /// \return a reference to storage
-llvh::StringRef replaceExtension(
+llvh::StringRef deriveFilename(
     llvh::StringRef input,
     llvh::SmallString<32> &storage,
     llvh::StringRef newExt) {
-  storage = input;
+  storage = llvh::sys::path::filename(input);
   if (llvh::sys::path::extension(storage) != newExt)
     llvh::sys::path::replace_extension(storage, newExt);
   else
@@ -100,7 +100,7 @@ bool compileToC(
   // If an output file name is not specified, derive it from the input.
   llvh::SmallString<32> outputPathBuf{};
   if (outputFilename.empty())
-    outputFilename = replaceExtension(inputFilename, outputPathBuf, ".c");
+    outputFilename = deriveFilename(inputFilename, outputPathBuf, ".c");
 
   OutputStream fileOS{};
   if (!fileOS.open(outputFilename, llvh::sys::fs::F_None))
@@ -291,7 +291,7 @@ bool compileFromC(
       assert(
           outputLevel == OutputLevelKind::Asm ||
           outputLevel == OutputLevelKind::Obj);
-      outputFilename = replaceExtension(
+      outputFilename = deriveFilename(
           inputFilename,
           outputPathBuf,
           outputLevel == OutputLevelKind::Asm ? ".s" : ".o");
