@@ -580,6 +580,34 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }
 
+extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID symID,
+    SHLegacyValue *value,
+    char *propCacheEntry) {
+  putById_RJS<true, true>(
+      getRuntime(shr),
+      toPHV(target),
+      SymbolID::unsafeCreate(symID),
+      toPHV(value),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID symID,
+    SHLegacyValue *value,
+    char *propCacheEntry) {
+  putById_RJS<true, true>(
+      getRuntime(shr),
+      toPHV(target),
+      SymbolID::unsafeCreate(symID),
+      toPHV(value),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
 static inline void putByVal_RJS(
     SHRuntime *shr,
     SHLegacyValue *target,

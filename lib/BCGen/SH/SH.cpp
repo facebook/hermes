@@ -603,7 +603,26 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction TryStoreGlobalPropertyInst");
+    os_.indent(2);
+    if (isStrictMode_)
+      os_ << "_sh_ljs_try_put_by_id_strict_rjs(";
+    else
+      os_ << "_sh_ljs_try_put_by_id_loose_rjs(";
+
+    os_ << "shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    auto prop = inst.getProperty();
+    auto *propStr = cast<LiteralString>(prop);
+    os_ << llvh::format(
+               "s_symbols[%u]",
+               moduleGen_.stringTable.add(propStr->getValue().str()))
+        << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ", s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
+        << nextCacheIdx_++;
+
+    os_ << ");\n";
   }
   void generateStoreOwnPropertyInst(StoreOwnPropertyInst &inst) {
     hermes_fatal("Unimplemented instruction StoreOwnPropertyInst");
