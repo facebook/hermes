@@ -711,7 +711,36 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateDeletePropertyInst(DeletePropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction DeletePropertyInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    auto prop = inst.getProperty();
+    if (auto *propStr = llvh::dyn_cast<LiteralString>(prop)) {
+      if (isStrictMode_)
+        os_ << "_sh_ljs_del_by_id_strict(";
+      else
+        os_ << "_sh_ljs_del_by_id_loose(";
+
+      os_ << "shr, ";
+      generateRegisterPtr(*inst.getObject());
+      os_ << ", ";
+      os_ << llvh::format(
+          "s_symbols[%u]",
+          moduleGen_.stringTable.add(propStr->getValue().str()));
+      os_ << ");\n";
+      return;
+    }
+
+    if (isStrictMode_)
+      os_ << "_sh_ljs_del_by_val_strict(";
+    else
+      os_ << "_sh_ljs_del_by_val_loose(";
+
+    os_ << "shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*prop);
+    os_ << ");\n";
   }
   void generateLoadPropertyInst(LoadPropertyInst &inst) {
     os_.indent(2);
