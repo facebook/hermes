@@ -56,7 +56,7 @@
 # include <poll.h>
 #endif /* _AIX */
 
-#if defined(__APPLE__) && !TARGET_OS_IPHONE
+#if defined(__APPLE__) && !TARGET_OS_IPHONE && !TARGET_OS_TV
 # include <AvailabilityMacros.h>
 #endif
 
