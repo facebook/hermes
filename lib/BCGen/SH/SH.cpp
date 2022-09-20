@@ -426,7 +426,11 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateLoadStackInst(LoadStackInst &inst) {
-    hermes_fatal("Unimplemented instruction LoadStackInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    generateValue(*inst.getSingleOperand());
+    os_ << ";\n";
   }
   void generateMovInst(MovInst &inst) {
     os_.indent(2);
