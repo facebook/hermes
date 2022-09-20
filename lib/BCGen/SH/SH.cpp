@@ -340,7 +340,7 @@ class InstrGen {
         os_ << static_cast<int>(LN->getValue());
       else
         os_ << "((struct HermesValueBase){.raw = "
-            << llvh::DoubleToBits(LN->getValue()) << "}).f64";
+            << llvh::DoubleToBits(LN->getValue()) << "u}).f64";
       os_ << ")";
     } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
       os_ << "_sh_ljs_get_string(shr, s_symbols["
