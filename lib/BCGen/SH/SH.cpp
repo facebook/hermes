@@ -853,7 +853,33 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction DebuggerInst");
   }
   void generateCreateRegExpInst(CreateRegExpInst &inst) {
-    hermes_fatal("Unimplemented instruction CreateRegExpInst");
+    os_.indent(2);
+
+    uint32_t patternStrID =
+        moduleGen_.stringTable.add(inst.getPattern()->getValue().str());
+    uint32_t flagsStrID =
+        moduleGen_.stringTable.add(inst.getFlags()->getValue().str());
+
+    // Compile the regexp. We expect this to succeed because the AST went
+    // through the SemanticValidator. This is a bit of a hack: what we would
+    // really like to do is have the Parser emit a CompiledRegExp that can be
+    // threaded through the AST and then through the IR to this instruction
+    // selection, but that is too awkward, so we compile again here.
+    // uint32_t reBytecodeID = UINT32_MAX;
+    // if (auto regexp = CompiledRegExp::tryCompile(
+    //         inst.getPattern()->getValue().str(),
+    //         inst.getFlags()->getValue().str())) {
+    //   reBytecodeID = moduleGen_.regexpTable.addRegExp(std::move(*regexp));
+    // }
+
+    // TODO(T132343328): Compile the regexp bytecode ahead of time.
+    generateValue(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_create_regexp(shr, ";
+    os_ << llvh::format("s_symbols[%u]", patternStrID);
+    os_ << ", ";
+    os_ << llvh::format("s_symbols[%u]", flagsStrID);
+    os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
     hermes_fatal("Unimplemented instruction TryEndInst");
