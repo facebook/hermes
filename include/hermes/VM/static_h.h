@@ -364,6 +364,9 @@ SHLegacyValue _sh_ljs_del_by_val_loose(
 /// responsible for ensuring that \p symID is not garbage collected.
 SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
 
+SHLegacyValue
+_sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
+
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 bool _sh_ljs_to_boolean(SHLegacyValue b);
 SHLegacyValue _sh_ljs_to_numeric_rjs(SHRuntime *shr, const SHLegacyValue *n);

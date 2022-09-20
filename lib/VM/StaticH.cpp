@@ -9,6 +9,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SHSerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -1125,6 +1126,29 @@ extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
   NoHandleScope noHandles{getRuntime(shr)};
   return HermesValue::encodeStringValue(
       getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
+}
+
+extern "C" SHLegacyValue
+_sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr =
+      [&runtime, pattern, flags]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    Handle<JSRegExp> re = runtime.makeHandle(JSRegExp::create(runtime));
+    auto patternHandle = runtime.makeHandle(
+        runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(pattern)));
+    auto flagsHandle = runtime.makeHandle(
+        runtime.getStringPrimFromSymbolID(SymbolID::unsafeCreate(flags)));
+    if (LLVM_UNLIKELY(
+            JSRegExp::initialize(re, runtime, patternHandle, flagsHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return re.getHermesValue();
+  }();
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *cr;
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
