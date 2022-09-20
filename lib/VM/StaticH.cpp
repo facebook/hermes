@@ -610,6 +610,7 @@ static inline void putByVal_RJS(
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       _sh_throw_current(shr);
+    return;
   }
 
   // This is the "slow path".
