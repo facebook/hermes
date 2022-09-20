@@ -1436,24 +1436,25 @@ static char s_prop_cache[];
   for (auto &F : *M)
     generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
 
-  moduleGen.stringTable.generate(OS);
-  moduleGen.literalBuffers.generate(OS);
+  if (options.format == DumpBytecode || options.format == EmitBundle) {
+    moduleGen.stringTable.generate(OS);
+    moduleGen.literalBuffers.generate(OS);
 
-  OS << "static char s_prop_cache[" << nextCacheIdx
-     << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
-     << "static SHUnit s_this_unit = { .num_symbols = "
-     << moduleGen.stringTable.size()
-     << ", .num_prop_cache_entries = " << nextCacheIdx
-     << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
-     << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
-     << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
-     << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
-     << ".obj_val_buffer = s_obj_val_buffer, .obj_val_buffer_size = "
-     << moduleGen.literalBuffers.objValBuffer.size() << ", "
-     << ".array_buffer = s_array_buffer, .array_buffer_size = "
-     << moduleGen.literalBuffers.arrayBuffer.size() << ", "
-     << ".unit_main = _0_global, .unit_name = \"sh_compiled\" };\n"
-     << R"(
+    OS << "static char s_prop_cache[" << nextCacheIdx
+       << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
+       << "static SHUnit s_this_unit = { .num_symbols = "
+       << moduleGen.stringTable.size()
+       << ", .num_prop_cache_entries = " << nextCacheIdx
+       << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
+       << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
+       << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
+       << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
+       << ".obj_val_buffer = s_obj_val_buffer, .obj_val_buffer_size = "
+       << moduleGen.literalBuffers.objValBuffer.size() << ", "
+       << ".array_buffer = s_array_buffer, .array_buffer_size = "
+       << moduleGen.literalBuffers.arrayBuffer.size() << ", "
+       << ".unit_main = _0_global, .unit_name = \"sh_compiled\" };\n"
+       << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init();
   _sh_initialize_units(shr, 1, &s_this_unit);
@@ -1461,6 +1462,7 @@ int main(int argc, char **argv) {
   return 0;
 }
 )";
+  }
 }
 } // namespace
 
