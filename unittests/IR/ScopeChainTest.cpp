@@ -19,7 +19,6 @@ namespace {
 TEST(IRScopeChainTest, BasicScopeChainTest) {
   SourceErrorManager sm;
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.unlimitedRegisters = false;
   auto context = std::make_shared<Context>(sm, codeGenOpts);
 
   // This simulates local eval. We have an incoming nested scope with a variable

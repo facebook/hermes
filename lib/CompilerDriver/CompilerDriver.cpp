@@ -1029,9 +1029,6 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
-  if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    codeGenOpts.unlimitedRegisters = false;
-  }
   codeGenOpts.instrumentIR = cl::InstrumentIR;
 
   OptimizationSettings optimizationOpts;
