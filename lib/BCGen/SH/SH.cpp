@@ -592,7 +592,19 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateAllocArrayInst(AllocArrayInst &inst) {
-    hermes_fatal("Unimplemented instruction AllocArrayInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    auto elementCount = inst.getElementCount();
+    uint32_t sizeHint = inst.getSizeHint()->asUInt32();
+
+    if (elementCount == 0) {
+      os_ << "_sh_ljs_new_array(shr, " << sizeHint << ")";
+    } else {
+      llvm_unreachable("Unimplemented array literal buffers");
+    }
+
+    os_ << ";\n";
   }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
     // This instruction should not have reached this far.

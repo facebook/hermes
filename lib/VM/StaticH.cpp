@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
@@ -835,4 +836,18 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
             : Handle<JSObject>::vmcast(&getRuntime(shr).objectPrototype));
   }
   return result.getHermesValue();
+}
+
+extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
+  Runtime &runtime = getRuntime(shr);
+
+  CallResult<HermesValue> arrayRes = [&runtime, sizeHint]() {
+    GCScopeMarkerRAII marker{runtime};
+    return toCallResultHermesValue(
+        JSArray::create(runtime, sizeHint, sizeHint));
+  }();
+  if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *arrayRes;
 }
