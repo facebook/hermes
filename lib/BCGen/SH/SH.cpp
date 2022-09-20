@@ -625,13 +625,90 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateStoreOwnPropertyInst(StoreOwnPropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction StoreOwnPropertyInst");
+    os_.indent(2);
+    auto prop = inst.getProperty();
+    bool isEnumerable = inst.getIsEnumerable();
+
+    // If the property is a LiteralNumber, the property is enumerable, and it is
+    // a valid array index, it is coming from an array initialization and we
+    // will emit it as PutByIndex.
+    auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
+    if (numProp && isEnumerable) {
+      if (auto arrayIndex = numProp->convertToArrayIndex()) {
+        uint32_t index = arrayIndex.getValue();
+        os_ << "_sh_ljs_put_own_by_index(";
+        os_ << "shr, ";
+        generateRegisterPtr(*inst.getObject());
+        os_ << ", ";
+        os_ << index << ", ";
+        generateRegisterPtr(*inst.getStoredValue());
+        os_ << ");\n";
+        return;
+      }
+    }
+
+    if (isEnumerable)
+      os_ << "_sh_ljs_put_own_by_val(";
+    else
+      os_ << "_sh_ljs_put_own_ne_by_val(";
+
+    os_ << "shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*prop);
+    os_ << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ");\n";
   }
   void generateStoreNewOwnPropertyInst(StoreNewOwnPropertyInst &inst) {
-    hermes_fatal("Unimplemented instruction StoreNewOwnPropertyInst");
+    os_.indent(2);
+    auto prop = inst.getProperty();
+    bool isEnumerable = inst.getIsEnumerable();
+
+    if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
+      assert(
+          isEnumerable &&
+          "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
+      uint32_t index = *numProp->convertToArrayIndex();
+      os_ << "_sh_ljs_put_own_by_index(";
+      os_ << "shr, ";
+      generateRegisterPtr(*inst.getObject());
+      os_ << ", ";
+      os_ << index << ", ";
+      generateRegisterPtr(*inst.getStoredValue());
+      os_ << ");\n";
+      return;
+    }
+
+    if (isEnumerable)
+      os_ << "_sh_ljs_put_new_own_by_id(";
+    else
+      os_ << "_sh_ljs_put_new_own_ne_by_id(";
+
+    os_ << "shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    auto *propStr = cast<LiteralString>(prop);
+    os_ << llvh::format(
+               "s_symbols[%u]",
+               moduleGen_.stringTable.add(propStr->getValue().str()))
+        << ", &";
+    generateRegister(*inst.getStoredValue());
+    os_ << ");\n";
   }
   void generateStoreGetterSetterInst(StoreGetterSetterInst &inst) {
-    hermes_fatal("Unimplemented instruction StoreGetterSetterInst");
+    os_.indent(2);
+    os_ << "_sh_ljs_put_own_getter_setter_by_val(";
+    os_ << "shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getProperty());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getStoredGetter());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getStoredSetter());
+    os_ << ", " << inst.getIsEnumerable();
+    os_ << ");\n";
   }
   void generateDeletePropertyInst(DeletePropertyInst &inst) {
     hermes_fatal("Unimplemented instruction DeletePropertyInst");

@@ -9,6 +9,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SHSerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
@@ -835,6 +836,161 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
       toPHV(source),
       SymbolID::unsafeCreate(symID),
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+extern "C" void _sh_ljs_put_own_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = JSObject::defineOwnComputed(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        Handle<>(toPHV(key)),
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        Handle<>(toPHV(value)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+extern "C" void _sh_ljs_put_own_ne_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = JSObject::defineOwnComputed(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        Handle<>(toPHV(key)),
+        DefinePropertyFlags::getNewNonEnumerableFlags(),
+        Handle<>(toPHV(value)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
+extern "C" void _sh_ljs_put_own_by_index(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    Handle<> indexHandle{runtime, HermesValue::encodeDoubleValue(key)};
+    cr = JSObject::defineOwnComputedPrimitive(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        indexHandle,
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        Handle<>(toPHV(value)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
+/// Put an enumerable property.
+extern "C" void _sh_ljs_put_new_own_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  ExecutionStatus cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = JSObject::defineNewOwnProperty(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        SymbolID::unsafeCreate(key),
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        Handle<>(toPHV(value)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
+/// Put a non-enumerable property.
+extern "C" void _sh_ljs_put_new_own_ne_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  ExecutionStatus cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = JSObject::defineNewOwnProperty(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        SymbolID::unsafeCreate(key),
+        PropertyFlags::nonEnumerablePropertyFlags(),
+        Handle<>(toPHV(value)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
+/// Put a non-enumerable property.
+extern "C" void _sh_ljs_put_own_getter_setter_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *getter,
+    SHLegacyValue *setter,
+    bool isEnumerable) {
+  Runtime &runtime{getRuntime(shr)};
+
+  ExecutionStatus cr = [&runtime, target, key, getter, setter, isEnumerable]() {
+    GCScopeMarkerRAII marker{runtime};
+
+    DefinePropertyFlags dpFlags{};
+    dpFlags.setConfigurable = 1;
+    dpFlags.configurable = 1;
+    dpFlags.setEnumerable = 1;
+    dpFlags.enumerable = isEnumerable;
+
+    Handle<Callable> getterCallable = runtime.makeNullHandle<Callable>();
+    Handle<Callable> setterCallable = runtime.makeNullHandle<Callable>();
+    if (LLVM_LIKELY(!toPHV(getter)->isUndefined())) {
+      dpFlags.setGetter = 1;
+      getterCallable = Handle<Callable>::vmcast(toPHV(getter));
+    }
+    if (LLVM_LIKELY(!toPHV(setter)->isUndefined())) {
+      dpFlags.setSetter = 1;
+      setterCallable = Handle<Callable>::vmcast(toPHV(setter));
+    }
+    assert(
+        (dpFlags.setSetter || dpFlags.setGetter) &&
+        "No accessor set in PutOwnGetterSetterByVal");
+
+    auto res =
+        PropertyAccessor::create(runtime, getterCallable, setterCallable);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    auto accessor = runtime.makeHandle<PropertyAccessor>(*res);
+
+    return JSObject::defineOwnComputed(
+               Handle<JSObject>::vmcast(toPHV(target)),
+               runtime,
+               Handle<>(toPHV(key)),
+               dpFlags,
+               accessor)
+        .getStatus();
+  }();
+
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {

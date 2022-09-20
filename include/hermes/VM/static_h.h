@@ -307,6 +307,46 @@ SHLegacyValue _sh_ljs_get_by_val_rjs(
     SHLegacyValue *source,
     SHLegacyValue *key);
 
+/// Put an enumerable property.
+void _sh_ljs_put_own_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
+/// Put a non-enumerable property.
+void _sh_ljs_put_own_ne_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
+
+void _sh_ljs_put_own_by_index(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t key,
+    SHLegacyValue *value);
+
+/// Put an enumerable property.
+void _sh_ljs_put_new_own_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key,
+    SHLegacyValue *value);
+/// Put a non-enumerable property.
+void _sh_ljs_put_new_own_ne_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key,
+    SHLegacyValue *value);
+
+void _sh_ljs_put_own_getter_setter_by_val(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *getter,
+    SHLegacyValue *setter,
+    bool isEnumerable);
+
 /// Get the string associated with the given SHSymbolID. The caller is
 /// responsible for ensuring that \p symID is not garbage collected.
 SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
