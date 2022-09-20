@@ -532,7 +532,11 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction HBCReifyArgumentsInst");
   }
   void generateHBCSpillMovInst(HBCSpillMovInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCSpillMovInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    generateValue(*inst.getSingleOperand());
+    os_ << ";\n";
   }
   void generatePhiInst(PhiInst &inst) {
     // PhiInst has been translated into a sequence of MOVs in RegAlloc
