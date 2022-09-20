@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/ConsoleHost/MemorySizeParser.h"
+#include "hermes/Support/MemorySizeParser.h"
 
 namespace cl {
 

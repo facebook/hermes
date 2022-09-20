@@ -11,9 +11,9 @@
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
 
-#include "hermes/ConsoleHost/MemorySizeParser.h"
-#include "hermes/ConsoleHost/RandomSeedParser.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/Support/MemorySizeParser.h"
+#include "hermes/Support/RandomSeedParser.h"
 
 #include <string>
 

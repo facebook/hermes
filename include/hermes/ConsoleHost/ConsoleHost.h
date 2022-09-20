@@ -10,8 +10,8 @@
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/CompilerDriver/CompilerDriver.h"
-#include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/Support/MemorySizeParser.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/instrumentation/StatSamplingThread.h"
 

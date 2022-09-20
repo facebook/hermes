@@ -36,5 +36,7 @@ add_hermes_library(hermesSupport
         UTF8.cpp
         UTF16Stream.cpp
         LEB128.cpp
+        MemorySizeParser.cpp
+        RandomSeedParser.cpp
         LINK_LIBS ${link_libs}
 )

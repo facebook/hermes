@@ -5,10 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CONSOLEHOST_MEMORYSIZEPARSER_H
-#define HERMES_CONSOLEHOST_MEMORYSIZEPARSER_H
-
-#include "hermes/Public/GCConfig.h"
+#ifndef HERMES_SUPPORT_RANDOMSEEDPARSER_H
+#define HERMES_SUPPORT_RANDOMSEEDPARSER_H
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
@@ -35,4 +33,4 @@ struct RandomSeedParser : public parser<int64_t> {
 
 } // namespace cl
 
-#endif // HERMES_CONSOLEHOST_MEMORYSIZEPARSER_H
+#endif // HERMES_SUPPORT_RANDOMSEEDPARSER_H

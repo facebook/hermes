@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/ConsoleHost/RandomSeedParser.h"
+#include "hermes/Support/RandomSeedParser.h"
 
 namespace cl {
 
