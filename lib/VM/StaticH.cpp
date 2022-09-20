@@ -1161,7 +1161,7 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
     uint32_t keyBufferIndex) {
   Runtime &runtime = getRuntime(shr);
   if (auto clazzOpt = _sh_find_object_literal_hidden_class(
-          shr, unit, keyBufferIndex, numLiterals))
+          shr, unit, numLiterals, keyBufferIndex))
     return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
 
   MutableHandle<> tmpHandleKey{runtime};
