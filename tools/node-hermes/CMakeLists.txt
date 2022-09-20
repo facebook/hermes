@@ -18,7 +18,7 @@ if(HERMES_BUILD_NODE_HERMES)
     InternalBindings/util.cpp InternalBindings/tty_wrap.cpp
     InternalBindings/pipe_wrap.cpp InternalBindings/stream_base.cpp
     ${ALL_HEADER_FILES}
-    LINK_LIBS hermesapi hermesNodeBytecode uv_a
+    LINK_OBJLIBS hermesapi hermesNodeBytecode uv_a
     )
   target_include_directories(node-hermes PRIVATE third-party/libuv/include/)
 endif()

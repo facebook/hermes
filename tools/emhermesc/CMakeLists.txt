@@ -3,12 +3,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 add_hermes_tool(emhermesc
   emhermesc.cpp
   ${ALL_HEADER_FILES}
-  LINK_LIBS hermesHBCBackend
+  LINK_OBJLIBS hermesHBCBackend LLVHSupport
   )
 
 if (EMSCRIPTEN)

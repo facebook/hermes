@@ -50,13 +50,14 @@ if (LLVM_PTHREAD_LIBRARY_PATH)
   list(APPEND LIBS pthread)
 endif()
 
-add_hermes_library(gtest
+add_hermes_library(gtest STATIC
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
 
+  LINK_OBJLIBS
+  LLVHSupport # Depends on llvh::raw_ostream
   LINK_LIBS
   ${LIBS}
-  LLVHSupport # Depends on llvh::raw_ostream
 )
 
 add_subdirectory(UnitTestMain)

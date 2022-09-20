@@ -3,13 +3,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(link_libs
+set(LINK_OBJLIBS
     dtoa
     hermesRegex
     hermesPlatformUnicode)
 
 if (ANDROID)
-  list(APPEND link_libs log)
+  list(APPEND LINK_OBJLIBS log)
 endif()
 
 add_hermes_library(hermesSupport
@@ -38,5 +38,5 @@ add_hermes_library(hermesSupport
         LEB128.cpp
         MemorySizeParser.cpp
         RandomSeedParser.cpp
-        LINK_LIBS ${link_libs}
+        LINK_OBJLIBS ${LINK_OBJLIBS}
 )

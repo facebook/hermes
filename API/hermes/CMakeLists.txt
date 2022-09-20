@@ -12,33 +12,33 @@ file(GLOB api_headers ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
 add_hermes_library(hermesapi
-        ${api_sources}
-        LINK_LIBS jsi hermesVMRuntime)
-target_include_directories(hermesapi PUBLIC ..)
+  ${api_sources}
+  LINK_LIBS jsi hermesvm
+  )
+target_include_directories(hermesapi_obj PUBLIC ..)
 
 add_hermes_library(hermesapiLean
         ${api_sources}
-        LINK_LIBS jsi hermesVMRuntimeLean)
-target_include_directories(hermesapiLean PUBLIC ..)
+        LINK_LIBS jsi hermesvmlean)
+target_include_directories(hermesapiLean_obj PUBLIC ..)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
-  LINK_LIBS hermesapi)
+  LINK_OBJLIBS hermesapi)
 
-add_hermes_library(timerStats TimerStats.cpp LINK_LIBS jsi hermesSupport)
+add_hermes_library(timerStats TimerStats.cpp LINK_LIBS jsi LINK_OBJLIBS hermesSupport)
 
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
-  LINK_LIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
+  LINK_OBJLIBS hermesapi hermesInstrumentation synthTrace synthTraceParser)
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
 set(HERMES_ENABLE_RTTI OFF)
 
 # synthTraceParser uses exceptions but not rtti
-add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_LIBS hermesSupport hermesParser synthTrace)
+add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_OBJLIBS hermesSupport hermesParser synthTrace)
 
 set(HERMES_ENABLE_EH OFF)
 
 # compileJS uses neither exceptions nor RTTI
-add_hermes_library(compileJS STATIC CompileJS.cpp LINK_LIBS hermesPublic)
+add_hermes_library(compileJS CompileJS.cpp LINK_OBJLIBS hermesPublic)
 
 # Restore EH and RTTI (Note: At the time of writing, there is no usage of
 # add_hermes_library either after this line in this file or in a sub directory.
@@ -50,9 +50,9 @@ add_library(libhermes SHARED ${api_sources})
 
 # This is configured using a cmake flag instead of a separate target, because
 # we need the output to be named "libhermes.so".
-set(LIBHERMES_VM_DEP hermesVMRuntime)
+set(LIBHERMES_VM_DEP hermesvm)
 if(HERMES_BUILD_LEAN_LIBHERMES)
-  set(LIBHERMES_VM_DEP hermesVMRuntimeLean)
+  set(LIBHERMES_VM_DEP hermesvmlean)
 endif()
 
 target_link_libraries(libhermes

@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-cmake_minimum_required(VERSION 3.13.0)
+cmake_minimum_required(VERSION 3.21.0)
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -274,7 +274,9 @@ set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
-if (HERMES_IS_ANDROID)
+if (HERMES_UNICODE_LITE)
+  add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_LITE)
+elseif (HERMES_IS_ANDROID)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 endif()
 
@@ -465,7 +467,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple, Emscripten, and Android.
-if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
+if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID OR HERMES_UNICODE_LITE)
   set(ICU_FOUND 1)
 endif()
 
@@ -526,22 +528,24 @@ endif()
 # Declare a function that links ICU for the given target.
 # This adds the correct -rpath link flag as necessary.
 function(hermes_link_icu target_name)
-  get_target_property(target_type ${target_name} TYPE)
-  target_link_libraries(${target_name} ${ICU_LIBRARIES})
+  if(ICU_LIBRARIES)
+    get_target_property(target_type ${target_name} TYPE)
+    target_link_libraries(${target_name} ${ICU_LIBRARIES})
 
-  if (HERMES_USE_STATIC_ICU)
-    if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-      target_link_libraries(${target_name} dl pthread)
-    elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
-      message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
+    if (HERMES_USE_STATIC_ICU)
+      if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
+        target_link_libraries(${target_name} dl pthread)
+      elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
+        message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
+      endif()
     endif()
-  endif()
 
-  if (ICU_RPATH)
-    set_property(TARGET ${target_name} APPEND PROPERTY
-                  INSTALL_RPATH ${ICU_RPATH})
-    set_property(TARGET ${target_name} PROPERTY
-                  BUILD_WITH_INSTALL_RPATH TRUE)
+    if (ICU_RPATH)
+      set_property(TARGET ${target_name} APPEND PROPERTY
+                    INSTALL_RPATH ${ICU_RPATH})
+      set_property(TARGET ${target_name} PROPERTY
+                    BUILD_WITH_INSTALL_RPATH TRUE)
+    endif()
   endif()
 endfunction()
 

@@ -9,6 +9,6 @@ set(source_files
 )
 
 add_hermes_library(hermesRegex
-    STATIC ${source_files}
-    LINK_LIBS hermesPlatformUnicode
+    ${source_files}
+    LINK_OBJLIBS hermesPlatformUnicode
 )

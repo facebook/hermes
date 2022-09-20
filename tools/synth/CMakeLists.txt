@@ -5,8 +5,6 @@
 
 set(HERMES_ENABLE_EH ON)
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 add_hermes_tool(synth
   synth.cpp
 )

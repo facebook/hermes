@@ -5,7 +5,7 @@
 
 add_hermes_library(hermesFlowParser
     FlowParser.cpp
-    LINK_LIBS
+    LINK_OBJLIBS
     hermesSupport
     ${LIBFLOWPARSER}
 )

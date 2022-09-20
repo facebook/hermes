@@ -84,6 +84,6 @@ set_source_files_properties(InternalBytecode.cpp
 )
 
 # Allow InternalBytecode to find its .inc file
-target_include_directories(hermesInternalBytecode
+target_include_directories(hermesInternalBytecode_obj
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 )

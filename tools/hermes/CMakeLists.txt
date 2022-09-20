@@ -17,35 +17,17 @@ check_function_exists(readline HAVE_LIBREADLINE)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 add_hermes_tool(hermes
   hermes.cpp
   repl.cpp
-  ${ALL_HEADER_FILES}
+  LINK_OBJLIBS hermesCompilerDriver_obj hermesConsoleHost_obj
+  LINK_LIBS hermesvm ${LIBREADLINE}
   )
 
 if(HAVE_LIBREADLINE)
   target_compile_definitions(hermes PRIVATE HAVE_LIBREADLINE)
   set_target_properties(hermes PROPERTIES UNITY_BUILD false)
 endif()
-
-target_link_libraries(hermes
-  hermesVMRuntime
-  hermesCompilerDriver
-  hermesConsoleHost
-  hermesAST
-  hermesHBCBackend
-  hermesBackend
-  hermesOptimizer
-  hermesFrontend
-  hermesParser
-  hermesSourceMap
-  hermesSupport
-  dtoa
-  hermesInstrumentation
-  ${LIBREADLINE}
-)
 
 install(TARGETS hermes
   RUNTIME DESTINATION bin

@@ -5,7 +5,7 @@
 
 set(HERMES_ENABLE_RTTI ON)
 add_hermes_library(hermesPublic rtti.cpp)
-target_include_directories(hermesPublic PUBLIC ../../)
+target_include_directories(hermesPublic_obj PUBLIC ../../)
 
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/public/hermes/Public" DESTINATION include/hermes
   FILES_MATCHING PATTERN "*.h")
