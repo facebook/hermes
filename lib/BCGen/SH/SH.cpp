@@ -28,39 +28,6 @@ void generateBasicBlockLabel(
   OS << "L" << bbMap.find(B)->second;
 }
 
-/// Constructs a map from basic blocks to their catch instruction
-void constructCatchMap(
-    llvh::DenseMap<BasicBlock *, CatchInst *> &catchMap,
-    Function &F) {
-  // Create catchInfoMap entry for every CatchInst
-  CatchInfoMap catchInfoMap{};
-  for (auto &B : F)
-    for (auto &I : B)
-      if (auto CI = llvh::dyn_cast<CatchInst>(&I))
-        catchInfoMap[CI] = CatchCoverageInfo();
-
-  // Populate catchInfoMap
-  llvh::SmallVector<CatchInst *, 4> aliveCatches{};
-  llvh::SmallPtrSet<BasicBlock *, 32> visited{};
-  hermes::constructCatchMap(
-      &F, catchInfoMap, aliveCatches, visited, &F.front(), 1024);
-
-  // Invert catchInfoMap into a catchMap from BB to CatchInst
-  // Make sure to always invert the CatchInst of highest depth
-  llvh::DenseMap<BasicBlock *, uint32_t> maxDepths{};
-  for (auto it : catchInfoMap) {
-    auto catchInst = it.first;
-    auto depth = it.second.depth;
-    for (auto BB : it.second.coveredBlockList) {
-      auto depthIt = maxDepths.find(BB);
-      if (depthIt == maxDepths.end() || depth > depthIt->second) {
-        catchMap[BB] = catchInst;
-        maxDepths[BB] = depth;
-      }
-    }
-  }
-}
-
 /// Helper to unique and store the contents of strings.
 class SHStringTable {
   StringSetVector strings_;
@@ -289,7 +256,6 @@ class InstrGen {
       Function &F,
       ModuleGen &moduleGen,
       FunctionScopeAnalysis &scopeAnalysis,
-      llvh::DenseMap<BasicBlock *, CatchInst *> &catchMap,
       unsigned envSize,
       uint32_t &nextCacheIdx,
       bool isStrictMode)
@@ -298,7 +264,6 @@ class InstrGen {
         bbMap_(bbMap),
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
-        catchMap_(catchMap),
         envSize_(envSize),
         nextCacheIdx_(nextCacheIdx),
         isStrictMode_(isStrictMode) {}
@@ -332,9 +297,6 @@ class InstrGen {
 
   /// Function scope analysis of the current module
   FunctionScopeAnalysis &scopeAnalysis_;
-
-  /// Map from basic blocks to their catch instruction
-  llvh::DenseMap<BasicBlock *, CatchInst *> catchMap_;
 
   /// The size of this functions environment
   unsigned envSize_;
@@ -1359,9 +1321,6 @@ void generateFunction(
 
   unsigned envSize = F.getFunctionScope()->getVariables().size();
 
-  llvh::DenseMap<BasicBlock *, CatchInst *> catchMap{};
-  constructCatchMap(catchMap, F);
-
   InstrGen instrGen(
       OS,
       RA,
@@ -1369,7 +1328,6 @@ void generateFunction(
       F,
       moduleGen,
       scopeAnalysis,
-      catchMap,
       envSize,
       nextCacheIdx,
       F.isStrictMode());
