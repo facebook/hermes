@@ -991,10 +991,48 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateGetPNamesInst(GetPNamesInst &inst) {
-    hermes_fatal("Unimplemented instruction GetPNamesInst");
+    os_.indent(2);
+    generateValue(*inst.getIterator());
+    os_ << " = _sh_ljs_get_pname_list_rjs(shr, ";
+    generateRegisterPtr(*inst.getBase());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getIndex());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getSize());
+    os_ << ");\n";
+
+    os_.indent(2) << "if (_sh_ljs_is_undefined(";
+    generateValue(*inst.getIterator());
+    os_ << ")) goto ";
+    generateBasicBlockLabel(inst.getOnEmptyDest(), os_, bbMap_);
+    os_ << ";\n";
+
+    os_.indent(2) << "goto ";
+    generateBasicBlockLabel(inst.getOnSomeDest(), os_, bbMap_);
+    os_ << ";\n";
   }
   void generateGetNextPNameInst(GetNextPNameInst &inst) {
-    hermes_fatal("Unimplemented instruction GetNextPNameInst");
+    os_.indent(2);
+    generateValue(*inst.getPropertyAddr());
+    os_ << " = _sh_ljs_get_next_pname_rjs(shr, ";
+    generateRegisterPtr(*inst.getIteratorAddr());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getBaseAddr());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getIndexAddr());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getSizeAddr());
+    os_ << ");\n";
+
+    os_.indent(2) << "if (_sh_ljs_is_undefined(";
+    generateValue(*inst.getPropertyAddr());
+    os_ << ")) goto ";
+    generateBasicBlockLabel(inst.getOnLastDest(), os_, bbMap_);
+    os_ << ";\n";
+
+    os_.indent(2) << "goto ";
+    generateBasicBlockLabel(inst.getOnSomeDest(), os_, bbMap_);
+    os_ << ";\n";
   }
   void generateCheckHasInstanceInst(CheckHasInstanceInst &inst) {
     hermes_fatal("This instruction is not in use in HBC.");
