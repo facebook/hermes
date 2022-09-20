@@ -10,6 +10,7 @@
 
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
+#include "hermes/FrontEndDefs/JavaScriptDeclKind.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 #include <deque>
@@ -21,7 +22,7 @@ namespace sem {
 class FunctionInfo {
  public:
   struct VarDecl {
-    enum class Kind { Var, Let, Const };
+    using Kind = JavaScriptDeclKind;
 
     Kind kind;
     ESTree::IdentifierNode *identifier;

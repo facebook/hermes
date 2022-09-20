@@ -382,22 +382,12 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   if (inFunc->isGlobalScope() && declKind == VarDecl::Kind::Var) {
     res = Builder.createGlobalObjectProperty(name, true);
   } else {
-    Variable::DeclKind vdc;
-    if (declKind == VarDecl::Kind::Let)
-      vdc = Variable::DeclKind::Let;
-    else if (declKind == VarDecl::Kind::Const)
-      vdc = Variable::DeclKind::Const;
-    else {
-      assert(declKind == VarDecl::Kind::Var);
-      vdc = Variable::DeclKind::Var;
-    }
-
     if (!Mod->getContext().getCodeGenerationSettings().enableTDZ) {
       // short-circuit all declarations to be Var. TDZ dies here.
-      vdc = Variable::DeclKind::Var;
+      declKind = Variable::DeclKind::Var;
     }
 
-    res = Builder.createVariable(inFunc->getFunctionScope(), vdc, name);
+    res = Builder.createVariable(inFunc->getFunctionScope(), declKind, name);
   }
 
   // Register the variable in the scoped hash table.

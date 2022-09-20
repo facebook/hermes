@@ -10,6 +10,7 @@
 
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
+#include "hermes/FrontEndDefs/JavaScriptDeclKind.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -894,11 +895,7 @@ class GlobalObject : public Literal {
 /// This represents a JavaScript variable, that's allocated in the function.
 class Variable : public Value {
  public:
-  enum class DeclKind {
-    Var,
-    Let,
-    Const,
-  };
+  using DeclKind = JavaScriptDeclKind;
 
  private:
   Variable(const Variable &) = delete;
