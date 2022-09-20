@@ -8,6 +8,7 @@
 #include "hermes/BCGen/SH/SH.h"
 
 #include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
@@ -184,12 +185,79 @@ class SHStringTable {
   }
 };
 
+class SHLiteralBuffers {
+  hbc::SerializedLiteralGenerator literalGenerator_;
+
+ public:
+  /// Table of constants used to initialize constant arrays.
+  /// They are stored as chars in order to shorten bytecode size.
+  std::vector<unsigned char> arrayBuffer{};
+
+  /// Table of constants used to initialize object keys.
+  /// They are stored as chars in order to shorten bytecode size
+  std::vector<unsigned char> objKeyBuffer{};
+
+  /// Table of constants used to initialize object values.
+  /// They are stored as chars in order to shorten bytecode size
+  std::vector<unsigned char> objValBuffer{};
+
+  explicit SHLiteralBuffers(SHStringTable &stringTable)
+      : literalGenerator_(
+            [&stringTable](llvh::StringRef str) {
+              return stringTable.add(str);
+            },
+            [&stringTable](llvh::StringRef str) {
+              return stringTable.add(str);
+            },
+            true) {}
+
+  /// Returns the starting offset of the elements.
+  uint32_t addArrayBuffer(ArrayRef<Literal *> elements) {
+    return literalGenerator_.serializeBuffer(elements, arrayBuffer, false);
+  }
+
+  /// Add to the the object buffer using \keys as the array of keys, and
+  /// \vals as the array of values.
+  /// Returns a pair where the first value is the object's offset into the
+  /// key buffer, and the second value is its offset into the value buffer.
+  std::pair<uint32_t, uint32_t> addObjectBuffer(
+      ArrayRef<Literal *> keys,
+      ArrayRef<Literal *> vals) {
+    return std::pair<uint32_t, uint32_t>{
+        literalGenerator_.serializeBuffer(keys, objKeyBuffer, true),
+        literalGenerator_.serializeBuffer(vals, objValBuffer, false)};
+  }
+
+  void generate(llvh::raw_ostream &os) const {
+    generateBuffer(os, "s_obj_key_buffer", objKeyBuffer);
+    generateBuffer(os, "s_obj_val_buffer", objValBuffer);
+    generateBuffer(os, "s_array_buffer", arrayBuffer);
+  }
+
+ private:
+  void generateBuffer(
+      llvh::raw_ostream &os,
+      llvh::StringRef name,
+      llvh::ArrayRef<unsigned char> buf) const {
+    os << "static unsigned char " << name << "[" << buf.size() << "] = {";
+    for (unsigned char c : buf) {
+      os << (int)c << ",";
+    }
+    os << "};\n";
+  }
+};
+
 struct ModuleGen {
   /// Table containing uniqued strings for the current module.
-  SHStringTable stringTable;
+  SHStringTable stringTable{};
 
   /// A map from functions to unique numbers for identificatio
-  llvh::DenseMap<Function *, unsigned> funcMap;
+  llvh::DenseMap<Function *, unsigned> funcMap{};
+
+  /// Literal buffers for objects and arrays.
+  SHLiteralBuffers literalBuffers;
+
+  explicit ModuleGen() : literalBuffers{stringTable} {}
 
   /// Generates the correct label for BasicBlock \p B based on \p bbMap and
   /// outputs it through \p OS. If the JS function name is valid C then it will
@@ -601,9 +669,18 @@ class InstrGen {
     if (elementCount == 0) {
       os_ << "_sh_ljs_new_array(shr, " << sizeHint << ")";
     } else {
-      llvm_unreachable("Unimplemented array literal buffers");
-    }
+      llvh::SmallVector<Literal *, 8> elements;
+      for (unsigned i = 0, e = inst.getElementCount(); i < e; ++i) {
+        elements.push_back(cast<Literal>(inst.getArrayElement(i)));
+      }
+      auto bufIndex = moduleGen_.literalBuffers.addArrayBuffer(
+          ArrayRef<Literal *>{elements});
 
+      os_ << "_sh_ljs_new_array_with_buffer(shr, &s_this_unit, ";
+      os_ << sizeHint << ", ";
+      os_ << elementCount << ", ";
+      os_ << bufIndex << ")";
+    }
     os_ << ";\n";
   }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
@@ -887,7 +964,30 @@ class InstrGen {
   }
   void generateHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCAllocObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    int numLiterals = inst.getKeyValuePairCount();
+    llvh::SmallVector<Literal *, 8> objKeys;
+    llvh::SmallVector<Literal *, 8> objVals;
+    for (int ind = 0; ind < numLiterals; ind++) {
+      auto keyValuePair = inst.getKeyValuePair(ind);
+      objKeys.push_back(cast<Literal>(keyValuePair.first));
+      objVals.push_back(cast<Literal>(keyValuePair.second));
+    }
+
+    // size hint operand of NewObjectWithBuffer opcode is 16-bit.
+    uint32_t sizeHint =
+        std::min((uint32_t)UINT16_MAX, inst.getSizeHint()->asUInt32());
+
+    auto buffIdxs = moduleGen_.literalBuffers.addObjectBuffer(
+        llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
+    os_ << " = ";
+    os_ << "_sh_ljs_new_object_with_buffer(shr, &s_this_unit, ";
+    os_ << sizeHint << ", ";
+    os_ << numLiterals << ", ";
+    os_ << buffIdxs.first << ", ";
+    os_ << buffIdxs.second << ")";
+    os_ << ";\n";
   }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
     hermes_fatal("Unimplemented instruction HBCProfilePointInst");
@@ -1088,6 +1188,7 @@ void generateModule(
     const BytecodeGenerationOptions &options) {
   PassManager PM;
   PM.addPass(new LowerNumericProperties());
+  PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new hbc::LowerConstruction());
   PM.addPass(new hbc::LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
@@ -1136,6 +1237,8 @@ void generateModule(
     OS << R"(
 #include "hermes/VM/static_h.h"
 
+static SHUnit s_this_unit;
+
 static SHSymbolID s_symbols[];
 static char s_prop_cache[];
 )";
@@ -1152,6 +1255,7 @@ static char s_prop_cache[];
     generateFunction(F, OS, moduleGen, scopeAnalysis, nextCacheIdx, options);
 
   moduleGen.stringTable.generate(OS);
+  moduleGen.literalBuffers.generate(OS);
 
   OS << "static char s_prop_cache[" << nextCacheIdx
      << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
@@ -1160,6 +1264,12 @@ static char s_prop_cache[];
      << ", .num_prop_cache_entries = " << nextCacheIdx
      << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
      << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
+     << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
+     << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
+     << ".obj_val_buffer = s_obj_val_buffer, .obj_val_buffer_size = "
+     << moduleGen.literalBuffers.objValBuffer.size() << ", "
+     << ".array_buffer = s_array_buffer, .array_buffer_size = "
+     << moduleGen.literalBuffers.arrayBuffer.size() << ", "
      << ".unit_main = _0_global, .unit_name = \"sh_compiled\" };\n"
      << R"(
 int main(int argc, char **argv) {

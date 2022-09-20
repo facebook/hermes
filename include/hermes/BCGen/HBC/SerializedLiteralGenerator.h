@@ -53,14 +53,21 @@ class BytecodeModuleGenerator;
 /// four bytes. All values are serialized in little-endian format.
 class SerializedLiteralGenerator {
  private:
-  /// The bytecode module generator.
-  BytecodeModuleGenerator &BMGen_;
+  /// String lookup functions.
+  using StringLookupFn = std::function<unsigned int(llvh::StringRef)>;
+  StringLookupFn getIdentifierID_;
+  StringLookupFn getStringID_;
   /// Whether to perform de-duplication optimization or not.
   bool deDuplicate_;
 
  public:
-  SerializedLiteralGenerator(BytecodeModuleGenerator &BMGen, bool deDuplicate)
-      : BMGen_(BMGen), deDuplicate_(deDuplicate) {}
+  SerializedLiteralGenerator(
+      StringLookupFn getIdentifierID,
+      StringLookupFn getStringID,
+      bool deDuplicate)
+      : getIdentifierID_(getIdentifierID),
+        getStringID_(getStringID),
+        deDuplicate_(deDuplicate) {}
 
   using TagType = unsigned char;
 

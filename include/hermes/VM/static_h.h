@@ -69,6 +69,19 @@ typedef struct SHUnit {
   /// SH_PROPERTY_CACHE_ENTRY_SIZE`. Must be zeroed initially.
   char *prop_cache;
 
+  /// Object key buffer.
+  const unsigned char *obj_key_buffer;
+  /// Size of object key buffer.
+  uint32_t obj_key_buffer_size;
+  /// Object value buffer.
+  const unsigned char *obj_val_buffer;
+  /// Size of object value buffer.
+  uint32_t obj_val_buffer_size;
+  /// Array value buffer.
+  const unsigned char *array_buffer;
+  /// Size of array value buffer.
+  uint32_t array_buffer_size;
+
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);
   /// Unit name.
@@ -136,6 +149,18 @@ void _sh_cache_template_object(
     SHUnit *unit,
     uint32_t templateObjID,
     SHLegacyValue templateObj);
+
+void _sh_cache_object_literal_hidden_class(
+    SHRuntime *shr,
+    const SHUnit *unit,
+    uint32_t keyBufferIndex,
+    SHLegacyValue clazz);
+
+void *_sh_find_object_literal_hidden_class(
+    SHRuntime *shr,
+    const SHUnit *unit,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex);
 
 /// Add the locals to the gc list, allocate register stack, return a pointer to
 /// the frame.
@@ -346,8 +371,30 @@ SHLegacyValue _sh_ljs_new_object_with_parent(
     SHRuntime *shr,
     const SHLegacyValue *parent);
 
+/// \p sizeHint the eventual size of the resultant object.
+/// \p numLiterals the number of literals to read off the buffer
+///   to populate the start of the object.
+SHLegacyValue _sh_ljs_new_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t sizeHint,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex,
+    uint32_t valBufferIndex);
+
 /// \p sizeHint the size of the resultant array.
 SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint);
+
+/// \p numElements the size of the resultant array.
+/// \p numLiterals the number of literals to read off the buffer
+///   to populate the start of the array.
+SHLegacyValue _sh_ljs_new_array_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t numElements,
+    uint32_t numLiterals,
+    uint32_t bufferIndex);
+
 #ifdef __cplusplus
 }
 #endif
