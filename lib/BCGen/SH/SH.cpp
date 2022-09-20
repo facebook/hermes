@@ -351,6 +351,16 @@ class InstrGen {
     os_ << "locals.t" << ra_.getRegister(&val).getIndex();
   }
 
+  /// Helper to generate a pointer to a value that must always have an allocated
+  /// register, for instance because we need to assign to it or take its
+  /// address.
+  /// The pointer can be used to pass to API functions that will use it
+  /// as a PinnedHermesValue.
+  void generateRegisterPtr(Value &val) {
+    os_ << "&";
+    generateRegister(val);
+  }
+
   /// Helper to generate an SHValue from a Value.
   void generateValue(Value &val) {
     if (llvh::isa<LiteralUndefined>(&val)) {
