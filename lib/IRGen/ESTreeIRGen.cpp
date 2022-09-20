@@ -392,15 +392,12 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
       vdc = Variable::DeclKind::Var;
     }
 
-    auto *var = Builder.createVariable(inFunc->getFunctionScope(), vdc, name);
-
-    // For "let" and "const" create the related TDZ flag.
-    if (Variable::declKindNeedsTDZ(vdc) &&
-        Mod->getContext().getCodeGenerationSettings().enableTDZ) {
-      var->setObeysTDZ(true);
+    if (!Mod->getContext().getCodeGenerationSettings().enableTDZ) {
+      // short-circuit all declarations to be Var. TDZ dies here.
+      vdc = Variable::DeclKind::Var;
     }
 
-    res = var;
+    res = Builder.createVariable(inFunc->getFunctionScope(), vdc, name);
   }
 
   // Register the variable in the scoped hash table.

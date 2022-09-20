@@ -900,11 +900,6 @@ class Variable : public Value {
     Const,
   };
 
-  /// Return true if this DeclKind needs to track TDZ.
-  static bool declKindNeedsTDZ(DeclKind dk) {
-    return dk != DeclKind::Var;
-  }
-
  private:
   Variable(const Variable &) = delete;
   void operator=(const Variable &) = delete;
@@ -917,9 +912,6 @@ class Variable : public Value {
 
   /// The scope that owns the variable.
   VariableScope *parent;
-
-  /// If true, this variable obeys the TDZ rules.
-  bool obeysTDZ_ = false;
 
  protected:
   explicit Variable(
@@ -946,10 +938,7 @@ class Variable : public Value {
   }
 
   bool getObeysTDZ() const {
-    return obeysTDZ_;
-  }
-  void setObeysTDZ(bool value) {
-    obeysTDZ_ = value;
+    return declKind != DeclKind::Var;
   }
 
   /// Return the index of this variable in the function's variable list.
