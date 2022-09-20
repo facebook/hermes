@@ -73,6 +73,8 @@ static cl::OptionCategory CompilerCategory(
 cl::opt<std::string>
     InputFilename(cl::desc("<file>"), cl::Positional, cl::Required);
 
+cl::list<std::string> ExecArgs(cl::desc("<exec arguments>"), cl::ConsumeAfter);
+
 static cl::opt<std::string> OutputFilename(
     "o",
     cl::desc("Output file name"),
@@ -541,6 +543,11 @@ ESTree::NodePtr parseJS(
 }
 
 bool compileFromCommandLineOptions() {
+  if (cli::OutputLevel != OutputLevelKind::Run && !cli::ExecArgs.empty()) {
+    llvh::errs() << "Error: unused exec arguments\n";
+    return false;
+  }
+
   std::unique_ptr<llvh::MemoryBuffer> fileBuf =
       memoryBufferFromFile(cli::InputFilename, true);
   if (!fileBuf)
@@ -645,7 +652,8 @@ bool compileFromCommandLineOptions() {
           cli::Verbose.getNumOccurrences()),
       cli::OutputLevel,
       cli::InputFilename,
-      cli::OutputFilename);
+      cli::OutputFilename,
+      cli::ExecArgs);
 }
 
 } // namespace
