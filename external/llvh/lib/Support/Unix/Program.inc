@@ -47,7 +47,7 @@
 #include <TargetConditionals.h>
 #endif
 
-#if defined(__APPLE__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+#if defined(__APPLE__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) && !(defined(TARGET_OS_TV) && TARGET_OS_TV)
 #define USE_NSGETENVIRON 1
 #else
 #define USE_NSGETENVIRON 0
@@ -200,7 +200,11 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // If this OS has posix_spawn and there is no memory limit being implied, use
   // posix_spawn.  It is more efficient than fork/exec.
 #ifdef HAVE_POSIX_SPAWN
+#if defined(TARGET_OS_TV) && TARGET_OS_TV
+  {
+#else
   if (MemoryLimit == 0) {
+#endif
     posix_spawn_file_actions_t FileActionsStore;
     posix_spawn_file_actions_t *FileActions = nullptr;
 
@@ -266,6 +270,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   }
 #endif
 
+#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
   // Create a child process.
   int child = fork();
   switch (child) {
@@ -325,6 +330,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   PI.Process = child;
 
   return true;
+#endif // TARGET_OS_TV
 }
 
 namespace llvh {

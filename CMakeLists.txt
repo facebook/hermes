@@ -57,6 +57,14 @@ if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 endif()
 
+if(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletvos")
+  add_definitions(-DTARGET_OS_TV=1)
+endif()
+
+if(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletvsimulator")
+  add_definitions(-DTARGET_OS_TV=1)
+endif()
+
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json
