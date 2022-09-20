@@ -744,6 +744,11 @@ class LiteralNumber : public Literal, public llvh::FoldingSetNode {
     return value == 0.0 && !std::signbit(value);
   }
 
+  /// Check whether the number is negative zero.
+  bool isNegativeZero() const {
+    return value == 0.0 && std::signbit(value);
+  }
+
   /// Check whether the number can be represented in unsigned 8-bit integer
   /// without losing any precision or information.
   bool isUInt8Representible() const {
