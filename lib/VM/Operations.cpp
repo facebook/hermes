@@ -2723,6 +2723,34 @@ extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
   return *res;
 }
 
+extern "C" SHLegacyValue _sh_ljs_minus_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  // Fast path, n is a number.
+  if (LLVM_LIKELY(toPHV(n)->isNumber()))
+    return HermesValue::encodeDoubleValue(-toPHV(n)->getNumber());
+  auto res = [shr, n]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    Handle<> nHandle{toPHV(n)};
+    // Try converting nHandle to a numeric.
+    auto numRes = toNumeric_RJS(runtime, nHandle);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // Test for BigInt since it is cheaper than testing for number. If it is a
+    // number, negate it.
+    if (LLVM_LIKELY(!numRes->isBigInt()))
+      return HermesValue::encodeDoubleValue(-numRes->getNumber());
+
+    // The result is a BigInt, perform a BigInt unary minus.
+    auto bigint = runtime.makeHandle(numRes->getBigInt());
+    return BigIntPrimitive::unaryMinus(runtime, bigint);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
 extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {
   return toBoolean(HermesValue::fromRaw(b.raw));
 }

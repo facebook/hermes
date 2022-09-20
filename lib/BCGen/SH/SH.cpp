@@ -472,6 +472,22 @@ class InstrGen {
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;
+      case OpKind::MinusKind: { // -
+        os_ << "_sh_ljs_minus_rjs(shr, &";
+        generateRegister(*inst.getSingleOperand());
+        os_ << ");\n";
+        break;
+      }
+      case OpKind::BangKind: { // !
+        os_ << "_sh_ljs_bool(!_sh_ljs_to_boolean(";
+        generateRegister(*inst.getSingleOperand());
+        os_ << "));\n";
+        break;
+      }
+      case OpKind::VoidKind: { // Void operator.
+        os_ << "_sh_ljs_undefined();\n";
+        break;
+      }
       default:
         hermes_fatal("Unimplemented unary operator.");
     }

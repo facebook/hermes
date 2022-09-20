@@ -433,6 +433,7 @@ SHLegacyValue _sh_ljs_left_shift_rjs(
     const SHLegacyValue *a,
     const SHLegacyValue *b);
 SHLegacyValue _sh_ljs_bit_not_rjs(SHRuntime *shr, const SHLegacyValue *a);
+SHLegacyValue _sh_ljs_minus_rjs(SHRuntime *shr, const SHLegacyValue *n);
 
 SHLegacyValue _sh_ljs_add_empty_string_rjs(
     SHRuntime *shr,
