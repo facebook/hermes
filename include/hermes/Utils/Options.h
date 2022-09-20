@@ -11,6 +11,7 @@
 namespace hermes {
 
 enum OutputFormatKind {
+  DumpNone,
   DumpAST,
   DumpTransformedAST,
   DumpJS,
