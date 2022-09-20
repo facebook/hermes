@@ -366,6 +366,8 @@ SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
 
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 bool _sh_ljs_to_boolean(SHLegacyValue b);
+SHLegacyValue _sh_ljs_to_numeric_rjs(SHRuntime *shr, const SHLegacyValue *n);
+SHLegacyValue _sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n);
 
 bool _sh_ljs_less_rjs(
     SHRuntime *shr,
@@ -428,6 +430,10 @@ SHLegacyValue _sh_ljs_left_shift_rjs(
     const SHLegacyValue *a,
     const SHLegacyValue *b);
 SHLegacyValue _sh_ljs_bit_not_rjs(SHRuntime *shr, const SHLegacyValue *a);
+
+SHLegacyValue _sh_ljs_add_empty_string_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a);
 
 SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
 
