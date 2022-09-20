@@ -1034,11 +1034,10 @@ std::shared_ptr<Context> createContext(
   OptimizationSettings optimizationOpts;
 
   // Enable aggressiveNonStrictModeOptimizations if the target is HBC.
-  optimizationOpts.aggressiveNonStrictModeOptimizations =
-      cl::BytecodeFormat == cl::BytecodeFormatKind::HBC;
+  optimizationOpts.aggressiveNonStrictModeOptimizations = true;
 
-  optimizationOpts.inlining = cl::OptimizationLevel != cl::OptLevel::O0 &&
-      cl::BytecodeFormat == cl::BytecodeFormatKind::HBC && cl::Inline;
+  optimizationOpts.inlining =
+      cl::OptimizationLevel != cl::OptLevel::O0 && cl::Inline;
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
@@ -1082,8 +1081,9 @@ std::shared_ptr<Context> createContext(
         defaultFlags.preemptiveFunctionCompilationThreshold);
   }
 
-  if (cl::EagerCompilation || cl::DumpTarget == EmitBundle ||
-      cl::OptimizationLevel > cl::OptLevel::Og) {
+  if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC ||
+      cl::DumpTarget != Execute || cl::OptimizationLevel > cl::OptLevel::Og ||
+      cl::EagerCompilation) {
     // Make sure nothing is lazy
     context->setLazyCompilation(false);
   } else if (cl::LazyCompilation) {
@@ -1794,16 +1794,10 @@ CompileResult processSourceFiles(
   DeclarationFileListTy declFileList;
 
   // Load the runtime library.
-  std::unique_ptr<llvh::MemoryBuffer> libBuffer;
-  switch (cl::BytecodeFormat) {
-    case cl::BytecodeFormatKind::HBC:
-      libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
-      break;
-    case cl::BytecodeFormatKind::SH:
-      libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
-      break;
-  }
-  if (!loadGlobalDefinition(*context, std::move(libBuffer), declFileList)) {
+  if (!loadGlobalDefinition(
+          *context,
+          llvh::MemoryBuffer::getMemBuffer(libhermes),
+          declFileList)) {
     return LoadGlobalsFailed;
   }
 
@@ -1839,7 +1833,7 @@ CompileResult processSourceFiles(
             sourceMapGen ? &*sourceMapGen : nullptr)) {
       return ParsingFailed;
     }
-    if (cl::DumpTarget < DumpIR) {
+    if (cl::DumpTarget < ViewCFG) {
       return Success;
     }
   } else {
