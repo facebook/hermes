@@ -565,6 +565,9 @@ class InstrGen {
         os_ << "_sh_ljs_bool(_sh_ljs_strict_equal";
         strictEqOp = true;
         break;
+      case OpKind::InKind: // in
+        os_ << "_sh_ljs_is_in";
+        break;
       default:
         hermes_fatal("Unimplemented operator");
     }
