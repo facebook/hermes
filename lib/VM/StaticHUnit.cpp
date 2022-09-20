@@ -262,3 +262,69 @@ extern "C" void _sh_cache_template_object(
   unit->runtime_ext->templateMap[templateObjID] =
       vmcast<JSObject>(HermesValue::fromRaw(templateObj.raw));
 }
+
+/// \return whether tuple <keyBufferIndex, numLiterals> can generate a
+/// hidden class literal cache hash key or not.
+/// \param keyBufferIndex value of NewObjectWithBuffer instruction. it must
+/// be less than 256 to be used as a cache key.
+static bool canGenerateLiteralHiddenClassCacheKey(
+    uint32_t keyBufferIndex,
+    unsigned numLiterals) {
+  return (keyBufferIndex & 0xFF000000) == 0 && numLiterals < 256;
+}
+
+/// \return a unique hash key for object literal hidden class cache.
+/// \param keyBufferIndex value of NewObjectWithBuffer instruction(must be
+/// less than 2^24).
+/// \param numLiterals number of literals used from key buffer of
+/// NewObjectWithBuffer instruction(must be less than 256).
+static uint32_t getLiteralHiddenClassCacheHashKey(
+    unsigned keyBufferIndex,
+    unsigned numLiterals) {
+  assert(
+      canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals) &&
+      "<keyBufferIndex, numLiterals> tuple can't be used as cache key.");
+  return ((uint32_t)keyBufferIndex << 8) | numLiterals;
+}
+
+extern "C" void _sh_cache_object_literal_hidden_class(
+    SHRuntime *shr,
+    const SHUnit *unit,
+    uint32_t keyBufferIndex,
+    SHLegacyValue clazz) {
+  Runtime &runtime = getRuntime(shr);
+  auto &objectLiteralHiddenClasses =
+      unit->runtime_ext->objectLiteralHiddenClasses;
+  auto *hiddenClass = vmcast<HiddenClass>(HermesValue::fromRaw(clazz.raw));
+  auto numLiterals = hiddenClass->getNumProperties();
+  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
+    assert(
+        !_sh_find_object_literal_hidden_class(
+            shr, unit, numLiterals, keyBufferIndex) &&
+        "Why are we caching an item already cached?");
+    objectLiteralHiddenClasses[getLiteralHiddenClassCacheHashKey(
+                                   keyBufferIndex, numLiterals)]
+        .set(runtime, hiddenClass);
+  }
+}
+
+extern "C" void *_sh_find_object_literal_hidden_class(
+    SHRuntime *shr,
+    const SHUnit *unit,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex) {
+  Runtime &runtime = getRuntime(shr);
+  auto &objectLiteralHiddenClasses =
+      unit->runtime_ext->objectLiteralHiddenClasses;
+  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
+    const auto cachedHiddenClassIter = objectLiteralHiddenClasses.find(
+        getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
+    if (cachedHiddenClassIter != objectLiteralHiddenClasses.end()) {
+      if (HiddenClass *const cachedHiddenClass =
+              cachedHiddenClassIter->second.get(runtime, runtime.getHeap())) {
+        return cachedHiddenClass;
+      }
+    }
+  }
+  return nullptr;
+}

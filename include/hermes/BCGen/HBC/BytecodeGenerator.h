@@ -343,7 +343,10 @@ class BytecodeModuleGenerator {
   /// Constructor which enables optimizations if \p optimizationEnabled is set.
   BytecodeModuleGenerator(
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
-      : literalGenerator_(*this, options.optimizationEnabled),
+      : literalGenerator_(
+            [this](llvh::StringRef str) { return getIdentifierID(str); },
+            [this](llvh::StringRef str) { return getStringID(str); },
+            options.optimizationEnabled),
         options_(options) {}
 
   /// Add a function to functionIDMap_ if not already exist. Returns the ID.

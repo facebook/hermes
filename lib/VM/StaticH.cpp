@@ -9,6 +9,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/SHSerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 
@@ -838,6 +839,138 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
+static Handle<HiddenClass> getHiddenClassForBuffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t numLiterals,
+    llvh::ArrayRef<unsigned char> keyBuffer,
+    uint32_t keyBufferIndex) {
+  Runtime &runtime = getRuntime(shr);
+  if (auto clazzOpt = _sh_find_object_literal_hidden_class(
+          shr, unit, keyBufferIndex, numLiterals))
+    return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
+
+  MutableHandle<> tmpHandleKey{runtime};
+  MutableHandle<HiddenClass> clazz =
+      runtime.makeMutableHandle(runtime.getHiddenClassForPrototypeRaw(
+          vmcast<JSObject>(runtime.objectPrototype),
+          JSObject::numOverlapSlots<JSObject>()));
+
+  GCScopeMarkerRAII marker{runtime};
+  SHSerializedLiteralParser keyGen{
+      keyBuffer.slice(keyBufferIndex), numLiterals, nullptr};
+  while (keyGen.hasNext()) {
+    auto key = keyGen.get(runtime);
+    SymbolID sym = [&] {
+      if (key.isSymbol())
+        return SymbolID::unsafeCreate(
+            unit->symbols[key.getSymbol().unsafeGetIndex()]);
+
+      assert(key.isNumber() && "Key must be symbol or number");
+      tmpHandleKey = key;
+      // Note that since this handle has been created, the associated symbol
+      // will be automatically kept alive until we flush the marker.
+      // valueToSymbolID cannot fail because the key is known to be uint32.
+      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
+      return *symHandle;
+    }();
+    auto addResult = HiddenClass::addProperty(
+        clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
+    clazz = addResult->first;
+    marker.flush();
+  }
+
+  if (LLVM_LIKELY(!clazz->isDictionary())) {
+    assert(
+        numLiterals == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    assert(
+        clazz->getNumProperties() < 256 &&
+        "cached hidden class should have property count less than 256");
+    _sh_cache_object_literal_hidden_class(
+        shr, unit, keyBufferIndex, clazz.getHermesValue());
+  }
+
+  return {clazz};
+}
+
+extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t sizeHint,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex,
+    uint32_t valBufferIndex) {
+  Runtime &runtime = getRuntime(shr);
+  llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
+  llvh::ArrayRef valBuffer{unit->obj_val_buffer, unit->obj_val_buffer_size};
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  Handle<HiddenClass> clazz = getHiddenClassForBuffer(
+      shr, unit, numLiterals, keyBuffer, keyBufferIndex);
+  GCScopeMarkerRAII marker{runtime};
+  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
+
+  SHSerializedLiteralParser valGen{
+      valBuffer.slice(valBufferIndex), numLiterals, unit};
+
+#ifndef NDEBUG
+  SHSerializedLiteralParser keyGen{
+      keyBuffer.slice(keyBufferIndex), numLiterals, nullptr};
+#endif
+
+  uint32_t propIndex = 0;
+  // keyGen should always have the same amount of elements as valGen
+  while (valGen.hasNext()) {
+#ifndef NDEBUG
+    {
+      GCScopeMarkerRAII marker{runtime};
+      // keyGen points to an element in the key buffer, which means it will
+      // only ever generate a Number or a Symbol. This means it will never
+      // allocate memory, and it is safe to not use a Handle.
+      SymbolID stringIdResult{};
+      auto key = keyGen.get(runtime);
+      if (key.isSymbol()) {
+        stringIdResult = SymbolID::unsafeCreate(
+            unit->symbols[key.getSymbol().unsafeGetIndex()]);
+      } else {
+        auto keyHandle =
+            runtime.makeHandle(HermesValue::encodeDoubleValue(key.getNumber()));
+        auto idRes = valueToSymbolID(runtime, keyHandle);
+        assert(
+            idRes != ExecutionStatus::EXCEPTION &&
+            "valueToIdentifier() failed for uint32_t value");
+        stringIdResult = **idRes;
+      }
+      NamedPropertyDescriptor desc;
+      auto pos = HiddenClass::findProperty(
+          clazz,
+          runtime,
+          stringIdResult,
+          PropertyFlags::defaultNewNamedPropertyFlags(),
+          desc);
+      assert(
+          pos &&
+          "Should find this property in cached hidden class property table.");
+      assert(
+          desc.slot == propIndex &&
+          "propIndex should be the same as recorded in hidden class table.");
+    }
+#endif
+    // Explicitly make sure valGen.get() is called before obj.get() so that
+    // any allocation in valGen.get() won't invalidate the raw pointer
+    // returned from obj.get().
+    HermesValue val = valGen.get(runtime);
+    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
+    // We made this object, it's not a Proxy.
+    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
+    ++propIndex;
+  }
+
+  return obj.getHermesValue();
+}
+
 extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 
@@ -850,4 +983,52 @@ extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
     _sh_throw_current(shr);
 
   return *arrayRes;
+}
+
+extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t numElements,
+    uint32_t numLiterals,
+    uint32_t arrayBufferIndex) {
+  // Create a new array using the built-in constructor, and initialize
+  // the elements from a literal array buffer.
+  Runtime &runtime = getRuntime(shr);
+  llvh::ArrayRef arrayBuffer{unit->array_buffer, unit->array_buffer_size};
+
+  CallResult<HermesValue> arrayRes = [&runtime, numElements]() {
+    GCScopeMarkerRAII marker{runtime};
+    return toCallResultHermesValue(
+        JSArray::create(runtime, numElements, numElements));
+  }();
+  if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  HermesValue arr = [&runtime,
+                     unit,
+                     &arrayRes,
+                     numElements,
+                     numLiterals,
+                     arrayBuffer,
+                     arrayBufferIndex]() {
+    GCScopeMarkerRAII marker{runtime};
+    // Resize the array storage in advance.
+    Handle<JSArray> arr = runtime.makeHandle(vmcast<JSArray>(*arrayRes));
+    JSArray::setStorageEndIndex(arr, runtime, numElements);
+
+    SHSerializedLiteralParser iter{
+        arrayBuffer.slice(arrayBufferIndex), numLiterals, unit};
+
+    JSArray::size_type i = 0;
+    while (iter.hasNext()) {
+      // NOTE: we must get the value in a separate step to guarantee ordering.
+      const auto value =
+          SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
+    }
+
+    return arr.getHermesValue();
+  }();
+
+  return arr;
 }

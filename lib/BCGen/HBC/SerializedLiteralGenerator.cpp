@@ -6,6 +6,7 @@
  */
 
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "llvh/Support/Endian.h"
 
@@ -86,8 +87,7 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
         break;
       case ValueKind::LiteralStringKind: {
         auto str = llvh::cast<LiteralString>(literals[i])->getValue().str();
-        int ind =
-            isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
+        int ind = isKeyBuffer ? getIdentifierID_(str) : getStringID_(str);
 
         if (ind > UINT16_MAX) {
           newTag = LongStringTag;
@@ -138,8 +138,7 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
         // For strings, we are going to store the index to the string table,
         // which will need to be decoded at runtime.
         auto str = llvh::cast<LiteralString>(literals[i])->getValue().str();
-        auto stringID =
-            isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
+        auto stringID = isKeyBuffer ? getIdentifierID_(str) : getStringID_(str);
 
         if (stringID > UINT16_MAX) {
           serializeValueToBuffer<uint32_t>(stringID, tmpSeqBuffer);
