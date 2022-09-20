@@ -1365,3 +1365,98 @@ _sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
     _sh_throw_current(shr);
   return _sh_ljs_bool(*cr);
 }
+
+extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *base,
+    SHLegacyValue *index,
+    SHLegacyValue *size) {
+  Runtime &runtime = getRuntime(shr);
+  if (toPHV(base)->isUndefined() || toPHV(base)->isNull()) {
+    // Set the iterator to be undefined value.
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  auto cr = [&runtime, base, index, size]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    Handle baseHandle{toPHV(base)};
+    // Convert to object and store it back to the register.
+    auto res = toObject(runtime, baseHandle);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    *base = res.getValue();
+
+    auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
+    uint32_t beginIndex;
+    uint32_t endIndex;
+    auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
+    if (cr == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto arr = *cr;
+    *index = HermesValue::encodeNumberValue(beginIndex);
+    *size = HermesValue::encodeNumberValue(endIndex);
+    return arr.getHermesValue();
+  }();
+
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *cr;
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *props,
+    SHLegacyValue *base,
+    SHLegacyValue *indexVal,
+    SHLegacyValue *sizeVal) {
+  Runtime &runtime = getRuntime(shr);
+  assert(
+      vmisa<BigStorage>(*toPHV(props)) &&
+      "GetNextPName's props must be BigStorage");
+  Handle<BigStorage> arr = Handle<BigStorage>::vmcast(toPHV(props));
+  Handle obj = Handle<JSObject>::vmcast(toPHV(base));
+  auto result =
+      [&runtime, arr, obj, indexVal, sizeVal]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    uint32_t idx = toPHV(indexVal)->getNumber();
+    uint32_t size = toPHV(sizeVal)->getNumber();
+    MutableHandle<> tmpHandle{runtime};
+    MutableHandle<JSObject> propObj{runtime};
+    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+    // Loop until we find a property which is present.
+    while (idx < size) {
+      tmpHandle = arr->at(runtime, idx);
+      ComputedPropertyDescriptor desc;
+      ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
+          obj, runtime, tmpHandle, propObj, tmpPropNameStorage, desc);
+      if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_LIKELY(propObj))
+        break;
+      ++idx;
+    }
+    if (idx < size) {
+      // We must return the property as a string
+      if (tmpHandle->isNumber()) {
+        auto status = toString_RJS(runtime, tmpHandle);
+        assert(
+            status == ExecutionStatus::RETURNED &&
+            "toString on number cannot fail");
+        tmpHandle = status->getHermesValue();
+      }
+      *indexVal = HermesValue::encodeNumberValue(idx + 1);
+      return tmpHandle.get();
+    } else {
+      return HermesValue::encodeUndefinedValue();
+    }
+  }();
+
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *result;
+}

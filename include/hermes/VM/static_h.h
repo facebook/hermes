@@ -476,6 +476,29 @@ SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numLiterals,
     uint32_t bufferIndex);
 
+/// \p base[in/out] is the object to be iterated.
+/// \p index[out] is the next index in the list.
+/// \p size[out] is the size of the list.
+/// \return the array of properties, or undefined if there is nothing to
+///   iterate.
+SHLegacyValue _sh_ljs_get_pname_list_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *base,
+    SHLegacyValue *index,
+    SHLegacyValue *size);
+
+/// \p props is the array of properties
+/// \p base is the object to be iterated.
+/// \p index is the iterating index.
+/// \p size is the size of the property list.
+/// \return the next property, undefined if unavailable
+SHLegacyValue _sh_ljs_get_next_pname_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *props,
+    SHLegacyValue *base,
+    SHLegacyValue *index,
+    SHLegacyValue *size);
+
 #ifdef __cplusplus
 }
 #endif
