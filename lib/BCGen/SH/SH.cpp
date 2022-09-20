@@ -416,7 +416,8 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateImplicitMovInst(ImplicitMovInst &inst) {
-    hermes_fatal("Unimplemented instruction ImplicitMovInst");
+    // ImplicitMovs produce no bytecode, they only express that a subsequent
+    // instruction will perform the equivalent of a 'Mov'.
   }
   void generateCoerceThisNSInst(CoerceThisNSInst &inst) {
     hermes_fatal("Unimplemented instruction CoerceThisNSInst");
@@ -455,7 +456,7 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction DirectEvalInst");
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {
-    hermes_fatal("Unimplemented instruction LoadFrameInst");
+    hermes_fatal("LoadFrameInst should have been lowered.");
   }
   void generateHBCLoadConstInst(HBCLoadConstInst &inst) {
     os_.indent(2);
@@ -772,13 +773,13 @@ class InstrGen {
         << nextCacheIdx_++ << ");\n";
   }
   void generateStoreStackInst(StoreStackInst &inst) {
-    hermes_fatal("Unimplemented instruction StoreStackInst");
+    hermes_fatal("StoreStackInst should have been lowered.");
   }
   void generateStoreFrameInst(StoreFrameInst &inst) {
-    hermes_fatal("Unimplemented instruction StoreFrameInst");
+    hermes_fatal("StoreFrameInst should have been lowered.");
   }
   void generateAllocStackInst(AllocStackInst &inst) {
-    hermes_fatal("Unimplemented instruction AllocStackInst");
+    // This is a no-op.
   }
   void generateAllocObjectInst(AllocObjectInst &inst) {
     os_.indent(2);
@@ -823,7 +824,7 @@ class InstrGen {
     hermes_fatal("AllocObjectLiteralInst should have been lowered.");
   }
   void generateCreateArgumentsInst(CreateArgumentsInst &inst) {
-    hermes_fatal("Unimplemented instruction CreateArgumentsInst");
+    hermes_fatal("CreateArgumentsInst should have been lowered.");
   }
   void generateCatchInst(CatchInst &inst) {
     hermes_fatal("Unimplemented instruction CatchInst");
@@ -870,7 +871,7 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction UnreachableInst");
   }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
-    hermes_fatal("Unimplemented instruction CreateFunctionInst");
+    hermes_fatal("CreateFunctionInst should have been lowered.");
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     hermes_fatal("Unimplemented instruction CreateGeneratorInst");
@@ -893,7 +894,7 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction HBCCreateGeneratorInst");
   }
   void generateTerminatorInst(TerminatorInst &inst) {
-    hermes_fatal("Unimplemented instruction TerminatorInst");
+    hermes_fatal("This is not a concrete instruction");
   }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
@@ -911,7 +912,7 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateSwitchInst(SwitchInst &inst) {
-    hermes_fatal("Unimplemented instruction SwitchInst");
+    hermes_fatal("SwitchInst should have been lowered");
   }
   void generateCondBranchInst(CondBranchInst &inst) {
     os_ << "  if(_sh_ljs_to_boolean(";
@@ -929,7 +930,7 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction GetNextPNameInst");
   }
   void generateCheckHasInstanceInst(CheckHasInstanceInst &inst) {
-    hermes_fatal("Unimplemented instruction CheckHasInstanceInst");
+    hermes_fatal("This instruction is not in use in HBC.");
   }
   void generateTryStartInst(TryStartInst &inst) {
     hermes_fatal("Unimplemented instruction TryStartInst");
