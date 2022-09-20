@@ -269,6 +269,18 @@ void _sh_ljs_put_by_id_strict_rjs(
     SHSymbolID symID,
     const SHLegacyValue *value,
     char *propCacheEntry);
+void _sh_ljs_try_put_by_id_loose_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID symID,
+    SHLegacyValue *value,
+    char *propCacheEntry);
+void _sh_ljs_try_put_by_id_strict_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID symID,
+    SHLegacyValue *value,
+    char *propCacheEntry);
 void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
