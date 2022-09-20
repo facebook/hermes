@@ -1346,3 +1346,22 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
 
   return arr;
 }
+
+extern "C" SHLegacyValue
+_sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{false};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    if (LLVM_UNLIKELY(!_sh_ljs_is_object(*obj))) {
+      (void)runtime.raiseTypeError("right operand of 'in' is not an object");
+      cr = ExecutionStatus::EXCEPTION;
+    } else {
+      cr = JSObject::hasComputed(
+          Handle<JSObject>::vmcast(toPHV(obj)), runtime, Handle<>(toPHV(name)));
+    }
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return _sh_ljs_bool(*cr);
+}
