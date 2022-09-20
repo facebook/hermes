@@ -11,6 +11,7 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/static_h.h"
 
 #include "llvh/Support/Endian.h"
 

@@ -13,6 +13,8 @@
 #include "hermes/VM/HermesValue.h"
 #include "llvh/ADT/ArrayRef.h"
 
+struct SHUnit;
+
 namespace hermes {
 namespace vm {
 
