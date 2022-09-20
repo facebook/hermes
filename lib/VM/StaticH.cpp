@@ -19,6 +19,16 @@ using namespace hermes::vm;
 /// be destroyed from a pointer.
 static llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> s_runtimes{};
 
+/// Convert the given \p cr to a \c CallResult<HermesValue>.
+template <typename T>
+static inline CallResult<HermesValue> toCallResultHermesValue(
+    CallResult<Handle<T>> cr) {
+  if (LLVM_UNLIKELY(cr.getStatus() == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return cr.getValue().getHermesValue();
+}
+
 extern "C" SHRuntime *_sh_init(void) {
   auto config = RuntimeConfig::Builder().build();
   std::shared_ptr<Runtime> runtimePtr = Runtime::create(config);
