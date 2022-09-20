@@ -395,6 +395,11 @@ static inline bool kindIsA(ValueKind kind, ValueKind base) {
 class SerializedScope {
  public:
   using Ptr = std::shared_ptr<const SerializedScope>;
+  /// A declaration (const/let/var) in this scope.
+  struct Declaration {
+    Identifier name;
+    JavaScriptDeclKind declKind;
+  };
   /// Parent scope, if any.
   Ptr parentScope;
   /// Original name of the function, if any.
@@ -406,7 +411,7 @@ class SerializedScope {
   /// generated). Function::lazyClosureAlias_.
   Identifier closureAlias;
   /// List of variable names in the frame.
-  llvh::SmallVector<Identifier, 16> variables;
+  llvh::SmallVector<Declaration, 16> variables;
 };
 
 using SerializedScopePtr = SerializedScope::Ptr;

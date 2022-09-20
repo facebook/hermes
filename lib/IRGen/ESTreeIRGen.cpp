@@ -1167,7 +1167,8 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     auto next = std::make_shared<SerializedScope>();
     next->variables.reserve(it->variables.size());
     for (auto var : it->variables) {
-      next->variables.push_back(std::move(Builder.createIdentifier(var)));
+      next->variables.push_back(SerializedScope::Declaration{
+          Builder.createIdentifier(var), Variable::DeclKind::Var});
     }
     next->parentScope = current;
     current = next;
@@ -1208,10 +1209,9 @@ void ESTreeIRGen::materializeScopesInChain(
 
   // Create an external scope.
   ExternalScope *ES = Builder.createExternalScope(wrapperFunction, depth);
-  for (auto variableId : scope->variables) {
-    auto *variable =
-        Builder.createVariable(ES, Variable::DeclKind::Var, variableId);
-    nameTable_.insert(variableId, variable);
+  for (const auto &var : scope->variables) {
+    auto *variable = Builder.createVariable(ES, var.declKind, var.name);
+    nameTable_.insert(var.name, variable);
   }
 }
 
@@ -1251,9 +1251,8 @@ void ESTreeIRGen::addLexicalDebugInfo(
       {},
       false);
 
-  for (auto &var : scope->variables) {
-    Builder.createVariable(
-        current->getFunctionScope(), Variable::DeclKind::Var, var);
+  for (const auto &var : scope->variables) {
+    Builder.createVariable(current->getFunctionScope(), var.declKind, var.name);
   }
 
   buildDummyLexicalParent(Builder, current, child);
@@ -1278,7 +1277,8 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
     scope->closureAlias = closure->getName();
   }
   for (auto *var : func->getFunctionScope()->getVariables()) {
-    scope->variables.push_back(var->getName());
+    scope->variables.push_back(
+        SerializedScope::Declaration{var->getName(), var->getDeclKind()});
   }
   scope->parentScope = serializeScope(ctx->getPreviousContext(), false);
   return scope;
