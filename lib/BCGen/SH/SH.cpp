@@ -322,6 +322,10 @@ class InstrGen {
     hermes_fatal(err.str());
   }
 
+  const char *boolStr(bool b) {
+    return b ? "true" : "false";
+  }
+
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
   void generateRegister(Value &val) {
@@ -345,7 +349,7 @@ class InstrGen {
     } else if (llvh::isa<LiteralNull>(&val)) {
       os_ << "_sh_ljs_null()";
     } else if (auto B = llvh::dyn_cast<LiteralBool>(&val)) {
-      os_ << "_sh_ljs_bool(" << B->getValue() << ")";
+      os_ << "_sh_ljs_bool(" << boolStr(B->getValue()) << ")";
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
       os_ << "_sh_ljs_double(";
       if (!LN->isNegativeZero() &&
