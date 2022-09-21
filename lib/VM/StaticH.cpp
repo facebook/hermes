@@ -1325,6 +1325,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     uint32_t keyBufferIndex,
     uint32_t valBufferIndex) {
   Runtime &runtime = getRuntime(shr);
+  GCScopeMarkerRAII marker{runtime};
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
   llvh::ArrayRef valBuffer{unit->obj_val_buffer, unit->obj_val_buffer_size};
   // Create a new object using the built-in constructor or cached hidden class.
@@ -1332,7 +1333,6 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   // call it.
   Handle<HiddenClass> clazz = getHiddenClassForBuffer(
       shr, unit, numLiterals, keyBuffer, keyBufferIndex);
-  GCScopeMarkerRAII marker{runtime};
   Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
   SHSerializedLiteralParser valGen{
