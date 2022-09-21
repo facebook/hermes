@@ -929,7 +929,7 @@ class InstrGen {
     // TODO(T132354002): Properly understand the nesting of try blocks so we can
     // directly pass in the corresponding SHJmpBuf here instead of retrieving it
     // from shr.
-    os_ << "_sh_end_try(shr);";
+    os_ << "  _sh_end_try(shr);\n";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);
