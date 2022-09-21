@@ -928,7 +928,9 @@ class InstrGen {
     os_ << "_sh_end_try(shr);";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = frame[" << hbc::StackFrameLayout::NewTarget << "];\n";
   }
   void generateThrowIfEmptyInst(ThrowIfEmptyInst &inst) {
     unimplemented(inst);
