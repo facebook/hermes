@@ -262,6 +262,7 @@ class InstrGen {
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
+        F_(F),
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
@@ -292,6 +293,9 @@ class InstrGen {
   /// A map from basic blocks to unique numbers for identification
   const llvh::DenseMap<BasicBlock *, unsigned> &bbMap_;
 
+  // The function being compiled.
+  Function &F_;
+
   /// The state for the module currently being emitted.
   ModuleGen &moduleGen_;
 
@@ -309,6 +313,14 @@ class InstrGen {
 
   /// True if the function being generated is in strict mode.
   bool isStrictMode_;
+
+  void unimplemented(Instruction &inst) {
+    auto err = "Unimplemented " + inst.getName();
+    F_.getParent()->getContext().getSourceErrorManager().error(
+        inst.getLocation(), err);
+    // This can optionally be disabled.
+    hermes_fatal(err.str());
+  }
 
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
@@ -453,11 +465,12 @@ class InstrGen {
         break;
       }
       default:
-        hermes_fatal("Unimplemented unary operator.");
+        unimplemented(inst);
+        break;
     }
   }
   void generateDirectEvalInst(DirectEvalInst &inst) {
-    hermes_fatal("Unimplemented instruction DirectEvalInst");
+    unimplemented(inst);
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {
     hermes_fatal("LoadFrameInst should have been lowered.");
@@ -588,7 +601,8 @@ class InstrGen {
         break;
       case OpKind::ExponentiationKind:
       default:
-        hermes_fatal("Unimplemented operator");
+        unimplemented(inst);
+        return;
     }
     if (strictEqOp) {
       os_ << "(";
@@ -865,7 +879,7 @@ class InstrGen {
         << ra_.getMaxRegisterUsage() << ");\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
-    hermes_fatal("Unimplemented instruction DebuggerInst");
+    unimplemented(inst);
   }
   void generateCreateRegExpInst(CreateRegExpInst &inst) {
     os_.indent(2);
@@ -903,19 +917,19 @@ class InstrGen {
     os_ << "_sh_end_try(shr);";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
-    hermes_fatal("Unimplemented instruction GetNewTargetInst");
+    unimplemented(inst);
   }
   void generateThrowIfEmptyInst(ThrowIfEmptyInst &inst) {
-    hermes_fatal("Unimplemented instruction ThrowIfEmptyInst");
+    unimplemented(inst);
   }
   void generateIteratorBeginInst(IteratorBeginInst &inst) {
-    hermes_fatal("Unimplemented instruction IteratorBeginInst");
+    unimplemented(inst);
   }
   void generateIteratorNextInst(IteratorNextInst &inst) {
-    hermes_fatal("Unimplemented instruction IteratorNextInst");
+    unimplemented(inst);
   }
   void generateIteratorCloseInst(IteratorCloseInst &inst) {
-    hermes_fatal("Unimplemented instruction IteratorCloseInst");
+    unimplemented(inst);
   }
   void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
     os_ << "  _sh_ljs_store_to_env(shr, ";
@@ -932,13 +946,13 @@ class InstrGen {
     os_ << ", " << inst.getResolvedName()->getIndexInVariableList() << ");\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
-    hermes_fatal("Unimplemented instruction UnreachableInst");
+    unimplemented(inst);
   }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     hermes_fatal("CreateFunctionInst should have been lowered.");
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
-    hermes_fatal("Unimplemented instruction CreateGeneratorInst");
+    unimplemented(inst);
   }
   void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
     os_.indent(2);
@@ -955,7 +969,7 @@ class InstrGen {
         << ");\n";
   }
   void generateHBCCreateGeneratorInst(HBCCreateGeneratorInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCreateGeneratorInst");
+    unimplemented(inst);
   }
   void generateTerminatorInst(TerminatorInst &inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -1101,10 +1115,10 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateSwitchImmInst(SwitchImmInst &inst) {
-    hermes_fatal("Unimplemented instruction SwitchImmInst");
+    unimplemented(inst);
   }
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
-    hermes_fatal("Unimplemented instruction SaveAndYieldInst");
+    unimplemented(inst);
   }
   void setupCallStack(CallInst &inst) {
     // Populate the outgoing registers that will not be set by _sh_ljs_call or
@@ -1137,10 +1151,10 @@ class InstrGen {
         << ");\n";
   }
   void generateConstructInst(ConstructInst &inst) {
-    hermes_fatal("Unimplemented instruction ConstructInst");
+    unimplemented(inst);
   }
   void generateCallBuiltinInst(CallBuiltinInst &inst) {
-    hermes_fatal("Unimplemented instruction CallBuiltinInst");
+    unimplemented(inst);
   }
   void generateHBCConstructInst(HBCConstructInst &inst) {
     // Populate the newTarget register, which is not set by setupCallStack.
@@ -1156,19 +1170,19 @@ class InstrGen {
         << ");\n";
   }
   void generateHBCCallDirectInst(HBCCallDirectInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCallDirectInst");
+    unimplemented(inst);
   }
   void generateHBCCallNInst(HBCCallNInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCCallNInst");
+    unimplemented(inst);
   }
   void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
-    hermes_fatal("Unimplemented instruction GetBuiltinClosureInst");
+    unimplemented(inst);
   }
   void generateStartGeneratorInst(StartGeneratorInst &inst) {
-    hermes_fatal("Unimplemented instruction StartGeneratorInst");
+    unimplemented(inst);
   }
   void generateResumeGeneratorInst(ResumeGeneratorInst &inst) {
-    hermes_fatal("Unimplemented instruction ResumeGeneratorInst");
+    unimplemented(inst);
   }
   void generateHBCGetGlobalObjectInst(HBCGetGlobalObjectInst &inst) {
     os_.indent(2);
@@ -1244,7 +1258,7 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCProfilePointInst");
+    unimplemented(inst);
   }
 };
 
