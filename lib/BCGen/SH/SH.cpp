@@ -489,8 +489,13 @@ class InstrGen {
   void generateHBCLoadParamInst(HBCLoadParamInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_param(frame, "
-        << static_cast<uint32_t>(inst.getIndex()->getValue()) << ");\n";
+    // Special case "this": it is always available, so we don't need a call.
+    if (inst.getIndex()->getValue() == 0) {
+      os_ << " = frame[" << hbc::StackFrameLayout::ThisArg << "];\n";
+    } else {
+      os_ << " = _sh_ljs_param(frame, "
+          << static_cast<uint32_t>(inst.getIndex()->getValue()) << ");\n";
+    }
   }
   void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
     llvh::Optional<int32_t> instScopeDepth =
@@ -1234,7 +1239,8 @@ class InstrGen {
   void generateHBCGetThisNSInst(HBCGetThisNSInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_coerce_this_ns(shr, _sh_ljs_param(frame, 0));\n";
+    os_ << " = _sh_ljs_coerce_this_ns(shr, frame["
+        << hbc::StackFrameLayout::ThisArg << "]);\n";
   }
   void generateHBCCreateThisInst(HBCCreateThisInst &inst) {
     os_.indent(2);
