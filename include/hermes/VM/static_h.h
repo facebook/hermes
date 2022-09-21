@@ -182,6 +182,41 @@ SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index);
 /// object.
 SHLegacyValue _sh_ljs_coerce_this_ns(SHRuntime *shr, SHLegacyValue value);
 
+/// `arguments` operations all work with a lazy "register" that contains either
+/// undefined or a reified array. The first call to _sh_reify_arguments_* will
+/// populate the reified array. This is an optimization to allow arguments[i] to
+/// just load an argument instead of doing a full array allocation and property
+/// lookup.
+
+/// Get a property of the 'arguments' array by value.
+SHLegacyValue _sh_ljs_get_arguments_prop_by_val_loose(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *idx,
+    SHLegacyValue *lazyReg);
+SHLegacyValue _sh_ljs_get_arguments_prop_by_val_strict(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *idx,
+    SHLegacyValue *lazyReg);
+
+/// Get the length of the 'arguments' array.
+SHLegacyValue _sh_ljs_get_arguments_length(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg);
+
+/// Ensure that the reified array has been created, updating \p lazyReg in place
+/// if it has not.
+void _sh_ljs_reify_arguments_loose(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg);
+void _sh_ljs_reify_arguments_strict(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg);
+
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,

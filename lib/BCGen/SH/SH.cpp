@@ -503,10 +503,21 @@ class InstrGen {
     os_ << " = _sh_ljs_get_env(shr, frame, " << delta << ");\n";
   }
   void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCGetArgumentsLengthInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_arguments_length(shr, frame, ";
+    generateRegisterPtr(*inst.getLazyRegister());
+    os_ << ");\n";
   }
   void generateHBCReifyArgumentsInst(HBCReifyArgumentsInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCReifyArgumentsInst");
+    os_.indent(2);
+    if (isStrictMode_)
+      os_ << "_sh_ljs_reify_arguments_strict";
+    else
+      os_ << "_sh_ljs_reify_arguments_loose";
+    os_ << "(shr, frame, ";
+    generateRegisterPtr(*inst.getLazyRegister());
+    os_ << ");\n";
   }
   void generateHBCSpillMovInst(HBCSpillMovInst &inst) {
     os_.indent(2);
@@ -1217,7 +1228,18 @@ class InstrGen {
   }
   void generateHBCGetArgumentsPropByValInst(
       HBCGetArgumentsPropByValInst &inst) {
-    hermes_fatal("Unimplemented instruction HBCGetArgumentsPropByValInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    if (isStrictMode_)
+      os_ << "_sh_ljs_get_arguments_prop_by_val_strict";
+    else
+      os_ << "_sh_ljs_get_arguments_prop_by_val_loose";
+    os_ << "(shr, frame, ";
+    generateRegisterPtr(*inst.getIndex());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getLazyRegister());
+    os_ << ");\n";
   }
   void generateHBCGetConstructedObjectInst(HBCGetConstructedObjectInst &inst) {
     os_.indent(2);
