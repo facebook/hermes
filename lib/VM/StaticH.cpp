@@ -123,21 +123,20 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
   return res->getHermesValue();
 }
 
-extern "C" SHLegacyValue _sh_ljs_load_this_ns(
+extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
     SHRuntime *shr,
-    SHLegacyValue *frame) {
-  StackFramePtr framePtr(toPHV(frame));
-  if (LLVM_LIKELY(framePtr.getThisArgRef().isObject())) {
-    return framePtr.getThisArgRef();
-  } else if (
-      framePtr.getThisArgRef().isNull() ||
-      framePtr.getThisArgRef().isUndefined()) {
+    SHLegacyValue value) {
+  if (LLVM_LIKELY(_sh_ljs_is_object(value))) {
+    return value;
+  } else if (_sh_ljs_is_null(value) || _sh_ljs_is_undefined(value)) {
     return getRuntime(shr).global_;
   } else {
     CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
     {
-      GCScopeMarkerRAII marker{getRuntime(shr)};
-      res = toObject(getRuntime(shr), Handle<>(&framePtr.getThisArgRef()));
+      Runtime &runtime = getRuntime(shr);
+      GCScopeMarkerRAII marker{runtime};
+      res = toObject(
+          runtime, runtime.makeHandle(HermesValue::fromRaw(value.raw)));
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       _sh_throw_current(shr);

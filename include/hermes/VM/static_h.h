@@ -177,8 +177,10 @@ void _sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP);
 /// Index 0 loads "this", 1 the first param, etc.
 SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index);
 
-/// Obtain the raw "this" value and coerce it to an object.
-SHLegacyValue _sh_ljs_load_this_ns(SHRuntime *shr, SHLegacyValue *frame);
+/// Coerce a value assumed to contain 'this' to an object using non-strict
+/// mode rules. Primitives are boxed, \c null or \c undefed produce the global
+/// object.
+SHLegacyValue _sh_ljs_coerce_this_ns(SHRuntime *shr, SHLegacyValue value);
 
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 SHLegacyValue _sh_ljs_create_this(

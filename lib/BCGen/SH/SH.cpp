@@ -410,9 +410,6 @@ class InstrGen {
     // ImplicitMovs produce no bytecode, they only express that a subsequent
     // instruction will perform the equivalent of a 'Mov'.
   }
-  void generateCoerceThisNSInst(CoerceThisNSInst &inst) {
-    hermes_fatal("Unimplemented instruction CoerceThisNSInst");
-  }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1183,10 +1180,17 @@ class InstrGen {
     generateRegister(inst);
     os_ << ", " << envSize_ << ");\n";
   }
+  void generateCoerceThisNSInst(CoerceThisNSInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_coerce_this_ns(shr, ";
+    generateRegister(*inst.getSingleOperand());
+    os_ << ");\n";
+  }
   void generateHBCGetThisNSInst(HBCGetThisNSInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_load_this_ns(shr, frame);\n";
+    os_ << " = _sh_ljs_coerce_this_ns(shr, _sh_ljs_param(frame, 0));\n";
   }
   void generateHBCCreateThisInst(HBCCreateThisInst &inst) {
     os_.indent(2);
