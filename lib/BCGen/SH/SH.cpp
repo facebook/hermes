@@ -940,13 +940,26 @@ class InstrGen {
     unimplemented(inst);
   }
   void generateIteratorBeginInst(IteratorBeginInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_iterator_begin_rjs(shr, ";
+    generateRegisterPtr(*inst.getSourceOrNext());
+    os_ << ");\n";
   }
   void generateIteratorNextInst(IteratorNextInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_iterator_next_rjs(shr, ";
+    generateRegisterPtr(*inst.getIterator());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getSourceOrNext());
+    os_ << ");\n";
   }
   void generateIteratorCloseInst(IteratorCloseInst &inst) {
-    unimplemented(inst);
+    os_ << "  _sh_ljs_iterator_close_rjs(shr, ";
+    generateRegisterPtr(*inst.getIterator());
+    os_ << ", " << boolStr(inst.getIgnoreInnerException());
+    os_ << ");\n";
   }
   void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
     os_ << "  _sh_ljs_store_to_env(shr, ";

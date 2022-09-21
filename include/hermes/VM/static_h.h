@@ -536,6 +536,26 @@ SHLegacyValue _sh_ljs_get_next_pname_rjs(
     SHLegacyValue *index,
     SHLegacyValue *size);
 
+/// If \p src is an array with an unmodified [Symbol.iterator], return 0. Else
+/// return the Symbol.iterator property of \p src and update \p src in place to
+/// the .next() method on the iterator.
+SHLegacyValue _sh_ljs_iterator_begin_rjs(SHRuntime *shr, SHLegacyValue *src);
+
+/// Move \p iteratorOrIdx forward, and return the value at the new iterator. \p
+/// srcOrNext is the source if we are iterating over an array, or the .next()
+/// method otherwise.
+SHLegacyValue _sh_ljs_iterator_next_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *iteratorOrIdx,
+    const SHLegacyValue *srcOrNext);
+
+/// If the given iterator is an object, call iterator.return(), ignoring
+/// catchable exceptions if ignoreExceptions is true.
+void _sh_ljs_iterator_close_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *iteratorOrIdx,
+    bool ignoreExceptions);
+
 #ifdef __cplusplus
 }
 #endif

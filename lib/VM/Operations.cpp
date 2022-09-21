@@ -2821,3 +2821,170 @@ extern "C" SHLegacyValue _sh_ljs_instance_of(
     _sh_throw_current(shr);
   return _sh_ljs_bool(*cr);
 }
+
+extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *src) {
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    Handle srcHandle{toPHV(src)};
+    if (LLVM_LIKELY(vmisa<JSArray>(*srcHandle))) {
+      // Check if we can take the fast path for array iteration, if the
+      // Symbol.iterator field is unmodified.
+      NamedPropertyDescriptor desc;
+      JSObject *propObj = JSObject::getNamedDescriptorPredefined(
+          Handle<JSArray>::vmcast(srcHandle),
+          runtime,
+          Predefined::SymbolIterator,
+          desc);
+      if (LLVM_LIKELY(propObj)) {
+        auto slotValueRes = JSObject::getNamedSlotValue(
+            createPseudoHandle(propObj), runtime, desc);
+        if (LLVM_UNLIKELY(slotValueRes == ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
+        PseudoHandle<> slotValue = std::move(*slotValueRes);
+        if (LLVM_LIKELY(
+                slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw()))
+          return HermesValue::encodeNumberValue(0);
+      }
+    }
+
+    // Fall back to the general case.
+    CallResult<IteratorRecord> iterRecord = getIterator(runtime, srcHandle);
+    if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    *src = iterRecord->nextMethod.getHermesValue();
+    return iterRecord->iterator.getHermesValue();
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+extern "C" SHLegacyValue _sh_ljs_iterator_next_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *iteratorOrIdx,
+    const SHLegacyValue *srcOrNext) {
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    Handle<> iteratorOrIdxHandle{toPHV(iteratorOrIdx)},
+        srcOrNextHandle{toPHV(srcOrNext)};
+
+    if (LLVM_LIKELY(iteratorOrIdxHandle->isNumber())) {
+      // If the iterator is a number, we can take the fast path for array
+      // iteration.
+      JSArray::size_type i =
+          iteratorOrIdxHandle->getNumberAs<JSArray::size_type>();
+      auto arr = Handle<JSArray>::vmcast(srcOrNextHandle);
+
+      {
+        NoHandleScope noHandles{runtime};
+        NoAllocScope noAlloc{runtime};
+
+        if (i >=
+            JSArray::getLength(vmcast<JSArray>(*srcOrNextHandle), runtime)) {
+          // Finished iterating the array, stop.
+          *iteratorOrIdx = HermesValue::encodeUndefinedValue();
+          return HermesValue::encodeUndefinedValue();
+        }
+        // Fast path: look up the property in indexed storage.
+        // Runs when there is no hole and a regular non-accessor property exists
+        // at the current index, because those are the only properties stored
+        // in indexed storage.
+        // If there is another kind of property we have to call getComputed_RJS.
+        // No need to check the fastIndexProperties flag because the indexed
+        // storage would be deleted and at() would return empty in that case.
+        SmallHermesValue value = arr->at(runtime, i);
+        if (LLVM_LIKELY(!value.isEmpty())) {
+          *iteratorOrIdx = HermesValue::encodeNumberValue(i + 1);
+          return value.unboxToHV(runtime);
+        }
+      }
+      // Slow path, just run the full getComputedPropertyValue_RJS path.
+      GCScopeMarkerRAII marker{runtime};
+      CallResult<PseudoHandle<>> valueRes =
+          JSObject::getComputed_RJS(arr, runtime, iteratorOrIdxHandle);
+      if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      *iteratorOrIdx = HermesValue::encodeNumberValue(i + 1);
+      return valueRes->get();
+    }
+    if (LLVM_UNLIKELY(iteratorOrIdxHandle->isUndefined())) {
+      // In all current use cases of IteratorNext, we check and branch away
+      // from IteratorNext in the case that iterStorage was set to undefined
+      // (which indicates completion of iteration).
+      // If we introduce a use case which allows calling IteratorNext,
+      // then this assert can be removed. For now, this branch just returned
+      // undefined in NDEBUG mode.
+      assert(false && "IteratorNext called on completed iterator");
+      return HermesValue::encodeUndefinedValue();
+    }
+
+    GCScopeMarkerRAII marker{runtime};
+
+    IteratorRecord iterRecord{
+        Handle<JSObject>::vmcast(iteratorOrIdxHandle),
+        Handle<Callable>::vmcast(srcOrNextHandle)};
+
+    CallResult<PseudoHandle<JSObject>> resultObjRes =
+        iteratorNext(runtime, iterRecord, llvh::None);
+    if (LLVM_UNLIKELY(resultObjRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    Handle<JSObject> resultObj = runtime.makeHandle(std::move(*resultObjRes));
+    CallResult<PseudoHandle<>> doneRes = JSObject::getNamed_RJS(
+        resultObj, runtime, Predefined::getSymbolID(Predefined::done));
+    if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (toBoolean(doneRes->get())) {
+      // Done with iteration. Clear the iterator so that subsequent
+      // instructions do not call next() or return().
+      *iteratorOrIdx = HermesValue::encodeUndefinedValue();
+      return HermesValue::encodeUndefinedValue();
+    }
+
+    // Not done iterating, so get the `value` property and return it.
+    CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
+        resultObj, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    return propRes->getHermesValue();
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+extern "C" void _sh_ljs_iterator_close_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *iteratorOrIdx,
+    bool ignoreExceptions) {
+  Handle<> iteratorOrIdxHandle{toPHV(iteratorOrIdx)};
+  if (LLVM_LIKELY(!iteratorOrIdxHandle->isObject()))
+    return;
+
+  Runtime &runtime = getRuntime(shr);
+  ExecutionStatus res;
+  {
+    GCScopeMarkerRAII marker{runtime};
+    // The iterator must be closed if it's still an object.
+    // That means it was never an index and is not done iterating (a state
+    // which is indicated by `undefined`).
+    res = iteratorClose(
+        runtime,
+        Handle<JSObject>::vmcast(iteratorOrIdxHandle),
+        Runtime::getEmptyValue());
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // Ignore the raised exception if necessary.
+    if (ignoreExceptions && !isUncatchableError(runtime.thrownValue_)) {
+      runtime.clearThrownValue();
+      return;
+    }
+
+    _sh_throw_current(shr);
+  }
+}
