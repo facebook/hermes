@@ -144,6 +144,116 @@ extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
   }
 }
 
+static SHLegacyValue getArgumentsPropByVal_RJS(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *idx,
+    SHLegacyValue *lazyReg,
+    bool strictMode) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr framePtr(toPHV(frame));
+  // If the arguments object hasn't been created yet and we have a
+  // valid integer index, we use the fast path.
+  if (toPHV(lazyReg)->isUndefined()) {
+    if (auto index = toArrayIndexFastPath(*toPHV(idx))) {
+      // Is this an existing argument?
+      if (*index < framePtr.getArgCount())
+        return framePtr.getArgRef(*index);
+    }
+  }
+  // Slow path.
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Interpreter::getArgumentsPropByValSlowPath_RJS(
+        runtime,
+        toPHV(lazyReg),
+        toPHV(idx),
+        framePtr.getCalleeClosureHandleUnsafe(),
+        strictMode);
+  }
+  if (res == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(shr);
+  return res->getHermesValue();
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_loose(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *idx,
+    SHLegacyValue *lazyReg) {
+  return getArgumentsPropByVal_RJS(shr, frame, idx, lazyReg, false);
+}
+extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_strict(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *idx,
+    SHLegacyValue *lazyReg) {
+  return getArgumentsPropByVal_RJS(shr, frame, idx, lazyReg, true);
+}
+extern "C" SHLegacyValue _sh_ljs_get_arguments_length(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr framePtr(toPHV(frame));
+  // If the arguments object hasn't been created yet, use the fast path.
+  if (toPHV(lazyReg)->isUndefined())
+    return HermesValue::encodeNumberValue(framePtr.getArgCount());
+
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    // The arguments object has been created, so this is a regular property
+    // get.
+    auto obj = Handle<JSObject>::vmcast(toPHV(lazyReg));
+    res = JSObject::getNamed_RJS(
+        obj, runtime, Predefined::getSymbolID(Predefined::length));
+  }
+  if (res == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(shr);
+  return res->getHermesValue();
+}
+
+static void reifyArguments(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg,
+    bool strictMode) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr framePtr(toPHV(frame));
+  // If the arguments object was already created, do nothing.
+  if (!toPHV(lazyReg)->isUndefined()) {
+    assert(
+        toPHV(lazyReg)->isObject() &&
+        "arguments lazy register is not an object");
+    return;
+  }
+
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = toCallResultHermesValue(Interpreter::reifyArgumentsSlowPath(
+        runtime, framePtr.getCalleeClosureHandleUnsafe(), strictMode));
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  *lazyReg = *res;
+}
+
+extern "C" void _sh_ljs_reify_arguments_loose(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg) {
+  reifyArguments(shr, frame, lazyReg, false);
+}
+extern "C" void _sh_ljs_reify_arguments_strict(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    SHLegacyValue *lazyReg) {
+  reifyArguments(shr, frame, lazyReg, true);
+}
+
 extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
