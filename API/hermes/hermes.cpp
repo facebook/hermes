@@ -738,6 +738,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value lockWeakObject(jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
+  jsi::ArrayBuffer createArrayBuffer(
+      std::shared_ptr<jsi::MutableBuffer> buffer) override;
   size_t size(const jsi::Array &) override;
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
@@ -2001,6 +2003,24 @@ jsi::Array HermesRuntimeImpl::createArray(size_t length) {
   auto result = vm::JSArray::create(runtime_, length, length);
   checkStatus(result.getStatus());
   return add<jsi::Object>(result->getHermesValue()).getArray(*this);
+}
+
+jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
+    std::shared_ptr<jsi::MutableBuffer> buffer) {
+  vm::GCScope gcScope(runtime_);
+  auto buf = runtime_.makeHandle(vm::JSArrayBuffer::create(
+      runtime_,
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.arrayBufferPrototype)));
+  auto size = buffer->size();
+  auto *data = buffer->data();
+  auto *ctx = new std::shared_ptr<jsi::MutableBuffer>(std::move(buffer));
+  auto finalize = [](void *ctx) {
+    delete static_cast<std::shared_ptr<jsi::MutableBuffer> *>(ctx);
+  };
+  auto res = vm::JSArrayBuffer::setExternalDataBlock(
+      runtime_, buf, data, size, ctx, finalize);
+  checkStatus(res);
+  return add<jsi::Object>(buf.getHermesValue()).getArrayBuffer(*this);
 }
 
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {

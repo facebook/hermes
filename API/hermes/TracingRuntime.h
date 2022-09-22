@@ -90,6 +90,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::Value lockWeakObject(jsi::WeakObject &wo) override;
 
   jsi::Array createArray(size_t length) override;
+  jsi::ArrayBuffer createArrayBuffer(
+      std::shared_ptr<jsi::MutableBuffer> buffer) override;
 
   size_t size(const jsi::Array &arr) override;
   size_t size(const jsi::ArrayBuffer &buf) override;
