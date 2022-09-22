@@ -1228,6 +1228,20 @@ TEST_F(NonDeterminismReplayTest, DateNewWithArgsTest) {
   EXPECT_EQ(dateTime, replayedTime);
 }
 
+TEST_F(NonDeterminismReplayTest, DateReplacedTest) {
+  eval(*traceRt, R"(
+var oldDate = Date;
+Date = undefined;
+var x = new oldDate();
+)");
+  auto traceTime = eval(*traceRt, "x.getTime()").asNumber();
+
+  replay();
+
+  auto replayedTime = eval(*replayRt, "x.getTime()").asNumber();
+  EXPECT_EQ(traceTime, replayedTime);
+}
+
 TEST_F(NonDeterminismReplayTest, MathRandomTest) {
   eval(*traceRt, "var x = Math.random();");
   auto randVal = eval(*traceRt, "x").asNumber();
