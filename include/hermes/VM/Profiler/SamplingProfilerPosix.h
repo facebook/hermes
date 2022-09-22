@@ -177,8 +177,7 @@ class SamplingProfiler {
     /// registered.
     std::unordered_set<SamplingProfiler *> profilers_;
 
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
     /// Per-thread profiler instance for loom profiling.
     /// Limitations: No recursive runtimes in one thread.
     ThreadLocal<SamplingProfiler> threadLocalProfilerForLoom_;
