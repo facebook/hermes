@@ -570,6 +570,7 @@ jobs:
           command: |
             git clone --depth=1 https://github.com/facebook/react-native
             cd react-native
+            git pull
             git checkout bc5cb7cd7933da707c02ff0dd993c607ba7d40b3
             yarn install
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
