@@ -13,6 +13,7 @@
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
 
@@ -363,6 +364,21 @@ class InstrGen {
     } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
       os_ << "_sh_ljs_get_string(shr, s_symbols["
           << moduleGen_.stringTable.add(S->getValue().str()) << "])";
+    } else if (auto *LBI = llvh::dyn_cast<LiteralBigInt>(&val)) {
+      auto parsedBigInt = bigint::ParsedBigInt::parsedBigIntFromNumericValue(
+          LBI->getValue()->str());
+      llvh::ArrayRef<uint8_t> bytes = parsedBigInt->getBytes();
+      assert(parsedBigInt && "should be valid");
+      os_ << "_sh_ljs_create_bigint(shr, ";
+      // Print a string literal using hex escapes for each byte.
+      // Cast it to `uint8_t*` for use with the API signature.
+      os_ << "(const uint8_t *)\"";
+      for (const uint8_t c : bytes) {
+        os_ << llvh::format("\\x%x", c);
+      }
+      os_ << "\", ";
+      os_ << bytes.size();
+      os_ << ")";
     } else if (llvh::isa<Instruction>(&val)) {
       generateRegister(val);
     } else {

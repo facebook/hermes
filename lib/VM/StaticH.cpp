@@ -1238,6 +1238,16 @@ _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
   return *cr;
 }
 
+extern "C" SHLegacyValue
+_sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size) {
+  Runtime &runtime = getRuntime(shr);
+  // This function won't allocate handles because the `fromBytes` function
+  // is also used in the interpreter.
+  NoHandleScope noHandle{runtime};
+  return runtime.ignoreAllocationFailure(
+      BigIntPrimitive::fromBytes(runtime, llvh::ArrayRef{value, size}));
+}
+
 extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
   PseudoHandle<JSObject> result;
   {
