@@ -363,7 +363,7 @@ class InstrGen {
     } else if (auto S = llvh::dyn_cast<LiteralString>(&val)) {
       os_ << "_sh_ljs_get_string(shr, s_symbols["
           << moduleGen_.stringTable.add(S->getValue().str()) << "])";
-    } else if (auto *I = llvh::dyn_cast<Instruction>(&val)) {
+    } else if (llvh::isa<Instruction>(&val)) {
       generateRegister(val);
     } else {
       hermes_fatal("Unknown value");
