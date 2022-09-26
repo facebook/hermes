@@ -623,10 +623,12 @@ def runTest(
         if lazy:
             run_vm = True
             fileToRun = js_source
+            onePhase = True
             start = time.time()
         elif shermes:
             run_vm = True
             fileToRun = js_source
+            onePhase = True
             start = time.time()
         else:
             errString = ""
@@ -752,10 +754,8 @@ def runTest(
                     args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
                 )
 
-                if (
-                    (not lazy and negativePhase == "runtime")
-                    or (lazy and negativePhase != "")
-                    or (shermes and negativePhase != "")
+                if (not onePhase and negativePhase == "runtime") or (
+                    onePhase and negativePhase != ""
                 ):
                     printVerbose("FAIL: Expected execution to throw")
                     return (
@@ -766,8 +766,8 @@ def runTest(
                 else:
                     printVerbose("PASS: Execution completed successfully")
             except subprocess.CalledProcessError as e:
-                if (not lazy and negativePhase != "runtime") or (
-                    lazy and negativePhase == ""
+                if (not onePhase and negativePhase != "runtime") or (
+                    onePhase and negativePhase == ""
                 ):
                     printVerbose(
                         "FAIL: Execution of {} threw unexpected error".format(filename)
