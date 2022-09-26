@@ -404,6 +404,11 @@ SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID);
 SHLegacyValue
 _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
 
+/// \param value the string of the BigInt.
+/// \param size  the size of the string \c value.
+SHLegacyValue
+_sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size);
+
 double _sh_ljs_to_double_rjs(SHRuntime *shr, const SHLegacyValue *n);
 bool _sh_ljs_to_boolean(SHLegacyValue b);
 SHLegacyValue _sh_ljs_to_numeric_rjs(SHRuntime *shr, const SHLegacyValue *n);
