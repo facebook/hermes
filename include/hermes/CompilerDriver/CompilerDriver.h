@@ -32,6 +32,8 @@ enum CompileStatus {
   OutputFileError,
   /// An error occured during optimization.
   OptimizationFailed,
+  /// An error occured in the backend during/after IR lowering.
+  BackendError,
 };
 
 /// Information about a bytecode file that is loaded into a buffer.

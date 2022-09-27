@@ -217,6 +217,8 @@ void BytecodeModuleGenerator::setFunctionGenerator(
   assert(
       functionGenerators_.find(F) == functionGenerators_.end() &&
       "Adding same function twice.");
+  assert(
+      !BFG->hasEncodingError() && "Error should have been reported already.");
   functionGenerators_[F] = std::move(BFG);
 }
 
