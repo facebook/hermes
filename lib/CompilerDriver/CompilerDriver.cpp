@@ -1694,9 +1694,15 @@ CompileResult generateBytecodeForExecution(
   std::shared_ptr<Context> context = M.shareContext();
   CompileResult result{Success};
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    result.bytecodeProvider = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), genOptions));
+    auto BM =
+        hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), genOptions);
+    if (auto N = context->getSourceErrorManager().getErrorCount()) {
+      llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
+      return BackendError;
+    }
 
+    result.bytecodeProvider =
+        hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
     result = InvalidFlags;
@@ -1734,6 +1740,11 @@ CompileResult generateBytecodeForSerialization(
         segment,
         sourceMapGenOrNull,
         std::move(baseBCProvider));
+
+    if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
+      llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
+      return BackendError;
+    }
 
     if (cl::DumpTarget == DumpBytecode) {
       disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
