@@ -16,11 +16,7 @@ namespace hermes {
 namespace platform_unicode {
 
 namespace {
-constexpr double MINUTES_PER_HOUR = 60;
-constexpr double SECONDS_PER_MINUTE = 60;
 constexpr double MS_PER_SECOND = 1000;
-constexpr double MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
-constexpr double MS_PER_HOUR = MS_PER_MINUTE * MINUTES_PER_HOUR;
 
 /// Create the locale used for date formatting and collation. \return the
 /// locale, transferring ownership to the caller (the "create" rule).
@@ -60,14 +56,7 @@ double localTZA() {
     llvm_unreachable("localtime failed in localTZA()");
   }
 
-#ifdef _WINDOWS
-  long gmtoff = -_timezone;
-#else
-  long gmtoff = local->tm_gmtoff;
-#endif
-
-  // Use the gmtoff field and subtract an hour if currently in DST.
-  return (gmtoff * MS_PER_SECOND) - (local->tm_isdst ? MS_PER_HOUR : 0);
+  return local->tm_gmtoff * MS_PER_SECOND;
 }
 
 } // namespace
