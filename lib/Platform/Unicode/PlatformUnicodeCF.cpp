@@ -40,11 +40,11 @@ CFLocaleRef copyLocale() {
   return CFLocaleCreateCopy(nullptr, hermesLocale);
 }
 
-/// return the local time zone adjustment in milliseconds.
-double localTZA() {
+/// return the offset from GMT to local time, measured in milliseconds.
+double localOffsetFromGMT() {
   ::tzset();
 
-  // Get the current time in seconds (might have DST adjustment included).
+  // Get the current time in seconds (with any applicable DST adjustment).
   time_t currentWithDST = std::time(nullptr);
   if (currentWithDST == static_cast<time_t>(-1)) {
     return 0;
@@ -53,7 +53,7 @@ double localTZA() {
   // Deconstruct the time into localTime.
   std::tm *local = std::localtime(&currentWithDST);
   if (!local) {
-    llvm_unreachable("localtime failed in localTZA()");
+    llvm_unreachable("localtime failed in localOffsetFromGMT()");
   }
 
   return local->tm_gmtoff * MS_PER_SECOND;
@@ -112,7 +112,7 @@ void dateFormat(
 
   CFLocaleRef localeRef = copyLocale();
   CFTimeZoneRef timezoneRef = CFTimeZoneCreateWithTimeIntervalFromGMT(
-      nullptr, localTZA() / MS_PER_SECOND);
+      nullptr, localOffsetFromGMT() / MS_PER_SECOND);
 
   auto formatter =
       CFDateFormatterCreate(nullptr, localeRef, dateStyle, timeStyle);
