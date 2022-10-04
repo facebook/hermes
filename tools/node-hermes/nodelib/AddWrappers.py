@@ -18,6 +18,15 @@ import io
 from os import path
 
 
+def _filename_from_arg(wrapper_path):
+    """Extracts the wrapper filename out of wrapper_path, stripping the .js extension."""
+
+    wrapper_path = wrapper_path.replace("\\", "/")
+    return wrapper_path[
+        wrapper_path.index("/wrappers/") + len("/wrappers/") : -len(".js")
+    ]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs="*")
@@ -33,13 +42,8 @@ def main():
             if not path.exists(arg):
                 raise Exception('File "{}" doesn\'t exist'.format(arg))
 
-            # Extracts the filename out of the full path and excludes the ".js" extension
             o.write(
-                '"{filename}" : (function(exports, require, module, internalBinding, __filename, __dirname) {{'.format(
-                    filename=arg[
-                        arg.index("nodelib") + len("nodelib") + 1 : -len(".js")
-                    ].replace("\\", "/")
-                )
+                f'"{_filename_from_arg(arg)}" : (function(exports, require, module, internalBinding, __filename, __dirname) {{'
             )
             with io.open(arg, "r", encoding="utf-8") as f:
                 o.write(f.read())
