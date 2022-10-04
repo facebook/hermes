@@ -8,8 +8,7 @@
         "editor.formatOnSave": true,
     },
     "eslint.autofixOnSave.ruleAllowlist": [
-      "@fb-tools/sort-requires",
+      "lint/sort-imports",
       "prettier/prettier",
     ],
 }
-
