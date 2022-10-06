@@ -10,6 +10,7 @@
 
 #include "hermes/AST/SemValidate.h"
 
+#include "Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
 
 namespace hermes {
@@ -20,43 +21,6 @@ using namespace hermes::ESTree;
 // Forward declarations
 class FunctionContext;
 class SemanticValidator;
-
-//===----------------------------------------------------------------------===//
-// Keywords
-
-class Keywords {
- public:
-  /// Identifier for "arguments".
-  const UniqueString *const identArguments;
-  /// Identifier for "eval".
-  const UniqueString *const identEval;
-  /// Identifier for "delete".
-  const UniqueString *const identDelete;
-  /// Identifier for "this".
-  const UniqueString *const identThis;
-  /// Identifier for "use strict".
-  const UniqueString *const identUseStrict;
-  /// Identifier for "show source ".
-  const UniqueString *const identShowSource;
-  /// Identifier for "hide source ".
-  const UniqueString *const identHideSource;
-  /// Identifier for "sensitive".
-  const UniqueString *const identSensitive;
-  /// Identifier for "var".
-  const UniqueString *const identVar;
-  /// Identifier for "let".
-  const UniqueString *const identLet;
-  /// Identifier for "const".
-  const UniqueString *const identConst;
-  /// "+".
-  const UniqueString *const identPlus;
-  /// "-".
-  const UniqueString *const identMinus;
-  /// "=".
-  const UniqueString *const identAssign;
-
-  Keywords(Context &astContext);
-};
 
 //===----------------------------------------------------------------------===//
 // SemanticValidator
