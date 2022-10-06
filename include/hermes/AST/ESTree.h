@@ -896,6 +896,9 @@ NodeList &getParams(FunctionLikeNode *node);
 /// functions.
 BlockStatementNode *getBlockStatement(FunctionLikeNode *node);
 
+/// \return the name of the function.
+Node *getIdentifier(FunctionLikeNode *node);
+
 /// \return the object of the member expression node.
 Node *getObject(MemberExpressionLikeNode *node);
 
