@@ -11,7 +11,10 @@ add_hermes_library(hermesAST
     SemValidate.cpp
     SemanticValidator.cpp SemanticValidator.h
     SemContext.cpp
+    SemResolve.cpp
+    SemanticResolver.cpp SemanticResolver.h
     DeclCollector.cpp DeclCollector.h
+    ScopedFunctionPromoter.cpp ScopedFunctionPromoter.h
     CommonJS.cpp
     LINK_OBJLIBS
     hermesSupport
