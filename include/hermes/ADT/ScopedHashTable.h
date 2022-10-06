@@ -162,6 +162,15 @@ class ScopedHashTable {
     return result->second->value_;
   }
 
+  /// Return a pointer to the innermost value for a key, or nullptr if none.
+  V *find(const K &key) {
+    auto result = map_.find(key);
+    if (result == map_.end())
+      return nullptr;
+
+    return &result->second->value_;
+  }
+
   // Gets all values currently in scope.
   std::unique_ptr<llvh::DenseMap<K, V>> flatten() const {
     std::unique_ptr<llvh::DenseMap<K, V>> result{
