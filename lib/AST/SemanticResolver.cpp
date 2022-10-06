@@ -336,6 +336,48 @@ void SemanticResolver::visit(ESTree::WithStatementNode *node) {
   // FIXME: Run an unresolver pass.
 }
 
+void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
+  // A try statement with both catch and finally handlers is technically
+  // two nested try statements. Transform:
+  //
+  //    try {
+  //      tryBody;
+  //    } catch {
+  //      catchBody;
+  //    } finally {
+  //      finallyBody;
+  //    }
+  //
+  // into
+  //
+  //    try {
+  //      try {
+  //        tryBody;
+  //      } catch {
+  //        catchBody;
+  //      }
+  //    } finally {
+  //      finallyBody;
+  //    }
+  if (compile_ && tryStatement->_handler && tryStatement->_finalizer) {
+    auto *nestedTry = new (astContext_)
+        TryStatementNode(tryStatement->_block, tryStatement->_handler, nullptr);
+    nestedTry->copyLocationFrom(tryStatement);
+    nestedTry->setEndLoc(nestedTry->_handler->getEndLoc());
+
+    ESTree::NodeList stmtList;
+    stmtList.push_back(*nestedTry);
+    tryStatement->_block =
+        new (astContext_) BlockStatementNode(std::move(stmtList));
+    tryStatement->_block->copyLocationFrom(nestedTry);
+    tryStatement->_handler = nullptr;
+  }
+
+  visitESTreeNode(*this, tryStatement->_block, tryStatement);
+  visitESTreeNode(*this, tryStatement->_handler, tryStatement);
+  visitESTreeNode(*this, tryStatement->_finalizer, tryStatement);
+}
+
 void SemanticResolver::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope{*this, node};
 
