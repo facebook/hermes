@@ -29,6 +29,7 @@ class FunctionInfo;
 
 namespace sema {
 class Decl;
+class LexicalScope;
 } // namespace sema
 
 namespace ESTree {
@@ -255,8 +256,29 @@ inline Strictness makeStrictness(bool strictMode) {
   return strictMode ? Strictness::StrictMode : Strictness::NonStrictMode;
 }
 
+/// Decoration for any node which can create a lexical scope.
+class ScopeDecorationBase {
+  /// Associated lexical scope created by the AST node.
+  sema::LexicalScope *scope_{};
+
+ public:
+  /// Set the associated lexical scope.
+  /// \pre \p scope is non-null.
+  /// \pre the scope has not already been set.
+  void setScope(sema::LexicalScope *scope) {
+    assert(scope && "setting lexical scope to null");
+    assert(!scope_ && "lexical scope is already set");
+    scope_ = scope;
+  }
+
+  /// \return the associated lexical scope, nullptr if none associated.
+  sema::LexicalScope *getScope() const {
+    return scope_;
+  }
+};
+
 /// Decoration for all function-like nodes.
-class FunctionLikeDecoration {
+class FunctionLikeDecoration : public ScopeDecorationBase {
   sem::FunctionInfo *semInfo_{};
 
  public:
@@ -324,14 +346,15 @@ class StatementDecoration {};
 /// break/continue.
 class LoopStatementDecoration : public LabelDecorationBase {};
 
-class SwitchStatementDecoration : public LabelDecorationBase {};
+class SwitchStatementDecoration : public LabelDecorationBase,
+                                  public ScopeDecorationBase {};
 
 class BreakStatementDecoration : public GotoDecorationBase {};
 class ContinueStatementDecoration : public GotoDecorationBase {};
 
 class LabeledStatementDecoration : public LabelDecorationBase {};
 
-class BlockStatementDecoration {
+class BlockStatementDecoration : public ScopeDecorationBase {
  public:
   /// The source buffer id in which this block was found (see \p SourceMgr ).
   uint32_t bufferId;
@@ -342,6 +365,12 @@ class BlockStatementDecoration {
   /// If this is a lazy block, the Await param to restore when eagerly parsing.
   bool paramAwait{false};
 };
+
+class ForStatementDecoration : public ScopeDecorationBase {};
+class ForInStatementDecoration : public ScopeDecorationBase {};
+class ForOfStatementDecoration : public ScopeDecorationBase {};
+
+class CatchClauseDecoration : public ScopeDecorationBase {};
 
 class PatternDecoration {};
 class CoverDecoration {};
@@ -417,6 +446,22 @@ struct DecoratorTrait<BlockStatementNode> {
 template <>
 struct DecoratorTrait<BreakStatementNode> {
   using Type = BreakStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForStatementNode> {
+  using Type = ForStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForInStatementNode> {
+  using Type = ForInStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForOfStatementNode> {
+  using Type = ForOfStatementDecoration;
+};
+template <>
+struct DecoratorTrait<CatchClauseNode> {
+  using Type = CatchClauseDecoration;
 };
 template <>
 struct DecoratorTrait<ContinueStatementNode> {
