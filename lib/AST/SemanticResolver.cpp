@@ -333,7 +333,13 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
 
 void SemanticResolver::visit(ESTree::WithStatementNode *node) {
   visitESTreeChildren(*this, node);
-  // FIXME: Run an unresolver pass.
+
+  uint32_t depth = curScope_->depth;
+  // Run the Unresolver to avoid resolving to variables past the depth of the
+  // `with`.
+  // Pass `depth + 1` because variables declared in this scope also cannot be
+  // trusted.
+  Unresolver::run(depth + 1, node->_body);
 }
 
 void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
@@ -461,7 +467,23 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
-  // FIXME: Check for local 'eval'.
+  // Check for a direct call to local `eval()`.
+  if (auto *identifier = llvh::dyn_cast<IdentifierNode>(node->_callee)) {
+    if (identifier->_name == kw_.identEval) {
+      bool isEval;
+      if (Binding *binding = bindingTable_.find(identifier->_name)) {
+        Decl *decl = binding->decl;
+        isEval = decl->scope == semCtx_.getGlobalScope() &&
+            Decl::isKindVarLike(decl->kind);
+      } else {
+        isEval = true;
+      }
+      if (isEval) {
+        registerLocalEval(curScope_);
+      }
+    }
+  }
+
   visitESTreeChildren(*this, node);
 }
 
@@ -619,7 +641,12 @@ void SemanticResolver::visitFunctionLike(
   // Finally visit the body.
   visitESTreeNode(*this, body, node);
 
-  // FIXME: Check for local eval and run the unresolver pass in non-strict mode.
+  // Check for local eval and run the unresolver pass in non-strict mode.
+  LexicalScope *lexScope = curFunctionInfo()->getFunctionScope();
+  if (lexScope->localEval && !curFunctionInfo()->strict) {
+    uint32_t depth = lexScope->depth;
+    Unresolver::run(depth, node);
+  }
 }
 
 void SemanticResolver::visitFunctionExpression(
@@ -1046,6 +1073,16 @@ ESTree::Node *SemanticResolver::findUseStrict(ESTree::NodeList &body) const {
   return nullptr;
 }
 
+/* static */ void SemanticResolver::registerLocalEval(LexicalScope *scope) {
+  for (LexicalScope *curScope = scope; curScope;
+       curScope = curScope->parentScope) {
+    curScope->localEval = true;
+
+    // This can also set a `canRename` flag on the identifier,
+    // which we haven't implemented yet.
+  }
+}
+
 SemanticResolver::ScopeRAII::ScopeRAII(
     SemanticResolver &resolver,
     ESTree::ScopeDecorationBase *scopeNode)
@@ -1094,6 +1131,33 @@ UniqueString *FunctionContext::getFunctionName() const {
       return idNode->_name;
   }
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Unresolver
+
+/* static */ void Unresolver::run(uint32_t depth, ESTree::Node *root) {
+  Unresolver unresolver{depth};
+  visitESTreeNode(unresolver, root);
+}
+
+void Unresolver::visit(ESTree::IdentifierNode *node) {
+  if (node->isUnresolvable()) {
+    return;
+  }
+
+  if (Decl *decl = node->getDecl()) {
+    LexicalScope *scope = decl->scope;
+
+    // The depth of this identifier's declaration is less than the `eval`/`with`
+    // declaration that could shadow it, so we must declare this identifier as
+    // unresolvable.
+    if (scope->depth < depth_) {
+      node->setUnresolvable();
+    }
+  }
+
+  visitESTreeChildren(*this, node);
 }
 
 } // namespace sema
