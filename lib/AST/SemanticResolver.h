@@ -174,6 +174,7 @@ class SemanticResolver {
 
   void visit(ESTree::WithStatementNode *node);
 
+  void visit(ESTree::TryStatementNode *tryStatement);
   void visit(ESTree::CatchClauseNode *node);
 
   void visit(ESTree::RegExpLiteralNode *regexp);
