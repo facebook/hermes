@@ -10,6 +10,7 @@ add_hermes_library(hermesAST
     Keywords.cpp Keywords.h
     SemValidate.cpp
     SemanticValidator.cpp SemanticValidator.h
+    SemContext.cpp
     CommonJS.cpp
     LINK_OBJLIBS
     hermesSupport
