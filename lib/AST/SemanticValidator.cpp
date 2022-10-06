@@ -22,30 +22,6 @@ namespace hermes {
 namespace sem {
 
 //===----------------------------------------------------------------------===//
-// Keywords
-
-Keywords::Keywords(Context &astContext)
-    : identArguments(
-          astContext.getIdentifier("arguments").getUnderlyingPointer()),
-      identEval(astContext.getIdentifier("eval").getUnderlyingPointer()),
-      identDelete(astContext.getIdentifier("delete").getUnderlyingPointer()),
-      identThis(astContext.getIdentifier("this").getUnderlyingPointer()),
-      identUseStrict(
-          astContext.getIdentifier("use strict").getUnderlyingPointer()),
-      identShowSource(
-          astContext.getIdentifier("show source").getUnderlyingPointer()),
-      identHideSource(
-          astContext.getIdentifier("hide source").getUnderlyingPointer()),
-      identSensitive(
-          astContext.getIdentifier("sensitive").getUnderlyingPointer()),
-      identVar(astContext.getIdentifier("var").getUnderlyingPointer()),
-      identLet(astContext.getIdentifier("let").getUnderlyingPointer()),
-      identConst(astContext.getIdentifier("const").getUnderlyingPointer()),
-      identPlus(astContext.getIdentifier("+").getUnderlyingPointer()),
-      identMinus(astContext.getIdentifier("-").getUnderlyingPointer()),
-      identAssign(astContext.getIdentifier("=").getUnderlyingPointer()) {}
-
-//===----------------------------------------------------------------------===//
 // SemanticValidator
 
 SemanticValidator::SemanticValidator(
