@@ -30,10 +30,14 @@ TEST(StringStorageTest, UniquingRegExpTest) {
     return std::move(*re);
   };
   UniquingRegExpTable URET;
-  auto idx0 = URET.addRegExp(makeRegExp("abc", "m"));
-  auto idx1 = URET.addRegExp(makeRegExp("def", "m"));
-  auto idx2 = URET.addRegExp(makeRegExp("abc", ""));
-  auto idx3 = URET.addRegExp(makeRegExp("abc", "m"));
+  auto re0 = makeRegExp("abc", "m");
+  auto idx0 = URET.addRegExp(&re0);
+  auto re1 = makeRegExp("def", "m");
+  auto idx1 = URET.addRegExp(&re1);
+  auto re2 = makeRegExp("abc", "");
+  auto idx2 = URET.addRegExp(&re2);
+  auto re3 = makeRegExp("abc", "m");
+  auto idx3 = URET.addRegExp(&re3);
 
   EXPECT_EQ(0u, idx0);
   EXPECT_EQ(1u, idx1);

@@ -33,11 +33,11 @@ uint32_t BytecodeFunctionGenerator::addBigInt(bigint::ParsedBigInt bigint) {
   return BMGen_.addBigInt(std::move(bigint));
 }
 
-uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp regexp) {
+uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp *regexp) {
   assert(
       !complete_ &&
       "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-  return BMGen_.addRegExp(std::move(regexp));
+  return BMGen_.addRegExp(regexp);
 }
 
 uint32_t BytecodeFunctionGenerator::addFilename(llvh::StringRef filename) {
@@ -240,8 +240,8 @@ uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
   return bigIntTable_.addBigInt(std::move(bigint));
 }
 
-uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {
-  return regExpTable_.addRegExp(std::move(regexp));
+uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
+  return regExpTable_.addRegExp(regexp);
 }
 
 uint32_t BytecodeModuleGenerator::addFilename(llvh::StringRef filename) {

@@ -367,7 +367,7 @@ std::vector<RegExpTableEntry> UniquingRegExpTable::getEntryList() const {
   result.reserve(regexps_.size());
   uint32_t offset = 0;
   for (const auto &re : regexps_) {
-    uint32_t size = re.getBytecode().size();
+    uint32_t size = re->getBytecode().size();
     result.push_back(RegExpTableEntry{offset, size});
     offset += size;
   }
@@ -377,7 +377,7 @@ std::vector<RegExpTableEntry> UniquingRegExpTable::getEntryList() const {
 RegExpBytecode UniquingRegExpTable::getBytecodeBuffer() const {
   RegExpBytecode result;
   for (const auto &re : regexps_) {
-    auto bytecode = re.getBytecode();
+    auto bytecode = re->getBytecode();
     result.insert(result.end(), bytecode.begin(), bytecode.end());
   }
   return result;
@@ -390,9 +390,9 @@ void UniquingRegExpTable::disassemble(llvh::raw_ostream &OS) const {
   // pattern (preserving escapes, etc) except that non-BMP characters will have
   // been encoded in UTF-8 as two UTF-16 surrogates.
   for (const auto &regexp : regexps_) {
-    OS << index << ": /" << regexp.getPattern() << '/' << regexp.getFlags()
+    OS << index << ": /" << regexp->getPattern() << '/' << regexp->getFlags()
        << '\n';
-    dumpRegexBytecode(regexp.getBytecode(), OS);
+    dumpRegexBytecode(regexp->getBytecode(), OS);
     index++;
   }
   OS << '\n';
