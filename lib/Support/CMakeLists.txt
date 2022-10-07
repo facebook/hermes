@@ -9,7 +9,7 @@ set(LINK_OBJLIBS
     hermesPlatformUnicode)
 
 if (ANDROID)
-  list(APPEND LINK_OBJLIBS log)
+  set(LINK_LIBS log)
 endif()
 
 add_hermes_library(hermesSupport
@@ -39,4 +39,5 @@ add_hermes_library(hermesSupport
         MemorySizeParser.cpp
         RandomSeedParser.cpp
         LINK_OBJLIBS ${LINK_OBJLIBS}
+        LINK_LIBS ${LINK_LIBS}
 )
