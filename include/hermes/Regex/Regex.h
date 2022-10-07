@@ -20,11 +20,13 @@
 
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Compiler.h"
+#include "hermes/Support/RegExpSupport.h"
 
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Regex/RegexNode.h"
 #include "hermes/Regex/RegexTypes.h"
 
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -64,6 +66,11 @@ class Regex {
 
   // Constraints on the type of strings that can match this regex.
   MatchConstraintSet matchConstraints_ = 0;
+
+  // This holds the named capture groups in the order they were defined.
+  std::deque<llvh::SmallVector<char16_t, 5>> orderedGroupNames_{};
+
+  ParsedGroupNamesMapping nameMapping_{};
 
   /// Construct and and append a node of type NodeType at the end of the nodes_
   /// list. The node should be constructible from \p args.
@@ -172,6 +179,14 @@ class Regex {
     return flags_;
   }
 
+  std::deque<llvh::SmallVector<char16_t, 5>> &getOrderedNamedGroups() {
+    return orderedGroupNames_;
+  }
+
+  ParsedGroupNamesMapping &getGroupNamesMapping() {
+    return nameMapping_;
+  }
+
   /// \return any errors produced during parsing, or ErrorType::None if none.
   constants::ErrorType getError() const {
     return error_;
@@ -202,6 +217,7 @@ class Regex {
       ForwardIterator last,
       uint32_t backRefLimit,
       uint32_t *outMaxBackRef);
+
   void pushLeftAnchor();
   void pushRightAnchor();
   void pushMatchAny();
