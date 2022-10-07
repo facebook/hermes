@@ -6,17 +6,5 @@
 add_hermes_tool(interp-dispatch-bench
   interp-dispatch-bench.cpp
   ${ALL_HEADER_FILES}
+  LINK_LIBS hermesvm
   )
-
-target_link_libraries(interp-dispatch-bench
-  hermesVMRuntime
-  hermesAST
-  hermesHBCBackend
-  hermesBackend
-  hermesOptimizer
-  hermesFrontend
-  hermesParser
-  hermesSupport
-  dtoa
-  LLVHSupport
-)

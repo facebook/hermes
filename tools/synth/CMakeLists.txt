@@ -10,7 +10,6 @@ add_hermes_tool(synth
 )
 
 target_link_libraries(synth
-  hermesVMRuntime
   hermesConsoleHost
   hermesapi
   traceInterpreter
