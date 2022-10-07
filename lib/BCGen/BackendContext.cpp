@@ -5,20 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/BackendContext.h"
+#include "hermes/BCGen/BackendContext.h"
 
 namespace hermes {
-namespace hbc {
 
 BackendContext::BackendContext() = default;
 BackendContext::~BackendContext() = default;
 
 BackendContext &BackendContext::get(Context &ctx) {
-  if (!ctx.getHBCBackendContext())
-    ctx.setHBCBackendContext(
+  if (!ctx.getBackendContext())
+    ctx.setBackendContext(
         std::shared_ptr<BackendContext>{new BackendContext()});
-  return *ctx.getHBCBackendContext();
+  return *ctx.getBackendContext();
 };
 
-} // namespace hbc
 } // namespace hermes

@@ -6,9 +6,9 @@
  */
 
 #define DEBUG_TYPE "builtins"
-#include "hermes/BCGen/HBC/Passes/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerBuiltinCalls.h"
 
-#include "hermes/BCGen/HBC/BackendContext.h"
+#include "hermes/BCGen/BackendContext.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Support/Statistic.h"
@@ -20,7 +20,6 @@
 STATISTIC(NumLowered, "Number of builtin calls lowered");
 
 namespace hermes {
-namespace hbc {
 
 class LowerBuiltinCallsContext {
  public:
@@ -181,7 +180,6 @@ bool LowerBuiltinCalls::runOnFunction(Function *F) {
   return run(F);
 }
 
-} // namespace hbc
 } // namespace hermes
 
 #undef DEBUG_TYPE
