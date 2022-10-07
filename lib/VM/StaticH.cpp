@@ -384,6 +384,30 @@ _sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
+extern "C" SHLegacyValue _sh_ljs_call_builtin(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t argCount,
+    uint32_t builtinMethodID) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr newFrame(runtime.getStackPointer());
+  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+  newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+  newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(
+      runtime.getBuiltinCallable(builtinMethodID));
+  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
+    SHRuntime *shr,
+    uint32_t builtinMethodID) {
+  return HermesValue::encodeObjectValue(
+      getRuntime(shr).getBuiltinCallable(builtinMethodID));
+}
+
 extern "C" void _sh_ljs_create_environment(
     SHRuntime *shr,
     SHLegacyValue *frame,

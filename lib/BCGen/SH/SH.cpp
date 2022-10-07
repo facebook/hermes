@@ -10,6 +10,7 @@
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
+#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
@@ -1171,14 +1172,16 @@ class InstrGen {
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     unimplemented(inst);
   }
-  void setupCallStack(CallInst &inst) {
+  void setupCallStack(CallInst &inst, bool populateCallee = true) {
     // Populate the outgoing registers that will not be set by _sh_ljs_call or
     // _sh_ljs_construct.
-    auto closureRegIdx =
-        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::CalleeClosureOrCB;
-    os_ << "  frame[" << closureRegIdx << "] = ";
-    generateValue(*inst.getCallee());
-    os_ << ";\n";
+    if (populateCallee) {
+      auto closureRegIdx =
+          ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::CalleeClosureOrCB;
+      os_ << "  frame[" << closureRegIdx << "] = ";
+      generateValue(*inst.getCallee());
+      os_ << ";\n";
+    }
     // Populate the arguments. In Hermes, where arguments and locals are on the
     // same stack, the arguments would already be in the right positions,
     // however, since we store locals in a separate structure, they need to be
@@ -1202,10 +1205,20 @@ class InstrGen {
         << ");\n";
   }
   void generateConstructInst(ConstructInst &inst) {
-    unimplemented(inst);
+    hermes_fatal("ConstructInst should have been lowered.");
+  }
+  void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_builtin_closure(shr, "
+        << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
   void generateCallBuiltinInst(CallBuiltinInst &inst) {
-    unimplemented(inst);
+    setupCallStack(inst, false);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_call_builtin(shr, frame, " << inst.getNumArguments() - 1
+        << ", " << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
   void generateHBCConstructInst(HBCConstructInst &inst) {
     // Populate the newTarget register, which is not set by setupCallStack.
@@ -1224,9 +1237,6 @@ class InstrGen {
     unimplemented(inst);
   }
   void generateHBCCallNInst(HBCCallNInst &inst) {
-    unimplemented(inst);
-  }
-  void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
     unimplemented(inst);
   }
   void generateStartGeneratorInst(StartGeneratorInst &inst) {
@@ -1451,6 +1461,11 @@ void generateModule(
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
   PassManager PM;
+  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
+  // it introduces calls to HermesInternal.
+  PM.addPass(new LowerExponentiationOperator());
+  // LowerBuiltinCalls needs to run before the rest of the lowering.
+  PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new hbc::LowerConstruction());

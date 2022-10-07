@@ -249,6 +249,18 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
 SHLegacyValue
 _sh_ljs_construct(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount);
 
+/// Performs a function call. The new frame is at the top of the stack.
+/// The arguments (excluding 'this') must be populated.
+SHLegacyValue _sh_ljs_call_builtin(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t argCount,
+    uint32_t builtinMethodID);
+
+SHLegacyValue _sh_ljs_get_builtin_closure(
+    SHRuntime *shr,
+    uint32_t builtinMethodID);
+
 /// Create a new environment with the specified size and the current function's
 /// environment as parent.
 /// \p result will contain the result on exit, but is also used as a temporary
