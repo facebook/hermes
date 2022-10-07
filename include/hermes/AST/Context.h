@@ -17,9 +17,7 @@
 
 namespace hermes {
 
-namespace hbc {
 class BackendContext;
-}
 
 #ifdef HERMES_RUN_WASM
 class EmitWasmIntrinsicsContext;
@@ -213,7 +211,7 @@ class Context {
 
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
-  std::shared_ptr<hbc::BackendContext> hbcBackendContext_{};
+  std::shared_ptr<BackendContext> hbcBackendContext_{};
 
 #ifdef HERMES_RUN_WASM
   std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
@@ -424,12 +422,11 @@ class Context {
     return allocator_.Allocate(size, alignment);
   }
 
-  hbc::BackendContext *getHBCBackendContext() {
+  BackendContext *getBackendContext() {
     return hbcBackendContext_.get();
   }
 
-  void setHBCBackendContext(
-      std::shared_ptr<hbc::BackendContext> hbcBackendContext) {
+  void setBackendContext(std::shared_ptr<BackendContext> hbcBackendContext) {
     hbcBackendContext_ = std::move(hbcBackendContext);
   }
 

@@ -5,13 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_BCGEN_HBC_BACKENDCONTEXT_H
-#define HERMES_BCGEN_HBC_BACKENDCONTEXT_H
+#ifndef HERMES_BCGEN_BACKENDCONTEXT_H
+#define HERMES_BCGEN_BACKENDCONTEXT_H
 
 #include "hermes/AST/Context.h"
 
 namespace hermes {
-namespace hbc {
 
 class LowerBuiltinCallsContext;
 
@@ -27,7 +26,6 @@ class BackendContext {
   std::shared_ptr<LowerBuiltinCallsContext> lowerBuiltinCallsContext;
 };
 
-} // namespace hbc
 } // namespace hermes
 
-#endif // HERMES_BCGEN_HBC_BACKENDCONTEXT_H
+#endif // HERMES_BCGEN_BACKENDCONTEXT_H

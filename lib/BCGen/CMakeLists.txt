@@ -5,8 +5,10 @@
 
 add_hermes_library(hermesBackend
   RegAlloc.cpp
+  BackendContext.cpp
   BCOpt.cpp
   Lowering.cpp
+  LowerBuiltinCalls.cpp
   Exceptions.cpp
   LINK_OBJLIBS hermesFrontend hermesOptimizer
 )

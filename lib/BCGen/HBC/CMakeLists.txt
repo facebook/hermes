@@ -4,7 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesHBCBackend
-  BackendContext.cpp
   HBC.cpp
   ISel.cpp
   Bytecode.cpp
@@ -26,7 +25,6 @@ add_hermes_library(hermesHBCBackend
   UniquingStringLiteralTable.cpp
   Passes/FuncCallNOpts.cpp
   Passes/InsertProfilePoint.cpp
-  Passes/LowerBuiltinCalls.cpp
   Passes/OptEnvironmentInit.cpp
   LINK_OBJLIBS
   hermesBackend
