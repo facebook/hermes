@@ -72,6 +72,13 @@ class Regex {
 
   ParsedGroupNamesMapping nameMapping_{};
 
+  // We can skip double parsing if there were no named backreferences used
+  // before the definition of the first named capture group.
+  bool sawNamedBackrefBeforeGroup_{false};
+
+  // Named backrefs that might be invalid.
+  std::vector<std::pair<GroupName, BackRefNode *>> unresolvedNamedBackRefs_;
+
   /// Construct and and append a node of type NodeType at the end of the nodes_
   /// list. The node should be constructible from \p args.
   /// \return an observer pointer to the new node.
@@ -187,6 +194,10 @@ class Regex {
     return nameMapping_;
   }
 
+  void sawNamedBackrefBeforeGroup() {
+    sawNamedBackrefBeforeGroup_ = true;
+  }
+
   /// \return any errors produced during parsing, or ErrorType::None if none.
   constants::ErrorType getError() const {
     return error_;
@@ -216,11 +227,14 @@ class Regex {
       ForwardIterator first,
       ForwardIterator last,
       uint32_t backRefLimit,
+      bool hasNamedGroups,
       uint32_t *outMaxBackRef);
 
   // Note- this method does not insert into the AST, it populates a different
   // datastructure. Returns false if the given name was already defined.
   bool addNamedCaptureGroup(GroupName &&identifier, uint32_t groupNum);
+
+  bool resolveNamedBackRefs();
 
   void pushLeftAnchor();
   void pushRightAnchor();
@@ -235,6 +249,7 @@ class Regex {
   void pushChar(CodePoint c);
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
+  void pushNamedBackRef(GroupName &&identifier);
   void pushAlternation(std::vector<NodeList> alternatives);
   void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
@@ -248,6 +263,7 @@ constants::ErrorType parseRegex(
     Receiver *receiver,
     SyntaxFlags flags,
     uint32_t backRefLimit,
+    bool hasNamedGroups,
     uint32_t *outMaxBackRef);
 
 template <class Traits>
@@ -256,8 +272,13 @@ constants::ErrorType Regex<Traits>::parse(
     ForwardIterator first,
     ForwardIterator last) {
   uint32_t maxBackRef = 0;
+  bool hasNamedGroups = flags_.unicode;
   auto result = parseWithBackRefLimit(
-      first, last, constants::kMaxCaptureGroupCount, &maxBackRef);
+      first,
+      last,
+      constants::kMaxCaptureGroupCount,
+      hasNamedGroups,
+      &maxBackRef);
 
   // Validate loop and capture group count.
   if (loopCount_ > constants::kMaxLoopCount) {
@@ -271,7 +292,18 @@ constants::ErrorType Regex<Traits>::parse(
   // value DecimalEscape is <= NCapturingParens". Now that we know the true
   // capture group count, either produce an error (if Unicode) or re-parse with
   // that as the limit so overlarge decimal escapes will be ignored.
-  if (result == constants::ErrorType::None && maxBackRef > markedCount_) {
+  bool reparseForNumberedBackref =
+      result == constants::ErrorType::None && maxBackRef > markedCount_;
+  // We must also reparse if there were any named capture groups used and it is
+  // not unicode mode.
+  bool reparseForNamedBackref = false;
+  if (!flags_.unicode && nameMapping_.size() > 0 &&
+      sawNamedBackrefBeforeGroup_) {
+    reparseForNamedBackref = true;
+    hasNamedGroups = true;
+  }
+
+  if (reparseForNumberedBackref || reparseForNamedBackref) {
     if (flags_.unicode) {
       return constants::ErrorType::EscapeInvalid;
     }
@@ -281,11 +313,10 @@ constants::ErrorType Regex<Traits>::parse(
     loopCount_ = 0;
     markedCount_ = 0;
     matchConstraints_ = 0;
-    result =
-        parseWithBackRefLimit(first, last, backRefLimit, &reparsedMaxBackRef);
-    assert(
-        result == constants::ErrorType::None &&
-        "regex reparsing should never fail if the first parse succeeded");
+    nameMapping_.clear();
+    orderedGroupNames_.clear();
+    result = parseWithBackRefLimit(
+        first, last, backRefLimit, hasNamedGroups, &reparsedMaxBackRef);
     assert(
         reparsedMaxBackRef <= backRefLimit &&
         "invalid backreference generated");
@@ -300,24 +331,41 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     ForwardIterator first,
     ForwardIterator last,
     uint32_t backRefLimit,
+    bool hasNamedGroups,
     uint32_t *outMaxBackRef) {
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
   appendNode<Node>();
-  auto result =
-      parseRegex(first, last, this, flags_, backRefLimit, outMaxBackRef);
+  auto result = parseRegex(
+      first, last, this, flags_, backRefLimit, hasNamedGroups, outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
   if (result == constants::ErrorType::None) {
     appendNode<GoalNode>();
     Node::optimizeNodeList(nodes_, flags_, nodeHolder_);
+    if (!resolveNamedBackRefs()) {
+      return constants::ErrorType::NonexistentNamedCaptureReference;
+    }
   }
 
   // Compute any match constraints.
   matchConstraints_ = Node::matchConstraintsForList(nodes_);
 
   return result;
+}
+
+template <class Traits>
+bool Regex<Traits>::resolveNamedBackRefs() {
+  for (auto &[name, backRef] : unresolvedNamedBackRefs_) {
+    auto search = nameMapping_.find(name);
+    if (search == nameMapping_.end()) {
+      return false;
+    }
+    auto groupNum = search->second;
+    backRef->setBackRef(groupNum - 1);
+  }
+  return true;
 }
 
 template <class Traits>
@@ -379,6 +427,22 @@ void Regex<Traits>::pushWordBoundary(bool invert) {
 template <class Traits>
 void Regex<Traits>::pushBackRef(uint32_t i) {
   appendNode<BackRefNode>(i);
+}
+
+template <class Traits>
+void Regex<Traits>::pushNamedBackRef(GroupName &&identifier) {
+  auto search = nameMapping_.find(identifier);
+  if (search == nameMapping_.end()) {
+    // If this name hasn't been defined yet, we have a case of an ambiguous
+    // named backref. It could be valid or not, because the group name could be
+    // defined in the future. We will revist these nodes at the end to see if
+    // they are valid.
+    BackRefNode *backRef = appendNode<BackRefNode>(0);
+    unresolvedNamedBackRefs_.emplace_back(std::move(identifier), backRef);
+    return;
+  }
+  auto groupNum = search->second;
+  appendNode<BackRefNode>(groupNum - 1);
 }
 
 template <class Traits>

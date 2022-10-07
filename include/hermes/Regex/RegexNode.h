@@ -469,6 +469,10 @@ class BackRefNode final : public Node {
  public:
   explicit BackRefNode(unsigned mexp) : mexp_(mexp) {}
 
+  void setBackRef(unsigned mexp) {
+    mexp_ = mexp;
+  }
+
  private:
   virtual NodeList *emitStep(RegexBytecodeStream &bcs) override {
     bcs.emit<BackRefInsn>()->mexp = mexp_;

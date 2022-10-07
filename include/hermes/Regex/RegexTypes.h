@@ -117,6 +117,12 @@ enum class ErrorType {
 
   /// Duplicate capture group name.
   DuplicateCaptureGroupName,
+
+  /// Syntactically invalid named backreference.
+  InvalidNamedReference,
+
+  /// Reference to nonexistent capture group.
+  NonexistentNamedCaptureReference
 };
 
 /// \return an error message for the given \p error.
@@ -148,6 +154,10 @@ inline const char *messageForError(ErrorType error) {
       return "Invalid capture group name";
     case ErrorType::DuplicateCaptureGroupName:
       return "Duplicate capture group name";
+    case ErrorType::InvalidNamedReference:
+      return "Invalid named reference";
+    case ErrorType::NonexistentNamedCaptureReference:
+      return "Nonexistent named capture reference";
     case ErrorType::None:
       return "No error";
   }
