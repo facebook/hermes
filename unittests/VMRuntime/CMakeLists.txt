@@ -75,18 +75,7 @@ set(RTSources
 
 add_hermes_unittest(HermesVMRuntimeTests
   ${RTSources}
+  LINK_LIBS hermesvm
   )
-
-target_link_libraries(HermesVMRuntimeTests
-  hermesVMRuntime
-  hermesAST
-  hermesHBCBackend
-  hermesBackend
-  hermesOptimizer
-  hermesFrontend
-  hermesParser
-  hermesSupport
-  dtoa
- )
 
 add_subdirectory(Instrumentation)

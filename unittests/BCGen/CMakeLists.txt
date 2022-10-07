@@ -16,7 +16,7 @@ set(BCSources
 
 add_hermes_unittest(HermesBCGenTests
   ${BCSources}
-  )
+)
 
 target_link_libraries(HermesBCGenTests
  hermesHBCBackend
@@ -24,6 +24,5 @@ target_link_libraries(HermesBCGenTests
  hermesFrontend
  hermesSupport
  hermesOptimizer
- hermesVMRuntime
  dtoa
  )
