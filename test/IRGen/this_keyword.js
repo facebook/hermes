@@ -5,23 +5,38 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -hermes-parser -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 // RUN: %hermes -hermes-parser -dump-ir %s -O
 
-//CHECK: function f1()
-//CHECK: frame = []
-//CHECK:   %BB0:
-//CHECK:     %0 = ReturnInst %this
 function f1() {
   return this;
 }
 
-//CHECK: function f2()
-//CHECK: frame = []
-//CHECK:   %BB0:
-//CHECK:     %0 = ReturnInst %this
 function f2(){
   "use strict"; // see strict mode
   return this;
 }
 
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global() : undefined
+// CHECK-NEXT:frame = [], globals = [f1, f2]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %f1()
+// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %f2()
+// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f1()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst %this
+// CHECK-NEXT:function_end
+
+// CHECK:function f2()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst %this
+// CHECK-NEXT:function_end
