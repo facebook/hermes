@@ -626,6 +626,8 @@ class ESTreeIRGen {
       BasicBlock *nextBB,
       AllocStackInst *received = nullptr);
 
+  Value *genRegExpLiteral(ESTree::RegExpLiteralNode *RE);
+
   /// @}
 
  private:

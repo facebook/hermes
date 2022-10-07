@@ -190,8 +190,16 @@ class Regex {
     return orderedGroupNames_;
   }
 
+  std::deque<llvh::SmallVector<char16_t, 5>> acquireOrderedGroupNames() {
+    return std::move(orderedGroupNames_);
+  }
+
   ParsedGroupNamesMapping &getGroupNamesMapping() {
     return nameMapping_;
+  }
+
+  ParsedGroupNamesMapping acquireGroupNamesMapping() {
+    return std::move(nameMapping_);
   }
 
   void sawNamedBackrefBeforeGroup() {

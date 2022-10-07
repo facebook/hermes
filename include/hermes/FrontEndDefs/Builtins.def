@@ -131,6 +131,7 @@ PRIVATE_BUILTIN(arraySpread)
 PRIVATE_BUILTIN(apply)
 PRIVATE_BUILTIN(exportAll)
 PRIVATE_BUILTIN(exponentiationOperator)
+PRIVATE_BUILTIN(initRegexNamedGroups)
 
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)

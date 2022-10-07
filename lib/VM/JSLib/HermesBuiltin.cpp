@@ -13,6 +13,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -807,6 +808,16 @@ hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
       runtime, std::move(lhs), runtime.makeHandle(res->getBigInt()));
 }
 
+CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
+    void *ctx,
+    Runtime &runtime,
+    NativeArgs args) {
+  auto *regexp = dyn_vmcast<JSRegExp>(args.getArg(0));
+  auto *groupsObj = dyn_vmcast<JSObject>(args.getArg(1));
+  regexp->setGroupNameMappings(runtime, groupsObj);
+  return HermesValue::encodeUndefinedValue();
+}
+
 void createHermesBuiltins(
     Runtime &runtime,
     llvh::MutableArrayRef<Callable *> builtins) {
@@ -878,6 +889,10 @@ void createHermesBuiltins(
       B::HermesBuiltin_exponentiationOperator,
       P::exponentiationOperator,
       hermesBuiltinExponentiate);
+  defineInternMethod(
+      B::HermesBuiltin_initRegexNamedGroups,
+      P::initRegexNamedGroups,
+      hermesBuiltinInitRegexNamedGroups);
 
   // Define the 'requireFast' function, which takes a number argument.
   defineInternMethod(

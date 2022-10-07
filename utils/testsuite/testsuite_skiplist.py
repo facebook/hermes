@@ -2025,7 +2025,6 @@ UNSUPPORTED_FEATURES = [
     "let",
     "new.target",
     "regexp-match-indices",
-    "regexp-named-groups",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
     "string-trimming",

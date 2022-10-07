@@ -21,7 +21,7 @@ exports.bar = bar;
 // Auto-generated content below. Please do not modify manually.
 
 // CHKOPT:Bytecode File Information:
-// CHKOPT-NEXT:  Bytecode version number: 89
+// CHKOPT-NEXT:  Bytecode version number: 90
 // CHKOPT-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKOPT-NEXT:  Function count: 7
 // CHKOPT-NEXT:  String count: 7
@@ -151,7 +151,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:  0x0002  end of debug lexical table
 
 // CHKDBG:Bytecode File Information:
-// CHKDBG-NEXT:  Bytecode version number: 89
+// CHKDBG-NEXT:  Bytecode version number: 90
 // CHKDBG-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKDBG-NEXT:  Function count: 7
 // CHKDBG-NEXT:  String count: 7
