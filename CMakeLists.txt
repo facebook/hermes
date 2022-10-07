@@ -688,7 +688,8 @@ if(HERMES_ENABLE_TEST_SUITE)
     use_flowparser=${HERMES_USE_FLOWPARSER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
-    FileCheck=${HERMES_TOOLS_OUTPUT_DIR}//FileCheck
+    FileCheck=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
+    FileCheckOrRegen=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
     hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
     hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
     hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb

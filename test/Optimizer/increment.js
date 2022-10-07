@@ -5,13 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheck %s
+// RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
 
-//CHECK-LABEL:function foo()
-//CHECK-NEXT:frame = []
-//CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = ReturnInst 10 : number
-//CHECK-NEXT:function_end
 function foo() {
   var k = 4;
   k++
@@ -24,3 +19,21 @@ function foo() {
 }
 
 foo()
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global()
+// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
+// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:function_end
+
+// CHECK:function foo() : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst 10 : number
+// CHECK-NEXT:function_end

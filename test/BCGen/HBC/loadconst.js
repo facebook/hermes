@@ -5,12 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -dump-ra -O %s | %FileCheck --match-full-lines %s
-
-//CHECK-LABEL:function global() : number
-//CHECK-NEXT: frame = []
-//CHECK-NEXT: %BB0:
-//CHECK-NEXT: {{.*}} %0 = HBCLoadConstInst 42 : number
-//CHECK-NEXT: {{.*}} %1 = ReturnInst %0 : number
+// RUN: %hermes -target=HBC -dump-ra -O %s | %FileCheckOrRegen --match-full-lines %s
 
 42;
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global() : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadConstInst 42 : number
+// CHECK-NEXT:  $Reg0 @1 [empty]	%1 = ReturnInst %0 : number
+// CHECK-NEXT:function_end
