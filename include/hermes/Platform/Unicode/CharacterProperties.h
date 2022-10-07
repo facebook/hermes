@@ -78,6 +78,24 @@ bool isUnicodeDigit(uint32_t cp);
 /// \return true if the codepoint is in the Connector Punctuation category.
 bool isUnicodeConnectorPunctuation(uint32_t cp);
 
+/// \return true if the codepoint has the ID_Start property and is ASCII.
+inline bool isASCIIIdentifierStart(uint32_t ch) {
+  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
+/// \return true if the codepoint has the ID_Start property.
+inline bool isUnicodeIDStart(uint32_t cp) {
+  return isASCIIIdentifierStart(cp) || isUnicodeOnlyLetter(cp);
+}
+
+/// \return true if the codepoint has the ID_Continue property.
+inline bool isUnicodeIDContinue(uint32_t cp) {
+  // TODO: clearly this has to be optimized somehow
+  return isUnicodeIDStart(cp) || isUnicodeCombiningMark(cp) ||
+      isUnicodeDigit(cp) || isUnicodeConnectorPunctuation(cp) ||
+      cp == UNICODE_ZWNJ || cp == UNICODE_ZWJ;
+}
+
 /// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
 uint32_t canonicalize(uint32_t cp, bool unicode);
 

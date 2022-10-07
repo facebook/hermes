@@ -766,10 +766,6 @@ class JSLexer {
   /// \return the decoded value and the incremented current pointer
   inline std::pair<uint32_t, const char *> _peekUTF8() const;
 
-  static inline bool isASCIIIdentifierStart(uint32_t ch);
-  static inline bool isUnicodeIdentifierStart(uint32_t ch);
-  static inline bool isUnicodeIdentifierPart(uint32_t ch);
-
   /// Decode a unicode escape sequence in the form "\uXXXX".
   ///
   /// \ref curCharPtr_  must point to the backslash of the escape. It will be
@@ -1040,21 +1036,6 @@ inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8(
 
 inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8() const {
   return _peekUTF8(curCharPtr_);
-}
-
-inline bool JSLexer::isASCIIIdentifierStart(uint32_t ch) {
-  return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
-}
-
-inline bool JSLexer::isUnicodeIdentifierStart(uint32_t ch) {
-  return isASCIIIdentifierStart(ch) || isUnicodeOnlyLetter(ch);
-}
-
-inline bool JSLexer::isUnicodeIdentifierPart(uint32_t ch) {
-  // TODO: clearly this has to be optimized somehow
-  return isUnicodeIdentifierStart(ch) || isUnicodeCombiningMark(ch) ||
-      isUnicodeDigit(ch) || isUnicodeConnectorPunctuation(ch) ||
-      ch == UNICODE_ZWNJ || ch == UNICODE_ZWJ;
 }
 
 } // namespace parser
