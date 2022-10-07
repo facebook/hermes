@@ -717,10 +717,14 @@ if(HERMES_ENABLE_TEST_SUITE)
     )
   set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
 
+  list(APPEND SHERMES_TEST_DEPS
+    hermesvm
+    shermes
+    )
   add_lit_testsuite(check-shermes "Running the Static Hermes regression tests"
     ${CMAKE_CURRENT_SOURCE_DIR}/test/shermes
     PARAMS ${HERMES_LIT_TEST_PARAMS}
-    DEPENDS ${HERMES_TEST_DEPS}
+    DEPENDS ${SHERMES_TEST_DEPS}
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-shermes PROPERTIES FOLDER "Static Hermes regression tests")
