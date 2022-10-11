@@ -49,6 +49,21 @@ BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
   }
 }
 
+Node *getIdentifier(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_id;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_id;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_id;
+  }
+}
+
 Node *getObject(MemberExpressionLikeNode *node) {
   switch (node->getKind()) {
     case NodeKind::MemberExpression:
