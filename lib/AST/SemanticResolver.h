@@ -352,6 +352,10 @@ class SemanticResolver {
   /// \return the node containing "use strict" or nullptr.
   ESTree::Node *findUseStrict(ESTree::NodeList &body) const;
 
+  /// Mark \p scope and every one of its ancestor scopes as users of local
+  /// `eval()`.
+  static void registerLocalEval(LexicalScope *scope);
+
   // \param decl must be non-null.
   // \return whether the specified declaration is in the current function.
   bool declInCurFunction(Decl *decl) {
@@ -418,6 +422,37 @@ inline FunctionInfo *SemanticResolver::curFunctionInfo() {
 const FunctionInfo *SemanticResolver::curFunctionInfo() const {
   return functionContext()->semInfo;
 }
+
+/// Visitor pass for marking variables as Unresolvable based on local `eval()`
+/// or `with`.
+class Unresolver {
+ public:
+  /// Mark all declarations that are at a lower depth than \p depth as
+  /// unresolvable, starting at \p root.
+  static void run(uint32_t depth, ESTree::Node *root);
+
+  void visit(ESTree::Node *node) {
+    visitESTreeChildren(*this, node);
+  }
+
+  void visit(ESTree::IdentifierNode *node);
+
+  /// Needed by RecursiveVisitorDispatch. Optionally can protect against too
+  /// deep nesting.
+  bool incRecursionDepth(ESTree::Node *) {
+    return true;
+  }
+  void decRecursionDepth() {}
+
+ private:
+  explicit Unresolver(uint32_t depth) : depth_(depth) {}
+
+ private:
+  /// Depth of the scope which contains the construct which could shadow
+  /// variables dynamically.
+  /// e.g. the depth of the function containing a local `eval()`.
+  uint32_t depth_;
+};
 
 } // namespace sema
 } // namespace hermes
