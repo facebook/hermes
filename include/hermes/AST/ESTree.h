@@ -27,6 +27,10 @@ namespace sem {
 class FunctionInfo;
 } // namespace sem
 
+namespace sema {
+class Decl;
+} // namespace sema
+
 namespace ESTree {
 
 using llvh::cast;
@@ -345,6 +349,62 @@ class CoverDecoration {};
 class CallExpressionLikeDecoration {};
 class MemberExpressionLikeDecoration {};
 
+/// Identifiers keep track of which variable they have been resolved to,
+/// to avoid having to keep looking this up in a side table.
+/// Some identifiers may be marked "unresolvable", so the user must check
+/// prior to getting/setting the declaration itself.
+///
+/// An identifier is unresolvable in the presence of `eval` or `with`,
+/// for example:
+/// ```
+/// function foo(a) {
+///   eval(a);
+///   return b;
+/// }
+/// ```
+/// in loose mode, results in `b` being unresovable due to the possible
+/// introduction of a local variable called `b` by the `eval` call.
+///
+/// Similarly we can use `with`:
+/// ```
+/// with (a) {
+///   print(b);
+/// }
+/// ```
+/// in which case `b` is unresolvable because we don't know if `a` has a `b`
+/// property or not.
+class IdentifierDecoration {
+ private:
+  /// Unable to resolve due to presence of `eval` or `with`.
+  bool unresolvable_{false};
+
+  /// Declaration to which this is resolved, `nullptr` if no resolution
+  /// has been recorded yet.
+  sema::Decl *decl_{nullptr};
+
+ public:
+  bool isUnresolvable() const {
+    return unresolvable_;
+  }
+  void setUnresolvable() {
+    unresolvable_ = true;
+  }
+  /// \pre the identifier hasn't been marked "unresolvable".
+  /// \return the declaration to which the identifier has been resolved,
+  /// `nullptr` if no resolution has been recorded.
+  sema::Decl *getDecl() const {
+    assert(
+        !unresolvable_ && "Attempt to read decl for unresolvable identifier");
+    return decl_;
+  }
+  /// Record a resolution to \p decl.
+  /// \pre the identifier hasn't been marked "unresolvable".
+  void setDecl(sema::Decl *decl) {
+    assert(!unresolvable_ && "Attempt to set decl for unresolvable identifier");
+    decl_ = decl;
+  }
+};
+
 namespace detail {
 /// We need to to be able customize some ESTree types when passing them through
 /// a constructor, so we create a simple template type mapper. Specifically, a
@@ -391,6 +451,10 @@ struct DecoratorTrait<SwitchStatementNode> {
 template <>
 struct DecoratorTrait<LabeledStatementNode> {
   using Type = LabeledStatementDecoration;
+};
+template <>
+struct DecoratorTrait<IdentifierNode> {
+  using Type = IdentifierDecoration;
 };
 template <>
 struct DecoratorTrait<ProgramNode> {
