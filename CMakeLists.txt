@@ -680,7 +680,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
   endif()
 
-  set(HERMES_LIT_TEST_PARAMS
+  set(HERMES_LIT_TEST_PARAMS_BASE
     test_exec_root=${CMAKE_CURRENT_BINARY_DIR}/test
     unittests_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
@@ -689,7 +689,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
-    FileCheckOrRegen=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
     hermes=${HERMES_TOOLS_OUTPUT_DIR}/hermes
     hermesc=${HERMES_TOOLS_OUTPUT_DIR}/hermesc
     hdb=${HERMES_TOOLS_OUTPUT_DIR}/hdb
@@ -705,6 +704,16 @@ if(HERMES_ENABLE_TEST_SUITE)
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
     coverage=${coverage_directory}
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
+    )
+
+  set(HERMES_LIT_TEST_PARAMS
+    ${HERMES_LIT_TEST_PARAMS_BASE}
+    FileCheckOrRegen=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
+    )
+
+  set(HERMES_LIT_UPDATE_PARAMS
+    ${HERMES_LIT_TEST_PARAMS_BASE}
+    "FileCheckOrRegen=${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/utils/lit-expect-gen/generate.py"
     )
 
   set(LLVH_LIT_ARGS "-sv")
@@ -729,4 +738,15 @@ if(HERMES_ENABLE_TEST_SUITE)
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-shermes PROPERTIES FOLDER "Static Hermes regression tests")
+
+  # update-lit will regenerate the expectations for all tests that are verified with FileCheckOrRegen.
+  # All other tests are run normally.
+  add_lit_testsuite(update-lit "Running the Hermes regression tests, and updating auto-generated expectations."
+    ${CMAKE_CURRENT_SOURCE_DIR}/test
+    ${CMAKE_CURRENT_SOURCE_DIR}/unittests
+    PARAMS ${HERMES_LIT_UPDATE_PARAMS}
+    DEPENDS ${HERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(update-lit PROPERTIES FOLDER "Hermes regression tests")
 endif()
