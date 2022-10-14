@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: LC_ALL=en_US.UTF-8 %shermes -exec %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 print('BigInt Binary ==');
 // CHECK-LABEL: BigInt Binary ==
