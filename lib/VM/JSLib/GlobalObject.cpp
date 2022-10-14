@@ -789,8 +789,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 #ifdef HERMES_ENABLE_INTL
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
-
-  if (LLVM_UNLIKELY(runtime.hasIntl())) {
+  if (runtime.hasIntl()) {
     runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
         runtime.getGlobal(),
         runtime,
