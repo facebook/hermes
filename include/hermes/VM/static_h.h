@@ -573,6 +573,8 @@ void _sh_ljs_iterator_close_rjs(
     const SHLegacyValue *iteratorOrIdx,
     bool ignoreExceptions);
 
+SHLegacyValue _sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *input);
+
 #ifdef __cplusplus
 }
 #endif

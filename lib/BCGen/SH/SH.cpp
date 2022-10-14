@@ -491,7 +491,11 @@ class InstrGen {
     }
   }
   void generateDirectEvalInst(DirectEvalInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_direct_eval(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {
     hermes_fatal("LoadFrameInst should have been lowered.");
