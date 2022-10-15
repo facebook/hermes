@@ -91,7 +91,7 @@ typedef struct SHUnit {
   SHUnitExt *runtime_ext;
 } SHUnit;
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
+#if defined(HERMESVM_COMPRESSED_POINTERS) || HERMESVM_SIZEOF_VOID_P == 4
 #define SH_PROPERTY_CACHE_ENTRY_SIZE 8
 #else
 #define SH_PROPERTY_CACHE_ENTRY_SIZE 16

@@ -116,8 +116,8 @@ struct CCCfg {
   std::string cflags;
   std::string ldflags;
   std::string ldlibs;
-  std::string hermesLibPath;
-  std::string hermesIncludePath;
+  std::vector<std::string> hermesLibPath;
+  std::vector<std::string> hermesIncludePath;
 };
 
 /// Populate CCCfg with overrides from the environment.
@@ -133,8 +133,16 @@ void populateCCCfg(CCCfg &cfg) {
   init(cfg.cflags, "CFLAGS", "");
   init(cfg.ldflags, "LDFLAGS", "");
   init(cfg.ldlibs, "LDLIBS", "");
-  cfg.hermesLibPath = SHERMES_CC_LIB_PATH;
-  cfg.hermesIncludePath = SHERMES_CC_INCLUDE_PATH;
+
+  llvh::SmallVector<llvh::StringRef, 2> vec{};
+  llvh::StringLiteral(SHERMES_CC_LIB_PATH).split(vec, ':', -1, false);
+  for (auto sr : vec)
+    cfg.hermesLibPath.push_back(sr.str());
+
+  vec.clear();
+  llvh::StringLiteral(SHERMES_CC_INCLUDE_PATH).split(vec, ':', -1, false);
+  for (auto sr : vec)
+    cfg.hermesIncludePath.push_back(sr.str());
 }
 
 // Split arguments separated by whitespace and push them individually into
@@ -220,8 +228,8 @@ bool invokeCC(
         args.emplace_back("-O3");
         break;
     }
-    if (!cfg.hermesIncludePath.empty())
-      args.push_back("-I" + cfg.hermesIncludePath);
+    for (const auto &s : cfg.hermesIncludePath)
+      args.push_back("-I" + s);
   } else {
     splitArgs(cfg.cflags, args);
   }
@@ -229,8 +237,8 @@ bool invokeCC(
   // Append the library paths and library.
   if (outputLevel == OutputLevelKind::Executable) {
     if (cfg.ldflags.empty()) {
-      if (!cfg.hermesLibPath.empty())
-        args.push_back("-L" + cfg.hermesLibPath);
+      for (const auto &s : cfg.hermesLibPath)
+        args.push_back("-L" + s);
 
       args.emplace_back("-framework");
       args.emplace_back("CoreFoundation");

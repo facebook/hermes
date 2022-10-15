@@ -3,7 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(SHERMES_CC_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/include" CACHE STRING
+set(SHERMES_CC_INCLUDE_PATH
+  "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
 set(SHERMES_CC_LIB_PATH "${CMAKE_BINARY_DIR}/lib" CACHE STRING
   "Library path when invoking CC")
