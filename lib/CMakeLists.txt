@@ -151,3 +151,5 @@ target_link_libraries(hermesvmlean PUBLIC
   hermesVMRuntimeLean_obj
   zip_obj
   )
+
+configure_file(config/libhermesvm-config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/libhermesvm-config.h)
