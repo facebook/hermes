@@ -104,6 +104,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "libhermesvm-config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

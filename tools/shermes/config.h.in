@@ -5,5 +5,5 @@
  * LICENSE file in the root directory of this source tree.
  */
 
- #cmakedefine SHERMES_CC_INCLUDE_PATH  R"(@SHERMES_CC_INCLUDE_PATH@)"
- #cmakedefine SHERMES_CC_LIB_PATH      R"(@SHERMES_CC_LIB_PATH@)"
+ #define SHERMES_CC_INCLUDE_PATH       R"(@SHERMES_CC_INCLUDE_PATH@)"
+ #define SHERMES_CC_LIB_PATH           R"(@SHERMES_CC_LIB_PATH@)"
