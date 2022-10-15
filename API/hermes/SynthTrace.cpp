@@ -146,8 +146,8 @@ SynthTrace::SynthTrace(
     json_->openDict();
     json_->emitKeyValue("nativePointerSize", sizeof(void *));
     json_->emitKeyValue(
-        "allowCompressedPointers",
-#ifdef HERMESVM_ALLOW_COMPRESSED_POINTERS
+        "compressedPointers",
+#ifdef HERMESVM_COMPRESSED_POINTERS
         true
 #else
         false

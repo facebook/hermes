@@ -473,12 +473,15 @@ class HermesValue32 {
   }
 };
 
-/// If compressed pointers are allowed, then we should also compress
-/// HermesValues. This means that when compressed pointers are allowed,
-/// SmallHermesValue will almost always be 32 bits, except with MallocGC, which
-/// does not support compressed pointers.
+/// SmallHermesValue is the HermesValue encoding used on the heap when we want
+/// to potentially benefit from a 32-bit representation (depending on native
+/// pointer size and HERMESVM_COMPRESSED_POINTERS). A 32-bit representation
+/// inherently requires boxing doubles, since they can't fit in 32 bits.
+///
+/// Additionally, for testing, we can force boxing of doubles even in a 64-bit
+/// representation.
 using SmallHermesValue =
-#ifdef HERMESVM_ALLOW_COMPRESSED_POINTERS
+#ifdef HERMESVM_BOXED_DOUBLES
     HermesValue32
 #else
     SmallHermesValueAdaptor

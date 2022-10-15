@@ -94,7 +94,7 @@ set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
 
 set(HERMESVM_GCKIND HADES
   CACHE STRING
-  "HermesVM GC type: either MALLOC or HADES")
+  "HermesVM GC type: MALLOC, HADES or RUNTIME")
 
 # Hermes VM opcode stats profiling
 set(HERMESVM_PROFILER_OPCODE OFF CACHE BOOL
@@ -124,8 +124,16 @@ endif()
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
 
-set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
-  "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
+# Determine how HermesValue-s are encoded in the heap.
+# - HEAP_HV_64: the default 64-bit encoding
+# - HEAP_HV_PREFER32: on 32-bit systems use 32-bit encoding and boxed doubles.
+#       On 64-bit systems, if the GC supports it, use 32-bit encoding with
+#       compressed pointers and boxed doubles. Otherwise fall back to HEAP_HV_64.
+# - HEAP_HV_BOXED: the encoding is either 32 or 64-bit depending on the system,
+#       but always box doubles. This is used for testing that all paths can deal
+#       with potential allocation of boxed doubles.
+set(HERMESVM_HEAP_HV_MODE HEAP_HV_PREFER32 CACHE STRING
+  "Heap HV mode: HEAP_HV_64, HEAP_HV_PREFER32, HEAP_HV_BOXED")
 
 if(APPLE OR WIN32)
     set(DEFAULT_CONTIGUOUS_HEAP OFF)
@@ -352,12 +360,50 @@ endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
 endif()
-if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
-    add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+
+# Configure HERMESVM_COMPRESSED_POINTERS and HERMESVM_BOXED_DOUBLES. There are
+# only three valid states:
+#   COMPRESSED=false BOXED=false  => Heap uses 64-bit HV
+#   COMPRESSED=true  BOXED=true   => 64-bit native ptr, heap uses 32-bit HV with
+#                                    compressed pointers
+#   COMPRESSED=false BOXED=true   => Heap uses native-ptr size HV
+#
+# Additionally, only with COMPRESSED=true, if allowed, HERMESVM_CONTIGUOUS_HEAP
+# is set.
+set(HERMESVM_COMPRESSED_POINTERS OFF)
+set(HERMESVM_BOXED_DOUBLES OFF)
+set(HERMESVM_CONTIGUOUS_HEAP OFF)
+if(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_64")
+  # Do nothing.
+elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_PREFER32")
+  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # Box doubles on 32-bit systems.
+    set(HERMESVM_BOXED_DOUBLES ON)
+  else()
+    # Compressed pointers are only enabled on 64 bit systems with Hades GC or Runtime GC.
+    if (HERMESVM_GCKIND MATCHES HADES|RUNTIME)
+      set(HERMESVM_COMPRESSED_POINTERS ON)
+      set(HERMESVM_BOXED_DOUBLES ON)
+      if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
+        set(HERMESVM_CONTIGUOUS_HEAP ON)
+      endif()
+    endif()
+  endif()
+elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_BOXED")
+  set(HERMESVM_BOXED_DOUBLES ON)
+else()
+  message(SEND_ERROR "Invalid HERMESVM_HEAP_HV_MODE: ${HERMESVM_HEAP_HV_MODE}")
 endif()
-if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
-    add_definitions(-DHERMESVM_ALLOW_CONTIGUOUS_HEAP)
+if (HERMESVM_COMPRESSED_POINTERS)
+  add_definitions(-DHERMESVM_COMPRESSED_POINTERS)
 endif()
+if (HERMESVM_BOXED_DOUBLES)
+  add_definitions(-DHERMESVM_BOXED_DOUBLES)
+endif()
+if (HERMESVM_CONTIGUOUS_HEAP)
+  add_definitions(-DHERMESVM_CONTIGUOUS_HEAP)
+endif()
+
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()

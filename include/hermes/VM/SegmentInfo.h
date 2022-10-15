@@ -10,18 +10,6 @@
 
 #include "hermes/VM/AlignedStorage.h"
 
-/// Define this macro here because SegmentInfo is necessarily a dependency of
-/// anything using compressed pointers.
-#if defined(HERMESVM_ALLOW_COMPRESSED_POINTERS) && LLVM_PTR_SIZE == 8 && \
-    (defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME))
-/// \macro HERMESVM_COMPRESSED_POINTERS
-/// \brief If defined, store pointers as 32 bits in GC-managed Hermes objects.
-#define HERMESVM_COMPRESSED_POINTERS
-#ifdef HERMESVM_ALLOW_CONTIGUOUS_HEAP
-#define HERMESVM_CONTIGUOUS_HEAP
-#endif
-#endif
-
 namespace hermes {
 namespace vm {
 

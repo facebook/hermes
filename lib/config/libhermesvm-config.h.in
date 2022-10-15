@@ -1,0 +1,26 @@
+/*
+* Copyright (c) Meta Platforms, Inc. and affiliates.
+*
+* This source code is licensed under the MIT license found in the
+* LICENSE file in the root directory of this source tree.
+*/
+#ifndef LIBHERMESVM_CONFIG_H
+#define LIBHERMESVM_CONFIG_H
+
+#pragma once
+
+#ifndef HERMESVM_COMPRESSED_POINTERS
+#cmakedefine HERMESVM_COMPRESSED_POINTERS
+#endif
+#ifndef HERMESVM_BOXED_DOUBLES
+#cmakedefine HERMESVM_BOXED_DOUBLES
+#endif
+#ifndef HERMESVM_CONTIGUOUS_HEAP
+#cmakedefine HERMESVM_CONTIGUOUS_HEAP
+#endif
+#ifndef HERMESVM_SIZEOF_VOID_P
+/// The value of `sizeof(void *)` as an integer for used by the preprocessor.
+#define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
+#endif
+
+#endif
