@@ -755,7 +755,7 @@ ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(Value *isReturn) {
 }
 
 HBCResolveEnvironment *IRBuilder::createHBCResolveEnvironment(
-    VariableScope *scope) {
+    ScopeDesc *scope) {
   auto RSC = new HBCResolveEnvironment(scope);
   insert(RSC);
   return RSC;

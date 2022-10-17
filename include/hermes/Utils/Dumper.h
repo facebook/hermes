@@ -86,6 +86,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printSourceLocation(SMRange rng);
 
   void printScope(ScopeDesc *S);
+  void printScopeRange(ScopeDesc *Start, ScopeDesc *End);
   void printScopeChain(ScopeDesc *S);
 
   /// Prints \p F's name in the following format:

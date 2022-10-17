@@ -295,8 +295,7 @@ Instruction *LowerLoadStoreFrameInst::getScope(
   if (var->getParent()->getFunction() != builder.getFunction()) {
     // If the variable is neither from the current scope,
     // we should get the proper scope for it.
-    return builder.createHBCResolveEnvironment(
-        var->getParent()->getVariableScope());
+    return builder.createHBCResolveEnvironment(var->getParent());
   } else {
     // Now we know that the variable belongs to the current scope.
     // We are going to conservatively assume the variable might get

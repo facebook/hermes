@@ -157,6 +157,16 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (auto VS = dyn_cast<VariableScope>(V)) {
     os << "%";
     printFunctionName(VS->getFunction(), PrintFunctionParams::No);
+  } else if (auto S = dyn_cast<ScopeDesc>(V)) {
+    if (!enableNewDumpFormat) {
+      os << "%";
+      printFunctionName(S->getFunction(), PrintFunctionParams::No);
+    } else {
+      os << "%S{";
+      printFunctionName(S->getFunction(), PrintFunctionParams::No);
+      printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
+      os << "}";
+    }
   } else if (auto VR = dyn_cast<Variable>(V)) {
     os << "[";
     printVariableName(VR);
@@ -294,6 +304,13 @@ void IRPrinter::printSourceLocation(SMRange rng) {
 void IRPrinter::printScope(ScopeDesc *S) {
   if (enableNewDumpFormat) {
     os << "#" << ScopeNamer.getNumber(S);
+  }
+}
+
+void IRPrinter::printScopeRange(ScopeDesc *Start, ScopeDesc *End) {
+  if (Start != End) {
+    printScopeRange(Start->getParent(), End);
+    printScope(Start);
   }
 }
 

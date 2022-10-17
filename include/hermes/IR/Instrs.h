@@ -2309,15 +2309,15 @@ class HBCResolveEnvironment : public SingleOperandInst {
   void operator=(const HBCResolveEnvironment &) = delete;
 
  public:
-  explicit HBCResolveEnvironment(VariableScope *scope)
+  explicit HBCResolveEnvironment(ScopeDesc *scope)
       : SingleOperandInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
   explicit HBCResolveEnvironment(
       const HBCResolveEnvironment *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  VariableScope *getScope() const {
-    return cast<VariableScope>(getSingleOperand());
+  ScopeDesc *getScope() const {
+    return cast<ScopeDesc>(getSingleOperand());
   }
 
   SideEffectKind getSideEffect() {
