@@ -11,6 +11,8 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/SaveAndRestore.h"
 
+#include <tuple>
+
 namespace hermes {
 namespace irgen {
 
@@ -67,18 +69,6 @@ bool isConstantExpr(ESTree::Node *node) {
   }
 }
 
-static ScopeDesc *createScopeDescForChain(
-    const SerializedScope *chain,
-    Module *M) {
-  ScopeDesc *scope = M->getInitialScope();
-
-  while (chain && chain->parentScope) {
-    scope = scope->createInnerScope();
-    chain = chain->parentScope.get();
-  }
-  return scope;
-}
-
 /// Adds the \p parent -> \p child link in the nesting graph.
 static void
 buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
@@ -91,134 +81,118 @@ buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
   builder.createReturnInst(inst);
 }
 
-/// Materializes a given scope chain so it is available during lazy
-/// compilation/eval.
-class ScopeChainMaterializer {
-  IRBuilder &builder_;
-  NameTableTy &nameTable_;
-  Function *topFunction_;
-  SerializedScopePtr &chain_;
+static void populateScopeFromChainLink(
+    IRBuilder &builder,
+    ScopeDesc *scope,
+    const SerializedScope &chainLink) {
+  for (const auto &var : chainLink.variables) {
+    builder.createVariable(scope, var.declKind, var.name);
+  }
+}
 
- public:
-  explicit ScopeChainMaterializer(
-      IRBuilder &b,
-      NameTableTy &n,
-      Function *f,
-      SerializedScopePtr &c)
-      : builder_(b), nameTable_(n), topFunction_(f), chain_(c) {}
-
-  /// Materializes scope_ for usage in eval() compilation. The materialized
-  /// scope chain looks like
-  ///
-  /// |    FUNCTION    | depth |
-  /// |       ...      |  ...  |
-  /// |     eval()     |    0  |
-  /// |  topFunction_  |   -1  |
-  /// |  topFunction_  |   -2  |
-  /// |       ...      |  ...  |
-  ///
-  /// All variables in scopes < 0 are added to ExternalScopes appeneded to
-  /// topFunction_, which is assumed to be installed as the current IRGen
-  /// FunctionContext.
-  void materializeScopesForEval() {
-    materializeScopesInChain(
-        MaterializeForEval::Yes,
-        topFunction_,
-        topFunction_->getFunctionScopeDesc(),
-        chain_,
-        -1);
+static std::tuple<Function *, ScopeDesc *> materializeScopeChain(
+    IRBuilder &builder,
+    Function *outmostFunction,
+    const SerializedScopePtr &chain) {
+  if (!chain) {
+    ScopeDesc *S = outmostFunction->getFunctionScopeDesc();
+    S->setSerializedScope(chain);
+    return std::make_tuple(outmostFunction, S);
   }
 
-  /// Materializes scope_ for usage in lazy compilation. The materialized
-  /// scope chain looks like
-  ///
-  /// |    FUNCTION    |  depth |
-  /// |       ...      |   ...  |
-  /// |     lazyFun    |     1  |
-  /// |  topFunction_  |     0  |
-  /// |     dummy a    |    -1  |
-  /// |     dummy b    |    -2  |
-  /// |       ...      |   ...  |
-  ///
-  /// All variables in scopes < 1 are added to ExternalScopes, as well as their
-  /// respective functions, to preserve current functionality.
-  void materializeScopesForLazyFunction() {
-    materializeScopesInChain(
-        MaterializeForEval::No,
-        topFunction_,
-        topFunction_->getFunctionScopeDesc(),
-        chain_,
-        0);
+  if (!chain->parentScope) {
+    ScopeDesc *S = outmostFunction->getFunctionScopeDesc();
+    populateScopeFromChainLink(builder, S, *chain);
+    S->setSerializedScope(chain);
+    return std::make_tuple(outmostFunction, S);
   }
 
- private:
-  enum class MaterializeForEval { No, Yes };
-  void materializeScopesInChain(
-      MaterializeForEval materializeForEval,
-      Function *current,
-      ScopeDesc *scopeDesc,
-      const SerializedScopePtr &scope,
-      int depth) {
-    if (!scope) {
-      assert(!scopeDesc && "Too many scopeDescs for chain");
-      return;
-    }
-    assert(depth > -1000 && "Excessive scope depth");
+  auto [currFunction, parentScope] =
+      materializeScopeChain(builder, outmostFunction, chain->parentScope);
 
-    Function *parent = current;
-    if (scope->parentScope) {
-      if (materializeForEval == MaterializeForEval::Yes ||
-          !scope->originalName.isValid()) {
-        scopeDesc->getParent()->setFunction(current);
-      } else {
-        assert(scopeDesc->getParent() && "Too few scopeDescs for chain");
-        parent = builder_.createFunction(
-            scopeDesc->getParent(),
-            scope->originalName,
-            Function::DefinitionKind::ES5Function,
-            false,
-            SourceVisibility::Sensitive,
-            {},
-            false);
-        buildDummyLexicalParent(builder_, parent, current);
-      }
-    }
+  ScopeDesc *newScope = parentScope->createInnerScope();
+  if (!chain->originalName.isValid()) {
+    newScope->setFunction(currFunction);
+  } else {
+    Function *newFunc = builder.createFunction(
+        newScope,
+        chain->originalName,
+        Function::DefinitionKind::ES5Function,
+        false,
+        SourceVisibility::Sensitive,
+        {},
+        false);
+    buildDummyLexicalParent(builder, currFunction, newFunc);
+    currFunction = newFunc;
+  }
+  populateScopeFromChainLink(builder, newScope, *chain);
+  newScope->setSerializedScope(chain);
+  return std::make_tuple(currFunction, newScope);
+}
 
-    // First materialize parent scopes.
-    materializeScopesInChain(
-        materializeForEval,
-        parent,
-        scopeDesc->getParent(),
-        scope->parentScope,
-        depth - 1);
+static std::tuple<Function *, ScopeDesc *> materializeScopeChainForEval(
+    IRBuilder &builder,
+    ESTree::ProgramNode *program,
+    const SerializedScopePtr &chain) {
+  Function *outerFunction = builder.createFunction(
+      builder.getModule()->getInitialScope()->createInnerScope(),
+      "",
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(program->strictness),
+      program->sourceVisibility,
+      program->getSourceRange(),
+      true);
 
-    // If scope->closureAlias is specified, we must create an alias binding
-    // between originalName (which must be valid) and the variable identified by
-    // closureAlias.
-    //
-    // We do this *before* inserting the other variables below to reflect that
-    // the closure alias is conceptually in an outside scope and also avoid the
-    // closure name incorrectly shadowing the same name inside the closure.
-    if (scope->closureAlias.isValid()) {
-      assert(scope->originalName.isValid() && "Original name invalid");
+  return std::make_tuple(
+      outerFunction,
+      std::get<ScopeDesc *>(
+          materializeScopeChain(builder, outerFunction, chain)));
+}
+
+static std::tuple<Function *, ScopeDesc *> materializeScopeChainForLazyFunction(
+    IRBuilder &builder,
+    hbc::LazyCompilationData *lazyData,
+    const SerializedScopePtr &chain) {
+  Function *topLevel = builder.createTopLevelFunction(
+      builder.getModule()->getInitialScope()->createInnerScope(),
+      lazyData->strictMode);
+
+  return std::make_tuple(
+      topLevel,
+      std::get<ScopeDesc *>(materializeScopeChain(builder, topLevel, chain)));
+}
+
+static void populateNameTable(NameTableTy &nameTable, ScopeDesc *scopeDesc) {
+  if (auto *parent = scopeDesc->getParent()) {
+    populateNameTable(nameTable, parent);
+  }
+
+  // If scope->closureAlias is specified, we must create an alias binding
+  // between originalName (which must be valid) and the variable identified by
+  // closureAlias.
+  //
+  // We do this *before* inserting the other variables below to reflect that
+  // the closure alias is conceptually in an outside scope and also avoid the
+  // closure name incorrectly shadowing the same name inside the closure.
+  if (SerializedScopePtr link = scopeDesc->getSerializedScope()) {
+    if (link->closureAlias.isValid()) {
+      assert(link->originalName.isValid() && "Original name invalid");
       assert(
-          scope->originalName != scope->closureAlias &&
+          link->originalName != link->closureAlias &&
           "Original name must be different from the alias");
 
       // NOTE: the closureAlias target must exist and must be a Variable.
-      auto *closureVar = cast<Variable>(nameTable_.lookup(scope->closureAlias));
+      auto *closureVar = cast<Variable>(nameTable.lookup(link->closureAlias));
 
       // Re-create the alias.
-      nameTable_.insert(scope->originalName, closureVar);
-    }
-
-    for (const auto &var : scope->variables) {
-      auto *variable =
-          builder_.createVariable(scopeDesc, var.declKind, var.name);
-      nameTable_.insert(var.name, variable);
+      nameTable.insert(link->originalName, closureVar);
     }
   }
-};
+
+  for (Variable *var : scopeDesc->getVariables()) {
+    nameTable.insert(var->getName(), var);
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // LReference
@@ -335,30 +309,19 @@ void ESTreeIRGen::doIt() {
   } else {
     // If compiling in an existing lexical context, we need to install the
     // scopes in a wrapper function, which represents the "global" code.
-
-    ScopeDesc *wrapperFunctionScope =
-        createScopeDescForChain(lexicalScopeChain.get(), Mod);
-
-    Function *wrapperFunction = Builder.createFunction(
-        wrapperFunctionScope,
-        "",
-        Function::DefinitionKind::ES5Function,
-        ESTree::isStrict(Program->strictness),
-        Program->sourceVisibility,
-        Program->getSourceRange(),
-        true);
+    auto [wrapperFunction, parentScope] =
+        materializeScopeChainForEval(Builder, Program, lexicalScopeChain);
 
     // Initialize the wrapper context.
     wrapperFunctionContext.emplace(this, wrapperFunction, nullptr);
+    currentIRScopeDesc_ = parentScope;
 
     // Restore the previously saved parent scopes.
-    ScopeChainMaterializer scm(
-        Builder, nameTable_, wrapperFunction, lexicalScopeChain);
-    scm.materializeScopesForEval();
+    populateNameTable(nameTable_, parentScope);
 
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
-        wrapperFunctionScope->createInnerScope(),
+        parentScope->createInnerScope(),
         "eval",
         Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
@@ -366,7 +329,8 @@ void ESTreeIRGen::doIt() {
         Program->getSourceRange(),
         false);
 
-    buildDummyLexicalParent(Builder, wrapperFunction, topLevelFunction);
+    buildDummyLexicalParent(
+        Builder, parentScope->getFunction(), topLevelFunction);
   }
 
   Mod->setTopLevelFunction(topLevelFunction);
@@ -449,16 +413,15 @@ void ESTreeIRGen::doCJSModule(
 std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
     hbc::LazyCompilationData *lazyData) {
   lexicalScopeChain = lazyData->parentScope;
-  ScopeDesc *topLevelScope =
-      createScopeDescForChain(lexicalScopeChain.get(), Mod);
 
   // Create a top level function that will never be executed, because:
   // 1. IRGen assumes the first function always has global scope
   // 2. It serves as the root for dummy functions for lexical data
-  Function *topLevel =
-      Builder.createTopLevelFunction(topLevelScope, lazyData->strictMode);
+  auto [topLevel, parentScope] = materializeScopeChainForLazyFunction(
+      Builder, lazyData, lexicalScopeChain);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
+  currentIRScopeDesc_ = parentScope;
 
   // Save the top-level context, but ensure it doesn't outlive what it is
   // pointing to.
@@ -474,8 +437,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   // Instruction selection determines the delta between the ExternalScope
   // and the dummy function chain, so we add the ExternalScopes with
   // positive depth.
-  ScopeChainMaterializer scm(Builder, nameTable_, topLevel, lexicalScopeChain);
-  scm.materializeScopesForLazyFunction();
+  populateNameTable(nameTable_, parentScope);
 
   // If lazyData->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -507,9 +469,9 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       ? genGeneratorFunction(lazyData->originalName, parentVar, node)
       : genES5Function(lazyData->originalName, parentVar, node, false);
 
-  // Now add the link between topLevel and func, completing the nesting graph
-  // generated by the ScopeChainMaterializer.
-  buildDummyLexicalParent(Builder, topLevel, func);
+  // Now add the link between parentScope's function and func, completing the
+  // nesting graph for the lazy function.
+  buildDummyLexicalParent(Builder, parentScope->getFunction(), func);
   return {func, topLevel};
 }
 
@@ -1340,8 +1302,8 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
   // Serialize the global scope if and only if it's the only scope.
   // We serialize the global scope to avoid re-declaring variables,
   // and only do it once to avoid creating spurious scopes.
-  if (!S->getParent() || (S->isGlobalScope() && !includeGlobal)) {
-    return lexicalScopeChain;
+  if (!S->getParent() || S->getSerializedScope()) {
+    return S->getSerializedScope();
   }
 
   auto scope = std::make_shared<SerializedScope>();

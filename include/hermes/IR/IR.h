@@ -612,6 +612,15 @@ class ScopeDesc : public Value {
 
   inline void setFunction(Function *F);
 
+  void setSerializedScope(SerializedScopePtr serializedScope) {
+    assert(!serializedScope_ && "scope has already been serialized");
+    serializedScope_ = std::move(serializedScope);
+  }
+
+  SerializedScopePtr getSerializedScope() const {
+    return serializedScope_;
+  }
+
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ScopeDescKind;
   }
@@ -619,6 +628,8 @@ class ScopeDesc : public Value {
  private:
   ScopeDesc *parent_{};
   ScopeListTy innerScopes_;
+
+  SerializedScopePtr serializedScope_;
 
   Function *function_{};
 
