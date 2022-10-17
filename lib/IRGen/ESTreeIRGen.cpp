@@ -67,6 +67,105 @@ bool isConstantExpr(ESTree::Node *node) {
   }
 }
 
+/// Materializes a given scope chain so it is available during lazy
+/// compilation/eval.
+class ScopeChainMaterializer {
+  IRBuilder &builder_;
+  NameTableTy &nameTable_;
+  Function *topFunction_;
+  SerializedScopePtr &chain_;
+
+ public:
+  explicit ScopeChainMaterializer(
+      IRBuilder &b,
+      NameTableTy &n,
+      Function *f,
+      SerializedScopePtr &c)
+      : builder_(b), nameTable_(n), topFunction_(f), chain_(c) {}
+
+  /// Materializes scope_ for usage in eval() compilation. The materialized
+  /// scope chain looks like
+  ///
+  /// |    FUNCTION    | depth |
+  /// |       ...      |  ...  |
+  /// |     eval()     |    0  |
+  /// |  topFunction_  |   -1  |
+  /// |  topFunction_  |   -2  |
+  /// |       ...      |  ...  |
+  ///
+  /// All variables in scopes < 0 are added to ExternalScopes appeneded to
+  /// topFunction_, which is assumed to be installed as the current IRGen
+  /// FunctionContext.
+  void materializeScopesForEval() {
+    materializeScopesInChain(chain_, -1);
+  }
+
+  /// Materializes scope_ for usage in lazy compilation. The materialized
+  /// scope chain looks like
+  ///
+  /// |    FUNCTION    |  depth |
+  /// |       ...      |   ...  |
+  /// |     lazyFun    |     N  |
+  /// |  topFunction_  |   N-1  |
+  /// |  topFunction_  |   N-2  |
+  /// |  topFunction_  |   ...  |
+  /// |  topFunction_  |     0  |
+  ///
+  /// All variables in scopes < N are added to ExternalScopes appeneded to
+  /// topFunction_, which is assumed to be installed as the current IRGen
+  /// FunctionContext.
+  void materializeScopesForLazyFunction() {
+    materializeScopesInChain(chain_, getDepth() - 1);
+  }
+
+ private:
+  int getDepth() {
+    int depth = 0;
+    const SerializedScope *current = chain_.get();
+    while (current) {
+      depth += 1;
+      current = current->parentScope.get();
+    }
+    return depth;
+  }
+
+  void materializeScopesInChain(const SerializedScopePtr &scope, int depth) {
+    if (!scope)
+      return;
+    assert(depth > -1000 && "Excessive scope depth");
+
+    // First materialize parent scopes.
+    materializeScopesInChain(scope->parentScope, depth - 1);
+
+    // If scope->closureAlias is specified, we must create an alias binding
+    // between originalName (which must be valid) and the variable identified by
+    // closureAlias.
+    //
+    // We do this *before* inserting the other variables below to reflect that
+    // the closure alias is conceptually in an outside scope and also avoid the
+    // closure name incorrectly shadowing the same name inside the closure.
+    if (scope->closureAlias.isValid()) {
+      assert(scope->originalName.isValid() && "Original name invalid");
+      assert(
+          scope->originalName != scope->closureAlias &&
+          "Original name must be different from the alias");
+
+      // NOTE: the closureAlias target must exist and must be a Variable.
+      auto *closureVar = cast<Variable>(nameTable_.lookup(scope->closureAlias));
+
+      // Re-create the alias.
+      nameTable_.insert(scope->originalName, closureVar);
+    }
+
+    // Create an external scope.
+    ExternalScope *ES = builder_.createExternalScope(topFunction_, depth);
+    for (const auto &var : scope->variables) {
+      auto *variable = builder_.createVariable(ES, var.declKind, var.name);
+      nameTable_.insert(var.name, variable);
+    }
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // LReference
 
@@ -197,7 +296,9 @@ void ESTreeIRGen::doIt() {
     genDummyFunction(wrapperFunction);
 
     // Restore the previously saved parent scopes.
-    materializeScopesInChain(wrapperFunction, lexicalScopeChain, -1);
+    ScopeChainMaterializer scm(
+        Builder, nameTable_, wrapperFunction, lexicalScopeChain);
+    scm.materializeScopesForEval();
 
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
@@ -286,16 +387,6 @@ void ESTreeIRGen::doCJSModule(
       segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
-static int getDepth(const SerializedScopePtr &chain) {
-  int depth = 0;
-  const SerializedScope *current = chain.get();
-  while (current) {
-    depth += 1;
-    current = current->parentScope.get();
-  }
-  return depth;
-}
-
 std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
     hbc::LazyCompilationData *lazyData) {
   // Create a top level function that will never be executed, because:
@@ -320,8 +411,8 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   // and the dummy function chain, so we add the ExternalScopes with
   // positive depth.
   lexicalScopeChain = lazyData->parentScope;
-  materializeScopesInChain(
-      topLevel, lexicalScopeChain, getDepth(lexicalScopeChain) - 1);
+  ScopeChainMaterializer scm(Builder, nameTable_, topLevel, lexicalScopeChain);
+  scm.materializeScopesForLazyFunction();
 
   // If lazyData->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -352,6 +443,21 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       : ESTree::isGenerator(node)
       ? genGeneratorFunction(lazyData->originalName, parentVar, node)
       : genES5Function(lazyData->originalName, parentVar, node, false);
+
+  // Now add the lexical debug information to the Module. Note that this will
+  // generate the (correct) nesting
+  //
+  //        topLevel -> a -> b -> c -> func
+  //
+  // even though func() was generated with topLevel as the FunctionContext,
+  // i.e., during IRGeneration, the "nesting" was
+  //
+  //        topLevel -> func
+  //
+  // with topLevel having all the ExternalScopes needed to generate the correct
+  // IR. Note that addLexicalDebugInfo will create new Variables and add them to
+  // the functions it creates. Those variables are not used in the initial IR,
+  // and possibly not at all.
   addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
   return {func, topLevel};
 }
@@ -1174,45 +1280,6 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     current = next;
   }
   return current;
-}
-
-void ESTreeIRGen::materializeScopesInChain(
-    Function *wrapperFunction,
-    const SerializedScopePtr &scope,
-    int depth) {
-  if (!scope)
-    return;
-  assert(depth < 1000 && "Excessive scope depth");
-
-  // First materialize parent scopes.
-  materializeScopesInChain(wrapperFunction, scope->parentScope, depth - 1);
-
-  // If scope->closureAlias is specified, we must create an alias binding
-  // between originalName (which must be valid) and the variable identified by
-  // closureAlias.
-  //
-  // We do this *before* inserting the other variables below to reflect that
-  // the closure alias is conceptually in an outside scope and also avoid the
-  // closure name incorrectly shadowing the same name inside the closure.
-  if (scope->closureAlias.isValid()) {
-    assert(scope->originalName.isValid() && "Original name invalid");
-    assert(
-        scope->originalName != scope->closureAlias &&
-        "Original name must be different from the alias");
-
-    // NOTE: the closureAlias target must exist and must be a Variable.
-    auto *closureVar = cast<Variable>(nameTable_.lookup(scope->closureAlias));
-
-    // Re-create the alias.
-    nameTable_.insert(scope->originalName, closureVar);
-  }
-
-  // Create an external scope.
-  ExternalScope *ES = Builder.createExternalScope(wrapperFunction, depth);
-  for (const auto &var : scope->variables) {
-    auto *variable = Builder.createVariable(ES, var.declKind, var.name);
-    nameTable_.insert(var.name, variable);
-  }
 }
 
 namespace {

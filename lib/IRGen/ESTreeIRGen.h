@@ -1040,12 +1040,6 @@ class ESTreeIRGen {
   /// identifiers.
   SerializedScopePtr resolveScopeIdentifiers(const ScopeChain &chain);
 
-  /// Materialize the provided scope.
-  void materializeScopesInChain(
-      Function *wrapperFunction,
-      const SerializedScopePtr &scope,
-      int depth);
-
   /// Add dummy functions for lexical scope debug info
   void addLexicalDebugInfo(
       Function *child,
