@@ -285,6 +285,8 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
+
   CreateFunctionInst *createCreateFunctionInst(Function *code);
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
@@ -492,7 +494,8 @@ class IRBuilder {
 
   HBCLoadParamInst *createHBCLoadParamInst(LiteralNumber *value);
 
-  HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst();
+  HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst(
+      ScopeDesc *scopeDesc);
 
   HBCGetThisNSInst *createHBCGetThisNSInst();
 

@@ -23,6 +23,15 @@
 #define INCLUDE_HBC_BACKEND
 #endif
 
+MARK_FIRST(ScopeCreationInst)
+DEF_VALUE(ScopeCreationInst, Instruction)
+DEF_VALUE(CreateScopeInst, ScopeCreationInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCCreateEnvironmentInst, ScopeCreationInst)
+DEF_VALUE(HBCResolveEnvironment, ScopeCreationInst)
+#endif
+MARK_LAST(ScopeCreationInst)
+
 MARK_FIRST(SingleOperandInst)
 DEF_VALUE(SingleOperandInst, Instruction)
 DEF_VALUE(AddEmptyStringInst, SingleOperandInst)
@@ -39,7 +48,6 @@ DEF_VALUE(LoadFrameInst, SingleOperandInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
 DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
-DEF_VALUE(HBCResolveEnvironment, SingleOperandInst)
 DEF_VALUE(HBCGetArgumentsLengthInst, SingleOperandInst)
 DEF_VALUE(HBCReifyArgumentsInst, SingleOperandInst)
 DEF_VALUE(HBCSpillMovInst, SingleOperandInst)
@@ -133,7 +141,6 @@ DEF_VALUE(ResumeGeneratorInst, Instruction)
 
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
-DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
 DEF_VALUE(HBCGetThisNSInst, Instruction)
 DEF_VALUE(HBCCreateThisInst, Instruction)
 DEF_VALUE(HBCGetArgumentsPropByValInst, Instruction)

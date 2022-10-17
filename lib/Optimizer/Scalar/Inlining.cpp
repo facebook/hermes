@@ -50,6 +50,15 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
     return false;
   }
 
+  // If it has nested scopes, it can't be inlined. This should be possible, but
+  // given that hermes doesn't currently support multi-scope functions it is
+  // impossible to test it.
+  for (const ScopeDesc *inner : F->getFunctionScopeDesc()->getInnerScopes()) {
+    if (inner->getFunction() == F) {
+      return false;
+    }
+  }
+
   // If the functions have different strictness, we can't inline them, since
   // we don't have strict/non-strict version of instructions (TODO).
   if (F->isStrictMode() != intoFunction->isStrictMode())
@@ -159,7 +168,20 @@ static Value *inlineFunction(
       Value *oldOp = I->getOperand(i);
       Value *newOp = nullptr;
 
-      if (llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
+      if (auto *sc = llvh::dyn_cast<ScopeDesc>(oldOp)) {
+        ScopeDesc *newSC = intoFunction->getFunctionScopeDesc();
+        newOp = newSC;
+
+        for (const ScopeDesc *inner : sc->getInnerScopes()) {
+          assert(
+              inner->getFunction() != F && "canBeInlined should have said no!");
+          (void)inner;
+        }
+
+        assert(
+            sc->getVariables().empty() && "canBeInlined should have said no!");
+      } else if (
+          llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
           llvh::isa<BasicBlock>(oldOp)) {
         // Operands must already have been visited.
         newOp = operandMap[oldOp];
@@ -177,6 +199,41 @@ static Value *inlineFunction(
 
       translatedOperands.push_back(newOp);
     }
+  };
+
+  CreateScopeInst *intoFunctionScopeCreation{};
+
+  // Returns the instruction materializing intoFunction's scope, creating it if
+  // needed.
+  auto getIntoFunctionScopeCreation = [&]() {
+    // Simple case: this function has already been called, so just return the
+    // cached value.
+    if (intoFunctionScopeCreation) {
+      return intoFunctionScopeCreation;
+    }
+
+    // This is the first time this function is invoked, so iterate over the
+    // instructions in intoFunction trying to find its scope's creation inst.
+    for (BasicBlock &BB : *intoFunction) {
+      for (Instruction &I : BB) {
+        if (auto *csi = llvh::dyn_cast<CreateScopeInst>(&I)) {
+          assert(
+              csi->getCreatedScopeDesc() ==
+                  intoFunction->getFunctionScopeDesc() &&
+              "CreateScopeInst creating the wrong scope");
+          intoFunctionScopeCreation = csi;
+          return csi;
+        }
+      }
+    }
+
+    // intoFunction's didn't have its scope materialized, so add that
+    // instruction.
+    IRBuilder::SaveRestore sr{builder};
+    builder.setInsertionPoint(&*intoFunction->begin()->begin());
+    intoFunctionScopeCreation =
+        builder.createCreateScopeInst(intoFunction->getFunctionScopeDesc());
+    return intoFunctionScopeCreation;
   };
 
   // Copy all instructions to the inlined function. Phi instructions are
@@ -229,6 +286,12 @@ static Value *inlineFunction(
           // Append to the existing phi.
           cast<PhiInst>(returnValue)->addEntry(translatedOperands[0], newBB);
         }
+      } else if (auto *csi = llvh::dyn_cast<CreateScopeInst>(&I)) {
+        assert(
+            csi->getCreatedScopeDesc() == F->getFunctionScopeDesc() &&
+            "CreateScopeInst creating the wrong scope");
+        newInst = getIntoFunctionScopeCreation();
+        // TODO: ensure newInst dominates the builder's current position.
       } else {
         newInst = builder.cloneInst(&I, translatedOperands);
       }

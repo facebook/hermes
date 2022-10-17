@@ -341,6 +341,12 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
+  auto CII = new CreateScopeInst(scopeDesc);
+  insert(CII);
+  return CII;
+}
+
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(Function *code) {
   auto CFI = new CreateFunctionInst(code);
   insert(CFI);
@@ -803,8 +809,9 @@ HBCLoadParamInst *IRBuilder::createHBCLoadParamInst(LiteralNumber *value) {
   return inst;
 }
 
-HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst() {
-  auto inst = new HBCCreateEnvironmentInst();
+HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst(
+    ScopeDesc *scopeDesc) {
+  auto inst = new HBCCreateEnvironmentInst(scopeDesc);
   insert(inst);
   return inst;
 }

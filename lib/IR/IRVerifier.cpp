@@ -54,6 +54,7 @@ class Verifier : public InstructionVisitor<Verifier, void> {
    public:
     const Function &function;
     bool createArgumentsEncountered = false;
+    ScopeCreationInst *functionBodyScopeDescCreator = nullptr;
 
     FunctionState(Verifier *verifier, const Function &function)
         : verifier(verifier),
@@ -307,6 +308,8 @@ static bool isTerminator(const Instruction *Inst) {
   return &*Inst->getParent()->rbegin() == Inst;
 }
 
+void Verifier::visitScopeCreationInst(const ScopeCreationInst &Inst) {}
+
 void Verifier::visitSingleOperandInst(const SingleOperandInst &Inst) {}
 
 void Verifier::visitReturnInst(const ReturnInst &Inst) {
@@ -453,6 +456,19 @@ void Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
 
 void Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
   // Nothing to verify at this point.
+}
+
+void Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
+  Assert(functionState, "function state cannot be null");
+  Assert(
+      !functionState->functionBodyScopeDescCreator,
+      "multiple functions materializing function's body scope desc");
+  functionState->functionBodyScopeDescCreator =
+      const_cast<CreateScopeInst *>(&Inst);
+  Assert(
+      functionState->function.getFunctionScopeDesc() ==
+          Inst.getCreatedScopeDesc(),
+      "CreateScopeInst is materializing the wrong scope desc");
 }
 
 void Verifier::visitCreateFunctionInst(const CreateFunctionInst &Inst) {
@@ -771,7 +787,16 @@ void Verifier::visitDirectEvalInst(DirectEvalInst const &Inst) {
 
 void Verifier::visitHBCCreateEnvironmentInst(
     const HBCCreateEnvironmentInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(functionState, "function state cannot be null");
+  Assert(
+      !functionState->functionBodyScopeDescCreator,
+      "multiple functions materializing function's body scope desc");
+  functionState->functionBodyScopeDescCreator =
+      const_cast<HBCCreateEnvironmentInst *>(&Inst);
+  Assert(
+      functionState->function.getFunctionScopeDesc() ==
+          Inst.getCreatedScopeDesc(),
+      "HBCCreateEnvironmentInst is materializing the wrong scope desc");
 }
 
 void Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
@@ -817,9 +842,27 @@ void Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
 void Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {}
 void Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
   Assert(
-      &Inst == &Inst.getParent()->front() &&
-          Inst.getParent() == &Inst.getParent()->getParent()->front(),
-      "StartGeneratorInst must be the first instruction of a function");
+      Inst.getParent() == &Inst.getParent()->getParent()->front(),
+      "StartGeneratorInst must be in the function's first basic block.");
+
+  BasicBlock::iterator it = Inst.getParent()->begin();
+
+  if (&Inst == &*it) {
+    // First instruction in the basic block, OK.
+    return;
+  }
+
+  if (llvh::isa<CreateScopeInst>(&*it)) {
+    ++it;
+    if (&Inst == &*it) {
+      return;
+    }
+  }
+
+  Assert(
+      false,
+      "StartGeneratorInst must be the first instruction of a function, "
+      "or the second instructions following a CreateScopeInst");
 }
 void Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {}
 

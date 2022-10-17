@@ -311,6 +311,24 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
 
+  // For now simply remove all the CreateScopeInst instructions, and replace
+  // their uses with undefined. This currently works because each function has a
+  // single scope, and this pass will use it in order to lower Loads, Stores,
+  // and Function creations. Once all instructions that need to be scope aware
+  // have their scope operands, then this loop will lower all CreateScopeInst to
+  // HBCCreateEnvironment.
+  for (BasicBlock &BB : F->getBasicBlockList()) {
+    for (auto I = BB.begin(), E = BB.end(); I != E; /* nothing */) {
+      Instruction *Inst = &*I;
+      ++I;
+      if (llvh::isa<CreateScopeInst>(Inst)) {
+        Inst->replaceAllUsesWith(builder.getLiteralUndefined());
+        Inst->eraseFromParent();
+        changed = true;
+      }
+    }
+  }
+
   updateToEntryInsertionPoint(builder, F);
 
   // All local captured variables will be stored in this scope (or
@@ -322,7 +340,7 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
   // environment to use - we don't account for the case when an environment may
   // not be needed somewhere along the chain.
   HBCCreateEnvironmentInst *captureScope =
-      builder.createHBCCreateEnvironmentInst();
+      builder.createHBCCreateEnvironmentInst(F->getFunctionScopeDesc());
 
   for (BasicBlock &BB : F->getBasicBlockList()) {
     for (auto I = BB.begin(), E = BB.end(); I != E; /* nothing */) {

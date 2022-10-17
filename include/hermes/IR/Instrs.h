@@ -29,6 +29,56 @@ namespace hermes {
 /// binary operations.
 bool isSideEffectFree(Type T);
 
+/// Base class for instructions that are used for scope creation (e.g.,
+/// HBCCreateEnvironment, CreateScopeInst, etc). All these operands have the
+/// descriptor for the scope they are creating as the last operand.
+class ScopeCreationInst : public Instruction {
+  ScopeCreationInst(const ScopeCreationInst &) = delete;
+  void operator=(const ScopeCreationInst &) = delete;
+
+  // Make pushOperand private to ensure derived classes only add operands via
+  // the constructor.
+  using Instruction::pushOperand;
+
+ protected:
+  enum { CreatedScopeIdx, FirstAvailableIdx };
+
+  explicit ScopeCreationInst(ValueKind kind, ScopeDesc *scopeDesc)
+      : Instruction(kind) {
+    pushOperand(scopeDesc);
+  }
+
+  template <uint32_t which>
+  void pushOperand(Value *value) {
+    static_assert(
+        which >= FirstAvailableIdx,
+        "Use FirstAvailableIndex to offset the created ScopeDesc.");
+    pushOperand(value);
+  }
+
+ public:
+  explicit ScopeCreationInst(
+      const ScopeCreationInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  ScopeDesc *getCreatedScopeDesc() const {
+    return cast<ScopeDesc>(getOperand(CreatedScopeIdx));
+  }
+
+  SideEffectKind getSideEffect() {
+    llvm_unreachable("ScopeCreationInst must be inherited.");
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    llvm_unreachable("ScopeCreationInst must be inherited.");
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ScopeCreationInstKind);
+  }
+};
+
 /// Base class for instructions that have exactly one operand. It guarantees
 /// that only one operand is pushed and it provides getSingleOperand().
 class SingleOperandInst : public Instruction {
@@ -547,6 +597,32 @@ class StoreFrameInst : public Instruction {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::StoreFrameInstKind);
+  }
+};
+
+class CreateScopeInst : public ScopeCreationInst {
+  CreateScopeInst(const CreateScopeInst &) = delete;
+  void operator=(const CreateScopeInst &) = delete;
+
+ public:
+  explicit CreateScopeInst(ScopeDesc *scopeDesc)
+      : ScopeCreationInst(ValueKind::CreateScopeInstKind, scopeDesc) {}
+
+  explicit CreateScopeInst(
+      const CreateScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : ScopeCreationInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CreateScopeInstKind);
   }
 };
 
@@ -2304,21 +2380,17 @@ class ThrowIfEmptyInst : public Instruction {
   }
 };
 
-class HBCResolveEnvironment : public SingleOperandInst {
+class HBCResolveEnvironment : public ScopeCreationInst {
   HBCResolveEnvironment(const HBCResolveEnvironment &) = delete;
   void operator=(const HBCResolveEnvironment &) = delete;
 
  public:
   explicit HBCResolveEnvironment(ScopeDesc *scope)
-      : SingleOperandInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
+      : ScopeCreationInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
   explicit HBCResolveEnvironment(
       const HBCResolveEnvironment *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
-
-  ScopeDesc *getScope() const {
-    return cast<ScopeDesc>(getSingleOperand());
-  }
+      : ScopeCreationInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2565,17 +2637,17 @@ class DirectEvalInst : public SingleOperandInst {
   }
 };
 
-class HBCCreateEnvironmentInst : public Instruction {
+class HBCCreateEnvironmentInst : public ScopeCreationInst {
   HBCCreateEnvironmentInst(const HBCCreateEnvironmentInst &) = delete;
   void operator=(const HBCCreateEnvironmentInst &) = delete;
 
  public:
-  explicit HBCCreateEnvironmentInst()
-      : Instruction(ValueKind::HBCCreateEnvironmentInstKind) {}
+  explicit HBCCreateEnvironmentInst(ScopeDesc *scopeDesc)
+      : ScopeCreationInst(ValueKind::HBCCreateEnvironmentInstKind, scopeDesc) {}
   explicit HBCCreateEnvironmentInst(
       const HBCCreateEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : ScopeCreationInst(src, operands) {}
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;

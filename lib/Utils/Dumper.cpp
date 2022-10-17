@@ -243,6 +243,11 @@ void IRPrinter::printInstruction(Instruction *I) {
   }
 
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
+    if (!enableNewDumpFormat) {
+      if (llvh::isa<HBCCreateEnvironmentInst>(I) && i == 0) {
+        continue;
+      }
+    }
     os << (first ? " " : ", ");
     printValueLabel(I, I->getOperand(i), i);
     first = false;
@@ -357,8 +362,11 @@ void IRPrinter::visitFunction(const Function &F) {
   InstNamer.clear();
   // Number all instructions sequentially.
   for (auto &BB : *UF)
-    for (auto &I : BB)
-      InstNamer.getNumber(&I);
+    for (auto &I : BB) {
+      if (!llvh::isa<CreateScopeInst>(&I) || enableNewDumpFormat) {
+        InstNamer.getNumber(&I);
+      }
+    }
 
   printFunctionHeader(UF);
   os << "\n";
@@ -390,8 +398,11 @@ void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
   Indent += 2;
 
   // Use IRVisitor dispatch to visit the instructions.
-  for (auto &I : BB)
-    visit(I);
+  for (auto &I : BB) {
+    if (!llvh::isa<CreateScopeInst>(&I) || enableNewDumpFormat) {
+      visit(I);
+    }
+  }
 
   Indent -= 2;
 }

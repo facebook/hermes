@@ -298,6 +298,12 @@ void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
 }
 
+void HBCISel::generateScopeCreationInst(
+    ScopeCreationInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("This is not a concrete instruction");
+}
+
 void HBCISel::generateSingleOperandInst(
     SingleOperandInst *Inst,
     BasicBlock *next) {
@@ -802,7 +808,9 @@ void HBCISel::generateCreateFunctionInst(
     BasicBlock *next) {
   llvm_unreachable("CreateFunctionInst should have been lowered.");
 }
-
+void HBCISel::generateCreateScopeInst(CreateScopeInst *Inst, BasicBlock *next) {
+  llvm_unreachable("CreateScopeInst should have been lowered.");
+}
 void HBCISel::generateHBCCreateFunctionInst(
     HBCCreateFunctionInst *Inst,
     BasicBlock *) {
@@ -1318,7 +1326,7 @@ void HBCISel::generateHBCResolveEnvironment(
   // We statically determine the relative depth delta of the current scope
   // and the scope that the variable belongs to. Such delta is used as
   // the operand to get_scope instruction.
-  ScopeDesc *instScope = Inst->getScope();
+  ScopeDesc *instScope = Inst->getCreatedScopeDesc();
   Optional<int32_t> instScopeDepth = scopeAnalysis_.getScopeDepth(instScope);
   Optional<int32_t> curScopeDepth =
       scopeAnalysis_.getScopeDepth(F_->getFunctionScopeDesc());

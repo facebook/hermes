@@ -496,6 +496,15 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   Builder.setLocation(newFunc->getSourceRange().Start);
 
+  BasicBlock *realEntry = &newFunc->front();
+  if (realEntry->empty()) {
+    Builder.setInsertionBlock(realEntry);
+  } else {
+    Builder.setInsertionPoint(&realEntry->front());
+  }
+  // Create the function scope.
+  Builder.createCreateScopeInst(newFunc->getFunctionScopeDesc());
+
   // Start pumping instructions into the entry basic block.
   Builder.setInsertionBlock(entry);
 
