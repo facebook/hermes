@@ -108,6 +108,7 @@ bool ResolveStaticRequireImpl::run() {
     builder_.setInsertionPointAfter(RR.call);
 
     builder_.setLocation(RR.call->getLocation());
+    builder_.setCurrentSourceLevelScope(RR.call->getSourceLevelScope());
 
     /// (CallBuiltin "requireFast", resolvedTarget)
     auto callHI = builder_.createCallBuiltinInst(

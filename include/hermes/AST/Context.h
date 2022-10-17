@@ -37,6 +37,8 @@ struct CodeGenerationSettings {
   bool dumpOperandRegisters{false};
   /// Print source location information in IR dumps.
   bool dumpSourceLocation{false};
+  /// Print the original scope for each instruction.
+  bool dumpSourceLevelScope{false};
   /// Print the use list if the instruction has any users.
   bool dumpUseList{false};
   /// Dump IR after every pass.

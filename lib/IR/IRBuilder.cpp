@@ -1018,6 +1018,7 @@ void IRBuilder::insert(Instruction *Inst) {
   Inst->setStatementIndex(statement);
 
   Inst->setLocation(Location);
+  Inst->setSourceLevelScope(CurrentSourceLevelScope);
 
   return justInsert(Inst);
 }
@@ -1094,6 +1095,7 @@ Instruction *IRBuilder::cloneInst(
       llvm_unreachable("invalid kind");
   }
 
+  inst->setSourceLevelScope(CurrentSourceLevelScope);
   justInsert(inst);
   return inst;
 }

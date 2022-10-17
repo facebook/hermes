@@ -51,6 +51,7 @@ FunctionContext::~FunctionContext() {
   irGen_->currentIRScope_ = oldIRScope_;
   irGen_->currentIRScopeDesc_ = oldIRScopeDesc_;
   irGen_->functionContext_ = oldContext_;
+  irGen_->Builder.setCurrentSourceLevelScope(irGen_->currentIRScopeDesc_);
 }
 
 Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
@@ -496,6 +497,7 @@ void ESTreeIRGen::emitFunctionPrologue(
                    << " variable decls.\n");
 
   Builder.setLocation(newFunc->getSourceRange().Start);
+  Builder.setCurrentSourceLevelScope(Builder.getLiteralUndefined());
 
   BasicBlock *realEntry = &newFunc->front();
   if (realEntry->empty()) {
@@ -509,6 +511,7 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Start pumping instructions into the entry basic block.
   Builder.setInsertionBlock(entry);
+  Builder.setCurrentSourceLevelScope(newFunc->getFunctionScopeDesc());
 
   // Always insert a CreateArgumentsInst. We will delete it later if it is
   // unused.

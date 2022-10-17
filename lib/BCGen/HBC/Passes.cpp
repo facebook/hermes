@@ -345,6 +345,7 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
       ++I;
 
       builder.setLocation(Inst->getLocation());
+      builder.setCurrentSourceLevelScope(Inst->getSourceLevelScope());
 
       switch (Inst->getKind()) {
         case ValueKind::LoadFrameInstKind: {
@@ -473,6 +474,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
     if (load && load->getObject() == createArguments) {
       builder.setInsertionPoint(load);
       builder.setLocation(load->getLocation());
+      builder.setCurrentSourceLevelScope(load->getSourceLevelScope());
       auto *propertyString = llvh::dyn_cast<LiteralString>(load->getProperty());
       if (propertyString && propertyString->getValue().str() == "length") {
         // For `arguments.length`, get the length.
@@ -524,6 +526,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
       // the usage with this array.
       builder.setInsertionPoint(inst);
       builder.setLocation(inst->getLocation());
+      builder.setCurrentSourceLevelScope(inst->getSourceLevelScope());
       builder.createHBCReifyArgumentsInst(lazyReg);
       auto *array = builder.createLoadStackInst(lazyReg);
       for (int i = 0, n = inst->getNumOperands(); i < n; i++) {
@@ -600,6 +603,7 @@ bool LowerConstruction::runOnFunction(Function *F) {
       if (auto *constructor = llvh::dyn_cast<ConstructInst>(&I)) {
         builder.setInsertionPoint(constructor);
         builder.setLocation(constructor->getLocation());
+        builder.setCurrentSourceLevelScope(constructor->getSourceLevelScope());
         auto closure = constructor->getCallee();
         auto prototype =
             builder.createLoadPropertyInst(closure, prototypeString);
@@ -837,6 +841,7 @@ bool SpillRegisters::runOnFunction(Function *F) {
       toSpill.clear();
       bool replaceWithFirstSpill = false;
       builder.setLocation(inst.getLocation());
+      builder.setCurrentSourceLevelScope(inst.getSourceLevelScope());
 
       auto myRegister = RA_.getRegister(&inst);
       if (requiresShortOutput(&inst) && !isShort(myRegister)) {

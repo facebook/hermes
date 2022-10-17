@@ -379,6 +379,12 @@ static opt<bool> DumpOperandRegisters(
     desc("Dump registers assigned to instruction operands"),
     cat(CompilerCategory));
 
+static opt<bool> DumpSourceLevelScope(
+    "dump-source-level-scope",
+    desc("Print the instruction's source-level scope."),
+    init(false),
+    cat(CompilerCategory));
+
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
     desc("Print the use list if the instruction has any users."),
@@ -1032,6 +1038,7 @@ std::shared_ptr<Context> createContext(
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
+  codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;

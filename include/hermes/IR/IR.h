@@ -1087,6 +1087,7 @@ class Instruction
   BasicBlock *Parent;
   /// Saves the instruction operands.
   llvh::SmallVector<Value::Use, 2> Operands;
+  Value *SourceLevelScope{};
 
   SMLoc location_{};
   /// The statement of which this Instruction is a part.
@@ -1130,6 +1131,13 @@ class Instruction
   }
   bool hasLocation() const {
     return location_.isValid();
+  }
+
+  void setSourceLevelScope(Value *sourceLevelScope) {
+    SourceLevelScope = sourceLevelScope;
+  }
+  Value *getSourceLevelScope() const {
+    return SourceLevelScope;
   }
 
   /// Update the statement that this Instruction belongs to.

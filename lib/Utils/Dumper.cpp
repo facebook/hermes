@@ -262,12 +262,24 @@ void IRPrinter::printInstruction(Instruction *I) {
   }
 
   auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+  const char *prefix = " // ";
+  if (codeGenOpts.dumpSourceLevelScope) {
+    if (auto *originalScope =
+            llvh::dyn_cast<ScopeDesc>(I->getSourceLevelScope())) {
+      os << prefix << "scope: ";
+      printFunctionName(originalScope->getFunction(), PrintFunctionParams::No);
+      printScopeRange(
+          originalScope, originalScope->getFunction()->getFunctionScopeDesc());
+      prefix = ", ";
+    }
+  }
+
   // Print the use list if there is any user for the instruction.
   if (!codeGenOpts.dumpUseList || I->getUsers().empty())
     return;
 
   llvh::DenseSet<Instruction *> Visited;
-  os << " // users:";
+  os << prefix << "users:";
   for (auto &U : I->getUsers()) {
     auto *II = cast<Instruction>(U);
     assert(II && "Expecting user to be an Instruction");

@@ -39,11 +39,17 @@ class IRBuilder {
   BasicBlock *Block{};
 
   SMLoc Location{};
+  Value *CurrentSourceLevelScope;
 
  public:
-  explicit IRBuilder(Module *Mod) : M(Mod), InsertionPoint(nullptr) {}
+  explicit IRBuilder(Module *Mod)
+      : M(Mod),
+        InsertionPoint(nullptr),
+        CurrentSourceLevelScope(getLiteralUndefined()) {}
   explicit IRBuilder(Function *F)
-      : M(F->getParent()), InsertionPoint(nullptr) {}
+      : M(F->getParent()),
+        InsertionPoint(nullptr),
+        CurrentSourceLevelScope(getLiteralUndefined()) {}
 
   //--------------------------------------------------------------------------//
   //                          Stateless APIs.                                 //
@@ -247,6 +253,10 @@ class IRBuilder {
   }
   SMLoc getLocation() const {
     return Location;
+  }
+
+  void setCurrentSourceLevelScope(Value *sourceLevelScope) {
+    CurrentSourceLevelScope = sourceLevelScope;
   }
 
   /// Move instruction \p inst from its block to the insertion point in the
