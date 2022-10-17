@@ -156,19 +156,9 @@ class FunctionScopeAnalysis {
       return ScopeData(nullptr, 0, true);
     }
   };
-  using LexicalScopeMap = llvh::DenseMap<const Function *, ScopeData>;
-  LexicalScopeMap lexicalScopeMap_{};
 
   using LexicalScopeDescMap = llvh::DenseMap<const ScopeDesc *, ScopeData>;
   LexicalScopeDescMap lexicalScopeDescMap_{};
-
-  /// Recursively calculate the scope data of a function \p F. \p depth is
-  /// specified during analysis initialization so scopes before the top level
-  /// can be initialized.
-  /// \return the ScopeData of the function.
-  ScopeData calculateFunctionScopeData(
-      Function *F,
-      llvh::Optional<int> depth = llvh::None);
 
   /// Recursively calculate the scope data of \p scopeDesc. \p depth is
   /// specified during analysis initialization so scopes before the top level
@@ -185,16 +175,14 @@ class FunctionScopeAnalysis {
 
  public:
   explicit FunctionScopeAnalysis(Function *entryPoint) {
-    ScopeData data = calculateFunctionScopeData(entryPoint, 0);
-    assert(!data.orphaned && data.depth == 0);
-    (void)data;
-    data = calculateFunctionScopeData(entryPoint->getFunctionScopeDesc(), 0);
+    ScopeData data =
+        calculateFunctionScopeData(entryPoint->getFunctionScopeDesc(), 0);
     assert(!data.orphaned && data.depth == 0);
     (void)data;
   }
 
-  /// Lazily get the scope depth of \p VS.
-  llvh::Optional<int32_t> getScopeDepth(VariableScope *VS);
+  /// Lazily get the scope depth of \p S.
+  llvh::Optional<int32_t> getScopeDepth(ScopeDesc *S);
 
   /// Lazily get the lexical parent of \p F, or nullptr if none.
   Function *getLexicalParent(Function *F);

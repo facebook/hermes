@@ -1318,10 +1318,10 @@ void HBCISel::generateHBCResolveEnvironment(
   // We statically determine the relative depth delta of the current scope
   // and the scope that the variable belongs to. Such delta is used as
   // the operand to get_scope instruction.
-  VariableScope *instScope = Inst->getScope();
+  ScopeDesc *instScope = Inst->getScope()->getScopeDesc();
   Optional<int32_t> instScopeDepth = scopeAnalysis_.getScopeDepth(instScope);
   Optional<int32_t> curScopeDepth =
-      scopeAnalysis_.getScopeDepth(F_->getFunctionScope());
+      scopeAnalysis_.getScopeDepth(F_->getFunctionScopeDesc());
   if (!instScopeDepth || !curScopeDepth) {
     // the function did not have any CreateFunctionInst, this function is dead.
     emitUnreachableIfDebug();

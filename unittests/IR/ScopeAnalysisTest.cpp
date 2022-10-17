@@ -61,19 +61,19 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   addEdges(orphan2, orphan21);
 
   FunctionScopeAnalysis fsa{G};
-  EXPECT_EQ(-5, fsa.getScopeDepth(ES5->getFunctionScope()));
-  EXPECT_EQ(-4, fsa.getScopeDepth(ES4->getFunctionScope()));
-  EXPECT_EQ(-3, fsa.getScopeDepth(ES3->getFunctionScope()));
-  EXPECT_EQ(-2, fsa.getScopeDepth(ES2->getFunctionScope()));
-  EXPECT_EQ(-1, fsa.getScopeDepth(ES1->getFunctionScope()));
-  EXPECT_EQ(0, fsa.getScopeDepth(G->getFunctionScope()));
-  EXPECT_EQ(1, fsa.getScopeDepth(F1->getFunctionScope()));
-  EXPECT_EQ(1, fsa.getScopeDepth(F2->getFunctionScope()));
-  EXPECT_EQ(2, fsa.getScopeDepth(F11->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan21->getFunctionScope()));
+  EXPECT_EQ(-5, fsa.getScopeDepth(ES5->getFunctionScopeDesc()));
+  EXPECT_EQ(-4, fsa.getScopeDepth(ES4->getFunctionScopeDesc()));
+  EXPECT_EQ(-3, fsa.getScopeDepth(ES3->getFunctionScopeDesc()));
+  EXPECT_EQ(-2, fsa.getScopeDepth(ES2->getFunctionScopeDesc()));
+  EXPECT_EQ(-1, fsa.getScopeDepth(ES1->getFunctionScopeDesc()));
+  EXPECT_EQ(0, fsa.getScopeDepth(G->getFunctionScopeDesc()));
+  EXPECT_EQ(1, fsa.getScopeDepth(F1->getFunctionScopeDesc()));
+  EXPECT_EQ(1, fsa.getScopeDepth(F2->getFunctionScopeDesc()));
+  EXPECT_EQ(2, fsa.getScopeDepth(F11->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan21->getFunctionScopeDesc()));
 
   EXPECT_EQ(nullptr, fsa.getLexicalParent(ES5));
   EXPECT_EQ(ES5, fsa.getLexicalParent(ES4));
@@ -84,10 +84,10 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   EXPECT_EQ(G, fsa.getLexicalParent(F1));
   EXPECT_EQ(G, fsa.getLexicalParent(F2));
   EXPECT_EQ(F1, fsa.getLexicalParent(F11));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScope()));
-  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan21->getFunctionScope()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScopeDesc()));
+  EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan21->getFunctionScopeDesc()));
 }
 
 } // end anonymous namespace
