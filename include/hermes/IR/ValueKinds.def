@@ -40,6 +40,7 @@ DEF_VALUE(LiteralBool, Literal)
 DEF_VALUE(GlobalObject, Literal)
 MARK_LAST(Literal)
 
+DEF_VALUE(ScopeDesc, Value)
 DEF_VALUE(EmptySentinel, Value)
 DEF_VALUE(Label, Value)
 DEF_VALUE(GlobalObjectProperty, Value)

@@ -143,7 +143,8 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   BFG->setHighestReadCacheIndex(255);
   BFG->setHighestWriteCacheIndex(255);
   BFG->bytecodeGenerationComplete();
-  auto F = Builder.createTopLevelFunction(true);
+  auto F = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   BMG.addFunction(F);
   BMG.setFunctionGenerator(F, std::move(BFG));
 

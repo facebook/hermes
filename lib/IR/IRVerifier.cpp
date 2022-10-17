@@ -88,6 +88,7 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   void beforeVisitInstruction(const Instruction &I);
 
   void visitModule(const Module &M);
+  void visitScope(const ScopeDesc &S);
   void visitFunction(const Function &F);
   void visitBasicBlock(const BasicBlock &BB);
 
@@ -129,7 +130,26 @@ class Verifier : public InstructionVisitor<Verifier, void> {
     }                                                               \
   } while (0)
 
+void Verifier::visitScope(const ScopeDesc &S) {
+  Assert(S.getParent(), "All scopes should have a parent");
+
+  const auto &parentsChildren = S.getParent()->getInnerScopes();
+  Assert(
+      std::find(parentsChildren.begin(), parentsChildren.end(), &S) !=
+          parentsChildren.end(),
+      "Scope is not in parent's inner scope list");
+
+  Assert(S.hasFunction(), "Scope is not bound to a function");
+  for (ScopeDesc *i : S.getInnerScopes()) {
+    visitScope(*i);
+  }
+}
+
 void Verifier::visitModule(const Module &M) {
+  for (ScopeDesc *S : M.getInitialScope()->getInnerScopes()) {
+    visitScope(*S);
+  }
+
   // Verify all functions are valid
   for (Module::const_iterator I = M.begin(); I != M.end(); I++) {
     Assert(I->getParent() == &M, "Function's parent does not match module");

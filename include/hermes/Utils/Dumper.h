@@ -46,6 +46,13 @@ struct InstructionNamer {
 
 using llvh::raw_ostream;
 
+// In order to prevent the need to update the lit tests with every IR change,
+// all scope-related dumping is gated behind this global variable, which allows
+// dumping to be enabled in a debugger if needed. This is also used as the
+// cl::location for the -bs flag, so specifying that flag in the command line
+// automatically enables the new dump format.
+inline bool enableNewDumpFormat = false;
+
 struct IRPrinter : public IRVisitor<IRPrinter, void> {
   /// Indentation level.
   unsigned Indent;
@@ -59,6 +66,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
 
   InstructionNamer InstNamer;
   InstructionNamer BBNamer;
+  InstructionNamer ScopeNamer;
 
   explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
       : Indent(0),
@@ -77,6 +85,19 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printSourceLocation(SMLoc loc);
   virtual void printSourceLocation(SMRange rng);
 
+  void printScope(ScopeDesc *S);
+  void printScopeChain(ScopeDesc *S);
+
+  /// Prints \p F's name in the following format:
+  ///
+  ///   name#a#b#c(params?)#d
+  ///
+  /// which means name is declared in scope "c"( which is an inner scope of "b",
+  /// itself an inner scope of "a"), and its "function" scope is "d". "params"
+  /// are omitted if \p printFunctionParams == PrintFunctionParams::No.
+  enum class PrintFunctionParams { No, Yes };
+  void printFunctionName(Function *F, PrintFunctionParams printFunctionParams);
+
   std::string getQuoteSign() {
     return needEscape ? R"(\")" : R"(")";
   }
@@ -91,6 +112,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   void visitInstruction(const Instruction &I);
   void visitBasicBlock(const BasicBlock &BB);
   void visitFunction(const Function &F);
+  void visitScope(const ScopeDesc &S);
   void visitModule(const Module &M);
 };
 

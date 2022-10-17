@@ -25,7 +25,10 @@ TEST(IRUtilsTest, Dominators1) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "testDominators1", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "testDominators1",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto Cond = Builder.createParameter(F, "cond");
   auto Arg2 = Builder.createParameter(F, "two");
   auto Arg3 = Builder.createParameter(F, "three");
@@ -61,7 +64,10 @@ TEST(IRUtilsTest, Dominators2) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "testDominators1", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "testDominators1",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto Param = Builder.createParameter(F, "param");
   auto Entry = Builder.createBasicBlock(F);
 

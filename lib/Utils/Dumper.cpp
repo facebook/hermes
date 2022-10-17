@@ -152,10 +152,11 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     auto Name = P->getName();
     os << "%" << ctx.toString(Name);
   } else if (auto F = dyn_cast<Function>(V)) {
-    os << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
+    os << "%";
+    printFunctionName(F, PrintFunctionParams::No);
   } else if (auto VS = dyn_cast<VariableScope>(V)) {
-    os << "%" << quoteStr(ctx.toString(VS->getFunction()->getInternalName()))
-       << "()";
+    os << "%";
+    printFunctionName(VS->getFunction(), PrintFunctionParams::No);
   } else if (auto VR = dyn_cast<Variable>(V)) {
     os << "[" << quoteStr(ctx.toString(VR->getName()));
     if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
@@ -172,21 +173,10 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
 }
 
 void IRPrinter::printFunctionHeader(Function *F) {
-  bool first = true;
-  auto &Ctx = F->getContext();
   std::string defKindStr = F->getDefinitionKindStr(false);
 
-  os << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
-     << "(";
-  for (auto P : F->getParameters()) {
-    if (!first) {
-      os << ", ";
-    }
-    os << Ctx.toString(P->getName());
-    printTypeLabel(P->getType());
-    first = false;
-  }
-  os << ")";
+  os << defKindStr << " ";
+  printFunctionName(F, PrintFunctionParams::Yes);
   printTypeLabel(F->getType());
 }
 
@@ -287,10 +277,55 @@ void IRPrinter::printSourceLocation(SMRange rng) {
      << ":" << end.col << ")";
 }
 
+void IRPrinter::printScope(ScopeDesc *S) {
+  if (enableNewDumpFormat) {
+    os << "#" << ScopeNamer.getNumber(S);
+  }
+}
+
+void IRPrinter::printScopeChain(ScopeDesc *S) {
+  if (S && S->getParent()) {
+    printScope(S->getParent());
+  }
+  printScope(S);
+}
+
+void IRPrinter::printFunctionName(
+    Function *F,
+    PrintFunctionParams printFunctionParams) {
+  auto &ctx = F->getContext();
+  os << quoteStr(ctx.toString(F->getInternalName()));
+  printScopeChain(F->getFunctionScopeDesc()->getParent());
+  os << "(";
+  if (printFunctionParams != PrintFunctionParams::No) {
+    bool first = true;
+    for (auto P : F->getParameters()) {
+      if (!first) {
+        os << ", ";
+      }
+      os << ctx.toString(P->getName());
+      printTypeLabel(P->getType());
+      first = false;
+    }
+  }
+  os << ")";
+  printScope(F->getFunctionScopeDesc());
+}
+
 void IRPrinter::visitModule(const Module &M) {
+  ScopeNamer.clear();
+  visitScope(*M.getInitialScope());
+
   // Use IRVisitor dispatch to visit each individual function.
   for (auto &F : M)
     visit(F);
+}
+
+void IRPrinter::visitScope(const ScopeDesc &S) {
+  ScopeNamer.getNumber(const_cast<ScopeDesc *>(&S));
+  for (ScopeDesc *inner : S.getInnerScopes()) {
+    visitScope(*inner);
+  }
 }
 
 void IRPrinter::visitFunction(const Function &F) {

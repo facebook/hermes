@@ -21,9 +21,12 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   Module M(Ctx);
   IRBuilder Builder(&M);
 
-  auto createFunction = [&](const char *name) {
+  auto createFunction = [&](ScopeDesc *parent, const char *name) {
     return Builder.createFunction(
-        name, Function::DefinitionKind::ES5Function, true);
+        parent->createInnerScope(),
+        name,
+        Function::DefinitionKind::ES5Function,
+        true);
   };
 
   auto addEdges = [&](Function *parent, auto... children) {
@@ -31,19 +34,20 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
     (Builder.createCreateFunctionInst(children), ...);
   };
 
-  auto ES5 = createFunction("es5");
-  auto ES4 = createFunction("es4");
-  auto ES3 = createFunction("es3");
-  auto ES2 = createFunction("es2");
-  auto ES1 = createFunction("es1");
-  auto G = Builder.createTopLevelFunction(true);
-  auto F1 = createFunction("f1");
-  auto F2 = createFunction("f2");
-  auto F11 = createFunction("f11");
-  auto orphan = createFunction("orphan");
-  auto orphan1 = createFunction("orphan1");
-  auto orphan2 = createFunction("orphan2");
-  auto orphan21 = createFunction("orphan21");
+  auto ES5 = createFunction(M.getInitialScope(), "es5");
+  auto ES4 = createFunction(ES5->getFunctionScopeDesc(), "es4");
+  auto ES3 = createFunction(ES4->getFunctionScopeDesc(), "es3");
+  auto ES2 = createFunction(ES3->getFunctionScopeDesc(), "es2");
+  auto ES1 = createFunction(ES2->getFunctionScopeDesc(), "es1");
+  auto G = Builder.createTopLevelFunction(
+      ES1->getFunctionScopeDesc()->createInnerScope(), true);
+  auto F1 = createFunction(G->getFunctionScopeDesc(), "f1");
+  auto F2 = createFunction(G->getFunctionScopeDesc(), "f2");
+  auto F11 = createFunction(F1->getFunctionScopeDesc(), "f11");
+  auto orphan = createFunction(M.getInitialScope(), "orphan");
+  auto orphan1 = createFunction(orphan->getFunctionScopeDesc(), "orphan1");
+  auto orphan2 = createFunction(orphan->getFunctionScopeDesc(), "orphan2");
+  auto orphan21 = createFunction(orphan2->getFunctionScopeDesc(), "orphan21");
   auto ES = Builder.createExternalScope(G, -5);
 
   addEdges(ES5, ES4);

@@ -155,6 +155,7 @@ ExternalScope::ExternalScope(Function *function, int32_t depth)
 Function::Function(
     ValueKind kind,
     Module *parent,
+    ScopeDesc *scopeDesc,
     Identifier originalName,
     DefinitionKind definitionKind,
     bool strictMode,
@@ -167,12 +168,14 @@ Function::Function(
       isGlobal_(isGlobal),
       externalScopes_(),
       functionScope_(this),
+      scopeDesc_(scopeDesc),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),
       strictMode_(strictMode),
       SourceRange(sourceRange),
       sourceVisibility_(sourceVisibility),
       internalName_(parent->deriveUniqueInternalName(originalName)) {
+  scopeDesc_->setFunction(this);
   if (insertBefore) {
     assert(insertBefore != this && "Cannot insert a function before itself!");
     assert(

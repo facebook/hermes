@@ -95,6 +95,9 @@ class FunctionContext {
   /// The old value which we save and will restore on destruction.
   FunctionContext *oldContext_;
 
+  /// The previous currentIRScopeDesc value.
+  ScopeDesc *oldIRScopeDesc_;
+
   /// As we descend into a new function, we save the state of the builder
   /// here. It is automatically restored once we are done with the function.
   IRBuilder::SaveRestore builderSaveState_;
@@ -366,6 +369,10 @@ class ESTreeIRGen {
   /// Identifier representing the string "?default".
   const Identifier identDefaultExport_;
 
+  /// The current scope descriptor available for IR generation. All new
+  /// functions created in this scope will define a new, inner scope.
+  ScopeDesc *currentIRScopeDesc_;
+
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
   Identifier genAnonymousLabelName(llvh::StringRef hint) {
@@ -405,6 +412,7 @@ class ESTreeIRGen {
   /// message.
   static Function *genSyntaxErrorFunction(
       Module *M,
+      ScopeDesc *scopeDesc,
       Identifier originalName,
       SMRange sourceRange,
       llvh::StringRef error);
@@ -1048,6 +1056,10 @@ class ESTreeIRGen {
   /// Recursively serialize scopes. The global scope is serialized
   /// if and only if it's the first scope and includeGlobal is true.
   SerializedScopePtr serializeScope(FunctionContext *ctx, bool includeGlobal);
+
+  ScopeDesc *newScopeDesc() {
+    return currentIRScopeDesc_->createInnerScope();
+  }
 };
 
 template <typename EB, typename EF, typename EH>

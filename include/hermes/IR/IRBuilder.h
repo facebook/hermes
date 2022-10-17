@@ -63,6 +63,7 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   Function *createFunction(
+      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -73,6 +74,7 @@ class IRBuilder {
 
   /// Create a new Function and add it to the Module.
   Function *createFunction(
+      ScopeDesc *scopeDesc,
       llvh::StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -86,6 +88,7 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   AsyncFunction *createAsyncFunction(
+      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -98,6 +101,7 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   GeneratorFunction *createGeneratorFunction(
+      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -110,6 +114,7 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   GeneratorInnerFunction *createGeneratorInnerFunction(
+      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -118,6 +123,7 @@ class IRBuilder {
 
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
+      ScopeDesc *scopeDesc,
       bool strictMode,
       SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{});

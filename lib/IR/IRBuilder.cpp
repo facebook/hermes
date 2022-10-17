@@ -20,6 +20,7 @@ BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
 }
 
 Function *IRBuilder::createFunction(
+    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -35,6 +36,7 @@ Function *IRBuilder::createFunction(
   }
   return new Function(
       M,
+      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
@@ -45,6 +47,7 @@ Function *IRBuilder::createFunction(
 }
 
 GeneratorFunction *IRBuilder::createGeneratorFunction(
+    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -58,6 +61,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
   }
   return new GeneratorFunction(
       M,
+      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
@@ -68,6 +72,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
 }
 
 GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
+    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -80,6 +85,7 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
   }
   return new GeneratorInnerFunction(
       M,
+      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
@@ -95,12 +101,14 @@ ExternalScope *IRBuilder::createExternalScope(
 }
 
 Function *IRBuilder::createTopLevelFunction(
+    ScopeDesc *scopeDesc,
     bool strictMode,
     SourceVisibility sourceVisibility,
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
   return createFunction(
+      scopeDesc,
       "global",
       Function::DefinitionKind::ES5Function,
       strictMode,
@@ -110,6 +118,7 @@ Function *IRBuilder::createTopLevelFunction(
 }
 
 Function *IRBuilder::createFunction(
+    ScopeDesc *scopeDesc,
     llvh::StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -120,6 +129,7 @@ Function *IRBuilder::createFunction(
   Identifier OrigIden =
       OriginalName.empty() ? Identifier{} : createIdentifier(OriginalName);
   return createFunction(
+      scopeDesc,
       OrigIden,
       definitionKind,
       strictMode,
@@ -130,6 +140,7 @@ Function *IRBuilder::createFunction(
 }
 
 AsyncFunction *IRBuilder::createAsyncFunction(
+    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -143,6 +154,7 @@ AsyncFunction *IRBuilder::createAsyncFunction(
   }
   return new AsyncFunction(
       M,
+      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,

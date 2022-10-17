@@ -69,6 +69,7 @@ using llvh::cl::desc;
 using llvh::cl::Hidden;
 using llvh::cl::init;
 using llvh::cl::list;
+using llvh::cl::location;
 using llvh::cl::opt;
 using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
@@ -275,6 +276,13 @@ static opt<bool> EagerCompilation(
     "eager",
     init(false),
     desc("Force fully eager compilation"),
+    cat(CompilerCategory));
+
+static opt<bool, true> EnableNewDumpFormat(
+    "enable-new-dump-format",
+    location(hermes::enableNewDumpFormat),
+    init(false),
+    desc("Enables the new compiler textual dump format"),
     cat(CompilerCategory));
 
 /// The following flags are exported so it may be used by the VM driver as well.

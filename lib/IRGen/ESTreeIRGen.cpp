@@ -67,6 +67,18 @@ bool isConstantExpr(ESTree::Node *node) {
   }
 }
 
+static ScopeDesc *createScopeDescForChain(
+    const SerializedScope *chain,
+    Module *M) {
+  ScopeDesc *scope = M->getInitialScope();
+
+  while (chain && chain->parentScope) {
+    scope = scope->createInnerScope();
+    chain = chain->parentScope.get();
+  }
+  return scope;
+}
+
 /// Adds the \p parent -> \p child link in the nesting graph.
 static void
 buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
@@ -109,7 +121,12 @@ class ScopeChainMaterializer {
   /// topFunction_, which is assumed to be installed as the current IRGen
   /// FunctionContext.
   void materializeScopesForEval() {
-    materializeScopesInChain(MaterializeForEval::Yes, topFunction_, chain_, -1);
+    materializeScopesInChain(
+        MaterializeForEval::Yes,
+        topFunction_,
+        topFunction_->getFunctionScopeDesc(),
+        chain_,
+        -1);
   }
 
   /// Materializes scope_ for usage in lazy compilation. The materialized
@@ -126,7 +143,12 @@ class ScopeChainMaterializer {
   /// All variables in scopes < 1 are added to ExternalScopes, as well as their
   /// respective functions, to preserve current functionality.
   void materializeScopesForLazyFunction() {
-    materializeScopesInChain(MaterializeForEval::No, topFunction_, chain_, 0);
+    materializeScopesInChain(
+        MaterializeForEval::No,
+        topFunction_,
+        topFunction_->getFunctionScopeDesc(),
+        chain_,
+        0);
   }
 
  private:
@@ -134,27 +156,40 @@ class ScopeChainMaterializer {
   void materializeScopesInChain(
       MaterializeForEval materializeForEval,
       Function *current,
+      ScopeDesc *scopeDesc,
       const SerializedScopePtr &scope,
       int depth) {
-    if (!scope)
+    if (!scope) {
+      assert(!scopeDesc && "Too many scopeDescs for chain");
       return;
+    }
     assert(depth > -1000 && "Excessive scope depth");
 
     Function *parent = current;
-    if (scope->parentScope && materializeForEval != MaterializeForEval::Yes) {
-      parent = builder_.createFunction(
-          scope->originalName,
-          Function::DefinitionKind::ES5Function,
-          false,
-          SourceVisibility::Sensitive,
-          {},
-          false);
-      buildDummyLexicalParent(builder_, parent, current);
+    if (scope->parentScope) {
+      if (materializeForEval == MaterializeForEval::Yes) {
+        scopeDesc->getParent()->setFunction(current);
+      } else {
+        assert(scopeDesc->getParent() && "Too few scopeDescs for chain");
+        parent = builder_.createFunction(
+            scopeDesc->getParent(),
+            scope->originalName,
+            Function::DefinitionKind::ES5Function,
+            false,
+            SourceVisibility::Sensitive,
+            {},
+            false);
+        buildDummyLexicalParent(builder_, parent, current);
+      }
     }
 
     // First materialize parent scopes.
     materializeScopesInChain(
-        materializeForEval, parent, scope->parentScope, depth - 1);
+        materializeForEval,
+        parent,
+        scopeDesc->getParent(),
+        scope->parentScope,
+        depth - 1);
 
     // If scope->closureAlias is specified, we must create an alias binding
     // between originalName (which must be valid) and the variable identified by
@@ -300,6 +335,7 @@ void ESTreeIRGen::doIt() {
 
   if (!lexicalScopeChain) {
     topLevelFunction = Builder.createTopLevelFunction(
+        Mod->getInitialScope()->createInnerScope(),
         ESTree::isStrict(Program->strictness),
         Program->sourceVisibility,
         Program->getSourceRange());
@@ -308,7 +344,11 @@ void ESTreeIRGen::doIt() {
     // If compiling in an existing lexical context, we need to install the
     // scopes in a wrapper function, which represents the "global" code.
 
+    ScopeDesc *wrapperFunctionScope =
+        createScopeDescForChain(lexicalScopeChain.get(), Mod);
+
     Function *wrapperFunction = Builder.createFunction(
+        wrapperFunctionScope,
         "",
         Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
@@ -326,6 +366,7 @@ void ESTreeIRGen::doIt() {
 
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
+        wrapperFunctionScope->createInnerScope(),
         "eval",
         Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
@@ -415,10 +456,15 @@ void ESTreeIRGen::doCJSModule(
 
 std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
     hbc::LazyCompilationData *lazyData) {
+  lexicalScopeChain = lazyData->parentScope;
+  ScopeDesc *topLevelScope =
+      createScopeDescForChain(lexicalScopeChain.get(), Mod);
+
   // Create a top level function that will never be executed, because:
   // 1. IRGen assumes the first function always has global scope
   // 2. It serves as the root for dummy functions for lexical data
-  Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode);
+  Function *topLevel =
+      Builder.createTopLevelFunction(topLevelScope, lazyData->strictMode);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
 
@@ -436,7 +482,6 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
   // Instruction selection determines the delta between the ExternalScope
   // and the dummy function chain, so we add the ExternalScopes with
   // positive depth.
-  lexicalScopeChain = lazyData->parentScope;
   ScopeChainMaterializer scm(Builder, nameTable_, topLevel, lexicalScopeChain);
   scm.materializeScopesForLazyFunction();
 

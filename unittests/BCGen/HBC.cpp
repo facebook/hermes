@@ -85,14 +85,18 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   BMG.initializeStringTable(stringsForTest({"f1"}));
   BMG.addFilename("main.js");
 
-  Function *globalFunction = Builder.createTopLevelFunction({});
+  Function *globalFunction = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), {});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
   BFG1->emitMov(1, 2);
   BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
   BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
 
-  Function *f1 =
-      Builder.createFunction("f1", Function::DefinitionKind::ES5Function, true);
+  Function *f1 = Builder.createFunction(
+      M.getInitialScope()->createInnerScope(),
+      "f1",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BFG2 = BytecodeFunctionGenerator::create(BMG, 10);
   BFG2->setSourceLocation(DebugSourceLocation(0, 0, 1, 1, 0));
   const DebugSourceLocation debugSourceLoc(0, 1, 20, 300, 0);
@@ -158,7 +162,8 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest());
 
-  Function *globalFunction = Builder.createTopLevelFunction({});
+  Function *globalFunction = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), {});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
   BFG1->addDebugSourceLocation(DebugSourceLocation{0, 1, 20, 300, 0});
   BFG1->emitMov(1, 2);
@@ -206,7 +211,8 @@ TEST(HBCBytecodeGen, StringTableTest) {
   BMG.initializeStringTable(
       stringsForTest({"foo", "bar", /* Ā */ "\xc4\x80", /* å */ "\xc3\xa5"}));
 
-  Function *F = Builder.createTopLevelFunction(true);
+  Function *F = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 2);
   auto fooIdx1 = BFG->getStringID(Builder.getLiteralString("foo"));
   auto barIdx1 = BFG->getStringID(Builder.getLiteralString("bar"));
@@ -281,7 +287,8 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest());
 
-  Function *F = Builder.createTopLevelFunction(true);
+  Function *F = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
   BFG->emitMov(1, 2);
   BFG->addExceptionHandler(HBCExceptionHandlerInfo{0, 10, 100});
@@ -323,7 +330,8 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   BytecodeModuleGenerator BMG;
   BMG.initializeStringTable(stringsForTest({"abc"}));
 
-  Function *F = Builder.createTopLevelFunction(true);
+  Function *F = Builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
   BFG->emitMov(1, 2);
   std::vector<Literal *> arr1{
@@ -358,7 +366,8 @@ TEST(SpillRegisterTest, SpillsParameters) {
   Module M(Ctx);
   IRBuilder builder(&M);
 
-  auto *F = builder.createTopLevelFunction(true);
+  auto *F = builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   auto *BB = builder.createBasicBlock(F);
   builder.setInsertionBlock(BB);
   auto *undef = builder.getLiteralUndefined();
@@ -398,7 +407,8 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   Module M(Ctx);
   IRBuilder builder(&M);
 
-  auto *F = builder.createTopLevelFunction(true);
+  auto *F = builder.createTopLevelFunction(
+      M.getInitialScope()->createInnerScope(), true);
   auto *BB = builder.createBasicBlock(F);
   builder.setInsertionBlock(BB);
 

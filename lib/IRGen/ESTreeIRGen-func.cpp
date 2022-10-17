@@ -22,11 +22,13 @@ FunctionContext::FunctionContext(
     : irGen_(irGen),
       semInfo_(semInfo),
       oldContext_(irGen->functionContext_),
+      oldIRScopeDesc_(irGen->currentIRScopeDesc_),
       builderSaveState_(irGen->Builder),
       function(function),
       scope(irGen->nameTable_),
       anonymousIDs_(function->getContext().getStringTable()) {
   irGen->functionContext_ = this;
+  irGen->currentIRScopeDesc_ = function->getFunctionScopeDesc();
 
   // Initialize it to LiteralUndefined by default to avoid corner cases.
   this->capturedNewTarget = irGen->Builder.getLiteralUndefined();
@@ -41,6 +43,7 @@ FunctionContext::FunctionContext(
 }
 
 FunctionContext::~FunctionContext() {
+  irGen_->currentIRScopeDesc_ = oldIRScopeDesc_;
   irGen_->functionContext_ = oldContext_;
 }
 
@@ -142,6 +145,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   }
 
   auto *newFunc = Builder.createFunction(
+      newScopeDesc(),
       nameHint,
       Function::DefinitionKind::ES6Arrow,
       ESTree::isStrict(AF->strictness),
@@ -194,12 +198,14 @@ Function *ESTreeIRGen::genES5Function(
 
   Function *newFunction = isGeneratorInnerFunction
       ? Builder.createGeneratorInnerFunction(
+            newScopeDesc(),
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr)
       : Builder.createFunction(
+            newScopeDesc(),
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
@@ -297,6 +303,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
   // Build the outer function which creates the generator.
   // Does not have an associated source range.
   auto *outerFn = Builder.createGeneratorFunction(
+      newScopeDesc(),
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
@@ -380,6 +387,7 @@ Function *ESTreeIRGen::genAsyncFunction(
   }
 
   auto *asyncFn = Builder.createAsyncFunction(
+      newScopeDesc(),
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
@@ -635,12 +643,14 @@ void ESTreeIRGen::genDummyFunction(Function *dummy) {
 /// message.
 Function *ESTreeIRGen::genSyntaxErrorFunction(
     Module *M,
+    ScopeDesc *scopeDesc,
     Identifier originalName,
     SMRange sourceRange,
     llvh::StringRef error) {
   IRBuilder builder{M};
 
   Function *function = builder.createFunction(
+      scopeDesc,
       originalName,
       Function::DefinitionKind::ES5Function,
       true,

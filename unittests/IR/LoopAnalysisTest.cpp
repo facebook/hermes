@@ -35,7 +35,10 @@ TEST(IRVerifierTest, LoopAnalysisTestSimple) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop = Builder.createBasicBlock(F);
   auto BBReturn = Builder.createBasicBlock(F);
@@ -88,7 +91,10 @@ TEST(IRVerifierTest, LoopAnalysisTestBranch) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBFirstIfT = Builder.createBasicBlock(F);
   auto BBFirstIfF = Builder.createBasicBlock(F);
@@ -173,7 +179,10 @@ TEST(IRVerifierTest, LoopAnalysisTestInnerLoops) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop1 = Builder.createBasicBlock(F);
   auto BBInside = Builder.createBasicBlock(F);
@@ -224,7 +233,10 @@ TEST(IRVerifierTest, LoopAnalysisTestCompleteGraph) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -290,7 +302,10 @@ TEST(IRVerifierTest, LoopAnalysisTestTwoInARow) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop1 = Builder.createBasicBlock(F);
   auto BBInner1 = Builder.createBasicBlock(F);
@@ -373,7 +388,10 @@ TEST(IRVerifierTest, LoopAnalysisTestInterleaving) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -437,7 +455,10 @@ TEST(IRVerifierTest, LoopAnalysisTestExitFromHeader) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBHeader = Builder.createBasicBlock(F);
   auto BBLoop = Builder.createBasicBlock(F);
@@ -491,7 +512,10 @@ TEST(IRVerifierTest, LoopAnalysisTestNoUniqueHeader) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -552,7 +576,10 @@ TEST(IRVerifierTest, LoopAnalysisTestNoUniquePreheader) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -616,7 +643,10 @@ TEST(IRVerifierTest, LoopAnalysisTestFinishingTime) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -677,7 +707,10 @@ TEST(IRVerifierTest, LoopAnalysisTestDirectlyIntoInner) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "main", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "main",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);

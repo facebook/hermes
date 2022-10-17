@@ -28,7 +28,10 @@ TEST(IRVerifierTest, BasicBlockTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "forEach", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "forEach",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto Arg1 = Builder.createParameter(F, "num");
   auto Arg2 = Builder.createParameter(F, "value");
 
@@ -65,7 +68,10 @@ TEST(IRVerifierTest, ReturnInstTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "testReturn", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "testReturn",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto Arg1 = Builder.createParameter(F, "num");
   Arg1->setType(Type::createNumber());
 
@@ -88,7 +94,10 @@ TEST(IRVerifierTest, BranchInstTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "testBranch", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "testBranch",
+      Function::DefinitionKind::ES5Function,
+      true);
 
   auto BB1 = Builder.createBasicBlock(F);
   auto BB2 = Builder.createBasicBlock(F);
@@ -113,7 +122,10 @@ TEST(IRVerifierTest, DominanceTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      "testBranch", Function::DefinitionKind::ES5Function, true);
+      M.getInitialScope()->createInnerScope(),
+      "testBranch",
+      Function::DefinitionKind::ES5Function,
+      true);
   auto Arg1 = Builder.createParameter(F, "num");
 
   auto Body = Builder.createBasicBlock(F);

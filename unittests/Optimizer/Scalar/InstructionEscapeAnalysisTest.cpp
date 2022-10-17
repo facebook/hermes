@@ -41,6 +41,7 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
         module_(context_),
         builder_(&module_),
         function_(builder_.createFunction(
+            module_.getInitialScope()->createInnerScope(),
             "main",
             Function::DefinitionKind::ES5Function,
             true)),
