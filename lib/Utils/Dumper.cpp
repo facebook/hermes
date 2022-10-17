@@ -247,6 +247,10 @@ void IRPrinter::printInstruction(Instruction *I) {
       if (llvh::isa<HBCCreateEnvironmentInst>(I) && i == 0) {
         continue;
       }
+      if (llvh::isa<HBCResolveEnvironment>(I) &&
+          i == HBCResolveEnvironment::OriginScopeDescIdx) {
+        continue;
+      }
     }
     os << (first ? " " : ", ");
     printValueLabel(I, I->getOperand(i), i);

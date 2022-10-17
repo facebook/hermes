@@ -475,7 +475,9 @@ class IRBuilder {
   //                  Target specific insertions                              //
   //--------------------------------------------------------------------------//
 
-  HBCResolveEnvironment *createHBCResolveEnvironment(ScopeDesc *scope);
+  HBCResolveEnvironment *createHBCResolveEnvironment(
+      ScopeDesc *originScopeDesc,
+      ScopeDesc *targetScopeDesc);
   HBCStoreToEnvironmentInst *
   createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);
   HBCLoadFromEnvironmentInst *createHBCLoadFromEnvironmentInst(

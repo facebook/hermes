@@ -2385,12 +2385,23 @@ class HBCResolveEnvironment : public ScopeCreationInst {
   void operator=(const HBCResolveEnvironment &) = delete;
 
  public:
-  explicit HBCResolveEnvironment(ScopeDesc *scope)
-      : ScopeCreationInst(ValueKind::HBCResolveEnvironmentKind, scope) {}
+  enum { OriginScopeDescIdx = FirstAvailableIdx };
+  explicit HBCResolveEnvironment(
+      ScopeDesc *srcScopeDesc,
+      ScopeDesc *targetScopeDesc)
+      : ScopeCreationInst(
+            ValueKind::HBCResolveEnvironmentKind,
+            targetScopeDesc) {
+    pushOperand<OriginScopeDescIdx>(srcScopeDesc);
+  }
   explicit HBCResolveEnvironment(
       const HBCResolveEnvironment *src,
       llvh::ArrayRef<Value *> operands)
       : ScopeCreationInst(src, operands) {}
+
+  ScopeDesc *getOriginScopeDesc() const {
+    return cast<ScopeDesc>(getOperand(OriginScopeDescIdx));
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
