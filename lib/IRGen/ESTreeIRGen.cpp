@@ -176,14 +176,18 @@ class ScopeChainMaterializer {
       nameTable_.insert(scope->originalName, closureVar);
     }
 
-    // Create an external scope.
-    ExternalScope *ES = builder_.createExternalScope(current, depth);
-    for (const auto &var : scope->variables) {
-      auto *variable = builder_.createVariable(ES, var.declKind, var.name);
-      nameTable_.insert(var.name, variable);
-      if (materializeForEval != MaterializeForEval::Yes) {
-        builder_.createVariable(
+    if (materializeForEval != MaterializeForEval::Yes) {
+      for (const auto &var : scope->variables) {
+        auto *variable = builder_.createVariable(
             current->getFunctionScope(), var.declKind, var.name);
+        nameTable_.insert(var.name, variable);
+      }
+    } else {
+      // Create an external scope.
+      ExternalScope *ES = builder_.createExternalScope(current, depth);
+      for (const auto &var : scope->variables) {
+        auto *variable = builder_.createVariable(ES, var.declKind, var.name);
+        nameTable_.insert(var.name, variable);
       }
     }
   }
@@ -315,9 +319,6 @@ void ESTreeIRGen::doIt() {
     // Initialize the wrapper context.
     wrapperFunctionContext.emplace(this, wrapperFunction, nullptr);
 
-    // Populate it with dummy code so it doesn't crash the back-end.
-    genDummyFunction(wrapperFunction);
-
     // Restore the previously saved parent scopes.
     ScopeChainMaterializer scm(
         Builder, nameTable_, wrapperFunction, lexicalScopeChain);
@@ -331,6 +332,8 @@ void ESTreeIRGen::doIt() {
         Program->sourceVisibility,
         Program->getSourceRange(),
         false);
+
+    buildDummyLexicalParent(Builder, wrapperFunction, topLevelFunction);
   }
 
   Mod->setTopLevelFunction(topLevelFunction);

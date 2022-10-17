@@ -159,13 +159,19 @@ class FunctionScopeAnalysis {
   using LexicalScopeMap = llvh::DenseMap<const Function *, ScopeData>;
   LexicalScopeMap lexicalScopeMap_{};
 
-  /// Recursively calculate the scope data of a function \p F.
+  /// Recursively calculate the scope data of a function \p F. \p depth is
+  /// specified during analysis initialization so scopes before the top level
+  /// can be initialized.
   /// \return the ScopeData of the function.
-  ScopeData calculateFunctionScopeData(Function *F);
+  ScopeData calculateFunctionScopeData(
+      Function *F,
+      llvh::Optional<int> depth = llvh::None);
 
  public:
-  explicit FunctionScopeAnalysis(const Function *entryPoint) {
-    lexicalScopeMap_[entryPoint] = ScopeData(nullptr, 0);
+  explicit FunctionScopeAnalysis(Function *entryPoint) {
+    ScopeData data = calculateFunctionScopeData(entryPoint, 0);
+    assert(!data.orphaned && data.depth == 0);
+    (void)data;
   }
 
   /// Lazily get the scope depth of \p VS.
