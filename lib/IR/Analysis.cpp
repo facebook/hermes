@@ -266,11 +266,75 @@ FunctionScopeAnalysis::calculateFunctionScopeData(
   return lexicalScopeMap_[F];
 }
 
+Function *FunctionScopeAnalysis::computeParent(
+    ScopeDesc *thisScope,
+    ScopeDesc *parentScope,
+    const ScopeData &sd) {
+  return (parentScope->hasFunction() &&
+          parentScope->getFunction() != thisScope->getFunction())
+      ? parentScope->getFunction()
+      : sd.parent;
+}
+
+FunctionScopeAnalysis::ScopeData
+FunctionScopeAnalysis::calculateFunctionScopeData(
+    ScopeDesc *scopeDesc,
+    llvh::Optional<int> depth) {
+  auto entry = lexicalScopeDescMap_.find(scopeDesc);
+  if (entry != lexicalScopeDescMap_.end()) {
+    return entry->second;
+  }
+
+  if (!scopeDesc->hasFunction()) {
+    // The only scope that doesn't have a function is the Module's initial
+    // scope.
+    assert(scopeDesc->getParent() == nullptr);
+  } else {
+    // If the function is a CommonJS module,
+    // then it won't have a CreateFunctionInst, so calculate the depth manually.
+    Function *F = scopeDesc->getFunction();
+    Module *module = F->getParent();
+    if (module->findCJSModule(F)) {
+      return ScopeData{module->getTopLevelFunction(), 1, false};
+    }
+  }
+
+  ScopeData ret = ScopeData::orphan();
+  if (ScopeDesc *parentScope = scopeDesc->getParent()) {
+    ScopeData parentData =
+        calculateFunctionScopeData(parentScope, nextScopeDepth(depth));
+    if (!parentData.orphaned && (parentData.depth >= 0 || depth)) {
+      assert(!depth || (depth == parentData.depth));
+      ret = ScopeData(
+          computeParent(scopeDesc, parentScope, parentData),
+          parentData.depth + 1);
+    }
+  } else if (depth) {
+    ret = ScopeData(nullptr, *depth);
+  }
+
+  LLVM_DEBUG({
+    if (ret.orphaned) {
+      dbgs() << "Orphaned scope in function \""
+             << scopeDesc->getFunction()->getInternalNameStr() << "\"\n";
+    }
+  });
+
+  lexicalScopeDescMap_[scopeDesc] = ret;
+  return ret;
+}
+
 Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
+  ScopeData fromScope = calculateFunctionScopeData(VS->getScopeDesc());
+  (void)fromScope;
   if (ExternalScope *ES = llvh::dyn_cast<ExternalScope>(VS)) {
+    assert(!fromScope.orphaned && ES->getDepth() == fromScope.depth);
     return ES->getDepth();
   } else {
     ScopeData sd = calculateFunctionScopeData(VS->getFunction());
+    assert(sd.orphaned == fromScope.orphaned);
+    assert(sd.parent == fromScope.parent);
+    assert(sd.depth == fromScope.depth);
     if (sd.orphaned)
       return llvh::None;
     return sd.depth;
@@ -278,7 +342,12 @@ Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(VariableScope *VS) {
 }
 
 Function *FunctionScopeAnalysis::getLexicalParent(Function *F) {
-  return calculateFunctionScopeData(F).parent;
+  Function *fromScope =
+      calculateFunctionScopeData(F->getFunctionScopeDesc()).parent;
+  (void)fromScope;
+  Function *ret = calculateFunctionScopeData(F).parent;
+  assert(fromScope == ret);
+  return ret;
 }
 
 #undef DEBUG_TYPE

@@ -48,9 +48,6 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   auto orphan1 = createFunction(orphan->getFunctionScopeDesc(), "orphan1");
   auto orphan2 = createFunction(orphan->getFunctionScopeDesc(), "orphan2");
   auto orphan21 = createFunction(orphan2->getFunctionScopeDesc(), "orphan21");
-  auto scopeES = G->getFunctionScopeDesc()->createInnerScope();
-  scopeES->setFunction(G);
-  auto ES = Builder.createExternalScope(G, scopeES, -5);
 
   addEdges(ES5, ES4);
   addEdges(ES4, ES3);
@@ -73,7 +70,6 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   EXPECT_EQ(1, fsa.getScopeDepth(F1->getFunctionScope()));
   EXPECT_EQ(1, fsa.getScopeDepth(F2->getFunctionScope()));
   EXPECT_EQ(2, fsa.getScopeDepth(F11->getFunctionScope()));
-  EXPECT_EQ(-5, fsa.getScopeDepth(ES));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan->getFunctionScope()));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan1->getFunctionScope()));
   EXPECT_EQ(llvh::None, fsa.getScopeDepth(orphan2->getFunctionScope()));

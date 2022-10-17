@@ -159,6 +159,9 @@ class FunctionScopeAnalysis {
   using LexicalScopeMap = llvh::DenseMap<const Function *, ScopeData>;
   LexicalScopeMap lexicalScopeMap_{};
 
+  using LexicalScopeDescMap = llvh::DenseMap<const ScopeDesc *, ScopeData>;
+  LexicalScopeDescMap lexicalScopeDescMap_{};
+
   /// Recursively calculate the scope data of a function \p F. \p depth is
   /// specified during analysis initialization so scopes before the top level
   /// can be initialized.
@@ -167,9 +170,25 @@ class FunctionScopeAnalysis {
       Function *F,
       llvh::Optional<int> depth = llvh::None);
 
+  /// Recursively calculate the scope data of \p scopeDesc. \p depth is
+  /// specified during analysis initialization so scopes before the top level
+  /// can be initialized.
+  /// \return the ScopeData of the function.
+  ScopeData calculateFunctionScopeData(
+      ScopeDesc *scopeDesc,
+      llvh::Optional<int> depth = llvh::None);
+
+  static Function *computeParent(
+      ScopeDesc *thisScope,
+      ScopeDesc *parentScope,
+      const ScopeData &sd);
+
  public:
   explicit FunctionScopeAnalysis(Function *entryPoint) {
     ScopeData data = calculateFunctionScopeData(entryPoint, 0);
+    assert(!data.orphaned && data.depth == 0);
+    (void)data;
+    data = calculateFunctionScopeData(entryPoint->getFunctionScopeDesc(), 0);
     assert(!data.orphaned && data.depth == 0);
     (void)data;
   }
@@ -185,9 +204,9 @@ class FunctionScopeAnalysis {
 /// based on a DFS visit of a dominator tree.
 namespace DomTreeDFS {
 
-/// StackNode - contains all the needed information to create a stack for doing
-/// a depth first traversal of the tree. This includes scopes for values and
-/// loads as well as the generation. There is a child iterator so that the
+/// StackNode - contains all the needed information to create a stack for
+/// doing a depth first traversal of the tree. This includes scopes for values
+/// and loads as well as the generation. There is a child iterator so that the
 /// children do not need to be stored separately.
 template <typename Visitor>
 class StackNode {
