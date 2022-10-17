@@ -143,18 +143,25 @@ bool Value::hasUser(Value *other) {
   return std::find(Users.begin(), Users.end(), other) != Users.end();
 }
 
-bool VariableScope::isGlobalScope() const {
-  return function_->isGlobalScope() && function_->getFunctionScope() == this;
+ScopeDesc::~ScopeDesc() {
+  for (ScopeDesc *inner : innerScopes_) {
+    Value::destroy(inner);
+  }
+
+  // Free all variables.
+  for (auto *v : variables_) {
+    Value::destroy(v);
+  }
 }
 
-ExternalScope::ExternalScope(
-    Function *function,
-    ScopeDesc *scopeDesc,
-    int32_t depth)
-    : VariableScope(ValueKind::ExternalScopeKind, function, scopeDesc),
-      depth_(depth) {
-  assert(function == scopeDesc->getFunction() && "Function mismatch");
-  function->addExternalScope(this);
+bool ScopeDesc::isGlobalScope() const {
+  return function_->isGlobalScope() &&
+      function_->getFunctionScopeDesc() == this;
+}
+
+ExternalScope::ExternalScope(ScopeDesc *scopeDesc, int32_t depth)
+    : VariableScope(ValueKind::ExternalScopeKind, scopeDesc), depth_(depth) {
+  scopeDesc->getFunction()->addExternalScope(this);
 }
 
 Function::Function(
@@ -172,7 +179,7 @@ Function::Function(
       parent_(parent),
       isGlobal_(isGlobal),
       externalScopes_(),
-      functionScope_(this, scopeDesc),
+      functionScope_(scopeDesc),
       scopeDesc_(scopeDesc),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),

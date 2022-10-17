@@ -95,10 +95,9 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
 }
 
 ExternalScope *IRBuilder::createExternalScope(
-    Function *function,
     ScopeDesc *scopeDesc,
     int32_t depth) {
-  return new ExternalScope(function, scopeDesc, depth);
+  return new ExternalScope(scopeDesc, depth);
 }
 
 Function *IRBuilder::createTopLevelFunction(

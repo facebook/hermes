@@ -129,8 +129,7 @@ class IRBuilder {
       SMRange sourceRange = SMRange{});
 
   /// Create a new ExternalScope with the given depth, which must be negative.
-  ExternalScope *
-  createExternalScope(Function *function, ScopeDesc *scopeDesc, int32_t depth);
+  ExternalScope *createExternalScope(ScopeDesc *scopeDesc, int32_t depth);
 
   /// Create a new global object property.
   GlobalObjectProperty *createGlobalObjectProperty(

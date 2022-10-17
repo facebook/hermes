@@ -223,7 +223,7 @@ class ScopeChainMaterializer {
       // FunctionScope already being bound to topFunction_'s scopeDesc.
       VariableScope *ES = depth == -1
           ? current->getFunctionScope()
-          : builder_.createExternalScope(current, scopeDesc, depth);
+          : builder_.createExternalScope(scopeDesc, depth);
       for (const auto &var : scope->variables) {
         auto *variable = builder_.createVariable(ES, var.declKind, var.name);
         nameTable_.insert(var.name, variable);

@@ -46,6 +46,7 @@ class Instruction;
 class Context;
 class TerminatorInst;
 class ScopeDesc;
+class Variable;
 
 /// This is an instance of a JavaScript type.
 class Type {
@@ -559,15 +560,12 @@ class Value {
 class ScopeDesc : public Value {
   friend class Module;
   friend class Value;
+  using VariableListType = llvh::SmallVector<Variable *, 8>;
 
   ScopeDesc(const ScopeDesc &) = delete;
   ScopeDesc &operator=(const ScopeDesc &) = delete;
 
-  ~ScopeDesc() {
-    for (ScopeDesc *inner : innerScopes_) {
-      Value::destroy(inner);
-    }
-  }
+  ~ScopeDesc();
 
   explicit ScopeDesc(ScopeDesc *p)
       : Value(ValueKind::ScopeDescKind), parent_(p) {}
@@ -591,6 +589,21 @@ class ScopeDesc : public Value {
   const ScopeListTy &getInnerScopes() const {
     return innerScopes_;
   }
+
+  VariableListType &getMutableVariables() {
+    return variables_;
+  }
+
+  const VariableListType &getVariables() const {
+    return variables_;
+  }
+
+  void addVariable(Variable *V) {
+    variables_.emplace_back(V);
+  }
+
+  /// Return true if this is the global function scope.
+  bool isGlobalScope() const;
 
   bool hasFunction() const {
     return function_;
@@ -626,6 +639,8 @@ class ScopeDesc : public Value {
 
   Function *function_{};
   VariableScope *variableScope_{};
+
+  VariableListType variables_;
 };
 
 /// This represents a function parameter.
@@ -1372,30 +1387,24 @@ class VariableScope : public Value {
 
   friend class Function;
 
-  /// The function where the scope is declared.
-  Function *function_;
-
   /// The ScopeDesc that backs this VariableScope.
   ScopeDesc *scopeDesc_;
-
-  /// The variables associated with this scope.
-  VariableListType variables_;
 
  protected:
   /// VariableScope is abstract and should not be constructed directly. Use a
   /// subclass such as Function.
-  VariableScope(ValueKind kind, Function *function, ScopeDesc *scopeDesc)
-      : Value(kind), function_(function), scopeDesc_(scopeDesc) {
+  VariableScope(ValueKind kind, ScopeDesc *scopeDesc)
+      : Value(kind), scopeDesc_(scopeDesc) {
     scopeDesc_->setVariableScope(this);
   }
 
-  VariableScope(Function *function, ScopeDesc *scopeDesc)
-      : VariableScope(ValueKind::VariableScopeKind, function, scopeDesc) {}
+  VariableScope(ScopeDesc *scopeDesc)
+      : VariableScope(ValueKind::VariableScopeKind, scopeDesc) {}
 
  public:
   /// \return the function where the scope is declared.
   Function *getFunction() const {
-    return function_;
+    return getScopeDesc()->getFunction();
   }
 
   /// \return the ScopeDesc that backs this VariableScope.
@@ -1404,23 +1413,22 @@ class VariableScope : public Value {
   }
 
   /// Return true if this is the global function scope.
-  bool isGlobalScope() const;
+  bool isGlobalScope() const {
+    return getScopeDesc()->isGlobalScope();
+  }
+
+  VariableListType &getVariables() {
+    return getScopeDesc()->getMutableVariables();
+  }
 
   /// \returns a list of variables.
-  VariableListType &getVariables() {
-    return variables_;
+  const VariableListType &getVariables() const {
+    return getScopeDesc()->getVariables();
   }
 
   /// Add a variable \p V to the variable list.
   void addVariable(Variable *V) {
-    variables_.push_back(V);
-  }
-
-  ~VariableScope() {
-    // Free all variables.
-    for (auto *v : variables_) {
-      Value::destroy(v);
-    }
+    getScopeDesc()->addVariable(V);
   }
 
   static bool classof(const Value *V) {
@@ -1442,7 +1450,7 @@ class ExternalScope : public VariableScope {
   const int32_t depth_ = 0;
 
  public:
-  ExternalScope(Function *function, ScopeDesc *scopeDesc, int32_t depth);
+  ExternalScope(ScopeDesc *scopeDesc, int32_t depth);
 
   /// \return the scope depth
   int32_t getDepth() const {
