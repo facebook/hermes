@@ -82,7 +82,7 @@ void ESTreeIRGen::genFunctionDeclaration(
                          : genES5Function(functionName, nullptr, func);
 
   // Store the newly created closure into a frame variable with the same name.
-  auto *newClosure = Builder.createCreateFunctionInst(newFunc);
+  auto *newClosure = Builder.createCreateFunctionInst(newFunc, currentIRScope_);
 
   emitStore(newClosure, funcStorage, true);
 }
@@ -128,7 +128,7 @@ Value *ESTreeIRGen::genFunctionExpression(
       ? genGeneratorFunction(originalNameIden, tempClosureVar, FE)
       : genES5Function(originalNameIden, tempClosureVar, FE);
 
-  Value *closure = Builder.createCreateFunctionInst(newFunc);
+  Value *closure = Builder.createCreateFunctionInst(newFunc, currentIRScope_);
 
   if (tempClosureVar)
     emitStore(closure, tempClosureVar, true);
@@ -178,7 +178,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   }
 
   // Emit CreateFunctionInst after we have restored the builder state.
-  return Builder.createCreateFunctionInst(newFunc);
+  return Builder.createCreateFunctionInst(newFunc, currentIRScope_);
 }
 
 namespace {
@@ -344,7 +344,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
         DoEmitParameters::No);
 
     // Create a generator function, which will store the arguments.
-    auto *gen = Builder.createCreateGeneratorInst(innerFn);
+    auto *gen = Builder.createCreateGeneratorInst(innerFn, currentIRScope_);
 
     if (!hasSimpleParams(functionNode)) {
       // If there are non-simple params, step the inner function once to
@@ -434,7 +434,7 @@ Function *ESTreeIRGen::genAsyncFunction(
         InitES5CaptureState::Yes,
         DoEmitParameters::No);
 
-    auto *genClosure = Builder.createCreateFunctionInst(gen);
+    auto *genClosure = Builder.createCreateFunctionInst(gen, currentIRScope_);
     auto *thisArg = curFunction()->function->getThisParameter();
     auto *argumentsList = curFunction()->createArgumentsInst;
 
@@ -676,6 +676,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
   builder.createParameter(function, "this");
   BasicBlock *firstBlock = builder.createBasicBlock(function);
   builder.setInsertionBlock(firstBlock);
+  builder.createCreateScopeInst(scopeDesc);
 
   builder.createThrowInst(builder.createCallInst(
       loadGlobalObjectProperty(

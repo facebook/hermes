@@ -287,7 +287,9 @@ class IRBuilder {
 
   CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
 
-  CreateFunctionInst *createCreateFunctionInst(Function *code);
+  CreateFunctionInst *createCreateFunctionInst(
+      Function *code,
+      ScopeCreationInst *environment);
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
@@ -468,7 +470,9 @@ class IRBuilder {
       Value *result,
       BasicBlock *nextBlock);
 
-  CreateGeneratorInst *createCreateGeneratorInst(Function *innerFn);
+  CreateGeneratorInst *createCreateGeneratorInst(
+      Function *innerFn,
+      ScopeCreationInst *environment);
 
   StartGeneratorInst *createStartGeneratorInst();
 

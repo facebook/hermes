@@ -647,16 +647,28 @@ class CreateFunctionInst : public Instruction {
   CreateFunctionInst(const CreateFunctionInst &) = delete;
   void operator=(const CreateFunctionInst &) = delete;
 
- public:
-  enum { FunctionCodeIdx, LAST_IDX };
-
-  explicit CreateFunctionInst(ValueKind kind, Function *code)
+ protected:
+  explicit CreateFunctionInst(
+      ValueKind kind,
+      Function *code,
+      Value *environment)
       : Instruction(kind) {
     setType(Type::createClosure());
     pushOperand(code);
+    // N.B.: All non-HBC CreateFunctionInst have a ScopeCreationInst as the
+    // environment, but that is not necessarily true about the HBC variants; the
+    // environment could be an HBCSpillMov.
+    pushOperand(environment);
   }
-  explicit CreateFunctionInst(Function *code)
-      : CreateFunctionInst(ValueKind::CreateFunctionInstKind, code) {}
+
+ public:
+  enum { FunctionCodeIdx, EnvIdx };
+
+  explicit CreateFunctionInst(Function *code, ScopeCreationInst *environment)
+      : CreateFunctionInst(
+            ValueKind::CreateFunctionInstKind,
+            code,
+            environment) {}
   explicit CreateFunctionInst(
       const CreateFunctionInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -664,6 +676,10 @@ class CreateFunctionInst : public Instruction {
 
   Function *getFunctionCode() const {
     return cast<Function>(getOperand(FunctionCodeIdx));
+  }
+
+  Value *getEnvironment() const {
+    return getOperand(EnvIdx);
   }
 
   SideEffectKind getSideEffect() {
@@ -3050,20 +3066,15 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
   void operator=(const HBCCreateFunctionInst &) = delete;
 
  public:
-  enum { EnvIdx = CreateFunctionInst::LAST_IDX };
-
-  explicit HBCCreateFunctionInst(Function *code, Value *env)
-      : CreateFunctionInst(ValueKind::HBCCreateFunctionInstKind, code) {
-    pushOperand(env);
-  }
+  explicit HBCCreateFunctionInst(Function *code, Value *environment)
+      : CreateFunctionInst(
+            ValueKind::HBCCreateFunctionInstKind,
+            code,
+            environment) {}
   explicit HBCCreateFunctionInst(
       const HBCCreateFunctionInst *src,
       llvh::ArrayRef<Value *> operands)
       : CreateFunctionInst(src, operands) {}
-
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateFunctionInstKind);
@@ -3184,13 +3195,23 @@ class CreateGeneratorInst : public CreateFunctionInst {
   CreateGeneratorInst(const CreateGeneratorInst &) = delete;
   void operator=(const CreateGeneratorInst &) = delete;
 
- public:
-  explicit CreateGeneratorInst(ValueKind kind, Function *genFunction)
-      : CreateFunctionInst(kind, genFunction) {
+ protected:
+  explicit CreateGeneratorInst(
+      ValueKind kind,
+      Function *genFunction,
+      Value *environment)
+      : CreateFunctionInst(kind, genFunction, environment) {
     setType(Type::createObject());
   }
-  explicit CreateGeneratorInst(Function *genFunction)
-      : CreateGeneratorInst(ValueKind::CreateGeneratorInstKind, genFunction) {}
+
+ public:
+  explicit CreateGeneratorInst(
+      Function *genFunction,
+      ScopeCreationInst *environment)
+      : CreateGeneratorInst(
+            ValueKind::CreateGeneratorInstKind,
+            genFunction,
+            environment) {}
   explicit CreateGeneratorInst(
       const CreateGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3207,20 +3228,12 @@ class HBCCreateGeneratorInst : public CreateGeneratorInst {
   void operator=(const HBCCreateGeneratorInst &) = delete;
 
  public:
-  enum { EnvIdx = CreateGeneratorInst::LAST_IDX };
-
   explicit HBCCreateGeneratorInst(Function *code, Value *env)
-      : CreateGeneratorInst(ValueKind::HBCCreateGeneratorInstKind, code) {
-    pushOperand(env);
-  }
+      : CreateGeneratorInst(ValueKind::HBCCreateGeneratorInstKind, code, env) {}
   explicit HBCCreateGeneratorInst(
       const HBCCreateGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
       : CreateGeneratorInst(src, operands) {}
-
-  Value *getEnvironment() const {
-    return getOperand(EnvIdx);
-  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateGeneratorInstKind);

@@ -31,7 +31,8 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
 
   auto addEdges = [&](Function *parent, auto... children) {
     Builder.setInsertionBlock(Builder.createBasicBlock(parent));
-    (Builder.createCreateFunctionInst(children), ...);
+    auto csi = Builder.createCreateScopeInst(parent->getFunctionScopeDesc());
+    (Builder.createCreateFunctionInst(children, csi), ...);
   };
 
   auto ES5 = createFunction(M.getInitialScope(), "es5");

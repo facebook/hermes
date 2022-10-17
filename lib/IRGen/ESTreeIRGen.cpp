@@ -51,10 +51,8 @@ buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
   auto *block = builder.createBasicBlock(parent);
   builder.setInsertionBlock(block);
   builder.createUnreachableInst();
-  // All functions must have a CreateScopeInst, including dummy ones, to avoid
-  // the need for special cases later down the compiler pipeline.
-  builder.createCreateScopeInst(parent->getFunctionScopeDesc());
-  auto *inst = builder.createCreateFunctionInst(child);
+  auto *csi = builder.createCreateScopeInst(parent->getFunctionScopeDesc());
+  auto *inst = builder.createCreateFunctionInst(child, csi);
   builder.createReturnInst(inst);
 }
 

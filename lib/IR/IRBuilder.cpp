@@ -347,8 +347,10 @@ CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
   return CII;
 }
 
-CreateFunctionInst *IRBuilder::createCreateFunctionInst(Function *code) {
-  auto CFI = new CreateFunctionInst(code);
+CreateFunctionInst *IRBuilder::createCreateFunctionInst(
+    Function *code,
+    ScopeCreationInst *environment) {
+  auto CFI = new CreateFunctionInst(code, environment);
   insert(CFI);
   return CFI;
 }
@@ -739,8 +741,10 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
   return I;
 }
 
-CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(Function *innerFn) {
-  auto *I = new CreateGeneratorInst(innerFn);
+CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
+    Function *innerFn,
+    ScopeCreationInst *environment) {
+  auto *I = new CreateGeneratorInst(innerFn, environment);
   insert(I);
   return I;
 }
