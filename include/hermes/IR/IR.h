@@ -600,6 +600,22 @@ class ScopeDesc : public Value {
 
   inline void setFunction(Function *F);
 
+  void setVariableScope(VariableScope *VS) {
+    assert(
+        !hasVariableScope() &&
+        "Each ScopeDesc can back a single VariableScope");
+    variableScope_ = VS;
+  }
+
+  bool hasVariableScope() const {
+    return variableScope_;
+  }
+
+  VariableScope *getVariableScope() const {
+    assert(hasVariableScope() && "Scope's VariableScope not set");
+    return variableScope_;
+  }
+
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ScopeDescKind;
   }
@@ -609,6 +625,7 @@ class ScopeDesc : public Value {
   ScopeListTy innerScopes_;
 
   Function *function_{};
+  VariableScope *variableScope_{};
 };
 
 /// This represents a function parameter.
@@ -1358,22 +1375,32 @@ class VariableScope : public Value {
   /// The function where the scope is declared.
   Function *function_;
 
+  /// The ScopeDesc that backs this VariableScope.
+  ScopeDesc *scopeDesc_;
+
   /// The variables associated with this scope.
   VariableListType variables_;
 
  protected:
   /// VariableScope is abstract and should not be constructed directly. Use a
   /// subclass such as Function.
-  VariableScope(ValueKind kind, Function *function)
-      : Value(kind), function_(function) {}
+  VariableScope(ValueKind kind, Function *function, ScopeDesc *scopeDesc)
+      : Value(kind), function_(function), scopeDesc_(scopeDesc) {
+    scopeDesc_->setVariableScope(this);
+  }
 
-  VariableScope(Function *function)
-      : VariableScope(ValueKind::VariableScopeKind, function) {}
+  VariableScope(Function *function, ScopeDesc *scopeDesc)
+      : VariableScope(ValueKind::VariableScopeKind, function, scopeDesc) {}
 
  public:
   /// \return the function where the scope is declared.
   Function *getFunction() const {
     return function_;
+  }
+
+  /// \return the ScopeDesc that backs this VariableScope.
+  ScopeDesc *getScopeDesc() const {
+    return scopeDesc_;
   }
 
   /// Return true if this is the global function scope.
@@ -1415,7 +1442,7 @@ class ExternalScope : public VariableScope {
   const int32_t depth_ = 0;
 
  public:
-  ExternalScope(Function *function, int32_t depth);
+  ExternalScope(Function *function, ScopeDesc *scopeDesc, int32_t depth);
 
   /// \return the scope depth
   int32_t getDepth() const {
@@ -1631,6 +1658,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   VariableScope *getFunctionScope() {
     return &functionScope_;
+  }
+
+  const llvh::SmallVector<VariableScope *, 4> &getExternalScopes() const {
+    return externalScopes_;
   }
 
   void addBlock(BasicBlock *BB);

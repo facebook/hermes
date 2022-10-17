@@ -147,8 +147,13 @@ bool VariableScope::isGlobalScope() const {
   return function_->isGlobalScope() && function_->getFunctionScope() == this;
 }
 
-ExternalScope::ExternalScope(Function *function, int32_t depth)
-    : VariableScope(ValueKind::ExternalScopeKind, function), depth_(depth) {
+ExternalScope::ExternalScope(
+    Function *function,
+    ScopeDesc *scopeDesc,
+    int32_t depth)
+    : VariableScope(ValueKind::ExternalScopeKind, function, scopeDesc),
+      depth_(depth) {
+  assert(function == scopeDesc->getFunction() && "Function mismatch");
   function->addExternalScope(this);
 }
 
@@ -167,7 +172,7 @@ Function::Function(
       parent_(parent),
       isGlobal_(isGlobal),
       externalScopes_(),
-      functionScope_(this),
+      functionScope_(this, scopeDesc),
       scopeDesc_(scopeDesc),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),

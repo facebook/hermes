@@ -158,7 +158,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "%";
     printFunctionName(VS->getFunction(), PrintFunctionParams::No);
   } else if (auto VR = dyn_cast<Variable>(V)) {
-    os << "[" << quoteStr(ctx.toString(VR->getName()));
+    os << "[";
+    printVariableName(VR);
     if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
       llvh::StringRef scopeName =
           VR->getParent()->getFunction()->getInternalNameStr();
@@ -181,20 +182,24 @@ void IRPrinter::printFunctionHeader(Function *F) {
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
-  bool first = true;
-  auto &Ctx = F->getContext();
-  os << "frame = [";
-  for (auto V : F->getFunctionScope()->getVariables()) {
-    if (!first) {
-      os << ", ";
+  auto printVariables = [this](VariableScope *VS) {
+    bool first = true;
+    for (auto V : VS->getVariables()) {
+      if (!first) {
+        os << ", ";
+      }
+      printVariableName(V);
+      printTypeLabel(V->getType());
+      first = false;
     }
-    os << Ctx.toString(V->getName());
-    printTypeLabel(V->getType());
-    first = false;
-  }
+  };
+
+  os << "frame = [";
+  printVariables(F->getFunctionScope());
   os << "]";
 
   if (F->isGlobalScope()) {
+    auto &Ctx = F->getContext();
     bool first2 = true;
     for (auto *GP : F->getParent()->getGlobalProperties()) {
       if (!GP->isDeclared())
@@ -209,6 +214,15 @@ void IRPrinter::printFunctionVariables(Function *F) {
     }
     if (!first2)
       os << "]";
+  }
+
+  if (enableNewDumpFormat) {
+    for (VariableScope *ES : F->getExternalScopes()) {
+      os << "\nexternal scope " << ScopeNamer.getNumber(ES->getScopeDesc())
+         << " = [";
+      printVariables(ES);
+      os << "]";
+    }
   }
 }
 
@@ -310,6 +324,13 @@ void IRPrinter::printFunctionName(
   }
   os << ")";
   printScope(F->getFunctionScopeDesc());
+}
+
+void IRPrinter::printVariableName(Variable *V) {
+  VariableScope *VS = V->getParent();
+  auto &ctx = VS->getFunction()->getContext();
+  os << ctx.toString(V->getName());
+  printScope(VS->getScopeDesc());
 }
 
 void IRPrinter::visitModule(const Module &M) {

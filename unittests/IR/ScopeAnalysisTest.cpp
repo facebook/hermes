@@ -48,7 +48,9 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   auto orphan1 = createFunction(orphan->getFunctionScopeDesc(), "orphan1");
   auto orphan2 = createFunction(orphan->getFunctionScopeDesc(), "orphan2");
   auto orphan21 = createFunction(orphan2->getFunctionScopeDesc(), "orphan21");
-  auto ES = Builder.createExternalScope(G, -5);
+  auto scopeES = G->getFunctionScopeDesc()->createInnerScope();
+  scopeES->setFunction(G);
+  auto ES = Builder.createExternalScope(G, scopeES, -5);
 
   addEdges(ES5, ES4);
   addEdges(ES4, ES3);

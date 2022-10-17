@@ -97,6 +97,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   /// are omitted if \p printFunctionParams == PrintFunctionParams::No.
   enum class PrintFunctionParams { No, Yes };
   void printFunctionName(Function *F, PrintFunctionParams printFunctionParams);
+  void printVariableName(Variable *V);
 
   std::string getQuoteSign() {
     return needEscape ? R"(\")" : R"(")";

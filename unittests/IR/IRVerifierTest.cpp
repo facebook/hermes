@@ -140,6 +140,21 @@ TEST(IRVerifierTest, DominanceTest) {
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
 
+TEST(IRVerifierTest, ScopeWithoutVariableScope) {
+  auto Ctx = std::make_shared<Context>();
+  Module M{Ctx};
+  IRBuilder Builder(&M);
+  auto F = Builder.createFunction(
+      M.getInitialScope()->createInnerScope(),
+      "testScopeWithoutVariableScope",
+      Function::DefinitionKind::ES5Function,
+      true);
+  Builder.setInsertionBlock(Builder.createBasicBlock(F));
+  Builder.createUnreachableInst();
+
+  F->getFunctionScopeDesc()->createInnerScope();
+  EXPECT_TRUE(verifyModule(M, &errs()));
+}
 #endif // HERMES_SLOW_DEBUG
 
 } // end anonymous namespace
