@@ -288,7 +288,7 @@ void HBCISel::addDebugLexicalInfo() {
     BCFGen_->setLexicalParentID(BCFGen_->getFunctionID(parent));
 
   std::vector<Identifier> names;
-  for (const Variable *var : F_->getFunctionScope()->getVariables())
+  for (const Variable *var : F_->getFunctionScopeDesc()->getVariables())
     names.push_back(var->getName());
   BCFGen_->setDebugVariableNames(std::move(names));
 }

@@ -159,11 +159,6 @@ bool ScopeDesc::isGlobalScope() const {
       function_->getFunctionScopeDesc() == this;
 }
 
-ExternalScope::ExternalScope(ScopeDesc *scopeDesc, int32_t depth)
-    : VariableScope(ValueKind::ExternalScopeKind, scopeDesc), depth_(depth) {
-  scopeDesc->getFunction()->addExternalScope(this);
-}
-
 Function::Function(
     ValueKind kind,
     Module *parent,
@@ -178,8 +173,6 @@ Function::Function(
     : Value(kind),
       parent_(parent),
       isGlobal_(isGlobal),
-      externalScopes_(),
-      functionScope_(scopeDesc),
       scopeDesc_(scopeDesc),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),
@@ -208,10 +201,6 @@ Function::~Function() {
     Value::destroy(p);
   }
   Value::destroy(thisParameter);
-
-  // Free all external scopes.
-  for (auto *ES : externalScopes_)
-    Value::destroy(ES);
 }
 
 std::string Function::getDefinitionKindStr(bool isDescriptive) const {

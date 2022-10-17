@@ -1049,13 +1049,13 @@ class ESTreeIRGen {
   SerializedScopePtr resolveScopeIdentifiers(const ScopeChain &chain);
 
   /// Save all variables currently in scope, for lazy compilation.
-  SerializedScopePtr saveCurrentScope() {
-    return serializeScope(curFunction(), true);
+  SerializedScopePtr saveScopeChain(ScopeDesc *S) {
+    return serializeScope(S, true);
   }
 
   /// Recursively serialize scopes. The global scope is serialized
   /// if and only if it's the first scope and includeGlobal is true.
-  SerializedScopePtr serializeScope(FunctionContext *ctx, bool includeGlobal);
+  SerializedScopePtr serializeScope(ScopeDesc *S, bool includeGlobal);
 
   ScopeDesc *newScopeDesc() {
     return currentIRScopeDesc_->createInnerScope();

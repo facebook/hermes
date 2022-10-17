@@ -167,7 +167,8 @@ class ScopeChainMaterializer {
 
     Function *parent = current;
     if (scope->parentScope) {
-      if (materializeForEval == MaterializeForEval::Yes) {
+      if (materializeForEval == MaterializeForEval::Yes ||
+          !scope->originalName.isValid()) {
         scopeDesc->getParent()->setFunction(current);
       } else {
         assert(scopeDesc->getParent() && "Too few scopeDescs for chain");
@@ -211,24 +212,10 @@ class ScopeChainMaterializer {
       nameTable_.insert(scope->originalName, closureVar);
     }
 
-    if (materializeForEval != MaterializeForEval::Yes) {
-      for (const auto &var : scope->variables) {
-        auto *variable =
-            builder_.createVariable(scopeDesc, var.declKind, var.name);
-        nameTable_.insert(var.name, variable);
-      }
-    } else {
-      // Use current's FunctionScope to house variables living at eval's -1
-      // depth. This is needed due to topFunction_'s (a.k.a. current's)
-      // FunctionScope already being bound to topFunction_'s scopeDesc.
-      VariableScope *ES = depth == -1
-          ? current->getFunctionScope()
-          : builder_.createExternalScope(scopeDesc, depth);
-      for (const auto &var : scope->variables) {
-        auto *variable =
-            builder_.createVariable(ES->getScopeDesc(), var.declKind, var.name);
-        nameTable_.insert(var.name, variable);
-      }
+    for (const auto &var : scope->variables) {
+      auto *variable =
+          builder_.createVariable(scopeDesc, var.declKind, var.name);
+      nameTable_.insert(var.name, variable);
     }
   }
 };
@@ -1348,27 +1335,29 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
 }
 
 SerializedScopePtr ESTreeIRGen::serializeScope(
-    FunctionContext *ctx,
+    ScopeDesc *S,
     bool includeGlobal) {
   // Serialize the global scope if and only if it's the only scope.
   // We serialize the global scope to avoid re-declaring variables,
   // and only do it once to avoid creating spurious scopes.
-  if (!ctx || (ctx->function->isGlobalScope() && !includeGlobal))
+  if (!S->getParent() || (S->isGlobalScope() && !includeGlobal)) {
     return lexicalScopeChain;
+  }
 
   auto scope = std::make_shared<SerializedScope>();
-  auto *func = ctx->function;
-  assert(func && "Missing function when saving scope");
+  auto *func = S->getFunction();
 
-  scope->originalName = func->getOriginalOrInferredName();
-  if (auto *closure = func->getLazyClosureAlias()) {
-    scope->closureAlias = closure->getName();
+  if (S == func->getFunctionScopeDesc()) {
+    scope->originalName = func->getOriginalOrInferredName();
+    if (auto *closure = func->getLazyClosureAlias()) {
+      scope->closureAlias = closure->getName();
+    }
   }
-  for (auto *var : func->getFunctionScope()->getVariables()) {
+  for (auto *var : S->getVariables()) {
     scope->variables.push_back(
         SerializedScope::Declaration{var->getName(), var->getDeclKind()});
   }
-  scope->parentScope = serializeScope(ctx->getPreviousContext(), false);
+  scope->parentScope = serializeScope(S->getParent(), false);
   return scope;
 }
 

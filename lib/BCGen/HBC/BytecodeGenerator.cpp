@@ -325,7 +325,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         F->getKind(),
         F->isStrictMode(),
         F->getExpectedParamCountIncludingThis(),
-        F->getFunctionScope()->getVariables().size(),
+        F->getFunctionScopeDesc()->getVariables().size(),
         functionNameId);
 
     if (F->isLazy()) {

@@ -361,7 +361,10 @@ void ESTreeIRGen::setupLazyScope(
       bodyBlock->isLazyFunctionBody &&
       "setupLazyScope can only be used with lazy function bodies");
   // Set the AST position and variable context so we can continue later.
-  function->setLazyScope(saveCurrentScope());
+  // Save the scope chain starting from function's parent (i.e., the last
+  // materialized scope).
+  function->setLazyScope(
+      saveScopeChain(function->getFunctionScopeDesc()->getParent()));
   auto &lazySource = function->getLazySource();
   lazySource.bufferId = bodyBlock->bufferId;
   lazySource.nodeKind = getLazyFunctionKind(functionNode);

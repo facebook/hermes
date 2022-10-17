@@ -38,7 +38,6 @@
 namespace hermes {
 
 class Module;
-class VariableScope;
 class Function;
 class BasicBlock;
 class Parameter;
@@ -613,22 +612,6 @@ class ScopeDesc : public Value {
 
   inline void setFunction(Function *F);
 
-  void setVariableScope(VariableScope *VS) {
-    assert(
-        !hasVariableScope() &&
-        "Each ScopeDesc can back a single VariableScope");
-    variableScope_ = VS;
-  }
-
-  bool hasVariableScope() const {
-    return variableScope_;
-  }
-
-  VariableScope *getVariableScope() const {
-    assert(hasVariableScope() && "Scope's VariableScope not set");
-    return variableScope_;
-  }
-
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ScopeDescKind;
   }
@@ -638,7 +621,6 @@ class ScopeDesc : public Value {
   ScopeListTy innerScopes_;
 
   Function *function_{};
-  VariableScope *variableScope_{};
 
   VariableListType variables_;
 };
@@ -1380,88 +1362,6 @@ struct ilist_alloc_traits<::hermes::BasicBlock> {
 
 namespace hermes {
 
-/// VariableScope is a lexical scope.
-class VariableScope : public Value {
-  using Value::Value;
-  using VariableListType = llvh::SmallVector<Variable *, 8>;
-
-  friend class Function;
-
-  /// The ScopeDesc that backs this VariableScope.
-  ScopeDesc *scopeDesc_;
-
- protected:
-  /// VariableScope is abstract and should not be constructed directly. Use a
-  /// subclass such as Function.
-  VariableScope(ValueKind kind, ScopeDesc *scopeDesc)
-      : Value(kind), scopeDesc_(scopeDesc) {
-    scopeDesc_->setVariableScope(this);
-  }
-
-  VariableScope(ScopeDesc *scopeDesc)
-      : VariableScope(ValueKind::VariableScopeKind, scopeDesc) {}
-
- public:
-  /// \return the function where the scope is declared.
-  Function *getFunction() const {
-    return getScopeDesc()->getFunction();
-  }
-
-  /// \return the ScopeDesc that backs this VariableScope.
-  ScopeDesc *getScopeDesc() const {
-    return scopeDesc_;
-  }
-
-  /// Return true if this is the global function scope.
-  bool isGlobalScope() const {
-    return getScopeDesc()->isGlobalScope();
-  }
-
-  VariableListType &getVariables() {
-    return getScopeDesc()->getMutableVariables();
-  }
-
-  /// \returns a list of variables.
-  const VariableListType &getVariables() const {
-    return getScopeDesc()->getVariables();
-  }
-
-  /// Add a variable \p V to the variable list.
-  void addVariable(Variable *V) {
-    getScopeDesc()->addVariable(V);
-  }
-
-  static bool classof(const Value *V) {
-    switch (V->getKind()) {
-      case ValueKind::VariableScopeKind:
-      case ValueKind::ExternalScopeKind:
-        return true;
-      default:
-        return false;
-    }
-  }
-};
-
-/// An ExternalScope is a container for variables injected from the environment,
-/// i.e. upvars from an enclosing scope. These variables are stored at a given
-/// depth in the scope chain.
-class ExternalScope : public VariableScope {
-  /// The scope depth represented by this external scope
-  const int32_t depth_ = 0;
-
- public:
-  ExternalScope(ScopeDesc *scopeDesc, int32_t depth);
-
-  /// \return the scope depth
-  int32_t getDepth() const {
-    return depth_;
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ExternalScopeKind;
-  }
-};
-
 class Function : public llvh::ilist_node_with_parent<Function, Module>,
                  public Value {
   Function(const Function &) = delete;
@@ -1484,12 +1384,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// Indicates whether this is the global scope.
   bool isGlobal_;
-
-  /// List of external scopes owned by this function. Deleted upon destruction.
-  llvh::SmallVector<VariableScope *, 4> externalScopes_;
-
-  /// The function scope - it is always the first scope in the scope list.
-  VariableScope functionScope_;
 
   /// The function scope descriptor.
   ScopeDesc *scopeDesc_;
@@ -1657,20 +1551,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// \return the Context of the parent module.
   Context &getContext() const;
-
-  /// Add a new scope to the function.
-  /// This is delete'd in our destructor.
-  void addExternalScope(ExternalScope *scope) {
-    externalScopes_.push_back(scope);
-  }
-
-  VariableScope *getFunctionScope() {
-    return &functionScope_;
-  }
-
-  const llvh::SmallVector<VariableScope *, 4> &getExternalScopes() const {
-    return externalScopes_;
-  }
 
   void addBlock(BasicBlock *BB);
   void addParameter(Parameter *A);

@@ -46,7 +46,7 @@ static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
 ///   inlined.
 static bool canBeInlined(Function *F, Function *intoFunction) {
   // If it has captured variables, it can't be inlined.
-  if (!F->getFunctionScope()->getVariables().empty()) {
+  if (!F->getFunctionScopeDesc()->getVariables().empty()) {
     return false;
   }
 

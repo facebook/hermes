@@ -132,7 +132,6 @@ class Verifier : public InstructionVisitor<Verifier, void> {
 
 void Verifier::visitScope(const ScopeDesc &S) {
   Assert(S.getParent(), "All scopes should have a parent");
-  Assert(S.hasVariableScope(), "All scopes should have a variable scope");
 
   const auto &parentsChildren = S.getParent()->getInnerScopes();
   Assert(

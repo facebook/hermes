@@ -154,9 +154,6 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (auto F = dyn_cast<Function>(V)) {
     os << "%";
     printFunctionName(F, PrintFunctionParams::No);
-  } else if (auto VS = dyn_cast<VariableScope>(V)) {
-    os << "%";
-    printFunctionName(VS->getFunction(), PrintFunctionParams::No);
   } else if (auto S = dyn_cast<ScopeDesc>(V)) {
     if (!enableNewDumpFormat) {
       os << "%";
@@ -192,20 +189,16 @@ void IRPrinter::printFunctionHeader(Function *F) {
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
-  auto printVariables = [this](VariableScope *VS) {
-    bool first = true;
-    for (auto V : VS->getVariables()) {
-      if (!first) {
-        os << ", ";
-      }
-      printVariableName(V);
-      printTypeLabel(V->getType());
-      first = false;
-    }
-  };
-
   os << "frame = [";
-  printVariables(F->getFunctionScope());
+  bool first = true;
+  for (auto V : F->getFunctionScopeDesc()->getVariables()) {
+    if (!first) {
+      os << ", ";
+    }
+    printVariableName(V);
+    printTypeLabel(V->getType());
+    first = false;
+  }
   os << "]";
 
   if (F->isGlobalScope()) {
@@ -224,15 +217,6 @@ void IRPrinter::printFunctionVariables(Function *F) {
     }
     if (!first2)
       os << "]";
-  }
-
-  if (enableNewDumpFormat) {
-    for (VariableScope *ES : F->getExternalScopes()) {
-      os << "\nexternal scope " << ScopeNamer.getNumber(ES->getScopeDesc())
-         << " = [";
-      printVariables(ES);
-      os << "]";
-    }
   }
 }
 

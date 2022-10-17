@@ -788,7 +788,7 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
 
     // Infer type of F's variables, except if F is in global scope
     if (!F->isGlobalScope()) {
-      for (auto *V : F->getFunctionScope()->getVariables()) {
+      for (auto *V : F->getFunctionScopeDesc()->getVariables()) {
         localChanged |= inferMemoryType(V);
       }
     }
