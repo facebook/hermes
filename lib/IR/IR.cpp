@@ -468,7 +468,7 @@ Parameter::Parameter(Function *parent, Identifier name)
 
 Variable::Variable(
     ValueKind k,
-    VariableScope *scope,
+    ScopeDesc *scope,
     DeclKind declKind,
     Identifier txt)
     : Value(k), declKind(declKind), text(txt), parent(scope) {

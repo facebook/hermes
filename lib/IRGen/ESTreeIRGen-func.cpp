@@ -102,7 +102,7 @@ Value *ESTreeIRGen::genFunctionExpression(
   if (FE->_id) {
     auto closureName = genAnonymousLabelName("closure");
     tempClosureVar = Builder.createVariable(
-        curFunction()->function->getFunctionScope(),
+        curFunction()->function->getFunctionScopeDesc(),
         Variable::DeclKind::Var,
         closureName);
 
@@ -447,7 +447,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   if (!curFunction()->getSemInfo()->containsArrowFunctions)
     return;
 
-  auto *scope = curFunction()->function->getFunctionScope();
+  auto *scope = curFunction()->function->getFunctionScopeDesc();
 
   // "this".
   curFunction()->capturedThis = Builder.createVariable(
@@ -561,7 +561,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     Identifier paramName = getNameFieldFromID(paramDecl.identifier);
     LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << paramName << "\n");
     auto *paramStorage = Builder.createVariable(
-        newFunc->getFunctionScope(), Variable::DeclKind::Var, paramName);
+        newFunc->getFunctionScopeDesc(), Variable::DeclKind::Var, paramName);
     // Register the storage for the parameter.
     nameTable_.insert(paramName, paramStorage);
   }

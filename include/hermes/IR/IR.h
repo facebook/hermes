@@ -1005,17 +1005,17 @@ class Variable : public Value {
   Identifier text;
 
   /// The scope that owns the variable.
-  VariableScope *parent;
+  ScopeDesc *parent;
 
  protected:
   explicit Variable(
       ValueKind k,
-      VariableScope *scope,
+      ScopeDesc *scope,
       DeclKind declKind,
       Identifier txt);
 
  public:
-  explicit Variable(VariableScope *scope, DeclKind declKind, Identifier txt)
+  explicit Variable(ScopeDesc *scope, DeclKind declKind, Identifier txt)
       : Variable(ValueKind::VariableKind, scope, declKind, txt){};
 
   ~Variable();
@@ -1027,7 +1027,7 @@ class Variable : public Value {
   Identifier getName() const {
     return text;
   }
-  VariableScope *getParent() const {
+  ScopeDesc *getParent() const {
     return parent;
   }
 

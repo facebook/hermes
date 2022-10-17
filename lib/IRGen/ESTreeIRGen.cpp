@@ -213,8 +213,8 @@ class ScopeChainMaterializer {
 
     if (materializeForEval != MaterializeForEval::Yes) {
       for (const auto &var : scope->variables) {
-        auto *variable = builder_.createVariable(
-            current->getFunctionScope(), var.declKind, var.name);
+        auto *variable =
+            builder_.createVariable(scopeDesc, var.declKind, var.name);
         nameTable_.insert(var.name, variable);
       }
     } else {
@@ -225,7 +225,8 @@ class ScopeChainMaterializer {
           ? current->getFunctionScope()
           : builder_.createExternalScope(scopeDesc, depth);
       for (const auto &var : scope->variables) {
-        auto *variable = builder_.createVariable(ES, var.declKind, var.name);
+        auto *variable =
+            builder_.createVariable(ES->getScopeDesc(), var.declKind, var.name);
         nameTable_.insert(var.name, variable);
       }
     }
@@ -556,7 +557,8 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
       declKind = Variable::DeclKind::Var;
     }
 
-    res = Builder.createVariable(inFunc->getFunctionScope(), declKind, name);
+    res =
+        Builder.createVariable(inFunc->getFunctionScopeDesc(), declKind, name);
   }
 
   // Register the variable in the scoped hash table.

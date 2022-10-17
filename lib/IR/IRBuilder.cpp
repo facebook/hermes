@@ -185,14 +185,14 @@ Parameter *IRBuilder::createParameter(Function *Parent, llvh::StringRef Name) {
 }
 
 Variable *IRBuilder::createVariable(
-    VariableScope *Parent,
+    ScopeDesc *Parent,
     Variable::DeclKind declKind,
     Identifier Name) {
   return new Variable(Parent, declKind, Name);
 }
 
 Variable *IRBuilder::createVariable(
-    VariableScope *Parent,
+    ScopeDesc *Parent,
     Variable::DeclKind declKind,
     llvh::StringRef Name) {
   return createVariable(Parent, declKind, createIdentifier(Name));

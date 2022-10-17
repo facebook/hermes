@@ -327,10 +327,10 @@ void IRPrinter::printFunctionName(
 }
 
 void IRPrinter::printVariableName(Variable *V) {
-  VariableScope *VS = V->getParent();
+  ScopeDesc *VS = V->getParent();
   auto &ctx = VS->getFunction()->getContext();
   os << ctx.toString(V->getName());
-  printScope(VS->getScopeDesc());
+  printScope(VS);
 }
 
 void IRPrinter::visitModule(const Module &M) {

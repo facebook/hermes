@@ -148,13 +148,13 @@ class IRBuilder {
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(
-      VariableScope *Parent,
+      ScopeDesc *Parent,
       Variable::DeclKind declKind,
       Identifier Name);
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(
-      VariableScope *Parent,
+      ScopeDesc *Parent,
       Variable::DeclKind declKind,
       llvh::StringRef Name);
 

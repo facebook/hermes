@@ -112,7 +112,7 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
       genAnonymousLabelName(catchVariableName.str());
 
   auto errorVar = Builder.createVariable(
-      curFunction()->function->getFunctionScope(),
+      curFunction()->function->getFunctionScopeDesc(),
       Variable::DeclKind::Var,
       uniquedCatchVariableName);
 
