@@ -18,41 +18,15 @@ namespace irgen {
 
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
-
-Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
-  if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    Instruction *res = builder.createLoadFrameInst(var);
-    if (var->getObeysTDZ())
-      res = builder.createThrowIfEmptyInst(res);
-    return res;
-  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
-    if (globalProp->isDeclared() || inhibitThrow)
-      return builder.createLoadPropertyInst(
-          builder.getGlobalObject(), globalProp->getName());
-    else
-      return builder.createTryLoadGlobalPropertyInst(globalProp);
-  } else {
-    llvm_unreachable("invalid value to load from");
+Instruction *loadGlobalObjectProperty(
+    IRBuilder &builder,
+    GlobalObjectProperty *from,
+    bool inhibitThrow) {
+  if (from->isDeclared() || inhibitThrow) {
+    return builder.createLoadPropertyInst(
+        builder.getGlobalObject(), from->getName());
   }
-}
-
-Instruction *
-emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
-  if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && var->getObeysTDZ()) {
-      // Must verify whether the variable is initialized.
-      builder.createThrowIfEmptyInst(builder.createLoadFrameInst(var));
-    }
-    return builder.createStoreFrameInst(storedValue, var);
-  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
-    if (globalProp->isDeclared() || !builder.getFunction()->isStrictMode())
-      return builder.createStorePropertyInst(
-          storedValue, builder.getGlobalObject(), globalProp->getName());
-    else
-      return builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
-  } else {
-    llvm_unreachable("unvalid value to load from");
-  }
+  return builder.createTryLoadGlobalPropertyInst(from);
 }
 
 /// \returns true if \p node is a constant expression.
@@ -77,6 +51,9 @@ buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
   auto *block = builder.createBasicBlock(parent);
   builder.setInsertionBlock(block);
   builder.createUnreachableInst();
+  // All functions must have a CreateScopeInst, including dummy ones, to avoid
+  // the need for special cases later down the compiler pipeline.
+  builder.createCreateScopeInst(parent->getFunctionScopeDesc());
   auto *inst = builder.createCreateFunctionInst(child);
   builder.createReturnInst(inst);
 }
@@ -212,7 +189,7 @@ Value *LReference::emitLoad() {
     case Kind::Member:
       return builder.createLoadPropertyInst(base_, property_);
     case Kind::VarOrGlobal:
-      return irgen::emitLoad(builder, base_);
+      return irgen_->emitLoad(base_);
     case Kind::Destructuring:
       assert(false && "destructuring cannot be loaded");
       return builder.getLiteralUndefined();
@@ -233,7 +210,7 @@ void LReference::emitStore(Value *value) {
       builder.createStorePropertyInst(value, base_, property_);
       return;
     case Kind::VarOrGlobal:
-      irgen::emitStore(builder, value, base_, declInit_);
+      irgen_->emitStore(value, base_, declInit_);
       return;
     case Kind::Error:
       return;
@@ -1323,5 +1300,37 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
   return scope;
 }
 
+Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
+  if (auto *var = llvh::dyn_cast<Variable>(from)) {
+    Instruction *res = Builder.createLoadFrameInst(var, currentIRScope_);
+    if (var->getObeysTDZ())
+      res = Builder.createThrowIfEmptyInst(res);
+    return res;
+  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
+    return loadGlobalObjectProperty(Builder, globalProp, inhibitThrow);
+  } else {
+    llvm_unreachable("invalid value to load from");
+  }
+}
+
+Instruction *
+ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
+  if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
+    if (!declInit && var->getObeysTDZ()) {
+      // Must verify whether the variable is initialized.
+      Builder.createThrowIfEmptyInst(
+          Builder.createLoadFrameInst(var, currentIRScope_));
+    }
+    return Builder.createStoreFrameInst(storedValue, var, currentIRScope_);
+  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
+    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode())
+      return Builder.createStorePropertyInst(
+          storedValue, Builder.getGlobalObject(), globalProp->getName());
+    else
+      return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+  } else {
+    llvm_unreachable("unvalid value to load from");
+  }
+}
 } // namespace irgen
 } // namespace hermes

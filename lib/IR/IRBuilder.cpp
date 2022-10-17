@@ -353,8 +353,10 @@ CreateFunctionInst *IRBuilder::createCreateFunctionInst(Function *code) {
   return CFI;
 }
 
-LoadFrameInst *IRBuilder::createLoadFrameInst(Variable *ptr) {
-  auto LI = new LoadFrameInst(ptr);
+LoadFrameInst *IRBuilder::createLoadFrameInst(
+    Variable *ptr,
+    ScopeCreationInst *scope) {
+  auto LI = new LoadFrameInst(ptr, scope);
   insert(LI);
   return LI;
 }
@@ -367,8 +369,9 @@ LoadStackInst *IRBuilder::createLoadStackInst(AllocStackInst *ptr) {
 
 StoreFrameInst *IRBuilder::createStoreFrameInst(
     Value *storedValue,
-    Variable *ptr) {
-  auto SI = new StoreFrameInst(storedValue, ptr);
+    Variable *ptr,
+    ScopeCreationInst *scope) {
+  auto SI = new StoreFrameInst(storedValue, ptr, scope);
   insert(SI);
   return SI;
 }

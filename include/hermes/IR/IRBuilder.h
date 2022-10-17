@@ -291,11 +291,14 @@ class IRBuilder {
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
-  LoadFrameInst *createLoadFrameInst(Variable *ptr);
+  LoadFrameInst *createLoadFrameInst(Variable *ptr, ScopeCreationInst *scope);
 
   StoreStackInst *createStoreStackInst(Value *storedValue, AllocStackInst *ptr);
 
-  StoreFrameInst *createStoreFrameInst(Value *storedValue, Variable *ptr);
+  StoreFrameInst *createStoreFrameInst(
+      Value *storedValue,
+      Variable *ptr,
+      ScopeCreationInst *scope);
 
   CallInst *
   createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);

@@ -23,12 +23,17 @@ FunctionContext::FunctionContext(
       semInfo_(semInfo),
       oldContext_(irGen->functionContext_),
       oldIRScopeDesc_(irGen->currentIRScopeDesc_),
+      oldIRScope_(irGen->currentIRScope_),
       builderSaveState_(irGen->Builder),
       function(function),
       scope(irGen->nameTable_),
       anonymousIDs_(function->getContext().getStringTable()) {
   irGen->functionContext_ = this;
   irGen->currentIRScopeDesc_ = function->getFunctionScopeDesc();
+
+  // Temporarily set the current IR scope to nullptr. IRGen should materialize
+  // currentIRScopeDesc_ before trying to access it.
+  irGen->currentIRScope_ = nullptr;
 
   // Initialize it to LiteralUndefined by default to avoid corner cases.
   this->capturedNewTarget = irGen->Builder.getLiteralUndefined();
@@ -43,6 +48,7 @@ FunctionContext::FunctionContext(
 }
 
 FunctionContext::~FunctionContext() {
+  irGen_->currentIRScope_ = oldIRScope_;
   irGen_->currentIRScopeDesc_ = oldIRScopeDesc_;
   irGen_->functionContext_ = oldContext_;
 }
@@ -78,7 +84,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
 
-  emitStore(Builder, newClosure, funcStorage, true);
+  emitStore(newClosure, funcStorage, true);
 }
 
 Value *ESTreeIRGen::genFunctionExpression(
@@ -125,7 +131,7 @@ Value *ESTreeIRGen::genFunctionExpression(
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
   if (tempClosureVar)
-    emitStore(Builder, closure, tempClosureVar, true);
+    emitStore(closure, tempClosureVar, true);
 
   return closure;
 }
@@ -456,7 +462,6 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   curFunction()->capturedThis = Builder.createVariable(
       scope, Variable::DeclKind::Var, genAnonymousLabelName("this"));
   emitStore(
-      Builder,
       Builder.getFunction()->getThisParameter(),
       curFunction()->capturedThis,
       true);
@@ -465,17 +470,13 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   curFunction()->capturedNewTarget = Builder.createVariable(
       scope, Variable::DeclKind::Var, genAnonymousLabelName("new.target"));
   emitStore(
-      Builder,
-      Builder.createGetNewTargetInst(),
-      curFunction()->capturedNewTarget,
-      true);
+      Builder.createGetNewTargetInst(), curFunction()->capturedNewTarget, true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
     curFunction()->capturedArguments = Builder.createVariable(
         scope, Variable::DeclKind::Var, genAnonymousLabelName("arguments"));
     emitStore(
-        Builder,
         curFunction()->createArgumentsInst,
         curFunction()->capturedArguments,
         true);
@@ -503,7 +504,8 @@ void ESTreeIRGen::emitFunctionPrologue(
     Builder.setInsertionPoint(&realEntry->front());
   }
   // Create the function scope.
-  Builder.createCreateScopeInst(newFunc->getFunctionScopeDesc());
+  currentIRScope_ =
+      Builder.createCreateScopeInst(newFunc->getFunctionScopeDesc());
 
   // Start pumping instructions into the entry basic block.
   Builder.setInsertionBlock(entry);
@@ -543,7 +545,8 @@ void ESTreeIRGen::emitFunctionPrologue(
     Builder.createStoreFrameInst(
         var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
                            : (Literal *)Builder.getLiteralUndefined(),
-        var);
+        var,
+        currentIRScope_);
   }
   for (auto *fd : semInfo->closures) {
     declareVariableOrGlobalProperty(
@@ -675,7 +678,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
   builder.setInsertionBlock(firstBlock);
 
   builder.createThrowInst(builder.createCallInst(
-      emitLoad(
+      loadGlobalObjectProperty(
           builder, builder.createGlobalObjectProperty("SyntaxError", false)),
       builder.getLiteralUndefined(),
       builder.getLiteralString(error)));

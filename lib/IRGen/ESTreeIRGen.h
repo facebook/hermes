@@ -35,23 +35,11 @@ using VarDecl = sem::FunctionInfo::VarDecl;
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
 
-/// Emit an instruction to load a value from a specified location.
-/// \param from location to load from, either a Variable or
-/// GlobalObjectProperty. \param inhibitThrow  if true, do not throw when
-/// loading from mmissing global properties. \return the instruction performing
-/// the load.
-Instruction *
-emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow = false);
-
-/// Emit an instruction to a store a value into the specified location.
-/// \param storedValue value to store
-/// \param ptr location to store into, either a Variable or
-///     GlobalObjectProperty.
-/// \param declInit whether this is a declaration initializer, so the TDZ check
-///     should be skipped.
-/// \return the instruction performing the store.
-Instruction *
-emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit);
+/// Emit a code sequence to load the global object property \p prop.
+Instruction *loadGlobalObjectProperty(
+    IRBuilder &builder,
+    GlobalObjectProperty *prop,
+    bool inhibitThrow = false);
 
 /// Return the name field from ID nodes.
 inline Identifier getNameFieldFromID(const ESTree::Node *ID) {
@@ -97,6 +85,9 @@ class FunctionContext {
 
   /// The previous currentIRScopeDesc value.
   ScopeDesc *oldIRScopeDesc_;
+
+  /// The previous currentIRScope value.
+  CreateScopeInst *oldIRScope_;
 
   /// As we descend into a new function, we save the state of the builder
   /// here. It is automatically restored once we are done with the function.
@@ -372,6 +363,9 @@ class ESTreeIRGen {
   /// The current scope descriptor available for IR generation. All new
   /// functions created in this scope will define a new, inner scope.
   ScopeDesc *currentIRScopeDesc_;
+
+  /// The current scope object available for IR generation.
+  CreateScopeInst *currentIRScope_{};
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
@@ -1060,6 +1054,23 @@ class ESTreeIRGen {
   ScopeDesc *newScopeDesc() {
     return currentIRScopeDesc_->createInnerScope();
   }
+
+  /// Emit an instruction to load a value from a specified location.
+  /// \param from location to load from, either a Variable or
+  ///     GlobalObjectProperty.
+  /// \param inhibitThrow  if true, do not throw when loading from missing
+  ///     global properties.
+  /// \return the instruction performing the load.
+  Instruction *emitLoad(Value *from, bool inhibitThrow = false);
+
+  /// Emit an instruction to a store a value into the specified location.
+  /// \param storedValue value to store
+  /// \param ptr location to store into, either a Variable or
+  ///     GlobalObjectProperty.
+  /// \param declInit whether this is a declaration initializer, so the TDZ
+  ///     check should be skipped.
+  /// \return the instruction performing the store.
+  Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 };
 
 template <typename EB, typename EF, typename EH>

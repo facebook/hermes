@@ -243,6 +243,7 @@ void IRPrinter::printInstruction(Instruction *I) {
   }
 
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
+    Value *O = I->getOperand(i);
     if (!enableNewDumpFormat) {
       if (llvh::isa<HBCCreateEnvironmentInst>(I) && i == 0) {
         continue;
@@ -251,9 +252,12 @@ void IRPrinter::printInstruction(Instruction *I) {
           i == HBCResolveEnvironment::OriginScopeDescIdx) {
         continue;
       }
+      if (llvh::isa<CreateScopeInst>(O)) {
+        continue;
+      }
     }
     os << (first ? " " : ", ");
-    printValueLabel(I, I->getOperand(i), i);
+    printValueLabel(I, O, i);
     first = false;
   }
 

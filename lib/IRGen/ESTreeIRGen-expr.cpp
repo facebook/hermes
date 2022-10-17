@@ -134,7 +134,8 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
       assert(
           curFunction()->capturedThis &&
           "arrow function must have a captured this");
-      return Builder.createLoadFrameInst(curFunction()->capturedThis);
+      return Builder.createLoadFrameInst(
+          curFunction()->capturedThis, currentIRScope_);
     }
     return curFunction()->function->getThisParameter();
   }
@@ -1696,7 +1697,8 @@ Value *ESTreeIRGen::genIdentifierExpression(
       !nameTable_.count(getNameFieldFromID(Iden))) {
     // If it is captured, we must use the captured value.
     if (curFunction()->capturedArguments) {
-      return Builder.createLoadFrameInst(curFunction()->capturedArguments);
+      return Builder.createLoadFrameInst(
+          curFunction()->capturedArguments, currentIRScope_);
     }
 
     return curFunction()->createArgumentsInst;
@@ -1724,7 +1726,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
                    << "\"\n");
 
   // Typeof <variable> does not throw.
-  return emitLoad(Builder, Var, afterTypeOf);
+  return emitLoad(Var, afterTypeOf);
 }
 
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
@@ -1744,7 +1746,7 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
 
       // If it is a variable, we must issue a load.
       if (auto *V = llvh::dyn_cast<Variable>(value))
-        return Builder.createLoadFrameInst(V);
+        return Builder.createLoadFrameInst(V, currentIRScope_);
 
       return value;
     }

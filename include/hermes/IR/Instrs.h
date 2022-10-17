@@ -534,20 +534,30 @@ class StoreStackInst : public Instruction {
   }
 };
 
-class LoadFrameInst : public SingleOperandInst {
+class LoadFrameInst : public Instruction {
   LoadFrameInst(const LoadFrameInst &) = delete;
   void operator=(const LoadFrameInst &) = delete;
 
  public:
-  explicit LoadFrameInst(Variable *alloc)
-      : SingleOperandInst(ValueKind::LoadFrameInstKind, alloc) {}
+  enum { LoadVariableIdx, EnvIdx };
+
+  explicit LoadFrameInst(Variable *alloc, ScopeCreationInst *environment)
+      : Instruction(ValueKind::LoadFrameInstKind) {
+    pushOperand(alloc);
+    pushOperand(environment);
+  }
+
   explicit LoadFrameInst(
       const LoadFrameInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
 
   Variable *getLoadVariable() const {
-    return cast<Variable>(getSingleOperand());
+    return cast<Variable>(getOperand(LoadVariableIdx));
+  }
+
+  ScopeCreationInst *getEnvironment() const {
+    return cast<ScopeCreationInst>(getOperand(EnvIdx));
   }
 
   SideEffectKind getSideEffect() {
@@ -568,7 +578,7 @@ class StoreFrameInst : public Instruction {
   void operator=(const StoreFrameInst &) = delete;
 
  public:
-  enum { StoredValueIdx, VariableIdx };
+  enum { StoredValueIdx, VariableIdx, EnvIdx };
 
   Value *getValue() const {
     return getOperand(StoredValueIdx);
@@ -576,11 +586,18 @@ class StoreFrameInst : public Instruction {
   Variable *getVariable() const {
     return cast<Variable>(getOperand(VariableIdx));
   }
+  ScopeCreationInst *getEnvironment() const {
+    return cast<ScopeCreationInst>(getOperand(EnvIdx));
+  }
 
-  explicit StoreFrameInst(Value *storedValue, Variable *ptr)
+  explicit StoreFrameInst(
+      Value *storedValue,
+      Variable *ptr,
+      ScopeCreationInst *environment)
       : Instruction(ValueKind::StoreFrameInstKind) {
     pushOperand(storedValue);
     pushOperand(ptr);
+    pushOperand(environment);
   }
   explicit StoreFrameInst(
       const StoreFrameInst *src,
