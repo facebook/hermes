@@ -41,55 +41,60 @@ function foo4(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [foo1, foo2, foo3, foo4]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo1() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %foo2() : string|number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "foo2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %foo3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "foo3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %foo4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "foo4" : string
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo1#0#1()#2 : number, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo1" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %foo2#0#1()#4 : string|number, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "foo2" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %foo3#0#1()#6, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "foo3" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %foo4#0#1()#8, %0
+// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "foo4" : string
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo1(a) : number
+// CHECK:function foo1#0#1(a)#2 : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 100 : number
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo1#0#1()#2}
+// CHECK-NEXT:  %1 = ReturnInst 100 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2(a) : string|number
+// CHECK:function foo2#0#1(a)#4 : string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %a, 10 : number
-// CHECK-NEXT:  %1 = ReturnInst %0 : string|number
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo2#0#1()#4}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %a, 10 : number
+// CHECK-NEXT:  %2 = ReturnInst %1 : string|number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo3(a)
+// CHECK:function foo3#0#1(a)#6
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CondBranchInst %a, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo3#0#1()#6}
+// CHECK-NEXT:  %1 = CondBranchInst %a, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = PhiInst %a, %BB1, 10 : number, %BB0
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = BranchInst %BB2
-// CHECK-NEXT:function_end
-
-// CHECK:function foo4(a)
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '<', %a, 0 : number
-// CHECK-NEXT:  %1 = CondBranchInst %0 : boolean, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = PhiInst 10 : number, %BB3, %a, %BB2, -1 : number, %BB0
+// CHECK-NEXT:  %2 = PhiInst %a, %BB1, 10 : number, %BB0
 // CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = BranchInst %BB2
+// CHECK-NEXT:function_end
+
+// CHECK:function foo4#0#1(a)#8
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo4#0#1()#8}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '<', %a, 0 : number
+// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %3 = PhiInst 10 : number, %BB3, %a, %BB2, -1 : number, %BB0
+// CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BinaryOperatorInst '==', %a, 0 : number
-// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB3, %BB1
+// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %a, 0 : number
+// CHECK-NEXT:  %6 = CondBranchInst %5 : boolean, %BB3, %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:  %7 = BranchInst %BB1
 // CHECK-NEXT:function_end

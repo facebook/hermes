@@ -24,26 +24,26 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // Auto-generated content below. Please do not modify manually.
 
-// LRA:function global() : undefined
+// LRA:function global#0()#1 : undefined
 // LRA-NEXT:frame = [], globals = [foo1, foo2, foo3, foo4, foo5]
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst
-// LRA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo1() : undefined, %0
+// LRA-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// LRA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo1#0#1()#2 : undefined, %0
 // LRA-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
 // LRA-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo1" : string
-// LRA-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %foo2() : undefined, %0
+// LRA-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %foo2#0#1()#3 : undefined, %0
 // LRA-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "foo2" : string
-// LRA-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %foo3() : undefined, %0
+// LRA-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %foo3#0#1()#4 : undefined, %0
 // LRA-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "foo3" : string
-// LRA-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %foo4() : undefined, %0
+// LRA-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %foo4#0#1()#5 : undefined, %0
 // LRA-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "foo4" : string
-// LRA-NEXT:  $Reg0 @10 [11...12) 	%10 = HBCCreateFunctionInst %foo5() : undefined, %0
+// LRA-NEXT:  $Reg0 @10 [11...12) 	%10 = HBCCreateFunctionInst %foo5#0#1()#6 : undefined, %0
 // LRA-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "foo5" : string
 // LRA-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg0 @13 [empty]	%13 = ReturnInst %12 : undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo1(f) : undefined
+// LRA:function foo1#0#1(f)#2 : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
@@ -53,7 +53,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg0 @3 [empty]	%4 = ReturnInst %1 : undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo2(f) : undefined
+// LRA:function foo2#0#1(f)#2 : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg2 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number
@@ -65,7 +65,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg0 @4 [empty]	%6 = ReturnInst %1 : undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo3(f) : undefined
+// LRA:function foo3#0#1(f)#2 : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg3 @0 [1...5) 	%0 = HBCLoadParamInst 1 : number
@@ -79,7 +79,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg0 @5 [empty]	%8 = ReturnInst %1 : undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo4(f) : undefined
+// LRA:function foo4#0#1(f)#2 : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg4 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
@@ -95,7 +95,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg0 @6 [empty]	%10 = ReturnInst %1 : undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo5(f) : undefined
+// LRA:function foo5#0#1(f)#2 : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg5 @0 [1...7) 	%0 = HBCLoadParamInst 1 : number

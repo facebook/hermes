@@ -65,7 +65,7 @@ print(typeAndValue(BigInt(1) << BigInt(4 * 64 + 32)))
 // << can no longer be assumed to return number -- it returns
 // a numeric when its arguments' types are unknown.
 
-// CHKIR-LABEL: function numberPlusBigInt() {{.*}}
+// CHKIR-LABEL: function numberPlusBigInt#0#1()#{{[0-9]+}} {{.*}}
 // CHKIR:  %[[N:[0-9]+]] = BinaryOperatorInst '<<', %{{[0-9]+}}
 // CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', 1 : number, %[[N]] : number|bigint
 

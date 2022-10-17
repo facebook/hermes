@@ -11,20 +11,20 @@
 function poszero(f) {
   return f(0.0, 0.0);
 }
-// CHECK: function poszero(f)
-// CHECK:   %2 = HBCLoadConstInst 0 : number
-// CHECK-NEXT:  %3 = ImplicitMovInst %1 : undefined
-// CHECK-NEXT:  %4 = ImplicitMovInst %2 : number
-// CHECK-NEXT:  %5 = ImplicitMovInst %2 : number
-// CHECK-NEXT:  %6 = HBCCallNInst %0, %1 : undefined, %2 : number, %2 : number
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK: function poszero#0#1(f)#2
+// CHECK:       %[[_2:[0-9]+]] = HBCLoadConstInst 0 : number
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_1:[0-9]+]] : undefined
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number
+// CHECK-NEXT:  %[[_6:[0-9]+]] = HBCCallNInst %{{[0-9]+}}, %[[_1]] : undefined, %[[_2]] : number, %[[_2]] : number
+// CHECK-NEXT:  %{{[0-9]+}}    = ReturnInst %[[_6]]
 
 // Negative zero is NOT 'cheap'.
 function negzero(f) {
   return f(-0.0, -0.0);
 }
-// CHECK:function negzero(f)
-// CHECK:  %2 = HBCLoadConstInst -0 : number
-// CHECK-NEXT:  %3 = ImplicitMovInst %1 : undefined
-// CHECK-NEXT:  %4 = ImplicitMovInst %2 : number
-// CHECK-NEXT:  %5 = ImplicitMovInst %2 : number
+// CHECK:function negzero#0#1(f)#2
+// CHECK:       %[[_2:[0-9]+]] = HBCLoadConstInst -0 : number
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %{{[0-9]+}} : undefined
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number
+// CHECK-NEXT:  %{{[0-9]+}}    = ImplicitMovInst %[[_2]] : number

@@ -20,25 +20,28 @@ function main()  {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [main]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %main() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : undefined, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function main() : undefined
+// CHECK:function main#0#1()#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : string
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 2 : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : string, %0
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 2 : number
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(p1 : number) : string
+// CHECK:function foo#1#2(p1 : number)#3 : string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', "value" : string, 2 : number
-// CHECK-NEXT:  %1 = ReturnInst %0 : string
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '+', "value" : string, 2 : number
+// CHECK-NEXT:  %2 = ReturnInst %1 : string
 // CHECK-NEXT:function_end

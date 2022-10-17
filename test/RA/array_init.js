@@ -21,7 +21,7 @@ var exp_then_elision_array = [1, 2, t, t + 1,,,"b"];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [const_array, t, exp_array, elision_array, const_then_elision_array, exp_then_elision_array]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...3) 	%0 = AllocArrayInst 4 : number, 1 : number, 2 : number, 3 : number, "a" : string

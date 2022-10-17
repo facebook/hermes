@@ -19,18 +19,18 @@ function foo (a, b) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo() : undefined, %0 @ $Reg0
+// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2 : undefined, %0 @ $Reg0
 // CHECK-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyInst %1 : closure @ $Reg1, %2 : object @ $Reg0, "foo" : string
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined @ $Reg0
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a, b) : undefined
+// CHECK:function foo#0#1(a, b)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number

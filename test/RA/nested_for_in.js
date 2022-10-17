@@ -20,7 +20,7 @@ for (var i=0 ; i < 3; ++i) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined|object
+// CHECK:function global#0()#1 : undefined|object
 // CHECK-NEXT:frame = [], globals = [a, x, y, i]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg4 @0 [1...36) 	%0 = HBCGetGlobalObjectInst

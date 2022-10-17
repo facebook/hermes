@@ -93,34 +93,34 @@ function code_sinking_in_loop(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [hoist_branch, hoist_branch_window, no_hoist_inc_dec, hoist_loop, hoist_loop_expression, hoist_from_multiblock_loop, hoist_with_dependencies_in_loop, code_sinking, code_sinking_in_loop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 @0 [1...19) 	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %hoist_branch(), %0
+// CHECK-NEXT:  $Reg0 @0 [1...19) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %hoist_branch#0#1()#2, %0
 // CHECK-NEXT:  $Reg1 @2 [3...20) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "hoist_branch" : string
-// CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %hoist_branch_window(), %0
+// CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %hoist_branch_window#0#1()#3, %0
 // CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "hoist_branch_window" : string
-// CHECK-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %no_hoist_inc_dec() : number|bigint, %0
+// CHECK-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %no_hoist_inc_dec#0#1()#4 : number|bigint, %0
 // CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "no_hoist_inc_dec" : string
-// CHECK-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %hoist_loop() : undefined, %0
+// CHECK-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %hoist_loop#0#1()#5 : undefined, %0
 // CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "hoist_loop" : string
-// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = HBCCreateFunctionInst %hoist_loop_expression() : undefined, %0
+// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = HBCCreateFunctionInst %hoist_loop_expression#0#1()#6 : undefined, %0
 // CHECK-NEXT:  $Reg2 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "hoist_loop_expression" : string
-// CHECK-NEXT:  $Reg2 @12 [13...14) 	%12 = HBCCreateFunctionInst %hoist_from_multiblock_loop() : undefined, %0
+// CHECK-NEXT:  $Reg2 @12 [13...14) 	%12 = HBCCreateFunctionInst %hoist_from_multiblock_loop#0#1()#7 : undefined, %0
 // CHECK-NEXT:  $Reg2 @13 [empty]	%13 = StorePropertyInst %12 : closure, %2 : object, "hoist_from_multiblock_loop" : string
-// CHECK-NEXT:  $Reg2 @14 [15...16) 	%14 = HBCCreateFunctionInst %hoist_with_dependencies_in_loop(), %0
+// CHECK-NEXT:  $Reg2 @14 [15...16) 	%14 = HBCCreateFunctionInst %hoist_with_dependencies_in_loop#0#1()#8, %0
 // CHECK-NEXT:  $Reg2 @15 [empty]	%15 = StorePropertyInst %14 : closure, %2 : object, "hoist_with_dependencies_in_loop" : string
-// CHECK-NEXT:  $Reg2 @16 [17...18) 	%16 = HBCCreateFunctionInst %code_sinking() : number, %0
+// CHECK-NEXT:  $Reg2 @16 [17...18) 	%16 = HBCCreateFunctionInst %code_sinking#0#1()#9 : number, %0
 // CHECK-NEXT:  $Reg2 @17 [empty]	%17 = StorePropertyInst %16 : closure, %2 : object, "code_sinking" : string
-// CHECK-NEXT:  $Reg0 @18 [19...20) 	%18 = HBCCreateFunctionInst %code_sinking_in_loop() : undefined, %0
+// CHECK-NEXT:  $Reg0 @18 [19...20) 	%18 = HBCCreateFunctionInst %code_sinking_in_loop#0#1()#10 : undefined, %0
 // CHECK-NEXT:  $Reg0 @19 [empty]	%19 = StorePropertyInst %18 : closure, %2 : object, "code_sinking_in_loop" : string
 // CHECK-NEXT:  $Reg0 @20 [21...22) 	%20 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @21 [empty]	%21 = ReturnInst %20 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_branch(x, y)
+// CHECK:function hoist_branch#0#1(x, y)#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadParamInst 2 : number
@@ -136,7 +136,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg1 @6 [empty]	%8 = ReturnInst %7
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_branch_window(x, y)
+// CHECK:function hoist_branch_window#0#1(x, y)#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 2 : number
@@ -155,7 +155,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg2 @7 [empty]	%11 = ReturnInst %10
 // CHECK-NEXT:function_end
 
-// CHECK:function no_hoist_inc_dec(x, y) : number|bigint
+// CHECK:function no_hoist_inc_dec#0#1(x, y)#2 : number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...7) 	%0 = HBCLoadParamInst 2 : number
@@ -175,7 +175,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @11 [empty]	%11 = ReturnInst %10 : number|bigint
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_loop(x) : undefined
+// CHECK:function hoist_loop#0#1(x)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg3 @0 [1...12) 	%0 = HBCLoadParamInst 1 : number
@@ -195,7 +195,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @12 [empty]	%12 = ReturnInst %3 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_loop_expression(a, b, call) : undefined
+// CHECK:function hoist_loop_expression#0#1(a, b, call)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg2 @0 [1...13) 	%0 = HBCLoadParamInst 3 : number
@@ -214,7 +214,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @12 [empty]	%12 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_from_multiblock_loop(x) : undefined
+// CHECK:function hoist_from_multiblock_loop#0#1(x)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg3 @0 [1...16) 	%0 = HBCGetGlobalObjectInst
@@ -237,7 +237,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @15 [empty]	%15 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_with_dependencies_in_loop(x, y)
+// CHECK:function hoist_with_dependencies_in_loop#0#1(x, y)#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...14) 	%0 = HBCLoadParamInst 2 : number
@@ -259,7 +259,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg1 @12 [empty]	%13 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function code_sinking(x, y) : number
+// CHECK:function code_sinking#0#1(x, y)#2 : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadParamInst 2 : number
@@ -276,7 +276,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg1 @8 [empty]	%9 = ReturnInst %8 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function code_sinking_in_loop(x, y) : undefined
+// CHECK:function code_sinking_in_loop#0#1(x, y)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...7) 	%0 = HBCLoadParamInst 1 : number

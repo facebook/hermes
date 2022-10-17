@@ -74,159 +74,174 @@ function postponed_store_in_use_block(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [store_x_not_captured, store_x_is_captured, load_x_not_captured, load_x_is_captured, load_x_captured_as_load, abort, foo, postponed_store_in_use_block]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %store_x_not_captured() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "store_x_not_captured" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %store_x_is_captured() : number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "store_x_is_captured" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %load_x_not_captured() : number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "load_x_not_captured" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %load_x_is_captured() : number
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "load_x_is_captured" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %load_x_captured_as_load() : number
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "load_x_captured_as_load" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %abort() : undefined
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "abort" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %"foo 5#"()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %postponed_store_in_use_block() : undefined
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "postponed_store_in_use_block" : string
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %store_x_not_captured#0#1()#2 : number, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "store_x_not_captured" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %store_x_is_captured#0#1()#4 : number, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "store_x_is_captured" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %load_x_not_captured#0#1()#6 : number, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "load_x_not_captured" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %load_x_is_captured#0#1()#8 : number, %0
+// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "load_x_is_captured" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %load_x_captured_as_load#0#1()#10 : number, %0
+// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "load_x_captured_as_load" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %abort#0#1()#12 : undefined, %0
+// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "abort" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %"foo 5#"#0#1()#13, %0
+// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %postponed_store_in_use_block#0#1()#14 : undefined, %0
+// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "postponed_store_in_use_block" : string
+// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function store_x_not_captured() : number
-// CHECK-NEXT:frame = [y : number]
+// CHECK:function store_x_not_captured#0#1()#2 : number
+// CHECK-NEXT:frame = [y#2 : number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo() : undefined
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst 9 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function foo() : undefined
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 12 : number, [y@store_x_not_captured] : number
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function store_x_is_captured() : number
-// CHECK-NEXT:frame = [y : number, x : number]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = StoreFrameInst 4 : number, [x] : number
-// CHECK-NEXT:  %2 = CreateFunctionInst %"foo 1#"() : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_not_captured#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#2] : number, %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %foo#1#2()#3 : undefined, %0
 // CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
-// CHECK-NEXT:  %4 = StoreFrameInst 9 : number, [x] : number
-// CHECK-NEXT:  %5 = ReturnInst 9 : number
+// CHECK-NEXT:  %4 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"() : undefined
+// CHECK:function foo#1#2()#3 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [x@store_x_is_captured] : number
-// CHECK-NEXT:  %1 = StoreFrameInst %0 : number, [y@store_x_is_captured] : number
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
+// CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#2@store_x_not_captured] : number, %0
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function load_x_not_captured() : number
-// CHECK-NEXT:frame = [y : number]
+// CHECK:function store_x_is_captured#0#1()#4 : number
+// CHECK-NEXT:frame = [y#4 : number, x#4 : number]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 2#"() : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_is_captured#0#1()#4}
+// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#4] : number, %0
+// CHECK-NEXT:  %2 = StoreFrameInst 4 : number, [x#4] : number, %0
+// CHECK-NEXT:  %3 = CreateFunctionInst %"foo 1#"#1#4()#5 : undefined, %0
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined
+// CHECK-NEXT:  %5 = StoreFrameInst 9 : number, [x#4] : number, %0
+// CHECK-NEXT:  %6 = ReturnInst 9 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function "foo 1#"#1#4()#5 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 1#"#1#4()#5}
+// CHECK-NEXT:  %1 = LoadFrameInst [x#4@store_x_is_captured] : number, %0
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : number, [y#4@store_x_is_captured] : number, %0
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function load_x_not_captured#0#1()#6 : number
+// CHECK-NEXT:frame = [y#6 : number]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_not_captured#0#1()#6}
+// CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#6] : number, %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %"foo 2#"#1#6()#7 : undefined, %0
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst 4 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function "foo 2#"#1#6()#7 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 2#"#1#6()#7}
+// CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#6@load_x_not_captured] : number, %0
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function load_x_is_captured#0#1()#8 : number
+// CHECK-NEXT:frame = [x#8 : number]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_is_captured#0#1()#8}
+// CHECK-NEXT:  %1 = StoreFrameInst 4 : number, [x#8] : number, %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %"foo 3#"#1#8()#9 : undefined, %0
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = LoadFrameInst [x#8] : number, %0
+// CHECK-NEXT:  %5 = ReturnInst %4 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function "foo 3#"#1#8()#9 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 3#"#1#8()#9}
+// CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [x#8@load_x_is_captured] : number, %0
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function load_x_captured_as_load#0#1()#10 : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_captured_as_load#0#1()#10}
+// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 4#"#1#10()#11 : undefined, %0
 // CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 2#"() : undefined
+// CHECK:function "foo 4#"#1#10()#11 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 12 : number, [y@load_x_not_captured] : number
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function load_x_is_captured() : number
-// CHECK-NEXT:frame = [x : number]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 4 : number, [x] : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 3#"() : undefined
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = LoadFrameInst [x] : number
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function "foo 3#"() : undefined
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 12 : number, [x@load_x_is_captured] : number
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function load_x_captured_as_load() : number
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 4#"() : undefined
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
-// CHECK-NEXT:  %2 = ReturnInst 4 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function "foo 4#"() : undefined
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function abort() : undefined
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ThrowInst 42 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function "foo 5#"(x)
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $a
-// CHECK-NEXT:  %1 = StoreStackInst %x, %0
-// CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = CatchInst
-// CHECK-NEXT:  %4 = LoadStackInst %0
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 100 : number
-// CHECK-NEXT:  %6 = StoreStackInst %5 : string|number, %0
-// CHECK-NEXT:  %7 = BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = LoadStackInst %0
-// CHECK-NEXT:  %9 = ReturnInst %8
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadStackInst %0
-// CHECK-NEXT:  %11 = BinaryOperatorInst '+', %10, 1 : number
-// CHECK-NEXT:  %12 = StoreStackInst %11 : string|number, %0
-// CHECK-NEXT:  %13 = LoadPropertyInst globalObject : object, "abort" : string
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined
-// CHECK-NEXT:  %15 = BinaryOperatorInst '+', %11 : string|number, 2 : number
-// CHECK-NEXT:  %16 = StoreStackInst %15 : string|number, %0
-// CHECK-NEXT:  %17 = BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %18 = TryEndInst
-// CHECK-NEXT:  %19 = BranchInst %BB3
-// CHECK-NEXT:function_end
-
-// CHECK:function postponed_store_in_use_block(x) : undefined
-// CHECK-NEXT:frame = [x]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = CreateFunctionInst %""()
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 0 : number, %1 : closure
+// CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 4#"#1#10()#11}
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, 4 : number
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ""()
+// CHECK:function abort#0#1()#12 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [x@postponed_store_in_use_block]
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = CreateScopeInst %S{abort#0#1()#12}
+// CHECK-NEXT:  %1 = ThrowInst 42 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function "foo 5#"#0#1(x)#13
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = AllocStackInst $a
+// CHECK-NEXT:  %1 = CreateScopeInst %S{"foo 5#"#0#1()#13}
+// CHECK-NEXT:  %2 = StoreStackInst %x, %0
+// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = CatchInst
+// CHECK-NEXT:  %5 = LoadStackInst %0
+// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %5, 100 : number
+// CHECK-NEXT:  %7 = StoreStackInst %6 : string|number, %0
+// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = LoadStackInst %0
+// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %11 = LoadStackInst %0
+// CHECK-NEXT:  %12 = BinaryOperatorInst '+', %11, 1 : number
+// CHECK-NEXT:  %13 = StoreStackInst %12 : string|number, %0
+// CHECK-NEXT:  %14 = LoadPropertyInst globalObject : object, "abort" : string
+// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %16 = BinaryOperatorInst '+', %12 : string|number, 2 : number
+// CHECK-NEXT:  %17 = StoreStackInst %16 : string|number, %0
+// CHECK-NEXT:  %18 = BranchInst %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %19 = TryEndInst
+// CHECK-NEXT:  %20 = BranchInst %BB3
+// CHECK-NEXT:function_end
+
+// CHECK:function postponed_store_in_use_block#0#1(x)#14 : undefined
+// CHECK-NEXT:frame = [x#14]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{postponed_store_in_use_block#0#1()#14}
+// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#14], %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %""#1#14()#15, %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', 0 : number, %2 : closure
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""#1#14()#15
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#14()#15}
+// CHECK-NEXT:  %1 = LoadFrameInst [x#14@postponed_store_in_use_block], %0
+// CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end

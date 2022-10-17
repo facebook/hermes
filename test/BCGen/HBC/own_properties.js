@@ -17,13 +17,13 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %3 = HBCCreateFunctionInst %foo(), %0
+// CHECK-NEXT:  %3 = HBCCreateFunctionInst %foo#0#1()#2, %0
 // CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, %1 : object, "foo" : string
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %6 = StoreStackInst %2 : undefined, %5
@@ -31,10 +31,10 @@ function foo() {
 // CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:function_end
 
-// CHECK:function foo()
+// CHECK:function foo#0#1()#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = HBCLoadConstInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst 2 : number
 // CHECK-NEXT:  %3 = HBCLoadConstInst 3 : number

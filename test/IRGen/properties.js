@@ -20,42 +20,44 @@ function sink(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [y, sink]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = StorePropertyInst 2 : number, globalObject : object, "y" : string
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %6 = StorePropertyInst 3 : number, %5, "bar" : string
-// CHECK-NEXT:  %7 = StoreStackInst 3 : number, %2
-// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %10 = CallInst %8, undefined : undefined, %9
-// CHECK-NEXT:  %11 = StoreStackInst %10, %2
-// CHECK-NEXT:  %12 = LoadStackInst %2
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = StorePropertyInst 2 : number, globalObject : object, "y" : string
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "y" : string
+// CHECK-NEXT:  %7 = StorePropertyInst 3 : number, %6, "bar" : string
+// CHECK-NEXT:  %8 = StoreStackInst 3 : number, %3
+// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "y" : string
+// CHECK-NEXT:  %11 = CallInst %9, undefined : undefined, %10
+// CHECK-NEXT:  %12 = StoreStackInst %11, %3
+// CHECK-NEXT:  %13 = LoadStackInst %3
+// CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:function_end
 
-// CHECK:function sink(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function sink#0#1(x, y)#2
+// CHECK-NEXT:frame = [x#2, y#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "bar" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %y, [y#2], %0
+// CHECK-NEXT:  %3 = LoadFrameInst [x#2], %0
+// CHECK-NEXT:  %4 = LoadPropertyInst %3, "bar" : string
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = LoadPropertyInst %5, "bar" : string
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %6 = LoadFrameInst [x#2], %0
+// CHECK-NEXT:  %7 = LoadPropertyInst %6, "bar" : string
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = LoadFrameInst [y]
-// CHECK-NEXT:  %10 = LoadPropertyInst %8, %9
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %9 = LoadFrameInst [x#2], %0
+// CHECK-NEXT:  %10 = LoadFrameInst [y#2], %0
+// CHECK-NEXT:  %11 = LoadPropertyInst %9, %10
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

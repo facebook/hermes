@@ -17,30 +17,33 @@ function g12(z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [g12]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %g12() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "g12" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %g12#0#1()#2 : undefined, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "g12" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function g12(z) : undefined
+// CHECK:function g12#0#1(z)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %w() : number
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
-// CHECK-NEXT:  %2 = BinaryOperatorInst '>', %z, 0 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{g12#0#1()#2}
+// CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = BinaryOperatorInst '>', %z, 0 : number
+// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CallInst %0 : closure, undefined : undefined
-// CHECK-NEXT:  %5 = BranchInst %BB2
+// CHECK-NEXT:  %5 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function w() : number
+// CHECK:function w#1#2()#3 : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 1 : number
+// CHECK-NEXT:  %0 = CreateScopeInst %S{w#1#2()#3}
+// CHECK-NEXT:  %1 = ReturnInst 1 : number
 // CHECK-NEXT:function_end

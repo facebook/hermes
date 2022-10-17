@@ -17,42 +17,44 @@ function foo(f, g) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(f, g)
-// CHECK-NEXT:frame = [f, g]
+// CHECK:function foo#0#1(f, g)#2
+// CHECK-NEXT:frame = [f#2, g#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %f, [f]
-// CHECK-NEXT:  %1 = StoreFrameInst %g, [g]
-// CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %f, [f#2], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %g, [g#2], %0
+// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = CatchInst
-// CHECK-NEXT:  %4 = LoadFrameInst [g]
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %4 = CatchInst
+// CHECK-NEXT:  %5 = LoadFrameInst [g#2], %0
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [f]
-// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
-// CHECK-NEXT:  %10 = BranchInst %BB4
+// CHECK-NEXT:  %9 = LoadFrameInst [f#2], %0
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
+// CHECK-NEXT:  %11 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = TryEndInst
-// CHECK-NEXT:  %12 = ReturnInst %9
+// CHECK-NEXT:  %12 = TryEndInst
+// CHECK-NEXT:  %13 = ReturnInst %10
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = BranchInst %BB6
+// CHECK-NEXT:  %14 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %14 = TryEndInst
-// CHECK-NEXT:  %15 = BranchInst %BB3
-// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %15 = TryEndInst
 // CHECK-NEXT:  %16 = BranchInst %BB3
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %17 = BranchInst %BB3
 // CHECK-NEXT:function_end

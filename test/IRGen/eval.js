@@ -21,46 +21,50 @@ function baz() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo, bar, baz]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %baz()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "baz" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %bar#0#1()#3, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %baz#0#1()#4, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "baz" : string
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
+// CHECK-NEXT:  %9 = LoadStackInst %7
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:function_end
 
-// CHECK:function foo()
+// CHECK:function foo#0#1()#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DirectEvalInst "1 + 1" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = DirectEvalInst "1 + 1" : string
+// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function bar#0#1()#3
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
+// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %4 = DirectEvalInst "2 + 2" : string
+// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function baz#0#1()#4
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{baz#0#1()#4}
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function bar()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
-// CHECK-NEXT:  %3 = DirectEvalInst "2 + 2" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function baz()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -24,27 +24,27 @@ function bar(a,b,c,d,e,f,g,h) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [foo, bar]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo() : number, %0
+// CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2 : number, %0
 // CHECK-NEXT:  $Reg1 @2 [3...6) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
-// CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCCreateFunctionInst %bar() : undefined, %0
+// CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCCreateFunctionInst %bar#0#1()#3 : undefined, %0
 // CHECK-NEXT:  $Reg0 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "bar" : string
 // CHECK-NEXT:  $Reg0 @6 [7...8) 	%6 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @7 [empty]	%7 = ReturnInst %6 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo() : number
+// CHECK:function foo#0#1()#2 : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadConstInst 0 : number
 // CHECK-NEXT:  $Reg0 @1 [empty]	%1 = ReturnInst %0 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(a, b, c, d, e, f, g, h) : undefined
+// CHECK:function bar#0#1(a, b, c, d, e, f, g, h)#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg9 @0 [1...19) 	%0 = HBCLoadParamInst 1 : number

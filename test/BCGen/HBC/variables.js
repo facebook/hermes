@@ -30,18 +30,18 @@ function daa(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [a, bar, foo, daa]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCLoadConstInst 5 : number
-// CHECK-NEXT:  %4 = HBCCreateFunctionInst %bar(), %0
+// CHECK-NEXT:  %4 = HBCCreateFunctionInst %bar#0#1()#2, %0
 // CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, %1 : object, "bar" : string
-// CHECK-NEXT:  %6 = HBCCreateFunctionInst %foo(), %0
+// CHECK-NEXT:  %6 = HBCCreateFunctionInst %foo#0#1()#3, %0
 // CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, %1 : object, "foo" : string
-// CHECK-NEXT:  %8 = HBCCreateFunctionInst %daa(), %0
+// CHECK-NEXT:  %8 = HBCCreateFunctionInst %daa#0#1()#4, %0
 // CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, %1 : object, "daa" : string
 // CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %11 = StoreStackInst %2 : undefined, %10
@@ -52,80 +52,80 @@ function daa(a) {
 // CHECK-NEXT:  %16 = ReturnInst %15
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function bar#0#1(a)#2
+// CHECK-NEXT:frame = [a#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{bar#0#1()#2}
 // CHECK-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %3 = HBCStoreToEnvironmentInst %0, %1, [a]
-// CHECK-NEXT:  %4 = HBCLoadFromEnvironmentInst %0, [a]
+// CHECK-NEXT:  %3 = HBCStoreToEnvironmentInst %0, %1, [a#2]
+// CHECK-NEXT:  %4 = HBCLoadFromEnvironmentInst %0, [a#2]
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst %2 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a)
-// CHECK-NEXT:frame = [a, b]
+// CHECK:function foo#0#1(a)#3
+// CHECK-NEXT:frame = [a#3, b#3]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{foo#0#1()#3}
 // CHECK-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a]
-// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
+// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a#3]
+// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b#3]
 // CHECK-NEXT:  %6 = LoadPropertyInst %3 : object, "bar" : string
-// CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst %0, [a]
+// CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst %0, [a#3]
 // CHECK-NEXT:  %8 = CallInst %6, %2 : undefined, %7
-// CHECK-NEXT:  %9 = HBCStoreToEnvironmentInst %0, %8, [b]
-// CHECK-NEXT:  %10 = HBCLoadFromEnvironmentInst %0, [b]
+// CHECK-NEXT:  %9 = HBCStoreToEnvironmentInst %0, %8, [b#3]
+// CHECK-NEXT:  %10 = HBCLoadFromEnvironmentInst %0, [b#3]
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = ReturnInst %2 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function daa(a)
-// CHECK-NEXT:frame = [a, b, daa_capture]
+// CHECK:function daa#0#1(a)#4
+// CHECK-NEXT:frame = [a#4, b#4, daa_capture#4]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{daa#0#1()#4}
 // CHECK-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a]
-// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b]
-// CHECK-NEXT:  %6 = HBCCreateFunctionInst %daa_capture(), %0
-// CHECK-NEXT:  %7 = HBCStoreToEnvironmentInst %0, %6 : closure, [daa_capture]
-// CHECK-NEXT:  %8 = HBCLoadFromEnvironmentInst %0, [a]
+// CHECK-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %1, [a#4]
+// CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %2 : undefined, [b#4]
+// CHECK-NEXT:  %6 = HBCCreateFunctionInst %daa_capture#1#4()#5, %0
+// CHECK-NEXT:  %7 = HBCStoreToEnvironmentInst %0, %6 : closure, [daa_capture#4]
+// CHECK-NEXT:  %8 = HBCLoadFromEnvironmentInst %0, [a#4]
 // CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8, %3 : number
-// CHECK-NEXT:  %10 = HBCStoreToEnvironmentInst %0, %9, [b]
-// CHECK-NEXT:  %11 = HBCLoadFromEnvironmentInst %0, [daa_capture]
+// CHECK-NEXT:  %10 = HBCStoreToEnvironmentInst %0, %9, [b#4]
+// CHECK-NEXT:  %11 = HBCLoadFromEnvironmentInst %0, [daa_capture#4]
 // CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = ReturnInst %2 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function daa_capture()
+// CHECK:function daa_capture#1#4()#5
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{daa_capture#1#4()#5}
 // CHECK-NEXT:  %1 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %2 = HBCResolveEnvironment %daa()
-// CHECK-NEXT:  %3 = HBCLoadFromEnvironmentInst %2, [b@daa]
+// CHECK-NEXT:  %2 = HBCResolveEnvironment %S{daa#0#1()#4}, %S{daa_capture#1#4()#5}
+// CHECK-NEXT:  %3 = HBCLoadFromEnvironmentInst %2, [b#4@daa]
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst %1 : undefined
 // CHECK-NEXT:function_end
 
-// CHKOPT:function global()
+// CHKOPT:function global#0()#1
 // CHKOPT-NEXT:frame = [], globals = [a, bar, foo, daa]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCCreateEnvironmentInst
-// CHKOPT-NEXT:  %1 = HBCCreateFunctionInst %bar(), %0
+// CHKOPT-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHKOPT-NEXT:  %1 = HBCCreateFunctionInst %bar#0#1()#2, %0
 // CHKOPT-NEXT:  %2 = HBCGetGlobalObjectInst
 // CHKOPT-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "bar" : string
-// CHKOPT-NEXT:  %4 = HBCCreateFunctionInst %foo(), %0
+// CHKOPT-NEXT:  %4 = HBCCreateFunctionInst %foo#0#1()#3, %0
 // CHKOPT-NEXT:  %5 = StorePropertyInst %4 : closure, %2 : object, "foo" : string
-// CHKOPT-NEXT:  %6 = HBCCreateFunctionInst %daa() : closure, %0
+// CHKOPT-NEXT:  %6 = HBCCreateFunctionInst %daa#0#1()#4 : closure, %0
 // CHKOPT-NEXT:  %7 = StorePropertyInst %6 : closure, %2 : object, "daa" : string
 // CHKOPT-NEXT:  %8 = HBCLoadConstInst 5 : number
 // CHKOPT-NEXT:  %9 = StorePropertyInst %8 : number, %2 : object, "a" : string
@@ -133,14 +133,14 @@ function daa(a) {
 // CHKOPT-NEXT:  %11 = ReturnInst %10
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function bar(a)
+// CHKOPT:function bar#0#1(a)#2
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = HBCLoadParamInst 1 : number
 // CHKOPT-NEXT:  %1 = ReturnInst %0
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function foo(a)
+// CHKOPT:function foo#0#1(a)#3
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = HBCGetGlobalObjectInst
@@ -151,22 +151,22 @@ function daa(a) {
 // CHKOPT-NEXT:  %5 = ReturnInst %4
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function daa(a) : closure
-// CHKOPT-NEXT:frame = [b : undefined|string|number]
+// CHKOPT:function daa#0#1(a)#4 : closure
+// CHKOPT-NEXT:frame = [b#4 : undefined|string|number]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCCreateEnvironmentInst
+// CHKOPT-NEXT:  %0 = HBCCreateEnvironmentInst %S{daa#0#1()#4}
 // CHKOPT-NEXT:  %1 = HBCLoadParamInst 1 : number
 // CHKOPT-NEXT:  %2 = HBCLoadConstInst 1 : number
 // CHKOPT-NEXT:  %3 = BinaryOperatorInst '+', %1, %2 : number
-// CHKOPT-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %3 : string|number, [b] : undefined|string|number
-// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst %daa_capture() : undefined|string|number, %0
+// CHKOPT-NEXT:  %4 = HBCStoreToEnvironmentInst %0, %3 : string|number, [b#4] : undefined|string|number
+// CHKOPT-NEXT:  %5 = HBCCreateFunctionInst %daa_capture#1#4()#5 : undefined|string|number, %0
 // CHKOPT-NEXT:  %6 = ReturnInst %5 : closure
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function daa_capture() : undefined|string|number
+// CHKOPT:function daa_capture#1#4()#5 : undefined|string|number
 // CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCResolveEnvironment %daa()
-// CHKOPT-NEXT:  %1 = HBCLoadFromEnvironmentInst %0, [b@daa] : undefined|string|number
+// CHKOPT-NEXT:  %0 = HBCResolveEnvironment %S{daa#0#1()#4}, %S{daa_capture#1#4()#5}
+// CHKOPT-NEXT:  %1 = HBCLoadFromEnvironmentInst %0, [b#4@daa] : undefined|string|number
 // CHKOPT-NEXT:  %2 = ReturnInst %1
 // CHKOPT-NEXT:function_end

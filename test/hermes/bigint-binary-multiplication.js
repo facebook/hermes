@@ -68,7 +68,7 @@ print(typeAndValue(BigInt(0) * BigInt("0xffffffffffffffff")));
 // CHKBC-NOT:     AddN
 // CHKBC:         Add     r{{[0-9]+}},
 
-// CHKIR-LABEL: function numberPlusBigInt() {{.*}}
+// CHKIR-LABEL: function numberPlusBigInt#0#1()#{{[0-9]+}} {{.*}}
 // CHKIR:  %[[N:[0-9]+]] = BinaryOperatorInst '*', %{{[0-9]+}}
 // CHKIR:  %{{[0-9]+}}   = BinaryOperatorInst '+', 1 : number, %[[N]] : number|bigint
 

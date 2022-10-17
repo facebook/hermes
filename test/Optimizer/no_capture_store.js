@@ -44,84 +44,92 @@ function outer() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [bar, main, outer]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %main() : closure
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %outer() : object
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "outer" : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %bar#0#1()#2 : undefined, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %main#0#1()#3 : closure, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %outer#0#1()#5 : object, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "outer" : string
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bar() : undefined
+// CHECK:function bar#0#1()#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function main(p) : closure
-// CHECK-NEXT:frame = [k1, k2, k3]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadPropertyInst globalObject : object, "bar" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [k1]
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "bar" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [k2]
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "bar" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = StoreFrameInst %7, [k3]
-// CHECK-NEXT:  %9 = CreateFunctionInst %""() : string|number|bigint
-// CHECK-NEXT:  %10 = ReturnInst %9 : closure
-// CHECK-NEXT:function_end
-
-// CHECK:function ""() : string|number|bigint
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [k1@main]
-// CHECK-NEXT:  %1 = LoadFrameInst [k2@main]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, %1
-// CHECK-NEXT:  %3 = LoadFrameInst [k3@main]
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2 : string|number|bigint, %3
-// CHECK-NEXT:  %5 = ReturnInst %4 : string|number|bigint
-// CHECK-NEXT:function_end
-
-// CHECK:function outer() : object
-// CHECK-NEXT:frame = [envVar]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [envVar]
-// CHECK-NEXT:  %1 = CreateFunctionInst %setValue() : undefined
-// CHECK-NEXT:  %2 = CreateFunctionInst %test1() : undefined
-// CHECK-NEXT:  %3 = CreateFunctionInst %test2() : undefined
-// CHECK-NEXT:  %4 = AllocArrayInst 3 : number
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst %1 : closure, %4 : object, 0 : number, true : boolean
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2 : closure, %4 : object, 1 : number, true : boolean
-// CHECK-NEXT:  %7 = StoreOwnPropertyInst %3 : closure, %4 : object, 2 : number, true : boolean
-// CHECK-NEXT:  %8 = ReturnInst %4 : object
-// CHECK-NEXT:function_end
-
-// CHECK:function setValue(v) : undefined
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %v, [envVar@outer]
+// CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test1() : undefined
-// CHECK-NEXT:frame = []
+// CHECK:function main#0#1(p)#3 : closure
+// CHECK-NEXT:frame = [k1#3, k2#3, k3#3]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 87 : number, [envVar@outer]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#3}
+// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [k1#3], %0
+// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
+// CHECK-NEXT:  %6 = StoreFrameInst %5, [k2#3], %0
+// CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [k3#3], %0
+// CHECK-NEXT:  %10 = CreateFunctionInst %""#1#3()#4 : string|number|bigint, %0
+// CHECK-NEXT:  %11 = ReturnInst %10 : closure
 // CHECK-NEXT:function_end
 
-// CHECK:function test2(o) : undefined
+// CHECK:function ""#1#3()#4 : string|number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 42 : number, [envVar@outer]
-// CHECK-NEXT:  %1 = CallInst %o, undefined : undefined
-// CHECK-NEXT:  %2 = StoreFrameInst 87 : number, [envVar@outer]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#3()#4}
+// CHECK-NEXT:  %1 = LoadFrameInst [k1#3@main], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [k2#3@main], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1, %2
+// CHECK-NEXT:  %4 = LoadFrameInst [k3#3@main], %0
+// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3 : string|number|bigint, %4
+// CHECK-NEXT:  %6 = ReturnInst %5 : string|number|bigint
+// CHECK-NEXT:function_end
+
+// CHECK:function outer#0#1()#5 : object
+// CHECK-NEXT:frame = [envVar#5]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{outer#0#1()#5}
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [envVar#5], %0
+// CHECK-NEXT:  %2 = CreateFunctionInst %setValue#1#5()#6 : undefined, %0
+// CHECK-NEXT:  %3 = CreateFunctionInst %test1#1#5()#7 : undefined, %0
+// CHECK-NEXT:  %4 = CreateFunctionInst %test2#1#5()#8 : undefined, %0
+// CHECK-NEXT:  %5 = AllocArrayInst 3 : number
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2 : closure, %5 : object, 0 : number, true : boolean
+// CHECK-NEXT:  %7 = StoreOwnPropertyInst %3 : closure, %5 : object, 1 : number, true : boolean
+// CHECK-NEXT:  %8 = StoreOwnPropertyInst %4 : closure, %5 : object, 2 : number, true : boolean
+// CHECK-NEXT:  %9 = ReturnInst %5 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function setValue#1#5(v)#6 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{setValue#1#5()#6}
+// CHECK-NEXT:  %1 = StoreFrameInst %v, [envVar#5@outer], %0
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function test1#1#5()#7 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test1#1#5()#7}
+// CHECK-NEXT:  %1 = StoreFrameInst 87 : number, [envVar#5@outer], %0
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function test2#1#5(o)#8 : undefined
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test2#1#5()#8}
+// CHECK-NEXT:  %1 = StoreFrameInst 42 : number, [envVar#5@outer], %0
+// CHECK-NEXT:  %2 = CallInst %o, undefined : undefined
+// CHECK-NEXT:  %3 = StoreFrameInst 87 : number, [envVar#5@outer], %0
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

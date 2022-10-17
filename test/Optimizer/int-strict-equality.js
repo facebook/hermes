@@ -59,76 +59,81 @@ function test_could_be_int(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [test_int_int, test_int_uint, test_uint_uint, test_could_be_int]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %test_int_int() : undefined|number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test_int_int" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %test_int_uint() : undefined|number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test_int_uint" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_uint_uint() : undefined|number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_uint_uint" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %test_could_be_int() : undefined|number
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "test_could_be_int" : string
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %test_int_int#0#1()#2 : undefined|number, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test_int_int" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %test_int_uint#0#1()#3 : undefined|number, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "test_int_uint" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %test_uint_uint#0#1()#4 : undefined|number, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "test_uint_uint" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %test_could_be_int#0#1()#5 : undefined|number, %0
+// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "test_could_be_int" : string
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_int_int(x, y) : undefined|number
+// CHECK:function test_int_int#0#1(x, y)#2 : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %x
-// CHECK-NEXT:  %1 = AsInt32Inst %y
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test_int_int#0#1()#2}
+// CHECK-NEXT:  %1 = AsInt32Inst %x
+// CHECK-NEXT:  %2 = AsInt32Inst %y
+// CHECK-NEXT:  %3 = BinaryOperatorInst '===', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %5 = ReturnInst %1 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_int_uint(x, y) : undefined|number
+// CHECK:function test_int_uint#0#1(x, y)#3 : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %x
-// CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %y, 0 : number
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test_int_uint#0#1()#3}
+// CHECK-NEXT:  %1 = AsInt32Inst %x
+// CHECK-NEXT:  %2 = BinaryOperatorInst '>>>', %y, 0 : number
+// CHECK-NEXT:  %3 = BinaryOperatorInst '===', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %5 = ReturnInst %1 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_uint_uint(x, y) : undefined|number
+// CHECK:function test_uint_uint#0#1(x, y)#4 : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '>>>', %x, 0 : number
-// CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %y, 0 : number
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test_uint_uint#0#1()#4}
+// CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %x, 0 : number
+// CHECK-NEXT:  %2 = BinaryOperatorInst '>>>', %y, 0 : number
+// CHECK-NEXT:  %3 = BinaryOperatorInst '===', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %5 = ReturnInst %1 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_could_be_int(func) : undefined|number
+// CHECK:function test_could_be_int#0#1(func)#5 : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CallInst %func, undefined : undefined
-// CHECK-NEXT:  %1 = BinaryOperatorInst '*', %0, 100 : number
-// CHECK-NEXT:  %2 = CallInst %func, undefined : undefined
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test_could_be_int#0#1()#5}
+// CHECK-NEXT:  %1 = CallInst %func, undefined : undefined
+// CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1, 100 : number
+// CHECK-NEXT:  %3 = CallInst %func, undefined : undefined
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = AsInt32Inst %1 : number
-// CHECK-NEXT:  %5 = BranchInst %BB2
+// CHECK-NEXT:  %5 = AsInt32Inst %2 : number
+// CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = PhiInst %4 : number, %BB1, undefined : undefined, %BB0
-// CHECK-NEXT:  %7 = BinaryOperatorInst '>>>', %1 : number, 0 : number
-// CHECK-NEXT:  %8 = BinaryOperatorInst '===', %6 : undefined|number, %7 : number
-// CHECK-NEXT:  %9 = CondBranchInst %8 : boolean, %BB3, %BB4
+// CHECK-NEXT:  %7 = PhiInst %5 : number, %BB1, undefined : undefined, %BB0
+// CHECK-NEXT:  %8 = BinaryOperatorInst '>>>', %2 : number, 0 : number
+// CHECK-NEXT:  %9 = BinaryOperatorInst '===', %7 : undefined|number, %8 : number
+// CHECK-NEXT:  %10 = CondBranchInst %9 : boolean, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst %1 : number
+// CHECK-NEXT:  %11 = ReturnInst %2 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

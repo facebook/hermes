@@ -15,16 +15,17 @@ print(void print);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %6 = UnaryOperatorInst 'void', %5
-// CHECK-NEXT:  %7 = CallInst %4, undefined : undefined, %6 : undefined
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %7 = UnaryOperatorInst 'void', %6
+// CHECK-NEXT:  %8 = CallInst %5, undefined : undefined, %7 : undefined
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end

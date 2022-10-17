@@ -11,7 +11,7 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : number
+// CHECK:function global#0()#1 : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCLoadConstInst 42 : number

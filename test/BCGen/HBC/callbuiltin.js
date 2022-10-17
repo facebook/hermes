@@ -28,16 +28,16 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global()
+// CHKRA:function global#0()#1
 // CHKRA-NEXT:frame = [], globals = [foo, shadows, checkNonStaticBuiltin]
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst
-// CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo(), %0
+// CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2, %0
 // CHKRA-NEXT:  %2 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
-// CHKRA-NEXT:  %4 = HBCCreateFunctionInst %shadows() : undefined, %0
+// CHKRA-NEXT:  %4 = HBCCreateFunctionInst %shadows#0#1()#3 : undefined, %0
 // CHKRA-NEXT:  %5 = StorePropertyInst %4 : closure, %2 : object, "shadows" : string
-// CHKRA-NEXT:  %6 = HBCCreateFunctionInst %checkNonStaticBuiltin() : undefined, %0
+// CHKRA-NEXT:  %6 = HBCCreateFunctionInst %checkNonStaticBuiltin#0#1()#4 : undefined, %0
 // CHKRA-NEXT:  %7 = StorePropertyInst %6 : closure, %2 : object, "checkNonStaticBuiltin" : string
 // CHKRA-NEXT:  %8 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // CHKRA-NEXT:  %9 = LoadPropertyInst %2 : object, "foo" : string
@@ -52,7 +52,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %18 = ReturnInst %17
 // CHKRA-NEXT:function_end
 
-// CHKRA:function foo(x)
+// CHKRA:function foo#0#1(x)#2
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCLoadParamInst 1 : number
@@ -61,7 +61,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %3 = ReturnInst %2
 // CHKRA-NEXT:function_end
 
-// CHKRA:function shadows() : undefined
+// CHKRA:function shadows#0#1()#2 : undefined
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
@@ -77,7 +77,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
 // CHKRA-NEXT:function_end
 
-// CHKRA:function checkNonStaticBuiltin() : undefined
+// CHKRA:function checkNonStaticBuiltin#0#1()#2 : undefined
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst

@@ -46,13 +46,6 @@ struct InstructionNamer {
 
 using llvh::raw_ostream;
 
-// In order to prevent the need to update the lit tests with every IR change,
-// all scope-related dumping is gated behind this global variable, which allows
-// dumping to be enabled in a debugger if needed. This is also used as the
-// cl::location for the -bs flag, so specifying that flag in the command line
-// automatically enables the new dump format.
-inline bool enableNewDumpFormat = false;
-
 struct IRPrinter : public IRVisitor<IRPrinter, void> {
   /// Indentation level.
   unsigned Indent;

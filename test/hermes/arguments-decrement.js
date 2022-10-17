@@ -23,14 +23,14 @@ print(decrementArguments());
 
 
 // CHKIR-LABEL: *** AFTER LowerConstruction
-// CHKIR-LABEL: function decrementArguments() : number
+// CHKIR-LABEL: function decrementArguments#0#1()#2 : number
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:
 // CHKIR-NEXT:   %4 = PhiInst undefined : undefined, %BB0, %2 : object, %BB1
 // CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number|bigint, %BB1
 // CHKIR-LABEL: %BB2:
 // CHKIR-LABEL: *** AFTER LowerArgumentsArray
-// CHKIR-LABEL: function decrementArguments() : number
+// CHKIR-LABEL: function decrementArguments#0#1()#2 : number
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:
 // CHKIR-NEXT:   %5 = PhiInst undefined : undefined, %BB0, %15, %BB2
@@ -41,7 +41,7 @@ print(decrementArguments());
 // CHKIR-LABEL: %BB3:
 // CHKIR-LABEL: %BB2:
 
-// CHKRA-LABEL: function decrementArguments() : number
+// CHKRA-LABEL: function decrementArguments#0#1()#2 : number
 // CHKRA-LABEL: %BB0:
 // CHKRA-LABEL: %BB1:
 // CHKRA-NEXT:   $Reg2 @7 [2...19)    %7 = PhiInst %5 : number, %BB0, %17 : number|bigint, %BB2

@@ -23,52 +23,56 @@ function test_member_access(obj, param) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo, bar, test_member_access]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_member_access()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_member_access" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %bar#0#1()#3, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %test_member_access#0#1()#4, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "test_member_access" : string
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
+// CHECK-NEXT:  %9 = LoadStackInst %7
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a, b, c)
-// CHECK-NEXT:frame = [a, b, c]
+// CHECK:function foo#0#1(a, b, c)#2
+// CHECK-NEXT:frame = [a#2, b#2, c#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst %c, [c]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %b, [b#2], %0
+// CHECK-NEXT:  %3 = StoreFrameInst %c, [c#2], %0
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(x, y, z)
-// CHECK-NEXT:frame = [x, y, z]
+// CHECK:function bar#0#1(x, y, z)#3
+// CHECK-NEXT:frame = [x#3, y#3, z#3]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = StoreFrameInst %z, [z]
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = LoadFrameInst [z]
-// CHECK-NEXT:  %7 = CallInst %3, undefined : undefined, %4, %5, %6
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
+// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %y, [y#3], %0
+// CHECK-NEXT:  %3 = StoreFrameInst %z, [z#3], %0
+// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %5 = LoadFrameInst [x#3], %0
+// CHECK-NEXT:  %6 = LoadFrameInst [y#3], %0
+// CHECK-NEXT:  %7 = LoadFrameInst [z#3], %0
+// CHECK-NEXT:  %8 = CallInst %4, undefined : undefined, %5, %6, %7
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_member_access(obj, param)
-// CHECK-NEXT:frame = [obj, param]
+// CHECK:function test_member_access#0#1(obj, param)#4
+// CHECK-NEXT:frame = [obj#4, param#4]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %1 = StoreFrameInst %param, [param]
-// CHECK-NEXT:  %2 = LoadFrameInst [obj]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "foo" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [param]
-// CHECK-NEXT:  %5 = CallInst %3, %2, %4
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{test_member_access#0#1()#4}
+// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#4], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %param, [param#4], %0
+// CHECK-NEXT:  %3 = LoadFrameInst [obj#4], %0
+// CHECK-NEXT:  %4 = LoadPropertyInst %3, "foo" : string
+// CHECK-NEXT:  %5 = LoadFrameInst [param#4], %0
+// CHECK-NEXT:  %6 = CallInst %4, %3, %5
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

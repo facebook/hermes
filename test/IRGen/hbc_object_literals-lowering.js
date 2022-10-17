@@ -50,33 +50,33 @@ function accessorObjectLiteral(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// IRGEN:function global() : undefined
+// IRGEN:function global#0()#1 : undefined
 // IRGEN-NEXT:frame = [], globals = [emitAllocObjectLiteral, nestedAllocObjectLiteral, numericPlaceholder, estimateBestNumElement, accessorObjectLiteral]
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCCreateEnvironmentInst
-// IRGEN-NEXT:  %1 = HBCCreateFunctionInst %emitAllocObjectLiteral() : object, %0
+// IRGEN-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// IRGEN-NEXT:  %1 = HBCCreateFunctionInst %emitAllocObjectLiteral#0#1()#2 : object, %0
 // IRGEN-NEXT:  %2 = HBCGetGlobalObjectInst
 // IRGEN-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "emitAllocObjectLiteral" : string
-// IRGEN-NEXT:  %4 = HBCCreateFunctionInst %nestedAllocObjectLiteral() : object, %0
+// IRGEN-NEXT:  %4 = HBCCreateFunctionInst %nestedAllocObjectLiteral#0#1()#3 : object, %0
 // IRGEN-NEXT:  %5 = StorePropertyInst %4 : closure, %2 : object, "nestedAllocObjectLiteral" : string
-// IRGEN-NEXT:  %6 = HBCCreateFunctionInst %numericPlaceholder() : object, %0
+// IRGEN-NEXT:  %6 = HBCCreateFunctionInst %numericPlaceholder#0#1()#4 : object, %0
 // IRGEN-NEXT:  %7 = StorePropertyInst %6 : closure, %2 : object, "numericPlaceholder" : string
-// IRGEN-NEXT:  %8 = HBCCreateFunctionInst %estimateBestNumElement() : object, %0
+// IRGEN-NEXT:  %8 = HBCCreateFunctionInst %estimateBestNumElement#0#1()#5 : object, %0
 // IRGEN-NEXT:  %9 = StorePropertyInst %8 : closure, %2 : object, "estimateBestNumElement" : string
-// IRGEN-NEXT:  %10 = HBCCreateFunctionInst %accessorObjectLiteral() : object, %0
+// IRGEN-NEXT:  %10 = HBCCreateFunctionInst %accessorObjectLiteral#0#1()#6 : object, %0
 // IRGEN-NEXT:  %11 = StorePropertyInst %10 : closure, %2 : object, "accessorObjectLiteral" : string
 // IRGEN-NEXT:  %12 = HBCLoadConstInst undefined : undefined
 // IRGEN-NEXT:  %13 = ReturnInst %12 : undefined
 // IRGEN-NEXT:function_end
 
-// IRGEN:function emitAllocObjectLiteral(func) : object
+// IRGEN:function emitAllocObjectLiteral#0#1(func)#2 : object
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 6 : number, "a" : string, 1 : number, "b" : string, 2 : number, "c" : string, 3 : number, "d" : string, 4 : number, 5 : number, 5 : number, 6 : number, 6 : number
 // IRGEN-NEXT:  %1 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 
-// IRGEN:function nestedAllocObjectLiteral(func) : object
+// IRGEN:function nestedAllocObjectLiteral#0#1(func)#3 : object
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "b" : string, null : null, "c" : string, "hello" : string, "d" : string, null : null
@@ -85,7 +85,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %3 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 
-// IRGEN:function numericPlaceholder(func) : object
+// IRGEN:function numericPlaceholder#0#1(func)#4 : object
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "c" : string, "hello" : string, "d" : string, null : null
@@ -94,7 +94,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %3 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 
-// IRGEN:function estimateBestNumElement(func) : object
+// IRGEN:function estimateBestNumElement#0#1(func)#5 : object
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 16 : number, "a" : string, 1 : number, "b" : string, 1 : number, "c" : string, 1 : number, "d" : string, 1 : number, "e" : string, 1 : number, "f" : string, null : null, "g" : string, null : null, "h" : string, 1 : number, "i" : string, 1 : number, "j" : string, 1 : number, "k" : string, 1 : number
@@ -110,12 +110,12 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %10 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 
-// IRGEN:function accessorObjectLiteral(func) : object
+// IRGEN:function accessorObjectLiteral#0#1(func)#6 : object
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "b" : string, "test-str" : string
-// IRGEN-NEXT:  %1 = HBCCreateEnvironmentInst
-// IRGEN-NEXT:  %2 = HBCCreateFunctionInst %"get c"() : number, %1
+// IRGEN-NEXT:  %1 = HBCCreateEnvironmentInst %S{accessorObjectLiteral#0#1()#6}
+// IRGEN-NEXT:  %2 = HBCCreateFunctionInst %"get c"#1#6()#7 : number, %1
 // IRGEN-NEXT:  %3 = HBCLoadConstInst undefined : undefined
 // IRGEN-NEXT:  %4 = HBCLoadConstInst "c" : string
 // IRGEN-NEXT:  %5 = StoreGetterSetterInst %2 : closure, %3 : undefined, %0 : object, %4 : string, true : boolean
@@ -124,7 +124,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %8 = ReturnInst %0 : object
 // IRGEN-NEXT:function_end
 
-// IRGEN:function "get c"() : number
+// IRGEN:function "get c"#1#6()#7 : number
 // IRGEN-NEXT:frame = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCLoadConstInst 42 : number

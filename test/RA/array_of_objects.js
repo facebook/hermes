@@ -10,7 +10,7 @@ var arr = [{a: 1}, {b: 2}, {c: 3}, {d: 4}];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [arr]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = AllocObjectInst 1 : number, empty

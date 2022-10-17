@@ -14,19 +14,20 @@ function foo() {
     return x + y;
 }
 
-//CHECK-LABEL:function foo()
-//CHECK-NEXT:frame = [x, y]
+//CHECK-LABEL:function foo#0#1()#2
+//CHECK-NEXT:frame = [x#2, y#2]
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-//CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [y]
-//CHECK-NEXT:  %2 = StoreFrameInst 20 : number, [x]
-//CHECK-NEXT:  %3 = StoreFrameInst 30 : number, [y]
-//CHECK-NEXT:  %4 = LoadFrameInst [x]
-//CHECK-NEXT:  %5 = ThrowIfEmptyInst %4
-//CHECK-NEXT:  %6 = LoadFrameInst [y]
-//CHECK-NEXT:  %7 = ThrowIfEmptyInst %6
-//CHECK-NEXT:  %8 = BinaryOperatorInst '+', %5, %7
-//CHECK-NEXT:  %9 = ReturnInst %8
+//CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+//CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#2], %0
+//CHECK-NEXT:  %2 = StoreFrameInst empty : empty, [y#2], %0
+//CHECK-NEXT:  %3 = StoreFrameInst 20 : number, [x#2], %0
+//CHECK-NEXT:  %4 = StoreFrameInst 30 : number, [y#2], %0
+//CHECK-NEXT:  %5 = LoadFrameInst [x#2], %0
+//CHECK-NEXT:  %6 = ThrowIfEmptyInst %5
+//CHECK-NEXT:  %7 = LoadFrameInst [y#2], %0
+//CHECK-NEXT:  %8 = ThrowIfEmptyInst %7
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %6, %8
+//CHECK-NEXT:  %10 = ReturnInst %9
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end

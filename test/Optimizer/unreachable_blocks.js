@@ -30,36 +30,39 @@ bar();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo, bar]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "bar" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : undefined, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %bar#0#1()#3 : undefined, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
-// CHECK:function foo() : undefined
+// CHECK:function foo#0#1()#2 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bar() : undefined
+// CHECK:function bar#0#1()#3 : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
+// CHECK-NEXT:  %1 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = CatchInst
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = CatchInst
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = BranchInst %BB3
+// CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = TryEndInst
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = TryEndInst
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

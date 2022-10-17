@@ -26,94 +26,102 @@ function outer2() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [outer1, outer2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %outer1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "outer1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %outer2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "outer2" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadStackInst %4
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %outer1#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "outer1" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %outer2#0#1()#5, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "outer2" : string
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
+// CHECK-NEXT:  %7 = LoadStackInst %5
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:function_end
 
-// CHECK:function outer1()
-// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, innerArrow1, innerArrow2]
+// CHECK:function outer1#0#1()#2
+// CHECK-NEXT:frame = [?anon_0_this#2, ?anon_1_new.target#2, innerArrow1#2, innerArrow2#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %1 = GetNewTargetInst
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [innerArrow1]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [innerArrow2]
-// CHECK-NEXT:  %5 = CreateFunctionInst %innerArrow1()
-// CHECK-NEXT:  %6 = StoreFrameInst %5 : closure, [innerArrow1]
-// CHECK-NEXT:  %7 = CreateFunctionInst %innerArrow2()
-// CHECK-NEXT:  %8 = StoreFrameInst %7 : closure, [innerArrow2]
+// CHECK-NEXT:  %0 = CreateScopeInst %S{outer1#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#2], %0
+// CHECK-NEXT:  %2 = GetNewTargetInst
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target#2], %0
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [innerArrow1#2], %0
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [innerArrow2#2], %0
+// CHECK-NEXT:  %6 = CreateFunctionInst %innerArrow1#1#2()#3, %0
+// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [innerArrow1#2], %0
+// CHECK-NEXT:  %8 = CreateFunctionInst %innerArrow2#1#2()#4, %0
+// CHECK-NEXT:  %9 = StoreFrameInst %8 : closure, [innerArrow2#2], %0
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:arrow innerArrow1#1#2()#3
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{innerArrow1#1#2()#3}
+// CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this#2@outer1], %0
+// CHECK-NEXT:  %2 = LoadPropertyInst %1, "x" : string
+// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:arrow innerArrow2#1#2()#4
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{innerArrow2#1#2()#4}
+// CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this#2@outer1], %0
+// CHECK-NEXT:  %2 = LoadPropertyInst %1, "y" : string
+// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function outer2#0#1()#5
+// CHECK-NEXT:frame = [?anon_0_this#5, ?anon_1_new.target#5, innerArrow4#5, inner3#5]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{outer2#0#1()#5}
+// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#5], %0
+// CHECK-NEXT:  %2 = GetNewTargetInst
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target#5], %0
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [innerArrow4#5], %0
+// CHECK-NEXT:  %5 = CreateFunctionInst %inner3#1#5()#6, %0
+// CHECK-NEXT:  %6 = StoreFrameInst %5 : closure, [inner3#5], %0
+// CHECK-NEXT:  %7 = CreateFunctionInst %innerArrow4#1#5()#7, %0
+// CHECK-NEXT:  %8 = StoreFrameInst %7 : closure, [innerArrow4#5], %0
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:arrow innerArrow1()
+// CHECK:function inner3#1#5()#6
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [?anon_0_this@outer1]
-// CHECK-NEXT:  %1 = LoadPropertyInst %0, "x" : string
+// CHECK-NEXT:  %0 = CreateScopeInst %S{inner3#1#5()#6}
+// CHECK-NEXT:  %1 = LoadPropertyInst %this, "a" : string
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:arrow innerArrow2()
+// CHECK:arrow innerArrow4#1#5()#7
+// CHECK-NEXT:frame = [nestedInnerArrow5#7]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{innerArrow4#1#5()#7}
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [nestedInnerArrow5#7], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [?anon_0_this#5@outer2], %0
+// CHECK-NEXT:  %3 = StorePropertyInst 10 : number, %2, "b" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %nestedInnerArrow5#5#7()#8, %0
+// CHECK-NEXT:  %5 = StoreFrameInst %4 : closure, [nestedInnerArrow5#7], %0
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:arrow nestedInnerArrow5#5#7()#8
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [?anon_0_this@outer1]
-// CHECK-NEXT:  %1 = LoadPropertyInst %0, "y" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:  %0 = CreateScopeInst %S{nestedInnerArrow5#5#7()#8}
+// CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this#5@outer2], %0
+// CHECK-NEXT:  %2 = LoadPropertyInst %1, "b" : string
+// CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function outer2()
-// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, innerArrow4, inner3]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %1 = GetNewTargetInst
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [innerArrow4]
-// CHECK-NEXT:  %4 = CreateFunctionInst %inner3()
-// CHECK-NEXT:  %5 = StoreFrameInst %4 : closure, [inner3]
-// CHECK-NEXT:  %6 = CreateFunctionInst %innerArrow4()
-// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [innerArrow4]
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function inner3()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadPropertyInst %this, "a" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:arrow innerArrow4()
-// CHECK-NEXT:frame = [nestedInnerArrow5]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [nestedInnerArrow5]
-// CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this@outer2]
-// CHECK-NEXT:  %2 = StorePropertyInst 10 : number, %1, "b" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %nestedInnerArrow5()
-// CHECK-NEXT:  %4 = StoreFrameInst %3 : closure, [nestedInnerArrow5]
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:arrow nestedInnerArrow5()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [?anon_0_this@outer2]
-// CHECK-NEXT:  %1 = LoadPropertyInst %0, "b" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -13,43 +13,46 @@ function foo(x = () => this) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x)
-// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, x]
+// CHECK:function foo#0#1(x)#2
+// CHECK-NEXT:frame = [?anon_0_this#2, ?anon_1_new.target#2, x#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %1 = GetNewTargetInst
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '!==', %x, undefined : undefined
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#2], %0
+// CHECK-NEXT:  %2 = GetNewTargetInst
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target#2], %0
+// CHECK-NEXT:  %4 = BinaryOperatorInst '!==', %x, undefined : undefined
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CreateFunctionInst %x()
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:  %6 = CreateFunctionInst %x#1#2()#3, %0
+// CHECK-NEXT:  %7 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = PhiInst %x, %BB0, %5 : closure, %BB2
-// CHECK-NEXT:  %8 = StoreFrameInst %7, [x]
-// CHECK-NEXT:  %9 = LoadFrameInst [x]
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %8 = PhiInst %x, %BB0, %6 : closure, %BB2
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [x#2], %0
+// CHECK-NEXT:  %10 = LoadFrameInst [x#2], %0
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:arrow x()
+// CHECK:arrow x#1#2()#3
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [?anon_0_this@foo]
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = CreateScopeInst %S{x#1#2()#3}
+// CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this#2@foo], %0
+// CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

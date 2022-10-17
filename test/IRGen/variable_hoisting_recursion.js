@@ -18,35 +18,37 @@ function fibonacci(n) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [fibonacci]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %fibonacci()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "fibonacci" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %fibonacci#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "fibonacci" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
-// CHECK:function fibonacci(n)
-// CHECK-NEXT:frame = [n]
+// CHECK:function fibonacci#0#1(n)#2
+// CHECK-NEXT:frame = [n#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %n, [n]
-// CHECK-NEXT:  %1 = LoadFrameInst [n]
-// CHECK-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{fibonacci#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %n, [n#2], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [n#2], %0
+// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = LoadFrameInst [n]
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %4 = LoadFrameInst [n#2], %0
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "fibonacci" : string
-// CHECK-NEXT:  %6 = LoadFrameInst [n]
-// CHECK-NEXT:  %7 = CallInst %5, undefined : undefined, %6
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "fibonacci" : string
+// CHECK-NEXT:  %7 = LoadFrameInst [n#2], %0
+// CHECK-NEXT:  %8 = CallInst %6, undefined : undefined, %7
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = BranchInst %BB3
-// CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:function_end

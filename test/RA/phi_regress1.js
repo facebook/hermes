@@ -42,11 +42,11 @@ print(glob);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global()
+// CHKRA:function global#0()#1
 // CHKRA-NEXT:frame = [], globals = [glob, bad]
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %bad() : null, %0
+// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %bad#0#1()#2 : null, %0
 // CHKRA-NEXT:  $Reg0 @2 [3...15) 	%2 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  $Reg1 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "bad" : string
 // CHKRA-NEXT:  $Reg4 @4 [5...10) 	%4 = HBCLoadConstInst null : null
@@ -64,7 +64,7 @@ print(glob);
 // CHKRA-NEXT:  $Reg0 @16 [empty]	%16 = ReturnInst %15
 // CHKRA-NEXT:function_end
 
-// CHKRA:function bad(param1, param2) : null
+// CHKRA:function bad#0#1(param1, param2)#2 : null
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg3 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number

@@ -20,35 +20,38 @@ function onlyDefault () {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [empty, onlyDefault]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %empty()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "empty" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %onlyDefault()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "onlyDefault" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadStackInst %4
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %empty#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "empty" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %onlyDefault#0#1()#3, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "onlyDefault" : string
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
+// CHECK-NEXT:  %7 = LoadStackInst %5
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:function_end
 
-// CHECK:function empty()
+// CHECK:function empty#0#1()#2
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BranchInst %BB1
+// CHECK-NEXT:  %0 = CreateScopeInst %S{empty#0#1()#2}
+// CHECK-NEXT:  %1 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function onlyDefault()
+// CHECK:function onlyDefault#0#1()#3
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BranchInst %BB1
+// CHECK-NEXT:  %0 = CreateScopeInst %S{onlyDefault#0#1()#3}
+// CHECK-NEXT:  %1 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = BranchInst %BB2
-// CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %3 = BranchInst %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %4 = BranchInst %BB2
 // CHECK-NEXT:function_end

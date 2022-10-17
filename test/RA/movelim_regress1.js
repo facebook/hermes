@@ -19,18 +19,18 @@ function fib(n) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [fib]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %fib() : string|number|bigint, %0
+// CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
+// CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %fib#0#1()#2 : string|number|bigint, %0
 // CHECK-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "fib" : string
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function fib(n) : string|number|bigint
+// CHECK:function fib#0#1(n)#2 : string|number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg5 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number

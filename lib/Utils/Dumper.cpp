@@ -155,15 +155,10 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "%";
     printFunctionName(F, PrintFunctionParams::No);
   } else if (auto S = dyn_cast<ScopeDesc>(V)) {
-    if (!enableNewDumpFormat) {
-      os << "%";
-      printFunctionName(S->getFunction(), PrintFunctionParams::No);
-    } else {
-      os << "%S{";
-      printFunctionName(S->getFunction(), PrintFunctionParams::No);
-      printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
-      os << "}";
-    }
+    os << "%S{";
+    printFunctionName(S->getFunction(), PrintFunctionParams::No);
+    printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
+    os << "}";
   } else if (auto VR = dyn_cast<Variable>(V)) {
     os << "[";
     printVariableName(VR);
@@ -244,18 +239,6 @@ void IRPrinter::printInstruction(Instruction *I) {
 
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
     Value *O = I->getOperand(i);
-    if (!enableNewDumpFormat) {
-      if (llvh::isa<HBCCreateEnvironmentInst>(I) && i == 0) {
-        continue;
-      }
-      if (llvh::isa<HBCResolveEnvironment>(I) &&
-          i == HBCResolveEnvironment::OriginScopeDescIdx) {
-        continue;
-      }
-      if (llvh::isa<CreateScopeInst>(O)) {
-        continue;
-      }
-    }
     os << (first ? " " : ", ");
     printValueLabel(I, O, i);
     first = false;
@@ -311,9 +294,7 @@ void IRPrinter::printSourceLocation(SMRange rng) {
 }
 
 void IRPrinter::printScope(ScopeDesc *S) {
-  if (enableNewDumpFormat) {
-    os << "#" << ScopeNamer.getNumber(S);
-  }
+  os << "#" << ScopeNamer.getNumber(S);
 }
 
 void IRPrinter::printScopeRange(ScopeDesc *Start, ScopeDesc *End) {
@@ -383,9 +364,7 @@ void IRPrinter::visitFunction(const Function &F) {
   // Number all instructions sequentially.
   for (auto &BB : *UF)
     for (auto &I : BB) {
-      if (!llvh::isa<CreateScopeInst>(&I) || enableNewDumpFormat) {
-        InstNamer.getNumber(&I);
-      }
+      InstNamer.getNumber(&I);
     }
 
   printFunctionHeader(UF);
@@ -419,9 +398,7 @@ void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
 
   // Use IRVisitor dispatch to visit the instructions.
   for (auto &I : BB) {
-    if (!llvh::isa<CreateScopeInst>(&I) || enableNewDumpFormat) {
-      visit(I);
-    }
+    visit(I);
   }
 
   Indent -= 2;

@@ -9,19 +9,21 @@
 
 // Make sure we can remove all trampolines from our code.
 
-//CHECK-LABEL:function test_one(x, y, z) : string
+//CHECK-LABEL:function test_one#0#1(x, y, z)#2 : string
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:  %BB0:
 
 
 function test_one(x,y,z) {
-//CHECK-NEXT:    %0 = BinaryOperatorInst '+', %x, %y
+//CHECK-NEXT:    %0 = CreateScopeInst %S{test_one#0#1()#2}
+
+//CHECK-NEXT:    %1 = BinaryOperatorInst '+', %x, %y
   x + y
 
-//CHECK-NEXT:    %1 = BinaryOperatorInst '+', %x, 5 : number
+//CHECK-NEXT:    %2 = BinaryOperatorInst '+', %x, 5 : number
   x + 5
 
-//CHECK-NEXT:    %2 = BinaryOperatorInst '+', false : boolean, %y
+//CHECK-NEXT:    %3 = BinaryOperatorInst '+', false : boolean, %y
   false + y
 
 //DEAD!
@@ -37,24 +39,24 @@ function test_one(x,y,z) {
   "hi" + "bye"
 
 //Alive - result is used.
-//CHECK-NEXT:    %3 = BinaryOperatorInst '+', "hi" : string, %z
+//CHECK-NEXT:    %4 = BinaryOperatorInst '+', "hi" : string, %z
   var t = "hi" + z
 
 //DEAD!
   null + "hi"
 
-//CHECK-NEXT:    %4 = ReturnInst %3 : string
+//CHECK-NEXT:    %5 = ReturnInst %4 : string
 //CHECK-NEXT:function_end
   return t
 }
 
-//CHECK-LABEL:function test_two(x, y, z) : undefined
+//CHECK-LABEL:function test_two#0#1(x, y, z)#3 : undefined
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = ReturnInst undefined : undefined
+//CHECK-NEXT:    %0 = CreateScopeInst %S{test_two#0#1()#3}
+//CHECK-NEXT:    %1 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 function test_two(x,y,z) {
   function test00() {}
   var test01 = function() {}
 }
-

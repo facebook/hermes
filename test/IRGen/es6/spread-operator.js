@@ -13,31 +13,33 @@ function foo(a, b, c) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a, b, c)
-// CHECK-NEXT:frame = [a, b, c]
+// CHECK:function foo#0#1(a, b, c)#2
+// CHECK-NEXT:frame = [a#2, b#2, c#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst %c, [c]
-// CHECK-NEXT:  %3 = AllocObjectInst 2 : number, empty
-// CHECK-NEXT:  %4 = LoadFrameInst [a]
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4, %3 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %6 = LoadFrameInst [b]
-// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %3 : object, %6
-// CHECK-NEXT:  %8 = LoadFrameInst [c]
-// CHECK-NEXT:  %9 = StoreOwnPropertyInst %8, %3 : object, "c" : string, true : boolean
-// CHECK-NEXT:  %10 = ReturnInst %3 : object
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
+// CHECK-NEXT:  %2 = StoreFrameInst %b, [b#2], %0
+// CHECK-NEXT:  %3 = StoreFrameInst %c, [c#2], %0
+// CHECK-NEXT:  %4 = AllocObjectInst 2 : number, empty
+// CHECK-NEXT:  %5 = LoadFrameInst [a#2], %0
+// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "a" : string, true : boolean
+// CHECK-NEXT:  %7 = LoadFrameInst [b#2], %0
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %4 : object, %7
+// CHECK-NEXT:  %9 = LoadFrameInst [c#2], %0
+// CHECK-NEXT:  %10 = StoreOwnPropertyInst %9, %4 : object, "c" : string, true : boolean
+// CHECK-NEXT:  %11 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

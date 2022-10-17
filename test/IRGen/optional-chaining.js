@@ -45,219 +45,229 @@ function f9(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4, f5, f6, f7, f8, f9]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "f3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "f4" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %f5()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "f5" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %f6()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "f6" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %f7()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "f7" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %f8()
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "f8" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %f9()
-// CHECK-NEXT:  %17 = StorePropertyInst %16 : closure, globalObject : object, "f9" : string
-// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
-// CHECK-NEXT:  %20 = LoadStackInst %18
-// CHECK-NEXT:  %21 = ReturnInst %20
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %f2#0#1()#3, %0
+// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %f3#0#1()#4, %0
+// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %f4#0#1()#5, %0
+// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %f5#0#1()#6, %0
+// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "f5" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %f6#0#1()#7, %0
+// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "f6" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %f7#0#1()#8, %0
+// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "f7" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %f8#0#1()#9, %0
+// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "f8" : string
+// CHECK-NEXT:  %17 = CreateFunctionInst %f9#0#1()#10, %0
+// CHECK-NEXT:  %18 = StorePropertyInst %17 : closure, globalObject : object, "f9" : string
+// CHECK-NEXT:  %19 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %20 = StoreStackInst undefined : undefined, %19
+// CHECK-NEXT:  %21 = LoadStackInst %19
+// CHECK-NEXT:  %22 = ReturnInst %21
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f1#0#1(a)#2
+// CHECK-NEXT:frame = [a#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#2], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %7, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadPropertyInst %1, "b" : string
-// CHECK-NEXT:  %8 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function f2(f)
-// CHECK-NEXT:frame = [f]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %f, [f]
-// CHECK-NEXT:  %1 = LoadFrameInst [f]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %7, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined
-// CHECK-NEXT:  %8 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function f3(a)
-// CHECK-NEXT:frame = [a]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %8, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadPropertyInst %1, "b" : string
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "c" : string
-// CHECK-NEXT:  %9 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function f4(a)
-// CHECK-NEXT:frame = [a]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %9, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadPropertyInst %1, "b" : string
-// CHECK-NEXT:  %8 = CallInst %7, %1
-// CHECK-NEXT:  %9 = LoadPropertyInst %8, "c" : string
-// CHECK-NEXT:  %10 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function f5(a)
-// CHECK-NEXT:frame = [a]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %8, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "b" : string
-// CHECK-NEXT:  %9 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function f6(a)
-// CHECK-NEXT:frame = [a]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %9, %BB2
-// CHECK-NEXT:  %5 = LoadPropertyInst %4, "d" : string
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %1, "b" : string
+// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f2#0#1(f)#3
+// CHECK-NEXT:frame = [f#3]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
+// CHECK-NEXT:  %1 = StoreFrameInst %f, [f#3], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [f#3], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
+// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f3#0#1(a)#4
+// CHECK-NEXT:frame = [a#4]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f3#0#1()#4}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#4], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#4], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %9, %BB2
+// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst %8, "c" : string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f7(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f4#0#1(a)#5
+// CHECK-NEXT:frame = [a#5]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f4#0#1()#5}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#5], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#5], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %11, %BB4
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %10, %BB2
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadPropertyInst %1, "b" : string
-// CHECK-NEXT:  %8 = BinaryOperatorInst '==', %7, null : null
-// CHECK-NEXT:  %9 = CondBranchInst %8, %BB1, %BB4
+// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %9 = CallInst %8, %2
+// CHECK-NEXT:  %10 = LoadPropertyInst %9, "c" : string
+// CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = CallInst %7, %1
-// CHECK-NEXT:  %11 = LoadPropertyInst %10, "c" : string
-// CHECK-NEXT:  %12 = BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f8(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f5#0#1(a)#6
+// CHECK-NEXT:frame = [a#6]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f5#0#1()#6}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#6], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#6], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %13, %BB4
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %9, %BB2
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadPropertyInst %1, "b" : string
-// CHECK-NEXT:  %8 = BinaryOperatorInst '==', %7, null : null
-// CHECK-NEXT:  %9 = CondBranchInst %8, %BB1, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %10 = LoadPropertyInst %7, "c" : string
-// CHECK-NEXT:  %11 = BinaryOperatorInst '==', %10, null : null
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB1, %BB4
+// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %9 = LoadPropertyInst %8, "b" : string
+// CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = CallInst %10, %7
-// CHECK-NEXT:  %14 = BranchInst %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f9(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f6#0#1(a)#7
+// CHECK-NEXT:frame = [a#7]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %1, null : null
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f6#0#1()#7}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#7], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#7], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = PhiInst undefined : undefined, %BB1, %7, %BB2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %10, %BB2
+// CHECK-NEXT:  %6 = LoadPropertyInst %5, "d" : string
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = DeletePropertyInst %1, "b" : string
 // CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %9 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %10 = LoadPropertyInst %9, "c" : string
+// CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f7#0#1(a)#8
+// CHECK-NEXT:frame = [a#8]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f7#0#1()#8}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#8], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#8], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %12, %BB4
+// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %9 = BinaryOperatorInst '==', %8, null : null
+// CHECK-NEXT:  %10 = CondBranchInst %9, %BB1, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %11 = CallInst %8, %2
+// CHECK-NEXT:  %12 = LoadPropertyInst %11, "c" : string
+// CHECK-NEXT:  %13 = BranchInst %BB3
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f8#0#1(a)#9
+// CHECK-NEXT:frame = [a#9]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f8#0#1()#9}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#9], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#9], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %14, %BB4
+// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %9 = BinaryOperatorInst '==', %8, null : null
+// CHECK-NEXT:  %10 = CondBranchInst %9, %BB1, %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %11 = LoadPropertyInst %8, "c" : string
+// CHECK-NEXT:  %12 = BinaryOperatorInst '==', %11, null : null
+// CHECK-NEXT:  %13 = CondBranchInst %12, %BB1, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %14 = CallInst %11, %8
+// CHECK-NEXT:  %15 = BranchInst %BB3
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function f9#0#1(a)#10
+// CHECK-NEXT:frame = [a#10]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f9#0#1()#10}
+// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#10], %0
+// CHECK-NEXT:  %2 = LoadFrameInst [a#10], %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
+// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = DeletePropertyInst %2, "b" : string
+// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

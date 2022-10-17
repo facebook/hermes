@@ -17,16 +17,18 @@ function f1(num) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global#0()#1 : undefined
 // CHECK-NEXT:frame = [], globals = [f1]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(num)
-// CHECK-NEXT:frame = [num]
+// CHECK:function f1#0#1(num)#2
+// CHECK-NEXT:frame = [num#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst %num
+// CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
+// CHECK-NEXT:  %1 = ReturnInst %num
 // CHECK-NEXT:function_end

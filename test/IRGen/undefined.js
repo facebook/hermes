@@ -19,29 +19,31 @@ undefined;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global#0()#1
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = StorePropertyInst 5 : number, globalObject : object, "undefined" : string
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
-// CHECK-NEXT:  %7 = StoreStackInst %6, %2
-// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %9 = LoadStackInst %2
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
+// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = StorePropertyInst 5 : number, globalObject : object, "undefined" : string
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// CHECK-NEXT:  %8 = StoreStackInst %7, %3
+// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %10 = LoadStackInst %3
+// CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:function_end
 
-// CHECK:function foo()
-// CHECK-NEXT:frame = [undefined]
+// CHECK:function foo#0#1()#2
+// CHECK-NEXT:frame = [undefined#2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [undefined]
-// CHECK-NEXT:  %1 = StoreFrameInst 5 : number, [undefined]
-// CHECK-NEXT:  %2 = LoadFrameInst [undefined]
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [undefined#2], %0
+// CHECK-NEXT:  %2 = StoreFrameInst 5 : number, [undefined#2], %0
+// CHECK-NEXT:  %3 = LoadFrameInst [undefined#2], %0
+// CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
