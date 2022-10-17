@@ -50,10 +50,8 @@ class LoadParameters : public FunctionPass {
 /// Lower LoadFrameInst, StoreFrameInst and CreateFunctionInst.
 class LowerLoadStoreFrameInst : public FunctionPass {
   /// Decide the correct scope to use when dealing with given variable.
-  Instruction *getScope(
-      IRBuilder &builder,
-      Variable *var,
-      HBCCreateEnvironmentInst *captureScope);
+  ScopeCreationInst *
+  getScope(IRBuilder &builder, Variable *var, ScopeCreationInst *environment);
 
  public:
   explicit LowerLoadStoreFrameInst()
