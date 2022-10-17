@@ -67,6 +67,18 @@ bool isConstantExpr(ESTree::Node *node) {
   }
 }
 
+/// Adds the \p parent -> \p child link in the nesting graph.
+static void
+buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
+  // FunctionScopeAnalysis works through CreateFunctionInsts, so we have to add
+  // that even though these functions are never invoked.
+  auto *block = builder.createBasicBlock(parent);
+  builder.setInsertionBlock(block);
+  builder.createUnreachableInst();
+  auto *inst = builder.createCreateFunctionInst(child);
+  builder.createReturnInst(inst);
+}
+
 /// Materializes a given scope chain so it is available during lazy
 /// compilation/eval.
 class ScopeChainMaterializer {
@@ -97,7 +109,7 @@ class ScopeChainMaterializer {
   /// topFunction_, which is assumed to be installed as the current IRGen
   /// FunctionContext.
   void materializeScopesForEval() {
-    materializeScopesInChain(chain_, -1);
+    materializeScopesInChain(MaterializeForEval::Yes, topFunction_, chain_, -1);
   }
 
   /// Materializes scope_ for usage in lazy compilation. The materialized
@@ -105,37 +117,44 @@ class ScopeChainMaterializer {
   ///
   /// |    FUNCTION    |  depth |
   /// |       ...      |   ...  |
-  /// |     lazyFun    |     N  |
-  /// |  topFunction_  |   N-1  |
-  /// |  topFunction_  |   N-2  |
-  /// |  topFunction_  |   ...  |
+  /// |     lazyFun    |     1  |
   /// |  topFunction_  |     0  |
+  /// |     dummy a    |    -1  |
+  /// |     dummy b    |    -2  |
+  /// |       ...      |   ...  |
   ///
-  /// All variables in scopes < N are added to ExternalScopes appeneded to
-  /// topFunction_, which is assumed to be installed as the current IRGen
-  /// FunctionContext.
+  /// All variables in scopes < 1 are added to ExternalScopes, as well as their
+  /// respective functions, to preserve current functionality.
   void materializeScopesForLazyFunction() {
-    materializeScopesInChain(chain_, getDepth() - 1);
+    materializeScopesInChain(MaterializeForEval::No, topFunction_, chain_, 0);
   }
 
  private:
-  int getDepth() {
-    int depth = 0;
-    const SerializedScope *current = chain_.get();
-    while (current) {
-      depth += 1;
-      current = current->parentScope.get();
-    }
-    return depth;
-  }
-
-  void materializeScopesInChain(const SerializedScopePtr &scope, int depth) {
+  enum class MaterializeForEval { No, Yes };
+  void materializeScopesInChain(
+      MaterializeForEval materializeForEval,
+      Function *current,
+      const SerializedScopePtr &scope,
+      int depth) {
     if (!scope)
       return;
     assert(depth > -1000 && "Excessive scope depth");
 
+    Function *parent = current;
+    if (scope->parentScope && materializeForEval != MaterializeForEval::Yes) {
+      parent = builder_.createFunction(
+          scope->originalName,
+          Function::DefinitionKind::ES5Function,
+          false,
+          SourceVisibility::Sensitive,
+          {},
+          false);
+      buildDummyLexicalParent(builder_, parent, current);
+    }
+
     // First materialize parent scopes.
-    materializeScopesInChain(scope->parentScope, depth - 1);
+    materializeScopesInChain(
+        materializeForEval, parent, scope->parentScope, depth - 1);
 
     // If scope->closureAlias is specified, we must create an alias binding
     // between originalName (which must be valid) and the variable identified by
@@ -158,10 +177,14 @@ class ScopeChainMaterializer {
     }
 
     // Create an external scope.
-    ExternalScope *ES = builder_.createExternalScope(topFunction_, depth);
+    ExternalScope *ES = builder_.createExternalScope(current, depth);
     for (const auto &var : scope->variables) {
       auto *variable = builder_.createVariable(ES, var.declKind, var.name);
       nameTable_.insert(var.name, variable);
+      if (materializeForEval != MaterializeForEval::Yes) {
+        builder_.createVariable(
+            current->getFunctionScope(), var.declKind, var.name);
+      }
     }
   }
 };
@@ -444,21 +467,9 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       ? genGeneratorFunction(lazyData->originalName, parentVar, node)
       : genES5Function(lazyData->originalName, parentVar, node, false);
 
-  // Now add the lexical debug information to the Module. Note that this will
-  // generate the (correct) nesting
-  //
-  //        topLevel -> a -> b -> c -> func
-  //
-  // even though func() was generated with topLevel as the FunctionContext,
-  // i.e., during IRGeneration, the "nesting" was
-  //
-  //        topLevel -> func
-  //
-  // with topLevel having all the ExternalScopes needed to generate the correct
-  // IR. Note that addLexicalDebugInfo will create new Variables and add them to
-  // the functions it creates. Those variables are not used in the initial IR,
-  // and possibly not at all.
-  addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
+  // Now add the link between topLevel and func, completing the nesting graph
+  // generated by the ScopeChainMaterializer.
+  buildDummyLexicalParent(Builder, topLevel, func);
   return {func, topLevel};
 }
 
@@ -1280,50 +1291,6 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     current = next;
   }
   return current;
-}
-
-namespace {
-void buildDummyLexicalParent(
-    IRBuilder &builder,
-    Function *parent,
-    Function *child) {
-  // FunctionScopeAnalysis works through CreateFunctionInsts, so we have to add
-  // that even though these functions are never invoked.
-  auto *block = builder.createBasicBlock(parent);
-  builder.setInsertionBlock(block);
-  builder.createUnreachableInst();
-  auto *inst = builder.createCreateFunctionInst(child);
-  builder.createReturnInst(inst);
-}
-} // namespace
-
-/// Add dummy functions for lexical scope debug info.
-// They are never executed and serve no purpose other than filling in debug
-// info. This is currently necessary because we can't rely on parent bytecode
-// modules for lexical scoping data.
-void ESTreeIRGen::addLexicalDebugInfo(
-    Function *child,
-    Function *global,
-    const SerializedScopePtr &scope) {
-  if (!scope || !scope->parentScope) {
-    buildDummyLexicalParent(Builder, global, child);
-    return;
-  }
-
-  auto *current = Builder.createFunction(
-      scope->originalName,
-      Function::DefinitionKind::ES5Function,
-      false,
-      SourceVisibility::Sensitive,
-      {},
-      false);
-
-  for (const auto &var : scope->variables) {
-    Builder.createVariable(current->getFunctionScope(), var.declKind, var.name);
-  }
-
-  buildDummyLexicalParent(Builder, current, child);
-  addLexicalDebugInfo(current, global, scope->parentScope);
 }
 
 SerializedScopePtr ESTreeIRGen::serializeScope(

@@ -1040,12 +1040,6 @@ class ESTreeIRGen {
   /// identifiers.
   SerializedScopePtr resolveScopeIdentifiers(const ScopeChain &chain);
 
-  /// Add dummy functions for lexical scope debug info
-  void addLexicalDebugInfo(
-      Function *child,
-      Function *global,
-      const SerializedScopePtr &scope);
-
   /// Save all variables currently in scope, for lazy compilation.
   SerializedScopePtr saveCurrentScope() {
     return serializeScope(curFunction(), true);
