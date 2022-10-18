@@ -96,6 +96,12 @@ cl::opt<OptLevel> OptimizationLevel(
         clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
     cl::cat(CompilerCategory));
 
+cl::opt<bool> EnableAsserts(
+    "enable-asserts",
+    cl::desc("Whether assertions in compiled code are enabled"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> Lean(
     "lean",
     cl::init(false),
@@ -647,6 +653,8 @@ bool compileFromCommandLineOptions() {
       ShermesCompileParams(
           genOptions,
           cli::OptimizationLevel,
+          cli::EnableAsserts ? ShermesCompileParams::EnableAsserts::on
+                             : ShermesCompileParams::EnableAsserts::off,
           cli::Lean ? ShermesCompileParams::Lean::on
                     : ShermesCompileParams::Lean::off,
           cli::Verbose.getNumOccurrences()),
