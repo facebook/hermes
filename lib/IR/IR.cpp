@@ -428,6 +428,17 @@ SideEffectKind Instruction::getDerivedSideEffect() {
   }
 }
 
+OptValue<Type> Instruction::getInherentType() {
+  switch (getKind()) {
+    default:
+      llvm_unreachable("Invalid kind");
+#define DEF_VALUE(XX, PARENT) \
+  case ValueKind::XX##Kind:   \
+    return XX::getInherentTypeImpl();
+#include "hermes/IR/Instrs.def"
+  }
+}
+
 bool Instruction::hasOutput() {
   switch (getKind()) {
     default:

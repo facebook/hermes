@@ -1046,6 +1046,17 @@ class Instruction
   /// Add an operand to the operand list.
   void pushOperand(Value *Val);
 
+  /// Implementation of \c getInherentType, default implementation returns
+  /// None.
+  ///
+  /// Subclasses should override this and call it in the constructor if the
+  /// instructions themselves have an inherent type.
+  ///
+  /// \return a Type if the instruction has an inherent type, None otherwise.
+  static OptValue<Type> getInherentTypeImpl() {
+    return llvh::None;
+  }
+
  public:
   void setOperand(Value *Val, unsigned Index);
   Value *getOperand(unsigned Index) const;
@@ -1055,6 +1066,19 @@ class Instruction
   /// Returns a vector of flags indicating which operands the instruction writes
   /// to.
   WordBitSet<> getChangedOperands();
+
+  /// An "inherent type" is a type that the instruction will _always_ have,
+  /// regardless of the operands that it is provided with.
+  /// The inherent type MUST be the tightest type bound that can be placed
+  /// on the result of the instruction - it must not be possible to narrow
+  /// the inherent type through any kind of type inference.
+  ///
+  /// If an Instruction has an inherent type, the constructor should set the
+  /// type of the Instruction to the inherent type by calling
+  /// \c getInherentTypeImpl.
+  ///
+  /// \return a Type if the instruction has an inherent type, None otherwise.
+  OptValue<Type> getInherentType();
 
   /// \return whether this instruction has an output value.
   bool hasOutput();
