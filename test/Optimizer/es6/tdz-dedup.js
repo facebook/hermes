@@ -144,7 +144,7 @@ function check_after_check() {
 // CHKOPT-NEXT:frame = [x, inner : closure]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHKOPT-NEXT:  %1 = CreateFunctionInst %inner() : undefined|null|boolean|string|number|bigint|object|closure|regexp
+// CHKOPT-NEXT:  %1 = CreateFunctionInst %inner() : undefined|null|boolean|string|number|bigint|environment|object|closure|regexp
 // CHKOPT-NEXT:  %2 = StoreFrameInst %1 : closure, [inner] : closure
 // CHKOPT-NEXT:  %3 = StoreFrameInst 0 : number, [x]
 // CHKOPT-NEXT:  %4 = LoadFrameInst [inner] : closure
@@ -153,13 +153,13 @@ function check_after_check() {
 // CHKOPT-NEXT:  %6 = ReturnInst undefined : undefined
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function inner(p) : undefined|null|boolean|string|number|bigint|object|closure|regexp
+// CHKOPT:function inner(p) : undefined|null|boolean|string|number|bigint|environment|object|closure|regexp
 // CHKOPT-NEXT:frame = [p]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = StoreFrameInst %p, [p]
 // CHKOPT-NEXT:  %1 = LoadFrameInst [x@check_after_check]
 // CHKOPT-NEXT:  %2 = ThrowIfEmptyInst %1
-// CHKOPT-NEXT:  %3 = UnaryOperatorInst '++', %2 : undefined|null|boolean|string|number|bigint|object|closure|regexp
+// CHKOPT-NEXT:  %3 = UnaryOperatorInst '++', %2 : undefined|null|boolean|string|number|bigint|environment|object|closure|regexp
 // CHKOPT-NEXT:  %4 = StoreFrameInst %3 : number|bigint, [x@check_after_check]
 // CHKOPT-NEXT:  %5 = LoadFrameInst [p]
 // CHKOPT-NEXT:  %6 = CondBranchInst %5, %BB1, %BB2
