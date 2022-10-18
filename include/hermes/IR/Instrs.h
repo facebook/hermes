@@ -2782,13 +2782,14 @@ class HBCGetArgumentsPropByValInst : public Instruction {
 
 // Create a real array for `arguments` for when getting the length and elements
 // by index isn't enough.
+// This is the base class for the strict and loose variants defined below.
 class HBCReifyArgumentsInst : public SingleOperandInst {
   HBCReifyArgumentsInst(const HBCReifyArgumentsInst &) = delete;
   void operator=(const HBCReifyArgumentsInst &) = delete;
 
  public:
-  explicit HBCReifyArgumentsInst(AllocStackInst *reg)
-      : SingleOperandInst(ValueKind::HBCReifyArgumentsInstKind, reg) {
+  explicit HBCReifyArgumentsInst(ValueKind kind, AllocStackInst *reg)
+      : SingleOperandInst(kind, reg) {
     setType(Type::createNoType());
   }
   explicit HBCReifyArgumentsInst(
@@ -2810,6 +2811,44 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsInstKind);
+  }
+};
+
+class HBCReifyArgumentsStrictInst : public HBCReifyArgumentsInst {
+  HBCReifyArgumentsStrictInst(const HBCReifyArgumentsStrictInst &) = delete;
+  void operator=(const HBCReifyArgumentsStrictInst &) = delete;
+
+ public:
+  explicit HBCReifyArgumentsStrictInst(AllocStackInst *reg)
+      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsStrictInstKind, reg) {
+    setType(Type::createNoType());
+  }
+  explicit HBCReifyArgumentsStrictInst(
+      const HBCReifyArgumentsStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : HBCReifyArgumentsInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsStrictInstKind);
+  }
+};
+
+class HBCReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
+  HBCReifyArgumentsLooseInst(const HBCReifyArgumentsLooseInst &) = delete;
+  void operator=(const HBCReifyArgumentsLooseInst &) = delete;
+
+ public:
+  explicit HBCReifyArgumentsLooseInst(AllocStackInst *reg)
+      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsLooseInstKind, reg) {
+    setType(Type::createNoType());
+  }
+  explicit HBCReifyArgumentsLooseInst(
+      const HBCReifyArgumentsLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : HBCReifyArgumentsInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsLooseInstKind);
   }
 };
 

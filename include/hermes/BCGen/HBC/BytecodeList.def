@@ -661,7 +661,8 @@ DEFINE_OPCODE_2(GetArgumentsLength, Reg8, Reg8)
 /// Create an actual 'arguments' array, if get-by-index and length isn't enough.
 /// Arg1 is the lazy loaded register, which afterwards will contain a proper
 ///      object that can be used by non-*Arguments* opcodes like Return.
-DEFINE_OPCODE_1(ReifyArguments, Reg8)
+DEFINE_OPCODE_1(ReifyArgumentsStrict, Reg8)
+DEFINE_OPCODE_1(ReifyArgumentsLoose, Reg8)
 
 /// Create a regular expression.
 /// Arg1 is the result.

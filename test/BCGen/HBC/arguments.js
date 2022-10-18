@@ -80,7 +80,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg1 @2 [empty]	%2 = StoreStackInst %1 : undefined, %0
-// CHECK-NEXT:  $Reg1 @3 [empty]	%3 = HBCReifyArgumentsInst %0
+// CHECK-NEXT:  $Reg1 @3 [empty]	%3 = HBCReifyArgumentsLooseInst %0
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = LoadStackInst %0
 // CHECK-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4
 // CHECK-NEXT:function_end
@@ -91,7 +91,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg1 @2 [empty]	%2 = StoreStackInst %1 : undefined, %0
-// CHECK-NEXT:  $Reg1 @3 [empty]	%3 = HBCReifyArgumentsInst %0
+// CHECK-NEXT:  $Reg1 @3 [empty]	%3 = HBCReifyArgumentsLooseInst %0
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = LoadStackInst %0
 // CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = BinaryOperatorInst '+', %4, %4
 // CHECK-NEXT:  $Reg0 @6 [empty]	%6 = ReturnInst %5 : string|number
@@ -114,7 +114,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 @13 [7...15) 	%9 = MovInst %8 : object
 // CHECK-NEXT:  $Reg0 @14 [empty]	%10 = ReturnInst %9 : object
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  $Reg1 @5 [empty]	%11 = HBCReifyArgumentsInst %0
+// CHECK-NEXT:  $Reg1 @5 [empty]	%11 = HBCReifyArgumentsLooseInst %0
 // CHECK-NEXT:  $Reg0 @6 [7...8) 	%12 = LoadStackInst %0
 // CHECK-NEXT:  $Reg0 @7 [8...13) 	%13 = MovInst %12
 // CHECK-NEXT:  $Reg1 @8 [empty]	%14 = BranchInst %BB3

@@ -48,6 +48,6 @@ print(decrementArguments());
 // CHKRA-NEXT:   $Reg2 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number|bigint
 // CHKRA-LABEL: %BB3:
 // CHKRA-LABEL: %BB2:
-// CHKRA-NEXT:   $Reg3 @15 [empty]    %15 = HBCReifyArgumentsInst %3
+// CHKRA-NEXT:   $Reg3 @15 [empty]    %15 = HBCReifyArgumentsLooseInst %3
 // CHKRA-NEXT:   $Reg3 @16 [empty]    %16 = LoadStackInst %3
 // CHKRA-NEXT:   $Reg2 @17 [18...19)  %17 = MovInst %8 : number|bigint

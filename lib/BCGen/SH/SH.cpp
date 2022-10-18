@@ -540,12 +540,15 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateHBCReifyArgumentsInst(HBCReifyArgumentsInst &inst) {
-    os_.indent(2);
-    if (isStrictMode_)
-      os_ << "_sh_ljs_reify_arguments_strict";
-    else
-      os_ << "_sh_ljs_reify_arguments_loose";
-    os_ << "(shr, frame, ";
+    hermes_fatal("This is not a concrete instruction");
+  }
+  void generateHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst &inst) {
+    os_ << "  _sh_ljs_reify_arguments_loose(shr, frame, ";
+    generateRegisterPtr(*inst.getLazyRegister());
+    os_ << ");\n";
+  }
+  void generateHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst &inst) {
+    os_ << "  _sh_ljs_reify_arguments_strict(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }

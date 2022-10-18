@@ -41,7 +41,13 @@ DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
 DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
 DEF_VALUE(HBCResolveEnvironment, SingleOperandInst)
 DEF_VALUE(HBCGetArgumentsLengthInst, SingleOperandInst)
+
+MARK_FIRST(HBCReifyArgumentsInst)
 DEF_VALUE(HBCReifyArgumentsInst, SingleOperandInst)
+DEF_VALUE(HBCReifyArgumentsStrictInst, HBCReifyArgumentsInst)
+DEF_VALUE(HBCReifyArgumentsLooseInst, HBCReifyArgumentsInst)
+MARK_LAST(HBCReifyArgumentsInst)
+
 DEF_VALUE(HBCSpillMovInst, SingleOperandInst)
 #endif
 MARK_LAST(SingleOperandInst)

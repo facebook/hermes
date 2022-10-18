@@ -500,7 +500,10 @@ class IRBuilder {
   HBCGetArgumentsLengthInst *createHBCGetArgumentsLengthInst(
       AllocStackInst *lazyReg);
 
-  HBCReifyArgumentsInst *createHBCReifyArgumentsInst(AllocStackInst *lazyReg);
+  HBCReifyArgumentsLooseInst *createHBCReifyArgumentsLooseInst(
+      AllocStackInst *lazyReg);
+  HBCReifyArgumentsStrictInst *createHBCReifyArgumentsStrictInst(
+      AllocStackInst *lazyReg);
 
   HBCCreateThisInst *createHBCCreateThisInst(Value *prototype, Value *closure);
 

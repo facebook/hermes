@@ -471,7 +471,10 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
 
         auto *newBlock = builder.createBasicBlock(F);
         builder.setInsertionBlock(newBlock);
-        builder.createHBCReifyArgumentsInst(lazyReg);
+        if (F->isStrictMode())
+          builder.createHBCReifyArgumentsStrictInst(lazyReg);
+        else
+          builder.createHBCReifyArgumentsLooseInst(lazyReg);
         auto *reifiedValue = builder.createLoadStackInst(lazyReg);
         builder.createBranchInst(thisBlock);
 
@@ -490,7 +493,10 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
       // the usage with this array.
       builder.setInsertionPoint(inst);
       builder.setLocation(inst->getLocation());
-      builder.createHBCReifyArgumentsInst(lazyReg);
+      if (F->isStrictMode())
+        builder.createHBCReifyArgumentsStrictInst(lazyReg);
+      else
+        builder.createHBCReifyArgumentsLooseInst(lazyReg);
       auto *array = builder.createLoadStackInst(lazyReg);
       for (int i = 0, n = inst->getNumOperands(); i < n; i++) {
         if (inst->getOperand(i) == createArguments) {

@@ -2853,25 +2853,27 @@ tailCall:
         ip = NEXTINST(GetArgumentsPropByVal);
         DISPATCH;
       }
-
-      CASE(ReifyArguments) {
+      CASE(ReifyArgumentsLoose)
+      CASE(ReifyArgumentsStrict) {
         // If the arguments object was already created, do nothing.
-        if (!O1REG(ReifyArguments).isUndefined()) {
+        if (!O1REG(ReifyArgumentsLoose).isUndefined()) {
           assert(
-              O1REG(ReifyArguments).isObject() &&
+              O1REG(ReifyArgumentsLoose).isObject() &&
               "arguments lazy register is not an object");
-          ip = NEXTINST(ReifyArguments);
+          ip = NEXTINST(ReifyArgumentsLoose);
           DISPATCH;
         }
         CAPTURE_IP(
             resArgs = reifyArgumentsSlowPath(
-                runtime, FRAME.getCalleeClosureHandleUnsafe(), strictMode));
+                runtime,
+                FRAME.getCalleeClosureHandleUnsafe(),
+                ip->opCode == OpCode::ReifyArgumentsStrict));
         if (LLVM_UNLIKELY(resArgs == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(ReifyArguments) = resArgs->getHermesValue();
+        O1REG(ReifyArgumentsLoose) = resArgs->getHermesValue();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(ReifyArguments);
+        ip = NEXTINST(ReifyArgumentsLoose);
         DISPATCH;
       }
 
