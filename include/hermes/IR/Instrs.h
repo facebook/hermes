@@ -2388,7 +2388,7 @@ class CoerceThisNSInst : public SingleOperandInst {
  public:
   explicit CoerceThisNSInst(Value *input)
       : SingleOperandInst(ValueKind::CoerceThisNSInstKind, input) {
-    setType(input->getType());
+    setType(Type::createObject());
   }
   explicit CoerceThisNSInst(
       const CoerceThisNSInst *src,
