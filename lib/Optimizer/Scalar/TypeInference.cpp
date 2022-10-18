@@ -479,19 +479,19 @@ class TypeInferenceImpl {
     hermes_fatal("This is not a concrete instruction");
   }
   bool inferAddEmptyStringInst(AddEmptyStringInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferAsNumberInst(AsNumberInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferAsNumericInst(AsNumericInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferAsInt32Inst(AsInt32Inst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferLoadStackInst(LoadStackInst *inst) {
@@ -504,15 +504,17 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferMovInst(MovInst *inst) {
-    // unimplemented
-    return false;
+    Type srcType = inst->getSingleOperand()->getType();
+    inst->setType(srcType);
+    return true;
   }
   bool inferImplicitMovInst(ImplicitMovInst *inst) {
-    // unimplemented
-    return false;
+    Type srcType = inst->getSingleOperand()->getType();
+    inst->setType(srcType);
+    return true;
   }
   bool inferCoerceThisNSInst(CoerceThisNSInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferUnaryOperatorInst(UnaryOperatorInst *inst) {
@@ -554,8 +556,8 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferDirectEvalInst(DirectEvalInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createAnyType());
+    return true;
   }
   bool inferLoadFrameInst(LoadFrameInst *inst) {
     Type T = inst->getLoadVariable()->getType();
@@ -567,8 +569,8 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferHBCLoadConstInst(HBCLoadConstInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(inst->getSingleOperand()->getType());
+    return true;
   }
   bool inferHBCLoadParamInst(HBCLoadParamInst *inst) {
     // unimplemented
@@ -586,11 +588,11 @@ class TypeInferenceImpl {
     hermes_fatal("This is not a concrete instruction");
   }
   bool inferHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst *inst) {
-    // unimplemented
+    // Does not return a value, uses a lazy register instead.
     return false;
   }
   bool inferHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst *inst) {
-    // unimplemented
+    // Does not return a value, uses a lazy register instead.
     return false;
   }
   bool inferHBCSpillMovInst(HBCSpillMovInst *inst) {
@@ -638,30 +640,25 @@ class TypeInferenceImpl {
     return inferBinaryInst(inst);
   }
   bool inferStorePropertyInst(StorePropertyInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst *inst) {
-    // unimplemented
     return false;
   }
 
   bool inferStoreOwnPropertyInst(StoreOwnPropertyInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferStoreNewOwnPropertyInst(StoreNewOwnPropertyInst *inst) {
-    // unimplemented
     return false;
   }
 
   bool inferStoreGetterSetterInst(StoreGetterSetterInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferDeletePropertyInst(DeletePropertyInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createBoolean());
+    return true;
   }
   bool inferLoadPropertyInst(LoadPropertyInst *inst) {
     bool changed = false;
@@ -745,30 +742,28 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferStoreStackInst(StoreStackInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferStoreFrameInst(StoreFrameInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferAllocStackInst(AllocStackInst *inst) {
     return inferMemoryType(inst);
   }
   bool inferAllocObjectInst(AllocObjectInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createObject());
+    return true;
   }
   bool inferAllocArrayInst(AllocArrayInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferAllocObjectLiteralInst(AllocObjectLiteralInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferCreateArgumentsInst(CreateArgumentsInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferCatchInst(CatchInst *inst) {
@@ -776,15 +771,13 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferDebuggerInst(DebuggerInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferCreateRegExpInst(CreateRegExpInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferTryEndInst(TryEndInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferGetNewTargetInst(GetNewTargetInst *inst) {
@@ -817,24 +810,23 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferUnreachableInst(UnreachableInst *inst) {
-    // unimplemented
     return false;
   }
 
   bool inferCreateFunctionInst(CreateFunctionInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferCreateGeneratorInst(CreateGeneratorInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferHBCCreateFunctionInst(HBCCreateFunctionInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferHBCCreateGeneratorInst(HBCCreateGeneratorInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
 #ifdef HERMES_RUN_WASM
@@ -848,7 +840,6 @@ class TypeInferenceImpl {
     hermes_fatal("This is not a concrete instruction");
   }
   bool inferBranchInst(BranchInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferReturnInst(ReturnInst *inst) {
@@ -863,15 +854,12 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferThrowInst(ThrowInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferSwitchInst(SwitchInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferCondBranchInst(CondBranchInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferGetPNamesInst(GetPNamesInst *inst) {
@@ -883,23 +871,18 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferCheckHasInstanceInst(CheckHasInstanceInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferTryStartInst(TryStartInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferCompareBranchInst(CompareBranchInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferSwitchImmInst(SwitchImmInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferSaveAndYieldInst(SaveAndYieldInst *inst) {
-    // unimplemented
     return false;
   }
 
@@ -922,16 +905,16 @@ class TypeInferenceImpl {
     return changed;
   }
   bool inferConstructInst(ConstructInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createObject());
+    return true;
   }
   bool inferCallBuiltinInst(CallBuiltinInst *inst) {
     // unimplemented
     return false;
   }
   bool inferHBCConstructInst(HBCConstructInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createObject());
+    return true;
   }
   bool inferHBCCallDirectInst(HBCCallDirectInst *inst) {
     // unimplemented
@@ -943,22 +926,24 @@ class TypeInferenceImpl {
   }
 
   bool inferGetBuiltinClosureInst(GetBuiltinClosureInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferStartGeneratorInst(StartGeneratorInst *inst) {
-    // unimplemented
     return false;
   }
   bool inferResumeGeneratorInst(ResumeGeneratorInst *inst) {
-    // unimplemented
-    return false;
+    // Result of ResumeGeneratorInst is whatever the user passes to .next()
+    // or .throw() to resume the generator, which we don't yet support
+    // understanding the types of.
+    inst->setType(Type::createAnyType());
+    return true;
   }
 
   // These are target dependent instructions:
 
   bool inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferHBCCreateEnvironmentInst(HBCCreateEnvironmentInst *inst) {
@@ -982,7 +967,7 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {
-    // unimplemented
+    assert(inst->getInherentType().hasValue());
     return false;
   }
   bool inferHBCProfilePointInst(HBCProfilePointInst *inst) {
