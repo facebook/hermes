@@ -1511,8 +1511,19 @@ void HBCISel::generateHBCGetArgumentsPropByValInst(
 void HBCISel::generateHBCReifyArgumentsInst(
     hermes::HBCReifyArgumentsInst *Inst,
     hermes::BasicBlock *next) {
+  llvm_unreachable("This is not a concrete instruction");
+}
+void HBCISel::generateHBCReifyArgumentsLooseInst(
+    hermes::HBCReifyArgumentsLooseInst *Inst,
+    hermes::BasicBlock *next) {
   auto reg = encodeValue(Inst->getLazyRegister());
-  BCFGen_->emitReifyArguments(reg);
+  BCFGen_->emitReifyArgumentsLoose(reg);
+}
+void HBCISel::generateHBCReifyArgumentsStrictInst(
+    hermes::HBCReifyArgumentsStrictInst *Inst,
+    hermes::BasicBlock *next) {
+  auto reg = encodeValue(Inst->getLazyRegister());
+  BCFGen_->emitReifyArgumentsStrict(reg);
 }
 void HBCISel::generateHBCCreateThisInst(
     HBCCreateThisInst *Inst,

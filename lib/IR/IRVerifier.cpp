@@ -816,7 +816,13 @@ void Verifier::visitHBCGetArgumentsLengthInst(
     const HBCGetArgumentsLengthInst &Inst) {
   // Nothing to verify at this point.
 }
-void Verifier::visitHBCReifyArgumentsInst(const HBCReifyArgumentsInst &Inst) {
+void Verifier::visitHBCReifyArgumentsInst(const HBCReifyArgumentsInst &Inst) {}
+void Verifier::visitHBCReifyArgumentsLooseInst(
+    const HBCReifyArgumentsLooseInst &Inst) {
+  // Nothing to verify at this point.
+}
+void Verifier::visitHBCReifyArgumentsStrictInst(
+    const HBCReifyArgumentsStrictInst &Inst) {
   // Nothing to verify at this point.
 }
 void Verifier::visitHBCConstructInst(const HBCConstructInst &Inst) {}

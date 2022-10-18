@@ -821,9 +821,15 @@ HBCGetArgumentsLengthInst *IRBuilder::createHBCGetArgumentsLengthInst(
   insert(inst);
   return inst;
 }
-HBCReifyArgumentsInst *IRBuilder::createHBCReifyArgumentsInst(
+HBCReifyArgumentsLooseInst *IRBuilder::createHBCReifyArgumentsLooseInst(
     AllocStackInst *lazyReg) {
-  auto inst = new HBCReifyArgumentsInst(lazyReg);
+  auto inst = new HBCReifyArgumentsLooseInst(lazyReg);
+  insert(inst);
+  return inst;
+}
+HBCReifyArgumentsStrictInst *IRBuilder::createHBCReifyArgumentsStrictInst(
+    AllocStackInst *lazyReg) {
+  auto inst = new HBCReifyArgumentsStrictInst(lazyReg);
   insert(inst);
   return inst;
 }

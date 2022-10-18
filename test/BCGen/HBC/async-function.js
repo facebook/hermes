@@ -83,7 +83,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Mov               r3, r2
 // CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleReturn>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArguments    r3
+// CHECK-NEXT:    ReifyArgumentsLoose    r3
 // CHECK-NEXT:    Mov               r6, r3
 // CHECK-NEXT:    Mov               r12, r2
 // CHECK-NEXT:    Mov               r11, r4
@@ -120,7 +120,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r2
 // CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleAwait>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArguments    r3
+// CHECK-NEXT:    ReifyArgumentsLoose r3
 // CHECK-NEXT:    Mov               r6, r3
 // CHECK-NEXT:    Mov               r12, r2
 // CHECK-NEXT:    Mov               r11, r4
@@ -172,7 +172,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r0, 0, r2
 // CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleAsyncFE>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArguments    r3
+// CHECK-NEXT:    ReifyArgumentsLoose r3
 // CHECK-NEXT:    Mov               r6, r3
 // CHECK-NEXT:    Mov               r12, r2
 // CHECK-NEXT:    Mov               r11, r4
