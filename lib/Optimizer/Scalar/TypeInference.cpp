@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "typeinference"
 
 #include "hermes/Optimizer/Scalar/TypeInference.h"
+
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
@@ -33,32 +34,6 @@ STATISTIC(
     "unique store(own) to that value");
 
 namespace {
-
-class TypeInferenceImpl {
-  /// Call graph provider to use. There could be different implementations
-  /// of the call graph provider.
-  CallGraphProvider *cgp_;
-
-  /// Run type inference on a CallInst, with the purpose of identifying the
-  /// type of the return value produced by the call.
-  bool inferCallInst(CallInst *CI);
-
-  /// Run type inference on an Instruction; this just does a case-based
-  /// dispatch.
-  bool inferType(Instruction *I);
-
-  /// Infer type information for formal parameters of a Function, based on the
-  /// types of actual parameters at call sites.
-  bool inferParams(Function *F);
-
-  /// Infer type information for a property load (or an array index too)
-  bool inferLoadPropertyInst(LoadPropertyInst *LPI);
-
-  bool runOnFunction(Function *F);
-
- public:
-  bool runOnModule(Module *M);
-};
 
 static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
   Value *op = UOI->getSingleOperand();
@@ -93,46 +68,6 @@ static bool inferTilde(UnaryOperatorInst *UOI) {
   // ~ BigInt => BigInt
   // ~ ?? => Int32|BigInt
   return inferUnaryArith(UOI, Type::createInt32());
-}
-} // anonymous namespace.
-
-static bool inferUnaryInst(UnaryOperatorInst *UOI) {
-  using OpKind = UnaryOperatorInst::OpKind;
-
-  switch (UOI->getOperatorKind()) {
-    case OpKind::DeleteKind: // delete:
-      UOI->setType(Type::createBoolean());
-      return true;
-    case OpKind::VoidKind: // void
-      UOI->setType(Type::createUndefined());
-      return true;
-    case OpKind::TypeofKind: // typeof
-      UOI->setType(Type::createString());
-      return true;
-    // https://tc39.es/ecma262/#sec-prefix-increment-operator
-    // https://tc39.es/ecma262/#sec-postfix-increment-operator
-    case OpKind::IncKind: // ++
-    // https://tc39.es/ecma262/#sec-prefix-decrement-operator
-    // https://tc39.es/ecma262/#sec-postfix-decrement-operator
-    case OpKind::DecKind: // --
-    // https://tc39.es/ecma262/#sec-unary-minus-operator
-    case OpKind::MinusKind: // -
-      return inferUnaryArithDefault(UOI);
-    // https://tc39.es/ecma262/#sec-unary-plus-operator
-    case OpKind::PlusKind: // +
-      UOI->setType(Type::createNumber());
-      return true;
-    // https://tc39.es/ecma262/#sec-bitwise-not-operator
-    case OpKind::TildeKind: // ~
-      return inferTilde(UOI);
-    case OpKind::BangKind: // !
-      UOI->setType(Type::createBoolean());
-      return true;
-    default:
-      break;
-  }
-
-  return false;
 }
 
 /// Try to infer the type of the value that's stored into \p addr. \p addr is
@@ -198,26 +133,6 @@ static bool inferMemoryType(Value *V) {
   return false;
 }
 
-static bool inferLoadStackInst(LoadStackInst *LS) {
-  Type T = LS->getSingleOperand()->getType();
-  if (T.isProperSubsetOf(LS->getType())) {
-    LS->setType(T);
-    return true;
-  }
-
-  return false;
-}
-
-static bool inferLoadFrameInst(LoadFrameInst *LF) {
-  Type T = LF->getLoadVariable()->getType();
-  if (T.isProperSubsetOf(LF->getType())) {
-    LF->setType(T);
-    return true;
-  }
-
-  return false;
-}
-
 /// Collects all of the values that are used by a tree of PHIs, recursively.
 /// Inputs are stored into \p inputs. Visited PHIs are stored into \p visited.
 static void collectPHIInputs(
@@ -239,43 +154,6 @@ static void collectPHIInputs(
     } else {
       inputs.insert(E.first);
     }
-  }
-}
-
-static bool inferPhiInstInst(PhiInst *P) {
-  // Check if the types of all incoming values match and if they do set the
-  // value of the PHI to match the incoming values.
-  unsigned numEntries = P->getNumEntries();
-  if (numEntries < 1)
-    return false;
-
-  llvh::SmallPtrSet<Value *, 8> visited;
-  llvh::SmallPtrSet<Value *, 8> values;
-  collectPHIInputs(visited, values, P);
-
-  Type originalTy = P->getType();
-
-  Type newTy;
-  bool foundFirst = false;
-
-  // For all possible incoming values into this phi:
-  for (auto *input : values) {
-    // If this is the first valid type remember it.
-    if (!foundFirst) {
-      newTy = input->getType();
-      foundFirst = true;
-      continue;
-    }
-
-    Type T = input->getType();
-    newTy = Type::unionTy(T, newTy);
-  }
-
-  if (newTy.isProperSubsetOf(originalTy)) {
-    P->setType(newTy);
-    return true;
-  } else {
-    return false;
   }
 }
 
@@ -517,29 +395,6 @@ static bool propagateArgs(llvh::DenseSet<CallInst *> &callSites, Function *F) {
   return changed;
 }
 
-/// If all call sites of this Function are known, propagate
-/// information from actuals to formals.
-bool TypeInferenceImpl::inferParams(Function *F) {
-  bool changed;
-  if (cgp_->hasUnknownCallsites(F)) {
-    LLVM_DEBUG(
-        dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
-    return false;
-  }
-  llvh::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
-  LLVM_DEBUG(
-      dbgs() << F->getInternalName().str() << " has " << callsites.size()
-             << " call sites.\n");
-  changed = propagateArgs(callsites, F);
-  if (changed) {
-    LLVM_DEBUG(
-        dbgs() << "inferParams changed for function "
-               << F->getInternalName().str() << "\n");
-    NumPT++;
-  }
-  return changed;
-}
-
 /// Propagate return type from potential callees to a CallInst.
 /// Assumes that each funcs' type has been inferred, in F->getType().
 static bool propagateReturn(llvh::DenseSet<Function *> &funcs, CallInst *CI) {
@@ -567,39 +422,6 @@ static bool propagateReturn(llvh::DenseSet<Function *> &funcs, CallInst *CI) {
   return changed;
 }
 
-/// If all callees are known, propagate information from returns
-/// of those callees to this CallInst.
-bool TypeInferenceImpl::inferCallInst(CallInst *CI) {
-  bool changed = false;
-  if (cgp_->hasUnknownCallees(CI)) {
-    LLVM_DEBUG(
-        dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
-    return false;
-  }
-  llvh::DenseSet<Function *> &callees = cgp_->getKnownCallees(CI);
-  LLVM_DEBUG(
-      dbgs() << "Found " << callees.size()
-             << " callees for : " << CI->getName().str() << "\n");
-  changed = propagateReturn(callees, CI);
-  if (changed) {
-    LLVM_DEBUG(dbgs() << "inferCallInst changed!\n");
-    NumRT++;
-  }
-  return changed;
-}
-
-static bool inferReturnInst(ReturnInst *RI) {
-  Type originalTy = RI->getType();
-  Value *operand = RI->getOperand(0);
-  Type newTy = operand->getType();
-
-  if (newTy.isProperSubsetOf(originalTy)) {
-    RI->setType(newTy);
-    return true;
-  }
-  return false;
-}
-
 /// Does a given prop belong in the owned set?
 static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
   for (auto *J : I->getUsers()) {
@@ -613,144 +435,584 @@ static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
   return false;
 }
 
-bool TypeInferenceImpl::inferLoadPropertyInst(LoadPropertyInst *LPI) {
-  bool changed = false;
-  bool first = true;
-  Type retTy;
-  Type originalTy = LPI->getType();
-  bool unique = true;
+/// Actual implementation of type inference pass.
+/// Contains the ability to infer types per-instruction.
+///
+/// Each of the "inferXXXInst" functions return a bool,
+/// indicating whether they set the type of the instruction.
+class TypeInferenceImpl {
+  /// Call graph provider to use. There could be different implementations
+  /// of the call graph provider.
+  CallGraphProvider *cgp_;
 
-  // Bail out if there are unknown receivers.
-  if (cgp_->hasUnknownReceivers(LPI))
+ public:
+  /// Run type inference on every instruction in the module.
+  /// \return true when some types were changed.
+  bool runOnModule(Module *M);
+
+ private:
+  /// Run type inference on an instruction.
+  /// This just does a case-based dispatch.
+  /// \return true when the instruction's type was changed.
+  bool inferInstruction(Instruction *inst) {
+    Type originalTy = inst->getType();
+    bool changed = false;
+
+    switch (inst->getKind()) {
+#define INCLUDE_HBC_INSTRS
+#define DEF_VALUE(CLASS, PARENT)               \
+  case ValueKind::CLASS##Kind:                 \
+    changed = infer##CLASS(cast<CLASS>(inst)); \
+    break;
+#include "hermes/IR/Instrs.def"
+      default:
+        llvm_unreachable("Invalid kind");
+    }
+
+    NumTI += changed;
+    return inst->getType() != originalTy;
+  }
+
+  bool runOnFunction(Function *F);
+
+  bool inferSingleOperandInst(SingleOperandInst *inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  bool inferAddEmptyStringInst(AddEmptyStringInst *inst) {
+    // unimplemented
     return false;
+  }
+  bool inferAsNumberInst(AsNumberInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferAsNumericInst(AsNumericInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferAsInt32Inst(AsInt32Inst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferLoadStackInst(LoadStackInst *inst) {
+    Type T = inst->getSingleOperand()->getType();
+    if (T.isProperSubsetOf(inst->getType())) {
+      inst->setType(T);
+      return true;
+    }
 
-  // Go over each known receiver R (can be empty)
-  for (auto *R : cgp_->getKnownReceivers(LPI)) {
-    assert(llvh::isa<AllocObjectInst>(R));
-    // Note: currently Array analysis is purposely disabled.
+    return false;
+  }
+  bool inferMovInst(MovInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferImplicitMovInst(ImplicitMovInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCoerceThisNSInst(CoerceThisNSInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferUnaryOperatorInst(UnaryOperatorInst *inst) {
+    using OpKind = UnaryOperatorInst::OpKind;
 
-    // Bail out if there are unknown stores.
-    if (cgp_->hasUnknownStores(R))
+    switch (inst->getOperatorKind()) {
+      case OpKind::DeleteKind: // delete:
+        inst->setType(Type::createBoolean());
+        return true;
+      case OpKind::VoidKind: // void
+        inst->setType(Type::createUndefined());
+        return true;
+      case OpKind::TypeofKind: // typeof
+        inst->setType(Type::createString());
+        return true;
+      // https://tc39.es/ecma262/#sec-prefix-increment-operator
+      // https://tc39.es/ecma262/#sec-postfix-increment-operator
+      case OpKind::IncKind: // ++
+      // https://tc39.es/ecma262/#sec-prefix-decrement-operator
+      // https://tc39.es/ecma262/#sec-postfix-decrement-operator
+      case OpKind::DecKind: // --
+      // https://tc39.es/ecma262/#sec-unary-minus-operator
+      case OpKind::MinusKind: // -
+        return inferUnaryArithDefault(inst);
+      // https://tc39.es/ecma262/#sec-unary-plus-operator
+      case OpKind::PlusKind: // +
+        inst->setType(Type::createNumber());
+        return true;
+      // https://tc39.es/ecma262/#sec-bitwise-not-operator
+      case OpKind::TildeKind: // ~
+        return inferTilde(inst);
+      case OpKind::BangKind: // !
+        inst->setType(Type::createBoolean());
+        return true;
+      default:
+        break;
+    }
+
+    return false;
+  }
+  bool inferDirectEvalInst(DirectEvalInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferLoadFrameInst(LoadFrameInst *inst) {
+    Type T = inst->getLoadVariable()->getType();
+    if (T.isProperSubsetOf(inst->getType())) {
+      inst->setType(T);
+      return true;
+    }
+
+    return false;
+  }
+  bool inferHBCLoadConstInst(HBCLoadConstInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCLoadParamInst(HBCLoadParamInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCResolveEnvironment(HBCResolveEnvironment *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  bool inferHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCSpillMovInst(HBCSpillMovInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferPhiInst(PhiInst *inst) {
+    // Check if the types of all incoming values match and if they do set the
+    // value of the PHI to match the incoming values.
+    unsigned numEntries = inst->getNumEntries();
+    if (numEntries < 1)
       return false;
 
-    Value *prop = LPI->getProperty();
+    llvh::SmallPtrSet<Value *, 8> visited;
+    llvh::SmallPtrSet<Value *, 8> values;
+    collectPHIInputs(visited, values, inst);
 
-    // If the property being requested is NOT an owned prop, Bail out
-    if (llvh::isa<AllocObjectInst>(R)) {
-      if (!isOwnedProperty(cast<AllocObjectInst>(R), prop))
+    Type originalTy = inst->getType();
+
+    Type newTy;
+    bool foundFirst = false;
+
+    // For all possible incoming values into this phi:
+    for (auto *input : values) {
+      // If this is the first valid type remember it.
+      if (!foundFirst) {
+        newTy = input->getType();
+        foundFirst = true;
+        continue;
+      }
+
+      Type T = input->getType();
+      newTy = Type::unionTy(T, newTy);
+    }
+
+    if (newTy.isProperSubsetOf(originalTy)) {
+      inst->setType(newTy);
+      return true;
+    } else {
+      return false;
+    }
+  }
+  bool inferBinaryOperatorInst(BinaryOperatorInst *inst) {
+    return inferBinaryInst(inst);
+  }
+  bool inferStorePropertyInst(StorePropertyInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferStoreOwnPropertyInst(StoreOwnPropertyInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferStoreNewOwnPropertyInst(StoreNewOwnPropertyInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferStoreGetterSetterInst(StoreGetterSetterInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferDeletePropertyInst(DeletePropertyInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferLoadPropertyInst(LoadPropertyInst *inst) {
+    bool changed = false;
+    bool first = true;
+    Type retTy;
+    Type originalTy = inst->getType();
+    bool unique = true;
+
+    // Bail out if there are unknown receivers.
+    if (cgp_->hasUnknownReceivers(inst))
+      return false;
+
+    // Go over each known receiver R (can be empty)
+    for (auto *R : cgp_->getKnownReceivers(inst)) {
+      assert(llvh::isa<AllocObjectInst>(R));
+      // Note: currently Array analysis is purposely disabled.
+
+      // Bail out if there are unknown stores.
+      if (cgp_->hasUnknownStores(R))
         return false;
-    }
 
-    // Go over each store of R (can be empty)
-    for (auto *S : cgp_->getKnownStores(R)) {
-      assert(
-          llvh::isa<StoreOwnPropertyInst>(S) ||
-          llvh::isa<StorePropertyInst>(S));
-      Value *storeVal = nullptr;
+      Value *prop = inst->getProperty();
 
+      // If the property being requested is NOT an owned prop, Bail out
       if (llvh::isa<AllocObjectInst>(R)) {
-        // If the property in the store is what this LPI wants, skip the store.
-        if (auto *SS = llvh::dyn_cast<StoreOwnPropertyInst>(S)) {
-          storeVal = SS->getStoredValue();
-          if (prop != SS->getProperty())
-            continue;
-        }
-        if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
-          storeVal = SS->getStoredValue();
-          if (prop != SS->getProperty())
-            continue;
-        }
+        if (!isOwnedProperty(cast<AllocObjectInst>(R), prop))
+          return false;
       }
 
-      if (llvh::isa<AllocArrayInst>(R)) {
-        if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
-          storeVal =
-              SS->getStoredValue(); // for arrays, no need to match prop name
+      // Go over each store of R (can be empty)
+      for (auto *S : cgp_->getKnownStores(R)) {
+        assert(
+            llvh::isa<StoreOwnPropertyInst>(S) ||
+            llvh::isa<StorePropertyInst>(S));
+        Value *storeVal = nullptr;
+
+        if (llvh::isa<AllocObjectInst>(R)) {
+          // If the property in the store is what this inst wants, skip the
+          // store.
+          if (auto *SS = llvh::dyn_cast<StoreOwnPropertyInst>(S)) {
+            storeVal = SS->getStoredValue();
+            if (prop != SS->getProperty())
+              continue;
+          }
+          if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
+            storeVal = SS->getStoredValue();
+            if (prop != SS->getProperty())
+              continue;
+          }
         }
-      }
 
-      assert(storeVal != nullptr);
+        if (llvh::isa<AllocArrayInst>(R)) {
+          if (auto *SS = llvh::dyn_cast<StorePropertyInst>(S)) {
+            storeVal =
+                SS->getStoredValue(); // for arrays, no need to match prop name
+          }
+        }
 
-      if (first) {
-        retTy = storeVal->getType();
-        first = false;
-      } else {
-        retTy = Type::unionTy(retTy, storeVal->getType());
-        unique = false;
+        assert(storeVal != nullptr);
+
+        if (first) {
+          retTy = storeVal->getType();
+          first = false;
+        } else {
+          retTy = Type::unionTy(retTy, storeVal->getType());
+          unique = false;
+        }
       }
     }
+    if (!first && unique) {
+      UniquePropertyValue++;
+    }
+    if (!first && retTy.isProperSubsetOf(originalTy)) {
+      inst->setType(retTy);
+      return true;
+    }
+    return changed;
   }
-  if (!first && unique) {
-    UniquePropertyValue++;
+  bool inferTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst *inst) {
+    // unimplemented
+    return false;
   }
-  if (!first && retTy.isProperSubsetOf(originalTy)) {
-    LPI->setType(retTy);
+  bool inferStoreStackInst(StoreStackInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferStoreFrameInst(StoreFrameInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferAllocStackInst(AllocStackInst *inst) {
+    return inferMemoryType(inst);
+  }
+  bool inferAllocObjectInst(AllocObjectInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferAllocArrayInst(AllocArrayInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferAllocObjectLiteralInst(AllocObjectLiteralInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCreateArgumentsInst(CreateArgumentsInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCatchInst(CatchInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferDebuggerInst(DebuggerInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCreateRegExpInst(CreateRegExpInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferTryEndInst(TryEndInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferGetNewTargetInst(GetNewTargetInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferThrowIfEmptyInst(ThrowIfEmptyInst *inst) {
+    inst->setType(Type::subtractTy(
+        inst->getCheckedValue()->getType(), Type::createEmpty()));
     return true;
   }
-  return changed;
-}
-
-/// Infer type information for "ThrowIfEmpty", which simply removes the
-/// possibility for "empty" from its operand.
-static bool inferThrowIfEmptyInst(ThrowIfEmptyInst *TIE) {
-  TIE->setType(
-      Type::subtractTy(TIE->getCheckedValue()->getType(), Type::createEmpty()));
-  return true;
-}
-
-/// Attempts to infer the type of instruction \p I based on the environment.
-/// \returns true if the type of the instruction was deduced.
-/// This method contains a bunch of rules that conform to the JavaScript
-/// language.
-bool TypeInferenceImpl::inferType(Instruction *I) {
-  Type originalTy = I->getType();
-
-  switch (I->getKind()) {
-    case ValueKind::BinaryOperatorInstKind:
-      NumTI += inferBinaryInst(cast<BinaryOperatorInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::UnaryOperatorInstKind:
-      NumTI += inferUnaryInst(cast<UnaryOperatorInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::PhiInstKind:
-      NumTI += inferPhiInstInst(cast<PhiInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::AllocStackInstKind:
-      NumTI += inferMemoryType(cast<AllocStackInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::LoadStackInstKind:
-      NumTI += inferLoadStackInst(cast<LoadStackInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::LoadFrameInstKind:
-      NumTI += inferLoadFrameInst(cast<LoadFrameInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::CallInstKind:
-      NumTI += inferCallInst(cast<CallInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::ReturnInstKind:
-      NumTI += inferReturnInst(cast<ReturnInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::LoadPropertyInstKind:
-      NumTI += inferLoadPropertyInst(cast<LoadPropertyInst>(I));
-      return I->getType() != originalTy;
-
-    case ValueKind::ThrowIfEmptyInstKind:
-      NumTI += inferThrowIfEmptyInst(cast<ThrowIfEmptyInst>(I));
-      return I->getType() != originalTy;
-
-    default:
-      // Not sure how to infer the type here.
-      return false;
+  bool inferIteratorBeginInst(IteratorBeginInst *inst) {
+    // unimplemented
+    return false;
   }
-}
+  bool inferIteratorNextInst(IteratorNextInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferIteratorCloseInst(IteratorCloseInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferUnreachableInst(UnreachableInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferCreateFunctionInst(CreateFunctionInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCreateGeneratorInst(CreateGeneratorInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCreateFunctionInst(HBCCreateFunctionInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCreateGeneratorInst(HBCCreateGeneratorInst *inst) {
+    // unimplemented
+    return false;
+  }
+#ifdef HERMES_RUN_WASM
+  bool inferCallIntrinsicInst(CallIntrinsicInst *inst) {
+    // unimplemented
+    return false;
+  }
+#endif
+
+  bool inferTerminatorInst(TerminatorInst *inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  bool inferBranchInst(BranchInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferReturnInst(ReturnInst *inst) {
+    Type originalTy = inst->getType();
+    Value *operand = inst->getOperand(0);
+    Type newTy = operand->getType();
+
+    if (newTy.isProperSubsetOf(originalTy)) {
+      inst->setType(newTy);
+      return true;
+    }
+    return false;
+  }
+  bool inferThrowInst(ThrowInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferSwitchInst(SwitchInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCondBranchInst(CondBranchInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferGetPNamesInst(GetPNamesInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferGetNextPNameInst(GetNextPNameInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCheckHasInstanceInst(CheckHasInstanceInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferTryStartInst(TryStartInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCompareBranchInst(CompareBranchInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferSwitchImmInst(SwitchImmInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferSaveAndYieldInst(SaveAndYieldInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferCallInst(CallInst *inst) {
+    bool changed = false;
+    if (cgp_->hasUnknownCallees(inst)) {
+      LLVM_DEBUG(
+          dbgs() << "Unknown callees for : " << inst->getName().str() << "\n");
+      return false;
+    }
+    llvh::DenseSet<Function *> &callees = cgp_->getKnownCallees(inst);
+    LLVM_DEBUG(
+        dbgs() << "Found " << callees.size()
+               << " callees for : " << inst->getName().str() << "\n");
+    changed = propagateReturn(callees, inst);
+    if (changed) {
+      LLVM_DEBUG(dbgs() << "inferCallInst changed!\n");
+      NumRT++;
+    }
+    return changed;
+  }
+  bool inferConstructInst(ConstructInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferCallBuiltinInst(CallBuiltinInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCConstructInst(HBCConstructInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCallDirectInst(HBCCallDirectInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCallNInst(HBCCallNInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  bool inferGetBuiltinClosureInst(GetBuiltinClosureInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferStartGeneratorInst(StartGeneratorInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferResumeGeneratorInst(ResumeGeneratorInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  // These are target dependent instructions:
+
+  bool inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCreateEnvironmentInst(HBCCreateEnvironmentInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCGetThisNSInst(HBCGetThisNSInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCCreateThisInst(HBCCreateThisInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCGetConstructedObjectInst(HBCGetConstructedObjectInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {
+    // unimplemented
+    return false;
+  }
+  bool inferHBCProfilePointInst(HBCProfilePointInst *inst) {
+    // unimplemented
+    return false;
+  }
+
+  /// If all call sites of this Function are known, propagate
+  /// information from actuals to formals.
+  bool inferParams(Function *F) {
+    bool changed;
+    if (cgp_->hasUnknownCallsites(F)) {
+      LLVM_DEBUG(
+          dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
+      return false;
+    }
+    llvh::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
+    LLVM_DEBUG(
+        dbgs() << F->getInternalName().str() << " has " << callsites.size()
+               << " call sites.\n");
+    changed = propagateArgs(callsites, F);
+    if (changed) {
+      LLVM_DEBUG(
+          dbgs() << "inferParams changed for function "
+                 << F->getInternalName().str() << "\n");
+      NumPT++;
+    }
+    return changed;
+  }
+};
 
 bool TypeInferenceImpl::runOnFunction(Function *F) {
   bool changed = false;
@@ -778,7 +1040,7 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
     for (auto &bbit : *F) {
       for (auto &it : bbit) {
         Instruction *I = &it;
-        localChanged |= inferType(I);
+        localChanged |= inferInstruction(I);
       }
     }
 
@@ -811,6 +1073,8 @@ bool TypeInferenceImpl::runOnModule(Module *M) {
   }
   return changed;
 }
+
+} // anonymous namespace
 
 bool TypeInference::runOnModule(Module *M) {
   TypeInferenceImpl impl{};
