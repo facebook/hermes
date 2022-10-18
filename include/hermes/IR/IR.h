@@ -57,6 +57,7 @@ class Type {
     String,
     Number,
     BigInt,
+    Environment,
     Object,
     Closure, // Subtype of Object.
     RegExp, // Subtype of Object.
@@ -83,6 +84,7 @@ class Type {
         "string",
         "number",
         "bigint",
+        "environment",
         "object",
         "closure",
         "regexp"};
@@ -181,6 +183,9 @@ class Type {
   static constexpr Type createNumeric() {
     return unionTy(createNumber(), createBigInt());
   }
+  static constexpr Type createEnvironment() {
+    return Type(BIT_TO_VAL(Environment));
+  }
   static constexpr Type createClosure() {
     return Type(BIT_TO_VAL(Closure));
   }
@@ -221,6 +226,9 @@ class Type {
   }
   constexpr bool isBigIntType() const {
     return IS_VAL(BigInt);
+  }
+  constexpr bool isEnvironmentType() const {
+    return IS_VAL(Environment);
   }
   constexpr bool isClosureType() const {
     return IS_VAL(Closure);
