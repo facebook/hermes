@@ -573,16 +573,16 @@ class TypeInferenceImpl {
     return true;
   }
   bool inferHBCLoadParamInst(HBCLoadParamInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createAnyType());
+    return true;
   }
   bool inferHBCResolveEnvironment(HBCResolveEnvironment *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createEnvironment());
+    return true;
   }
   bool inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createNumber());
+    return true;
   }
   bool inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -596,8 +596,8 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferHBCSpillMovInst(HBCSpillMovInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(inst->getSingleOperand()->getType());
+    return true;
   }
 
   bool inferPhiInst(PhiInst *inst) {
@@ -947,8 +947,8 @@ class TypeInferenceImpl {
     return false;
   }
   bool inferHBCCreateEnvironmentInst(HBCCreateEnvironmentInst *inst) {
-    // unimplemented
-    return false;
+    inst->setType(Type::createEnvironment());
+    return true;
   }
   bool inferHBCGetThisNSInst(HBCGetThisNSInst *inst) {
     // unimplemented
