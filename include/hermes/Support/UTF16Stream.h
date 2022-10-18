@@ -59,10 +59,6 @@ class UTF16Stream {
     return *this;
   }
 
-  const char16_t *position() const {
-    return cur_;
-  }
-
  private:
   /// Tries to convert more data. Returns true if more data was converted.
   bool refill();

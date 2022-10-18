@@ -127,28 +127,20 @@ ExecutionStatus JSONLexer::scanNumber() {
 ExecutionStatus JSONLexer::scanString() {
   assert(*curCharPtr_ == '"');
   ++curCharPtr_;
-  const char16_t *start = curCharPtr_.position();
-  bool hasEscape = false;
-  // Ideally we don't have to use tmpStorage. In the case of a plain string with
-  // no escapes, we just construct an ArrayRef at the end of scanning that
-  // points to the beginning and end of the string.
   SmallU16String<32> tmpStorage;
 
   while (curCharPtr_.hasChar()) {
     if (*curCharPtr_ == '"') {
       // End of string.
-      llvh::ArrayRef<char16_t> strRef = hasEscape
-          ? tmpStorage.arrayRef()
-          : llvh::makeArrayRef(start, curCharPtr_.position());
       ++curCharPtr_;
       // If the string exists in the identifier table, use that one.
       if (auto existing =
               runtime_.getIdentifierTable().getExistingStringPrimitiveOrNull(
-                  runtime_, strRef)) {
+                  runtime_, tmpStorage.arrayRef())) {
         token_.setString(runtime_.makeHandle<StringPrimitive>(existing));
         return ExecutionStatus::RETURNED;
       }
-      auto strRes = StringPrimitive::create(runtime_, strRef);
+      auto strRes = StringPrimitive::create(runtime_, tmpStorage.arrayRef());
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -158,12 +150,6 @@ ExecutionStatus JSONLexer::scanString() {
       return error(u"U+0000 thru U+001F is not allowed in string");
     }
     if (*curCharPtr_ == u'\\') {
-      if (!hasEscape && curCharPtr_.position() != start) {
-        // This is the first escape character encountered, so append everything
-        // we've seen so far to tmpStorage.
-        tmpStorage.append(start, curCharPtr_.position());
-      }
-      hasEscape = true;
       ++curCharPtr_;
       if (!curCharPtr_.hasChar()) {
         return error("Unexpected end of input");
@@ -211,8 +197,7 @@ ExecutionStatus JSONLexer::scanString() {
           return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
       }
     } else {
-      if (hasEscape)
-        tmpStorage.push_back(*curCharPtr_);
+      tmpStorage.push_back(*curCharPtr_);
       ++curCharPtr_;
     }
   }
