@@ -192,7 +192,7 @@ class AddEmptyStringInst : public SingleOperandInst {
  public:
   explicit AddEmptyStringInst(Value *value)
       : SingleOperandInst(ValueKind::AddEmptyStringInstKind, value) {
-    setType(Type::createString());
+    setType(*getInherentTypeImpl());
   }
   explicit AddEmptyStringInst(
       const AddEmptyStringInst *src,
@@ -227,7 +227,7 @@ class AsNumberInst : public SingleOperandInst {
  public:
   explicit AsNumberInst(Value *value)
       : SingleOperandInst(ValueKind::AsNumberInstKind, value) {
-    setType(Type::createNumber());
+    setType(*getInherentTypeImpl());
   }
   explicit AsNumberInst(
       const AsNumberInst *src,
@@ -262,7 +262,7 @@ class AsNumericInst : public SingleOperandInst {
  public:
   explicit AsNumericInst(Value *value)
       : SingleOperandInst(ValueKind::AsNumericInstKind, value) {
-    setType(Type::createNumeric());
+    setType(*getInherentTypeImpl());
   }
   explicit AsNumericInst(
       const AsNumericInst *src,
@@ -297,7 +297,7 @@ class AsInt32Inst : public SingleOperandInst {
  public:
   explicit AsInt32Inst(Value *value)
       : SingleOperandInst(ValueKind::AsInt32InstKind, value) {
-    setType(Type::createInt32());
+    setType(*getInherentTypeImpl());
   }
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
@@ -522,7 +522,6 @@ class StoreStackInst : public Instruction {
 
   explicit StoreStackInst(Value *storedValue, AllocStackInst *ptr)
       : Instruction(ValueKind::StoreStackInstKind) {
-    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(ptr);
   }
@@ -631,7 +630,7 @@ class CreateFunctionInst : public Instruction {
 
   explicit CreateFunctionInst(ValueKind kind, Function *code)
       : Instruction(kind) {
-    setType(Type::createClosure());
+    setType(*getInherentTypeImpl());
     pushOperand(code);
   }
   explicit CreateFunctionInst(Function *code)
@@ -741,7 +740,7 @@ class ConstructInst : public CallInst {
       LiteralUndefined *undefined,
       ArrayRef<Value *> args)
       : CallInst(ValueKind::ConstructInstKind, constructor, undefined, args) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
   }
   explicit ConstructInst(
       const ConstructInst *src,
@@ -810,7 +809,7 @@ class GetBuiltinClosureInst : public Instruction {
         builtinIndex->getValue() < (double)BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
-    setType(Type::createClosure());
+    setType(*getInherentTypeImpl());
   }
   explicit GetBuiltinClosureInst(
       const GetBuiltinClosureInst *src,
@@ -939,7 +938,7 @@ class HBCGetGlobalObjectInst : public Instruction {
  public:
   explicit HBCGetGlobalObjectInst()
       : Instruction(ValueKind::HBCGetGlobalObjectInstKind) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
   }
   explicit HBCGetGlobalObjectInst(
       const HBCGetGlobalObjectInst *src,
@@ -978,7 +977,6 @@ class StorePropertyInst : public Instruction {
       Value *object,
       Value *property)
       : Instruction(kind) {
-    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -1082,7 +1080,6 @@ class StoreOwnPropertyInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(kind) {
-    setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
     pushOperand(property);
@@ -1210,7 +1207,6 @@ class StoreGetterSetterInst : public Instruction {
       Value *property,
       LiteralBool *isEnumerable)
       : Instruction(ValueKind::StoreGetterSetterInstKind) {
-    setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
     pushOperand(object);
@@ -1385,7 +1381,7 @@ class AllocObjectInst : public Instruction {
 
   explicit AllocObjectInst(LiteralNumber *size, Value *parentObject)
       : Instruction(ValueKind::AllocObjectInstKind) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
     assert(size->isUInt32Representible() && "size must be uint32");
     pushOperand(size);
     pushOperand(parentObject);
@@ -1433,7 +1429,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
       LiteralNumber *sizeHint,
       const ObjectPropertyMap &prop_map)
       : Instruction(ValueKind::HBCAllocObjectFromBufferInstKind) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
     assert(sizeHint->isUInt32Representible() && "size hint must be uint32");
     pushOperand(sizeHint);
     for (size_t i = 0; i < prop_map.size(); i++) {
@@ -1493,7 +1489,7 @@ class AllocObjectLiteralInst : public Instruction {
 
   explicit AllocObjectLiteralInst(const ObjectPropertyMap &propMap)
       : Instruction(ValueKind::AllocObjectLiteralInstKind) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
     for (size_t i = 0; i < propMap.size(); i++) {
       pushOperand(propMap[i].first);
       pushOperand(propMap[i].second);
@@ -1550,7 +1546,7 @@ class AllocArrayInst : public Instruction {
   explicit AllocArrayInst(ArrayValueList &val_list, LiteralNumber *sizeHint)
       : Instruction(ValueKind::AllocArrayInstKind) {
     // TODO: refine this type annotation to "array" ?.
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
     pushOperand(sizeHint);
     for (auto val : val_list) {
       pushOperand(val);
@@ -1620,7 +1616,7 @@ class CreateArgumentsInst : public Instruction {
  public:
   explicit CreateArgumentsInst()
       : Instruction(ValueKind::CreateArgumentsInstKind) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
   }
   explicit CreateArgumentsInst(
       const CreateArgumentsInst *src,
@@ -1664,7 +1660,7 @@ class CreateRegExpInst : public Instruction {
 
   explicit CreateRegExpInst(LiteralString *pattern, LiteralString *flags)
       : Instruction(ValueKind::CreateRegExpInstKind) {
-    setType(Type::createRegExp());
+    setType(*getInherentTypeImpl());
     pushOperand(pattern);
     pushOperand(flags);
   }
@@ -2444,7 +2440,7 @@ class CoerceThisNSInst : public SingleOperandInst {
  public:
   explicit CoerceThisNSInst(Value *input)
       : SingleOperandInst(ValueKind::CoerceThisNSInstKind, input) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
   }
   explicit CoerceThisNSInst(
       const CoerceThisNSInst *src,
@@ -2477,9 +2473,7 @@ class DebuggerInst : public Instruction {
   void operator=(const DebuggerInst &) = delete;
 
  public:
-  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {
-    setType(Type::createNoType());
-  }
+  explicit DebuggerInst() : Instruction(ValueKind::DebuggerInstKind) {}
   explicit DebuggerInst(
       const DebuggerInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3105,9 +3099,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
  public:
   explicit HBCReifyArgumentsInst(ValueKind kind, AllocStackInst *reg)
-      : SingleOperandInst(kind, reg) {
-    setType(Type::createNoType());
-  }
+      : SingleOperandInst(kind, reg) {}
   explicit HBCReifyArgumentsInst(
       const HBCReifyArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3141,7 +3133,6 @@ class HBCReifyArgumentsStrictInst : public HBCReifyArgumentsInst {
  public:
   explicit HBCReifyArgumentsStrictInst(AllocStackInst *reg)
       : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsStrictInstKind, reg) {
-    setType(Type::createNoType());
   }
   explicit HBCReifyArgumentsStrictInst(
       const HBCReifyArgumentsStrictInst *src,
@@ -3159,9 +3150,7 @@ class HBCReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
 
  public:
   explicit HBCReifyArgumentsLooseInst(AllocStackInst *reg)
-      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsLooseInstKind, reg) {
-    setType(Type::createNoType());
-  }
+      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsLooseInstKind, reg) {}
   explicit HBCReifyArgumentsLooseInst(
       const HBCReifyArgumentsLooseInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3329,6 +3318,7 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
 
   explicit HBCCreateFunctionInst(Function *code, Value *env)
       : CreateFunctionInst(ValueKind::HBCCreateFunctionInstKind, code) {
+    setType(*getInherentTypeImpl());
     pushOperand(env);
   }
   explicit HBCCreateFunctionInst(
@@ -3361,7 +3351,9 @@ class HBCSpillMovInst : public SingleOperandInst {
 
  public:
   explicit HBCSpillMovInst(Instruction *value)
-      : SingleOperandInst(ValueKind::HBCSpillMovInstKind, value) {}
+      : SingleOperandInst(ValueKind::HBCSpillMovInstKind, value) {
+    setType(value->getType());
+  }
   explicit HBCSpillMovInst(
       const HBCSpillMovInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3478,7 +3470,7 @@ class CreateGeneratorInst : public CreateFunctionInst {
  public:
   explicit CreateGeneratorInst(ValueKind kind, Function *genFunction)
       : CreateFunctionInst(kind, genFunction) {
-    setType(Type::createObject());
+    setType(*getInherentTypeImpl());
   }
   explicit CreateGeneratorInst(Function *genFunction)
       : CreateGeneratorInst(ValueKind::CreateGeneratorInstKind, genFunction) {}
