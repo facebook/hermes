@@ -199,6 +199,10 @@ class AddEmptyStringInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createString();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -229,6 +233,10 @@ class AsNumberInst : public SingleOperandInst {
       const AsNumberInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createNumber();
+  }
 
   static bool hasOutput() {
     return true;
@@ -261,6 +269,10 @@ class AsNumericInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createNumeric();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -289,6 +301,10 @@ class AsInt32Inst : public SingleOperandInst {
   }
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createInt32();
+  }
 
   static bool hasOutput() {
     return true;
@@ -629,6 +645,10 @@ class CreateFunctionInst : public Instruction {
     return cast<Function>(getOperand(FunctionCodeIdx));
   }
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createClosure();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -728,6 +748,10 @@ class ConstructInst : public CallInst {
       llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -792,6 +816,10 @@ class GetBuiltinClosureInst : public Instruction {
       const GetBuiltinClosureInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createClosure();
+  }
 
   static bool hasOutput() {
     return true;
@@ -917,6 +945,10 @@ class HBCGetGlobalObjectInst : public Instruction {
       const HBCGetGlobalObjectInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
@@ -1363,6 +1395,10 @@ class AllocObjectInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -1409,6 +1445,10 @@ class HBCAllocObjectFromBufferInst : public Instruction {
       const HBCAllocObjectFromBufferInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
@@ -1464,6 +1504,10 @@ class AllocObjectLiteralInst : public Instruction {
       const AllocObjectLiteralInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
@@ -1548,6 +1592,10 @@ class AllocArrayInst : public Instruction {
     return getFirstNonLiteralIndex() == -1;
   }
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -1578,6 +1626,10 @@ class CreateArgumentsInst : public Instruction {
       const CreateArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
@@ -1620,6 +1672,10 @@ class CreateRegExpInst : public Instruction {
       const CreateRegExpInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createRegExp();
+  }
 
   static bool hasOutput() {
     return true;
@@ -2394,6 +2450,10 @@ class CoerceThisNSInst : public SingleOperandInst {
       const CoerceThisNSInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
@@ -3280,6 +3340,10 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
     return getOperand(EnvIdx);
   }
 
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createClosure();
+  }
+
   static bool hasOutput() {
     return true;
   }
@@ -3422,6 +3486,10 @@ class CreateGeneratorInst : public CreateFunctionInst {
       const CreateGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
       : CreateFunctionInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
