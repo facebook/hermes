@@ -46,7 +46,8 @@ class Interpreter {
       Handle<Callable> curFunction,
       bool strictMode);
 
-  /// Slow path for GetArgumentsPropByVal resReg, propNameReg, lazyReg.
+  /// Slow path for GetArgumentsPropByVal resReg, propNameReg, lazyReg
+  /// (both the strict and loose variants).
   ///
   /// It assumes that the "fast path" has already taken care of the case when
   /// the 'lazyReg' is still uninitialized and 'propNameReg' is a valid integer

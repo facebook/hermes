@@ -809,7 +809,13 @@ void Verifier::visitHBCGetThisNSInst(const HBCGetThisNSInst &Inst) {
   // Nothing to verify at this point.
 }
 void Verifier::visitHBCGetArgumentsPropByValInst(
-    const HBCGetArgumentsPropByValInst &Inst) {
+    const HBCGetArgumentsPropByValInst &Inst) {}
+void Verifier::visitHBCGetArgumentsPropByValLooseInst(
+    const HBCGetArgumentsPropByValLooseInst &Inst) {
+  // Nothing to verify at this point.
+}
+void Verifier::visitHBCGetArgumentsPropByValStrictInst(
+    const HBCGetArgumentsPropByValStrictInst &Inst) {
   // Nothing to verify at this point.
 }
 void Verifier::visitHBCGetArgumentsLengthInst(

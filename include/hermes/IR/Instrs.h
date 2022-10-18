@@ -3049,6 +3049,7 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 };
 
 // Get `arguments[i]` without having to create a real array.
+// This is the base class for the strict and loose variants defined below.
 class HBCGetArgumentsPropByValInst : public Instruction {
   HBCGetArgumentsPropByValInst(const HBCGetArgumentsPropByValInst &) = delete;
   void operator=(const HBCGetArgumentsPropByValInst &) = delete;
@@ -3056,8 +3057,11 @@ class HBCGetArgumentsPropByValInst : public Instruction {
  public:
   enum { IndexIdx, LazyRegisterIdx };
 
-  explicit HBCGetArgumentsPropByValInst(Value *index, AllocStackInst *reg)
-      : Instruction(ValueKind::HBCGetArgumentsPropByValInstKind) {
+  explicit HBCGetArgumentsPropByValInst(
+      ValueKind kind,
+      Value *index,
+      AllocStackInst *reg)
+      : Instruction(kind) {
     pushOperand(index);
     pushOperand(reg);
   }
@@ -3087,6 +3091,50 @@ class HBCGetArgumentsPropByValInst : public Instruction {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCGetArgumentsPropByValInstKind);
+  }
+};
+
+class HBCGetArgumentsPropByValLooseInst : public HBCGetArgumentsPropByValInst {
+  HBCGetArgumentsPropByValLooseInst(const HBCGetArgumentsPropByValLooseInst &) =
+      delete;
+  void operator=(const HBCGetArgumentsPropByValLooseInst &) = delete;
+
+ public:
+  explicit HBCGetArgumentsPropByValLooseInst(Value *index, AllocStackInst *reg)
+      : HBCGetArgumentsPropByValInst(
+            ValueKind::HBCGetArgumentsPropByValLooseInstKind,
+            index,
+            reg) {}
+  explicit HBCGetArgumentsPropByValLooseInst(
+      const HBCGetArgumentsPropByValLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : HBCGetArgumentsPropByValInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(
+        V->getKind(), ValueKind::HBCGetArgumentsPropByValLooseInstKind);
+  }
+};
+
+class HBCGetArgumentsPropByValStrictInst : public HBCGetArgumentsPropByValInst {
+  HBCGetArgumentsPropByValStrictInst(
+      const HBCGetArgumentsPropByValStrictInst &) = delete;
+  void operator=(const HBCGetArgumentsPropByValStrictInst &) = delete;
+
+ public:
+  explicit HBCGetArgumentsPropByValStrictInst(Value *index, AllocStackInst *reg)
+      : HBCGetArgumentsPropByValInst(
+            ValueKind::HBCGetArgumentsPropByValStrictInstKind,
+            index,
+            reg) {}
+  explicit HBCGetArgumentsPropByValStrictInst(
+      const HBCGetArgumentsPropByValStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : HBCGetArgumentsPropByValInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(
+        V->getKind(), ValueKind::HBCGetArgumentsPropByValStrictInstKind);
   }
 };
 

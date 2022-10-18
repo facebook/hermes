@@ -130,7 +130,7 @@ function *args() {
 // CHECK-NEXT:    Mov               r4, r2
 // CHECK-NEXT:    JmpTrue           L1, r4
 // CHECK-NEXT:    Mov               r2, r0
-// CHECK-NEXT:    GetArgumentsPropByVal r4, r1, r2
+// CHECK-NEXT:    GetArgumentsPropByValLoose r4, r1, r2
 // CHECK-NEXT:    SaveGenerator     L2
 // CHECK-NEXT:    Ret               r4
 // CHECK-NEXT:L2:

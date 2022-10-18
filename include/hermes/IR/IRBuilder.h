@@ -493,7 +493,10 @@ class IRBuilder {
 
   HBCGetThisNSInst *createHBCGetThisNSInst();
 
-  HBCGetArgumentsPropByValInst *createHBCGetArgumentsPropByValInst(
+  HBCGetArgumentsPropByValLooseInst *createHBCGetArgumentsPropByValLooseInst(
+      Value *index,
+      AllocStackInst *lazyReg);
+  HBCGetArgumentsPropByValStrictInst *createHBCGetArgumentsPropByValStrictInst(
       Value *index,
       AllocStackInst *lazyReg);
 

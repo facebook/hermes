@@ -2822,16 +2822,18 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(GetArgumentsPropByVal) {
+      CASE(GetArgumentsPropByValLoose)
+      CASE(GetArgumentsPropByValStrict) {
         // If the arguments object hasn't been created yet and we have a
         // valid integer index, we use the fast path.
-        if (O3REG(GetArgumentsPropByVal).isUndefined()) {
+        if (O3REG(GetArgumentsPropByValLoose).isUndefined()) {
           // If this is an integer index.
-          if (auto index = toArrayIndexFastPath(O2REG(GetArgumentsPropByVal))) {
+          if (auto index =
+                  toArrayIndexFastPath(O2REG(GetArgumentsPropByValLoose))) {
             // Is this an existing argument?
             if (*index < FRAME.getArgCount()) {
-              O1REG(GetArgumentsPropByVal) = FRAME.getArgRef(*index);
-              ip = NEXTINST(GetArgumentsPropByVal);
+              O1REG(GetArgumentsPropByValLoose) = FRAME.getArgRef(*index);
+              ip = NEXTINST(GetArgumentsPropByValLoose);
               DISPATCH;
             }
           }
@@ -2841,16 +2843,16 @@ tailCall:
             auto res,
             getArgumentsPropByValSlowPath_RJS(
                 runtime,
-                &O3REG(GetArgumentsPropByVal),
-                &O2REG(GetArgumentsPropByVal),
+                &O3REG(GetArgumentsPropByValLoose),
+                &O2REG(GetArgumentsPropByValLoose),
                 FRAME.getCalleeClosureHandleUnsafe(),
-                strictMode));
+                ip->opCode == OpCode::GetArgumentsPropByValStrict));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetArgumentsPropByVal) = res->getHermesValue();
-        ip = NEXTINST(GetArgumentsPropByVal);
+        O1REG(GetArgumentsPropByValLoose) = res->getHermesValue();
+        ip = NEXTINST(GetArgumentsPropByValLoose);
         DISPATCH;
       }
       CASE(ReifyArgumentsLoose)

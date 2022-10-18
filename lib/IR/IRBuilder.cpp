@@ -808,10 +808,19 @@ HBCGetThisNSInst *IRBuilder::createHBCGetThisNSInst() {
   insert(inst);
   return inst;
 }
-HBCGetArgumentsPropByValInst *IRBuilder::createHBCGetArgumentsPropByValInst(
+HBCGetArgumentsPropByValLooseInst *
+IRBuilder::createHBCGetArgumentsPropByValLooseInst(
     Value *index,
     AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsPropByValInst(index, lazyReg);
+  auto inst = new HBCGetArgumentsPropByValLooseInst(index, lazyReg);
+  insert(inst);
+  return inst;
+}
+HBCGetArgumentsPropByValStrictInst *
+IRBuilder::createHBCGetArgumentsPropByValStrictInst(
+    Value *index,
+    AllocStackInst *lazyReg) {
+  auto inst = new HBCGetArgumentsPropByValStrictInst(index, lazyReg);
   insert(inst);
   return inst;
 }

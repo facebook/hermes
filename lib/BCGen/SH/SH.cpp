@@ -1286,14 +1286,23 @@ class InstrGen {
   }
   void generateHBCGetArgumentsPropByValInst(
       HBCGetArgumentsPropByValInst &inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  void generateHBCGetArgumentsPropByValLooseInst(
+      HBCGetArgumentsPropByValLooseInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = ";
-    if (isStrictMode_)
-      os_ << "_sh_ljs_get_arguments_prop_by_val_strict";
-    else
-      os_ << "_sh_ljs_get_arguments_prop_by_val_loose";
-    os_ << "(shr, frame, ";
+    os_ << " = _sh_ljs_get_arguments_prop_by_val_loose(shr, frame, ";
+    generateRegisterPtr(*inst.getIndex());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getLazyRegister());
+    os_ << ");\n";
+  }
+  void generateHBCGetArgumentsPropByValStrictInst(
+      HBCGetArgumentsPropByValStrictInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_get_arguments_prop_by_val_strict(shr, frame, ";
     generateRegisterPtr(*inst.getIndex());
     os_ << ", ";
     generateRegisterPtr(*inst.getLazyRegister());
