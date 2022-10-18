@@ -31,12 +31,12 @@ function backwards_branch() {
 // CHECK:function global() : undefined
 // CHECK-NEXT:frame = [], globals = [backwards_branch]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %backwards_branch() : undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst %backwards_branch()
 // CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "backwards_branch" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function backwards_branch() : undefined
+// CHECK:function backwards_branch()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1

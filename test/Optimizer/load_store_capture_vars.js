@@ -87,7 +87,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "load_x_is_captured" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %load_x_captured_as_load() : number
 // CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "load_x_captured_as_load" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %abort() : undefined
+// CHECK-NEXT:  %10 = CreateFunctionInst %abort()
 // CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "abort" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %"foo 5#"()
 // CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "foo" : string
@@ -180,7 +180,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function abort() : undefined
+// CHECK:function abort()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ThrowInst 42 : number

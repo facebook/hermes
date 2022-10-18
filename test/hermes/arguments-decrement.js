@@ -27,7 +27,7 @@ print(decrementArguments());
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:
 // CHKIR-NEXT:   %4 = PhiInst undefined : undefined, %BB0, %2 : object, %BB1
-// CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number|bigint, %BB1
+// CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number, %BB1
 // CHKIR-LABEL: %BB2:
 // CHKIR-LABEL: *** AFTER LowerArgumentsArray
 // CHKIR-LABEL: function decrementArguments() : number
@@ -37,17 +37,17 @@ print(decrementArguments());
 //                 N.B. the broken hermesc would fail to update %BB2 in
 //                 the next instruction, thus having an invalid PHI node with an
 //                 operand that wasn't a predecessor node.
-// CHKIR-NEXT:   %6 = PhiInst 0 : number, %BB0, %7 : number|bigint, %BB2
+// CHKIR-NEXT:   %6 = PhiInst 0 : number, %BB0, %7 : number, %BB2
 // CHKIR-LABEL: %BB3:
 // CHKIR-LABEL: %BB2:
 
 // CHKRA-LABEL: function decrementArguments() : number
 // CHKRA-LABEL: %BB0:
 // CHKRA-LABEL: %BB1:
-// CHKRA-NEXT:   $Reg2 @7 [2...19)    %7 = PhiInst %5 : number, %BB0, %17 : number|bigint, %BB2
-// CHKRA-NEXT:   $Reg2 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number|bigint
+// CHKRA-NEXT:   $Reg2 @7 [2...19)    %7 = PhiInst %5 : number, %BB0, %17 : number, %BB2
+// CHKRA-NEXT:   $Reg2 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number
 // CHKRA-LABEL: %BB3:
 // CHKRA-LABEL: %BB2:
 // CHKRA-NEXT:   $Reg3 @15 [empty]    %15 = HBCReifyArgumentsLooseInst %3
 // CHKRA-NEXT:   $Reg3 @16 [empty]    %16 = LoadStackInst %3
-// CHKRA-NEXT:   $Reg2 @17 [18...19)  %17 = MovInst %8 : number|bigint
+// CHKRA-NEXT:   $Reg2 @17 [18...19)  %17 = MovInst %8 : number

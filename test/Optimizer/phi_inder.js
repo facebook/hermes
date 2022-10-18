@@ -52,7 +52,7 @@ function recursive_phi(x) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = PhiInst 1 : number, %BB0, %8 : string|number, %BB2
 // CHECK-NEXT:  %2 = PhiInst "hi" : string, %BB0, %9 : string|number, %BB2
-// CHECK-NEXT:  %3 = PhiInst 0 : number, %BB0, %10 : number|bigint, %BB2
+// CHECK-NEXT:  %3 = PhiInst 0 : number, %BB0, %10 : number, %BB2
 // CHECK-NEXT:  %4 = BinaryOperatorInst '>', %x, 3 : number
 // CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB3, %BB2
 // CHECK-NEXT:%BB4:
@@ -61,8 +61,8 @@ function recursive_phi(x) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = PhiInst %2 : string|number, %BB3, %1 : string|number, %BB1
 // CHECK-NEXT:  %9 = PhiInst %1 : string|number, %BB3, %2 : string|number, %BB1
-// CHECK-NEXT:  %10 = UnaryOperatorInst '++', %3 : number|bigint
-// CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10 : number|bigint, 10 : number
+// CHECK-NEXT:  %10 = UnaryOperatorInst '++', %3 : number
+// CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10 : number, 10 : number
 // CHECK-NEXT:  %12 = CondBranchInst %11 : boolean, %BB1, %BB4
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = BranchInst %BB2
