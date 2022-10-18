@@ -230,6 +230,10 @@ bool invokeCC(
     }
     for (const auto &s : cfg.hermesIncludePath)
       args.push_back("-I" + s);
+
+    if (params.enableAsserts == ShermesCompileParams::EnableAsserts::off) {
+      args.emplace_back("-DNDEBUG");
+    }
   } else {
     splitArgs(cfg.cflags, args);
   }

@@ -39,6 +39,8 @@ enum class OptLevel {
 struct ShermesCompileParams {
   const hermes::BytecodeGenerationOptions &genOptions;
   OptLevel nativeOptimize;
+  enum class EnableAsserts { off, on };
+  EnableAsserts enableAsserts;
   enum class Lean { off, on };
   Lean lean = Lean::off;
   int verbosity;
@@ -46,10 +48,12 @@ struct ShermesCompileParams {
   ShermesCompileParams(
       hermes::BytecodeGenerationOptions const &genOptions,
       OptLevel nativeOptimize,
+      EnableAsserts enableAsserts,
       Lean lean,
       int verbosity)
       : genOptions(genOptions),
         nativeOptimize(nativeOptimize),
+        enableAsserts(enableAsserts),
         lean(lean),
         verbosity(verbosity) {}
 };
