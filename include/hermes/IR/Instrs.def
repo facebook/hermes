@@ -142,7 +142,13 @@ DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
 DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
 DEF_VALUE(HBCGetThisNSInst, Instruction)
 DEF_VALUE(HBCCreateThisInst, Instruction)
+
+MARK_FIRST(HBCGetArgumentsPropByValInst)
 DEF_VALUE(HBCGetArgumentsPropByValInst, Instruction)
+DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
+DEF_VALUE(HBCGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
+MARK_LAST(HBCGetArgumentsPropByValInst)
+
 DEF_VALUE(HBCGetConstructedObjectInst, Instruction)
 DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)

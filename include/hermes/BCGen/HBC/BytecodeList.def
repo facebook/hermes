@@ -650,7 +650,8 @@ DEFINE_OPCODE_2(AddEmptyString, Reg8, Reg8)
 /// Arg2 is the index.
 /// Arg3 is the lazy loaded register.
 /// Arg1 = arguments[Arg2]
-DEFINE_OPCODE_3(GetArgumentsPropByVal, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(GetArgumentsPropByValLoose, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(GetArgumentsPropByValStrict, Reg8, Reg8, Reg8)
 
 /// Get the length of the 'arguments' array.
 /// Arg1 is the result.
@@ -846,6 +847,8 @@ ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)
 ASSERT_EQUAL_LAYOUT3(Mul, MulN)
+ASSERT_EQUAL_LAYOUT1(ReifyArgumentsLoose, ReifyArgumentsStrict)
+ASSERT_EQUAL_LAYOUT3(GetArgumentsPropByValLoose, GetArgumentsPropByValStrict)
 
 // Call and CallLong must agree on the first 2 parameters.
 ASSERT_EQUAL_LAYOUT2(Call, CallLong)

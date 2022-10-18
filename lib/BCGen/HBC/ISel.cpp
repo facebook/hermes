@@ -1503,10 +1503,23 @@ void HBCISel::generateHBCGetArgumentsLengthInst(
 void HBCISel::generateHBCGetArgumentsPropByValInst(
     hermes::HBCGetArgumentsPropByValInst *Inst,
     hermes::BasicBlock *next) {
+  llvm_unreachable("This is not a concrete instruction");
+}
+void HBCISel::generateHBCGetArgumentsPropByValLooseInst(
+    hermes::HBCGetArgumentsPropByValLooseInst *Inst,
+    hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
-  BCFGen_->emitGetArgumentsPropByVal(output, index, reg);
+  BCFGen_->emitGetArgumentsPropByValLoose(output, index, reg);
+}
+void HBCISel::generateHBCGetArgumentsPropByValStrictInst(
+    hermes::HBCGetArgumentsPropByValStrictInst *Inst,
+    hermes::BasicBlock *next) {
+  auto output = encodeValue(Inst);
+  auto index = encodeValue(Inst->getIndex());
+  auto reg = encodeValue(Inst->getLazyRegister());
+  BCFGen_->emitGetArgumentsPropByValStrict(output, index, reg);
 }
 void HBCISel::generateHBCReifyArgumentsInst(
     hermes::HBCReifyArgumentsInst *Inst,

@@ -447,8 +447,13 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
         load->eraseFromParent();
       } else {
         // For all other property loads, get by index.
-        auto *get = builder.createHBCGetArgumentsPropByValInst(
-            load->getProperty(), lazyReg);
+        HBCGetArgumentsPropByValInst *get;
+        if (F->isStrictMode())
+          get = builder.createHBCGetArgumentsPropByValStrictInst(
+              load->getProperty(), lazyReg);
+        else
+          get = builder.createHBCGetArgumentsPropByValLooseInst(
+              load->getProperty(), lazyReg);
         load->replaceAllUsesWith(get);
         load->eraseFromParent();
       }

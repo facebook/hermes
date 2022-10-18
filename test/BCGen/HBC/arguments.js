@@ -70,7 +70,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg2 @3 [4...6) 	%3 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst 1 : number
 // CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = BinaryOperatorInst '+', %3, %4 : number
-// CHECK-NEXT:  $Reg0 @6 [7...8) 	%6 = HBCGetArgumentsPropByValInst %5 : string|number, %0
+// CHECK-NEXT:  $Reg0 @6 [7...8) 	%6 = HBCGetArgumentsPropByValLooseInst %5 : string|number, %0
 // CHECK-NEXT:  $Reg0 @7 [empty]	%7 = ReturnInst %6
 // CHECK-NEXT:function_end
 
