@@ -1056,6 +1056,9 @@ class Instruction
   /// to.
   WordBitSet<> getChangedOperands();
 
+  /// \return whether this instruction has an output value.
+  bool hasOutput();
+
   void setLocation(SMLoc loc) {
     location_ = loc;
   }
