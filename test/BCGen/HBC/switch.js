@@ -102,7 +102,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %f() : string, %0
 // CHECK-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "f" : string
-// CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %regress1() : undefined, %0
+// CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %regress1(), %0
 // CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "regress1" : string
 // CHECK-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %jump_table() : undefined|string, %0
 // CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "jump_table" : string
@@ -156,7 +156,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:  $Reg2 @5 [empty]	%26 = CompareBranchInst '===', %25 : number, %0, %BB2, %BB10
 // CHECK-NEXT:function_end
 
-// CHECK:function regress1(w) : undefined
+// CHECK:function regress1(w)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg6 @0 [1...17) 	%0 = HBCLoadParamInst 1 : number

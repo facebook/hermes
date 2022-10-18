@@ -21,24 +21,24 @@ function bug2() {
 // CHECK:function global() : undefined
 // CHECK-NEXT:frame = [], globals = [bug1, bug2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %bug1() : undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst %bug1()
 // CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "bug1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bug2() : undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst %bug2()
 // CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bug2" : string
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bug1() : undefined
+// CHECK:function bug1()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %2 : number|bigint, %BB1
-// CHECK-NEXT:  %2 = UnaryOperatorInst '++', %1 : undefined|number|bigint
+// CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %2 : number, %BB1
+// CHECK-NEXT:  %2 = UnaryOperatorInst '++', %1 : undefined|number
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function bug2() : undefined
+// CHECK:function bug2()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1

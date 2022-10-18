@@ -106,9 +106,9 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "no_hoist_inc_dec" : string
 // CHECK-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %hoist_loop() : undefined, %0
 // CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "hoist_loop" : string
-// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = HBCCreateFunctionInst %hoist_loop_expression() : undefined, %0
+// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = HBCCreateFunctionInst %hoist_loop_expression(), %0
 // CHECK-NEXT:  $Reg2 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "hoist_loop_expression" : string
-// CHECK-NEXT:  $Reg2 @12 [13...14) 	%12 = HBCCreateFunctionInst %hoist_from_multiblock_loop() : undefined, %0
+// CHECK-NEXT:  $Reg2 @12 [13...14) 	%12 = HBCCreateFunctionInst %hoist_from_multiblock_loop(), %0
 // CHECK-NEXT:  $Reg2 @13 [empty]	%13 = StorePropertyInst %12 : closure, %2 : object, "hoist_from_multiblock_loop" : string
 // CHECK-NEXT:  $Reg2 @14 [15...16) 	%14 = HBCCreateFunctionInst %hoist_with_dependencies_in_loop(), %0
 // CHECK-NEXT:  $Reg2 @15 [empty]	%15 = StorePropertyInst %14 : closure, %2 : object, "hoist_with_dependencies_in_loop" : string
@@ -185,17 +185,17 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg2 @4 [5...7) 	%4 = MovInst %1 : number
 // CHECK-NEXT:  $Reg4 @5 [empty]	%5 = CompareBranchInst '<', %4 : number, %0, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg2 @6 [2...12) 	%6 = PhiInst %4 : number, %BB0, %10 : number|bigint, %BB1
+// CHECK-NEXT:  $Reg2 @6 [2...12) 	%6 = PhiInst %4 : number, %BB0, %10 : number, %BB1
 // CHECK-NEXT:  $Reg4 @7 [8...9) 	%7 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// CHECK-NEXT:  $Reg4 @8 [empty]	%8 = HBCCallNInst %7, %3 : undefined, %6 : number|bigint
-// CHECK-NEXT:  $Reg2 @9 [10...11) 	%9 = UnaryOperatorInst '++', %6 : number|bigint
-// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = MovInst %9 : number|bigint
-// CHECK-NEXT:  $Reg1 @11 [empty]	%11 = CompareBranchInst '<', %10 : number|bigint, %0, %BB1, %BB2
+// CHECK-NEXT:  $Reg4 @8 [empty]	%8 = HBCCallNInst %7, %3 : undefined, %6 : number
+// CHECK-NEXT:  $Reg2 @9 [10...11) 	%9 = UnaryOperatorInst '++', %6 : number
+// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = MovInst %9 : number
+// CHECK-NEXT:  $Reg1 @11 [empty]	%11 = CompareBranchInst '<', %10 : number, %0, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 @12 [empty]	%12 = ReturnInst %3 : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_loop_expression(a, b, call) : undefined
+// CHECK:function hoist_loop_expression(a, b, call)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg2 @0 [1...13) 	%0 = HBCLoadParamInst 3 : number
@@ -214,7 +214,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @12 [empty]	%12 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function hoist_from_multiblock_loop(x) : undefined
+// CHECK:function hoist_from_multiblock_loop(x)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg3 @0 [1...16) 	%0 = HBCGetGlobalObjectInst
