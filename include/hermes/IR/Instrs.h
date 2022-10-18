@@ -57,6 +57,10 @@ class SingleOperandInst : public Instruction {
     return getOperand(0);
   }
 
+  static bool hasOutput() {
+    llvm_unreachable("SingleOperandInst must be inherited.");
+  }
+
   SideEffectKind getSideEffect() {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
@@ -88,6 +92,10 @@ class TerminatorInst : public Instruction {
   unsigned getNumSuccessors() const;
   BasicBlock *getSuccessor(unsigned idx) const;
   void setSuccessor(unsigned idx, BasicBlock *B);
+
+  static bool hasOutput() {
+    llvm_unreachable("TerminatorInst must be inherited.");
+  }
 
   SideEffectKind getSideEffect() {
     llvm_unreachable("TerminatorInst must be inherited.");
@@ -148,6 +156,10 @@ class BranchInst : public TerminatorInst {
   explicit BranchInst(const BranchInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -187,6 +199,10 @@ class AddEmptyStringInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -213,6 +229,10 @@ class AsNumberInst : public SingleOperandInst {
       const AsNumberInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -241,6 +261,10 @@ class AsNumericInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -265,6 +289,10 @@ class AsInt32Inst : public SingleOperandInst {
   }
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -311,6 +339,10 @@ class CondBranchInst : public TerminatorInst {
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -355,6 +387,10 @@ class ReturnInst : public TerminatorInst {
   }
   explicit ReturnInst(const ReturnInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -404,6 +440,10 @@ class AllocStackInst : public Instruction {
     return variableName.get();
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -431,6 +471,10 @@ class LoadStackInst : public SingleOperandInst {
 
   AllocStackInst *getPtr() const {
     return cast<AllocStackInst>(getSingleOperand());
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -471,6 +515,10 @@ class StoreStackInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
   }
@@ -498,6 +546,10 @@ class LoadFrameInst : public SingleOperandInst {
 
   Variable *getLoadVariable() const {
     return cast<Variable>(getSingleOperand());
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -537,6 +589,10 @@ class StoreFrameInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
   }
@@ -571,6 +627,10 @@ class CreateFunctionInst : public Instruction {
 
   Function *getFunctionCode() const {
     return cast<Function>(getOperand(FunctionCodeIdx));
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -630,6 +690,10 @@ class CallInst : public Instruction {
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -664,6 +728,10 @@ class ConstructInst : public CallInst {
       llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::ConstructInstKind);
   }
@@ -690,6 +758,10 @@ class CallBuiltinInst : public CallInst {
       const CallBuiltinInst *src,
       llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   BuiltinMethod::Enum getBuiltinIndex() const {
     return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
@@ -720,6 +792,10 @@ class GetBuiltinClosureInst : public Instruction {
       const GetBuiltinClosureInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -776,6 +852,10 @@ class CallIntrinsicInst : public Instruction {
     return (WasmIntrinsics::Enum)cast<LiteralNumber>(
                getOperand(IntrinsicIndexIdx))
         ->asUInt32();
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -838,6 +918,10 @@ class HBCGetGlobalObjectInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -892,6 +976,10 @@ class StorePropertyInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -932,6 +1020,10 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
       const TryStoreGlobalPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : StorePropertyInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -997,6 +1089,10 @@ class StoreOwnPropertyInst : public Instruction {
       const StoreOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -1094,6 +1190,10 @@ class StoreGetterSetterInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -1130,6 +1230,10 @@ class DeletePropertyInst : public Instruction {
       const DeletePropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -1172,6 +1276,10 @@ class LoadPropertyInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -1210,6 +1318,10 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
       const TryLoadGlobalPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : LoadPropertyInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -1250,6 +1362,10 @@ class AllocObjectInst : public Instruction {
       const AllocObjectInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1293,6 +1409,10 @@ class HBCAllocObjectFromBufferInst : public Instruction {
       const HBCAllocObjectFromBufferInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1344,6 +1464,10 @@ class AllocObjectLiteralInst : public Instruction {
       const AllocObjectLiteralInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1424,6 +1548,10 @@ class AllocArrayInst : public Instruction {
     return getFirstNonLiteralIndex() == -1;
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -1450,6 +1578,10 @@ class CreateArgumentsInst : public Instruction {
       const CreateArgumentsInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1488,6 +1620,10 @@ class CreateRegExpInst : public Instruction {
       const CreateRegExpInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1551,6 +1687,10 @@ class UnaryOperatorInst : public SingleOperandInst {
       const UnaryOperatorInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands), op_(src->op_) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect();
 
@@ -1653,6 +1793,10 @@ class BinaryOperatorInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), op_(src->op_) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return getBinarySideEffect(
         getLeftHandSide()->getType(),
@@ -1683,6 +1827,10 @@ class CatchInst : public Instruction {
   explicit CatchInst(const CatchInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -1709,6 +1857,10 @@ class ThrowInst : public TerminatorInst {
   }
   explicit ThrowInst(const ThrowInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -1768,6 +1920,10 @@ class SwitchInst : public TerminatorInst {
   explicit SwitchInst(const SwitchInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -1824,6 +1980,10 @@ class GetPNamesInst : public TerminatorInst {
   }
   BasicBlock *getOnSomeDest() const {
     return cast<BasicBlock>(getOperand(OnSomeIdx));
+  }
+
+  static bool hasOutput() {
+    return false;
   }
 
   SideEffectKind getSideEffect() {
@@ -1889,6 +2049,10 @@ class GetNextPNameInst : public TerminatorInst {
       const GetNextPNameInst *src,
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
@@ -1973,6 +2137,10 @@ class CheckHasInstanceInst : public TerminatorInst {
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2046,6 +2214,10 @@ class TryStartInst : public TerminatorInst {
     return cast<BasicBlock>(getOperand(CatchTargetBlockIdx));
   }
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2077,6 +2249,10 @@ class TryEndInst : public Instruction {
   explicit TryEndInst() : Instruction(ValueKind::TryEndInstKind) {}
   explicit TryEndInst(const TryEndInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -2126,6 +2302,10 @@ class PhiInst : public Instruction {
   explicit PhiInst(const PhiInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2150,6 +2330,10 @@ class MovInst : public SingleOperandInst {
   }
   explicit MovInst(const MovInst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2180,6 +2364,10 @@ class ImplicitMovInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2207,6 +2395,10 @@ class CoerceThisNSInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2233,6 +2425,10 @@ class DebuggerInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2256,6 +2452,10 @@ class GetNewTargetInst : public Instruction {
       const GetNewTargetInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2291,6 +2491,10 @@ class ThrowIfEmptyInst : public Instruction {
     return getOperand(CheckedValueIdx);
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -2318,6 +2522,10 @@ class HBCResolveEnvironment : public SingleOperandInst {
 
   VariableScope *getScope() const {
     return cast<VariableScope>(getSingleOperand());
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -2361,6 +2569,10 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return getOperand(ValueIdx);
   }
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
   }
@@ -2396,6 +2608,10 @@ class HBCLoadFromEnvironmentInst : public Instruction {
   }
   Value *getEnvironment() const {
     return getOperand(EnvIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -2474,6 +2690,10 @@ class SwitchImmInst : public TerminatorInst {
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2518,6 +2738,10 @@ class SaveAndYieldInst : public TerminatorInst {
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -2552,6 +2776,10 @@ class DirectEvalInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
   }
@@ -2576,6 +2804,10 @@ class HBCCreateEnvironmentInst : public Instruction {
       const HBCCreateEnvironmentInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2605,6 +2837,10 @@ class HBCProfilePointInst : public Instruction {
       const HBCProfilePointInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), pointIndex_(src->pointIndex_) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2641,6 +2877,10 @@ class HBCLoadConstInst : public SingleOperandInst {
     return cast<Literal>(getSingleOperand());
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2672,6 +2912,10 @@ class HBCLoadParamInst : public SingleOperandInst {
     return cast<LiteralNumber>(getSingleOperand());
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -2698,6 +2942,10 @@ class HBCGetThisNSInst : public Instruction {
       const HBCGetThisNSInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2727,6 +2975,10 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 
   Value *getLazyRegister() const {
     return getSingleOperand();
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -2767,6 +3019,10 @@ class HBCGetArgumentsPropByValInst : public Instruction {
     return getOperand(LazyRegisterIdx);
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -2799,6 +3055,10 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
 
   Value *getLazyRegister() const {
     return getSingleOperand();
+  }
+
+  static bool hasOutput() {
+    return false;
   }
 
   SideEffectKind getSideEffect() {
@@ -2877,6 +3137,10 @@ class HBCCreateThisInst : public Instruction {
     return getOperand(ClosureIdx);
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
   }
@@ -2905,6 +3169,10 @@ class HBCConstructInst : public CallInst {
       const HBCConstructInst *src,
       llvh::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCConstructInstKind);
@@ -2938,6 +3206,10 @@ class HBCGetConstructedObjectInst : public Instruction {
   }
   Value *getConstructorReturnValue() const {
     return getOperand(ConstructorReturnValueIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -2978,6 +3250,10 @@ class HBCCallDirectInst : public CallInst {
     return cast<Function>(getCallee());
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::HBCCallDirectInstKind;
   }
@@ -3004,6 +3280,10 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
     return getOperand(EnvIdx);
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateFunctionInstKind);
   }
@@ -3025,6 +3305,10 @@ class HBCSpillMovInst : public SingleOperandInst {
 
   Instruction *getValue() const {
     return cast<Instruction>(getSingleOperand());
+  }
+
+  static bool hasOutput() {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -3088,6 +3372,10 @@ class CompareBranchInst : public TerminatorInst {
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands), op_(src->op_) {}
 
+  static bool hasOutput() {
+    return false;
+  }
+
   SideEffectKind getSideEffect() {
     return BinaryOperatorInst::getBinarySideEffect(
         getLeftHandSide()->getType(),
@@ -3135,6 +3423,10 @@ class CreateGeneratorInst : public CreateFunctionInst {
       llvh::ArrayRef<Value *> operands)
       : CreateFunctionInst(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CreateGeneratorInstKind);
   }
@@ -3161,6 +3453,10 @@ class HBCCreateGeneratorInst : public CreateGeneratorInst {
     return getOperand(EnvIdx);
   }
 
+  static bool hasOutput() {
+    return true;
+  }
+
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateGeneratorInstKind);
   }
@@ -3177,6 +3473,10 @@ class StartGeneratorInst : public Instruction {
       const StartGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -3206,6 +3506,10 @@ class ResumeGeneratorInst : public Instruction {
       const ResumeGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -3239,6 +3543,10 @@ class IteratorBeginInst : public Instruction {
       const IteratorBeginInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
@@ -3275,6 +3583,10 @@ class IteratorNextInst : public Instruction {
       const IteratorNextInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
 
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
@@ -3317,6 +3629,10 @@ class IteratorCloseInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  static bool hasOutput() {
+    return true;
+  }
+
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
   }
@@ -3349,6 +3665,10 @@ class UnreachableInst : public Instruction {
       const UnreachableInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;

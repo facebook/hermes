@@ -428,6 +428,17 @@ SideEffectKind Instruction::getDerivedSideEffect() {
   }
 }
 
+bool Instruction::hasOutput() {
+  switch (getKind()) {
+    default:
+      llvm_unreachable("Invalid kind");
+#define DEF_VALUE(XX, PARENT) \
+  case ValueKind::XX##Kind:   \
+    return XX::hasOutput();
+#include "hermes/IR/Instrs.def"
+  }
+}
+
 WordBitSet<> Instruction::getChangedOperands() {
   switch (getKind()) {
     default:
