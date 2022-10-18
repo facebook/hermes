@@ -747,7 +747,7 @@ bool SpillRegisters::requiresShortOutput(Instruction *I) {
 
   // Instructions that produce no output, don't use the register, even when
   // allocated.
-  if (I->getType().isNoType())
+  if (!I->hasOutput())
     return false;
 
   switch (I->getKind()) {
