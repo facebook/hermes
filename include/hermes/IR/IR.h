@@ -65,6 +65,8 @@ class Type {
     LAST_TYPE
   };
 
+  static_assert(LAST_TYPE <= 16, "Type tag must fit in 16 bits");
+
   enum NumTypeKind {
     Double,
     Int32,
@@ -72,6 +74,8 @@ class Type {
 
     LAST_NUM_TYPE
   };
+
+  static_assert(LAST_NUM_TYPE <= 16, "Num tag must fit in 16 bits");
 
   /// Return the string representation of the type at index \p idx.
   llvh::StringRef getKindStr(TypeKind idx) const {
@@ -354,6 +358,8 @@ class Type {
     return !(*this == RHS);
   }
 };
+
+static_assert(sizeof(Type) <= 8, "Type must not be too big");
 
 /// This lattice describes the kind of side effect that instructions have.
 /// The side effects are organized in a hierarchy, and higher levels are a
