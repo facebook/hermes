@@ -945,6 +945,14 @@ class TypeInferenceImpl {
     return Type::createObject();
   }
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  Type inferHBCGetArgumentsPropByValLooseInst(
+      HBCGetArgumentsPropByValLooseInst *inst) {
+    return Type::createAnyType();
+  }
+  Type inferHBCGetArgumentsPropByValStrictInst(
+      HBCGetArgumentsPropByValStrictInst *inst) {
     return Type::createAnyType();
   }
   Type inferHBCGetConstructedObjectInst(HBCGetConstructedObjectInst *inst) {
