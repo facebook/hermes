@@ -246,6 +246,8 @@ bool invokeCC(
 
       args.emplace_back("-framework");
       args.emplace_back("CoreFoundation");
+      args.emplace_back("-framework");
+      args.emplace_back("Foundation");
       args.emplace_back("-lc++");
     } else {
       splitArgs(cfg.ldflags, args);
