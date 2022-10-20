@@ -152,4 +152,10 @@ target_link_libraries(hermesvmlean PUBLIC
   zip_obj
   )
 
+if(HERMES_ENABLE_INTL)
+  set(INTL_OBJ_LIBS hermesPlatformIntl_obj hermesBCP47Parser_obj)
+  target_link_libraries(hermesvm PUBLIC ${INTL_OBJ_LIBS})
+  target_link_libraries(hermesvmlean PUBLIC ${INTL_OBJ_LIBS})
+endif()
+
 configure_file(config/libhermesvm-config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/libhermesvm-config.h)
