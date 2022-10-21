@@ -922,7 +922,13 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 
 void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
-void Verifier::visitCacheNewObjectInst(const CacheNewObjectInst &Inst) {}
+void Verifier::visitCacheNewObjectInst(const CacheNewObjectInst &Inst) {
+  // If there's a CacheNewObjectInst in the function, it must be the only
+  // user of the %this parameter.
+  Assert(
+      Inst.getParent()->getParent()->getThisParameter()->getNumUsers() == 1,
+      "CacheNewObject functions must only have one user of 'this'");
+}
 
 } // namespace
 
