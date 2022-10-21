@@ -511,6 +511,13 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+static CLFlag CacheNewObject(
+    'f',
+    "cache-new-object",
+    false,
+    "caching new objects to speed up construction",
+    CompilerCategory);
+
 static CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
@@ -1058,6 +1065,8 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.staticRequire = cl::StaticRequire;
 
   optimizationOpts.useUnsafeIntrinsics = cl::UseUnsafeIntrinsics;
+
+  optimizationOpts.cacheNewObject = cl::CacheNewObject;
 
   auto context = std::make_shared<Context>(
       codeGenOpts,
