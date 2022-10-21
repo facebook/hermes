@@ -36,5 +36,6 @@ PASS(
     "Move StartGenerator to start of function")
 PASS(Auditor, "auditor", "Auditor")
 PASS(TDZDedup, "tdzdedup", "TDZ Deduplication")
+PASS(CacheNewObject, "cachenewobject", "Insert CacheNewObject instructions")
 
 #undef PASS
