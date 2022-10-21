@@ -137,6 +137,8 @@ DEF_VALUE(GetBuiltinClosureInst, Instruction)
 DEF_VALUE(StartGeneratorInst, Instruction)
 DEF_VALUE(ResumeGeneratorInst, Instruction)
 
+DEF_VALUE(CacheNewObjectInst, Instruction)
+
 // These are target dependent instructions:
 
 #ifdef INCLUDE_HBC_BACKEND

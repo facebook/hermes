@@ -586,6 +586,10 @@ class IRBuilder {
       AllocStackInst *iterator,
       bool ignoreInnerException);
 
+  CacheNewObjectInst *createCacheNewObjectInst(
+      Value *thisParameter,
+      llvh::ArrayRef<Literal *> keys);
+
   UnreachableInst *createUnreachableInst();
 
   /// This is an RAII object that saves and restores the source location of the
