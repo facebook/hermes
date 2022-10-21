@@ -448,16 +448,29 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
     using OpKind = UnaryOperatorInst::OpKind;
+    bool isDouble = inst.getSingleOperand()->getType().isNumberType();
     switch (inst.getOperatorKind()) {
       case (OpKind::IncKind):
-        os_ << "_sh_ljs_inc_rjs(shr, &";
-        generateRegister(*inst.getSingleOperand());
-        os_ << ");\n";
+        if (isDouble) {
+          os_ << "_sh_ljs_double(_sh_ljs_get_double(";
+          generateRegister(*inst.getSingleOperand());
+          os_ << ") + 1);\n";
+        } else {
+          os_ << "_sh_ljs_inc_rjs(shr, &";
+          generateRegister(*inst.getSingleOperand());
+          os_ << ");\n";
+        }
         break;
       case (OpKind::DecKind):
-        os_ << "_sh_ljs_dec_rjs(shr, &";
-        generateRegister(*inst.getSingleOperand());
-        os_ << ");\n";
+        if (isDouble) {
+          os_ << "_sh_ljs_double(_sh_ljs_get_double(";
+          generateRegister(*inst.getSingleOperand());
+          os_ << ") - 1);\n";
+        } else {
+          os_ << "_sh_ljs_dec_rjs(shr, &";
+          generateRegister(*inst.getSingleOperand());
+          os_ << ");\n";
+        }
         break;
       case (OpKind::TildeKind):
         os_ << "_sh_ljs_bit_not_rjs(shr, &";
@@ -568,79 +581,142 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
 
+    // If the final result is a bool instead of a double.
     bool boolConv = false;
-    bool strictEqOp = false;
+
+    // Whether to pass the arguments to a function by value.
+    bool passByValue = false;
+
+    // Function to use if we can't specialize the types.
+    const char *funcUntypedOp = nullptr;
+
+    // Infix operator for doubles.
+    const char *infixDoubleOp = nullptr;
+    // Function call for operator for doubles.
+    const char *funcDoubleOp = nullptr;
+
+    bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
+        inst.getRightHandSide()->getType().isNumberType();
+
     using OpKind = BinaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
       case OpKind::AddKind: // +   (+=)
-        os_ << "_sh_ljs_add_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "+";
+        } else {
+          funcUntypedOp = "_sh_ljs_add_rjs";
+        }
         break;
       case OpKind::SubtractKind: // -   (-=)
-        os_ << "_sh_ljs_sub_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "-";
+        } else {
+          funcUntypedOp = "_sh_ljs_sub_rjs";
+        }
         break;
       case OpKind::MultiplyKind: // *   (*=)
-        os_ << "_sh_ljs_mul_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "*";
+        } else {
+          funcUntypedOp = "_sh_ljs_mul_rjs";
+        }
         break;
       case OpKind::DivideKind: // /   (/=)
-        os_ << "_sh_ljs_div_rjs";
+        if (bothDouble)
+          infixDoubleOp = "/";
+        else
+          funcUntypedOp = "_sh_ljs_div_rjs";
         break;
       case OpKind::ModuloKind: // %   (%=)
-        os_ << "_sh_ljs_mod_rjs";
+        if (bothDouble)
+          funcDoubleOp = "_sh_mod_double";
+        else
+          funcUntypedOp = "_sh_ljs_mod_rjs";
         break;
       case OpKind::OrKind: // |   (|=)
-        os_ << "_sh_ljs_bit_or_rjs";
+        funcUntypedOp = "_sh_ljs_bit_or_rjs";
         break;
       case OpKind::AndKind: // &   (&=)
-        os_ << "_sh_ljs_bit_and_rjs";
+        funcUntypedOp = "_sh_ljs_bit_and_rjs";
         break;
       case OpKind::XorKind: // ^   (^=)
-        os_ << "_sh_ljs_bit_xor_rjs";
+        funcUntypedOp = "_sh_ljs_bit_xor_rjs";
         break;
       case OpKind::RightShiftKind: // >>  (>>=)
-        os_ << "_sh_ljs_right_shift_rjs";
+        funcUntypedOp = "_sh_ljs_right_shift_rjs";
         break;
       case OpKind::UnsignedRightShiftKind: // >>> (>>>=)
-        os_ << "_sh_ljs_unsigned_right_shift_rjs";
+        funcUntypedOp = "_sh_ljs_unsigned_right_shift_rjs";
         break;
       case OpKind::LeftShiftKind: // <<  (<<=)
-        os_ << "_sh_ljs_left_shift_rjs";
+        funcUntypedOp = "_sh_ljs_left_shift_rjs";
         break;
       case OpKind::NotEqualKind: // !=
-        os_ << "_sh_ljs_bool(!_sh_ljs_equal_rjs";
+        funcUntypedOp = "!_sh_ljs_equal_rjs";
         boolConv = true;
         break;
       case OpKind::EqualKind: // ==
-        os_ << "_sh_ljs_bool(_sh_ljs_equal_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "==";
+        } else {
+          funcUntypedOp = "_sh_ljs_equal_rjs";
+        }
         boolConv = true;
         break;
       case OpKind::StrictlyNotEqualKind: // !==
-        os_ << "_sh_ljs_bool(!_sh_ljs_strict_equal";
-        strictEqOp = true;
+        if (bothDouble) {
+          infixDoubleOp = "!=";
+        } else {
+          funcUntypedOp = "!_sh_ljs_strict_equal";
+          passByValue = true;
+        }
+        boolConv = true;
         break;
       case OpKind::StrictlyEqualKind: // ===
-        os_ << "_sh_ljs_bool(_sh_ljs_strict_equal";
-        strictEqOp = true;
+        if (bothDouble) {
+          infixDoubleOp = "==";
+        } else {
+          funcUntypedOp = "_sh_ljs_strict_equal";
+          passByValue = true;
+        }
+        boolConv = true;
         break;
       case OpKind::InKind: // in
-        os_ << "_sh_ljs_is_in";
+        funcUntypedOp = "_sh_ljs_is_in";
         break;
       case OpKind::InstanceOfKind:
-        os_ << "_sh_ljs_instance_of";
+        funcUntypedOp = "_sh_ljs_instance_of";
         break;
       case OpKind::LessThanKind:
-        os_ << "_sh_ljs_bool(_sh_ljs_less_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "<";
+        } else {
+          funcUntypedOp = "_sh_ljs_less_rjs";
+        }
         boolConv = true;
         break;
       case OpKind::LessThanOrEqualKind:
-        os_ << "_sh_ljs_bool(_sh_ljs_less_equal_rjs";
+        if (bothDouble) {
+          infixDoubleOp = "<=";
+        } else {
+          funcUntypedOp = "_sh_ljs_less_equal_rjs";
+        }
         boolConv = true;
         break;
       case OpKind::GreaterThanKind:
-        os_ << "_sh_ljs_bool(_sh_ljs_greater_rjs";
+        if (bothDouble) {
+          infixDoubleOp = ">";
+        } else {
+          funcUntypedOp = "_sh_ljs_greater_rjs";
+        }
         boolConv = true;
         break;
       case OpKind::GreaterThanOrEqualKind:
-        os_ << "_sh_ljs_bool(_sh_ljs_greater_equal_rjs";
+        if (bothDouble) {
+          infixDoubleOp = ">=";
+        } else {
+          funcUntypedOp = "_sh_ljs_greater_equal_rjs";
+        }
         boolConv = true;
         break;
       case OpKind::ExponentiationKind:
@@ -648,21 +724,45 @@ class InstrGen {
         unimplemented(inst);
         return;
     }
-    if (strictEqOp) {
-      os_ << "(";
+    if (boolConv)
+      os_ << "_sh_ljs_bool(";
+    else if (infixDoubleOp || funcDoubleOp)
+      os_ << "_sh_ljs_double(";
+    if (passByValue) {
+      assert(funcUntypedOp);
+      os_ << funcUntypedOp << "(";
       generateRegister(*inst.getLeftHandSide());
       os_ << ", ";
       generateRegister(*inst.getRightHandSide());
-      os_ << "));\n";
+      os_ << ")";
+    } else if (infixDoubleOp) {
+      assert(bothDouble);
+      os_ << "_sh_ljs_get_double(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ") " << infixDoubleOp << " _sh_ljs_get_double(";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ")";
+    } else if (funcDoubleOp) {
+      assert(bothDouble);
+      os_ << funcDoubleOp << "(";
+      os_ << "_sh_ljs_get_double(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << "), _sh_ljs_get_double(";
+      generateRegister(*inst.getRightHandSide());
+      os_ << "))";
     } else {
-      os_ << "(shr, &";
+      assert(funcUntypedOp);
+      os_ << funcUntypedOp << "(shr, &";
       generateRegister(*inst.getLeftHandSide());
       os_ << ", &";
       generateRegister(*inst.getRightHandSide());
-      if (boolConv)
-        os_ << ")";
-      os_ << ");\n";
+      os_ << ")";
     }
+    if (boolConv)
+      os_ << ")";
+    else if (infixDoubleOp || funcDoubleOp)
+      os_ << ")";
+    os_ << ";\n";
   }
   void generateStorePropertyInst(StorePropertyInst &inst) {
     os_.indent(2);
@@ -1052,9 +1152,16 @@ class InstrGen {
     hermes_fatal("SwitchInst should have been lowered");
   }
   void generateCondBranchInst(CondBranchInst &inst) {
-    os_ << "  if(_sh_ljs_to_boolean(";
+    os_.indent(2);
+    os_ << "if(";
+    if (inst.getCondition()->getType().isBooleanType()) {
+      os_ << "_sh_ljs_get_bool(";
+    } else {
+      os_ << "_sh_ljs_to_boolean(";
+    }
     generateRegister(*inst.getCondition());
-    os_ << ")) goto ";
+    os_ << ")) ";
+    os_ << "goto ";
     generateBasicBlockLabel(inst.getTrueDest(), os_, bbMap_);
     os_ << ";\n  goto ";
     generateBasicBlockLabel(inst.getFalseDest(), os_, bbMap_);
@@ -1122,46 +1229,90 @@ class InstrGen {
   void generateCompareBranchInst(CompareBranchInst &inst) {
     os_ << "  if(";
 
-    bool strictEqOp = false;
+    // Whether to pass the arguments to a function by value.
+    bool passByValue = false;
+
+    // Function to use if we can't specialize the types.
+    const char *funcUntypedOp = nullptr;
+
+    // Infix operator for doubles.
+    const char *infixDoubleOp = nullptr;
+
+    bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
+        inst.getRightHandSide()->getType().isNumberType();
+
     using OpKind = BinaryOperatorInst::OpKind;
     switch (inst.getOperatorKind()) {
-      case OpKind::LessThanKind: // <
-        os_ << "_sh_ljs_less_rjs";
+      case OpKind::LessThanKind:
+        if (bothDouble) {
+          infixDoubleOp = "<";
+        } else {
+          funcUntypedOp = "_sh_ljs_less_rjs";
+        }
         break;
-      case OpKind::LessThanOrEqualKind: // <=
-        os_ << "_sh_ljs_less_equal_rjs";
+      case OpKind::LessThanOrEqualKind:
+        if (bothDouble) {
+          infixDoubleOp = "<=";
+        } else {
+          funcUntypedOp = "_sh_ljs_less_equal_rjs";
+        }
         break;
-      case OpKind::GreaterThanKind: // >
-        os_ << "_sh_ljs_greater_rjs";
+      case OpKind::GreaterThanKind:
+        if (bothDouble) {
+          infixDoubleOp = ">";
+        } else {
+          funcUntypedOp = "_sh_ljs_greater_rjs";
+        }
         break;
-      case OpKind::GreaterThanOrEqualKind: // >=
-        os_ << "_sh_ljs_greater_equal_rjs";
+      case OpKind::GreaterThanOrEqualKind:
+        if (bothDouble) {
+          infixDoubleOp = ">=";
+        } else {
+          funcUntypedOp = "_sh_ljs_greater_equal_rjs";
+        }
         break;
       case OpKind::EqualKind: // ==
-        os_ << "_sh_ljs_equal_rjs";
+        funcUntypedOp = "_sh_ljs_equal_rjs";
         break;
       case OpKind::NotEqualKind: // !=
-        os_ << "!_sh_ljs_equal_rjs";
+        funcUntypedOp = "!_sh_ljs_equal_rjs";
         break;
       case OpKind::StrictlyEqualKind: // ===
-        os_ << "_sh_ljs_strict_equal";
-        strictEqOp = true;
+        if (bothDouble) {
+          infixDoubleOp = "==";
+        } else {
+          funcUntypedOp = "_sh_ljs_strict_equal";
+          passByValue = true;
+        }
         break;
       case OpKind::StrictlyNotEqualKind: // !==
-        os_ << "!_sh_ljs_strict_equal";
-        strictEqOp = true;
+        if (bothDouble) {
+          infixDoubleOp = "!=";
+        } else {
+          funcUntypedOp = "!_sh_ljs_strict_equal";
+          passByValue = true;
+        }
         break;
       default:
         hermes_fatal("Invalid operator for CompareBranchInst");
     }
-    if (strictEqOp) {
-      os_ << "(";
+    if (passByValue) {
+      assert(funcUntypedOp);
+      os_ << funcUntypedOp << "(";
       generateRegister(*inst.getLeftHandSide());
       os_ << ", ";
       generateRegister(*inst.getRightHandSide());
       os_ << ")";
+    } else if (infixDoubleOp) {
+      assert(bothDouble);
+      os_ << "_sh_ljs_get_double(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << ") " << infixDoubleOp << " _sh_ljs_get_double(";
+      generateRegister(*inst.getRightHandSide());
+      os_ << ")";
     } else {
-      os_ << "(shr, &";
+      assert(funcUntypedOp);
+      os_ << funcUntypedOp << "(shr, &";
       generateRegister(*inst.getLeftHandSide());
       os_ << ", &";
       generateRegister(*inst.getRightHandSide());

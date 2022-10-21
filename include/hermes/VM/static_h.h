@@ -10,6 +10,7 @@
 
 #include "hermes/VM/sh_legacy_value.h"
 
+#include <math.h>
 #include <setjmp.h>
 #include <stdbool.h>
 
@@ -574,6 +575,10 @@ void _sh_ljs_iterator_close_rjs(
     bool ignoreExceptions);
 
 SHLegacyValue _sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *input);
+
+static inline double _sh_mod_double(double a, double b) {
+  return fmod(a, b);
+}
 
 #ifdef __cplusplus
 }
