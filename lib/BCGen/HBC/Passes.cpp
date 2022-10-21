@@ -99,6 +99,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<HBCAllocObjectFromBufferInst>(Inst))
     return true;
 
+  if (llvh::isa<CacheNewObjectInst>(Inst))
+    return true;
+
   // All operands of AllocArrayInst are literals.
   if (llvh::isa<AllocArrayInst>(Inst))
     return true;

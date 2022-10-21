@@ -418,6 +418,10 @@ class BytecodeModuleGenerator {
   /// Returns the starting offset of the elements.
   uint32_t addArrayBuffer(ArrayRef<Literal *> elements);
 
+  /// Add a list of keys to the object buffer.
+  /// \return the starting offset of the keys in the buffer.
+  uint32_t addKeyBuffer(ArrayRef<Literal *> keys);
+
   /// Add to the the object buffer using \keys as the array of keys, and
   /// \vals as the array of values.
   /// Returns a pair where the first value is the object's offset into the

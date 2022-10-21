@@ -3444,6 +3444,11 @@ class CacheNewObjectInst : public Instruction {
     return llvh::cast<Literal>(getOperand(FirstKeyIdx + index));
   }
 
+  /// \return the this parameter.
+  Value *getThis() const {
+    return getOperand(ThisIdx);
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
   }

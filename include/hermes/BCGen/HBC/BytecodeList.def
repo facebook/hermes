@@ -88,6 +88,8 @@ DEFINE_OPCODE_0(Unreachable)
 DEFINE_OPCODE_5(NewObjectWithBuffer, Reg8, UInt16, UInt16, UInt16, UInt16)
 DEFINE_OPCODE_5(NewObjectWithBufferLong, Reg8, UInt16, UInt16, UInt32, UInt32)
 
+DEFINE_OPCODE_4(CacheNewObject, Reg8, Reg8, UInt16, UInt16)
+
 /// Create a new, empty Object using the built-in constructor (regardless of
 /// whether it was overridden).
 /// Arg1 = {}

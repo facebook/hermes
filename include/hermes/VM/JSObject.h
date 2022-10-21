@@ -470,6 +470,26 @@ class JSObject : public GCCell {
     return clazz_;
   }
 
+  static ExecutionStatus setClassUnsafe(
+      Handle<JSObject> self,
+      Handle<HiddenClass> clazz,
+      Runtime &runtime) {
+    assert(
+        self->getClass(runtime)->getNumProperties() == 0 &&
+        "Object with properties cannot have its class set.");
+
+    const SlotIndex numProperties = clazz->getNumProperties();
+    if (LLVM_UNLIKELY(
+            JSObject::allocatePropStorage(
+                createPseudoHandle(self.get()), runtime, numProperties) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    self->clazz_.set(runtime, clazz.get(), runtime.getHeap());
+    return ExecutionStatus::RETURNED;
+  }
+
   /// \return the object ID. Assign one if not yet exist. This ID can be used
   /// in Set or Map where hashing is required. We don't assign object an ID
   /// until we actually need it. An exception is lazily created objects where

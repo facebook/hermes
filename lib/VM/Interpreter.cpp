@@ -499,16 +499,11 @@ ExecutionStatus Interpreter::putByValTransient_RJS(
   return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
-static Handle<HiddenClass> getHiddenClassForBuffer(
+static Handle<HiddenClass> createHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     unsigned numLiterals,
     unsigned keyBufferIndex) {
-  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-  if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, keyBufferIndex, numLiterals))
-    return *clazzOpt;
-
   MutableHandle<> tmpHandleKey{runtime};
   MutableHandle<HiddenClass> clazz =
       runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
@@ -538,6 +533,20 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
     marker.flush();
   }
 
+  return clazz;
+}
+
+static Handle<HiddenClass> getHiddenClassForBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    unsigned numLiterals,
+    unsigned keyBufferIndex) {
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, keyBufferIndex, numLiterals))
+    return *clazzOpt;
+  Handle<HiddenClass> clazz = createHiddenClassForBuffer(
+      runtime, curCodeBlock, numLiterals, keyBufferIndex);
   if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
         numLiterals == clazz->getNumProperties() &&
@@ -549,6 +558,50 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
   }
 
   return {clazz};
+}
+
+// TODO: This should construct and return a new cache entry.
+static bool cacheNewObject(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    Handle<JSObject> thisArg,
+    unsigned numLiterals,
+    unsigned keyBufferIndex) {
+  // This must be a constructor invocation, and "this" must be unmodified.
+  assert(
+      thisArg->getClass(runtime) ==
+      *runtime.getHiddenClassForPrototype(runtime.objectPrototypeRawPtr, 0));
+
+  auto keyGen =
+      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
+  MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
+  MutableHandle<> tmpHandleKey{runtime};
+  while (keyGen.hasNext()) {
+    auto encodedKey = keyGen.get(runtime);
+    auto key = encodedKey.isSymbol()
+        ? HermesValue::encodeSymbolValue(
+              ID(encodedKey.getSymbol().unsafeGetIndex()))
+        : encodedKey;
+
+    ComputedPropertyDescriptor desc;
+    // TODO: We can actually just walk the prototype chain manually here, and
+    // cache the prototypes as we go along.
+    JSObject::getComputedPrimitiveDescriptor(
+        thisArg,
+        runtime,
+        runtime.makeHandle(key),
+        propObj,
+        tmpSymbolStorage,
+        desc);
+    if (propObj && desc.flags.accessor)
+      return false;
+  }
+
+  Handle<HiddenClass> clazz = createHiddenClassForBuffer(
+      runtime, curCodeBlock, numLiterals, keyBufferIndex);
+  thisArg->setClassUnsafe(thisArg, clazz, runtime);
+  return true;
 }
 
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
@@ -2943,6 +2996,31 @@ tailCall:
         O1REG(NewObjectWithBufferLong) = resPH->get();
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewObjectWithBufferLong);
+        DISPATCH;
+      }
+
+      CASE(CacheNewObject) {
+        // TODO: Replace this with a better check, that accounts for whether
+        // caching has failed on previous calls.
+        if (FRAME->getNewTargetRef().isUndefined()) {
+          ip = NEXTINST(CacheNewObject);
+          DISPATCH;
+        }
+
+        // TODO: Check the cache here, and call cacheNewObject only if the cache
+        // is empty and needs to be populated.
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            cacheNewObject(
+                runtime,
+                curCodeBlock,
+                // 'this' must be an object since it is a constructor call.
+                Handle<JSObject>::vmcast(&O2REG(CacheNewObject)),
+                ip->iCacheNewObject.op3,
+                ip->iCacheNewObject.op4));
+        O1REG(CacheNewObject) = O2REG(CacheNewObject);
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CacheNewObject);
         DISPATCH;
       }
 

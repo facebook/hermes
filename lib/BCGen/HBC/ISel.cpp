@@ -1603,8 +1603,17 @@ void HBCISel::generateIteratorCloseInst(
 void HBCISel::generateCacheNewObjectInst(
     hermes::CacheNewObjectInst *Inst,
     hermes::BasicBlock *next) {
-  // FIXME: Implement this once we have bytecode instructions for it.
-  hermes_fatal("unimplemented CacheNewObjectInst");
+  auto res = encodeValue(Inst);
+  auto thisArg = encodeValue(Inst->getThis());
+  auto numKeys = Inst->getNumKeys();
+  SmallVector<Literal *, 8> keys;
+  for (size_t i = 0; i < numKeys; ++i)
+    keys.push_back(Inst->getKey(i));
+
+  auto buffIdx = BCFGen_->BMGen_.addKeyBuffer(keys);
+  // TODO: Handle cases where buffIdx is larger than 16 bits. For now,
+  // compilation will fail.
+  BCFGen_->emitCacheNewObject(res, thisArg, numKeys, buffIdx);
 }
 
 void HBCISel::generateSwitchImmInst(

@@ -84,11 +84,15 @@ uint32_t BytecodeModuleGenerator::addArrayBuffer(ArrayRef<Literal *> elements) {
   return literalGenerator_.serializeBuffer(elements, arrayBuffer_, false);
 }
 
+uint32_t BytecodeModuleGenerator::addKeyBuffer(ArrayRef<Literal *> keys) {
+  return literalGenerator_.serializeBuffer(keys, objKeyBuffer_, true);
+}
+
 std::pair<uint32_t, uint32_t> BytecodeModuleGenerator::addObjectBuffer(
     ArrayRef<Literal *> keys,
     ArrayRef<Literal *> vals) {
   return std::pair<uint32_t, uint32_t>{
-      literalGenerator_.serializeBuffer(keys, objKeyBuffer_, true),
+      addKeyBuffer(keys),
       literalGenerator_.serializeBuffer(vals, objValBuffer_, false)};
 }
 
