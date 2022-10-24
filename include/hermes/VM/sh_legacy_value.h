@@ -222,8 +222,23 @@ static inline bool _sh_ljs_is_undefined(SHLegacyValue v) {
 static inline bool _sh_ljs_is_null(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Null;
 }
+static inline bool _sh_ljs_is_bool(SHLegacyValue v) {
+  return _sh_ljs_get_etag(v) == HVETag_Bool;
+}
 static inline bool _sh_ljs_is_object(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Object;
+}
+static inline bool _sh_ljs_is_double(SHLegacyValue v) {
+  // C enums are int, so to compare we have to use unsigned.
+  return (unsigned int)_sh_ljs_get_tag(v) < (unsigned int)HVTag_First;
+}
+
+static inline bool _sh_ljs_get_bool(SHLegacyValue v) {
+  // Clear the ETag and return the raw values that are left.
+  return (bool)(v.raw & ~_sh_ljs_get_etag(v));
+}
+static inline double _sh_ljs_get_double(SHLegacyValue v) {
+  return v.f64;
 }
 
 #ifdef __cplusplus
