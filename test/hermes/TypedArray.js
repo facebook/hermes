@@ -443,6 +443,19 @@ cons.forEach(function(TypedArray) {
 });
 /// @}
 
+/// @name %TypedArray%.prototype.at
+/// @{
+cons.forEach(function(TA) {
+  var ta = new TA([1, 2, 3, 4, 5]);
+  assert.equal(ta.at(0).toString(), '1');
+  assert.equal(ta.at(-1).toString(), '5');
+  assert.equal(ta.at(10), undefined);
+  assert.throws(function(){TA.prototype.at.call(ta, 1n)}, TypeError);
+  assert.throws(function(){TA.prototype.at.call("hi", 1)}, TypeError);
+  assert.throws(function(){TA.prototype.at.call([1, "f", 3], 1)}, TypeError);
+});
+// @}
+
 /// @name %TypedArray%.prototype.copyWithin
 /// @{
 

@@ -432,10 +432,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Array/prototype/splice/create-ctor-non-object.js",
     "test262/test/built-ins/Array/prototype/flat/non-object-ctor-throws.js",
     "test262/test/built-ins/Array/prototype/flatMap/this-value-ctor-non-object.js",
-    # TODO(T76109235) proposal-relative-indexing-method
-    "test262/test/built-ins/Array/prototype/at/",
-    "test262/test/built-ins/TypedArray/prototype/at/",
-    "test262/test/built-ins/String/prototype/at/",
     # TODO(T90541287) array length coercion order
     "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order-set.js",
     "test262/test/built-ins/Array/length/define-own-prop-length-coercion-order.js",

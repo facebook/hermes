@@ -1099,3 +1099,24 @@ print(arrayEquals([1,2,3].flatMap(function(x) {
   return [x, x+this];
 }, 100), [1,101,2,102,3,103]));
 // CHECK-NEXT: true
+
+print([1, 2, 3, 4, 5].at(1));
+// CHECK-NEXT: 2
+print(Array.prototype.at.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, 1));
+// CHECK-NEXT: b
+print([1, 2, 3, 4, 5].at(6));
+// CHECK-NEXT: undefined
+print(Array.prototype.at.call({length: 0, 0: 'a', 1: 'b', 2: 'c'}, 1));
+// CHECK-NEXT: undefined
+try { [].at(1n); } catch(e) { print(e.name) }
+// CHECK-NEXT: TypeError
+print([1, 2, 3, 4, 5].at(-1));
+// CHECK-NEXT: 5
+print([1, 2, 3, 4, 5].at(-5));
+// CHECK-NEXT: 1
+print([1, 2, 3, 4, 5].at(-6));
+// CHECK-NEXT: undefined
+print(Array.prototype.at.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, -1));
+// CHECK-NEXT: c
+print(Array.prototype.at.call({length: 30}, 5));
+// CHECK-NEXT: undefined
