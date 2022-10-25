@@ -226,6 +226,9 @@ export type Statement =
   | ClassDeclaration
   | ContinueStatement
   | DebuggerStatement
+  | DeclareClass
+  | DeclareVariable
+  | DeclareFunction
   | DeclareInterface
   | DeclareModule
   | DeclareOpaqueType
@@ -1261,7 +1264,7 @@ export interface ObjectTypeProperty extends BaseNode {
   +value: TypeAnnotationType;
   +method: boolean;
   +optional: boolean;
-  +static: false; // can't be static
+  +static: boolean;
   +proto: false; // ???
   +variance: Variance | null;
   +kind: 'init';
@@ -1510,10 +1513,12 @@ export interface DeclareExportDeclaration extends BaseNode {
   +specifiers: $ReadOnlyArray<ExportSpecifier>;
   +declaration:
     | TypeAlias
+    | DeclareVariable
     | DeclareClass
     | DeclareFunction
     | DeclareOpaqueType
     | DeclareInterface
+    | TypeAnnotationType
     | null;
   +source: StringLiteral | null;
   +default: boolean;
