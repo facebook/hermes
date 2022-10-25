@@ -699,6 +699,10 @@ class CallInst : public Instruction {
   CallInst(const CallInst &) = delete;
   void operator=(const CallInst &) = delete;
 
+  // Forces the code to use the appropriate getters instead of relying on
+  // hard-coded offsets when accessing the arguments.
+  using Instruction::getOperand;
+
  public:
   enum { CalleeIdx, ThisIdx };
 
@@ -721,7 +725,7 @@ class CallInst : public Instruction {
   }
 
   unsigned getNumArguments() const {
-    return getNumOperands() - 1;
+    return getNumOperands() - ThisIdx;
   }
 
   explicit CallInst(
