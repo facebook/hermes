@@ -9,8 +9,8 @@
  */
 
 import {
-  HermesESTreeJSON,
-  formatAndWriteDistArtifact,
+  GetHermesESTreeJSON,
+  formatAndWriteSrcArtifact,
   LITERAL_TYPES,
   NODES_WITHOUT_TRANSFORM_NODE_TYPES,
 } from './utils/scriptUtils';
@@ -19,7 +19,9 @@ const predicateFunctions: Array<string> = [];
 
 const NODES_WITH_SPECIAL_HANDLING = new Set([]);
 
-const nodes = HermesESTreeJSON.map(n => n.name).concat('Literal');
+const nodes = GetHermesESTreeJSON()
+  .map(n => n.name)
+  .concat('Literal');
 for (const node of nodes) {
   if (
     NODES_WITH_SPECIAL_HANDLING.has(node) ||
@@ -189,7 +191,10 @@ for (const [name, token, type] of TOKENS) {
     predicateFunctions.push(
       `
 export function is${name}Keyword(node: ESNode | Token): boolean %checks {
-  return (node.type === 'Identifier' || node.type === 'Keyword') && node.value === '${token}';
+  return (
+    (node.type === 'Identifier' && node.name === '${token}') ||
+    (node.type === 'Keyword' && node.value === '${token}')
+  );
 }
       `,
     );
@@ -210,16 +215,9 @@ import type {ESNode, Token} from 'hermes-estree';
 ${predicateFunctions.join('\n')}
 `;
 
-formatAndWriteDistArtifact({
+formatAndWriteSrcArtifact({
   code: fileContents,
   package: 'hermes-estree',
-  filename: 'predicates.js',
-  subdirSegments: ['generated'],
-});
-formatAndWriteDistArtifact({
-  code: fileContents,
-  package: 'hermes-estree',
-  filename: 'predicates.js.flow',
+  file: 'generated/predicates.js',
   flow: 'strict-local',
-  subdirSegments: ['generated'],
 });

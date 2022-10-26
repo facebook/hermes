@@ -11,8 +11,8 @@
 'use strict';
 
 import {
-  HermesESTreeJSON,
-  formatAndWriteDistArtifact,
+  GetHermesESTreeJSON,
+  formatAndWriteSrcArtifact,
   LITERAL_TYPES,
 } from './utils/scriptUtils';
 
@@ -20,7 +20,7 @@ const ALLOWED_ARG_TYPES = new Set(['NodePtr', 'NodeList']);
 
 // $FlowExpectedError[incompatible-type]
 const visitorKeys: {[string]: Array<string>} = Object.create(null);
-for (const node of HermesESTreeJSON) {
+for (const node of GetHermesESTreeJSON()) {
   visitorKeys[node.name] = node.arguments
     .filter(arg => ALLOWED_ARG_TYPES.has(arg.type))
     .map(arg => arg.name);
@@ -49,8 +49,10 @@ const visitorKeysFileContents = `module.exports = ${JSON.stringify(
   2,
 )};`;
 
-formatAndWriteDistArtifact({
+formatAndWriteSrcArtifact({
   code: visitorKeysFileContents,
   package: 'hermes-eslint',
-  filename: 'HermesESLintVisitorKeys.js',
+  file: 'HermesESLintVisitorKeys.js',
+  // This file is shadowed by a manual `.js.flow` file
+  flow: false,
 });

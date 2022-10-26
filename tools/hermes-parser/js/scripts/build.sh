@@ -35,6 +35,16 @@ else
   exit 1
 fi
 
+# Generate the JSON blob used to drive the rest of the JS codegen
+yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
+
+# Generate source code, written into package src directories
+yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
+yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genPredicateFunctions.js"
+yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
+
 # Create fresh dist directory for each package, and copy source files in
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIR="$THIS_DIR/../$package"
@@ -44,23 +54,16 @@ for package in "${PACKAGES[@]}"; do
 
   # There is no system for flow to emit flow declarations for files
   # So we rename all the JS files to .js.flow so they are treated like flow declarations
-  find "$PACKAGE_DIR/dist" -type f -name "*.js" -exec rename ".js" ".js.flow" {} \;
+  find "$PACKAGE_DIR/dist" -type f -name "*.js" -exec rename --no-overwrite ".js" ".js.flow" {} \;
 
   # Copy just the JS files again
   (cd "$PACKAGE_DIR/src" && find . -type f -name '*.js' -exec cp --parents -t ../dist {} +)
 done
 
-# Generate the JSON blob used to drive the rest of the JS codegen
-yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
-
-# Generate code, written into package dist directories
+# Generate source code that only applies to dist directory
 yarn babel-node "$THIS_DIR/genWasmParser.js" "$WASM_PARSER"
-yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
-yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
-yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
+# TODO: Move these to `src` directory, currently causes Flow errors.
 yarn babel-node "$THIS_DIR/genSelectorTypes.js"
-yarn babel-node "$THIS_DIR/genPredicateFunctions.js"
-yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
 yarn babel-node "$THIS_DIR/genTransformCloneTypes.js"
 yarn babel-node "$THIS_DIR/genTransformModifyTypes.js"
 yarn babel-node "$THIS_DIR/genTransformReplaceNodeTypes.js"

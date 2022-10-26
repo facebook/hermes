@@ -11,7 +11,7 @@
 'use strict';
 
 import {
-  HermesESTreeJSON,
+  GetHermesESTreeJSON,
   formatAndWriteDistArtifact,
   LITERAL_TYPES,
 } from './utils/scriptUtils';
@@ -20,6 +20,8 @@ const imports: Array<string> = ['ESNode'];
 const enterSelectors: Array<string> = [];
 const exitSelectors: Array<string> = [];
 const typeAliases = new Map<string, string>();
+
+const HermesESTreeJSON = GetHermesESTreeJSON();
 
 function pushSelector(selector: string, type: string): void {
   enterSelectors.push(`+'${selector}'?: (node: ${type}) => void`);
@@ -111,11 +113,11 @@ ${exitSelectors.join(',\n')},
 };
 `;
 
+// TODO: Move to `src` directory, currently causes Flow errors.
 formatAndWriteDistArtifact({
   code: fileContents,
   package: 'hermes-estree',
-  subdirSegments: ['generated'],
-  filename: 'HermesESTreeSelectorTypes.js.flow',
+  file: 'generated/HermesESTreeSelectorTypes.js.flow',
   flow: 'strict',
 });
 

@@ -11,15 +11,15 @@
 'use strict';
 
 import {
-  HermesESTreeJSON,
-  formatAndWriteDistArtifact,
+  GetHermesESTreeJSON,
+  formatAndWriteSrcArtifact,
 } from './utils/scriptUtils';
 import tempCustomASTDefs from './utils/tempCustomASTDefs';
 
 const visitorKeys: {[string]: $ReadOnly<{[string]: 'Node' | 'NodeList'}>} =
   // $FlowExpectedError[incompatible-type]
   Object.create(null);
-for (const node of HermesESTreeJSON) {
+for (const node of GetHermesESTreeJSON()) {
   const nodeVisitorKeys = {};
   for (const arg of node.arguments) {
     switch (arg.type) {
@@ -49,9 +49,10 @@ export const NODE_LIST_CHILD = 'NodeList';
 export const HERMES_AST_VISITOR_KEYS = ${JSON.stringify(visitorKeys, null, 2)};
 `;
 
-formatAndWriteDistArtifact({
+formatAndWriteSrcArtifact({
   code: visitorKeysFileContents,
   package: 'hermes-parser',
-  filename: 'visitor-keys.js',
-  subdirSegments: ['generated'],
+  file: 'generated/visitor-keys.js',
+  // This file is shadowed by a manual `.js.flow` file
+  flow: false,
 });

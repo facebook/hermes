@@ -41,69 +41,12 @@ module.exports = {
       ]),
     ),
 
-    // hermes-eslint
-    '.*/HermesESLintVisitorKeys$': path.resolve(
-      __dirname,
-      'hermes-eslint',
-      'dist',
-      'HermesESLintVisitorKeys.js',
-    ),
-
     // hermes-parser
-    '.*/HermesParserNodeDeserializers$': path.resolve(
-      __dirname,
-      'hermes-parser',
-      'dist',
-      'HermesParserNodeDeserializers.js',
-    ),
     '.*/HermesParserWASM$': path.resolve(
       __dirname,
       'hermes-parser',
       'dist',
       'HermesParserWASM.js',
-    ),
-    '.*/HermesAST$': path.resolve(
-      __dirname,
-      'hermes-parser',
-      'dist',
-      'HermesAST.js',
-    ),
-    '.*/generated/visitor-keys$': path.resolve(
-      __dirname,
-      'hermes-parser',
-      'dist',
-      'generated',
-      'visitor-keys.js',
-    ),
-
-    // hermes-transform
-    '.*/generated/node-types$': path.resolve(
-      __dirname,
-      'hermes-transform',
-      'dist',
-      'generated',
-      'node-types.js',
-    ),
-    '.*/generated/special-case-node-types$': path.resolve(
-      __dirname,
-      'hermes-transform',
-      'dist',
-      'generated',
-      'special-case-node-types.js',
-    ),
-    '.*/generated/TransformCloneSignatures$': path.resolve(
-      __dirname,
-      'hermes-transform',
-      'dist',
-      'generated',
-      'TransformCloneSignatures.js',
-    ),
-    '.*/generated/TransformReplaceSignatures$': path.resolve(
-      __dirname,
-      'hermes-transform',
-      'dist',
-      'generated',
-      'TransformReplaceSignatures.js',
     ),
   } /*: {[string]: string} */),
 };

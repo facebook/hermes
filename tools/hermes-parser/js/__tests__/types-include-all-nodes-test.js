@@ -12,7 +12,7 @@ import type {TypeAnnotationType} from 'hermes-estree';
 
 import fs from 'fs';
 import path from 'path';
-import {HermesESTreeJSON} from '../scripts/utils/scriptUtils';
+import {GetHermesESTreeJSON} from '../scripts/utils/scriptUtils';
 import {parseForESLint} from 'hermes-eslint';
 import {traverse} from 'hermes-transform';
 
@@ -165,7 +165,7 @@ const propertiesWithIncorrectOptionalFlagInHermes = new Map([
 describe('All nodes declared by hermes should have an interface in hermes-estree that is of the correct shape.', () => {
   const interfaces = getInterfaces();
 
-  for (const node of HermesESTreeJSON) {
+  for (const node of GetHermesESTreeJSON()) {
     if (typesThatShouldBeSkipped.has(node.name)) {
       describe.skip(node.name, () => {
         it.skip('was skipped due to being included in `typesThatShouldBeSkipped`', () => {});
