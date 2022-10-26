@@ -279,6 +279,9 @@ class InstrGen {
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return generate##CLASS(*cast<CLASS>(&I));
+#define DEF_TAG(NAME, PARENT) \
+  case ValueKind::NAME##Kind: \
+    return generate##PARENT(*cast<PARENT>(&I));
 #include "hermes/IR/Instrs.def"
       default:
         llvm_unreachable("Invalid kind");
@@ -444,10 +447,9 @@ class InstrGen {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
-    using OpKind = UnaryOperatorInst::OpKind;
     bool isDouble = inst.getSingleOperand()->getType().isNumberType();
-    switch (inst.getOperatorKind()) {
-      case (OpKind::IncKind):
+    switch (inst.getKind()) {
+      case (ValueKind::UnaryIncInstKind):
         if (isDouble) {
           os_ << "_sh_ljs_double(_sh_ljs_get_double(";
           generateRegister(*inst.getSingleOperand());
@@ -458,7 +460,7 @@ class InstrGen {
           os_ << ");\n";
         }
         break;
-      case (OpKind::DecKind):
+      case (ValueKind::UnaryDecInstKind):
         if (isDouble) {
           os_ << "_sh_ljs_double(_sh_ljs_get_double(";
           generateRegister(*inst.getSingleOperand());
@@ -469,29 +471,29 @@ class InstrGen {
           os_ << ");\n";
         }
         break;
-      case (OpKind::TildeKind):
+      case (ValueKind::UnaryTildeInstKind):
         os_ << "_sh_ljs_bit_not_rjs(shr, &";
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;
-      case (OpKind::TypeofKind):
+      case (ValueKind::UnaryTypeofInstKind):
         os_ << "_sh_ljs_typeof(shr, &";
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;
-      case OpKind::MinusKind: { // -
+      case ValueKind::UnaryMinusInstKind: { // -
         os_ << "_sh_ljs_minus_rjs(shr, &";
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;
       }
-      case OpKind::BangKind: { // !
+      case ValueKind::UnaryBangInstKind: { // !
         os_ << "_sh_ljs_bool(!_sh_ljs_to_boolean(";
         generateRegister(*inst.getSingleOperand());
         os_ << "));\n";
         break;
       }
-      case OpKind::VoidKind: { // Void operator.
+      case ValueKind::UnaryVoidInstKind: { // Void operator.
         os_ << "_sh_ljs_undefined();\n";
         break;
       }

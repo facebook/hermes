@@ -403,34 +403,32 @@ void HBCISel::generateUnaryOperatorInst(
   auto opReg = encodeValue(Inst->getSingleOperand());
   auto resReg = encodeValue(Inst);
 
-  using OpKind = UnaryOperatorInst::OpKind;
-
-  switch (Inst->getOperatorKind()) {
-    case OpKind::TypeofKind: { // typeof
+  switch (Inst->getKind()) {
+    case ValueKind::UnaryTypeofInstKind: { // typeof
       BCFGen_->emitTypeOf(resReg, opReg);
       break;
     }
-    case OpKind::MinusKind: { // -
+    case ValueKind::UnaryMinusInstKind: { // -
       BCFGen_->emitNegate(resReg, opReg);
       break;
     }
-    case OpKind::TildeKind: { // ~
+    case ValueKind::UnaryTildeInstKind: { // ~
       BCFGen_->emitBitNot(resReg, opReg);
       break;
     }
-    case OpKind::BangKind: { // !
+    case ValueKind::UnaryBangInstKind: { // !
       BCFGen_->emitNot(resReg, opReg);
       break;
     }
-    case OpKind::VoidKind: { // Void operator.
+    case ValueKind::UnaryVoidInstKind: { // Void operator.
       BCFGen_->emitLoadConstUndefined(resReg);
       break;
     }
-    case OpKind::IncKind: { // ++
+    case ValueKind::UnaryIncInstKind: { // ++
       BCFGen_->emitInc(resReg, opReg);
       break;
     }
-    case OpKind::DecKind: { // --
+    case ValueKind::UnaryDecInstKind: { // --
       BCFGen_->emitDec(resReg, opReg);
       break;
     }
@@ -1694,6 +1692,9 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return generate##CLASS(cast<CLASS>(ii), next);
+#define DEF_TAG(NAME, PARENT) \
+  case ValueKind::NAME##Kind: \
+    return generate##PARENT(cast<PARENT>(ii), next);
 #include "hermes/IR/Instrs.def"
 
     default:

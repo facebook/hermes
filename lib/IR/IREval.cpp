@@ -67,11 +67,11 @@ SmallString<256> buildString(
 } // namespace
 
 Literal *hermes::evalUnaryOperator(
-    UnaryOperatorInst::OpKind kind,
+    ValueKind kind,
     IRBuilder &builder,
     Literal *operand) {
   switch (kind) {
-    case UnaryOperatorInst::OpKind::MinusKind:
+    case ValueKind::UnaryMinusInstKind:
       // Negate constant integers.
       switch (operand->getKind()) {
         case ValueKind::LiteralNumberKind:
@@ -94,7 +94,7 @@ Literal *hermes::evalUnaryOperator(
           break;
       }
       break;
-    case UnaryOperatorInst::OpKind::TypeofKind:
+    case ValueKind::UnaryTypeofInstKind:
       switch (operand->getKind()) {
         case ValueKind::GlobalObjectKind:
         case ValueKind::LiteralNullKind:
@@ -112,7 +112,7 @@ Literal *hermes::evalUnaryOperator(
       }
       break;
 
-    case UnaryOperatorInst::OpKind::BangKind:
+    case ValueKind::UnaryBangInstKind:
       if (evalIsTrue(builder, operand)) {
         return builder.getLiteralBool(false);
       }
@@ -121,16 +121,16 @@ Literal *hermes::evalUnaryOperator(
       }
       break;
 
-    case UnaryOperatorInst::OpKind::VoidKind:
+    case ValueKind::UnaryVoidInstKind:
       return builder.getLiteralUndefined();
 
-    case UnaryOperatorInst::OpKind::IncKind:
+    case ValueKind::UnaryIncInstKind:
       if (auto *V = evalToNumber(builder, operand)) {
         return builder.getLiteralNumber(V->getValue() + 1);
       }
       break;
 
-    case UnaryOperatorInst::OpKind::DecKind:
+    case ValueKind::UnaryDecInstKind:
       if (auto *V = evalToNumber(builder, operand)) {
         return builder.getLiteralNumber(V->getValue() - 1);
       }

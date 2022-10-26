@@ -612,8 +612,8 @@ CreateRegExpInst *IRBuilder::createRegExpInst(
 
 UnaryOperatorInst *IRBuilder::createUnaryOperatorInst(
     Value *value,
-    UnaryOperatorInst::OpKind opKind) {
-  auto UOI = new UnaryOperatorInst(value, opKind);
+    ValueKind kind) {
+  auto UOI = new UnaryOperatorInst(kind, value);
   insert(UOI);
   return UOI;
 }
@@ -1081,6 +1081,10 @@ Instruction *IRBuilder::cloneInst(
 #define DEF_VALUE(name, parent)                    \
   case ValueKind::name##Kind:                      \
     inst = new name(cast<name>(source), operands); \
+    break;
+#define DEF_TAG(name, parent)                          \
+  case ValueKind::name##Kind:                          \
+    inst = new parent(cast<parent>(source), operands); \
     break;
 
 #include "hermes/IR/Instrs.def"

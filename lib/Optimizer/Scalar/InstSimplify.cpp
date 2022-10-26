@@ -97,7 +97,7 @@ Value *reduceAsInt32(AsInt32Inst *asInt32) {
 Value *simplifyUnOp(UnaryOperatorInst *unary) {
   IRBuilder builder(unary->getParent()->getParent());
 
-  auto kind = unary->getOperatorKind();
+  auto kind = unary->getKind();
   auto *op = unary->getSingleOperand();
   Type t = op->getType();
 
@@ -108,11 +108,9 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
     }
   }
 
-  using OpKind = UnaryOperatorInst::OpKind;
-
   // Try to simplify based on type information.
   switch (kind) {
-    case OpKind::TypeofKind:
+    case ValueKind::UnaryTypeofInstKind:
       if (t.isNullType()) {
         return builder.getLiteralString("object");
       }
@@ -136,13 +134,13 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
       }
       break;
 
-    case OpKind::BangKind:
+    case ValueKind::UnaryBangInstKind:
       if (op->getType().isSubsetOf(kNullOrUndef)) {
         return builder.getLiteralBool(true);
       }
       break;
 
-    case OpKind::PlusKind:
+    case ValueKind::UnaryPlusInstKind:
       // Convert +x to AsNumber(x).
       builder.setInsertionPoint(unary);
       return reduceAsNumber(builder.createAsNumberInst(op));
@@ -362,7 +360,7 @@ Value *simplifyCondBranchInst(CondBranchInst *CBI) {
   //
   if (auto *U = llvh::dyn_cast<UnaryOperatorInst>(cond)) {
     if (U->getSideEffect() == SideEffectKind::None &&
-        U->getOperatorKind() == UnaryOperatorInst::OpKind::BangKind) {
+        U->getKind() == ValueKind::UnaryBangInstKind) {
       // Strip the negation.
       CBI->setOperand(U->getSingleOperand(), 0);
       // Swap the destination blocks:
@@ -482,11 +480,11 @@ Value *simplifyAsNumber(AsNumberInst *asNumber) {
 
 bool isUnaryIncOrDec(Value *value) {
   if (auto *unOp = llvh::dyn_cast<UnaryOperatorInst>(value)) {
-    switch (unOp->getOperatorKind()) {
+    switch (unOp->getKind()) {
       default:
         break;
-      case UnaryOperatorInst::OpKind::IncKind:
-      case UnaryOperatorInst::OpKind::DecKind:
+      case ValueKind::UnaryIncInstKind:
+      case ValueKind::UnaryDecInstKind:
         return true;
     }
   }
@@ -578,11 +576,11 @@ OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
 ///   - llvh::None if the instruction should be deleted.
 OptValue<Value *> simplifyInstruction(Instruction *I) {
   // Dispatch the different simplification kinds:
+  if (llvh::isa<UnaryOperatorInst>(I))
+    return simplifyUnOp(llvh::cast<UnaryOperatorInst>(I));
   switch (I->getKind()) {
     case ValueKind::BinaryOperatorInstKind:
       return simplifyBinOp(cast<BinaryOperatorInst>(I));
-    case ValueKind::UnaryOperatorInstKind:
-      return simplifyUnOp(cast<UnaryOperatorInst>(I));
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));
     case ValueKind::AsNumericInstKind:

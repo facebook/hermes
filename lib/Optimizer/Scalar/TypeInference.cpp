@@ -505,6 +505,10 @@ class TypeInferenceImpl {
   case ValueKind::CLASS##Kind:                    \
     inferredTy = infer##CLASS(cast<CLASS>(inst)); \
     break;
+#define DEF_TAG(NAME, PARENT)                       \
+  case ValueKind::NAME##Kind:                       \
+    inferredTy = infer##PARENT(cast<PARENT>(inst)); \
+    break;
 #include "hermes/IR/Instrs.def"
       default:
         llvm_unreachable("Invalid kind");
@@ -596,31 +600,29 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferUnaryOperatorInst(UnaryOperatorInst *inst) {
-    using OpKind = UnaryOperatorInst::OpKind;
-
-    switch (inst->getOperatorKind()) {
-      case OpKind::DeleteKind: // delete:
+    switch (inst->getKind()) {
+      case ValueKind::UnaryDeleteInstKind: // delete:
         return Type::createBoolean();
-      case OpKind::VoidKind: // void
+      case ValueKind::UnaryVoidInstKind: // void
         return Type::createUndefined();
-      case OpKind::TypeofKind: // typeof
+      case ValueKind::UnaryTypeofInstKind: // typeof
         return Type::createString();
       // https://tc39.es/ecma262/#sec-prefix-increment-operator
       // https://tc39.es/ecma262/#sec-postfix-increment-operator
-      case OpKind::IncKind: // ++
+      case ValueKind::UnaryIncInstKind: // ++
       // https://tc39.es/ecma262/#sec-prefix-decrement-operator
       // https://tc39.es/ecma262/#sec-postfix-decrement-operator
-      case OpKind::DecKind: // --
+      case ValueKind::UnaryDecInstKind: // --
       // https://tc39.es/ecma262/#sec-unary-minus-operator
-      case OpKind::MinusKind: // -
+      case ValueKind::UnaryMinusInstKind: // -
         return inferUnaryArithDefault(inst);
       // https://tc39.es/ecma262/#sec-unary-plus-operator
-      case OpKind::PlusKind: // +
+      case ValueKind::UnaryPlusInstKind: // +
         return Type::createNumber();
       // https://tc39.es/ecma262/#sec-bitwise-not-operator
-      case OpKind::TildeKind: // ~
+      case ValueKind::UnaryTildeInstKind: // ~
         return inferTilde(inst);
-      case OpKind::BangKind: // !
+      case ValueKind::UnaryBangInstKind: // !
         return Type::createBoolean();
       default:
         hermes_fatal("Invalid unary operator");

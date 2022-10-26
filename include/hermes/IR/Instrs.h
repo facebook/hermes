@@ -1804,53 +1804,31 @@ class CreateRegExpInst : public Instruction {
 
 class UnaryOperatorInst : public SingleOperandInst {
  public:
-  /// JavaScript Binary operators as defined in the ECMA spec.
-  /// http://www.ecma-international.org/ecma-262/7.0/index.html#sec-unary-operators
-  enum class OpKind {
-    DeleteKind, // delete
-    VoidKind, // void
-    TypeofKind, // typeof
-    PlusKind, // +
-    MinusKind, // -
-    TildeKind, // ~
-    BangKind, // !
-    IncKind, // + 1
-    DecKind, // - 1
-    LAST_OPCODE
-  };
-
  private:
   UnaryOperatorInst(const UnaryOperatorInst &) = delete;
   void operator=(const UnaryOperatorInst &) = delete;
 
-  /// The operator kind.
-  OpKind op_;
-
   // A list of textual representation of the operators above.
-  static const char *opStringRepr[(int)OpKind::LAST_OPCODE];
+  static const char *opStringRepr[HERMES_IR_CLASS_LENGTH(UnaryOperatorInst)];
 
  public:
-  /// \return the binary operator kind.
-  OpKind getOperatorKind() const {
-    return op_;
-  }
-
   // Convert the operator string \p into the enum representation or assert
   // fail if the string is invalud.
-  static OpKind parseOperator(llvh::StringRef op);
+  static ValueKind parseOperator(llvh::StringRef op);
 
   /// \return the string representation of the operator.
   llvh::StringRef getOperatorStr() {
-    return opStringRepr[static_cast<int>(op_)];
+    return opStringRepr[HERMES_IR_KIND_TO_OFFSET(UnaryOperatorInst, getKind())];
   }
 
-  explicit UnaryOperatorInst(Value *value, OpKind opKind)
-      : SingleOperandInst(ValueKind::UnaryOperatorInstKind, value),
-        op_(opKind) {}
+  explicit UnaryOperatorInst(ValueKind kind, Value *value)
+      : SingleOperandInst(kind, value) {
+    assert(HERMES_IR_KIND_IN_CLASS(kind, UnaryOperatorInst));
+  }
   explicit UnaryOperatorInst(
       const UnaryOperatorInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands), op_(src->op_) {}
+      : SingleOperandInst(src, operands) {}
 
   static bool hasOutput() {
     return true;
@@ -1863,8 +1841,7 @@ class UnaryOperatorInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::UnaryOperatorInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), UnaryOperatorInst);
   }
 };
 

@@ -63,19 +63,17 @@ const char *BinaryOperatorInst::assignmentOpStringRepr[] = {
     "<<=", ">>=", ">>>=", "+=",  "-=",  "*=",    "/=", "%=", "|=",
     "^=",  "&=",  "**=",  "||=", "&&=", "\?\?=", "",   ""};
 
-UnaryOperatorInst::OpKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
-  for (int i = 0; i < static_cast<int>(BinaryOperatorInst::OpKind::LAST_OPCODE);
-       i++) {
-    if (op == UnaryOperatorInst::opStringRepr[i]) {
-      return static_cast<UnaryOperatorInst::OpKind>(i);
-    }
+ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
+  for (int i = 0; i < HERMES_IR_CLASS_LENGTH(UnaryOperatorInst); ++i) {
+    if (op == UnaryOperatorInst::opStringRepr[i])
+      return HERMES_IR_OFFSET_TO_KIND(UnaryOperatorInst, i);
   }
 
   llvm_unreachable("invalid operator string");
 }
 
 SideEffectKind UnaryOperatorInst::getSideEffect() {
-  if (getOperatorKind() == OpKind::DeleteKind) {
+  if (getKind() == ValueKind::UnaryDeleteInstKind) {
     return SideEffectKind::Unknown;
   }
 
@@ -83,9 +81,9 @@ SideEffectKind UnaryOperatorInst::getSideEffect() {
     return SideEffectKind::None;
   }
 
-  switch (getOperatorKind()) {
-    case OpKind::VoidKind: // void
-    case OpKind::TypeofKind: // typeof
+  switch (getKind()) {
+    case ValueKind::UnaryVoidInstKind: // void
+    case ValueKind::UnaryTypeofInstKind: // typeof
       return SideEffectKind::None;
 
     default:
@@ -377,11 +375,6 @@ Instruction::Variety Instruction::getVariety() const {
     case ValueKind::BinaryOperatorInstKind:
       operatorKind = static_cast<unsigned>(
           cast<BinaryOperatorInst>(this)->getOperatorKind());
-      break;
-
-    case ValueKind::UnaryOperatorInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<UnaryOperatorInst>(this)->getOperatorKind());
       break;
 
     case ValueKind::CompareBranchInstKind:
