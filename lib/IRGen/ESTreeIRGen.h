@@ -367,6 +367,18 @@ class ESTreeIRGen {
   /// Identifier representing the string "?default".
   const Identifier identDefaultExport_;
 
+  /// Identifier representing the string "delete".
+  const Identifier identDelete_;
+
+  /// Identifier representing the string "typeof".
+  const Identifier identTypeof_;
+
+  /// Identifier representing the string "!".
+  const Identifier identBang_;
+
+  /// Identifier representing the string "+".
+  const Identifier identPlus_;
+
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
   Identifier genAnonymousLabelName(llvh::StringRef hint) {

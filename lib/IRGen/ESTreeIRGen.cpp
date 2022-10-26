@@ -148,7 +148,11 @@ ESTreeIRGen::ESTreeIRGen(
       lexicalScopeChain(resolveScopeIdentifiers(scopeChain)),
       identEval_(Builder.createIdentifier("eval")),
       identLet_(Builder.createIdentifier("let")),
-      identDefaultExport_(Builder.createIdentifier("?default")) {}
+      identDefaultExport_(Builder.createIdentifier("?default")),
+      identDelete_(Builder.createIdentifier("delete")),
+      identTypeof_(Builder.createIdentifier("typeof")),
+      identBang_(Builder.createIdentifier("!")),
+      identPlus_(Builder.createIdentifier("+")) {}
 
 void ESTreeIRGen::doIt() {
   LLVM_DEBUG(llvh::dbgs() << "Processing top level program.\n");
