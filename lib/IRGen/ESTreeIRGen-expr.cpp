@@ -8,6 +8,7 @@
 #include "ESTreeIRGen.h"
 
 #include "llvh/ADT/ScopeExit.h"
+#include "llvh/ADT/StringSwitch.h"
 
 namespace hermes {
 namespace irgen {
@@ -236,9 +237,7 @@ void ESTreeIRGen::genExpressionBranch(
   Value *condVal = genExpression(expr);
   if (onNullish) {
     Value *isNullish = Builder.createBinaryOperatorInst(
-        condVal,
-        Builder.getLiteralNull(),
-        BinaryOperatorInst::OpKind::EqualKind);
+        condVal, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind);
     BasicBlock *notNullishBB = Builder.createBasicBlock(Builder.getFunction());
     Builder.createCondBranchInst(isNullish, onNullish, notNullishBB);
     Builder.setInsertionBlock(notNullishBB);
@@ -336,7 +335,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
           Builder.createBinaryOperatorInst(
               Builder.createLoadStackInst(nextIndex),
               Builder.getLiteralNumber(1),
-              BinaryOperatorInst::OpKind::AddKind),
+              ValueKind::BinaryAddInstKind),
           nextIndex);
     } else {
       count++;
@@ -472,9 +471,7 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     // NOTE: We use `obj == null` to account for both null and undefined.
     Builder.createCondBranchInst(
         Builder.createBinaryOperatorInst(
-            callee,
-            Builder.getLiteralNull(),
-            BinaryOperatorInst::OpKind::EqualKind),
+            callee, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind),
         shortCircuitBB,
         evalRHSBB);
 
@@ -595,7 +592,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
         Builder.createBinaryOperatorInst(
             baseValue,
             Builder.getLiteralNull(),
-            BinaryOperatorInst::OpKind::EqualKind),
+            ValueKind::BinaryEqualInstKind),
         shortCircuitBB,
         evalRHSBB);
 
@@ -1197,7 +1194,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 Builder.createCompareBranchInst(
                     returnMethod,
                     Builder.getLiteralUndefined(),
-                    BinaryOperatorInst::OpKind::StrictlyEqualKind,
+                    ValueKind::CmpBrStrictlyEqualInstKind,
                     noReturnBB,
                     haveReturnBB);
 
@@ -1278,7 +1275,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         Builder.createCompareBranchInst(
             throwMethod,
             Builder.getLiteralUndefined(),
-            BinaryOperatorInst::OpKind::StrictlyEqualKind,
+            ValueKind::CmpBrStrictlyEqualInstKind,
             noThrowMethodBB,
             hasThrowMethodBB);
 
@@ -1531,19 +1528,23 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
     return RHS;
   }
 
-  auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
+  assert(opStr != "=" && "Assignment was already handled");
 
   LReference lref = createLRef(AE->_left, false);
   Identifier nameHint = extractNameHint(lref);
 
-  Value *result;
-  if (AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitOrKind ||
-      AssignmentKind == BinaryOperatorInst::OpKind::AssignShortCircuitAndKind ||
-      AssignmentKind == BinaryOperatorInst::OpKind::AssignNullishCoalesceKind) {
-    return genLogicalAssignmentExpr(AE, AssignmentKind, lref, nameHint);
+  auto logicalAssign =
+      llvh::StringSwitch<OptValue<LogicalAssignmentOp>>(opStr)
+          .Case("||=", LogicalAssignmentOp::ShortCircuitOrKind)
+          .Case("&&=", LogicalAssignmentOp::ShortCircuitAndKind)
+          .Case("\?\?=", LogicalAssignmentOp::NullishCoalesceKind)
+          .Default(llvh::None);
+  if (logicalAssign) {
+    return genLogicalAssignmentExpr(AE, *logicalAssign, lref, nameHint);
   }
 
-  assert(AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind);
+  auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
+
   // Section 11.13.1 specifies that we should first load the
   // LHS before materializing the RHS. Unlike in C, this
   // code is well defined: "x+= x++".
@@ -1551,6 +1552,7 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   auto V = lref.emitLoad();
   auto *RHS = genExpression(AE->_right, nameHint);
   auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
+  Value *result;
   result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
   result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
 
@@ -1562,7 +1564,7 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
 
 Value *ESTreeIRGen::genLogicalAssignmentExpr(
     ESTree::AssignmentExpressionNode *AE,
-    BinaryOperatorInst::OpKind AssignmentKind,
+    LogicalAssignmentOp assignmentKind,
     LReference lref,
     Identifier nameHint) {
   // Logical assignment expressions must use short-circuiting logic.
@@ -1578,19 +1580,17 @@ Value *ESTreeIRGen::genLogicalAssignmentExpr(
   values.push_back(lhs);
   blocks.push_back(Builder.getInsertionBlock());
 
-  switch (AssignmentKind) {
-    case BinaryOperatorInst::OpKind::AssignShortCircuitOrKind:
+  switch (assignmentKind) {
+    case LogicalAssignmentOp::ShortCircuitOrKind:
       Builder.createCondBranchInst(lhs, continueBB, assignBB);
       break;
-    case BinaryOperatorInst::OpKind::AssignShortCircuitAndKind:
+    case LogicalAssignmentOp::ShortCircuitAndKind:
       Builder.createCondBranchInst(lhs, assignBB, continueBB);
       break;
-    case BinaryOperatorInst::OpKind::AssignNullishCoalesceKind:
+    case LogicalAssignmentOp::NullishCoalesceKind:
       Builder.createCondBranchInst(
           Builder.createBinaryOperatorInst(
-              lhs,
-              Builder.getLiteralNull(),
-              BinaryOperatorInst::OpKind::EqualKind),
+              lhs, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind),
           assignBB,
           continueBB);
       break;
@@ -1799,9 +1799,7 @@ Value *ESTreeIRGen::genLogicalExpression(
       // Use == instead of === to account for both values at once.
       Builder.createCondBranchInst(
           Builder.createBinaryOperatorInst(
-              LHS,
-              Builder.getLiteralNull(),
-              BinaryOperatorInst::OpKind::EqualKind),
+              LHS, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind),
           evalRHSBlock,
           continueBlock);
 

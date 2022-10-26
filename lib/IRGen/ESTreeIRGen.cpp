@@ -669,7 +669,7 @@ void ESTreeIRGen::emitIteratorCloseSlow(
   Builder.createCompareBranchInst(
       returnMethod,
       Builder.getLiteralUndefined(),
-      BinaryOperatorInst::OpKind::StrictlyEqualKind,
+      ValueKind::CmpBrStrictlyEqualInstKind,
       noReturn,
       haveReturn);
 
@@ -870,7 +870,7 @@ void ESTreeIRGen::emitDestructuringArray(
           Builder.createBinaryOperatorInst(
               Builder.createLoadStackInst(value),
               Builder.getLiteralUndefined(),
-              BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+              ValueKind::BinaryStrictlyNotEqualInstKind),
           storeBlock,
           getDefaultBlock);
 
@@ -990,7 +990,7 @@ void ESTreeIRGen::emitRestElement(
   });
   // ++n;
   auto add = Builder.createBinaryOperatorInst(
-      nVal, Builder.getLiteralNumber(1), BinaryOperatorInst::OpKind::AddKind);
+      nVal, Builder.getLiteralNumber(1), ValueKind::BinaryAddInstKind);
   add->setType(Type::createNumber());
   Builder.createStoreStackInst(add, n);
   Builder.createBranchInst(notDoneBlock);
@@ -1027,9 +1027,7 @@ void ESTreeIRGen::emitDestructuringObject(
     // Use == instead of === to account for both undefined and null.
     Builder.createCondBranchInst(
         Builder.createBinaryOperatorInst(
-            source,
-            Builder.getLiteralNull(),
-            BinaryOperatorInst::OpKind::EqualKind),
+            source, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind),
         throwBB,
         doneBB);
 
@@ -1155,7 +1153,7 @@ Value *ESTreeIRGen::emitOptionalInitialization(
       Builder.createBinaryOperatorInst(
           value,
           Builder.getLiteralUndefined(),
-          BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+          ValueKind::BinaryStrictlyNotEqualInstKind),
       storeBlock,
       getDefaultBlock);
 

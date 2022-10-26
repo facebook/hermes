@@ -1847,59 +1847,20 @@ class UnaryOperatorInst : public SingleOperandInst {
 
 class BinaryOperatorInst : public Instruction {
  public:
-  /// JavaScript Binary operators as defined in the ECMA spec.
-  /// http://ecma-international.org/ecma-262/5.1/#sec-11
-  enum class OpKind {
-    IdentityKind, // nop (assignment operator, no arithmetic op)
-    EqualKind, // ==
-    NotEqualKind, // !=
-    StrictlyEqualKind, // ===
-    StrictlyNotEqualKind, // !==
-    LessThanKind, // <
-    LessThanOrEqualKind, // <=
-    GreaterThanKind, // >
-    GreaterThanOrEqualKind, // >=
-    LeftShiftKind, // <<  (<<=)
-    RightShiftKind, // >>  (>>=)
-    UnsignedRightShiftKind, // >>> (>>>=)
-    AddKind, // +   (+=)
-    SubtractKind, // -   (-=)
-    MultiplyKind, // *   (*=)
-    DivideKind, // /   (/=)
-    ModuloKind, // %   (%=)
-    OrKind, // |   (|=)
-    XorKind, // ^   (^=)
-    AndKind, // &   (^=)
-    ExponentiationKind, // ** (**=)
-    AssignShortCircuitOrKind, // ||= (only for assignment)
-    AssignShortCircuitAndKind, // &&= (only for assignment)
-    AssignNullishCoalesceKind, // ??= (only for assignment)
-    InKind, // "in"
-    InstanceOfKind, // instanceof
-    LAST_OPCODE
-  };
-
   // A list of textual representation of the operators above.
-  static const char *opStringRepr[(int)OpKind::LAST_OPCODE];
+  static const char *opStringRepr[HERMES_IR_CLASS_LENGTH(BinaryOperatorInst)];
 
   // A list of textual representation of the assignment operators that match the
   // operators above.
-  static const char *assignmentOpStringRepr[(int)OpKind::LAST_OPCODE];
+  static const char
+      *assignmentOpStringRepr[HERMES_IR_CLASS_LENGTH(BinaryOperatorInst)];
 
  private:
   BinaryOperatorInst(const BinaryOperatorInst &) = delete;
   void operator=(const BinaryOperatorInst &) = delete;
 
-  /// The operator kind.
-  OpKind op_;
-
  public:
   enum { LeftHandSideIdx, RightHandSideIdx };
-
-  /// \return the binary operator kind.
-  OpKind getOperatorKind() const {
-    return op_;
-  }
 
   Value *getLeftHandSide() const {
     return getOperand(LeftHandSideIdx);
@@ -1910,30 +1871,27 @@ class BinaryOperatorInst : public Instruction {
 
   // Convert the operator string \p into the enum representation or assert
   // fail if the string is invalud.
-  static OpKind parseOperator(llvh::StringRef op);
+  static ValueKind parseOperator(llvh::StringRef op);
 
   // Convert the assignment operator string \p into the enum representation or
   // assert fail if the string is invalud.
-  static OpKind parseAssignmentOperator(llvh::StringRef op);
-
-  // Get the operator that allows you to swap the operands, if one exists.
-  // >= becomes <= and + becomes +.
-  static llvh::Optional<OpKind> tryGetReverseOperator(OpKind op);
+  static ValueKind parseAssignmentOperator(llvh::StringRef op);
 
   /// \return the string representation of the operator.
   llvh::StringRef getOperatorStr() {
-    return opStringRepr[static_cast<int>(op_)];
+    return opStringRepr[HERMES_IR_KIND_TO_OFFSET(
+        BinaryOperatorInst, getKind())];
   }
 
-  explicit BinaryOperatorInst(Value *left, Value *right, OpKind opKind)
-      : Instruction(ValueKind::BinaryOperatorInstKind), op_(opKind) {
+  explicit BinaryOperatorInst(ValueKind kind, Value *left, Value *right)
+      : Instruction(kind) {
     pushOperand(left);
     pushOperand(right);
   }
   explicit BinaryOperatorInst(
       const BinaryOperatorInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands), op_(src->op_) {}
+      : Instruction(src, operands) {}
 
   static bool hasOutput() {
     return true;
@@ -1941,9 +1899,7 @@ class BinaryOperatorInst : public Instruction {
 
   SideEffectKind getSideEffect() {
     return getBinarySideEffect(
-        getLeftHandSide()->getType(),
-        getRightHandSide()->getType(),
-        getOperatorKind());
+        getLeftHandSide()->getType(), getRightHandSide()->getType(), getKind());
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1951,14 +1907,13 @@ class BinaryOperatorInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::BinaryOperatorInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BinaryOperatorInst);
   }
 
   /// Calculate the side effect of a binary operator, given inferred types of
   /// its arguments.
   static SideEffectKind
-  getBinarySideEffect(Type leftTy, Type rightTy, OpKind op);
+  getBinarySideEffect(Type leftTy, Type rightTy, ValueKind op);
 };
 
 class CatchInst : public Instruction {
@@ -3546,15 +3501,9 @@ class CompareBranchInst : public TerminatorInst {
   CompareBranchInst(const CompareBranchInst &) = delete;
   void operator=(const CompareBranchInst &) = delete;
 
-  /// The operator kind.
-  BinaryOperatorInst::OpKind op_;
-
  public:
   enum { LeftHandSideIdx, RightHandSideIdx, TrueBlockIdx, FalseBlockIdx };
 
-  BinaryOperatorInst::OpKind getOperatorKind() const {
-    return op_;
-  }
   Value *getLeftHandSide() const {
     return getOperand(LeftHandSideIdx);
   }
@@ -3570,16 +3519,18 @@ class CompareBranchInst : public TerminatorInst {
 
   /// \return the string representation of the operator.
   llvh::StringRef getOperatorStr() {
-    return BinaryOperatorInst::opStringRepr[static_cast<int>(op_)];
+    return BinaryOperatorInst::opStringRepr[HERMES_IR_KIND_TO_OFFSET(
+        CompareBranchInst, getKind())];
   }
 
   explicit CompareBranchInst(
+      ValueKind kind,
       Value *left,
       Value *right,
-      BinaryOperatorInst::OpKind opKind,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock)
-      : TerminatorInst(ValueKind::CompareBranchInstKind), op_(opKind) {
+      : TerminatorInst(kind) {
+    assert(HERMES_IR_KIND_IN_CLASS(kind, CompareBranchInst));
     pushOperand(left);
     pushOperand(right);
     pushOperand(trueBlock);
@@ -3588,17 +3539,35 @@ class CompareBranchInst : public TerminatorInst {
   explicit CompareBranchInst(
       const CompareBranchInst *src,
       llvh::ArrayRef<Value *> operands)
-      : TerminatorInst(src, operands), op_(src->op_) {}
+      : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
     return false;
   }
 
+  /// Return the BinaryOperatorInst ValueKind corresponding to this comparison.
+  ValueKind toBinaryOperatorValueKind() const {
+    return HERMES_IR_OFFSET_TO_KIND(
+        BinaryOperatorInst,
+        HERMES_IR_KIND_TO_OFFSET(CompareBranchInst, getKind()));
+  }
+
+  /// Convert a BinaryOperatorInst ValueKind into a CompareBranchInst one.
+  static ValueKind fromBinaryOperatorValueKind(ValueKind kind) {
+    int ofs = HERMES_IR_KIND_TO_OFFSET(BinaryOperatorInst, kind);
+    assert(
+        ofs >= 0 && ofs < HERMES_IR_CLASS_LENGTH(CompareBranchInst) &&
+        "Invalid CmpBr ValueKind");
+    return HERMES_IR_OFFSET_TO_KIND(CompareBranchInst, ofs);
+  }
+
+  // static ValueKind kindFromBinaryOperatorValueKind
+
   SideEffectKind getSideEffect() {
     return BinaryOperatorInst::getBinarySideEffect(
         getLeftHandSide()->getType(),
         getRightHandSide()->getType(),
-        getOperatorKind());
+        toBinaryOperatorValueKind());
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3606,8 +3575,7 @@ class CompareBranchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::CompareBranchInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), CompareBranchInst);
   }
 
   unsigned getNumSuccessors() const {

@@ -84,7 +84,7 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
   }
   Instruction *createInstruction(Value *dependency1, Value *dependency2) {
     return builder_.createBinaryOperatorInst(
-        dependency1, dependency2, BinaryOperatorInst::OpKind::AddKind);
+        dependency1, dependency2, ValueKind::BinaryAddInstKind);
   }
   std::vector<Instruction *> createInstructions(unsigned n) {
     std::vector<Instruction *> vec;

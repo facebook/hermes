@@ -1203,9 +1203,6 @@ class Instruction
     }
   };
 
-  /// Return the variety of this instruction.
-  Variety getVariety() const;
-
   /// Return the hash code the this instruction.
   llvh::hash_code getHashCode() const;
 

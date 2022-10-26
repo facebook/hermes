@@ -27,6 +27,12 @@
 #ifndef TERMINATOR
 #define TERMINATOR(NAME, PARENT) DEF_VALUE(NAME, PARENT)
 #endif
+#ifndef BEGIN_TERMINATOR
+#define BEGIN_TERMINATOR(NAME, PARENT) BEGIN_VALUE(NAME, PARENT)
+#endif
+#ifndef END_TERMINATOR
+#define END_TERMINATOR(NAME) END_VALUE(NAME)
+#endif
 
 #if defined(INCLUDE_ALL_INSTRS) || defined(INCLUDE_HBC_INSTRS)
 #define INCLUDE_HBC_BACKEND
@@ -69,7 +75,31 @@ DEF_VALUE(HBCSpillMovInst, Instruction)
 #endif
 
 DEF_VALUE(PhiInst, Instruction)
-DEF_VALUE(BinaryOperatorInst, Instruction)
+
+BEGIN_VALUE(BinaryOperatorInst, Instruction)
+DEF_TAG(BinaryEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryNotEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryStrictlyEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryStrictlyNotEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryLessThanInst, BinaryOperatorInst)
+DEF_TAG(BinaryLessThanOrEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryGreaterThanInst, BinaryOperatorInst)
+DEF_TAG(BinaryGreaterThanOrEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryLeftShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryRightShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryUnsignedRightShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryAddInst, BinaryOperatorInst)
+DEF_TAG(BinarySubtractInst, BinaryOperatorInst)
+DEF_TAG(BinaryMultiplyInst, BinaryOperatorInst)
+DEF_TAG(BinaryDivideInst, BinaryOperatorInst)
+DEF_TAG(BinaryModuloInst, BinaryOperatorInst)
+DEF_TAG(BinaryOrInst, BinaryOperatorInst)
+DEF_TAG(BinaryXorInst, BinaryOperatorInst)
+DEF_TAG(BinaryAndInst, BinaryOperatorInst)
+DEF_TAG(BinaryExponentiationInst, BinaryOperatorInst)
+DEF_TAG(BinaryInInst, BinaryOperatorInst)
+DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
+END_VALUE(BinaryOperatorInst)
 
 MARK_FIRST(BaseStorePropertyInst, Instruction)
 DEF_VALUE(StorePropertyInst, BaseStorePropertyInst)
@@ -140,7 +170,19 @@ TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
 TERMINATOR(CheckHasInstanceInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
-TERMINATOR(CompareBranchInst, TerminatorInst)
+
+BEGIN_TERMINATOR(CompareBranchInst, TerminatorInst)
+// NOTE: the ordering here matches BinaryOperatorInst!
+DEF_TAG(CmpBrEqualInst, CompareBranchInst)
+DEF_TAG(CmpBrNotEqualInst, CompareBranchInst)
+DEF_TAG(CmpBrStrictlyEqualInst, CompareBranchInst)
+DEF_TAG(CmpBrStrictlyNotEqualInst, CompareBranchInst)
+DEF_TAG(CmpBrLessThanInst, CompareBranchInst)
+DEF_TAG(CmpBrLessThanOrEqualInst, CompareBranchInst)
+DEF_TAG(CmpBrGreaterThanInst, CompareBranchInst)
+DEF_TAG(CmpBrGreaterThanOrEqualInst, CompareBranchInst)
+END_TERMINATOR(CompareBranchInst)
+
 TERMINATOR(SwitchImmInst, TerminatorInst)
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
@@ -186,8 +228,10 @@ DEF_VALUE(HBCProfilePointInst, Instruction)
 #undef DEF_VALUE
 #undef MARK_FIRST
 #undef MARK_LAST
-#undef TERMINATOR
 #endif
 #undef BEGIN_VALUE
 #undef END_VALUE
 #undef DEF_TAG
+#undef TERMINATOR
+#undef BEGIN_TERMINATOR
+#undef END_TERMINATOR

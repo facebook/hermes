@@ -29,8 +29,7 @@ Value *simplifyAsUint32(Value *operand) {
   if (!binary)
     return operand;
 
-  if (binary->getOperatorKind() !=
-      BinaryOperatorInst::OpKind::UnsignedRightShiftKind)
+  if (binary->getKind() != ValueKind::BinaryUnsignedRightShiftInstKind)
     return operand;
 
   auto *lhs = binary->getLeftHandSide();
@@ -44,7 +43,7 @@ Value *simplifyAsUint32(Value *operand) {
 }
 
 OptValue<Value *> simplifyBinOpWasm(BinaryOperatorInst *binary) {
-  auto kind = binary->getOperatorKind();
+  auto kind = binary->getKind();
 
   Value *lhs = binary->getLeftHandSide();
   Value *rhs = binary->getRightHandSide();
@@ -60,20 +59,19 @@ OptValue<Value *> simplifyBinOpWasm(BinaryOperatorInst *binary) {
   args.push_back(lhs);
   args.push_back(rhs);
 
-  using OpKind = BinaryOperatorInst::OpKind;
   hermes::CallIntrinsicInst *intrinsic = nullptr;
   builder.setInsertionPoint(binary);
 
   switch (kind) {
-    case OpKind::AddKind:
+    case ValueKind::BinaryAddInstKind:
       intrinsic =
           builder.createCallIntrinsicInst(WasmIntrinsics::__uasm_add32, args);
       break;
-    case OpKind::SubtractKind:
+    case ValueKind::BinarySubtractInstKind:
       intrinsic =
           builder.createCallIntrinsicInst(WasmIntrinsics::__uasm_sub32, args);
       break;
-    case OpKind::DivideKind:
+    case ValueKind::BinaryDivideInstKind:
       // Asm.js will have both oprands in the same type
       if (leftTy.isInt32Type()) {
         intrinsic = builder.createCallIntrinsicInst(
@@ -115,7 +113,7 @@ OptValue<Value *> simplifyLoad(LoadPropertyInst *load) {
   auto *addrInst = llvh::dyn_cast<BinaryOperatorInst>(load->getProperty());
   if (!addrInst)
     return llvh::None;
-  if (addrInst->getOperatorKind() != BinaryOperatorInst::OpKind::RightShiftKind)
+  if (addrInst->getKind() != ValueKind::BinaryRightShiftInstKind)
     return llvh::None;
   auto *addr = addrInst->getLeftHandSide();
   auto *amount = llvh::dyn_cast<LiteralNumber>(addrInst->getRightHandSide());
@@ -181,7 +179,7 @@ OptValue<Value *> simplifyStore(StorePropertyInst *store) {
   auto *addrInst = llvh::dyn_cast<BinaryOperatorInst>(store->getProperty());
   if (!addrInst)
     return llvh::None;
-  if (addrInst->getOperatorKind() != BinaryOperatorInst::OpKind::RightShiftKind)
+  if (addrInst->getKind() != ValueKind::BinaryRightShiftInstKind)
     return llvh::None;
   auto *addr = addrInst->getLeftHandSide();
   auto *amount = llvh::dyn_cast<LiteralNumber>(addrInst->getRightHandSide());

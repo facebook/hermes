@@ -193,20 +193,20 @@ static Type inferBinaryBitwise(BinaryOperatorInst *BOI) {
 }
 
 static Type inferBinaryInst(BinaryOperatorInst *BOI) {
-  switch (BOI->getOperatorKind()) {
+  switch (BOI->getKind()) {
     // The following operations always return a boolean result.
     // They may throw, they may read/write memory, but the result of the
     // operation must be a boolean.
-    case BinaryOperatorInst::OpKind::EqualKind:
-    case BinaryOperatorInst::OpKind::NotEqualKind:
-    case BinaryOperatorInst::OpKind::StrictlyEqualKind:
-    case BinaryOperatorInst::OpKind::StrictlyNotEqualKind:
-    case BinaryOperatorInst::OpKind::LessThanKind:
-    case BinaryOperatorInst::OpKind::LessThanOrEqualKind:
-    case BinaryOperatorInst::OpKind::GreaterThanKind:
-    case BinaryOperatorInst::OpKind::GreaterThanOrEqualKind:
-    case BinaryOperatorInst::OpKind::InKind:
-    case BinaryOperatorInst::OpKind::InstanceOfKind:
+    case ValueKind::BinaryEqualInstKind:
+    case ValueKind::BinaryNotEqualInstKind:
+    case ValueKind::BinaryStrictlyEqualInstKind:
+    case ValueKind::BinaryStrictlyNotEqualInstKind:
+    case ValueKind::BinaryLessThanInstKind:
+    case ValueKind::BinaryLessThanOrEqualInstKind:
+    case ValueKind::BinaryGreaterThanInstKind:
+    case ValueKind::BinaryGreaterThanOrEqualInstKind:
+    case ValueKind::BinaryInInstKind:
+    case ValueKind::BinaryInstanceOfInstKind:
       // Notice that the spec says that comparison of NaN should return
       // "Undefined" but all VMs return 'false'. We decided to conform to the
       // current implementation and not to the spec.
@@ -214,28 +214,28 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
 
     // These arithmetic operations always return a number or bigint:
     // https://262.ecma-international.org/#sec-multiplicative-operators
-    case BinaryOperatorInst::OpKind::DivideKind:
-    case BinaryOperatorInst::OpKind::MultiplyKind:
+    case ValueKind::BinaryDivideInstKind:
+    case ValueKind::BinaryMultiplyInstKind:
     // https://262.ecma-international.org/#sec-exp-operator
-    case BinaryOperatorInst::OpKind::ExponentiationKind:
+    case ValueKind::BinaryExponentiationInstKind:
     // https://tc39.es/ecma262/#sec-subtraction-operator-minus
-    case BinaryOperatorInst::OpKind::SubtractKind:
+    case ValueKind::BinarySubtractInstKind:
     // https://tc39.es/ecma262/#sec-left-shift-operator
-    case BinaryOperatorInst::OpKind::LeftShiftKind:
+    case ValueKind::BinaryLeftShiftInstKind:
     // https://tc39.es/ecma262/#sec-signed-right-shift-operator
-    case BinaryOperatorInst::OpKind::RightShiftKind:
+    case ValueKind::BinaryRightShiftInstKind:
       return inferBinaryArith(BOI);
 
-    case BinaryOperatorInst::OpKind::ModuloKind:
+    case ValueKind::BinaryModuloInstKind:
       return inferBinaryArith(BOI, Type::createInt32());
 
     // https://es5.github.io/#x11.7.3
-    case BinaryOperatorInst::OpKind::UnsignedRightShiftKind:
+    case ValueKind::BinaryUnsignedRightShiftInstKind:
       return Type::createUint32();
 
     // The Add operator is special:
     // https://262.ecma-international.org/#sec-addition-operator-plus
-    case BinaryOperatorInst::OpKind::AddKind: {
+    case ValueKind::BinaryAddInstKind: {
       Type LeftTy = BOI->getLeftHandSide()->getType();
       Type RightTy = BOI->getRightHandSide()->getType();
       // String + String -> String. It is enough for one of the operands to be
@@ -277,9 +277,9 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
     }
 
     // https://tc39.es/ecma262/#sec-binary-bitwise-operators
-    case BinaryOperatorInst::OpKind::AndKind:
-    case BinaryOperatorInst::OpKind::OrKind:
-    case BinaryOperatorInst::OpKind::XorKind:
+    case ValueKind::BinaryAndInstKind:
+    case ValueKind::BinaryOrInstKind:
+    case ValueKind::BinaryXorInstKind:
       return inferBinaryBitwise(BOI);
 
     default:

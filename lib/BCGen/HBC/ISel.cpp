@@ -454,91 +454,89 @@ void HBCISel::generateBinaryOperatorInst(
   bool isBothNumber = Inst->getLeftHandSide()->getType().isNumberType() &&
       Inst->getRightHandSide()->getType().isNumberType();
 
-  using OpKind = BinaryOperatorInst::OpKind;
-
-  switch (Inst->getOperatorKind()) {
-    case OpKind::EqualKind: // ==
+  switch (Inst->getKind()) {
+    case ValueKind::BinaryEqualInstKind: // ==
       // TODO: optimize the case for null check.
       BCFGen_->emitEq(res, left, right);
       break;
-    case OpKind::NotEqualKind: // !=
+    case ValueKind::BinaryNotEqualInstKind: // !=
       // TODO: optimize the case for null check.
       BCFGen_->emitNeq(res, left, right);
       break;
-    case OpKind::StrictlyEqualKind: // ===
+    case ValueKind::BinaryStrictlyEqualInstKind: // ===
       BCFGen_->emitStrictEq(res, left, right);
       break;
-    case OpKind::StrictlyNotEqualKind: // !===
+    case ValueKind::BinaryStrictlyNotEqualInstKind: // !===
       BCFGen_->emitStrictNeq(res, left, right);
       break;
-    case OpKind::LessThanKind: // <
+    case ValueKind::BinaryLessThanInstKind: // <
       BCFGen_->emitLess(res, left, right);
       break;
-    case OpKind::LessThanOrEqualKind: // <=
+    case ValueKind::BinaryLessThanOrEqualInstKind: // <=
       BCFGen_->emitLessEq(res, left, right);
       break;
-    case OpKind::GreaterThanKind: // >
+    case ValueKind::BinaryGreaterThanInstKind: // >
       BCFGen_->emitGreater(res, left, right);
       break;
-    case OpKind::GreaterThanOrEqualKind: // >=
+    case ValueKind::BinaryGreaterThanOrEqualInstKind: // >=
       BCFGen_->emitGreaterEq(res, left, right);
       break;
-    case OpKind::LeftShiftKind: // <<  (<<=)
+    case ValueKind::BinaryLeftShiftInstKind: // <<  (<<=)
       BCFGen_->emitLShift(res, left, right);
       break;
-    case OpKind::RightShiftKind: // >>  (>>=)
+    case ValueKind::BinaryRightShiftInstKind: // >>  (>>=)
       BCFGen_->emitRShift(res, left, right);
       break;
-    case OpKind::UnsignedRightShiftKind: // >>> (>>>=)
+    case ValueKind::BinaryUnsignedRightShiftInstKind: // >>> (>>>=)
       BCFGen_->emitURshift(res, left, right);
       break;
-    case OpKind::AddKind: // +   (+=)
+    case ValueKind::BinaryAddInstKind: // +   (+=)
       if (isBothNumber) {
         BCFGen_->emitAddN(res, left, right);
       } else {
         BCFGen_->emitAdd(res, left, right);
       }
       break;
-    case OpKind::SubtractKind: // -   (-=)
+    case ValueKind::BinarySubtractInstKind: // -   (-=)
       if (isBothNumber) {
         BCFGen_->emitSubN(res, left, right);
       } else {
         BCFGen_->emitSub(res, left, right);
       }
       break;
-    case OpKind::MultiplyKind: // *   (*=)
+    case ValueKind::BinaryMultiplyInstKind: // *   (*=)
       if (isBothNumber) {
         BCFGen_->emitMulN(res, left, right);
       } else {
         BCFGen_->emitMul(res, left, right);
       }
       break;
-    case OpKind::DivideKind: // /   (/=)
+    case ValueKind::BinaryDivideInstKind: // /   (/=)
       if (isBothNumber) {
         BCFGen_->emitDivN(res, left, right);
       } else {
         BCFGen_->emitDiv(res, left, right);
       }
       break;
-    case OpKind::ExponentiationKind: // ** (**=)
+    case ValueKind::BinaryExponentiationInstKind: // ** (**=)
       llvm_unreachable("ExponentiationKind emits a HermesInternal call");
       break;
-    case OpKind::ModuloKind: // %   (%=)
+    case ValueKind::BinaryModuloInstKind: // %   (%=)
       BCFGen_->emitMod(res, left, right);
       break;
-    case OpKind::OrKind: // |   (|=)
+    case ValueKind::BinaryOrInstKind: // |   (|=)
       BCFGen_->emitBitOr(res, left, right);
       break;
-    case OpKind::XorKind: // ^   (^=)
+    case ValueKind::BinaryXorInstKind: // ^   (^=)
       BCFGen_->emitBitXor(res, left, right);
       break;
-    case OpKind::AndKind: // &   (^=)
+    case ValueKind::BinaryAndInstKind: // &   (^=)
       BCFGen_->emitBitAnd(res, left, right);
       break;
-    case OpKind::InKind: // "in"
+    case ValueKind::BinaryInInstKind: // "in"
       BCFGen_->emitIsIn(res, left, right);
       break;
-    case OpKind::InstanceOfKind: // instanceof
+    case ValueKind::BinaryInstanceOfInstKind: // instanceof
       BCFGen_->emitInstanceOf(res, left, right);
       break;
 
@@ -1006,31 +1004,30 @@ void HBCISel::generateCompareBranchInst(
     std::swap(trueBlock, falseBlock);
   }
 
-  using OpKind = BinaryOperatorInst::OpKind;
   offset_t loc;
-  switch (Inst->getOperatorKind()) {
-    case OpKind::LessThanKind: // <
+  switch (Inst->getKind()) {
+    case ValueKind::CmpBrLessThanInstKind: // <
       loc = invert
           ? (isBothNumber ? BCFGen_->emitJNotLessNLong(res, left, right)
                           : BCFGen_->emitJNotLessLong(res, left, right))
           : (isBothNumber ? BCFGen_->emitJLessNLong(res, left, right)
                           : BCFGen_->emitJLessLong(res, left, right));
       break;
-    case OpKind::LessThanOrEqualKind: // <=
+    case ValueKind::CmpBrLessThanOrEqualInstKind: // <=
       loc = invert
           ? (isBothNumber ? BCFGen_->emitJNotLessEqualNLong(res, left, right)
                           : BCFGen_->emitJNotLessEqualLong(res, left, right))
           : (isBothNumber ? BCFGen_->emitJLessEqualNLong(res, left, right)
                           : BCFGen_->emitJLessEqualLong(res, left, right));
       break;
-    case OpKind::GreaterThanKind: // >
+    case ValueKind::CmpBrGreaterThanInstKind: // >
       loc = invert
           ? (isBothNumber ? BCFGen_->emitJNotGreaterNLong(res, left, right)
                           : BCFGen_->emitJNotGreaterLong(res, left, right))
           : (isBothNumber ? BCFGen_->emitJGreaterNLong(res, left, right)
                           : BCFGen_->emitJGreaterLong(res, left, right));
       break;
-    case OpKind::GreaterThanOrEqualKind: // >=
+    case ValueKind::CmpBrGreaterThanOrEqualInstKind: // >=
       loc = invert
           ? (isBothNumber ? BCFGen_->emitJNotGreaterEqualNLong(res, left, right)
                           : BCFGen_->emitJNotGreaterEqualLong(res, left, right))
@@ -1038,22 +1035,22 @@ void HBCISel::generateCompareBranchInst(
                           : BCFGen_->emitJGreaterEqualLong(res, left, right));
       break;
 
-    case OpKind::EqualKind:
+    case ValueKind::CmpBrEqualInstKind:
       loc = invert ? BCFGen_->emitJNotEqualLong(res, left, right)
                    : BCFGen_->emitJEqualLong(res, left, right);
       break;
 
-    case OpKind::NotEqualKind:
+    case ValueKind::CmpBrNotEqualInstKind:
       loc = invert ? BCFGen_->emitJEqualLong(res, left, right)
                    : BCFGen_->emitJNotEqualLong(res, left, right);
       break;
 
-    case OpKind::StrictlyEqualKind:
+    case ValueKind::CmpBrStrictlyEqualInstKind:
       loc = invert ? BCFGen_->emitJStrictNotEqualLong(res, left, right)
                    : BCFGen_->emitJStrictEqualLong(res, left, right);
       break;
 
-    case OpKind::StrictlyNotEqualKind:
+    case ValueKind::CmpBrStrictlyNotEqualInstKind:
       loc = invert ? BCFGen_->emitJStrictEqualLong(res, left, right)
                    : BCFGen_->emitJStrictNotEqualLong(res, left, right);
       break;
