@@ -265,7 +265,7 @@ bool Inlining::runOnModule(Module *M) {
 
   for (Function &F : *M) {
     for (Instruction *I : F.getUsers()) {
-      auto *CFI = llvh::dyn_cast<CreateFunctionInst>(I);
+      auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(I);
       if (!CFI)
         continue;
 

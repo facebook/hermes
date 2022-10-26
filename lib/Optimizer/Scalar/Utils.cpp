@@ -77,7 +77,7 @@ Function *hermes::getCallee(Value *callee) {
   }
 
   // This is a direct use of a closure.
-  if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(callee)) {
+  if (auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(callee)) {
     return CFI->getFunctionCode();
   }
 
@@ -93,7 +93,7 @@ Function *hermes::getCallee(Value *callee) {
   return nullptr;
 }
 
-bool hermes::isDirectCallee(Value *C, CallInst *CI) {
+bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
   if (CI->getCallee() != C)
     return false;
 
@@ -108,13 +108,17 @@ bool hermes::isDirectCallee(Value *C, CallInst *CI) {
 
 bool hermes::getCallSites(
     Function *F,
-    llvh::SmallVectorImpl<CallInst *> &callsites) {
+    llvh::SmallVectorImpl<BaseCallInst *> &callsites) {
   for (auto *CU : F->getUsers()) {
-    auto *CFI = cast<CreateFunctionInst>(CU);
+    auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(CU);
+    if (!CFI) {
+      // Used in an instruction that returns a non-callable. Bail.
+      return false;
+    }
 
     // Collect direct calls.
     for (auto *U : CFI->getUsers()) {
-      auto *CI = llvh::dyn_cast<CallInst>(U);
+      auto *CI = llvh::dyn_cast<BaseCallInst>(U);
       if (CI && isDirectCallee(CFI, CI)) {
         callsites.push_back(CI);
         continue;
@@ -137,7 +141,7 @@ bool hermes::getCallSites(
             return false;
 
           Value *loadUser = LFI->getUsers()[0];
-          if (auto *loadUserCI = llvh::dyn_cast<CallInst>(loadUser)) {
+          if (auto *loadUserCI = llvh::dyn_cast<BaseCallInst>(loadUser)) {
             if (loadUserCI && isDirectCallee(LFI, loadUserCI)) {
               callsites.push_back(loadUserCI);
               continue;

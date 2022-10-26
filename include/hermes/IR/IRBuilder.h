@@ -62,7 +62,7 @@ class IRBuilder {
   /// \param OriginalName the original name specified by the user.
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
-  Function *createFunction(
+  NormalFunction *createFunction(
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -72,7 +72,7 @@ class IRBuilder {
       Function *insertBefore = nullptr);
 
   /// Create a new Function and add it to the Module.
-  Function *createFunction(
+  NormalFunction *createFunction(
       llvh::StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
@@ -460,7 +460,8 @@ class IRBuilder {
       Value *result,
       BasicBlock *nextBlock);
 
-  CreateGeneratorInst *createCreateGeneratorInst(Function *innerFn);
+  CreateGeneratorInst *createCreateGeneratorInst(
+      GeneratorInnerFunction *innerFn);
 
   StartGeneratorInst *createStartGeneratorInst();
 

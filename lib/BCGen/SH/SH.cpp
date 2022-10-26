@@ -390,9 +390,6 @@ class InstrGen {
   void generateInstruction(Instruction &inst) {
     hermes_fatal("Unimplemented instruction Instruction");
   }
-  void generateSingleOperandInst(SingleOperandInst &inst) {
-    hermes_fatal("This is not a concrete instruction");
-  }
   void generateAddEmptyStringInst(AddEmptyStringInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -551,9 +548,6 @@ class InstrGen {
     os_ << " = _sh_ljs_get_arguments_length(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
-  }
-  void generateHBCReifyArgumentsInst(HBCReifyArgumentsInst &inst) {
-    hermes_fatal("This is not a concrete instruction");
   }
   void generateHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst &inst) {
     os_ << "  _sh_ljs_reify_arguments_loose(shr, frame, ";
@@ -1130,9 +1124,6 @@ class InstrGen {
   void generateHBCCreateGeneratorInst(HBCCreateGeneratorInst &inst) {
     unimplemented(inst);
   }
-  void generateTerminatorInst(TerminatorInst &inst) {
-    hermes_fatal("This is not a concrete instruction");
-  }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
@@ -1330,7 +1321,7 @@ class InstrGen {
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     unimplemented(inst);
   }
-  void setupCallStack(CallInst &inst, bool populateCallee = true) {
+  void setupCallStack(BaseCallInst &inst, bool populateCallee = true) {
     // Populate the outgoing registers that will not be set by _sh_ljs_call or
     // _sh_ljs_construct.
     if (populateCallee) {
@@ -1434,10 +1425,6 @@ class InstrGen {
     os_ << ", &";
     generateRegister(*inst.getClosure());
     os_ << ");\n";
-  }
-  void generateHBCGetArgumentsPropByValInst(
-      HBCGetArgumentsPropByValInst &inst) {
-    hermes_fatal("This is not a concrete instruction");
   }
   void generateHBCGetArgumentsPropByValLooseInst(
       HBCGetArgumentsPropByValLooseInst &inst) {

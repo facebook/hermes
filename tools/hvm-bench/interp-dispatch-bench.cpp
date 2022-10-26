@@ -152,7 +152,7 @@ L1:
       0,
       BFG->generateBytecodeFunction(
           hermes::Function::DefinitionKind::ES5Function,
-          hermes::ValueKind::FunctionKind,
+          hermes::ValueKind::NormalFunctionKind,
           true,
           0,
           0));

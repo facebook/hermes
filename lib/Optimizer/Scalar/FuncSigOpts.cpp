@@ -60,7 +60,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   IRBuilder builder(F);
 
-  llvh::SmallVector<CallInst *, 8> callsites;
+  llvh::SmallVector<BaseCallInst *, 8> callsites;
   if (!getCallSites(F, callsites))
     return false;
 
@@ -76,10 +76,10 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       numFormalParam, {undef, false});
 
   // A list of unused arguments passed by the caller.
-  llvh::SmallVector<std::pair<CallInst *, unsigned>, 8> unusedParams;
+  llvh::SmallVector<std::pair<BaseCallInst *, unsigned>, 8> unusedParams;
 
   // For each call site:
-  for (CallInst *caller : callsites) {
+  for (BaseCallInst *caller : callsites) {
     // For each parameter in the callee:
     for (unsigned i = 0; i < numFormalParam; i++) {
       // Get the arg that matches the i'th parameter. Unpassed parameters are

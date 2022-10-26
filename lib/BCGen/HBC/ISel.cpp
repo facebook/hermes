@@ -57,16 +57,16 @@ static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
 }
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
-  if (auto *CI = llvh::dyn_cast<CallInst>(I)) {
+  if (auto *CI = llvh::dyn_cast<BaseCallInst>(I)) {
     return allocateCallInst(CI);
   }
 }
 
 bool HVMRegisterAllocator::hasTargetSpecificLowering(Instruction *I) {
-  return llvh::isa<CallInst>(I);
+  return llvh::isa<BaseCallInst>(I);
 }
 
-void HVMRegisterAllocator::allocateCallInst(CallInst *I) {
+void HVMRegisterAllocator::allocateCallInst(BaseCallInst *I) {
   allocateParameterCount(I->getNumArguments() + CALL_EXTRA_REGISTERS);
 }
 
@@ -298,12 +298,6 @@ void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
 }
 
-void HBCISel::generateSingleOperandInst(
-    SingleOperandInst *Inst,
-    BasicBlock *next) {
-  llvm_unreachable("This is not a concrete instruction");
-}
-
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());
@@ -352,7 +346,7 @@ void HBCISel::emitUnreachableIfDebug() {
 #endif
 }
 
-void HBCISel::verifyCall(CallInst *Inst) {
+void HBCISel::verifyCall(BaseCallInst *Inst) {
 #ifndef NDEBUG
   const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
@@ -892,9 +886,6 @@ void HBCISel::generateTryEndInst(TryEndInst *Inst, BasicBlock *next) {
   // the list of basic blocks covered by a catch.
   // The range of try regions are stored in exception handlers,
   // and are therefore not encoded in the instruction stream.
-}
-void HBCISel::generateTerminatorInst(TerminatorInst *Inst, BasicBlock *next) {
-  llvm_unreachable("This is not a concrete instruction");
 }
 void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
   auto *dst = Inst->getBranchDest();
@@ -1500,11 +1491,6 @@ void HBCISel::generateHBCGetArgumentsLengthInst(
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsLength(output, reg);
 }
-void HBCISel::generateHBCGetArgumentsPropByValInst(
-    hermes::HBCGetArgumentsPropByValInst *Inst,
-    hermes::BasicBlock *next) {
-  llvm_unreachable("This is not a concrete instruction");
-}
 void HBCISel::generateHBCGetArgumentsPropByValLooseInst(
     hermes::HBCGetArgumentsPropByValLooseInst *Inst,
     hermes::BasicBlock *next) {
@@ -1520,11 +1506,6 @@ void HBCISel::generateHBCGetArgumentsPropByValStrictInst(
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsPropByValStrict(output, index, reg);
-}
-void HBCISel::generateHBCReifyArgumentsInst(
-    hermes::HBCReifyArgumentsInst *Inst,
-    hermes::BasicBlock *next) {
-  llvm_unreachable("This is not a concrete instruction");
 }
 void HBCISel::generateHBCReifyArgumentsLooseInst(
     hermes::HBCReifyArgumentsLooseInst *Inst,
@@ -1551,7 +1532,7 @@ void HBCISel::generateHBCConstructInst(
     BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());
-  verifyCall(cast<CallInst>(Inst));
+  verifyCall(Inst);
 
   if (Inst->getNumArguments() <= UINT8_MAX) {
     BCFGen_->emitConstruct(output, function, Inst->getNumArguments());

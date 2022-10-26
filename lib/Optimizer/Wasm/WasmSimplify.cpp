@@ -261,7 +261,7 @@ OptValue<Value *> wasmSimplifyInstruction(Instruction *I) {
     case ValueKind::BinaryOperatorInstKind:
       return simplifyBinOpWasm(cast<BinaryOperatorInst>(I));
     case ValueKind::LoadPropertyInstKind:
-      return simplifyLoad(cast<LoadPropertyInst>(I));
+      return simplifyLoad(cast<BaseLoadPropertyInst>(I));
     case ValueKind::StorePropertyInstKind:
       return simplifyStore(cast<StorePropertyInst>(I));
     case ValueKind::CallInstKind:

@@ -9,7 +9,7 @@
 #define DEF_VALUE(NAME, PARENT)
 #endif
 #ifndef MARK_FIRST
-#define MARK_FIRST(NAME)
+#define MARK_FIRST(NAME, PARENT)
 #endif
 #ifndef MARK_LAST
 #define MARK_LAST(NAME)
@@ -23,53 +23,52 @@
 #define INCLUDE_HBC_BACKEND
 #endif
 
-MARK_FIRST(SingleOperandInst)
-DEF_VALUE(SingleOperandInst, Instruction)
-DEF_VALUE(AddEmptyStringInst, SingleOperandInst)
-DEF_VALUE(AsNumberInst, SingleOperandInst)
-DEF_VALUE(AsNumericInst, SingleOperandInst)
-DEF_VALUE(AsInt32Inst, SingleOperandInst)
-DEF_VALUE(LoadStackInst, SingleOperandInst)
-DEF_VALUE(MovInst, SingleOperandInst)
+DEF_VALUE(AddEmptyStringInst, Instruction)
+DEF_VALUE(AsNumberInst, Instruction)
+DEF_VALUE(AsNumericInst, Instruction)
+DEF_VALUE(AsInt32Inst, Instruction)
+DEF_VALUE(LoadStackInst, Instruction)
+DEF_VALUE(MovInst, Instruction)
 DEF_VALUE(ImplicitMovInst, Instruction)
-DEF_VALUE(CoerceThisNSInst, SingleOperandInst)
-DEF_VALUE(UnaryOperatorInst, SingleOperandInst)
-DEF_VALUE(DirectEvalInst, SingleOperandInst)
-DEF_VALUE(LoadFrameInst, SingleOperandInst)
+DEF_VALUE(CoerceThisNSInst, Instruction)
+DEF_VALUE(UnaryOperatorInst, Instruction)
+DEF_VALUE(DirectEvalInst, Instruction)
+DEF_VALUE(LoadFrameInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
-DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
-DEF_VALUE(HBCResolveEnvironment, SingleOperandInst)
-DEF_VALUE(HBCGetArgumentsLengthInst, SingleOperandInst)
+DEF_VALUE(HBCLoadConstInst, Instruction)
+DEF_VALUE(HBCLoadParamInst, Instruction)
+DEF_VALUE(HBCResolveEnvironment, Instruction)
+DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
 
-MARK_FIRST(HBCReifyArgumentsInst)
-DEF_VALUE(HBCReifyArgumentsInst, SingleOperandInst)
+MARK_FIRST(HBCReifyArgumentsInst, Instruction)
 DEF_VALUE(HBCReifyArgumentsStrictInst, HBCReifyArgumentsInst)
 DEF_VALUE(HBCReifyArgumentsLooseInst, HBCReifyArgumentsInst)
 MARK_LAST(HBCReifyArgumentsInst)
 
-DEF_VALUE(HBCSpillMovInst, SingleOperandInst)
+DEF_VALUE(HBCSpillMovInst, Instruction)
 #endif
-MARK_LAST(SingleOperandInst)
 
 DEF_VALUE(PhiInst, Instruction)
 DEF_VALUE(BinaryOperatorInst, Instruction)
-MARK_FIRST(StorePropertyInst)
-DEF_VALUE(StorePropertyInst, Instruction)
-DEF_VALUE(TryStoreGlobalPropertyInst, StorePropertyInst)
-MARK_LAST(StorePropertyInst)
 
-MARK_FIRST(StoreOwnPropertyInst)
-DEF_VALUE(StoreOwnPropertyInst, Instruction)
-DEF_VALUE(StoreNewOwnPropertyInst, StoreOwnPropertyInst)
-MARK_LAST(StoreOwnPropertyInst)
+MARK_FIRST(BaseStorePropertyInst, Instruction)
+DEF_VALUE(StorePropertyInst, BaseStorePropertyInst)
+DEF_VALUE(TryStoreGlobalPropertyInst, BaseStorePropertyInst)
+MARK_LAST(BaseStorePropertyInst)
+
+MARK_FIRST(BaseStoreOwnPropertyInst, Instruction)
+DEF_VALUE(StoreOwnPropertyInst, BaseStoreOwnPropertyInst)
+DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
+MARK_LAST(BaseStoreOwnPropertyInst)
 
 DEF_VALUE(StoreGetterSetterInst, Instruction)
 DEF_VALUE(DeletePropertyInst, Instruction)
-MARK_FIRST(LoadPropertyInst)
-DEF_VALUE(LoadPropertyInst, Instruction)
-DEF_VALUE(TryLoadGlobalPropertyInst, LoadPropertyInst)
-MARK_LAST(LoadPropertyInst)
+
+MARK_FIRST(BaseLoadPropertyInst, Instruction)
+DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)
+DEF_VALUE(TryLoadGlobalPropertyInst, BaseLoadPropertyInst)
+MARK_LAST(BaseLoadPropertyInst)
+
 DEF_VALUE(StoreStackInst, Instruction)
 DEF_VALUE(StoreFrameInst, Instruction)
 DEF_VALUE(AllocStackInst, Instruction)
@@ -92,20 +91,26 @@ DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
 #endif
 DEF_VALUE(UnreachableInst, Instruction)
 
-MARK_FIRST(CreateFunctionInst)
-DEF_VALUE(CreateFunctionInst, Instruction)
-DEF_VALUE(CreateGeneratorInst, Instruction)
+MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
+
+MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
+DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
-DEF_VALUE(HBCCreateGeneratorInst, Instruction)
+DEF_VALUE(HBCCreateFunctionInst, BaseCreateCallableInst)
 #endif
-MARK_LAST(CreateFunctionInst)
+MARK_LAST(BaseCreateCallableInst)
+
+DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCCreateGeneratorInst, BaseCreateLexicalChildInst)
+#endif
+MARK_LAST(BaseCreateLexicalChildInst)
+
 #ifdef HERMES_RUN_WASM
 DEF_VALUE(CallIntrinsicInst, Instruction)
 #endif
 
-MARK_FIRST(TerminatorInst)
-DEF_VALUE(TerminatorInst, Instruction)
+MARK_FIRST(TerminatorInst, Instruction)
 TERMINATOR(BranchInst, TerminatorInst)
 TERMINATOR(ReturnInst, TerminatorInst)
 TERMINATOR(ThrowInst, TerminatorInst)
@@ -120,16 +125,16 @@ TERMINATOR(SwitchImmInst, TerminatorInst)
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
 
-MARK_FIRST(CallInst)
-DEF_VALUE(CallInst, Instruction)
-DEF_VALUE(ConstructInst, CallInst)
-DEF_VALUE(CallBuiltinInst, CallInst)
+MARK_FIRST(BaseCallInst, Instruction)
+DEF_VALUE(CallInst, BaseCallInst)
+DEF_VALUE(ConstructInst, BaseCallInst)
+DEF_VALUE(CallBuiltinInst, BaseCallInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCConstructInst, CallInst)
-DEF_VALUE(HBCCallDirectInst, CallInst)
-DEF_VALUE(HBCCallNInst, CallInst)
+DEF_VALUE(HBCConstructInst, BaseCallInst)
+DEF_VALUE(HBCCallDirectInst, BaseCallInst)
+DEF_VALUE(HBCCallNInst, BaseCallInst)
 #endif
-MARK_LAST(CallInst)
+MARK_LAST(BaseCallInst)
 
 DEF_VALUE(GetBuiltinClosureInst, Instruction)
 DEF_VALUE(StartGeneratorInst, Instruction)
@@ -143,8 +148,7 @@ DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
 DEF_VALUE(HBCGetThisNSInst, Instruction)
 DEF_VALUE(HBCCreateThisInst, Instruction)
 
-MARK_FIRST(HBCGetArgumentsPropByValInst)
-DEF_VALUE(HBCGetArgumentsPropByValInst, Instruction)
+MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
 DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
 DEF_VALUE(HBCGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
 MARK_LAST(HBCGetArgumentsPropByValInst)

@@ -220,11 +220,11 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
     // To find the scope data of a function, we try to locate the
     // CreateFunctionInst that creates this function. The scope of F
     // will be 1 more than the scope depth of the CreateFunctionInst.
-    const CreateFunctionInst *Inst = nullptr;
+    const BaseCreateLexicalChildInst *Inst = nullptr;
     for (auto *user : F->getUsers()) {
-      if (llvh::isa<CreateFunctionInst>(user)) {
-        assert(Inst == nullptr && "Function has multiple CreateFunctionInst");
-        Inst = llvh::dyn_cast<CreateFunctionInst>(user);
+      if (llvh::isa<BaseCreateLexicalChildInst>(user)) {
+        assert(Inst == nullptr && "Function has multiple create instructions");
+        Inst = llvh::cast<BaseCreateLexicalChildInst>(user);
       }
     }
     // Because the calculation is done lazily, any function requested

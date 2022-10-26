@@ -201,14 +201,14 @@ Function *ESTreeIRGen::genES5Function(
             ESTree::isStrict(functionNode->strictness),
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr)
-      : Builder.createFunction(
+      : llvh::cast<Function>(Builder.createFunction(
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
             functionNode->sourceVisibility,
             functionNode->getSourceRange(),
             /* isGlobal */ false,
-            /* insertBefore */ nullptr);
+            /* insertBefore */ nullptr));
 
   newFunction->setLazyClosureAlias(lazyClosureAlias);
 
@@ -333,7 +333,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
         DoEmitParameters::No);
 
     // Create a generator function, which will store the arguments.
-    auto *gen = Builder.createCreateGeneratorInst(innerFn);
+    auto *gen = Builder.createCreateGeneratorInst(
+        llvh::cast<GeneratorInnerFunction>(innerFn));
 
     if (!hasSimpleParams(functionNode)) {
       // If there are non-simple params, step the inner function once to

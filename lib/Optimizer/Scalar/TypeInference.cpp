@@ -331,7 +331,9 @@ static bool inferFunctionReturnType(Function *F) {
 
 /// Propagate type information from call sites of F to formals of F.
 /// This assumes that all call sites of F are known.
-static bool propagateArgs(llvh::DenseSet<CallInst *> &callSites, Function *F) {
+static bool propagateArgs(
+    llvh::DenseSet<BaseCallInst *> &callSites,
+    Function *F) {
   bool changed = false;
 
   // In non strict mode a function can escape by accessing arguments.caller.
@@ -422,7 +424,7 @@ static Type propagateReturn(llvh::DenseSet<Function *> &funcs, CallInst *CI) {
 /// Does a given prop belong in the owned set?
 static bool isOwnedProperty(AllocObjectInst *I, Value *prop) {
   for (auto *J : I->getUsers()) {
-    if (auto *SOPI = llvh::dyn_cast<StoreOwnPropertyInst>(J)) {
+    if (auto *SOPI = llvh::dyn_cast<BaseStoreOwnPropertyInst>(J)) {
       if (SOPI->getObject() == I) {
         if (prop == SOPI->getProperty())
           return true;
@@ -718,14 +720,14 @@ class TypeInferenceImpl {
       // Go over each store of R (can be empty)
       for (auto *S : cgp_->getKnownStores(R)) {
         assert(
-            llvh::isa<StoreOwnPropertyInst>(S) ||
-            llvh::isa<StorePropertyInst>(S));
+            llvh::isa<BaseStoreOwnPropertyInst>(S) ||
+            llvh::isa<BaseStorePropertyInst>(S));
         Value *storeVal = nullptr;
 
         if (llvh::isa<AllocObjectInst>(R)) {
           // If the property in the store is what this inst wants, skip the
           // store.
-          if (auto *SS = llvh::dyn_cast<StoreOwnPropertyInst>(S)) {
+          if (auto *SS = llvh::dyn_cast<BaseStoreOwnPropertyInst>(S)) {
             storeVal = SS->getStoredValue();
             if (prop != SS->getProperty())
               continue;
@@ -979,7 +981,7 @@ class TypeInferenceImpl {
       }
       return true;
     }
-    llvh::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
+    llvh::DenseSet<BaseCallInst *> &callsites = cgp_->getKnownCallsites(F);
     LLVM_DEBUG(
         dbgs() << F->getInternalName().str() << " has " << callsites.size()
                << " call sites.\n");

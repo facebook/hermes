@@ -35,6 +35,7 @@ class IRVisitorBase {
   ValueRetTy visit##CLASS(const CLASS &I) { \
     return asImpl().visit##PARENT(I);       \
   }
+#define MARK_FIRST(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
 #include "hermes/IR/ValueKinds.def"
 };
 
