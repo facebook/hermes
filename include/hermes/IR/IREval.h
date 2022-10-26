@@ -24,7 +24,7 @@ evalUnaryOperator(ValueKind kind, IRBuilder &builder, Literal *operand);
 /// \returns a literal which represents the result of evaluating the binary
 /// operator or nullptr if the operator cannot be evaluated.
 Literal *evalBinaryOperator(
-    BinaryOperatorInst::OpKind kind,
+    ValueKind kind,
     IRBuilder &builder,
     Literal *lhs,
     Literal *rhs);

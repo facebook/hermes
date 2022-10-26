@@ -157,7 +157,7 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
 
   Value *lhs = binary->getLeftHandSide();
   Value *rhs = binary->getRightHandSide();
-  auto kind = binary->getOperatorKind();
+  auto kind = binary->getKind();
 
   // Try simplifying without replacing the instruction.
   auto *litLhs = llvh::dyn_cast<Literal>(lhs);
@@ -178,10 +178,8 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
   // identical to itself, and comparisons with side effects can't be replaced.
   bool identicalOperands = safeTypes && lhs == rhs && !canBeNaN(lhs);
 
-  using OpKind = BinaryOperatorInst::OpKind;
-
   switch (kind) {
-    case OpKind::EqualKind: // ==
+    case ValueKind::BinaryEqualInstKind: // ==
       // Identical operands must be equal.
       if (identicalOperands) {
         return builder.getLiteralBool(true);
@@ -192,11 +190,11 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
         builder.setInsertionPoint(binary);
         return builder.createBinaryOperatorInst(
-            lhs, rhs, OpKind::StrictlyEqualKind);
+            lhs, rhs, ValueKind::BinaryStrictlyEqualInstKind);
       }
       break;
 
-    case OpKind::NotEqualKind: // !=
+    case ValueKind::BinaryNotEqualInstKind: // !=
       // Identical operands can't be non-equal.
       if (identicalOperands) {
         return builder.getLiteralBool(false);
@@ -207,11 +205,11 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       if (leftTy.isKnownPrimitiveType() && rightTy == leftTy) {
         builder.setInsertionPoint(binary);
         return builder.createBinaryOperatorInst(
-            lhs, rhs, OpKind::StrictlyNotEqualKind);
+            lhs, rhs, ValueKind::BinaryStrictlyNotEqualInstKind);
       }
       break;
 
-    case OpKind::StrictlyEqualKind: // ===
+    case ValueKind::BinaryStrictlyEqualInstKind: // ===
       // Identical operand must be strictly equal.
       if (identicalOperands) {
         return builder.getLiteralBool(true);
@@ -225,42 +223,42 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       }
       break;
 
-    case OpKind::StrictlyNotEqualKind: // !===
+    case ValueKind::BinaryStrictlyNotEqualInstKind: // !===
       // Identical operands can't be non-equal.
       if (identicalOperands) {
         return builder.getLiteralBool(false);
       }
       break;
 
-    case OpKind::LessThanKind: // <
+    case ValueKind::BinaryLessThanInstKind: // <
       // Handle comparison to self:
       if (identicalOperands && !leftTy.isUndefinedType()) {
         return builder.getLiteralBool(false);
       }
       break;
 
-    case OpKind::LessThanOrEqualKind: // <=
+    case ValueKind::BinaryLessThanOrEqualInstKind: // <=
       // Handle comparison to self:
       if (identicalOperands && !leftTy.isUndefinedType()) {
         return builder.getLiteralBool(true);
       }
       break;
 
-    case OpKind::GreaterThanKind: // >
+    case ValueKind::BinaryGreaterThanInstKind: // >
       // Handle comparison to self:
       if (identicalOperands && !leftTy.isUndefinedType()) {
         return builder.getLiteralBool(false);
       }
       break;
 
-    case OpKind::GreaterThanOrEqualKind: // >=
+    case ValueKind::BinaryGreaterThanOrEqualInstKind: // >=
       // Handle comparison to self:
       if (identicalOperands && !leftTy.isUndefinedType()) {
         return builder.getLiteralBool(true);
       }
       break;
 
-    case OpKind::AddKind:
+    case ValueKind::BinaryAddInstKind:
       // Convert ("" + x) or (x + "") as AsString(x).
       if (llvh::isa<LiteralString>(lhs) &&
           cast<LiteralString>(lhs)->getValue().str() == "") {
@@ -274,7 +272,7 @@ Value *simplifyBinOp(BinaryOperatorInst *binary) {
       }
       break;
 
-    case OpKind::OrKind: { // |
+    case ValueKind::BinaryOrInstKind: { // |
       // Convert (x | 0) of (0 | x) to AsInt32.
       Value *nonzeroOp = nullptr;
       if (llvh::isa<LiteralNumber>(lhs) &&
@@ -578,9 +576,9 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
   // Dispatch the different simplification kinds:
   if (llvh::isa<UnaryOperatorInst>(I))
     return simplifyUnOp(llvh::cast<UnaryOperatorInst>(I));
+  if (llvh::isa<BinaryOperatorInst>(I))
+    return simplifyBinOp(llvh::cast<BinaryOperatorInst>(I));
   switch (I->getKind()) {
-    case ValueKind::BinaryOperatorInstKind:
-      return simplifyBinOp(cast<BinaryOperatorInst>(I));
     case ValueKind::AsNumberInstKind:
       return simplifyAsNumber(cast<AsNumberInst>(I));
     case ValueKind::AsNumericInstKind:

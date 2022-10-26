@@ -625,7 +625,7 @@ void ESTreeIRGen::genSwitchStatement(ESTree::SwitchStatementNode *switchStmt) {
 
     auto *caseVal = genExpression(caseStmt->_test);
     auto *pred = Builder.createBinaryOperatorInst(
-        caseVal, discr, BinaryOperatorInst::OpKind::StrictlyEqualKind);
+        caseVal, discr, ValueKind::BinaryStrictlyEqualInstKind);
 
     elseBlock = Builder.createBasicBlock(function);
     Builder.createCondBranchInst(pred, caseBlocks[caseIndex], elseBlock);

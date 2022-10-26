@@ -618,11 +618,9 @@ UnaryOperatorInst *IRBuilder::createUnaryOperatorInst(
   return UOI;
 }
 
-BinaryOperatorInst *IRBuilder::createBinaryOperatorInst(
-    Value *left,
-    Value *right,
-    BinaryOperatorInst::OpKind opKind) {
-  auto BOI = new BinaryOperatorInst(left, right, opKind);
+BinaryOperatorInst *
+IRBuilder::createBinaryOperatorInst(Value *left, Value *right, ValueKind kind) {
+  auto BOI = new BinaryOperatorInst(kind, left, right);
   insert(BOI);
   return BOI;
 }
@@ -950,11 +948,10 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
 CompareBranchInst *IRBuilder::createCompareBranchInst(
     Value *left,
     Value *right,
-    BinaryOperatorInst::OpKind opKind,
+    ValueKind kind,
     BasicBlock *trueBlock,
     BasicBlock *falseBlock) {
-  auto *inst =
-      new CompareBranchInst(left, right, opKind, trueBlock, falseBlock);
+  auto *inst = new CompareBranchInst(kind, left, right, trueBlock, falseBlock);
   insert(inst);
   return inst;
 }

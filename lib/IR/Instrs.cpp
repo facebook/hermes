@@ -24,6 +24,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getNumSuccessors();
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }
@@ -33,6 +34,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getSuccessor(idx);
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }
@@ -42,6 +44,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->setSuccessor(idx, B);
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }
@@ -54,14 +57,12 @@ const char *UnaryOperatorInst::opStringRepr[] =
     {"delete", "void", "typeof", "+", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
-    "",   "==", "!=",  "===", "!==", "<", "<=", ">",         ">=",
-    "<<", ">>", ">>>", "+",   "-",   "*", "/",  "%",         "|",
-    "^",  "&",  "**",  "",    "",    "",  "in", "instanceof"};
+    "==", "!=", "===", "!==", "<", "<=", ">", ">=", "<<", ">>", ">>>",
+    "+",  "-",  "*",   "/",   "%", "|",  "^", "&",  "**", "in", "instanceof"};
 
 const char *BinaryOperatorInst::assignmentOpStringRepr[] = {
-    "=",   "",    "",     "",    "",    "",      "",   "",   "",
-    "<<=", ">>=", ">>>=", "+=",  "-=",  "*=",    "/=", "%=", "|=",
-    "^=",  "&=",  "**=",  "||=", "&&=", "\?\?=", "",   ""};
+    "",   "",   "",   "",   "",   "",   "",   "",   "<<=", ">>=", ">>>=",
+    "+=", "-=", "*=", "/=", "%=", "|=", "^=", "&=", "**=", "",    ""};
 
 ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
   for (int i = 0; i < HERMES_IR_CLASS_LENGTH(UnaryOperatorInst); ++i) {
@@ -93,67 +94,37 @@ SideEffectKind UnaryOperatorInst::getSideEffect() {
   return SideEffectKind::Unknown;
 }
 
-static BinaryOperatorInst::OpKind parseOperator_impl(
+static ValueKind parseOperator_impl(
     llvh::StringRef op,
     const char **lookup_table) {
-  for (int i = 0; i < static_cast<int>(BinaryOperatorInst::OpKind::LAST_OPCODE);
-       i++) {
-    if (op == lookup_table[i]) {
-      return static_cast<BinaryOperatorInst::OpKind>(i);
-    }
+  for (int i = 0; i < HERMES_IR_CLASS_LENGTH(BinaryOperatorInst); ++i) {
+    if (op == lookup_table[i])
+      return HERMES_IR_OFFSET_TO_KIND(BinaryOperatorInst, i);
   }
 
   llvm_unreachable("invalid operator string");
 }
 
-BinaryOperatorInst::OpKind BinaryOperatorInst::parseOperator(
-    llvh::StringRef op) {
+ValueKind BinaryOperatorInst::parseOperator(llvh::StringRef op) {
   return parseOperator_impl(op, opStringRepr);
 }
 
-BinaryOperatorInst::OpKind BinaryOperatorInst::parseAssignmentOperator(
-    llvh::StringRef op) {
+ValueKind BinaryOperatorInst::parseAssignmentOperator(llvh::StringRef op) {
   return parseOperator_impl(op, assignmentOpStringRepr);
 }
 
-llvh::Optional<BinaryOperatorInst::OpKind>
-BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
-  switch (op) {
-    // Commutative operators
-    case OpKind::EqualKind:
-    case OpKind::NotEqualKind:
-    case OpKind::StrictlyEqualKind:
-    case OpKind::StrictlyNotEqualKind:
-    case OpKind::AddKind:
-    case OpKind::MultiplyKind:
-    case OpKind::OrKind:
-    case OpKind::XorKind:
-    case OpKind::AndKind:
-      return op;
-
-    // Rewritable operators
-    case OpKind::LessThanKind:
-      return OpKind::GreaterThanKind;
-    case OpKind::LessThanOrEqualKind:
-      return OpKind::GreaterThanOrEqualKind;
-    case OpKind::GreaterThanKind:
-      return OpKind::LessThanKind;
-    case OpKind::GreaterThanOrEqualKind:
-      return OpKind::LessThanOrEqualKind;
-
-    default:
-      return llvh::None;
-  }
-}
-
-SideEffectKind
-BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
+SideEffectKind BinaryOperatorInst::getBinarySideEffect(
+    Type leftTy,
+    Type rightTy,
+    ValueKind op) {
   // The 'in' and 'instanceof' operators may throw:
-  if (op == OpKind::InKind || op == OpKind::InstanceOfKind)
+  if (op == ValueKind::BinaryInInstKind ||
+      op == ValueKind::BinaryInstanceOfInstKind)
     return SideEffectKind::Unknown;
 
   // Strict equality does not throw or have other side effects (per ES5 11.9.6).
-  if (op == OpKind::StrictlyNotEqualKind || op == OpKind::StrictlyEqualKind)
+  if (op == ValueKind::BinaryStrictlyNotEqualInstKind ||
+      op == ValueKind::BinaryStrictlyEqualInstKind)
     return SideEffectKind::None;
 
   // This instruction does not read/write memory if the LHS and RHS types are
@@ -366,36 +337,10 @@ void SwitchImmInst::setSuccessor(unsigned idx, BasicBlock *B) {
   setOperand(B, FirstCaseIdx + (idx - 1) * 2 + 1);
 }
 
-Instruction::Variety Instruction::getVariety() const {
-  const ValueKind kind = getKind();
-
-  // Get the operator kind, if the instruction has one.
-  unsigned operatorKind;
-  switch (kind) {
-    case ValueKind::BinaryOperatorInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<BinaryOperatorInst>(this)->getOperatorKind());
-      break;
-
-    case ValueKind::CompareBranchInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<CompareBranchInst>(this)->getOperatorKind());
-      break;
-
-    default:
-      operatorKind = 0;
-      break;
-  }
-
-  // Combine the two kinds into a single value.
-  return Variety(std::make_pair(static_cast<unsigned>(kind), operatorKind));
-}
-
 bool Instruction::isIdenticalTo(const Instruction *RHS) const {
-  // Check if both instructions have the same variety and number of operands.
+  // Check if both instructions have the same kind and number of operands.
   // This should filter out most cases.
-  if (getVariety() != RHS->getVariety() ||
-      getNumOperands() != RHS->getNumOperands())
+  if (getKind() != RHS->getKind() || getNumOperands() != RHS->getNumOperands())
     return false;
 
   // Check operands.
@@ -422,7 +367,8 @@ class InstructionHashConstructor
 } // namespace
 
 llvh::hash_code Instruction::getHashCode() const {
-  llvh::hash_code hc = llvh::hash_combine(getVariety(), getNumOperands());
+  llvh::hash_code hc =
+      llvh::hash_combine((unsigned)getKind(), getNumOperands());
 
   // Check operands.
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i)

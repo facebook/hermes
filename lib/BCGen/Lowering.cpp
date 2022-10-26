@@ -59,7 +59,7 @@ void SwitchLowering::lowerSwitchIntoIfs(SwitchInst *switchInst) {
     auto *pred = builder.createBinaryOperatorInst(
         caseEntry.first,
         switchInst->getInputValue(),
-        BinaryOperatorInst::OpKind::StrictlyEqualKind);
+        ValueKind::BinaryStrictlyEqualInstKind);
     // Cond branch - if the predicate of the comparison is true then jump
     // into the destination block. Otherwise jump to the next comparison in
     // the chain.
@@ -724,17 +724,16 @@ bool LimitAllocArray::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LowerCondBranch::isOperatorSupported(BinaryOperatorInst::OpKind op) {
-  using OpKind = BinaryOperatorInst::OpKind;
-  switch (op) {
-    case OpKind::LessThanKind: // <
-    case OpKind::LessThanOrEqualKind: // <=
-    case OpKind::GreaterThanKind: // >
-    case OpKind::GreaterThanOrEqualKind: // >=
-    case OpKind::StrictlyEqualKind:
-    case OpKind::StrictlyNotEqualKind:
-    case OpKind::NotEqualKind: // !=
-    case OpKind::EqualKind: // ==
+bool LowerCondBranch::isOperatorSupported(ValueKind kind) {
+  switch (kind) {
+    case ValueKind::BinaryLessThanInstKind: // <
+    case ValueKind::BinaryLessThanOrEqualInstKind: // <=
+    case ValueKind::BinaryGreaterThanInstKind: // >
+    case ValueKind::BinaryGreaterThanOrEqualInstKind: // >=
+    case ValueKind::BinaryStrictlyEqualInstKind:
+    case ValueKind::BinaryStrictlyNotEqualInstKind:
+    case ValueKind::BinaryNotEqualInstKind: // !=
+    case ValueKind::BinaryEqualInstKind: // ==
       return true;
     default:
       return false;
@@ -775,7 +774,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
           continue;
 
       // Only certain operators are supported.
-      if (!isOperatorSupported(binopInst->getOperatorKind()))
+      if (!isOperatorSupported(binopInst->getKind()))
         continue;
 
       builder.setInsertionPoint(cbInst);
@@ -783,7 +782,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
       auto *cmpBranch = builder.createCompareBranchInst(
           LHS,
           RHS,
-          binopInst->getOperatorKind(),
+          CompareBranchInst::fromBinaryOperatorValueKind(binopInst->getKind()),
           cbInst->getTrueDest(),
           cbInst->getFalseDest());
 
@@ -815,8 +814,7 @@ bool LowerExponentiationOperator::runOnFunction(Function *F) {
       // iteration.
       ++it;
       if (auto *binOp = llvh::dyn_cast<BinaryOperatorInst>(inst)) {
-        if (binOp->getOperatorKind() ==
-            BinaryOperatorInst::OpKind::ExponentiationKind) {
+        if (binOp->getKind() == ValueKind::BinaryExponentiationInstKind) {
           changed |= lowerExponentiationOperator(builder, binOp);
         }
       }
@@ -830,8 +828,7 @@ bool LowerExponentiationOperator::lowerExponentiationOperator(
     IRBuilder &builder,
     BinaryOperatorInst *binOp) {
   assert(
-      binOp->getOperatorKind() ==
-          BinaryOperatorInst::OpKind::ExponentiationKind &&
+      binOp->getKind() == ValueKind::BinaryExponentiationInstKind &&
       "lowerExponentiationOperator must take a ** operator");
   // Replace a ** b with HermesInternal.exponentiationOperator(a, b)
   builder.setInsertionPoint(binOp);

@@ -424,10 +424,8 @@ class IRBuilder {
 
   PhiInst *createPhiInst();
 
-  BinaryOperatorInst *createBinaryOperatorInst(
-      Value *left,
-      Value *right,
-      BinaryOperatorInst::OpKind opKind);
+  BinaryOperatorInst *
+  createBinaryOperatorInst(Value *left, Value *right, ValueKind kind);
 
   GetPNamesInst *createGetPNamesInst(
       Value *iteratorAddr,
@@ -552,7 +550,7 @@ class IRBuilder {
   CompareBranchInst *createCompareBranchInst(
       Value *left,
       Value *right,
-      BinaryOperatorInst::OpKind opKind,
+      ValueKind kind,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
 

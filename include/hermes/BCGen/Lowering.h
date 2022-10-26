@@ -135,7 +135,7 @@ class LowerCondBranch : public FunctionPass {
  private:
   /// \return whether the given binary operator can be lowered to a conditional
   /// branch.
-  static bool isOperatorSupported(BinaryOperatorInst::OpKind op);
+  static bool isOperatorSupported(ValueKind kind);
 };
 
 /// Iterates over all instructions and performs lowering on exponentiation

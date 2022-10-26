@@ -563,9 +563,15 @@ class ESTreeIRGen {
 
   Value *genNewExpr(ESTree::NewExpressionNode *N);
   Value *genAssignmentExpr(ESTree::AssignmentExpressionNode *AE);
+
+  enum class LogicalAssignmentOp : uint8_t {
+    ShortCircuitOrKind, // ||=
+    ShortCircuitAndKind, // &&=
+    NullishCoalesceKind, // ??=
+  };
   Value *genLogicalAssignmentExpr(
       ESTree::AssignmentExpressionNode *AE,
-      BinaryOperatorInst::OpKind AssignmentKind,
+      LogicalAssignmentOp assignmentKind,
       LReference lref,
       Identifier nameHint);
   Value *genConditionalExpr(ESTree::ConditionalExpressionNode *C);
@@ -961,7 +967,7 @@ class ESTreeIRGen {
     return Builder.createBinaryOperatorInst(
         Builder.createLoadStackInst(iteratorRecord.iterStorage),
         Builder.getLiteralUndefined(),
-        BinaryOperatorInst::OpKind::StrictlyEqualKind);
+        ValueKind::BinaryStrictlyEqualInstKind);
   }
 
   /// Emit the IteratorCloseInst, which will close the iterator if it was
