@@ -381,6 +381,9 @@ enum class ValueKind : uint8_t {
   First_ValueKind,
 #define INCLUDE_ALL_INSTRS
 #define DEF_VALUE(CLASS, PARENT) CLASS##Kind,
+#define BEGIN_VALUE(CLASS, PARENT) First_##CLASS##Kind,
+#define DEF_TAG(NAME, PARENT) NAME##Kind,
+#define END_VALUE(CLASS) Last_##CLASS##Kind,
 #define MARK_VALUE(CLASS) CLASS##Kind,
 #define MARK_FIRST(CLASS, PARENT) First_##CLASS##Kind,
 #define MARK_LAST(CLASS) Last_##CLASS##Kind,
@@ -397,6 +400,19 @@ static inline bool kindInRange(ValueKind kind, ValueKind from, ValueKind to) {
 #define HERMES_IR_KIND_IN_CLASS(kind, CLASS) \
   kindInRange(                               \
       kind, ValueKind::First_##CLASS##Kind, ValueKind::Last_##CLASS##Kind)
+
+/// Return the numeric offset of the specified kind from the first kind in the
+/// class.
+#define HERMES_IR_KIND_TO_OFFSET(CLASS, kind) \
+  ((int)(kind) - (int)ValueKind::First_##CLASS##Kind - 1)
+
+/// Convert from an offset to a ValueKind inside a class.
+#define HERMES_IR_OFFSET_TO_KIND(CLASS, offset) \
+  ((ValueKind)((int)ValueKind::First_##CLASS##Kind + (offset) + 1))
+
+/// Return number of values in an IR class.
+#define HERMES_IR_CLASS_LENGTH(CLASS) \
+  ((int)ValueKind::Last_##CLASS##Kind - (int)ValueKind::First_##CLASS##Kind - 1)
 
 /// A linked list of function scopes provided as context during IRGen.
 /// This how e.g. the debugger can provide information that an identifier 'foo'

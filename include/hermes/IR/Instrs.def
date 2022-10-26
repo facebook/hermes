@@ -8,6 +8,15 @@
 #ifndef DEF_VALUE
 #define DEF_VALUE(NAME, PARENT)
 #endif
+#ifndef BEGIN_VALUE
+#define BEGIN_VALUE(NAME, PARENT)
+#endif
+#ifndef END_VALUE
+#define END_VALUE(NAME)
+#endif
+#ifndef DEF_TAG
+#define DEF_TAG(NAME, PARENT)
+#endif
 #ifndef MARK_FIRST
 #define MARK_FIRST(NAME, PARENT)
 #endif
@@ -23,6 +32,18 @@
 #define INCLUDE_HBC_BACKEND
 #endif
 
+BEGIN_VALUE(UnaryOperatorInst, Instruction)
+DEF_TAG(UnaryDeleteInst, UnaryOperatorInst)
+DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
+DEF_TAG(UnaryTypeofInst, UnaryOperatorInst)
+DEF_TAG(UnaryPlusInst, UnaryOperatorInst)
+DEF_TAG(UnaryMinusInst, UnaryOperatorInst)
+DEF_TAG(UnaryTildeInst, UnaryOperatorInst)
+DEF_TAG(UnaryBangInst, UnaryOperatorInst)
+DEF_TAG(UnaryIncInst, UnaryOperatorInst)
+DEF_TAG(UnaryDecInst, UnaryOperatorInst)
+END_VALUE(UnaryOperatorInst)
+
 DEF_VALUE(AddEmptyStringInst, Instruction)
 DEF_VALUE(AsNumberInst, Instruction)
 DEF_VALUE(AsNumericInst, Instruction)
@@ -31,7 +52,6 @@ DEF_VALUE(LoadStackInst, Instruction)
 DEF_VALUE(MovInst, Instruction)
 DEF_VALUE(ImplicitMovInst, Instruction)
 DEF_VALUE(CoerceThisNSInst, Instruction)
-DEF_VALUE(UnaryOperatorInst, Instruction)
 DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(LoadFrameInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
@@ -168,3 +188,6 @@ DEF_VALUE(HBCProfilePointInst, Instruction)
 #undef MARK_LAST
 #undef TERMINATOR
 #endif
+#undef BEGIN_VALUE
+#undef END_VALUE
+#undef DEF_TAG

@@ -196,6 +196,7 @@ class HBCISel {
 #define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT) \
   void generate##CLASS(CLASS *Inst, BasicBlock *next);
+#define BEGIN_VALUE(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
 #include "hermes/IR/ValueKinds.def"
 #undef DEF_VALUE
 #undef MARK_VALUE

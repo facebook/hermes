@@ -52,6 +52,10 @@ void Value::destroy(Value *V) {
   case ValueKind::XX##Kind:   \
     delete cast<XX>(V);       \
     break;
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    delete cast<PARENT>(V); \
+    break;
 #include "hermes/IR/ValueKinds.def"
   }
 }
@@ -62,7 +66,8 @@ llvh::StringRef Value::getKindStr() const {
       llvm_unreachable("Invalid kind");
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
-    return llvh::StringRef(#XX);
+    return llvh::StringLiteral(#XX);
+#define DEF_TAG(XX, PARENT) DEF_VALUE(XX, PARENT)
 #include "hermes/IR/ValueKinds.def"
   }
 }
@@ -408,6 +413,9 @@ llvh::StringRef Instruction::getName() {
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
     return #XX;
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    return #PARENT;
 #include "hermes/IR/Instrs.def"
   }
 }
@@ -419,6 +427,9 @@ SideEffectKind Instruction::getDerivedSideEffect() {
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
     return cast<XX>(this)->getSideEffect();
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    return cast<PARENT>(this)->getSideEffect();
 #include "hermes/IR/Instrs.def"
   }
 }
@@ -430,6 +441,9 @@ OptValue<Type> Instruction::getInherentType() {
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
     return XX::getInherentTypeImpl();
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    return PARENT::getInherentTypeImpl();
 #include "hermes/IR/Instrs.def"
   }
 }
@@ -441,6 +455,9 @@ bool Instruction::hasOutput() {
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
     return XX::hasOutput();
+#define DEF_TAG(XX, PARENT) \
+  case ValueKind::XX##Kind: \
+    return PARENT::hasOutput();
 #include "hermes/IR/Instrs.def"
   }
 }
@@ -453,6 +470,10 @@ WordBitSet<> Instruction::getChangedOperands() {
 #define DEF_VALUE(XX, PARENT)                        \
   case ValueKind::XX##Kind:                          \
     return cast<XX>(this)->getChangedOperandsImpl(); \
+    break;
+#define DEF_TAG(XX, PARENT)                              \
+  case ValueKind::XX##Kind:                              \
+    return cast<PARENT>(this)->getChangedOperandsImpl(); \
     break;
 #include "hermes/IR/Instrs.def"
   }

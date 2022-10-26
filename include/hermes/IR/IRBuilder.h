@@ -408,9 +408,7 @@ class IRBuilder {
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
-  UnaryOperatorInst *createUnaryOperatorInst(
-      Value *value,
-      UnaryOperatorInst::OpKind opKind);
+  UnaryOperatorInst *createUnaryOperatorInst(Value *value, ValueKind kind);
 
   DirectEvalInst *createDirectEvalInst(Value *operand);
 

@@ -95,6 +95,7 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   void visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst);
 
 #define DEF_VALUE(XX, PARENT) void visit##XX(const XX &Inst);
+#define BEGIN_VALUE(XX, PARENT) DEF_VALUE(XX, PARENT)
 #include "hermes/IR/Instrs.def"
 
  private:

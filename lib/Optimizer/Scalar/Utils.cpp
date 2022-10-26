@@ -228,9 +228,10 @@ bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
   if (I->hasSideEffect()) {
     return false;
   }
+  if (llvh::isa<UnaryOperatorInst>(I))
+    return true;
   switch (I->getKind()) {
     case ValueKind::GetNewTargetInstKind:
-    case ValueKind::UnaryOperatorInstKind:
     case ValueKind::BinaryOperatorInstKind:
     case ValueKind::HBCResolveEnvironmentKind:
     case ValueKind::HBCLoadConstInstKind:

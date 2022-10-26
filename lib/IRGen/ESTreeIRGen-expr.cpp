@@ -205,7 +205,7 @@ void ESTreeIRGen::genExpressionBranch(
     case ESTree::NodeKind::UnaryExpression: {
       auto *e = cast<ESTree::UnaryExpressionNode>(expr);
       switch (UnaryOperatorInst::parseOperator(e->_operator->str())) {
-        case UnaryOperatorInst::OpKind::BangKind:
+        case ValueKind::UnaryBangInstKind:
           // Do not propagate onNullish here because !expr cannot be nullish.
           return genExpressionBranch(e->_argument, onFalse, onTrue, nullptr);
         default:
@@ -1390,7 +1390,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   auto kind = UnaryOperatorInst::parseOperator(U->_operator->str());
 
   // Handle the delete unary expression. https://es5.github.io/#x11.4.1
-  if (kind == UnaryOperatorInst::OpKind::DeleteKind) {
+  if (kind == ValueKind::UnaryDeleteInstKind) {
     if (auto *memberExpr =
             llvh::dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
       LLVM_DEBUG(llvh::dbgs() << "IRGen delete member expression.\n");
@@ -1439,7 +1439,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   }
 
   // Need to handle the special case of "typeof <undefined variable>".
-  if (kind == UnaryOperatorInst::OpKind::TypeofKind) {
+  if (kind == ValueKind::UnaryTypeofInstKind) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       Value *argument = genIdentifierExpression(id, true);
       return Builder.createUnaryOperatorInst(argument, kind);
@@ -1451,7 +1451,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   auto *cookie = instrumentIR_.preUnaryExpression(U, argument);
 
   Value *result;
-  if (kind == UnaryOperatorInst::OpKind::PlusKind)
+  if (kind == ValueKind::UnaryPlusInstKind)
     result = Builder.createAsNumberInst(argument);
   else
     result = Builder.createUnaryOperatorInst(argument, kind);
@@ -1462,11 +1462,11 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   LLVM_DEBUG(llvh::dbgs() << "IRGen update expression.\n");
   bool isPrefix = updateExpr->_prefix;
 
-  UnaryOperatorInst::OpKind opKind;
+  ValueKind opKind;
   if (updateExpr->_operator->str() == "++") {
-    opKind = UnaryOperatorInst::OpKind::IncKind;
+    opKind = ValueKind::UnaryIncInstKind;
   } else if (updateExpr->_operator->str() == "--") {
-    opKind = UnaryOperatorInst::OpKind::DecKind;
+    opKind = ValueKind::UnaryDecInstKind;
   } else {
     llvm_unreachable("Invalid update operator");
   }
