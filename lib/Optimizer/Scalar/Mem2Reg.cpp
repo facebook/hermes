@@ -78,7 +78,7 @@ static void collectCapturedVariables(
 
       // Recursively check capturing functions by inspecting the created
       // closure.
-      if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
+      if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
         collectCapturedVariables(
             capturedLoads, capturedStores, CF->getFunctionCode());
         continue;
@@ -234,7 +234,7 @@ static bool promoteLoads(BasicBlock *BB) {
       continue;
     }
 
-    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(
@@ -382,7 +382,7 @@ static bool eliminateStores(
       }
     }
 
-    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
+    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
       if (usePreciseCaptureAnalysis) {
         collectCapturedVariables(

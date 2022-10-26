@@ -156,7 +156,7 @@ class HBCISel {
   void emitUnreachableIfDebug();
 
   /// In debug mode, assert that parameters have been correctly allocated.
-  void verifyCall(CallInst *Inst);
+  void verifyCall(BaseCallInst *Inst);
 
   /// The last emitted property cache index.
   uint8_t lastPropertyReadCacheIndex_{0};

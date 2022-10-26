@@ -25,24 +25,19 @@ using namespace hermes;
 
 // Make sure the ValueKinds.def tree is consistent with the class hierarchy.
 #define QUOTE(X) #X
-#define DEF_VALUE(CLASS, PARENT)                                           \
-  static_assert(                                                           \
-      std::is_base_of<PARENT, CLASS>::value,                               \
-      QUOTE(CLASS) " should directly inherit from " QUOTE(PARENT));        \
-  static_assert(                                                           \
-      std::is_convertible<CLASS *, PARENT *>::value,                       \
-      QUOTE(CLASS) " should publicly inherit from " QUOTE(PARENT));        \
-  static_assert(                                                           \
-      ValueKind::CLASS##Kind > ValueKind::First_##PARENT##Kind,            \
-      QUOTE(CLASS) "Kind should be after First_" QUOTE(PARENT) "Kind");    \
-  static_assert(                                                           \
-      ValueKind::CLASS##Kind < ValueKind::Last_##PARENT##Kind,             \
-      QUOTE(CLASS) "Kind should be before Last_" QUOTE(PARENT) "Kind");    \
-  static_assert(                                                           \
-      ValueKind::PARENT##Kind ==                                           \
-          static_cast<ValueKind>(                                          \
-              static_cast<unsigned>(ValueKind::First_##PARENT##Kind) + 1), \
-      QUOTE(PARENT) "Kind should be right after First_" QUOTE(PARENT) "Kind");
+#define DEF_VALUE(CLASS, PARENT)                                        \
+  static_assert(                                                        \
+      std::is_base_of<PARENT, CLASS>::value,                            \
+      QUOTE(CLASS) " should directly inherit from " QUOTE(PARENT));     \
+  static_assert(                                                        \
+      std::is_convertible<CLASS *, PARENT *>::value,                    \
+      QUOTE(CLASS) " should publicly inherit from " QUOTE(PARENT));     \
+  static_assert(                                                        \
+      ValueKind::CLASS##Kind > ValueKind::First_##PARENT##Kind,         \
+      QUOTE(CLASS) "Kind should be after First_" QUOTE(PARENT) "Kind"); \
+  static_assert(                                                        \
+      ValueKind::CLASS##Kind < ValueKind::Last_##PARENT##Kind,          \
+      QUOTE(CLASS) "Kind should be before Last_" QUOTE(PARENT) "Kind");
 #include "hermes/IR/ValueKinds.def"
 #undef QUOTE
 

@@ -52,7 +52,8 @@ TEST(IRScopeChainTest, BasicScopeChainTest) {
       for (const auto &Ins : BB) {
         if (llvh::isa<LoadFrameInst>(&Ins)) {
           loadsFromNonglobals++;
-        } else if (const auto *LP = llvh::dyn_cast<LoadPropertyInst>(&Ins)) {
+        } else if (
+            const auto *LP = llvh::dyn_cast<BaseLoadPropertyInst>(&Ins)) {
           if (llvh::isa<GlobalObject>(LP->getObject()))
             loadsFromGlobals++;
         }

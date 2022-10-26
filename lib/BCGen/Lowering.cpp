@@ -637,13 +637,13 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &Inst : BB) {
-      if (llvh::isa<LoadPropertyInst>(&Inst)) {
+      if (llvh::isa<BaseLoadPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, LoadPropertyInst::PropertyIdx);
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<StoreOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<BaseStoreOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StoreOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {

@@ -151,7 +151,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
   while (!workList.empty()) {
     Usage U = workList.pop_back_val();
 
-    if (auto *call = llvh::dyn_cast<CallInst>(U.I)) {
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(U.I)) {
       // Make sure require() doesn't escape as a parameter.
       bool fail = false;
       for (unsigned numArgs = call->getNumArguments(), arg = 0; arg != numArgs;
@@ -180,11 +180,19 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
         canResolve_ = false;
         continue;
       }
+      if (!llvh::isa<CallInst>(call)) {
+        EM_.warning(
+            Warning::UnresolvedStaticRequire,
+            call->getLocation(),
+            "'require' used in unexpected way");
+        canResolve_ = false;
+        continue;
+      }
 
       assert(
           call->getCallee() == U.V && "Value is not used at all in CallInst");
 
-      resolveRequireCall(moduleFunction, call);
+      resolveRequireCall(moduleFunction, llvh::cast<CallInst>(call));
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.
 
@@ -219,7 +227,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
-    } else if (auto *LPI = llvh::dyn_cast<LoadPropertyInst>(U.I)) {
+    } else if (auto *LPI = llvh::dyn_cast<BaseLoadPropertyInst>(U.I)) {
       if (LPI->getProperty() == U.V) {
         // `require` must not be used as a key in a LoadPropertyInst,
         // because it could be used in a getter and escape.

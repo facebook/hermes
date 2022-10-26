@@ -416,7 +416,7 @@ inline CodeBlock *createCodeBlock(
       0,
       BFG->generateBytecodeFunction(
           Function::DefinitionKind::ES5Function,
-          ValueKind::FunctionKind,
+          ValueKind::NormalFunctionKind,
           true,
           0,
           0));

@@ -121,7 +121,7 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
 
   // StoreOwnPropertyInst and StoreNewOwnPropertyInst.
-  if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(Inst)) {
+  if (auto *SOP = llvh::dyn_cast<BaseStoreOwnPropertyInst>(Inst)) {
     if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
       if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
         // In StoreNewOwnPropertyInst the property name must be a literal.
@@ -146,15 +146,15 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
 
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.
-  if (llvh::isa<StorePropertyInst>(Inst) &&
-      opIndex == StorePropertyInst::PropertyIdx &&
+  if (llvh::isa<BaseStorePropertyInst>(Inst) &&
+      opIndex == BaseStorePropertyInst::PropertyIdx &&
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
 
   // If LoadPropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.
-  if (llvh::isa<LoadPropertyInst>(Inst) &&
-      opIndex == LoadPropertyInst::PropertyIdx &&
+  if (llvh::isa<BaseLoadPropertyInst>(Inst) &&
+      opIndex == BaseLoadPropertyInst::PropertyIdx &&
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
 
@@ -435,7 +435,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   uniqueUsers.insert(
       createArguments->getUsers().begin(), createArguments->getUsers().end());
   for (Value *user : uniqueUsers) {
-    auto *load = llvh::dyn_cast<LoadPropertyInst>(user);
+    auto *load = llvh::dyn_cast<BaseLoadPropertyInst>(user);
     if (load && load->getObject() == createArguments) {
       builder.setInsertionPoint(load);
       builder.setLocation(load->getLocation());
@@ -604,7 +604,7 @@ bool LowerCalls::runOnFunction(Function *F) {
 
   for (auto &BB : *F) {
     for (auto &I : BB) {
-      auto *call = llvh::dyn_cast<CallInst>(&I);
+      auto *call = llvh::dyn_cast<BaseCallInst>(&I);
       // This also matches constructors.
       if (!call)
         continue;

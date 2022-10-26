@@ -91,6 +91,9 @@ class Verifier : public InstructionVisitor<Verifier, void> {
   void visitFunction(const Function &F);
   void visitBasicBlock(const BasicBlock &BB);
 
+  void visitBaseStoreOwnPropertyInst(const BaseStoreOwnPropertyInst &Inst);
+  void visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst);
+
 #define DEF_VALUE(XX, PARENT) void visit##XX(const XX &Inst);
 #include "hermes/IR/Instrs.def"
 
@@ -287,8 +290,6 @@ static bool isTerminator(const Instruction *Inst) {
   return &*Inst->getParent()->rbegin() == Inst;
 }
 
-void Verifier::visitSingleOperandInst(const SingleOperandInst &Inst) {}
-
 void Verifier::visitReturnInst(const ReturnInst &Inst) {
   Assert(
       isTerminator(&Inst),
@@ -435,8 +436,15 @@ void Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
   // Nothing to verify at this point.
 }
 
+void Verifier::visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst) {
+  Assert(
+      llvh::isa<NormalFunction>(Inst.getFunctionCode()) ||
+          llvh::isa<GeneratorFunction>(Inst.getFunctionCode()) ||
+          llvh::isa<AsyncFunction>(Inst.getFunctionCode()),
+      "BaseCreateCallableInst only accepts NormalFunction/GeneratorFunction");
+}
 void Verifier::visitCreateFunctionInst(const CreateFunctionInst &Inst) {
-  // Nothing to verify at this point.
+  visitBaseCreateCallableInst(Inst);
 }
 
 void Verifier::visitCallInst(const CallInst &Inst) {
@@ -454,7 +462,6 @@ void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
   assert(
       isNativeBuiltin(Inst.getBuiltinIndex()) &&
       "CallBuiltin must take a native builtin.");
-  visitCallInst(Inst);
 }
 
 void Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
@@ -478,40 +485,34 @@ void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
   Assert(
       Inst.getNumArguments() <= HBCCallDirectInst::MAX_ARGUMENTS,
       "CallBuiltin too many arguments");
-  visitCallInst(Inst);
 }
 
-void Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {
-  // Nothing to verify at this point.
-}
-
+void Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {}
 void Verifier::visitTryLoadGlobalPropertyInst(
-    const TryLoadGlobalPropertyInst &Inst) {
-  visitLoadPropertyInst(Inst);
-}
+    const TryLoadGlobalPropertyInst &Inst) {}
 
 void Verifier::visitDeletePropertyInst(const DeletePropertyInst &Inst) {
   // Nothing to verify at this point.
 }
 
-void Verifier::visitStorePropertyInst(const StorePropertyInst &Inst) {
-  // Nothing to verify at this point.
-}
+void Verifier::visitStorePropertyInst(const StorePropertyInst &Inst) {}
 
 void Verifier::visitTryStoreGlobalPropertyInst(
-    const TryStoreGlobalPropertyInst &Inst) {
-  visitStorePropertyInst(Inst);
-}
+    const TryStoreGlobalPropertyInst &Inst) {}
 
-void Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
+void Verifier::visitBaseStoreOwnPropertyInst(
+    const BaseStoreOwnPropertyInst &Inst) {
   Assert(
       llvh::isa<LiteralBool>(
           Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
-      "StoreOwnPropertyInst::IsEnumerable must be a boolean literal");
+      "BaseStoreOwnPropertyInst::IsEnumerable must be a boolean literal");
+}
+void Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
+  visitBaseStoreOwnPropertyInst(Inst);
 }
 void Verifier::visitStoreNewOwnPropertyInst(
     const StoreNewOwnPropertyInst &Inst) {
-  visitStoreOwnPropertyInst(Inst);
+  visitBaseStoreOwnPropertyInst(Inst);
   Assert(
       llvh::isa<LiteralString>(
           Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
@@ -739,10 +740,6 @@ void Verifier::visitDebuggerInst(DebuggerInst const &Inst) {
   // Nothing to verify at this point.
 }
 
-void Verifier::visitTerminatorInst(const TerminatorInst &Inst) {
-  Assert(false, "TerminatorInst is a virtual class.");
-}
-
 void Verifier::visitDirectEvalInst(DirectEvalInst const &Inst) {
   // Nothing to verify at this point.
 }
@@ -792,7 +789,11 @@ void Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
   visitBinaryOperatorLikeInst(Inst);
 }
 
-void Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {}
+void Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
+  Assert(
+      llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
+      "CreateGeneratorInst must take a GeneratorInnerFunction");
+}
 void Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
   Assert(
       &Inst == &Inst.getParent()->front() &&
@@ -802,14 +803,14 @@ void Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
 void Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {}
 
 void Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
-  visitCreateGeneratorInst(Inst);
+  Assert(
+      llvh::isa<GeneratorInnerFunction>(Inst.getFunctionCode()),
+      "HBCCreateGeneratorInst must take a GeneratorInnerFunction");
 }
 
 void Verifier::visitHBCGetThisNSInst(const HBCGetThisNSInst &Inst) {
   // Nothing to verify at this point.
 }
-void Verifier::visitHBCGetArgumentsPropByValInst(
-    const HBCGetArgumentsPropByValInst &Inst) {}
 void Verifier::visitHBCGetArgumentsPropByValLooseInst(
     const HBCGetArgumentsPropByValLooseInst &Inst) {
   // Nothing to verify at this point.
@@ -822,7 +823,6 @@ void Verifier::visitHBCGetArgumentsLengthInst(
     const HBCGetArgumentsLengthInst &Inst) {
   // Nothing to verify at this point.
 }
-void Verifier::visitHBCReifyArgumentsInst(const HBCReifyArgumentsInst &Inst) {}
 void Verifier::visitHBCReifyArgumentsLooseInst(
     const HBCReifyArgumentsLooseInst &Inst) {
   // Nothing to verify at this point.
@@ -837,7 +837,7 @@ void Verifier::visitHBCGetConstructedObjectInst(
     const HBCGetConstructedObjectInst &Inst) {}
 
 void Verifier::visitHBCCreateFunctionInst(const HBCCreateFunctionInst &Inst) {
-  visitCreateFunctionInst(Inst);
+  visitBaseCreateCallableInst(Inst);
 }
 void Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {}
 void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}

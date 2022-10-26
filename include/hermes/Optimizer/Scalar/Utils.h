@@ -39,11 +39,13 @@ Function *getCallee(Value *callee);
 
 /// \returns True if the value \p C is the caller's callee and is not captured
 ///   by any of the arguments.
-bool isDirectCallee(Value *C, CallInst *CI);
+bool isDirectCallee(Value *C, BaseCallInst *CI);
 
 /// Collect the call sites for function \p F in \p callsites.
 /// \returns True if all call sites are known and \p callsites is valid.
-bool getCallSites(Function *F, llvh::SmallVectorImpl<CallInst *> &callsites);
+bool getCallSites(
+    Function *F,
+    llvh::SmallVectorImpl<BaseCallInst *> &callsites);
 
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
 bool deleteIncomingBlockFromPhis(

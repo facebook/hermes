@@ -22,7 +22,7 @@ class HVMRegisterAllocator : public RegisterAllocator {
 
  protected:
   void handleInstruction(Instruction *I) override;
-  void allocateCallInst(CallInst *I);
+  void allocateCallInst(BaseCallInst *I);
   bool hasTargetSpecificLowering(Instruction *I) override;
 
  public:

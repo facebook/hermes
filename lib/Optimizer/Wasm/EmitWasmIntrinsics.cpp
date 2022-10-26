@@ -96,14 +96,15 @@ bool EmitWasmIntrinsics::runOnFunction(Function *F) {
       if (inst->getKind() != ValueKind::CallInstKind)
         continue;
       auto *callInst = cast<CallInst>(inst);
-      auto *loadProp = llvh::dyn_cast<LoadPropertyInst>(callInst->getCallee());
+      auto *loadProp =
+          llvh::dyn_cast<BaseLoadPropertyInst>(callInst->getCallee());
       if (!loadProp)
         continue;
       auto propLit = llvh::dyn_cast<LiteralString>(loadProp->getProperty());
       if (!propLit)
         continue;
       auto *loadGlobalProp =
-          llvh::dyn_cast<LoadPropertyInst>(loadProp->getObject());
+          llvh::dyn_cast<BaseLoadPropertyInst>(loadProp->getObject());
       if (!loadGlobalProp)
         continue;
       if (!llvh::isa<GlobalObject>(loadGlobalProp->getObject()))

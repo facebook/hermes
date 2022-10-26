@@ -378,29 +378,25 @@ enum class SideEffectKind {
 };
 
 enum class ValueKind : uint8_t {
+  First_ValueKind,
 #define INCLUDE_ALL_INSTRS
 #define DEF_VALUE(CLASS, PARENT) CLASS##Kind,
 #define MARK_VALUE(CLASS) CLASS##Kind,
-#define MARK_FIRST(CLASS) First_##CLASS##Kind,
+#define MARK_FIRST(CLASS, PARENT) First_##CLASS##Kind,
 #define MARK_LAST(CLASS) Last_##CLASS##Kind,
 #include "hermes/IR/ValueKinds.def"
 #undef INCLUDE_ALL_INSTRS
+  Last_ValueKind,
 };
 
-/// \returns true if \p kind is equal to \p base or a subkind of it.
-static inline bool kindIsA(ValueKind kind, ValueKind base) {
-  switch (base) {
-    default:
-      return kind == base;
-#define INCLUDE_ALL_INSTRS
-#define MARK_FIRST(CLASS)                            \
-  case ValueKind::CLASS##Kind:                       \
-    return kind >= ValueKind::First_##CLASS##Kind && \
-        kind <= ValueKind::Last_##CLASS##Kind;
-#include "hermes/IR/ValueKinds.def"
-#undef INCLUDE_ALL_INSTRS
-  }
+static inline bool kindInRange(ValueKind kind, ValueKind from, ValueKind to) {
+  return kind > from && kind < to;
 }
+
+/// Return true if the specified kind falls in the range of the specified class.
+#define HERMES_IR_KIND_IN_CLASS(kind, CLASS) \
+  kindInRange(                               \
+      kind, ValueKind::First_##CLASS##Kind, ValueKind::Last_##CLASS##Kind)
 
 /// A linked list of function scopes provided as context during IRGen.
 /// This how e.g. the debugger can provide information that an identifier 'foo'
@@ -652,7 +648,7 @@ class Literal : public Value {
   explicit Literal(ValueKind k) : Value(k) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::LiteralKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Literal);
   }
 };
 
@@ -1166,7 +1162,7 @@ class Instruction
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::InstructionKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Instruction);
   }
 
   /// An opaque class representing the variety of an instruction.
@@ -1350,10 +1346,7 @@ namespace hermes {
 
 /// VariableScope is a lexical scope.
 class VariableScope : public Value {
-  using Value::Value;
   using VariableListType = llvh::SmallVector<Variable *, 8>;
-
-  friend class Function;
 
   /// The function where the scope is declared.
   Function *function_;
@@ -1366,9 +1359,6 @@ class VariableScope : public Value {
   /// subclass such as Function.
   VariableScope(ValueKind kind, Function *function)
       : Value(kind), function_(function) {}
-
-  VariableScope(Function *function)
-      : VariableScope(ValueKind::VariableScopeKind, function) {}
 
  public:
   /// \return the function where the scope is declared.
@@ -1397,13 +1387,16 @@ class VariableScope : public Value {
   }
 
   static bool classof(const Value *V) {
-    switch (V->getKind()) {
-      case ValueKind::VariableScopeKind:
-      case ValueKind::ExternalScopeKind:
-        return true;
-      default:
-        return false;
-    }
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), VariableScope);
+  }
+};
+
+class FuncVariableScope : public VariableScope {
+ public:
+  FuncVariableScope(Function *function)
+      : VariableScope(ValueKind::FuncVariableScopeKind, function) {}
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::FuncVariableScopeKind;
   }
 };
 
@@ -1454,7 +1447,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   llvh::SmallVector<VariableScope *, 4> externalScopes_;
 
   /// The function scope - it is always the first scope in the scope list.
-  VariableScope functionScope_;
+  FuncVariableScope functionScope_;
 
   /// The basic blocks in this function.
   BasicBlockListType BasicBlockList{};
@@ -1533,33 +1526,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
       Function *insertBefore = nullptr);
 
  public:
-  /// \param parent Module this function will belong to.
-  /// \param originalName User-specified function name, or an empty string.
-  /// \param strictMode Whether this function uses strict mode.
-  /// \param isGlobal Whether this is the global (top-level) function.
-  /// \param sourceRange Range of source code this function comes from.
-  /// \param insertBefore Another function in \p parent where this function
-  ///   should be inserted before. If null, appends to the end of the module.
-  explicit Function(
-      Module *parent,
-      Identifier originalName,
-      DefinitionKind definitionKind,
-      bool strictMode,
-      SourceVisibility sourceVisibility,
-      bool isGlobal,
-      SMRange sourceRange,
-      Function *insertBefore = nullptr)
-      : Function(
-            ValueKind::FunctionKind,
-            parent,
-            originalName,
-            definitionKind,
-            strictMode,
-            sourceVisibility,
-            isGlobal,
-            sourceRange,
-            insertBefore) {}
-
   ~Function();
 
   Module *getParent() const {
@@ -1791,10 +1757,47 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   void viewGraph();
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::FunctionKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Function);
   }
 };
 
+class NormalFunction final : public Function {
+ public:
+  /// \param parent Module this function will belong to.
+  /// \param originalName User-specified function name, or an empty string.
+  /// \param strictMode Whether this function uses strict mode.
+  /// \param isGlobal Whether this is the global (top-level) function.
+  /// \param sourceRange Range of source code this function comes from.
+  /// \param insertBefore Another function in \p parent where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  explicit NormalFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      SourceVisibility sourceVisibility,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore = nullptr)
+      : Function(
+            ValueKind::NormalFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            sourceVisibility,
+            isGlobal,
+            sourceRange,
+            insertBefore) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::NormalFunctionKind;
+  }
+};
+
+/// The "outer" generator function, used with CreateFunctionInst and invoked as
+/// a normal function.
 class GeneratorFunction final : public Function {
  public:
   explicit GeneratorFunction(
@@ -1818,10 +1821,12 @@ class GeneratorFunction final : public Function {
             insertBefore) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GeneratorFunctionKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GeneratorFunctionKind;
   }
 };
 
+/// The "inner" generator function, invoked by the .next() generator machinery.
 class GeneratorInnerFunction final : public Function {
  public:
   explicit GeneratorInnerFunction(
@@ -1848,7 +1853,8 @@ class GeneratorInnerFunction final : public Function {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GeneratorInnerFunctionKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GeneratorInnerFunctionKind;
   }
 };
 
@@ -1875,7 +1881,8 @@ class AsyncFunction final : public Function {
             insertBefore) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AsyncFunctionKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsyncFunctionKind;
   }
 };
 

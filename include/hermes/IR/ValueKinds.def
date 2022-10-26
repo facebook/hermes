@@ -9,7 +9,7 @@
 #define DEF_VALUE(NAME, PARENT)
 #endif
 #ifndef MARK_FIRST
-#define MARK_FIRST(NAME)
+#define MARK_FIRST(NAME, PARENT)
 #endif
 #ifndef MARK_LAST
 #define MARK_LAST(NAME)
@@ -18,18 +18,13 @@
 #define MARK_VALUE(NAME)
 #endif
 
-MARK_FIRST(Value)
-MARK_VALUE(Value)
-
-MARK_FIRST(Instruction)
-DEF_VALUE(Instruction, Value)
+MARK_FIRST(Instruction, Value)
 #define INCLUDED_FROM_VALUEKINDS
 #include "hermes/IR/Instrs.def"
 #undef INCLUDED_FROM_VALUEKINDS
 MARK_LAST(Instruction)
 
-MARK_FIRST(Literal)
-DEF_VALUE(Literal, Value)
+MARK_FIRST(Literal, Value)
 DEF_VALUE(LiteralEmpty, Literal)
 DEF_VALUE(LiteralUndefined, Literal)
 DEF_VALUE(LiteralNull, Literal)
@@ -46,21 +41,20 @@ DEF_VALUE(GlobalObjectProperty, Value)
 DEF_VALUE(Variable, Value)
 DEF_VALUE(Parameter, Value)
 DEF_VALUE(BasicBlock, Value)
-MARK_FIRST(VariableScope)
-DEF_VALUE(VariableScope, Value)
+MARK_FIRST(VariableScope, Value)
+DEF_VALUE(FuncVariableScope, VariableScope)
 DEF_VALUE(ExternalScope, VariableScope)
 MARK_LAST(VariableScope)
-MARK_FIRST(Function)
-DEF_VALUE(Function, Value)
+
+MARK_FIRST(Function, Value)
+DEF_VALUE(NormalFunction, Function)
 DEF_VALUE(GeneratorFunction, Function)
 DEF_VALUE(GeneratorInnerFunction, Function)
 DEF_VALUE(AsyncFunction, Function)
 MARK_LAST(Function)
-DEF_VALUE(Module, Value)
 
-MARK_LAST(Value)
+DEF_VALUE(Module, Value)
 
 #undef DEF_VALUE
 #undef MARK_FIRST
 #undef MARK_LAST
-#undef MARK_VALUE

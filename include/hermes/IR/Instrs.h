@@ -69,9 +69,8 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::SingleOperandInstKind);
-  }
+ private:
+  static bool classof(const Value *V);
 };
 
 /// Subclasses of this class are all able to terminate a basic
@@ -106,7 +105,7 @@ class TerminatorInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::TerminatorInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), TerminatorInst);
   }
 
   using succ_iterator = llvh::SuccIterator<TerminatorInst, BasicBlock>;
@@ -169,7 +168,8 @@ class BranchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::BranchInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::BranchInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -216,7 +216,8 @@ class AddEmptyStringInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AddEmptyStringInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AddEmptyStringInstKind;
   }
 };
 
@@ -251,7 +252,8 @@ class AsNumberInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AsNumberInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsNumberInstKind;
   }
 };
 
@@ -286,7 +288,8 @@ class AsNumericInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AsNumericInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsNumericInstKind;
   }
 };
 
@@ -319,7 +322,8 @@ class AsInt32Inst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AsInt32InstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsInt32InstKind;
   }
 };
 
@@ -368,7 +372,8 @@ class CondBranchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CondBranchInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CondBranchInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -417,7 +422,8 @@ class ReturnInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ReturnInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ReturnInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -469,7 +475,8 @@ class AllocStackInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AllocStackInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocStackInstKind;
   }
 };
 
@@ -502,7 +509,8 @@ class LoadStackInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::LoadStackInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadStackInstKind;
   }
 };
 
@@ -543,7 +551,8 @@ class StoreStackInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StoreStackInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StoreStackInstKind;
   }
 };
 
@@ -576,7 +585,8 @@ class LoadFrameInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::LoadFrameInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadFrameInstKind;
   }
 };
 
@@ -617,35 +627,33 @@ class StoreFrameInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StoreFrameInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StoreFrameInstKind;
   }
 };
 
-class CreateFunctionInst : public Instruction {
-  CreateFunctionInst(const CreateFunctionInst &) = delete;
-  void operator=(const CreateFunctionInst &) = delete;
+/// A base class for all instructions that create a lexical child. Some of them
+/// don't return a callable.
+class BaseCreateLexicalChildInst : public Instruction {
+  BaseCreateLexicalChildInst(const BaseCreateLexicalChildInst &) = delete;
+  void operator=(const BaseCreateLexicalChildInst &) = delete;
+
+ protected:
+  explicit BaseCreateLexicalChildInst(ValueKind kind, Function *code)
+      : Instruction(kind) {
+    pushOperand(code);
+  }
 
  public:
   enum { FunctionCodeIdx, LAST_IDX };
 
-  explicit CreateFunctionInst(ValueKind kind, Function *code)
-      : Instruction(kind) {
-    setType(*getInherentTypeImpl());
-    pushOperand(code);
-  }
-  explicit CreateFunctionInst(Function *code)
-      : CreateFunctionInst(ValueKind::CreateFunctionInstKind, code) {}
-  explicit CreateFunctionInst(
-      const CreateFunctionInst *src,
+  explicit BaseCreateLexicalChildInst(
+      const BaseCreateLexicalChildInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Function *getFunctionCode() const {
     return cast<Function>(getOperand(FunctionCodeIdx));
-  }
-
-  static OptValue<Type> getInherentTypeImpl() {
-    return Type::createClosure();
   }
 
   static bool hasOutput() {
@@ -661,13 +669,81 @@ class CreateFunctionInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CreateFunctionInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseCreateLexicalChildInst);
   }
 };
 
-class CallInst : public Instruction {
-  CallInst(const CallInst &) = delete;
-  void operator=(const CallInst &) = delete;
+/// Base class for all instruction creating and returning a callable.
+class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
+  BaseCreateCallableInst(const BaseCreateCallableInst &) = delete;
+  void operator=(const BaseCreateCallableInst &) = delete;
+
+ protected:
+  explicit BaseCreateCallableInst(ValueKind kind, Function *code)
+      : BaseCreateLexicalChildInst(kind, code) {
+    setType(*getInherentTypeImpl());
+  }
+
+ public:
+  explicit BaseCreateCallableInst(
+      const BaseCreateCallableInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseCreateLexicalChildInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createClosure();
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseCreateCallableInst);
+  }
+};
+
+/// Create a normal function, or an outer generator function.
+class CreateFunctionInst : public BaseCreateCallableInst {
+  CreateFunctionInst(const CreateFunctionInst &) = delete;
+  void operator=(const CreateFunctionInst &) = delete;
+
+ public:
+  explicit CreateFunctionInst(Function *code)
+      : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, code) {
+    assert(
+        (llvh::isa<NormalFunction>(code) ||
+         llvh::isa<GeneratorFunction>(code) ||
+         llvh::isa<AsyncFunction>(code)) &&
+        "Only NormalFunction/GeneratorFunction supported by CreateFunctionInst");
+  }
+  explicit CreateFunctionInst(
+      const CreateFunctionInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseCreateCallableInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CreateFunctionInstKind;
+  }
+};
+
+class BaseCallInst : public Instruction {
+  BaseCallInst(const BaseCallInst &) = delete;
+  void operator=(const BaseCallInst &) = delete;
+
+ protected:
+  explicit BaseCallInst(
+      ValueKind kind,
+      Value *callee,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : Instruction(kind) {
+    pushOperand(callee);
+    pushOperand(thisValue);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
+  }
+  explicit BaseCallInst(
+      const BaseCallInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
 
  public:
   enum { CalleeIdx, ThisIdx };
@@ -694,21 +770,6 @@ class CallInst : public Instruction {
     return getNumOperands() - 1;
   }
 
-  explicit CallInst(
-      ValueKind kind,
-      Value *callee,
-      Value *thisValue,
-      ArrayRef<Value *> args)
-      : Instruction(kind) {
-    pushOperand(callee);
-    pushOperand(thisValue);
-    for (const auto &arg : args) {
-      pushOperand(arg);
-    }
-  }
-  explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
   static bool hasOutput() {
     return true;
   }
@@ -722,11 +783,26 @@ class CallInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CallInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseCallInst);
   }
 };
 
-class ConstructInst : public CallInst {
+class CallInst : public BaseCallInst {
+  CallInst(const CallInst &) = delete;
+  void operator=(const CallInst &) = delete;
+
+ public:
+  explicit CallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
+      : BaseCallInst(ValueKind::CallInstKind, callee, thisValue, args) {}
+  explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
+      : BaseCallInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CallInstKind;
+  }
+};
+
+class ConstructInst : public BaseCallInst {
   ConstructInst(const ConstructInst &) = delete;
   void operator=(const ConstructInst &) = delete;
 
@@ -739,30 +815,30 @@ class ConstructInst : public CallInst {
       Value *constructor,
       LiteralUndefined *undefined,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::ConstructInstKind, constructor, undefined, args) {
+      : BaseCallInst(
+            ValueKind::ConstructInstKind,
+            constructor,
+            undefined,
+            args) {
     setType(*getInherentTypeImpl());
   }
   explicit ConstructInst(
       const ConstructInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
+      : BaseCallInst(src, operands) {}
 
   static OptValue<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
-  static bool hasOutput() {
-    return true;
-  }
-
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ConstructInstKind);
+    return V->getKind() == ValueKind::ConstructInstKind;
   }
 };
 
 /// Call a VM builtin with the specified number and undefined as the "this"
 /// parameter.
-class CallBuiltinInst : public CallInst {
+class CallBuiltinInst : public BaseCallInst {
   CallBuiltinInst(const CallBuiltinInst &) = delete;
   void operator=(const CallBuiltinInst &) = delete;
 
@@ -771,7 +847,7 @@ class CallBuiltinInst : public CallInst {
       LiteralNumber *callee,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
+      : BaseCallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
         callee->getValue() < (double)BuiltinMethod::_count &&
@@ -780,18 +856,14 @@ class CallBuiltinInst : public CallInst {
   explicit CallBuiltinInst(
       const CallBuiltinInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
-
-  static bool hasOutput() {
-    return true;
-  }
+      : BaseCallInst(src, operands) {}
 
   BuiltinMethod::Enum getBuiltinIndex() const {
     return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CallBuiltinInstKind);
+    return V->getKind() == ValueKind::CallBuiltinInstKind;
   }
 };
 
@@ -838,7 +910,8 @@ class GetBuiltinClosureInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GetBuiltinClosureInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GetBuiltinClosureInstKind;
   }
 };
 
@@ -903,7 +976,7 @@ class CallIntrinsicInst : public Instruction {
 };
 #endif
 
-class HBCCallNInst : public CallInst {
+class HBCCallNInst : public BaseCallInst {
  public:
   /// The minimum number of args supported by a CallN instruction, including
   /// 'this'.
@@ -914,7 +987,7 @@ class HBCCallNInst : public CallInst {
   static constexpr uint32_t kMaxArgs = 4;
 
   explicit HBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallNInstKind, callee, thisValue, args) {
+      : BaseCallInst(ValueKind::HBCCallNInstKind, callee, thisValue, args) {
     // +1 for 'this'.
     assert(
         kMinArgs <= args.size() + 1 && args.size() + 1 <= kMaxArgs &&
@@ -924,7 +997,7 @@ class HBCCallNInst : public CallInst {
   explicit HBCCallNInst(
       const HBCCallNInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
+      : BaseCallInst(src, operands) {}
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::HBCCallNInstKind;
@@ -962,16 +1035,17 @@ class HBCGetGlobalObjectInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCGetGlobalObjectInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetGlobalObjectInstKind;
   }
 };
 
-class StorePropertyInst : public Instruction {
-  StorePropertyInst(const StorePropertyInst &) = delete;
-  void operator=(const StorePropertyInst &) = delete;
+class BaseStorePropertyInst : public Instruction {
+  BaseStorePropertyInst(const BaseStorePropertyInst &) = delete;
+  void operator=(const BaseStorePropertyInst &) = delete;
 
  protected:
-  explicit StorePropertyInst(
+  explicit BaseStorePropertyInst(
       ValueKind kind,
       Value *storedValue,
       Value *object,
@@ -985,6 +1059,11 @@ class StorePropertyInst : public Instruction {
  public:
   enum { StoredValueIdx, ObjectIdx, PropertyIdx };
 
+  explicit BaseStorePropertyInst(
+      const BaseStorePropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
   Value *getStoredValue() const {
     return getOperand(StoredValueIdx);
   }
@@ -994,17 +1073,6 @@ class StorePropertyInst : public Instruction {
   Value *getProperty() const {
     return getOperand(PropertyIdx);
   }
-
-  explicit StorePropertyInst(Value *storedValue, Value *object, Value *property)
-      : StorePropertyInst(
-            ValueKind::StorePropertyInstKind,
-            storedValue,
-            object,
-            property) {}
-  explicit StorePropertyInst(
-      const StorePropertyInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
 
   static bool hasOutput() {
     return false;
@@ -1019,24 +1087,46 @@ class StorePropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StorePropertyInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStorePropertyInst);
   }
 };
 
-class TryStoreGlobalPropertyInst : public StorePropertyInst {
+class StorePropertyInst : public BaseStorePropertyInst {
+  StorePropertyInst(const StorePropertyInst &) = delete;
+  void operator=(const StorePropertyInst &) = delete;
+
+ public:
+  explicit StorePropertyInst(Value *storedValue, Value *object, Value *property)
+      : BaseStorePropertyInst(
+            ValueKind::StorePropertyInstKind,
+            storedValue,
+            object,
+            property) {}
+  explicit StorePropertyInst(
+      const StorePropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseStorePropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StorePropertyInstKind;
+  }
+};
+
+class TryStoreGlobalPropertyInst : public BaseStorePropertyInst {
   TryStoreGlobalPropertyInst(const TryStoreGlobalPropertyInst &) = delete;
   void operator=(const TryStoreGlobalPropertyInst &) = delete;
 
  public:
   LiteralString *getProperty() const {
-    return cast<LiteralString>(StorePropertyInst::getProperty());
+    return cast<LiteralString>(BaseStorePropertyInst::getProperty());
   }
 
   explicit TryStoreGlobalPropertyInst(
       Value *storedValue,
       Value *globalObject,
       LiteralString *property)
-      : StorePropertyInst(
+      : BaseStorePropertyInst(
             ValueKind::TryStoreGlobalPropertyInstKind,
             storedValue,
             globalObject,
@@ -1049,31 +1139,20 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
   explicit TryStoreGlobalPropertyInst(
       const TryStoreGlobalPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : StorePropertyInst(src, operands) {}
-
-  static bool hasOutput() {
-    return false;
-  }
-
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
+      : BaseStorePropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::TryStoreGlobalPropertyInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::TryStoreGlobalPropertyInstKind;
   }
 };
 
-class StoreOwnPropertyInst : public Instruction {
-  StoreOwnPropertyInst(const StoreOwnPropertyInst &) = delete;
-  void operator=(const StoreOwnPropertyInst &) = delete;
+class BaseStoreOwnPropertyInst : public Instruction {
+  BaseStoreOwnPropertyInst(const BaseStoreOwnPropertyInst &) = delete;
+  void operator=(const BaseStoreOwnPropertyInst &) = delete;
 
  protected:
-  explicit StoreOwnPropertyInst(
+  explicit BaseStoreOwnPropertyInst(
       ValueKind kind,
       Value *storedValue,
       Value *object,
@@ -1102,20 +1181,8 @@ class StoreOwnPropertyInst : public Instruction {
     return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
-  explicit StoreOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      Value *property,
-      LiteralBool *isEnumerable)
-      : StoreOwnPropertyInst(
-            ValueKind::StoreOwnPropertyInstKind,
-            storedValue,
-            object,
-            property,
-            isEnumerable) {}
-
-  explicit StoreOwnPropertyInst(
-      const StoreOwnPropertyInst *src,
+  explicit BaseStoreOwnPropertyInst(
+      const BaseStoreOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1132,11 +1199,39 @@ class StoreOwnPropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StoreOwnPropertyInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStoreOwnPropertyInst);
   }
 };
 
-class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
+class StoreOwnPropertyInst : public BaseStoreOwnPropertyInst {
+  StoreOwnPropertyInst(const StoreOwnPropertyInst &) = delete;
+  void operator=(const StoreOwnPropertyInst &) = delete;
+
+ public:
+  explicit StoreOwnPropertyInst(
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      LiteralBool *isEnumerable)
+      : BaseStoreOwnPropertyInst(
+            ValueKind::StoreOwnPropertyInstKind,
+            storedValue,
+            object,
+            property,
+            isEnumerable) {}
+
+  explicit StoreOwnPropertyInst(
+      const StoreOwnPropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseStoreOwnPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StoreOwnPropertyInstKind;
+  }
+};
+
+class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
   StoreNewOwnPropertyInst(const StoreNewOwnPropertyInst &) = delete;
   void operator=(const StoreNewOwnPropertyInst &) = delete;
 
@@ -1146,7 +1241,7 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
       Value *object,
       Literal *property,
       LiteralBool *isEnumerable)
-      : StoreOwnPropertyInst(
+      : BaseStoreOwnPropertyInst(
             ValueKind::StoreNewOwnPropertyInstKind,
             storedValue,
             object,
@@ -1164,10 +1259,11 @@ class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
   explicit StoreNewOwnPropertyInst(
       const StoreNewOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : StoreOwnPropertyInst(src, operands) {}
+      : BaseStoreOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StoreNewOwnPropertyInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StoreNewOwnPropertyInstKind;
   }
 };
 
@@ -1231,7 +1327,8 @@ class StoreGetterSetterInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StoreGetterSetterInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StoreGetterSetterInstKind;
   }
 };
 
@@ -1272,16 +1369,17 @@ class DeletePropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::DeletePropertyInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::DeletePropertyInstKind;
   }
 };
 
-class LoadPropertyInst : public Instruction {
-  LoadPropertyInst(const LoadPropertyInst &) = delete;
-  void operator=(const LoadPropertyInst &) = delete;
+class BaseLoadPropertyInst : public Instruction {
+  BaseLoadPropertyInst(const BaseLoadPropertyInst &) = delete;
+  void operator=(const BaseLoadPropertyInst &) = delete;
 
  protected:
-  explicit LoadPropertyInst(ValueKind kind, Value *object, Value *property)
+  explicit BaseLoadPropertyInst(ValueKind kind, Value *object, Value *property)
       : Instruction(kind) {
     pushOperand(object);
     pushOperand(property);
@@ -1297,10 +1395,8 @@ class LoadPropertyInst : public Instruction {
     return getOperand(PropertyIdx);
   }
 
-  explicit LoadPropertyInst(Value *object, Value *property)
-      : LoadPropertyInst(ValueKind::LoadPropertyInstKind, object, property) {}
-  explicit LoadPropertyInst(
-      const LoadPropertyInst *src,
+  explicit BaseLoadPropertyInst(
+      const BaseLoadPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1317,23 +1413,44 @@ class LoadPropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::LoadPropertyInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseLoadPropertyInst);
   }
 };
 
-class TryLoadGlobalPropertyInst : public LoadPropertyInst {
+class LoadPropertyInst : public BaseLoadPropertyInst {
+  LoadPropertyInst(const LoadPropertyInst &) = delete;
+  void operator=(const LoadPropertyInst &) = delete;
+
+ public:
+  explicit LoadPropertyInst(Value *object, Value *property)
+      : BaseLoadPropertyInst(
+            ValueKind::LoadPropertyInstKind,
+            object,
+            property) {}
+  explicit LoadPropertyInst(
+      const LoadPropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseLoadPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadPropertyInstKind;
+  }
+};
+
+class TryLoadGlobalPropertyInst : public BaseLoadPropertyInst {
   TryLoadGlobalPropertyInst(const TryLoadGlobalPropertyInst &) = delete;
   void operator=(const TryLoadGlobalPropertyInst &) = delete;
 
  public:
   LiteralString *getProperty() const {
-    return cast<LiteralString>(LoadPropertyInst::getProperty());
+    return cast<LiteralString>(BaseLoadPropertyInst::getProperty());
   }
 
   explicit TryLoadGlobalPropertyInst(
       Value *globalObject,
       LiteralString *property)
-      : LoadPropertyInst(
+      : BaseLoadPropertyInst(
             ValueKind::TryLoadGlobalPropertyInstKind,
             globalObject,
             property) {
@@ -1345,22 +1462,11 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
   explicit TryLoadGlobalPropertyInst(
       const TryLoadGlobalPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : LoadPropertyInst(src, operands) {}
-
-  static bool hasOutput() {
-    return true;
-  }
-
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
-  }
-
-  WordBitSet<> getChangedOperandsImpl() {
-    return {};
-  }
+      : BaseLoadPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::TryLoadGlobalPropertyInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::TryLoadGlobalPropertyInstKind;
   }
 };
 
@@ -1408,7 +1514,8 @@ class AllocObjectInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AllocObjectInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocObjectInstKind;
   }
 };
 
@@ -1475,7 +1582,8 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCAllocObjectFromBufferInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCAllocObjectFromBufferInstKind;
   }
 };
 
@@ -1522,7 +1630,8 @@ class AllocObjectLiteralInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AllocObjectLiteralInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocObjectLiteralInstKind;
   }
 
   Literal *getKey(unsigned index) const {
@@ -1605,7 +1714,8 @@ class AllocArrayInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AllocArrayInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocArrayInstKind;
   }
 };
 
@@ -1640,7 +1750,8 @@ class CreateArgumentsInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CreateArgumentsInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CreateArgumentsInstKind;
   }
 };
 
@@ -1686,7 +1797,8 @@ class CreateRegExpInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CreateRegExpInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CreateRegExpInstKind;
   }
 };
 
@@ -1751,7 +1863,8 @@ class UnaryOperatorInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::UnaryOperatorInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::UnaryOperatorInstKind;
   }
 };
 
@@ -1861,7 +1974,8 @@ class BinaryOperatorInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::BinaryOperatorInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::BinaryOperatorInstKind;
   }
 
   /// Calculate the side effect of a binary operator, given inferred types of
@@ -1892,7 +2006,8 @@ class CatchInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CatchInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CatchInstKind;
   }
 };
 
@@ -1927,7 +2042,8 @@ class ThrowInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ThrowInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ThrowInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -1985,7 +2101,8 @@ class SwitchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::SwitchInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::SwitchInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -2051,7 +2168,8 @@ class GetPNamesInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GetPNamesInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GetPNamesInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -2120,7 +2238,8 @@ class GetNextPNameInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GetNextPNameInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GetNextPNameInstKind;
   }
 
   Value *getPropertyAddr() const {
@@ -2202,7 +2321,8 @@ class CheckHasInstanceInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CheckHasInstanceInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CheckHasInstanceInstKind;
   }
 
   AllocStackInst *getResult() const {
@@ -2279,7 +2399,8 @@ class TryStartInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::TryStartInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::TryStartInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -2315,7 +2436,8 @@ class TryEndInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::TryEndInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::TryEndInstKind;
   }
 };
 
@@ -2367,7 +2489,8 @@ class PhiInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::PhiInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::PhiInstKind;
   }
 };
 
@@ -2396,7 +2519,8 @@ class MovInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::MovInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::MovInstKind;
   }
 };
 
@@ -2429,7 +2553,8 @@ class ImplicitMovInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ImplicitMovInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ImplicitMovInstKind;
   }
 };
 
@@ -2464,7 +2589,8 @@ class CoerceThisNSInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CoerceThisNSInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CoerceThisNSInstKind;
   }
 };
 
@@ -2492,7 +2618,8 @@ class DebuggerInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::DebuggerInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::DebuggerInstKind;
   }
 };
 
@@ -2520,7 +2647,8 @@ class GetNewTargetInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GetNewTargetInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GetNewTargetInstKind;
   }
 };
 
@@ -2558,7 +2686,8 @@ class ThrowIfEmptyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ThrowIfEmptyInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ThrowIfEmptyInstKind;
   }
 };
 
@@ -2591,7 +2720,8 @@ class HBCResolveEnvironment : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCResolveEnvironmentKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCResolveEnvironmentKind;
   }
 };
 
@@ -2636,7 +2766,8 @@ class HBCStoreToEnvironmentInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCStoreToEnvironmentInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCStoreToEnvironmentInstKind;
   }
 };
 
@@ -2677,7 +2808,8 @@ class HBCLoadFromEnvironmentInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCLoadFromEnvironmentInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCLoadFromEnvironmentInstKind;
   }
 };
 
@@ -2757,7 +2889,8 @@ class SwitchImmInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::SwitchImmInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::SwitchImmInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -2814,7 +2947,8 @@ class SaveAndYieldInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::SaveAndYieldInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::SaveAndYieldInstKind;
   }
 };
 
@@ -2843,7 +2977,8 @@ class DirectEvalInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::DirectEvalInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::DirectEvalInstKind;
   }
 };
 
@@ -2872,7 +3007,8 @@ class HBCCreateEnvironmentInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCreateEnvironmentInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCreateEnvironmentInstKind;
   }
 };
 
@@ -2905,7 +3041,8 @@ class HBCProfilePointInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCProfilePointInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCProfilePointInstKind;
   }
 
   uint16_t getPointIndex() const {
@@ -2944,7 +3081,8 @@ class HBCLoadConstInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCLoadConstInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCLoadConstInstKind;
   }
 };
 
@@ -2979,7 +3117,8 @@ class HBCLoadParamInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCLoadParamInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCLoadParamInstKind;
   }
 };
 
@@ -3010,7 +3149,8 @@ class HBCGetThisNSInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCGetThisNSInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetThisNSInstKind;
   }
 };
 
@@ -3044,7 +3184,8 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCGetArgumentsLengthInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetArgumentsLengthInstKind;
   }
 };
 
@@ -3090,7 +3231,7 @@ class HBCGetArgumentsPropByValInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCGetArgumentsPropByValInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), HBCGetArgumentsPropByValInst);
   }
 };
 
@@ -3111,8 +3252,8 @@ class HBCGetArgumentsPropByValLooseInst : public HBCGetArgumentsPropByValInst {
       : HBCGetArgumentsPropByValInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(
-        V->getKind(), ValueKind::HBCGetArgumentsPropByValLooseInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetArgumentsPropByValLooseInstKind;
   }
 };
 
@@ -3133,8 +3274,8 @@ class HBCGetArgumentsPropByValStrictInst : public HBCGetArgumentsPropByValInst {
       : HBCGetArgumentsPropByValInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(
-        V->getKind(), ValueKind::HBCGetArgumentsPropByValStrictInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetArgumentsPropByValStrictInstKind;
   }
 };
 
@@ -3170,7 +3311,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsInstKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), HBCReifyArgumentsInst);
   }
 };
 
@@ -3188,7 +3329,8 @@ class HBCReifyArgumentsStrictInst : public HBCReifyArgumentsInst {
       : HBCReifyArgumentsInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsStrictInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCReifyArgumentsStrictInstKind;
   }
 };
 
@@ -3205,7 +3347,8 @@ class HBCReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
       : HBCReifyArgumentsInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCReifyArgumentsLooseInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCReifyArgumentsLooseInstKind;
   }
 };
 
@@ -3247,12 +3390,13 @@ class HBCCreateThisInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCreateThisInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCreateThisInstKind;
   }
 };
 
 /// Call a constructor. thisValue can be created with HBCCreateThisInst.
-class HBCConstructInst : public CallInst {
+class HBCConstructInst : public BaseCallInst {
   HBCConstructInst(const HBCConstructInst &) = delete;
   void operator=(const HBCConstructInst &) = delete;
 
@@ -3261,18 +3405,16 @@ class HBCConstructInst : public CallInst {
       Value *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCConstructInstKind, callee, thisValue, args) {}
+      : BaseCallInst(ValueKind::HBCConstructInstKind, callee, thisValue, args) {
+  }
   explicit HBCConstructInst(
       const HBCConstructInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
-
-  static bool hasOutput() {
-    return true;
-  }
+      : BaseCallInst(src, operands) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCConstructInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCConstructInstKind;
   }
 };
 
@@ -3318,11 +3460,12 @@ class HBCGetConstructedObjectInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCGetConstructedObjectInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCGetConstructedObjectInstKind;
   }
 };
 
-class HBCCallDirectInst : public CallInst {
+class HBCCallDirectInst : public BaseCallInst {
   HBCCallDirectInst(const HBCCallDirectInst &) = delete;
   void operator=(const HBCCallDirectInst &) = delete;
 
@@ -3333,7 +3476,11 @@ class HBCCallDirectInst : public CallInst {
       Function *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallDirectInstKind, callee, thisValue, args) {
+      : BaseCallInst(
+            ValueKind::HBCCallDirectInstKind,
+            callee,
+            thisValue,
+            args) {
     assert(
         getNumArguments() <= MAX_ARGUMENTS &&
         "Too many arguments to HBCCallDirect");
@@ -3341,14 +3488,10 @@ class HBCCallDirectInst : public CallInst {
   explicit HBCCallDirectInst(
       const HBCCallDirectInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
+      : BaseCallInst(src, operands) {}
 
   Function *getFunctionCode() const {
     return cast<Function>(getCallee());
-  }
-
-  static bool hasOutput() {
-    return true;
   }
 
   static bool classof(const Value *V) {
@@ -3357,7 +3500,7 @@ class HBCCallDirectInst : public CallInst {
 };
 
 /// Creating a closure in HBC requires an explicit environment.
-class HBCCreateFunctionInst : public CreateFunctionInst {
+class HBCCreateFunctionInst : public BaseCreateCallableInst {
   HBCCreateFunctionInst(const HBCCreateFunctionInst &) = delete;
   void operator=(const HBCCreateFunctionInst &) = delete;
 
@@ -3365,29 +3508,22 @@ class HBCCreateFunctionInst : public CreateFunctionInst {
   enum { EnvIdx = CreateFunctionInst::LAST_IDX };
 
   explicit HBCCreateFunctionInst(Function *code, Value *env)
-      : CreateFunctionInst(ValueKind::HBCCreateFunctionInstKind, code) {
+      : BaseCreateCallableInst(ValueKind::HBCCreateFunctionInstKind, code) {
     setType(*getInherentTypeImpl());
     pushOperand(env);
   }
   explicit HBCCreateFunctionInst(
       const HBCCreateFunctionInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CreateFunctionInst(src, operands) {}
+      : BaseCreateCallableInst(src, operands) {}
 
   Value *getEnvironment() const {
     return getOperand(EnvIdx);
   }
 
-  static OptValue<Type> getInherentTypeImpl() {
-    return Type::createClosure();
-  }
-
-  static bool hasOutput() {
-    return true;
-  }
-
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCreateFunctionInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCreateFunctionInstKind;
   }
 };
 
@@ -3424,7 +3560,8 @@ class HBCSpillMovInst : public SingleOperandInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCSpillMovInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCSpillMovInstKind;
   }
 };
 
@@ -3492,7 +3629,8 @@ class CompareBranchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CompareBranchInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CompareBranchInstKind;
   }
 
   unsigned getNumSuccessors() const {
@@ -3511,37 +3649,35 @@ class CompareBranchInst : public TerminatorInst {
   }
 };
 
-class CreateGeneratorInst : public CreateFunctionInst {
+/// Create a generator instance with an inner function. Note that the result is
+/// not a callable.
+class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   CreateGeneratorInst(const CreateGeneratorInst &) = delete;
   void operator=(const CreateGeneratorInst &) = delete;
 
  public:
-  explicit CreateGeneratorInst(ValueKind kind, Function *genFunction)
-      : CreateFunctionInst(kind, genFunction) {
+  explicit CreateGeneratorInst(GeneratorInnerFunction *genFunction)
+      : BaseCreateLexicalChildInst(
+            ValueKind::CreateGeneratorInstKind,
+            genFunction) {
     setType(*getInherentTypeImpl());
   }
-  explicit CreateGeneratorInst(Function *genFunction)
-      : CreateGeneratorInst(ValueKind::CreateGeneratorInstKind, genFunction) {}
   explicit CreateGeneratorInst(
       const CreateGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CreateFunctionInst(src, operands) {}
+      : BaseCreateLexicalChildInst(src, operands) {}
 
   static OptValue<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
-  static bool hasOutput() {
-    return true;
-  }
-
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::CreateGeneratorInstKind);
+    return V->getKind() == ValueKind::CreateGeneratorInstKind;
   }
 };
 
 /// Creating a closure in HBC requires an explicit environment.
-class HBCCreateGeneratorInst : public CreateGeneratorInst {
+class HBCCreateGeneratorInst : public BaseCreateLexicalChildInst {
   HBCCreateGeneratorInst(const HBCCreateGeneratorInst &) = delete;
   void operator=(const HBCCreateGeneratorInst &) = delete;
 
@@ -3549,24 +3685,28 @@ class HBCCreateGeneratorInst : public CreateGeneratorInst {
   enum { EnvIdx = CreateGeneratorInst::LAST_IDX };
 
   explicit HBCCreateGeneratorInst(Function *code, Value *env)
-      : CreateGeneratorInst(ValueKind::HBCCreateGeneratorInstKind, code) {
+      : BaseCreateLexicalChildInst(
+            ValueKind::HBCCreateGeneratorInstKind,
+            code) {
     pushOperand(env);
+    setType(*getInherentTypeImpl());
   }
   explicit HBCCreateGeneratorInst(
       const HBCCreateGeneratorInst *src,
       llvh::ArrayRef<Value *> operands)
-      : CreateGeneratorInst(src, operands) {}
+      : BaseCreateLexicalChildInst(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   Value *getEnvironment() const {
     return getOperand(EnvIdx);
   }
 
-  static bool hasOutput() {
-    return true;
-  }
-
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCreateGeneratorInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCreateGeneratorInstKind;
   }
 };
 
@@ -3595,7 +3735,8 @@ class StartGeneratorInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::StartGeneratorInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StartGeneratorInstKind;
   }
 };
 
@@ -3632,7 +3773,8 @@ class ResumeGeneratorInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::ResumeGeneratorInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ResumeGeneratorInstKind;
   }
 };
 
@@ -3669,7 +3811,8 @@ class IteratorBeginInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::IteratorBeginInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::IteratorBeginInstKind;
   }
 };
 
@@ -3712,7 +3855,8 @@ class IteratorNextInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::IteratorNextInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::IteratorNextInstKind;
   }
 };
 
@@ -3758,7 +3902,8 @@ class IteratorCloseInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::IteratorCloseInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::IteratorCloseInstKind;
   }
 };
 
@@ -3787,7 +3932,8 @@ class UnreachableInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::UnreachableInstKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::UnreachableInstKind;
   }
 };
 

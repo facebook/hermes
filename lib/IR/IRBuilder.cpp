@@ -19,7 +19,7 @@ BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
   return new BasicBlock(Parent);
 }
 
-Function *IRBuilder::createFunction(
+NormalFunction *IRBuilder::createFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -33,7 +33,7 @@ Function *IRBuilder::createFunction(
   if (!OriginalName.isValid()) {
     OriginalName = createIdentifier("");
   }
-  return new Function(
+  return new NormalFunction(
       M,
       OriginalName,
       definitionKind,
@@ -109,7 +109,7 @@ Function *IRBuilder::createTopLevelFunction(
       true);
 }
 
-Function *IRBuilder::createFunction(
+NormalFunction *IRBuilder::createFunction(
     llvh::StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
@@ -373,7 +373,7 @@ CallInst *IRBuilder::createCallInst(
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(ValueKind::CallInstKind, callee, thisValue, args);
+  auto CI = new CallInst(callee, thisValue, args);
   insert(CI);
   return CI;
 }
@@ -724,7 +724,8 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
   return I;
 }
 
-CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(Function *innerFn) {
+CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
+    GeneratorInnerFunction *innerFn) {
   auto *I = new CreateGeneratorInst(innerFn);
   insert(I);
   return I;

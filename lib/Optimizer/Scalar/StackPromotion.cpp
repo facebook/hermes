@@ -135,7 +135,7 @@ void collectCapturedVariables(
     Function *current) {
   for (auto &BB : *current) {
     for (auto &I : BB) {
-      if (auto *create = llvh::dyn_cast<CreateFunctionInst>(&I)) {
+      if (auto *create = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
         collectCapturedVariables(captured, base, create->getFunctionCode());
         continue;
       }
@@ -168,7 +168,7 @@ void determineCapturedVariableUsage(
   llvh::DenseSet<BasicBlock *> toPropagate;
   for (auto &BB : *F) {
     for (auto &I : BB) {
-      auto *create = llvh::dyn_cast<CreateFunctionInst>(&I);
+      auto *create = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I);
       if (!create)
         continue;
 
