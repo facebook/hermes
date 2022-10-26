@@ -601,8 +601,6 @@ class TypeInferenceImpl {
   }
   Type inferUnaryOperatorInst(UnaryOperatorInst *inst) {
     switch (inst->getKind()) {
-      case ValueKind::UnaryDeleteInstKind: // delete:
-        return Type::createBoolean();
       case ValueKind::UnaryVoidInstKind: // void
         return Type::createUndefined();
       case ValueKind::UnaryTypeofInstKind: // typeof
@@ -616,9 +614,6 @@ class TypeInferenceImpl {
       // https://tc39.es/ecma262/#sec-unary-minus-operator
       case ValueKind::UnaryMinusInstKind: // -
         return inferUnaryArithDefault(inst);
-      // https://tc39.es/ecma262/#sec-unary-plus-operator
-      case ValueKind::UnaryPlusInstKind: // +
-        return Type::createNumber();
       // https://tc39.es/ecma262/#sec-bitwise-not-operator
       case ValueKind::UnaryTildeInstKind: // ~
         return inferTilde(inst);

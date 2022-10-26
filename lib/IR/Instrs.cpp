@@ -54,7 +54,7 @@ bool hermes::isSideEffectFree(Type T) {
 }
 
 const char *UnaryOperatorInst::opStringRepr[] =
-    {"delete", "void", "typeof", "+", "-", "~", "!", "++", "--"};
+    {"void", "typeof", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
     "==", "!=", "===", "!==", "<", "<=", ">", ">=", "<<", ">>", ">>>",
@@ -74,10 +74,6 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
 }
 
 SideEffectKind UnaryOperatorInst::getSideEffect() {
-  if (getKind() == ValueKind::UnaryDeleteInstKind) {
-    return SideEffectKind::Unknown;
-  }
-
   if (isSideEffectFree(getSingleOperand()->getType())) {
     return SideEffectKind::None;
   }

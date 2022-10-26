@@ -39,10 +39,8 @@
 #endif
 
 BEGIN_VALUE(UnaryOperatorInst, Instruction)
-DEF_TAG(UnaryDeleteInst, UnaryOperatorInst)
 DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
 DEF_TAG(UnaryTypeofInst, UnaryOperatorInst)
-DEF_TAG(UnaryPlusInst, UnaryOperatorInst)
 DEF_TAG(UnaryMinusInst, UnaryOperatorInst)
 DEF_TAG(UnaryTildeInst, UnaryOperatorInst)
 DEF_TAG(UnaryBangInst, UnaryOperatorInst)

@@ -140,11 +140,6 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
       }
       break;
 
-    case ValueKind::UnaryPlusInstKind:
-      // Convert +x to AsNumber(x).
-      builder.setInsertionPoint(unary);
-      return reduceAsNumber(builder.createAsNumberInst(op));
-
     default:
       break;
   }
