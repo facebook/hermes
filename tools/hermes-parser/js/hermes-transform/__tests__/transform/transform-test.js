@@ -643,6 +643,35 @@ if (true) {
   });
 
   describe('comments', () => {
+    describe('docblock', () => {
+      it('should not attach to node', () => {
+        const code = `
+/* @flow */
+statement();
+`;
+
+        const result = transform(code, context => ({
+          Program(node) {
+            expect(context.getComments(node.body[0])).toEqual([]);
+            expect(node.docblock.comment.value).toBe(' @flow ');
+            context.insertBeforeStatement(
+              node.body[0],
+              t.ExpressionStatement({
+                expression: t.StringLiteral({
+                  value: 'before',
+                }),
+              }),
+            );
+          },
+        }));
+
+        expect(result).toBe(`\
+/* @flow */
+('before');
+statement();
+`);
+      });
+    });
     describe('attachment', () => {
       it('should attach comments so they are maintained during an insertion', () => {
         const code = `
@@ -1112,11 +1141,11 @@ const x = 1;
     });
 
     describe('removal', () => {
-      it('shoud allow removal of leading comments', () => {
+      it('should allow removal of leading comments', () => {
         const code = `\
-/*block*/
-const x = 1;
 //line
+const x = 1;
+/*block*/
 const y = 2;`;
         const result = transform(code, context => ({
           VariableDeclaration(node) {
@@ -1131,7 +1160,7 @@ const y = 2;
 `);
       });
 
-      it('shoud allow removal of trailing comments', () => {
+      it('should allow removal of trailing comments', () => {
         const code = `\
 const x = 1; /*block*/
 const y = 2; //line`;
@@ -1170,17 +1199,19 @@ y; // EOL comment
       });
       it('should clone block comments to new nodes', () => {
         const code = `\
+'use strict';
 /* Leading comment 1 */
 /* Leading comment 2 */
 x; /* EOL comment */
 y;`;
         const result = transform(code, context => ({
           Program(node) {
-            context.cloneCommentsTo(node.body[0], node.body[1]);
+            context.cloneCommentsTo(node.body[1], node.body[2]);
           },
         }));
 
         expect(result).toBe(`\
+'use strict';
 /* Leading comment 1 */
 /* Leading comment 2 */
 x; /* EOL comment */

@@ -45,9 +45,29 @@ export function getTransformedAST(
     sourceType: 'module',
   });
 
+  // Don't include the docblock comment in the comment list as we don't want to attach it
+  // as it should be maintained at the top of the file as nodes are moved around.
+  let comments = ast.comments;
+  if (ast.docblock != null && ast.docblock.comment === comments[0]) {
+    const [first, ...nonDocblockComments] = comments;
+
+    // Since we will not be attaching this comment automatically we need to add the
+    // properties prettier expects for printing.
+    // $FlowExpectedError[prop-missing]
+    first.placement = 'endOfLine';
+    // $FlowExpectedError[prop-missing]
+    first.leading = true;
+    // $FlowExpectedError[prop-missing]
+    first.trailing = false;
+    // $FlowExpectedError[prop-missing]
+    first.printed = false;
+
+    comments = nonDocblockComments;
+  }
+
   // attach comments before mutation. this will ensure that as nodes are
   // cloned / moved around - comments remain in the correct place with respect to the node
-  attachComments(ast.comments, ast, code);
+  attachComments(comments, ast, code);
 
   // traverse the AST and colllect the mutations
   const transformContext = getTransformContext();
@@ -124,11 +144,15 @@ export function getTransformedAST(
     }
   }
 
-  // if the very first node in the program is replaced, it will take the docblock with it
-  // this is bad as it means we'll lose `@format`, `@flow`, licence, etc.
-  // so this hack just makes sure that we keep the docblock
-  // note that we do this **BEFORE** the comment mutations in case someone intentionally
-  // wants to remove the docblock comment for some weird reason
+  // remove the comments
+  // this is done at the end because it requires a complete traversal of the AST
+  // so that we can find relevant node's attachment array
+  performRemoveCommentMutations(ast, removeCommentMutations);
+
+  // The docblock comment is never attached to any AST nodes, since its technically
+  // attached to the program. However this is specific to our AST and in order for
+  // prettier to correctly print it we need to attach it to the first node in the
+  // program body.
   if (ast.docblock != null && ast.body.length > 0) {
     const firstNode = ast.body[0];
     const docblockComment = ast.docblock.comment;
@@ -137,11 +161,6 @@ export function getTransformedAST(
       addCommentsToNode(firstNode, [docblockComment], 'leading');
     }
   }
-
-  // remove the comments
-  // this is done at the end because it requires a complete traversal of the AST
-  // so that we can find relevant node's attachment array
-  performRemoveCommentMutations(ast, removeCommentMutations);
 
   return {
     ast,
