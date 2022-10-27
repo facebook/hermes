@@ -21,6 +21,9 @@ print('all' in Promise);
 print('allSettled' in Promise);
 // CHECK-NEXT: true
 
+print('any' in Promise);
+// CHECK-NEXT: true
+
 var promise = new Promise(function(res, rej) {
   res('success!');
 });
