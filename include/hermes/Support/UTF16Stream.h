@@ -27,7 +27,8 @@ class UTF16Stream {
       : cur_(str.begin()),
         end_(str.end()),
         utf8Begin_(nullptr),
-        utf8End_(nullptr) {}
+        utf8End_(nullptr),
+        beginCapture_(nullptr) {}
 
   /// A stream that converts \p utf8 to UTF16. If the input is not valid UTF8,
   /// then the stream will end at the first malformed character.
@@ -59,9 +60,28 @@ class UTF16Stream {
     return *this;
   }
 
+  /// Begin capturing the stream of values. Once the capture is completed with a
+  /// call to endCapture(), the captured stream can be viewed via an ArrayRef.
+  void beginCapture();
+
+  /// Terminate the active capture and give back an ArrayRef. Note that the next
+  /// time the stream is advanced, there are no gurantees that the given
+  /// ArrayRef will be valid. Calling this method without a matching, preceding
+  /// call to beginCapture leads to undefined behavior.
+  llvh::ArrayRef<char16_t> endCapture();
+
+  /// Terminate the active capture if there is an ongoing one, else do nothing.
+  /// This is a good method to call to ensure there are no outstanding captures.
+  void cancelCapture();
+
  private:
   /// Tries to convert more data. Returns true if more data was converted.
   bool refill();
+
+  /// Adjust the conversion buffer to make room for a still-growing capture.
+  /// This should be called when the current conversion buffer is exhausted but
+  /// there is still an outstanding capture.
+  void makeRoomForCapture();
 
   /// The range of the input (if UTF16 input) or conversion buffer (if UTF8
   /// input) that is available to be consumed.
@@ -72,8 +92,12 @@ class UTF16Stream {
   const uint8_t *utf8Begin_;
   const uint8_t *utf8End_;
 
+  /// If beginCapture is a nullptr, then there is no range being currently
+  /// captured. Otherwise, this points to the beginning of the capture.
+  const char16_t *beginCapture_;
+
   /// The conversion buffer (if UTF8 input).
-  OwningArray<char16_t> storage_;
+  std::vector<char16_t> storage_;
 };
 
 } // namespace hermes
