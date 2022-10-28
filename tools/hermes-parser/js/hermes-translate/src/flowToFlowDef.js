@@ -32,7 +32,9 @@ import type {
   ImportDeclaration,
   InterfaceDeclaration,
   InterfaceExtends,
+  Literal,
   ModuleDeclaration,
+  ObjectExpression,
   ObjectTypeAnnotation,
   ObjectTypeProperty,
   OpaqueType,
@@ -61,6 +63,7 @@ import {
 import {createTranslationContext} from './utils/TranslationUtils';
 import {asDetachedNode} from 'hermes-transform';
 import {translationError, flowFixMeOrError} from './utils/ErrorUtils';
+import {isExpression} from 'hermes-estree';
 
 const EMPTY_TRANSLATION_RESULT = [null, []];
 
@@ -351,14 +354,142 @@ function convertStatement(
 function convertExpressionToTypeAnnotation(
   expr: Expression,
   context: TranslationContext,
-): TranslatedResultOrNull<TypeAnnotationType> {
+): TranslatedResult<TypeAnnotationType> {
   switch (expr.type) {
     case 'TypeCastExpression': {
       const [resultExpr, deps] = convertTypeCastExpression(expr, context);
       return [resultExpr, deps];
     }
+    case 'Identifier': {
+      return [
+        t.GenericTypeAnnotation({id: t.Identifier({name: expr.name})}),
+        analyzeTypeDependencies(expr, context),
+      ];
+    }
+    case 'Literal': {
+      const [resultExpr, deps] = convertLiteral(expr, context);
+      return [resultExpr, deps];
+    }
+    case 'ObjectExpression': {
+      const [resultExpr, deps] = convertObjectExpression(expr, context);
+      return [resultExpr, deps];
+    }
+    case 'ArrowFunctionExpression':
+    case 'FunctionExpression': {
+      const [resultExpr, deps] = convertAFunction(expr, context);
+      return [resultExpr, deps];
+    }
     default: {
-      return EMPTY_TRANSLATION_RESULT;
+      return [
+        flowFixMeOrError(
+          expr,
+          `convertExpressionToTypeAnnotation: Unsupported expression of type "${expr.type}", a type annotation is required.`,
+          context,
+        ),
+        [],
+      ];
+    }
+  }
+}
+
+function convertObjectExpression(
+  expr: ObjectExpression,
+  context: TranslationContext,
+): TranslatedResult<TypeAnnotationType> {
+  const [resultProperties, deps] = convertArray(expr.properties, prop => {
+    switch (prop.type) {
+      case 'SpreadElement': {
+        const [resultExpr, deps] = convertExpressionToTypeAnnotation(
+          prop.argument,
+          context,
+        );
+        return [t.ObjectTypeSpreadProperty({argument: resultExpr}), deps];
+      }
+      case 'Property': {
+        if (
+          prop.key.type !== 'Identifier' &&
+          prop.key.type !== 'StringLiteral'
+        ) {
+          throw translationError(
+            prop.key,
+            `ObjectExpression Property: Unsupported key type of "${prop.key.type}"`,
+            context,
+          );
+        }
+        const [resultExpr, deps] = convertExpressionToTypeAnnotation(
+          prop.value,
+          context,
+        );
+        return [
+          t.ObjectTypeProperty({
+            key: asDetachedNode(prop.key),
+            value: resultExpr,
+            method: prop.method,
+            optional: false,
+            static: false,
+            proto: false,
+            variance: null,
+            kind: prop.kind,
+          }),
+          deps,
+        ];
+      }
+    }
+  });
+  return [
+    t.ObjectTypeAnnotation({
+      inexact: false,
+      exact: false,
+      properties: resultProperties,
+      indexers: [],
+      callProperties: [],
+      internalSlots: [],
+    }),
+    deps,
+  ];
+}
+
+function convertLiteral(
+  expr: Literal,
+  context: TranslationContext,
+): TranslatedResult<TypeAnnotationType> {
+  switch (expr.literalType) {
+    case 'bigint': {
+      return [t.BigIntLiteralTypeAnnotation({raw: expr.raw}), []];
+    }
+    case 'boolean': {
+      return [
+        t.BooleanLiteralTypeAnnotation({raw: expr.raw, value: expr.value}),
+        [],
+      ];
+    }
+    case 'null': {
+      return [t.NullLiteralTypeAnnotation({}), []];
+    }
+    case 'numeric': {
+      return [
+        t.NumberLiteralTypeAnnotation({raw: expr.raw, value: expr.value}),
+        [],
+      ];
+    }
+    case 'string': {
+      return [
+        t.StringLiteralTypeAnnotation({raw: expr.raw, value: expr.value}),
+        [],
+      ];
+    }
+    case 'regexp': {
+      return [
+        t.GenericTypeAnnotation({id: t.Identifier({name: 'RegExp'})}),
+        [],
+      ];
+    }
+    default: {
+      throw translationError(
+        expr,
+        'convertLiteral: Unsupported literal type.',
+        context,
+      );
     }
   }
 }
@@ -438,25 +569,6 @@ function convertExportDeclaration(
         deps,
       ];
     }
-    case 'TypeCastExpression': {
-      if (!opts.default) {
-        throw translationError(
-          decl,
-          'ExportDeclaration: Non default typecast found, invalid AST.',
-          context,
-        );
-      }
-      const [declDecl, deps] = convertTypeCastExpression(decl, context);
-      return [
-        t.DeclareExportDeclaration({
-          specifiers: [],
-          declaration: declDecl,
-          default: true,
-          source: null,
-        }),
-        deps,
-      ];
-    }
     case 'VariableDeclaration': {
       if (opts.default) {
         throw translationError(
@@ -488,9 +600,31 @@ function convertExportDeclaration(
       ];
     }
     default: {
+      if (isExpression(decl)) {
+        if (!opts.default) {
+          throw translationError(
+            decl,
+            'ExportDeclaration: Non default expression found, invalid AST.',
+            context,
+          );
+        }
+        const [declDecl, deps] = convertExpressionToTypeAnnotation(
+          decl,
+          context,
+        );
+        return [
+          t.DeclareExportDeclaration({
+            specifiers: [],
+            declaration: declDecl,
+            default: true,
+            source: null,
+          }),
+          deps,
+        ];
+      }
       throw translationError(
         decl,
-        `ExportNamedDeclaration: Unsupported declaration case of type "${decl.type}"`,
+        `ExportDeclaration: Unsupported declaration of type "${decl.type}".`,
         context,
       );
     }
@@ -559,23 +693,18 @@ function convertVariableDeclaration(
     }
 
     const init = first.init;
-    const [resultInit, deps] =
-      init == null
-        ? EMPTY_TRANSLATION_RESULT
-        : convertExpressionToTypeAnnotation(init, context);
-
-    if (resultInit != null) {
-      return [resultInit, deps];
+    if (init == null) {
+      return [
+        flowFixMeOrError(
+          first,
+          `VariableDeclaration: Type annotation missing`,
+          context,
+        ),
+        [],
+      ];
     }
 
-    return [
-      flowFixMeOrError(
-        first,
-        `VariableDeclaration: Type annotation missing`,
-        context,
-      ),
-      [],
-    ];
+    return convertExpressionToTypeAnnotation(init, context);
   })();
 
   return [
