@@ -596,9 +596,14 @@ class InstrGen {
     const char *infixDoubleOp = nullptr;
     // Function call for operator for doubles.
     const char *funcDoubleOp = nullptr;
+    // Function call for operator for int32.
+    const char *funcInt32Op = nullptr;
 
     bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
         inst.getRightHandSide()->getType().isNumberType();
+
+    bool bothInt32 = inst.getLeftHandSide()->getType().isInt32Type() &&
+        inst.getRightHandSide()->getType().isInt32Type();
 
     switch (inst.getKind()) {
       case ValueKind::BinaryAddInstKind: // +   (+=)
@@ -629,7 +634,9 @@ class InstrGen {
           funcUntypedOp = "_sh_ljs_div_rjs";
         break;
       case ValueKind::BinaryModuloInstKind: // %   (%=)
-        if (bothDouble)
+        if (bothInt32)
+          funcInt32Op = "_sh_mod_int32";
+        else if (bothDouble)
           funcDoubleOp = "_sh_mod_double";
         else
           funcUntypedOp = "_sh_ljs_mod_rjs";
@@ -727,7 +734,7 @@ class InstrGen {
     }
     if (boolConv)
       os_ << "_sh_ljs_bool(";
-    else if (infixDoubleOp || funcDoubleOp)
+    else if (infixDoubleOp || funcDoubleOp || funcInt32Op)
       os_ << "_sh_ljs_double(";
     if (passByValue) {
       assert(funcUntypedOp);
@@ -743,6 +750,14 @@ class InstrGen {
       os_ << ") " << infixDoubleOp << " _sh_ljs_get_double(";
       generateRegister(*inst.getRightHandSide());
       os_ << ")";
+    } else if (funcInt32Op) {
+      assert(bothInt32);
+      os_ << funcInt32Op << "(";
+      os_ << "_sh_ljs_get_double(";
+      generateRegister(*inst.getLeftHandSide());
+      os_ << "), _sh_ljs_get_double(";
+      generateRegister(*inst.getRightHandSide());
+      os_ << "))";
     } else if (funcDoubleOp) {
       assert(bothDouble);
       os_ << funcDoubleOp << "(";
@@ -761,7 +776,7 @@ class InstrGen {
     }
     if (boolConv)
       os_ << ")";
-    else if (infixDoubleOp || funcDoubleOp)
+    else if (infixDoubleOp || funcDoubleOp || funcInt32Op)
       os_ << ")";
     os_ << ";\n";
   }

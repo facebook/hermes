@@ -580,6 +580,17 @@ static inline double _sh_mod_double(double a, double b) {
   return fmod(a, b);
 }
 
+/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail.
+/// \return the double representing the result of the JS mod operation on the
+///   two integers.
+static inline double _sh_mod_int32(int32_t a, int32_t b) {
+  if (b == 0) {
+    // Avoid the divide-by-zero and return NaN directly.
+    return nan("");
+  }
+  return (double)(a % b);
+}
+
 /// Call the \c hermes::truncateToInt32SlowPath function.
 /// Annotated ((const)) to let the compiler know that the function will not
 /// read/write global memory at all (it's just doing math), allowing for
