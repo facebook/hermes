@@ -1636,3 +1636,7 @@ extern "C" SHLegacyValue _sh_ljs_direct_eval(
 
   return *result;
 }
+
+extern "C" int32_t _sh_to_int32_double_slow_path(double d) {
+  return truncateToInt32SlowPath(d);
+}

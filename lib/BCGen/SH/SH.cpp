@@ -421,9 +421,15 @@ class InstrGen {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
-    os_ << "_sh_ljs_to_int32_rjs(shr, ";
-    generateRegisterPtr(*inst.getSingleOperand());
-    os_ << ");\n";
+    if (inst.getSingleOperand()->getType().isNumberType()) {
+      os_ << "_sh_ljs_double((double)_sh_to_int32_double(_sh_ljs_get_double(";
+      generateRegister(*inst.getSingleOperand());
+      os_ << ")));\n";
+    } else {
+      os_ << "_sh_ljs_to_int32_rjs(shr, ";
+      generateRegisterPtr(*inst.getSingleOperand());
+      os_ << ");\n";
+    }
   }
   void generateLoadStackInst(LoadStackInst &inst) {
     os_.indent(2);
