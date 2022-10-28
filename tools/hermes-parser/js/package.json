@@ -33,6 +33,7 @@
     "hermes-eslint",
     "hermes-estree",
     "hermes-transform",
+    "hermes-translate",
     "hermes-parser"
   ]
 }
