@@ -580,6 +580,24 @@ static inline double _sh_mod_double(double a, double b) {
   return fmod(a, b);
 }
 
+/// Call the \c hermes::truncateToInt32SlowPath function.
+/// Annotated ((const)) to let the compiler know that the function will not
+/// read/write global memory at all (it's just doing math), allowing for
+/// optimizations around the locals struct.
+__attribute__((const)) int32_t _sh_to_int32_double_slow_path(double d);
+
+/// C version of the hermes::truncateToInt32 function.
+/// Inlines the fast path for SH to use, calls out to the slow path.
+static inline int32_t _sh_to_int32_double(double d) {
+  // Check of the value can be converted to integer without loss. We want to
+  // use the widest available integer because this conversion will be much
+  // faster than the bit-twiddling slow path.
+  intmax_t fast = (intmax_t)d;
+  if (fast == d)
+    return (int32_t)fast;
+  return _sh_to_int32_double_slow_path(d);
+}
+
 #ifdef __cplusplus
 }
 #endif
