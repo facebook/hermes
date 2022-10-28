@@ -20,6 +20,7 @@ function math(a, b) {
   print(a / b);
   print(a % b);
   print(a | 0);
+  print((a|0) % (b|0));
 }
 
 math(1, 2);
@@ -27,6 +28,7 @@ math(1, 2);
 // CHECK-NEXT: -1
 // CHECK-NEXT: 2
 // CHECK-NEXT: 0.5
+// CHECK-NEXT: 1
 // CHECK-NEXT: 1
 // CHECK-NEXT: 1
 
