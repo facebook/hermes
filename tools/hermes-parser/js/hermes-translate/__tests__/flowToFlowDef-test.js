@@ -386,7 +386,7 @@ describe('flowToFlowDef', () => {
         `export interface A {
            foo: string;
          }`,
-        `declare export interface A {
+        `export interface A {
            foo: string;
          }`,
       );
@@ -396,7 +396,7 @@ describe('flowToFlowDef', () => {
         `export interface A {
            foo(): void;
          }`,
-        `declare export interface A {
+        `export interface A {
            foo(): void;
          }`,
       );
@@ -405,7 +405,7 @@ describe('flowToFlowDef', () => {
       expectTranslate(
         `interface Foo {}
          export type Bar = Foo;`,
-        `declare interface Foo {}
+        `interface Foo {}
          export type Bar = Foo;`,
       );
     });
