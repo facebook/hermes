@@ -498,6 +498,9 @@ describe('flowToFlowDef', () => {
           `{set foo(bar: string): void}`,
         );
       });
+      it('properties', () => {
+        expectTranslateExpression(`{FOO: 1}`, `{FOO: 1}`);
+      });
       it('spread', () => {
         expectTranslateExpression(`{...a}`, `{...a}`);
       });

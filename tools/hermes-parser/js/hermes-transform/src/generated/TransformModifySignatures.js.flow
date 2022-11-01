@@ -8,8 +8,11 @@
  * @format
  */
 
-import type {CallExpression} from 'hermes-estree';
-import type {CallExpressionProps} from './node-types';
+import type {CallExpression, ObjectTypeAnnotation} from 'hermes-estree';
+import type {
+  CallExpressionProps,
+  ObjectTypeAnnotationProps,
+} from './node-types';
 
 /*
  * !!! THIS FILE WILL BE OVERWRITTEN BY CODEGEN !!!
@@ -24,4 +27,10 @@ type CallExpressionModifySignature = (
   newProps: $Partial<CallExpressionProps>,
 ) => void;
 
-export type TransformModifySignatures = CallExpressionModifySignature;
+type ObjectTypeAnnotationModifySignature = (
+  node: ObjectTypeAnnotation,
+  newProps: $Partial<ObjectTypeAnnotationProps>,
+) => void;
+
+export type TransformModifySignatures = CallExpressionModifySignature &
+  ObjectTypeAnnotationModifySignature;
