@@ -6,6 +6,7 @@
 <PROJECT_ROOT>/.*/node_modules
 
 [options]
+name=hermes-parser
 emoji=true
 file_watcher=watchman
 lazy_mode=true
