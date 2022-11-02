@@ -20,7 +20,7 @@ const visitorKeys: {[string]: $ReadOnly<{[string]: 'Node' | 'NodeList'}>} =
   // $FlowExpectedError[incompatible-type]
   Object.create(null);
 for (const node of GetHermesESTreeJSON()) {
-  const nodeVisitorKeys = {};
+  const nodeVisitorKeys: {[string]: 'Node' | 'NodeList'} = {};
   for (const arg of node.arguments) {
     switch (arg.type) {
       case 'NodeList':
