@@ -44,6 +44,7 @@ import type {
   TypeAnnotationType,
   TypeCastExpression,
   TypeParameterDeclaration,
+  TypeParameterInstantiation,
   VariableDeclaration,
 } from 'hermes-estree';
 import type {ScopeManager} from 'hermes-eslint';
@@ -415,20 +416,64 @@ function convertObjectExpression(
             context,
           );
         }
+
+        if (prop.method === true) {
+          if (
+            prop.value.type !== 'ArrowFunctionExpression' &&
+            prop.value.type !== 'FunctionExpression'
+          ) {
+            throw translationError(
+              prop.key,
+              `ObjectExpression Property: Expected method to have a function value, but got ${prop.value.type}`,
+              context,
+            );
+          }
+
+          const [resultExpr, deps] = convertAFunction(prop.value, context);
+          return [
+            t.ObjectTypeMethodSignature({
+              key: asDetachedNode(prop.key),
+              value: resultExpr,
+            }),
+            deps,
+          ];
+        }
+
+        if (prop.kind === 'get' || prop.kind === 'set') {
+          if (
+            prop.value.type !== 'ArrowFunctionExpression' &&
+            prop.value.type !== 'FunctionExpression'
+          ) {
+            throw translationError(
+              prop.key,
+              `ObjectExpression Property: Expected accessor to have a function value, but got ${prop.value.type}`,
+              context,
+            );
+          }
+
+          const kind = prop.kind;
+          const [resultExpr, deps] = convertAFunction(prop.value, context);
+          return [
+            t.ObjectTypeAccessorSignature({
+              key: asDetachedNode(prop.key),
+              kind,
+              value: resultExpr,
+            }),
+            deps,
+          ];
+        }
+
         const [resultExpr, deps] = convertExpressionToTypeAnnotation(
           prop.value,
           context,
         );
+
         return [
-          t.ObjectTypeProperty({
+          t.ObjectTypePropertySignature({
             key: asDetachedNode(prop.key),
             value: resultExpr,
-            method: prop.method,
             optional: false,
-            static: false,
-            proto: false,
             variance: null,
-            kind: prop.kind,
           }),
           deps,
         ];
@@ -504,46 +549,60 @@ function convertExportDeclaration(
     case 'FunctionDeclaration': {
       const [declDecl, deps] = convertFunctionDeclation(decl, context);
       return [
-        t.DeclareExportDeclaration({
-          specifiers: [],
-          declaration: declDecl,
-          default: opts.default,
-          source: null,
-        }),
+        opts.default
+          ? t.DeclareExportDefaultDeclaration({
+              declaration: declDecl,
+            })
+          : t.DeclareExportDeclarationNamedWithDeclaration({
+              declaration: declDecl,
+            }),
         deps,
       ];
     }
     case 'ClassDeclaration': {
       const [declDecl, deps] = convertClassDeclaration(decl, context);
       return [
-        t.DeclareExportDeclaration({
-          specifiers: [],
-          declaration: declDecl,
-          default: opts.default,
-          source: null,
-        }),
+        opts.default
+          ? t.DeclareExportDefaultDeclaration({
+              declaration: declDecl,
+            })
+          : t.DeclareExportDeclarationNamedWithDeclaration({
+              declaration: declDecl,
+            }),
         deps,
       ];
     }
     case 'InterfaceDeclaration': {
+      if (opts.default) {
+        throw translationError(
+          decl,
+          'ExportDeclaration: Default interface found, invalid AST.',
+          context,
+        );
+      }
+
       const [declDecl, deps] = convertInterfaceDeclaration(decl, context);
       return [
-        t.ExportNamedDeclaration({
+        t.ExportNamedDeclarationWithDeclaration({
           exportKind: 'type',
-          source: null,
-          specifiers: [],
           declaration: declDecl,
         }),
         deps,
       ];
     }
     case 'TypeAlias': {
+      if (opts.default) {
+        throw translationError(
+          decl,
+          'ExportDeclaration: Default type alias found, invalid AST.',
+          context,
+        );
+      }
+
       const [declDecl, deps] = convertTypeAlias(decl, context);
       return [
-        t.ExportNamedDeclaration({
+        t.ExportNamedDeclarationWithDeclaration({
           exportKind: 'type',
-          source: null,
-          specifiers: [],
           declaration: declDecl,
         }),
         deps,
@@ -559,11 +618,8 @@ function convertExportDeclaration(
       }
       const [declDecl, deps] = convertOpaqueType(decl, context);
       return [
-        t.DeclareExportDeclaration({
-          specifiers: [],
+        t.DeclareExportDeclarationNamedWithDeclaration({
           declaration: declDecl,
-          default: false,
-          source: null,
         }),
         deps,
       ];
@@ -578,21 +634,16 @@ function convertExportDeclaration(
       }
       const [declDecl, deps] = convertVariableDeclaration(decl, context);
       return [
-        t.DeclareExportDeclaration({
-          specifiers: [],
+        t.DeclareExportDeclarationNamedWithDeclaration({
           declaration: declDecl,
-          default: false,
-          source: null,
         }),
         deps,
       ];
     }
     case 'EnumDeclaration': {
       return [
-        t.ExportNamedDeclaration({
+        t.ExportNamedDeclarationWithDeclaration({
           exportKind: 'value',
-          source: null,
-          specifiers: [],
           declaration: asDetachedNode(decl),
         }),
         [],
@@ -612,11 +663,8 @@ function convertExportDeclaration(
           context,
         );
         return [
-          t.DeclareExportDeclaration({
-            specifiers: [],
+          t.DeclareExportDefaultDeclaration({
             declaration: declDecl,
-            default: true,
-            source: null,
           }),
           deps,
         ];
@@ -654,11 +702,10 @@ function convertExportNamedDeclaration(
           analyzeTypeDependencies(local, context),
         );
   return [
-    t.ExportNamedDeclaration({
+    t.ExportNamedDeclarationWithSpecifiers({
       exportKind: stmt.exportKind,
       source: asDetachedNode(stmt.source),
       specifiers: resultSpecfiers,
-      declaration: null,
     }),
     specifiersDeps,
   ];
@@ -791,7 +838,7 @@ function convertClassDeclaration(
 
 function convertSuperClass(
   superClass: ?Expression,
-  superTypeParameters: ?TypeParameterDeclaration,
+  superTypeParameters: ?TypeParameterInstantiation,
   context: TranslationContext,
 ): TranslatedResultOrNull<InterfaceExtends> {
   if (superClass == null) {
@@ -806,7 +853,7 @@ function convertSuperClass(
     );
   }
   const [resultTypeParams, typeParamsDeps] =
-    convertTypeParameterDeclarationOrNull(superTypeParameters, context);
+    convertTypeParameterInstantiationOrNull(superTypeParameters, context);
   const superDeps = analyzeTypeDependencies(superClass, context);
   return [
     t.InterfaceExtends({
@@ -866,15 +913,12 @@ function convertClassMember(
       );
 
       return [
-        t.ObjectTypeProperty({
+        t.ObjectTypePropertySignature({
           key: asDetachedNode(member.key),
           value: resultTypeAnnotation,
-          method: false,
           optional: member.optional,
           static: member.static,
-          proto: false,
           variance: member.variance,
-          kind: 'init',
         }),
         deps,
       ];
@@ -897,16 +941,25 @@ function convertClassMember(
 
       const [resultValue, deps] = convertAFunction(member.value, context);
 
+      if (member.kind === 'get' || member.kind === 'set') {
+        // accessors are methods - but flow accessor signatures are properties
+        const kind = member.kind;
+        return [
+          t.ObjectTypeAccessorSignature({
+            key: asDetachedNode(member.key),
+            value: resultValue,
+            static: member.static,
+            kind,
+          }),
+          deps,
+        ];
+      }
+
       return [
-        t.ObjectTypeProperty({
+        t.ObjectTypeMethodSignature({
           key: asDetachedNode(member.key),
           value: resultValue,
-          method: true,
-          optional: false,
           static: member.static,
-          proto: false,
-          variance: null,
-          kind: 'init',
         }),
         deps,
       ];
@@ -958,12 +1011,8 @@ function convertFunctionDeclation(
 
   return [
     t.DeclareFunction({
-      id: t.Identifier({
-        name: id.name,
-        typeAnnotation: t.TypeAnnotation({
-          typeAnnotation: resultFunc,
-        }),
-      }),
+      name: id.name,
+      functionType: resultFunc,
       predicate: resultPredicate,
     }),
     [...funcDeps, ...predicateDeps],
@@ -1168,4 +1217,13 @@ function convertTypeParameterDeclarationOrNull(
     return EMPTY_TRANSLATION_RESULT;
   }
   return [asDetachedNode(decl), analyzeTypeDependencies(decl, context)];
+}
+function convertTypeParameterInstantiationOrNull(
+  inst: ?TypeParameterInstantiation,
+  context: TranslationContext,
+): TranslatedResultOrNull<TypeParameterInstantiation> {
+  if (inst == null) {
+    return EMPTY_TRANSLATION_RESULT;
+  }
+  return [asDetachedNode(inst), analyzeTypeDependencies(inst, context)];
 }

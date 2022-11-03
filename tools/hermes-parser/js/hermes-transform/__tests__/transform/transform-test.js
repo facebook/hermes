@@ -1296,32 +1296,47 @@ x?.();
         });
         context.modifyNodeInPlace(node, {
           properties: [
-            t.ObjectTypeProperty({
+            t.ObjectTypeMethodSignature({
               key: t.Identifier({name: 'a'}),
               value: func,
-              method: true,
-              optional: false,
-              static: false,
-              proto: false,
-              variance: null,
-              kind: 'init',
             }),
-            t.ObjectTypeProperty({
+            t.ObjectTypePropertySignature({
               key: t.Identifier({name: 'b'}),
               value: func,
-              method: false,
               optional: false,
-              static: false,
-              proto: false,
               variance: null,
-              kind: 'init',
+            }),
+            t.ObjectTypeAccessorSignature({
+              key: t.Identifier({name: 'c'}),
+              value: func,
+              kind: 'get',
+            }),
+            t.ObjectTypeAccessorSignature({
+              key: t.Identifier({name: 'd'}),
+              // setters must have a param hence new func
+              value: t.FunctionTypeAnnotation({
+                params: [
+                  t.FunctionTypeParam({
+                    name: t.Identifier({
+                      name: 'param',
+                    }),
+                    optional: false,
+                    typeAnnotation: t.StringTypeAnnotation(),
+                  }),
+                ],
+                returnType: t.VoidTypeAnnotation(),
+                rest: null,
+                typeParameters: null,
+                this: null,
+              }),
+              kind: 'set',
             }),
           ],
         });
       },
     }));
     expect(result).toBe(`\
-type A = {a(): void, b: () => void};
+type A = {a(): void, b: () => void, get c(): void, set d(param: string): void};
 `);
   });
 });

@@ -25,13 +25,17 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'BigIntLiteral',
   'BooleanLiteral',
   'ClassDeclaration',
+  'DeclareExportDeclaration',
+  'DeclareFunction',
+  'ExportNamedDeclaration',
   'Identifier',
   'NullLiteral',
   'NumericLiteral',
+  'ObjectTypeProperty',
+  'Program',
   'RegExpLiteral',
   'StringLiteral',
   'TemplateElement',
-  'Program',
 ]);
 
 for (const node of GetHermesESTreeJSON()) {

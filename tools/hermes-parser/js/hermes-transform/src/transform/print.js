@@ -67,7 +67,7 @@ export function print(
       // position.
       if (node.type === 'ObjectTypeProperty') {
         if (
-          !node.method &&
+          node.method === false &&
           node.kind === 'init' &&
           node.range[0] === 1 &&
           node.value.range[0] === 1
