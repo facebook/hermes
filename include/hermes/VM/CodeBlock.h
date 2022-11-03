@@ -34,9 +34,6 @@ namespace vm {
 class RuntimeModule;
 class CodeBlock;
 
-/// A pointer to JIT-compiled function.
-typedef CallResult<HermesValue> (*JITCompiledFunctionPtr)(Runtime &runtime);
-
 /// A sequence of instructions representing the body of a function.
 class CodeBlock final
     : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
