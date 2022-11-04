@@ -470,73 +470,6 @@ void SamplingProfiler::collectStackForLoomCommon(
 }
 #endif
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-/*static*/ FBLoomStackCollectionRetcode SamplingProfiler::collectStackForLoom(
-    int64_t *frames,
-    uint16_t *depth,
-    uint16_t max_depth,
-    void *profiler) {
-  auto profilerInstance = GlobalProfiler::get();
-  {
-    std::unique_lock<std::mutex> lock(profilerInstance->profilerLock_);
-    if (!profilerInstance->enabled_) {
-      return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
-    }
-    profilerInstance->collectingStack_ = true;
-  }
-  auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
-  std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
-
-  *depth = 0;
-  // Sampling stack will touch GC objects(like closure) so
-  // only do so if heap is valid.
-  if (LLVM_LIKELY(localProfiler->suspendCount_ == 0)) {
-    // Do not register domains for Loom profiling, since we don't use them for
-    // symbolication.
-    if (!profilerInstance->sampleStack(localProfiler)) {
-      profilerInstance->collectingStack_ = false;
-      profilerInstance->disableForLoomCondVar_.notify_one();
-      return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
-    }
-  } else {
-    profilerInstance->collectingStack_ = false;
-    profilerInstance->disableForLoomCondVar_.notify_one();
-    return FBLoomStackCollectionRetcode::EMPTY_STACK;
-  }
-
-  uint32_t index = 0;
-  for (unsigned i = 0; i < localProfiler->sampledStacks_.size(); ++i) {
-    auto &sample = localProfiler->sampledStacks_[i];
-    for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
-         ++iter) {
-      const StackFrame &frame = *iter;
-      localProfiler->collectStackForLoomCommon(frame, frames, index);
-      (*depth)++;
-      index++;
-    }
-  }
-  localProfiler->clear();
-  if (*depth == 0) {
-    profilerInstance->collectingStack_ = false;
-    profilerInstance->disableForLoomCondVar_.notify_one();
-    return FBLoomStackCollectionRetcode::EMPTY_STACK;
-  }
-  profilerInstance->collectingStack_ = false;
-  profilerInstance->disableForLoomCondVar_.notify_one();
-  return FBLoomStackCollectionRetcode::SUCCESS;
-}
-
-/*static*/ bool SamplingProfiler::enableForLoom() {
-  auto profilerInstance = GlobalProfiler::get();
-  return profilerInstance->enableForLoomCollection();
-}
-
-/*static*/ bool SamplingProfiler::disableForLoom() {
-  auto profilerInstance = GlobalProfiler::get();
-  return profilerInstance->disableForLoomCollection();
-}
-#endif
-
 SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : currentThread_{pthread_self()}, runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
@@ -544,8 +477,6 @@ SamplingProfiler::SamplingProfiler(Runtime &runtime)
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
   // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
   const int32_t tracerTypeJavascript = 1;
-  fbloom_profilo_api()->fbloom_register_external_tracer_callback(
-      1, this, collectStackForLoom);
   fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
       tracerTypeJavascript, enable);
   fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
@@ -659,23 +590,6 @@ bool SamplingProfiler::GlobalProfiler::enable() {
   return true;
 }
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-bool SamplingProfiler::GlobalProfiler::enableForLoomCollection() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  if (enabled_) {
-    return true;
-  }
-  if (!samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
-    return false;
-  }
-  if (!registerSignalHandlers()) {
-    return false;
-  }
-  enabled_ = true;
-  return true;
-}
-#endif
-
 bool SamplingProfiler::disable() {
   return GlobalProfiler::get()->disable();
 }
@@ -705,32 +619,6 @@ bool SamplingProfiler::GlobalProfiler::disable() {
   timerThread_.join();
   return true;
 }
-
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-bool SamplingProfiler::GlobalProfiler::disableForLoomCollection() {
-  {
-    std::unique_lock lock(profilerLock_);
-    while (collectingStack_) {
-      disableForLoomCondVar_.wait(lock);
-    }
-
-    if (!enabled_) {
-      // Already disabled.
-      return true;
-    }
-    if (!samplingDoneSem_.close()) {
-      return false;
-    }
-    // Unregister handlers before shutdown.
-    if (!unregisterSignalHandler()) {
-      return false;
-    }
-    // Telling timer thread to exit.
-    enabled_ = false;
-  }
-  return true;
-}
-#endif
 
 void SamplingProfiler::clear() {
   sampledStacks_.clear();
