@@ -188,6 +188,11 @@ bool SamplingProfiler::GlobalProfiler::sampleStacks() {
     if (!sampleStack(localProfiler)) {
       return false;
     }
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+    if (localProfiler->shouldPushDataToLoom()) {
+      localProfiler->pushLastSampledStackToLoom();
+    }
+#endif
   }
   return true;
 }
@@ -400,6 +405,11 @@ void SamplingProfiler::collectStackForLoomCommon(
       break;
     }
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+    case StackFrame::FrameKind::SuspendFrame:
+      break;
+#endif
+
     default:
       llvm_unreachable("Loom: unknown frame kind");
   }
@@ -532,12 +542,15 @@ SamplingProfiler::SamplingProfiler(Runtime &runtime)
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
   GlobalProfiler::get()->registerRuntime(this);
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
+  const int32_t tracerTypeJavascript = 1;
   fbloom_profilo_api()->fbloom_register_external_tracer_callback(
       1, this, collectStackForLoom);
   fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
-      1, enableForLoom);
+      tracerTypeJavascript, enable);
   fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
-      1, disableForLoom);
+      tracerTypeJavascript, disable);
+  loomDataPushEnabled_ = true;
 #endif
 }
 
@@ -727,6 +740,39 @@ void SamplingProfiler::clear() {
   // TODO: keep thread names that are still in use.
   threadNames_.clear();
 }
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+bool SamplingProfiler::shouldPushDataToLoom() const {
+  auto now = std::chrono::system_clock::now();
+  constexpr auto kLoomDelay = std::chrono::milliseconds(50);
+  // The default sample stack interval in timerLoop() is between 5-15ms which
+  // is too often for loom.
+  return loomDataPushEnabled_ && (now - previousPushTs > kLoomDelay);
+}
+
+void SamplingProfiler::pushLastSampledStackToLoom() {
+  constexpr uint16_t maxDepth = 512;
+  int64_t frames[maxDepth];
+  uint16_t depth = 0;
+  // Each element in sampledStacks_ is one call stack, access the last one
+  // to get the latest stack trace.
+  auto sample = sampledStacks_.back();
+  for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend(); ++iter) {
+    const StackFrame &frame = *iter;
+    collectStackForLoomCommon(frame, frames, depth);
+    depth++;
+    if (depth > maxDepth) {
+      return;
+    }
+  }
+  // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
+  const int32_t tracerTypeJavascript = 1;
+  fbloom_profilo_api()->fbloom_write_stack_to_loom(
+      tracerTypeJavascript, frames, depth);
+  previousPushTs = std::chrono::system_clock::now();
+  clear();
+}
+#endif
 
 void SamplingProfiler::suspend(std::string_view extraInfo) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
