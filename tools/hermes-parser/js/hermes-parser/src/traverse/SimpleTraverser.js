@@ -10,6 +10,7 @@
 
 'use strict';
 
+import type {VisitorKeysType} from './getVisitorKeys';
 import type {ESNode} from 'hermes-estree';
 
 import {getVisitorKeys, isNode} from './getVisitorKeys';
@@ -20,6 +21,8 @@ export type TraverserOptions = $ReadOnly<{
   enter: TraverserCallback,
   /** The callback function which is called on leaving each node. */
   leave: TraverserCallback,
+  /** The set of visitor keys to use for traversal. Defaults to the `hermes-eslint` visitor keys */
+  visitorKeys?: ?VisitorKeysType,
 }>;
 
 /**
@@ -77,7 +80,7 @@ export class SimpleTraverser {
       throw ex;
     }
 
-    const keys = getVisitorKeys(node);
+    const keys = getVisitorKeys(node, options.visitorKeys);
     for (const key of keys) {
       // $FlowExpectedError[prop-missing]
       const child = node[key];

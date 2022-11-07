@@ -9,7 +9,7 @@
  */
 
 import type {Comment, ESNode, Program} from 'hermes-estree';
-import type {DetachedNode} from '../../detachedNode';
+import type {DetachedNode, MaybeDetachedNode} from '../../detachedNode';
 
 // $FlowExpectedError[untyped-import]
 import {attach as untypedAttach} from './prettier/main/comments';
@@ -23,6 +23,7 @@ import {
   // $FlowExpectedError[untyped-import]
   addTrailingComment as untypedAddTrailingComment,
 } from './prettier/common/util';
+import {isBlockComment} from 'hermes-estree';
 import {EOL} from 'os';
 
 export type Options = $ReadOnly<{}>;
@@ -52,6 +53,20 @@ export function moveCommentsToNewNode(
 ): void {
   setCommentsOnNode(newNode, getCommentsForNode(oldNode));
   setCommentsOnNode(oldNode, []);
+}
+
+export function cloneJSDocCommentsToNewNode(
+  oldNode: ESNode,
+  newNode: MaybeDetachedNode<ESNode>,
+): void {
+  const comments = getCommentsForNode(oldNode).filter(comment => {
+    return (
+      isBlockComment(comment) &&
+      // JSDoc comments always start with an extra asterisk
+      comment.value.startsWith('*')
+    );
+  });
+  setCommentsOnNode(newNode, comments.map(cloneCommentWithMarkers));
 }
 
 export function setCommentsOnNode(
