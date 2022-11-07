@@ -30,12 +30,12 @@ describe('ExportAllDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        Object {
-          "body": Array [
-            Object {
+        {
+          "body": [
+            {
               "exportKind": "value",
               "exported": null,
-              "source": Object {
+              "source": {
                 "literalType": "string",
                 "raw": "'z'",
                 "type": "Literal",
@@ -82,17 +82,17 @@ describe('ExportAllDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        Object {
-          "body": Array [
-            Object {
+        {
+          "body": [
+            {
               "exportKind": "value",
-              "exported": Object {
+              "exported": {
                 "name": "y",
                 "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "source": Object {
+              "source": {
                 "literalType": "string",
                 "raw": "'z'",
                 "type": "Literal",

@@ -37,15 +37,15 @@ describe('PropertyDefinition', () => {
 
   test('ESTree', () => {
     expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      Object {
-        "body": Array [
-          Object {
-            "body": Object {
-              "body": Array [
-                Object {
+      {
+        "body": [
+          {
+            "body": {
+              "body": [
+                {
                   "computed": false,
                   "declare": false,
-                  "key": Object {
+                  "key": {
                     "name": "foo",
                     "optional": false,
                     "type": "Identifier",
@@ -58,10 +58,10 @@ describe('PropertyDefinition', () => {
                   "value": null,
                   "variance": null,
                 },
-                Object {
+                {
                   "computed": false,
                   "declare": false,
-                  "key": Object {
+                  "key": {
                     "name": "bar",
                     "optional": false,
                     "type": "Identifier",
@@ -71,7 +71,7 @@ describe('PropertyDefinition', () => {
                   "static": false,
                   "type": "PropertyDefinition",
                   "typeAnnotation": null,
-                  "value": Object {
+                  "value": {
                     "literalType": "numeric",
                     "raw": "1",
                     "type": "Literal",
@@ -79,10 +79,10 @@ describe('PropertyDefinition', () => {
                   },
                   "variance": null,
                 },
-                Object {
+                {
                   "computed": false,
                   "declare": false,
-                  "key": Object {
+                  "key": {
                     "name": "staticProp",
                     "optional": false,
                     "type": "Identifier",
@@ -92,7 +92,7 @@ describe('PropertyDefinition', () => {
                   "static": true,
                   "type": "PropertyDefinition",
                   "typeAnnotation": null,
-                  "value": Object {
+                  "value": {
                     "literalType": "numeric",
                     "raw": "1",
                     "type": "Literal",
@@ -103,14 +103,14 @@ describe('PropertyDefinition', () => {
               ],
               "type": "ClassBody",
             },
-            "decorators": Array [],
-            "id": Object {
+            "decorators": [],
+            "id": {
               "name": "C",
               "optional": false,
               "type": "Identifier",
               "typeAnnotation": null,
             },
-            "implements": Array [],
+            "implements": [],
             "superClass": null,
             "superTypeParameters": null,
             "type": "ClassDeclaration",
@@ -147,15 +147,15 @@ describe('PropertyDefinition', () => {
 
       test('ESTree', () => {
         expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-          Object {
-            "body": Array [
-              Object {
-                "body": Object {
-                  "body": Array [
-                    Object {
+          {
+            "body": [
+              {
+                "body": {
+                  "body": [
+                    {
                       "computed": false,
                       "declare": false,
-                      "key": Object {
+                      "key": {
                         "name": "baz",
                         "optional": false,
                         "type": "Identifier",
@@ -164,10 +164,10 @@ describe('PropertyDefinition', () => {
                       "optional": false,
                       "static": false,
                       "type": "PropertyDefinition",
-                      "typeAnnotation": Object {
+                      "typeAnnotation": {
                         "type": "TypeAnnotation",
-                        "typeAnnotation": Object {
-                          "id": Object {
+                        "typeAnnotation": {
+                          "id": {
                             "name": "F",
                             "optional": false,
                             "type": "Identifier",
@@ -177,7 +177,7 @@ describe('PropertyDefinition', () => {
                           "typeParameters": null,
                         },
                       },
-                      "value": Object {
+                      "value": {
                         "literalType": "numeric",
                         "raw": "1",
                         "type": "Literal",
@@ -188,14 +188,14 @@ describe('PropertyDefinition', () => {
                   ],
                   "type": "ClassBody",
                 },
-                "decorators": Array [],
-                "id": Object {
+                "decorators": [],
+                "id": {
                   "name": "C",
                   "optional": false,
                   "type": "Identifier",
                   "typeAnnotation": null,
                 },
-                "implements": Array [],
+                "implements": [],
                 "superClass": null,
                 "superTypeParameters": null,
                 "type": "ClassDeclaration",
@@ -234,15 +234,15 @@ describe('PropertyDefinition', () => {
 
       test('ESTree', () => {
         expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-          Object {
-            "body": Array [
-              Object {
-                "body": Object {
-                  "body": Array [
-                    Object {
+          {
+            "body": [
+              {
+                "body": {
+                  "body": [
+                    {
                       "computed": false,
                       "declare": true,
-                      "key": Object {
+                      "key": {
                         "name": "bam",
                         "optional": false,
                         "type": "Identifier",
@@ -251,9 +251,9 @@ describe('PropertyDefinition', () => {
                       "optional": false,
                       "static": false,
                       "type": "PropertyDefinition",
-                      "typeAnnotation": Object {
+                      "typeAnnotation": {
                         "type": "TypeAnnotation",
-                        "typeAnnotation": Object {
+                        "typeAnnotation": {
                           "raw": "1",
                           "type": "NumberLiteralTypeAnnotation",
                           "value": 1,
@@ -265,14 +265,14 @@ describe('PropertyDefinition', () => {
                   ],
                   "type": "ClassBody",
                 },
-                "decorators": Array [],
-                "id": Object {
+                "decorators": [],
+                "id": {
                   "name": "C",
                   "optional": false,
                   "type": "Identifier",
                   "typeAnnotation": null,
                 },
-                "implements": Array [],
+                "implements": [],
                 "superClass": null,
                 "superTypeParameters": null,
                 "type": "ClassDeclaration",

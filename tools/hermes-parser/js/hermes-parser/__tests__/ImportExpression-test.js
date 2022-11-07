@@ -29,13 +29,13 @@ describe('ImportExpression', () => {
 
   test('ESTree', () => {
     expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      Object {
-        "body": Array [
-          Object {
+      {
+        "body": [
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "attributes": null,
-              "source": Object {
+              "source": {
                 "literalType": "string",
                 "raw": "'foo'",
                 "type": "Literal",
