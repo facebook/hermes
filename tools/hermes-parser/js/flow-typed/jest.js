@@ -121,25 +121,6 @@ type JestAsymmetricEqualityType = {
   ...
 };
 
-type JestCallsType = {
-  allArgs(): mixed,
-  all(): mixed,
-  any(): boolean,
-  count(): number,
-  first(): mixed,
-  mostRecent(): mixed,
-  reset(): void,
-  ...
-};
-
-type JestClockType = {
-  install(): void,
-  mockDate(date: Date): void,
-  tick(milliseconds?: number): void,
-  uninstall(): void,
-  ...
-};
-
 type JestMatcherResult = {
   message?: string | (() => string),
   pass: boolean,
@@ -174,19 +155,6 @@ type JestTestName = string | Function;
 /**
  *  Plugin: jest-styled-components
  */
-
-type JestStyledComponentsMatcherValue =
-  | string
-  | JestAsymmetricEqualityType
-  | RegExp
-  | typeof undefined;
-
-type JestStyledComponentsMatcherOptions = {
-  media?: string,
-  modifier?: string,
-  supports?: string,
-  ...
-};
 
 interface JestExpectType {
   not: JestExpectType;
@@ -372,6 +340,9 @@ interface JestExpectType {
    */
   toThrowErrorMatchingSnapshot(): void;
   toThrowErrorMatchingInlineSnapshot(snapshot?: string): void;
+
+  // added by jest-specific-snapshot
+  toMatchSpecificSnapshot(snapshotFilename: string): void;
 }
 
 type JestObjectType = {
@@ -560,12 +531,10 @@ type JestObjectType = {
   ...
 };
 
-type JestSpyType = {calls: JestCallsType, ...};
-
-type JestDoneFn = {|
+type JestDoneFn = {
   (error?: Error): void,
   fail: (error: Error) => void,
-|};
+};
 
 /** Runs this function after every test inside this context */
 declare function afterEach(
@@ -638,7 +607,7 @@ declare var it: {
    * @param {Function} Test
    * @param {number} Timeout for the test, in milliseconds.
    */
-  only: {|
+  only: {
     (
       name: JestTestName,
       fn?: (done: JestDoneFn) => ?Promise<mixed>,
@@ -651,7 +620,7 @@ declare var it: {
       fn?: (...args: Array<any>) => ?Promise<mixed>,
       timeout?: number,
     ) => void,
-  |},
+  },
   /**
    * Skip running this test
    *
@@ -659,7 +628,7 @@ declare var it: {
    * @param {Function} Test
    * @param {number} Timeout for the test, in milliseconds.
    */
-  skip: {|
+  skip: {
     (
       name: JestTestName,
       fn?: (done: JestDoneFn) => ?Promise<mixed>,
@@ -672,7 +641,7 @@ declare var it: {
       fn?: (...args: Array<any>) => ?Promise<mixed>,
       timeout?: number,
     ) => void,
-  |},
+  },
   /**
    * Highlight planned tests in the summary output
    *
@@ -752,11 +721,9 @@ type JestPrettyFormatColors = {
 };
 
 type JestPrettyFormatIndent = string => string;
-type JestPrettyFormatRefs = Array<any>;
 type JestPrettyFormatPrint = any => string;
-type JestPrettyFormatStringOrNull = string | null;
 
-type JestPrettyFormatOptions = {|
+type JestPrettyFormatOptions = {
   callToJSON: boolean,
   edgeSpacing: string,
   escapeRegex: boolean,
@@ -767,14 +734,14 @@ type JestPrettyFormatOptions = {|
   plugins: JestPrettyFormatPlugins,
   printFunctionName: boolean,
   spacing: string,
-  theme: {|
+  theme: {
     comment: string,
     content: string,
     prop: string,
     tag: string,
     value: string,
-  |},
-|};
+  },
+};
 
 type JestPrettyFormatPlugin = {
   print: (
