@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef object/spread/trailing/multiple 1`] = `
+[ExpectedTranslationError: 
+> 13 |   ...T1,
+     |   ^^^^^ Unsupported feature: Translating "object types with spreads in the middle or at the end" is currently not supported.]
+`;

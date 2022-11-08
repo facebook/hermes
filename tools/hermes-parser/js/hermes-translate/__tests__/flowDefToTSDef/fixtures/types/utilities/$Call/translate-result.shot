@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/utilities/$Call 1`] = `
+[ExpectedTranslationError: 
+> 11 | type T = $Call<Foo, Bar>;
+     |          ^^^^^^^^^^^^^^^ Unsupported feature: Translating "$Call" is currently not supported.]
+`;

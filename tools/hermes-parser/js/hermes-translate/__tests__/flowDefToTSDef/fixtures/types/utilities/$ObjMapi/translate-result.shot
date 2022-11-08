@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/utilities/$ObjMapi 1`] = `
+[ExpectedTranslationError: 
+> 11 | type T = $ObjMapi<Foo, Bar>;
+     |          ^^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "$ObjMapi" is currently not supported.]
+`;

@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef import/typeof/named 1`] = `
+[ExpectedTranslationError: 
+> 11 | import typeof {Thing} from 'module';
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "typeof imports" is currently not supported.]
+`;

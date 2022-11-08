@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/keywords/empty 1`] = `
+[ExpectedTranslationError: 
+> 11 | type T = empty;
+     |          ^^^^^ Unsupported feature: Translating "empty type" is currently not supported.]
+`;
