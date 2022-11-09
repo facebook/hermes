@@ -1,0 +1,11 @@
+diff --git a/xplat/static_h/external/llvh/include/llvh/ADT/StringSet.h b/xplat/static_h/external/llvh/include/llvh/ADT/StringSet.h
+--- a/xplat/static_h/external/llvh/include/llvh/ADT/StringSet.h
++++ b/xplat/static_h/external/llvh/include/llvh/ADT/StringSet.h
+@@ -34,6 +34,7 @@ namespace llvh {
+       for (StringRef X : S)
+         insert(X);
+     }
++    using StringMap<char, AllocatorTy>::StringMap;
+ 
+     std::pair<typename base::iterator, bool> insert(StringRef Key) {
+       assert(!Key.empty());
