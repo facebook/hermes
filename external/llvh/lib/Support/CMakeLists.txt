@@ -11,6 +11,7 @@ add_hermes_library(LLVHSupport
     ErrorHandling.cpp
     FileCheck.cpp
     FoldingSet.cpp
+    FormatVariadic.cpp
     GraphWriter.cpp
     Hashing.cpp
     Host.cpp
@@ -53,6 +54,7 @@ add_hermes_library(LLVHSupport
     Unicode.cpp
     Valgrind.cpp
     Watchdog.cpp
+    WithColor.cpp
     LINK_OBJLIBS LLVHDemangle ${TERMINFO_LIBS}
 )
 
