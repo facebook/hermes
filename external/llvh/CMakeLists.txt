@@ -29,6 +29,21 @@ set(CMAKE_UNITY_BUILD OFF)
 
 add_subdirectory(lib)
 add_subdirectory(utils/FileCheck)
+add_subdirectory(utils/TableGen)
 add_subdirectory(utils/not)
 add_subdirectory(utils/count)
 add_subdirectory(utils/unittest)
+
+set(LLVH_LIT_ARGS "-sv")
+set(LLVH_LIT_TEST_PARAMS
+  test_exec_root=${CMAKE_CURRENT_BINARY_DIR}/test
+  FileCheck=$<TARGET_FILE:FileCheck>
+  llvh-tblgen=$<TARGET_FILE:llvh-tblgen>
+  )
+add_lit_testsuite(check-llvh "Running LLVH regression tests"
+  ${CMAKE_CURRENT_SOURCE_DIR}/test
+  PARAMS ${LLVH_LIT_TEST_PARAMS}
+  DEPENDS llvh-tblgen FileCheck
+  ARGS ${LLVH_TEST_EXTRA_ARGS}
+  )
+set_target_properties(check-llvh PROPERTIES FOLDER "LLVH regression tests")
