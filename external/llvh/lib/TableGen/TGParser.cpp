@@ -1791,13 +1791,25 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
                                  IDParseMode Mode) {
   Init *R = nullptr;
   switch (Lex.getCode()) {
-  default: TokError("Unknown token when parsing a value"); break;
+  default: TokError("Unknown or reserved token when parsing a value"); break;
+
   case tgtok::paste:
     // This is a leading paste operation.  This is deprecated but
     // still exists in some .td files.  Ignore it.
     Lex.Lex();  // Skip '#'.
     return ParseSimpleValue(CurRec, ItemType, Mode);
-  case tgtok::IntVal: R = IntInit::get(Lex.getCurIntVal()); Lex.Lex(); break;
+  case tgtok::TrueVal:
+    R = IntInit::get(1);
+    Lex.Lex();
+    break;
+  case tgtok::FalseVal:
+    R = IntInit::get(0);
+    Lex.Lex();
+    break;
+  case tgtok::IntVal:
+    R = IntInit::get(Lex.getCurIntVal());
+    Lex.Lex();
+    break;
   case tgtok::BinaryIntVal: {
     auto BinaryVal = Lex.getCurBinaryIntVal();
     SmallVector<Init*, 16> Bits(BinaryVal.second);
@@ -2213,6 +2225,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
         default:
           Init *RHSResult = ParseValue(CurRec, ItemType, ParseNameMode);
           Result = BinOpInit::getListConcat(LHS, RHSResult);
+          break;
         }
         break;
       }
