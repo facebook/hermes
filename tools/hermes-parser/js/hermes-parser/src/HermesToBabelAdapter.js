@@ -91,6 +91,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapUnsupportedTypeAnnotation(node);
       case 'BigIntLiteral':
         return this.mapBigIntLiteral(node);
+      case 'BigIntLiteralTypeAnnotation':
+        return this.mapBigIntLiteralTypeAnnotation(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -413,8 +415,11 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   }
 
   mapBigIntLiteral(node: HermesNode): HermesNode {
-    const bigint = node.bigint.replace(/n$/, '').replace(/_/, '');
-    node.value = typeof BigInt === 'function' ? BigInt(bigint) : null;
+    node.value = this.getBigIntLiteralValue(node.bigint).value;
+    return node;
+  }
+  mapBigIntLiteralTypeAnnotation(node: HermesNode): HermesNode {
+    node.value = this.getBigIntLiteralValue(node.raw).value;
     return node;
   }
 
