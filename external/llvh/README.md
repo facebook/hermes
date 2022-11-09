@@ -32,6 +32,10 @@ cp -r ./llvm/utils/lit/* /path/to/hermes/external/llvh/utils/lit
 Some copied files were omitted because we don't use them
 (like lit self-tests and examples).
 
+## Other imports from v9.0.1
+
+Support/JSON and Support/ToolOutputFile.
+
 ## Rename to LLVH
 
 To avoid conflicts when linking with mainline LLVM, the namespace and include directories were

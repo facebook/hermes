@@ -16,6 +16,7 @@ add_hermes_library(LLVHSupport
     Hashing.cpp
     Host.cpp
     InitLLVM.cpp
+    JSON.cpp
     LineIterator.cpp
     Locale.cpp
     ManagedStatic.cpp
@@ -49,6 +50,7 @@ add_hermes_library(LLVHSupport
     TargetParser.cpp
     Threading.cpp
     Timer.cpp
+    ToolOutputFile.cpp
     Triple.cpp
     Twine.cpp
     Unicode.cpp
