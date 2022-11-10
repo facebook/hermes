@@ -43,6 +43,13 @@ class JSRegExp final : public JSObject {
     return create(runtime, Handle<JSObject>::vmcast(&runtime.regExpPrototype));
   }
 
+  /// Creates the hidden class for Regular Expression match objects.
+  /// \p arrayClass should be hidden class for JSArray objects, and it will be
+  /// augmented with properties "index", "input", and "groups".
+  static Handle<HiddenClass> createMatchClass(
+      Runtime &runtime,
+      Handle<HiddenClass> arrayClass);
+
   /// Initializes RegExp with existing bytecode. Populates fields for the
   /// pattern and flags, but performs no validation on them. It is assumed that
   /// the bytecode is correct and corresponds to the given pattern/flags.

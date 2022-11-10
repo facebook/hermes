@@ -75,6 +75,28 @@ PseudoHandle<JSRegExp> JSRegExp::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
+Handle<HiddenClass> JSRegExp::createMatchClass(
+    Runtime &runtime,
+    Handle<HiddenClass> arrayClass) {
+  // Adds the property \p name to matchClass which, upon return, will point to
+  // the newly created hidden class.
+  auto addProperty = [&](Handle<HiddenClass> clazz, Predefined::Str name) {
+    auto added = HiddenClass::addProperty(
+        clazz,
+        runtime,
+        Predefined::getSymbolID(name),
+        PropertyFlags::defaultNewNamedPropertyFlags());
+    assert(
+        added != ExecutionStatus::EXCEPTION &&
+        "Adding the first properties shouldn't cause overflow");
+    return added->first;
+  };
+
+  Handle<HiddenClass> addIndex = addProperty(arrayClass, Predefined::index);
+  Handle<HiddenClass> addInput = addProperty(addIndex, Predefined::input);
+  return addProperty(addInput, Predefined::groups);
+}
+
 void JSRegExp::initialize(
     Handle<JSRegExp> selfHandle,
     Runtime &runtime,
