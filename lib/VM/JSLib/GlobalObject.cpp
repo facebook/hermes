@@ -446,7 +446,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // populated later.
   runtime.arrayPrototype =
       runtime
-          .ignoreAllocationFailure(JSArray::create(
+          .ignoreAllocationFailure(JSArray::createNoAllocPropStorage(
               runtime,
               Handle<JSObject>::vmcast(&runtime.objectPrototype),
               JSArray::createClass(
