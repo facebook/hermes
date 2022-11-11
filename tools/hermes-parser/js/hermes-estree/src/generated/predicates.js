@@ -63,6 +63,10 @@ export function isBigIntLiteralTypeAnnotation(
   return node.type === 'BigIntLiteralTypeAnnotation';
 }
 
+export function isBigIntTypeAnnotation(node: ESNode | Token): boolean %checks {
+  return node.type === 'BigIntTypeAnnotation';
+}
+
 export function isBinaryExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'BinaryExpression';
 }

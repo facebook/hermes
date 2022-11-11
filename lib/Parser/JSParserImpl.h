@@ -298,6 +298,7 @@ class JSParserImpl {
   UniqueString *voidIdent_;
   UniqueString *nullIdent_;
   UniqueString *symbolIdent_;
+  UniqueString *bigintIdent_;
 
   UniqueString *checksIdent_;
 

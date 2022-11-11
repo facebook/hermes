@@ -926,6 +926,9 @@ function deserializeAnyTypeAnnotation() {
 function deserializeMixedTypeAnnotation() {
   return {type: 'MixedTypeAnnotation', loc: this.addEmptyLoc()};
 }
+function deserializeBigIntTypeAnnotation() {
+  return {type: 'BigIntTypeAnnotation', loc: this.addEmptyLoc()};
+}
 function deserializeVoidTypeAnnotation() {
   return {type: 'VoidTypeAnnotation', loc: this.addEmptyLoc()};
 }
@@ -1832,6 +1835,7 @@ module.exports = [
   deserializeSymbolTypeAnnotation,
   deserializeAnyTypeAnnotation,
   deserializeMixedTypeAnnotation,
+  deserializeBigIntTypeAnnotation,
   deserializeVoidTypeAnnotation,
   deserializeFunctionTypeAnnotation,
   deserializeFunctionTypeParam,

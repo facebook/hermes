@@ -137,6 +137,7 @@ pub enum NodeKind {
     SymbolTypeAnnotation,
     AnyTypeAnnotation,
     MixedTypeAnnotation,
+    BigIntTypeAnnotation,
     VoidTypeAnnotation,
     FunctionTypeAnnotation,
     FunctionTypeParam,

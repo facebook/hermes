@@ -2157,6 +2157,9 @@ impl GenJS<'_, '_> {
             Node::StringTypeAnnotation(_) => {
                 out_token!(self, node, "string");
             }
+            Node::BigIntTypeAnnotation(_) => {
+                out_token!(self, node, "bigint");
+            }
             Node::NumberTypeAnnotation(_) => {
                 out_token!(self, node, "number");
             }
@@ -3642,6 +3645,7 @@ impl GenJS<'_, '_> {
             Node::ExistsTypeAnnotation(_)
             | Node::EmptyTypeAnnotation(_)
             | Node::StringTypeAnnotation(_)
+            | Node::BigIntTypeAnnotation(_)
             | Node::NumberTypeAnnotation(_)
             | Node::StringLiteralTypeAnnotation(_)
             | Node::NumberLiteralTypeAnnotation(_)

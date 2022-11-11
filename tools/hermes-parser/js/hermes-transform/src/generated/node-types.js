@@ -31,6 +31,7 @@ import type {
   AssignmentPattern as AssignmentPatternType,
   AwaitExpression as AwaitExpressionType,
   BigIntLiteralTypeAnnotation as BigIntLiteralTypeAnnotationType,
+  BigIntTypeAnnotation as BigIntTypeAnnotationType,
   BinaryExpression as BinaryExpressionType,
   BlockStatement as BlockStatementType,
   BooleanLiteralTypeAnnotation as BooleanLiteralTypeAnnotationType,
@@ -212,6 +213,8 @@ export type AwaitExpressionProps = {
 export type BigIntLiteralTypeAnnotationProps = {
   +raw: BigIntLiteralTypeAnnotationType['raw'],
 };
+
+export type BigIntTypeAnnotationProps = {};
 
 export type BinaryExpressionProps = {
   +left: MaybeDetachedNode<BinaryExpressionType['left']>,
@@ -1076,6 +1079,16 @@ export function BigIntLiteralTypeAnnotation(props: {
   });
   setParentPointersInDirectChildren(node);
   return node;
+}
+
+export function BigIntTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<BigIntTypeAnnotationType> {
+  return detachedProps<BigIntTypeAnnotationType>(props.parent, {
+    type: 'BigIntTypeAnnotation',
+  });
 }
 
 export function BinaryExpression(props: {

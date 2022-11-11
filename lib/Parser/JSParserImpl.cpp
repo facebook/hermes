@@ -107,6 +107,7 @@ void JSParserImpl::initializeIdentifiers() {
   voidIdent_ = lexer_.getIdentifier("void");
   nullIdent_ = lexer_.getIdentifier("null");
   symbolIdent_ = lexer_.getIdentifier("symbol");
+  bigintIdent_ = lexer_.getIdentifier("bigint");
 
   checksIdent_ = lexer_.getIdentifier("%checks");
 

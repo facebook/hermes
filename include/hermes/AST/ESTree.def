@@ -703,6 +703,7 @@ ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(SymbolTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Base)
+ESTREE_NODE_0_ARGS(BigIntTypeAnnotation, Base)
 ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Base)
 ESTREE_NODE_5_ARGS(
     FunctionTypeAnnotation, Base,
