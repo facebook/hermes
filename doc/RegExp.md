@@ -20,8 +20,8 @@ As of this writing, Hermes regexp supports
 
 1. All of ES6, including global, case-insensitive, multiline, sticky, and Unicode (and legacy).
 1. ES9 lookbehinds.
+1. Named capture groups.
 
 Missing features from ES9 include:
 
-1. Named capture groups.
 1. Unicode property escapes.
