@@ -137,8 +137,12 @@ static std::tuple<Function *, ScopeDesc *> materializeScopeChainForLazyFunction(
       std::get<ScopeDesc *>(materializeScopeChain(builder, topLevel, chain)));
 }
 
+/// Recursively populate \p nameTable with \p scopeDesc's (and its parents')
+/// variables.
 static void populateNameTable(NameTableTy &nameTable, ScopeDesc *scopeDesc) {
   if (auto *parent = scopeDesc->getParent()) {
+    // If scopeDesc has a parent scope, first add the definitions in it. This
+    // way, scopeDesc definitions will take priority over those in the parents.
     populateNameTable(nameTable, parent);
   }
 
@@ -396,6 +400,15 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
       Builder, lazyData, lexicalScopeChain);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
+
+  // Note that topLevel is the Module's top level function (i.e., global()), so
+  // currentIRScopeDesc_ is the descriptor for global()'s function scope. What
+  // we really need instead is the lazy function's parent scope in as the
+  // previous scope. Thus, manually set it here. Another option would be to
+  // recursively "install" the FunctionContexts of all encompassing functions,
+  // but that's not really necessary -- by setting currentIRScopeDesc_ to
+  // parentScope, the ESTreeIRGen object is in a "compatible" state, ready to
+  // generate code for the lazy function.
   currentIRScopeDesc_ = parentScope;
 
   // Save the top-level context, but ensure it doesn't outlive what it is
@@ -405,13 +418,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
 
   auto *node = cast<ESTree::FunctionLikeNode>(Root);
 
-  // We restore scoping information in two separate ways:
-  // 1. By adding them to ExternalScopes for resolution here
-  // 2. By adding dummy functions for lexical scoping debug info later
-  //
-  // Instruction selection determines the delta between the ExternalScope
-  // and the dummy function chain, so we add the ExternalScopes with
-  // positive depth.
+  // Now restore scoping information in two separate ways.
   populateNameTable(nameTable_, parentScope);
 
   // If lazyData->closureAlias is specified, we must create an alias binding

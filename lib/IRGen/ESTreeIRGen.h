@@ -362,7 +362,7 @@ class ESTreeIRGen {
 
   /// The current scope descriptor available for IR generation. All new
   /// functions created in this scope will define a new, inner scope.
-  ScopeDesc *currentIRScopeDesc_;
+  ScopeDesc *currentIRScopeDesc_{};
 
   /// The current scope object available for IR generation.
   CreateScopeInst *currentIRScope_{};
