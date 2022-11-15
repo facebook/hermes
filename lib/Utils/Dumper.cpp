@@ -247,8 +247,7 @@ void IRPrinter::printInstruction(Instruction *I) {
   auto codeGenOpts = I->getContext().getCodeGenerationSettings();
   const char *prefix = " // ";
   if (codeGenOpts.dumpSourceLevelScope) {
-    if (auto *originalScope =
-            llvh::dyn_cast<ScopeDesc>(I->getSourceLevelScope())) {
+    if (auto *originalScope = I->getSourceLevelScope()) {
       os << prefix << "scope: ";
       printFunctionName(originalScope->getFunction(), PrintFunctionParams::No);
       printScopeRange(

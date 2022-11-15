@@ -39,17 +39,12 @@ class IRBuilder {
   BasicBlock *Block{};
 
   SMLoc Location{};
-  Value *CurrentSourceLevelScope;
+  ScopeDesc *CurrentSourceLevelScope{};
 
  public:
-  explicit IRBuilder(Module *Mod)
-      : M(Mod),
-        InsertionPoint(nullptr),
-        CurrentSourceLevelScope(getLiteralUndefined()) {}
+  explicit IRBuilder(Module *Mod) : M(Mod), InsertionPoint(nullptr) {}
   explicit IRBuilder(Function *F)
-      : M(F->getParent()),
-        InsertionPoint(nullptr),
-        CurrentSourceLevelScope(getLiteralUndefined()) {}
+      : M(F->getParent()), InsertionPoint(nullptr) {}
 
   //--------------------------------------------------------------------------//
   //                          Stateless APIs.                                 //
@@ -255,7 +250,7 @@ class IRBuilder {
     return Location;
   }
 
-  void setCurrentSourceLevelScope(Value *sourceLevelScope) {
+  void setCurrentSourceLevelScope(ScopeDesc *sourceLevelScope) {
     CurrentSourceLevelScope = sourceLevelScope;
   }
 

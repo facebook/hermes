@@ -497,7 +497,7 @@ void ESTreeIRGen::emitFunctionPrologue(
                    << " variable decls.\n");
 
   Builder.setLocation(newFunc->getSourceRange().Start);
-  Builder.setCurrentSourceLevelScope(Builder.getLiteralUndefined());
+  Builder.setCurrentSourceLevelScope(nullptr);
 
   BasicBlock *realEntry = &newFunc->front();
   if (realEntry->empty()) {
