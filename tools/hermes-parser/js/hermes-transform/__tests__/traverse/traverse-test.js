@@ -34,6 +34,49 @@ describe('traverse', () => {
     expect(visitedNodes).toEqual(['Program', 'VariableDeclaration', 'Literal']);
   });
 
+  it('stops traversal', () => {
+    const code = 'const x = 1, y = 2;';
+    const {ast, scopeManager} = parseForESLint(code);
+
+    const visitedNodes = [];
+    traverse(code, ast, scopeManager, context => ({
+      '*'(node) {
+        visitedNodes.push(node.type);
+      },
+      VariableDeclarator() {
+        context.stopTraversal();
+      },
+    }));
+
+    expect(visitedNodes).toEqual([
+      'Program',
+      'VariableDeclaration',
+      'VariableDeclarator',
+    ]);
+  });
+
+  it('skips traversal', () => {
+    const code = 'const x = 1, y = 2;';
+    const {ast, scopeManager} = parseForESLint(code);
+
+    const visitedNodes = [];
+    traverse(code, ast, scopeManager, context => ({
+      '*'(node) {
+        visitedNodes.push(node.type);
+      },
+      VariableDeclarator() {
+        context.skipTraversal();
+      },
+    }));
+
+    expect(visitedNodes).toEqual([
+      'Program',
+      'VariableDeclaration',
+      'VariableDeclarator',
+      'VariableDeclarator',
+    ]);
+  });
+
   it('visits the AST in the correct order - traversed as defined by the visitor keys', () => {
     const code = 'const x = 1;';
     const {ast, scopeManager} = parseForESLint(code);

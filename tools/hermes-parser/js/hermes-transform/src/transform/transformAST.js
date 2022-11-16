@@ -28,7 +28,7 @@ import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
 import type {ParseResult} from './parse';
 
-export type transformASTResult = {
+export type TransformASTResult = {
   ast: Program,
   astWasMutated: boolean,
   mutatedCode: string,
@@ -37,7 +37,7 @@ export type transformASTResult = {
 export function transformAST(
   {ast, scopeManager, code}: ParseResult,
   visitors: TransformVisitor,
-): transformASTResult {
+): TransformASTResult {
   // traverse the AST and colllect the mutations
   const transformContext = getTransformContext();
   traverseWithContext(
