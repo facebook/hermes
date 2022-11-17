@@ -2713,10 +2713,7 @@ extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
 
     // The result is a BigInt, perform a BigInt bitwise not.
     auto bigint = runtime.makeHandle(numRes->getBigInt());
-    auto notRes = BigIntPrimitive::unaryNOT(runtime, bigint);
-    if (LLVM_UNLIKELY(notRes == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-    return HermesValue::encodeBigIntValue(notRes->getBigInt());
+    return BigIntPrimitive::unaryNOT(runtime, bigint);
   }();
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
