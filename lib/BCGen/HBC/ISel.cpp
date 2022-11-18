@@ -860,19 +860,14 @@ void HBCISel::generateDebuggerInst(DebuggerInst *Inst, BasicBlock *next) {
 void HBCISel::generateCreateRegExpInst(
     CreateRegExpInst *Inst,
     BasicBlock *next) {
+  const auto &pattern = Inst->getPattern()->getValue();
+  const auto &flags = Inst->getFlags()->getValue();
+  auto &ctx = F_->getParent()->getContext();
+  auto &regexp = ctx.getCompiledRegExp(
+      pattern.getUnderlyingPointer(), flags.getUnderlyingPointer());
+  uint32_t reBytecodeID = BCFGen_->addRegExp(&regexp);
   auto patternStrID = BCFGen_->getStringID(Inst->getPattern());
   auto flagsStrID = BCFGen_->getStringID(Inst->getFlags());
-  // Compile the regexp. We expect this to succeed because the AST went through
-  // the SemanticValidator. This is a bit of a hack: what we would really like
-  // to do is have the Parser emit a CompiledRegExp that can be threaded through
-  // the AST and then through the IR to this instruction selection, but that is
-  // too awkward, so we compile again here.
-  uint32_t reBytecodeID = UINT32_MAX;
-  if (auto regexp = CompiledRegExp::tryCompile(
-          Inst->getPattern()->getValue().str(),
-          Inst->getFlags()->getValue().str())) {
-    reBytecodeID = BCFGen_->addRegExp(std::move(*regexp));
-  }
   BCFGen_->emitCreateRegExp(
       encodeValue(Inst), patternStrID, flagsStrID, reBytecodeID);
 }

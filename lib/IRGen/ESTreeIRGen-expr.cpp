@@ -1567,14 +1567,13 @@ Value *ESTreeIRGen::genRegExpLiteral(ESTree::RegExpLiteralNode *RE) {
       Identifier::getFromPointer(RE->_pattern),
       Identifier::getFromPointer(RE->_flags));
 
-  llvh::StringRef regexpError;
-  auto regexp = CompiledRegExp::tryCompile(
-      RE->_pattern->str(), RE->_flags->str(), &regexpError);
-  if (regexp && regexp->getMapping().size()) {
-    auto &mapping = regexp->getMapping();
+  auto &regexp = Builder.getModule()->getContext().getCompiledRegExp(
+      RE->_pattern, RE->_flags);
 
+  if (regexp.getMapping().size()) {
+    auto &mapping = regexp.getMapping();
     HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
-    for (auto &identifier : regexp->getOrderedGroupNames()) {
+    for (auto &identifier : regexp.getOrderedGroupNames()) {
       std::string converted;
       convertUTF16ToUTF8WithSingleSurrogates(converted, identifier);
       auto *key = Builder.getLiteralString(converted);

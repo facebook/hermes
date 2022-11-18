@@ -150,7 +150,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
-  uint32_t addRegExp(CompiledRegExp regexp);
+  uint32_t addRegExp(CompiledRegExp *regexp);
 
   /// Add filename to the filename table.
   /// \return the index of the string.
@@ -395,7 +395,7 @@ class BytecodeModuleGenerator {
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
-  uint32_t addRegExp(CompiledRegExp regexp);
+  uint32_t addRegExp(CompiledRegExp *regexp);
 
   /// Add filename to the filename table.
   /// \return the index of the string.
