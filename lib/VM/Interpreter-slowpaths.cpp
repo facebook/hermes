@@ -552,6 +552,22 @@ template CallResult<HermesValue> doIncDecOperSlowPath<doDec>(
     Runtime &runtime,
     Handle<> src);
 
+CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src) {
+  // Try converting src to a numeric.
+  auto numRes = toNumeric_RJS(runtime, src);
+  if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  // Test for BigInt since it is cheaper than testing for number. If it is a
+  // number, truncate it and perform bitwise not.
+  if (LLVM_LIKELY(!numRes->isBigInt()))
+    return HermesValue::encodeDoubleValue(
+        ~hermes::truncateToInt32(numRes->getNumber()));
+
+  // The result is a BigInt, perform a BigInt bitwise not.
+  auto bigint = runtime.makeHandle(numRes->getBigInt());
+  return BigIntPrimitive::unaryNOT(runtime, bigint);
+}
+
 } // namespace vm
 } // namespace hermes
 
