@@ -161,7 +161,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   StringID printID = 1;
   StringID resultID = 2;
 
-  const unsigned FRAME_SIZE = 16;
+  const int FRAME_SIZE = 16;
   BytecodeModuleGenerator BMG;
   auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
 
@@ -171,9 +171,12 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   BFG->emitGetGlobalObject(0);
   BFG->emitGetById(1, 0, 1, printID);
   BFG->emitLoadConstUndefined(3);
-  BFG->emitMov(FRAME_SIZE + StackFrameLayout::ThisArg, 3);
-  BFG->emitLoadConstString(FRAME_SIZE + StackFrameLayout::FirstArg, resultID);
-  BFG->emitMov(FRAME_SIZE + StackFrameLayout::FirstArg - 1, 2);
+  BFG->emitMov(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
+  BFG->emitLoadConstString(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg), resultID);
+  BFG->emitMov(
+      static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg - 1), 2);
   BFG->emitCall(3, 1, 3);
   BFG->emitRet(2);
   BFG->setHighestReadCacheIndex(1);
@@ -458,7 +461,7 @@ LLVM_ATTRIBUTE_NOINLINE static void testInterpreterStackSize(
   // Increase this only if you have a reason to grow the interpreter's frame.
 #ifdef _MSC_VER
   // TODO(T42117517) Understand why stack frame size is large on Windows
-  uintptr_t kStackFrameSizeLimit = 3000;
+  uintptr_t kStackFrameSizeLimit = 3700;
 #else
   uintptr_t kStackFrameSizeLimit = 1500;
 #endif
