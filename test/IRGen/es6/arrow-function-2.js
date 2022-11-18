@@ -30,9 +30,9 @@ function outer2() {
 // CHECK-NEXT:frame = [], globals = [outer1, outer2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %outer1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "outer1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "outer1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %outer2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "outer2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "outer2" : string
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadStackInst %4
@@ -102,7 +102,7 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [nestedInnerArrow5]
 // CHECK-NEXT:  %1 = LoadFrameInst [?anon_0_this@outer2]
-// CHECK-NEXT:  %2 = StorePropertyInst 10 : number, %1, "b" : string
+// CHECK-NEXT:  %2 = StorePropertyLooseInst 10 : number, %1, "b" : string
 // CHECK-NEXT:  %3 = CreateFunctionInst %nestedInnerArrow5()
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : closure, [nestedInnerArrow5]
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined

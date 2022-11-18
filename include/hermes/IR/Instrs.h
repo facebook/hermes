@@ -1095,21 +1095,69 @@ class StorePropertyInst : public BaseStorePropertyInst {
   StorePropertyInst(const StorePropertyInst &) = delete;
   void operator=(const StorePropertyInst &) = delete;
 
- public:
-  explicit StorePropertyInst(Value *storedValue, Value *object, Value *property)
-      : BaseStorePropertyInst(
-            ValueKind::StorePropertyInstKind,
-            storedValue,
-            object,
-            property) {}
+ protected:
+  explicit StorePropertyInst(
+      ValueKind kind,
+      Value *storedValue,
+      Value *object,
+      Value *property)
+      : BaseStorePropertyInst(kind, storedValue, object, property) {}
   explicit StorePropertyInst(
       const StorePropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : BaseStorePropertyInst(src, operands) {}
 
+ public:
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::StorePropertyInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), StorePropertyInst);
+  }
+};
+
+class StorePropertyLooseInst : public StorePropertyInst {
+  StorePropertyLooseInst(const StorePropertyLooseInst &) = delete;
+  void operator=(const StorePropertyLooseInst &) = delete;
+
+ public:
+  explicit StorePropertyLooseInst(
+      Value *storedValue,
+      Value *object,
+      Value *property)
+      : StorePropertyInst(
+            ValueKind::StorePropertyLooseInstKind,
+            storedValue,
+            object,
+            property) {}
+  explicit StorePropertyLooseInst(
+      const StorePropertyLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : StorePropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StorePropertyLooseInstKind;
+  }
+};
+
+class StorePropertyStrictInst : public StorePropertyInst {
+  StorePropertyStrictInst(const StorePropertyStrictInst &) = delete;
+  void operator=(const StorePropertyStrictInst &) = delete;
+
+ public:
+  explicit StorePropertyStrictInst(
+      Value *storedValue,
+      Value *object,
+      Value *property)
+      : StorePropertyInst(
+            ValueKind::StorePropertyStrictInstKind,
+            storedValue,
+            object,
+            property) {}
+  explicit StorePropertyStrictInst(
+      const StorePropertyStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : StorePropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StorePropertyStrictInstKind;
   }
 };
 
@@ -1117,20 +1165,13 @@ class TryStoreGlobalPropertyInst : public BaseStorePropertyInst {
   TryStoreGlobalPropertyInst(const TryStoreGlobalPropertyInst &) = delete;
   void operator=(const TryStoreGlobalPropertyInst &) = delete;
 
- public:
-  LiteralString *getProperty() const {
-    return cast<LiteralString>(BaseStorePropertyInst::getProperty());
-  }
-
+ protected:
   explicit TryStoreGlobalPropertyInst(
+      ValueKind kind,
       Value *storedValue,
       Value *globalObject,
       LiteralString *property)
-      : BaseStorePropertyInst(
-            ValueKind::TryStoreGlobalPropertyInstKind,
-            storedValue,
-            globalObject,
-            property) {
+      : BaseStorePropertyInst(kind, storedValue, globalObject, property) {
     assert(
         (llvh::isa<GlobalObject>(globalObject) ||
          llvh::isa<HBCGetGlobalObjectInst>(globalObject)) &&
@@ -1141,9 +1182,63 @@ class TryStoreGlobalPropertyInst : public BaseStorePropertyInst {
       llvh::ArrayRef<Value *> operands)
       : BaseStorePropertyInst(src, operands) {}
 
+ public:
+  LiteralString *getProperty() const {
+    return cast<LiteralString>(BaseStorePropertyInst::getProperty());
+  }
+
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::TryStoreGlobalPropertyInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), TryStoreGlobalPropertyInst);
+  }
+};
+
+class TryStoreGlobalPropertyLooseInst : public TryStoreGlobalPropertyInst {
+  TryStoreGlobalPropertyLooseInst(const TryStoreGlobalPropertyLooseInst &) =
+      delete;
+  void operator=(const TryStoreGlobalPropertyLooseInst &) = delete;
+
+ public:
+  explicit TryStoreGlobalPropertyLooseInst(
+      Value *storedValue,
+      Value *globalObject,
+      LiteralString *property)
+      : TryStoreGlobalPropertyInst(
+            ValueKind::TryStoreGlobalPropertyLooseInstKind,
+            storedValue,
+            globalObject,
+            property) {}
+  explicit TryStoreGlobalPropertyLooseInst(
+      const TryStoreGlobalPropertyLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TryStoreGlobalPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::TryStoreGlobalPropertyLooseInstKind;
+  }
+};
+
+class TryStoreGlobalPropertyStrictInst : public TryStoreGlobalPropertyInst {
+  TryStoreGlobalPropertyStrictInst(const TryStoreGlobalPropertyStrictInst &) =
+      delete;
+  void operator=(const TryStoreGlobalPropertyStrictInst &) = delete;
+
+ public:
+  explicit TryStoreGlobalPropertyStrictInst(
+      Value *storedValue,
+      Value *globalObject,
+      LiteralString *property)
+      : TryStoreGlobalPropertyInst(
+            ValueKind::TryStoreGlobalPropertyStrictInstKind,
+            storedValue,
+            globalObject,
+            property) {}
+  explicit TryStoreGlobalPropertyStrictInst(
+      const TryStoreGlobalPropertyStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TryStoreGlobalPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::TryStoreGlobalPropertyStrictInstKind;
   }
 };
 

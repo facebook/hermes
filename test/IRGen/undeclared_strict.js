@@ -20,7 +20,7 @@ var x = y;
 // CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %3 = StorePropertyInst %2, globalObject : object, "x" : string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2, globalObject : object, "x" : string
 // CHECK-NEXT:  %4 = LoadStackInst %0
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end

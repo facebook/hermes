@@ -20,7 +20,7 @@ function foo(a) {
 // CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg2           	%2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg3           	%3 = HBCCreateFunctionInst %foo(), %0
-// CHECK-NEXT:  $Reg4           	%4 = StorePropertyInst %3 : closure, %1 : object, "foo" : string
+// CHECK-NEXT:  $Reg4           	%4 = StorePropertyLooseInst %3 : closure, %1 : object, "foo" : string
 // CHECK-NEXT:  $Reg4           	%5 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  $Reg5           	%6 = StoreStackInst %2 : undefined, %5
 // CHECK-NEXT:  $Reg5           	%7 = LoadStackInst %5

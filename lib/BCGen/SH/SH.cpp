@@ -780,10 +780,11 @@ class InstrGen {
       os_ << ")";
     os_ << ";\n";
   }
-  void generateStorePropertyInst(StorePropertyInst &inst) {
+
+  void generateStorePropertyInstImpl(StorePropertyInst &inst, bool strictMode) {
     os_.indent(2);
     if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
-      if (isStrictMode_)
+      if (strictMode)
         os_ << "_sh_ljs_put_by_id_strict_rjs";
       else
         os_ << "_sh_ljs_put_by_id_loose_rjs";
@@ -797,7 +798,7 @@ class InstrGen {
       return;
     }
 
-    if (isStrictMode_)
+    if (strictMode)
       os_ << "_sh_ljs_put_by_val_strict_rjs";
     else
       os_ << "_sh_ljs_put_by_val_loose_rjs";
@@ -809,9 +810,18 @@ class InstrGen {
     generateRegister(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst &inst) {
+  void generateStorePropertyLooseInst(StorePropertyLooseInst &inst) {
+    generateStorePropertyInstImpl(inst, false);
+  }
+  void generateStorePropertyStrictInst(StorePropertyStrictInst &inst) {
+    generateStorePropertyInstImpl(inst, true);
+  }
+
+  void generateTryStoreGlobalPropertyInstImpl(
+      TryStoreGlobalPropertyInst &inst,
+      bool strictMode) {
     os_.indent(2);
-    if (isStrictMode_)
+    if (strictMode)
       os_ << "_sh_ljs_try_put_by_id_strict_rjs(";
     else
       os_ << "_sh_ljs_try_put_by_id_loose_rjs(";
@@ -831,6 +841,15 @@ class InstrGen {
 
     os_ << ");\n";
   }
+  void generateTryStoreGlobalPropertyLooseInst(
+      TryStoreGlobalPropertyLooseInst &inst) {
+    generateTryStoreGlobalPropertyInstImpl(inst, false);
+  }
+  void generateTryStoreGlobalPropertyStrictInst(
+      TryStoreGlobalPropertyStrictInst &inst) {
+    generateTryStoreGlobalPropertyInstImpl(inst, true);
+  }
+
   void generateStoreOwnPropertyInst(StoreOwnPropertyInst &inst) {
     os_.indent(2);
     auto prop = inst.getProperty();

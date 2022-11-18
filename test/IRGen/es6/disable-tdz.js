@@ -20,7 +20,7 @@ function check1() {
 // CHECK-NEXT:frame = [], globals = [check1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %check1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "check1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
 // CHECK-NEXT:  %4 = LoadStackInst %2
@@ -48,7 +48,7 @@ function check1() {
 // CHKDIS-NEXT:frame = [], globals = [check1]
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = CreateFunctionInst %check1()
-// CHKDIS-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "check1" : string
+// CHKDIS-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
 // CHKDIS-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHKDIS-NEXT:  %3 = StoreStackInst undefined : undefined, %2
 // CHKDIS-NEXT:  %4 = LoadStackInst %2

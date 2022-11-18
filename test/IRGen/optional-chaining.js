@@ -49,23 +49,23 @@ function f9(a) {
 // CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4, f5, f6, f7, f8, f9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %f5()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "f5" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "f5" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %f6()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "f6" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "f6" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %f7()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "f7" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "f7" : string
 // CHECK-NEXT:  %14 = CreateFunctionInst %f8()
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "f8" : string
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "f8" : string
 // CHECK-NEXT:  %16 = CreateFunctionInst %f9()
-// CHECK-NEXT:  %17 = StorePropertyInst %16 : closure, globalObject : object, "f9" : string
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "f9" : string
 // CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
 // CHECK-NEXT:  %20 = LoadStackInst %18

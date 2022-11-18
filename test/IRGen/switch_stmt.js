@@ -82,17 +82,17 @@ function fallthrough(b) {
 // CHECK-NEXT:frame = [], globals = [days_of_the_week, simple_xor, simple_xor2, simple_test0, simple_test1, fallthrough]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %days_of_the_week()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "days_of_the_week" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "days_of_the_week" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %simple_xor()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "simple_xor" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_xor" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %simple_xor2()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "simple_xor2" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_xor2" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %simple_test0()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "simple_test0" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simple_test0" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %simple_test1()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "simple_test1" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple_test1" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %fallthrough()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "fallthrough" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "fallthrough" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12

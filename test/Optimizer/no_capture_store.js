@@ -48,11 +48,11 @@ function outer() {
 // CHECK-NEXT:frame = [], globals = [bar, main, outer]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "bar" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %main() : closure
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "main" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %outer() : object
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "outer" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "outer" : string
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

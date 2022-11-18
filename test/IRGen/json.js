@@ -47,7 +47,7 @@ var json = {
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst "title" : string, "S" : string, "GlossList" : string, %5 : object
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst "title" : string, "example glossary" : string, "GlossDiv" : string, %6 : object
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst "glossary" : string, %7 : object
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : object, globalObject : object, "json" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : object, globalObject : object, "json" : string
 // CHECK-NEXT:  %10 = LoadStackInst %0
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:function_end

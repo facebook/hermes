@@ -23,10 +23,10 @@ undefined;
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = StorePropertyInst 5 : number, globalObject : object, "undefined" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst 5 : number, globalObject : object, "undefined" : string
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
 // CHECK-NEXT:  %7 = StoreStackInst %6, %2

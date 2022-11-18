@@ -100,8 +100,15 @@ DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
 END_VALUE(BinaryOperatorInst)
 
 MARK_FIRST(BaseStorePropertyInst, Instruction)
-DEF_VALUE(StorePropertyInst, BaseStorePropertyInst)
-DEF_VALUE(TryStoreGlobalPropertyInst, BaseStorePropertyInst)
+MARK_FIRST(StorePropertyInst, BaseStorePropertyInst)
+DEF_VALUE(StorePropertyLooseInst, StorePropertyInst)
+DEF_VALUE(StorePropertyStrictInst, StorePropertyInst)
+MARK_LAST(StorePropertyInst)
+
+MARK_FIRST(TryStoreGlobalPropertyInst, BaseStorePropertyInst)
+DEF_VALUE(TryStoreGlobalPropertyLooseInst, TryStoreGlobalPropertyInst)
+DEF_VALUE(TryStoreGlobalPropertyStrictInst, TryStoreGlobalPropertyInst)
+MARK_LAST(TryStoreGlobalPropertyInst)
 MARK_LAST(BaseStorePropertyInst)
 
 MARK_FIRST(BaseStoreOwnPropertyInst, Instruction)

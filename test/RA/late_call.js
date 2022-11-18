@@ -30,9 +30,9 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo() : number, %0
 // CHECK-NEXT:  $Reg1 @2 [3...6) 	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
+// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCCreateFunctionInst %bar() : undefined, %0
-// CHECK-NEXT:  $Reg0 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "bar" : string
+// CHECK-NEXT:  $Reg0 @5 [empty]	%5 = StorePropertyLooseInst %4 : closure, %2 : object, "bar" : string
 // CHECK-NEXT:  $Reg0 @6 [7...8) 	%6 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @7 [empty]	%7 = ReturnInst %6 : undefined
 // CHECK-NEXT:function_end

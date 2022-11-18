@@ -544,8 +544,8 @@ void HBCISel::generateBinaryOperatorInst(
       break;
   }
 }
-void HBCISel::generateStorePropertyInst(
-    StorePropertyInst *Inst,
+void HBCISel::generateStorePropertyLooseInst(
+    StorePropertyLooseInst *Inst,
     BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
@@ -554,33 +554,44 @@ void HBCISel::generateStorePropertyInst(
   if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
     // Property is a string
     auto id = BCFGen_->getIdentifierID(Lit);
-    if (id <= UINT16_MAX) {
-      if (F_->isStrictMode())
-        BCFGen_->emitPutByIdStrict(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-      else
-        BCFGen_->emitPutByIdLoose(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-    } else {
-      if (F_->isStrictMode())
-        BCFGen_->emitPutByIdStrictLong(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-      else
-        BCFGen_->emitPutByIdLooseLong(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-    }
+    if (id <= UINT16_MAX)
+      BCFGen_->emitPutByIdLoose(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+    else
+      BCFGen_->emitPutByIdLooseLong(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
     return;
   }
 
   auto propReg = encodeValue(prop);
-  if (F_->isStrictMode())
-    BCFGen_->emitPutByValStrict(objReg, propReg, valueReg);
-  else
-    BCFGen_->emitPutByValLoose(objReg, propReg, valueReg);
+  BCFGen_->emitPutByValLoose(objReg, propReg, valueReg);
 }
 
-void HBCISel::generateTryStoreGlobalPropertyInst(
-    TryStoreGlobalPropertyInst *Inst,
+void HBCISel::generateStorePropertyStrictInst(
+    StorePropertyStrictInst *Inst,
+    BasicBlock *next) {
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto objReg = encodeValue(Inst->getObject());
+  auto prop = Inst->getProperty();
+
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
+    // Property is a string
+    auto id = BCFGen_->getIdentifierID(Lit);
+    if (id <= UINT16_MAX)
+      BCFGen_->emitPutByIdStrict(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+    else
+      BCFGen_->emitPutByIdStrictLong(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+    return;
+  }
+
+  auto propReg = encodeValue(prop);
+  BCFGen_->emitPutByValStrict(objReg, propReg, valueReg);
+}
+
+void HBCISel::generateTryStoreGlobalPropertyLooseInst(
+    TryStoreGlobalPropertyLooseInst *Inst,
     BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
@@ -589,21 +600,30 @@ void HBCISel::generateTryStoreGlobalPropertyInst(
   auto *Lit = cast<LiteralString>(prop);
 
   auto id = BCFGen_->getIdentifierID(Lit);
-  if (id <= UINT16_MAX) {
-    if (F_->isStrictMode())
-      BCFGen_->emitTryPutByIdStrict(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-    else
-      BCFGen_->emitTryPutByIdLoose(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-  } else {
-    if (F_->isStrictMode())
-      BCFGen_->emitTryPutByIdStrictLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-    else
-      BCFGen_->emitTryPutByIdLooseLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
-  }
+  if (id <= UINT16_MAX)
+    BCFGen_->emitTryPutByIdLoose(
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+  else
+    BCFGen_->emitTryPutByIdLooseLong(
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+}
+
+void HBCISel::generateTryStoreGlobalPropertyStrictInst(
+    TryStoreGlobalPropertyStrictInst *Inst,
+    BasicBlock *next) {
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto objReg = encodeValue(Inst->getObject());
+  auto prop = Inst->getProperty();
+
+  auto *Lit = cast<LiteralString>(prop);
+
+  auto id = BCFGen_->getIdentifierID(Lit);
+  if (id <= UINT16_MAX)
+    BCFGen_->emitTryPutByIdStrict(
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+  else
+    BCFGen_->emitTryPutByIdStrictLong(
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
 }
 
 void HBCISel::generateStoreOwnPropertyInst(

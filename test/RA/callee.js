@@ -22,9 +22,9 @@ function foo(x) {
 // CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg2           	%2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg3           	%3 = HBCCreateFunctionInst %sink(), %0
-// CHECK-NEXT:  $Reg4           	%4 = StorePropertyInst %3 : closure, %1 : object, "sink" : string
+// CHECK-NEXT:  $Reg4           	%4 = StorePropertyLooseInst %3 : closure, %1 : object, "sink" : string
 // CHECK-NEXT:  $Reg4           	%5 = HBCCreateFunctionInst %foo(), %0
-// CHECK-NEXT:  $Reg5           	%6 = StorePropertyInst %5 : closure, %1 : object, "foo" : string
+// CHECK-NEXT:  $Reg5           	%6 = StorePropertyLooseInst %5 : closure, %1 : object, "foo" : string
 // CHECK-NEXT:  $Reg5           	%7 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  $Reg6           	%8 = StoreStackInst %2 : undefined, %7
 // CHECK-NEXT:  $Reg6           	%9 = LoadStackInst %7

@@ -24,7 +24,7 @@ function foo(param) {
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
 // CHECK-NEXT:  %4 = LoadStackInst %2
@@ -44,9 +44,9 @@ function foo(param) {
 // CHECK-NEXT:  %7 = StoreFrameInst %6 : object, [foo]
 // CHECK-NEXT:  %8 = LoadFrameInst [obj]
 // CHECK-NEXT:  %9 = LoadFrameInst [foo]
-// CHECK-NEXT:  %10 = StorePropertyInst %9, %8, "field" : string
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9, %8, "field" : string
 // CHECK-NEXT:  %11 = LoadFrameInst [foo]
 // CHECK-NEXT:  %12 = LoadFrameInst [obj]
-// CHECK-NEXT:  %13 = StorePropertyInst %12, %11, 5 : number
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12, %11, 5 : number
 // CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

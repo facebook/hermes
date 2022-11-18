@@ -27,11 +27,11 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:frame = [], globals = [foo, bar, test_member_access]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "bar" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test_member_access()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_member_access" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_member_access" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = LoadStackInst %6

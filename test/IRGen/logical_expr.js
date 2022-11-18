@@ -22,13 +22,13 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:frame = [], globals = [logical_and, logical_or, logical_and_and, logical_and_or]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %logical_and()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "logical_and" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "logical_and" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %logical_or()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "logical_or" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "logical_or" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %logical_and_and()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "logical_and_and" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "logical_and_and" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %logical_and_or()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "logical_and_or" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "logical_and_or" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8

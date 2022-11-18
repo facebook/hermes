@@ -41,13 +41,13 @@ function func4() {
 // CHECK-NEXT:frame = [], globals = [func1, func2, func3, func4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %func1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "func1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "func1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %func2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "func2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "func2" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %func3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "func3" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "func3" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %func4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "func4" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "func4" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8

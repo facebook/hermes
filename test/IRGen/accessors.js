@@ -34,7 +34,7 @@ var x = {
 // CHECK-NEXT:  %8 = StoreGetterSetterInst %6 : closure, %7 : closure, %2 : object, "1" : string, true : boolean
 // CHECK-NEXT:  %9 = StoreNewOwnPropertyInst null : null, %2 : object, "b" : string, true : boolean
 // CHECK-NEXT:  %10 = StoreOwnPropertyInst 12 : number, %2 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %11 = StorePropertyInst %2 : object, globalObject : object, "x" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %2 : object, globalObject : object, "x" : string
 // CHECK-NEXT:  %12 = LoadStackInst %0
 // CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:function_end

@@ -63,13 +63,13 @@ function test_could_be_int(func) {
 // CHECK-NEXT:frame = [], globals = [test_int_int, test_int_uint, test_uint_uint, test_could_be_int]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test_int_int() : undefined|number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test_int_int" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_int_int" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %test_int_uint() : undefined|number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test_int_uint" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_int_uint" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test_uint_uint() : undefined|number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_uint_uint" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_uint_uint" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %test_could_be_int() : undefined|number
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "test_could_be_int" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test_could_be_int" : string
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

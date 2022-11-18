@@ -39,13 +39,13 @@ function check4() {
 // CHECK-NEXT:frame = [], globals = [check1, check2, check3, check4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %check1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "check1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %check2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "check2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check2" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %check3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "check3" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check3" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %check4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "check4" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "check4" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8

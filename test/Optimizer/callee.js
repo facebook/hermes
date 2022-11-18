@@ -44,11 +44,11 @@ function load_store_test() {
 // CHECK-NEXT:frame = [], globals = [fuzz, ctor_test, load_store_test]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %fuzz() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "fuzz" : string
+// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "fuzz" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %ctor_test() : object
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "ctor_test" : string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_test" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %load_store_test() : number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "load_store_test" : string
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "load_store_test" : string
 // CHECK-NEXT:  %6 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
 

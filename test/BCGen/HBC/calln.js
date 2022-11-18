@@ -30,15 +30,15 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst
 // LRA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo1() : undefined, %0
 // LRA-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
-// LRA-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo1" : string
+// LRA-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo1" : string
 // LRA-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %foo2() : undefined, %0
-// LRA-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "foo2" : string
+// LRA-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyLooseInst %4 : closure, %2 : object, "foo2" : string
 // LRA-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %foo3() : undefined, %0
-// LRA-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "foo3" : string
+// LRA-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyLooseInst %6 : closure, %2 : object, "foo3" : string
 // LRA-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %foo4() : undefined, %0
-// LRA-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "foo4" : string
+// LRA-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyLooseInst %8 : closure, %2 : object, "foo4" : string
 // LRA-NEXT:  $Reg0 @10 [11...12) 	%10 = HBCCreateFunctionInst %foo5() : undefined, %0
-// LRA-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "foo5" : string
+// LRA-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyLooseInst %10 : closure, %2 : object, "foo5" : string
 // LRA-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg0 @13 [empty]	%13 = ReturnInst %12 : undefined
 // LRA-NEXT:function_end

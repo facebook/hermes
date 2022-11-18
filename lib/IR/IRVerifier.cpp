@@ -496,10 +496,15 @@ void Verifier::visitDeletePropertyInst(const DeletePropertyInst &Inst) {
   // Nothing to verify at this point.
 }
 
-void Verifier::visitStorePropertyInst(const StorePropertyInst &Inst) {}
+void Verifier::visitStorePropertyLooseInst(const StorePropertyLooseInst &Inst) {
+}
+void Verifier::visitStorePropertyStrictInst(
+    const StorePropertyStrictInst &Inst) {}
 
-void Verifier::visitTryStoreGlobalPropertyInst(
-    const TryStoreGlobalPropertyInst &Inst) {}
+void Verifier::visitTryStoreGlobalPropertyLooseInst(
+    const TryStoreGlobalPropertyLooseInst &Inst) {}
+void Verifier::visitTryStoreGlobalPropertyStrictInst(
+    const TryStoreGlobalPropertyStrictInst &Inst) {}
 
 void Verifier::visitBaseStoreOwnPropertyInst(
     const BaseStoreOwnPropertyInst &Inst) {

@@ -21,7 +21,7 @@ function g12(z) {
 // CHECK-NEXT:frame = [], globals = [g12]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %g12() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "g12" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "g12" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

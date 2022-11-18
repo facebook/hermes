@@ -26,17 +26,17 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst %2, "a" : string
-// CHECK-NEXT:  %4 = StorePropertyInst %3, globalObject : object, "a" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, globalObject : object, "a" : string
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %6 = LoadPropertyInst %5, "a" : string
-// CHECK-NEXT:  %7 = StorePropertyInst %6, globalObject : object, "a" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6, globalObject : object, "a" : string
 // CHECK-NEXT:  %8 = LoadPropertyInst %5, "b" : string
-// CHECK-NEXT:  %9 = StorePropertyInst %8, globalObject : object, "b" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8, globalObject : object, "b" : string
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %11 = LoadPropertyInst %10, "a" : string
-// CHECK-NEXT:  %12 = StorePropertyInst %11, globalObject : object, "b" : string
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11, globalObject : object, "b" : string
 // CHECK-NEXT:  %13 = LoadPropertyInst %10, "c" : string
-// CHECK-NEXT:  %14 = StorePropertyInst %13, globalObject : object, "d" : string
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13, globalObject : object, "d" : string
 // CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %16 = LoadPropertyInst %15, "a" : string
 // CHECK-NEXT:  %17 = BinaryOperatorInst '!==', %16, undefined : undefined
@@ -46,7 +46,7 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %20 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %21 = PhiInst %16, %BB0, %19, %BB2
-// CHECK-NEXT:  %22 = StorePropertyInst %21, globalObject : object, "b" : string
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21, globalObject : object, "b" : string
 // CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %24 = LoadPropertyInst %23, "a" : string
 // CHECK-NEXT:  %25 = BinaryOperatorInst '!==', %24, undefined : undefined
@@ -109,7 +109,7 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %68 = CondBranchInst %67, %BB20, %BB21
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:  %69 = LoadStackInst %37
-// CHECK-NEXT:  %70 = StorePropertyInst %69, globalObject : object, "b" : string
+// CHECK-NEXT:  %70 = StorePropertyLooseInst %69, globalObject : object, "b" : string
 // CHECK-NEXT:  %71 = BranchInst %BB22
 // CHECK-NEXT:%BB22:
 // CHECK-NEXT:  %72 = TryEndInst
@@ -134,7 +134,7 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %86 = CondBranchInst %85, %BB27, %BB28
 // CHECK-NEXT:%BB25:
 // CHECK-NEXT:  %87 = LoadStackInst %37
-// CHECK-NEXT:  %88 = StorePropertyInst %87, globalObject : object, "e" : string
+// CHECK-NEXT:  %88 = StorePropertyLooseInst %87, globalObject : object, "e" : string
 // CHECK-NEXT:  %89 = BranchInst %BB29
 // CHECK-NEXT:%BB29:
 // CHECK-NEXT:  %90 = TryEndInst

@@ -34,13 +34,13 @@ function shadow(arguments) {
 // CHECK-NEXT:frame = [], globals = [cheap, expensive, cond, shadow]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %cheap()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "cheap" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "cheap" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %expensive()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "expensive" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "expensive" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %cond()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "cond" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "cond" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %shadow()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "shadow" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "shadow" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8

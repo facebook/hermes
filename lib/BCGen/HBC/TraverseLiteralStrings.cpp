@@ -26,9 +26,11 @@ bool isIdOperand(Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(DeletePropertyInst);
     CASE_WITH_PROP_IDX(LoadPropertyInst);
     CASE_WITH_PROP_IDX(StoreNewOwnPropertyInst);
-    CASE_WITH_PROP_IDX(StorePropertyInst);
+    CASE_WITH_PROP_IDX(StorePropertyLooseInst);
+    CASE_WITH_PROP_IDX(StorePropertyStrictInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
-    CASE_WITH_PROP_IDX(TryStoreGlobalPropertyInst);
+    CASE_WITH_PROP_IDX(TryStoreGlobalPropertyLooseInst);
+    CASE_WITH_PROP_IDX(TryStoreGlobalPropertyStrictInst);
 
     case ValueKind::HBCAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating

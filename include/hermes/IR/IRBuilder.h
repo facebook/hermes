@@ -329,12 +329,28 @@ class IRBuilder {
 
   StorePropertyInst *
   createStorePropertyInst(Value *storedValue, Value *object, Value *property);
+  StorePropertyLooseInst *createStorePropertyLooseInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
+  StorePropertyStrictInst *createStorePropertyStrictInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
+
   TryStoreGlobalPropertyInst *createTryStoreGlobalPropertyInst(
       Value *storedValue,
       LiteralString *property);
   TryStoreGlobalPropertyInst *createTryStoreGlobalPropertyInst(
       Value *storedValue,
       GlobalObjectProperty *property);
+  TryStoreGlobalPropertyLooseInst *createTryStoreGlobalPropertyLooseInst(
+      Value *storedValue,
+      LiteralString *property);
+  TryStoreGlobalPropertyStrictInst *createTryStoreGlobalPropertyStrictInst(
+      Value *storedValue,
+      LiteralString *property);
+
   StoreOwnPropertyInst *createStoreOwnPropertyInst(
       Value *storedValue,
       Value *object,

@@ -32,7 +32,7 @@ function backwards_branch() {
 // CHECK-NEXT:frame = [], globals = [backwards_branch]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %backwards_branch()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "backwards_branch" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "backwards_branch" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

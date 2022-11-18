@@ -37,15 +37,15 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = [], globals = [simpleAsyncFE, simpleReturn, simpleAwait, nonSimpleArrayDestructuring]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simpleReturn()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simpleReturn" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simpleReturn" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %simpleAwait()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "simpleAwait" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simpleAwait" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %nonSimpleArrayDestructuring()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "nonSimpleArrayDestructuring" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "nonSimpleArrayDestructuring" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = CreateFunctionInst %simpleAsyncFE()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "simpleAsyncFE" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simpleAsyncFE" : string
 // CHECK-NEXT:  %10 = LoadStackInst %6
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:function_end

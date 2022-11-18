@@ -28,11 +28,11 @@ function test_simple_call() {
 // CHECK-NEXT:frame = [], globals = [Car, test_simple_new, test_simple_call]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %Car()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "Car" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "Car" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %test_simple_new()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test_simple_new" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_simple_new" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test_simple_call()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_simple_call" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_simple_call" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = LoadStackInst %6
@@ -45,9 +45,9 @@ function test_simple_call() {
 // CHECK-NEXT:  %0 = StoreFrameInst %model, [model]
 // CHECK-NEXT:  %1 = StoreFrameInst %year, [year]
 // CHECK-NEXT:  %2 = LoadFrameInst [model]
-// CHECK-NEXT:  %3 = StorePropertyInst %2, %this, "model" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2, %this, "model" : string
 // CHECK-NEXT:  %4 = LoadFrameInst [year]
-// CHECK-NEXT:  %5 = StorePropertyInst %4, %this, "year" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %this, "year" : string
 // CHECK-NEXT:  %6 = ReturnInst "wat" : string
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined

@@ -22,7 +22,7 @@ function foo() {
 // CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
 // CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo(), %0
 // CHKRA-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
+// CHKRA-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
 // CHKRA-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
 // CHKRA-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined
 // CHKRA-NEXT:function_end

@@ -52,15 +52,15 @@ function cse_unary(a) {
 // CHECK-NEXT:frame = [], globals = [foo, foo_with_cf, check_operator_kind, cse_this_instr, cse_unary]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %foo_with_cf() : number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "foo_with_cf" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo_with_cf" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %check_operator_kind() : number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "check_operator_kind" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check_operator_kind" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %cse_this_instr() : undefined
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "cse_this_instr" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "cse_this_instr" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %cse_unary() : number|bigint
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "cse_unary" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "cse_unary" : string
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

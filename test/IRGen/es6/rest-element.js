@@ -30,13 +30,13 @@ function f4(t) {
 // CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8
@@ -87,7 +87,7 @@ function f4(t) {
 // CHECK-NEXT:  %32 = StoreStackInst %31 : number, %13
 // CHECK-NEXT:  %33 = BranchInst %BB2
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %34 = StorePropertyInst %19, %12 : object, %24 : number
+// CHECK-NEXT:  %34 = StorePropertyLooseInst %19, %12 : object, %24 : number
 // CHECK-NEXT:  %35 = BranchInst %BB10
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %36 = TryEndInst
@@ -155,7 +155,7 @@ function f4(t) {
 // CHECK-NEXT:  %39 = StoreStackInst %38 : number, %28
 // CHECK-NEXT:  %40 = BranchInst %BB6
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %41 = StorePropertyInst %16, %27 : object, %21 : number
+// CHECK-NEXT:  %41 = StorePropertyLooseInst %16, %27 : object, %21 : number
 // CHECK-NEXT:  %42 = BranchInst %BB16
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:  %43 = TryEndInst
@@ -279,7 +279,7 @@ function f4(t) {
 // CHECK-NEXT:  %42 = StoreStackInst %41 : number, %23
 // CHECK-NEXT:  %43 = BranchInst %BB5
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %44 = StorePropertyInst %29, %22 : object, %34 : number
+// CHECK-NEXT:  %44 = StorePropertyLooseInst %29, %22 : object, %34 : number
 // CHECK-NEXT:  %45 = BranchInst %BB13
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %46 = TryEndInst
@@ -361,7 +361,7 @@ function f4(t) {
 // CHECK-NEXT:  %50 = StoreStackInst %49 : number, %39
 // CHECK-NEXT:  %51 = BranchInst %BB9
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %52 = StorePropertyInst %27, %38 : object, %32 : number
+// CHECK-NEXT:  %52 = StorePropertyLooseInst %27, %38 : object, %32 : number
 // CHECK-NEXT:  %53 = BranchInst %BB19
 // CHECK-NEXT:%BB19:
 // CHECK-NEXT:  %54 = TryEndInst
@@ -419,7 +419,7 @@ function f4(t) {
 // CHECK-NEXT:  %93 = CondBranchInst %92, %BB34, %BB35
 // CHECK-NEXT:%BB32:
 // CHECK-NEXT:  %94 = LoadStackInst %67
-// CHECK-NEXT:  %95 = StorePropertyInst %94, %77, 0 : number
+// CHECK-NEXT:  %95 = StorePropertyLooseInst %94, %77, 0 : number
 // CHECK-NEXT:  %96 = BranchInst %BB36
 // CHECK-NEXT:%BB36:
 // CHECK-NEXT:  %97 = TryEndInst

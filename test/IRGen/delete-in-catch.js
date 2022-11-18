@@ -26,7 +26,7 @@ try {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = CatchInst
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_e]
-// CHECK-NEXT:  %5 = StorePropertyInst false : boolean, globalObject : object, "result" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst false : boolean, globalObject : object, "result" : string
 // CHECK-NEXT:  %6 = StoreStackInst false : boolean, %0
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB3:

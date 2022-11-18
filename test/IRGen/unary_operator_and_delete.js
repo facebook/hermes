@@ -31,9 +31,9 @@ delete_test()
 // CHECK-NEXT:frame = [], globals = [unary_operator_test, delete_test]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %unary_operator_test()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "unary_operator_test" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "unary_operator_test" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %delete_test()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "delete_test" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "delete_test" : string
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "unary_operator_test" : string

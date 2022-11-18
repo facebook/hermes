@@ -44,13 +44,13 @@ function forof_continue(seq) {
 // CHECK-NEXT:frame = [], globals = [forof_normal, forof_update, forof_break, forof_continue]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %forof_normal()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "forof_normal" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "forof_normal" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %forof_update()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "forof_update" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "forof_update" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %forof_break()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "forof_break" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "forof_break" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %forof_continue()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "forof_continue" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "forof_continue" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8
@@ -130,7 +130,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %25 = AsNumericInst %24
 // CHECK-NEXT:  %26 = UnaryOperatorInst '++', %25 : number|bigint
 // CHECK-NEXT:  %27 = StoreFrameInst %26, [i]
-// CHECK-NEXT:  %28 = StorePropertyInst %13, %23, %25 : number|bigint
+// CHECK-NEXT:  %28 = StorePropertyLooseInst %13, %23, %25 : number|bigint
 // CHECK-NEXT:  %29 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %30 = TryEndInst

@@ -427,15 +427,51 @@ StorePropertyInst *IRBuilder::createStorePropertyInst(
     Value *storedValue,
     Value *object,
     Value *property) {
-  auto SPI = new StorePropertyInst(storedValue, object, property);
+  if (Block->getParent()->isStrictMode())
+    return createStorePropertyStrictInst(storedValue, object, property);
+  else
+    return createStorePropertyLooseInst(storedValue, object, property);
+}
+StorePropertyLooseInst *IRBuilder::createStorePropertyLooseInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto SPI = new StorePropertyLooseInst(storedValue, object, property);
   insert(SPI);
   return SPI;
 }
+StorePropertyStrictInst *IRBuilder::createStorePropertyStrictInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto SPI = new StorePropertyStrictInst(storedValue, object, property);
+  insert(SPI);
+  return SPI;
+}
+
 TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
     Value *storedValue,
     LiteralString *property) {
-  auto *inst =
-      new TryStoreGlobalPropertyInst(storedValue, getGlobalObject(), property);
+  if (Block->getParent()->isStrictMode())
+    return createTryStoreGlobalPropertyStrictInst(storedValue, property);
+  else
+    return createTryStoreGlobalPropertyLooseInst(storedValue, property);
+}
+TryStoreGlobalPropertyLooseInst *
+IRBuilder::createTryStoreGlobalPropertyLooseInst(
+    Value *storedValue,
+    LiteralString *property) {
+  auto *inst = new TryStoreGlobalPropertyLooseInst(
+      storedValue, getGlobalObject(), property);
+  insert(inst);
+  return inst;
+}
+TryStoreGlobalPropertyStrictInst *
+IRBuilder::createTryStoreGlobalPropertyStrictInst(
+    Value *storedValue,
+    LiteralString *property) {
+  auto *inst = new TryStoreGlobalPropertyStrictInst(
+      storedValue, getGlobalObject(), property);
   insert(inst);
   return inst;
 }
@@ -548,10 +584,8 @@ StorePropertyInst *IRBuilder::createStorePropertyInst(
 TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
     Value *storedValue,
     Identifier property) {
-  auto *inst = new TryStoreGlobalPropertyInst(
-      storedValue, getGlobalObject(), getLiteralString(property));
-  insert(inst);
-  return inst;
+  return createTryStoreGlobalPropertyInst(
+      storedValue, getLiteralString(property));
 }
 
 AllocObjectInst *IRBuilder::createAllocObjectInst(

@@ -63,7 +63,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:  %36 = CondBranchInst %35, %BB14, %BB15
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %37 = LoadStackInst %10
-// CHECK-NEXT:  %38 = StorePropertyInst %37, globalObject : object, "a" : string
+// CHECK-NEXT:  %38 = StorePropertyLooseInst %37, globalObject : object, "a" : string
 // CHECK-NEXT:  %39 = BranchInst %BB16
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:  %40 = TryEndInst
@@ -150,7 +150,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:  %101 = CondBranchInst %100, %BB40, %BB41
 // CHECK-NEXT:%BB38:
 // CHECK-NEXT:  %102 = LoadStackInst %70
-// CHECK-NEXT:  %103 = StorePropertyInst %102, globalObject : object, "b" : string
+// CHECK-NEXT:  %103 = StorePropertyLooseInst %102, globalObject : object, "b" : string
 // CHECK-NEXT:  %104 = BranchInst %BB42
 // CHECK-NEXT:%BB42:
 // CHECK-NEXT:  %105 = TryEndInst
@@ -175,7 +175,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:  %119 = CondBranchInst %118, %BB47, %BB48
 // CHECK-NEXT:%BB45:
 // CHECK-NEXT:  %120 = LoadStackInst %70
-// CHECK-NEXT:  %121 = StorePropertyInst %120, globalObject : object, "c" : string
+// CHECK-NEXT:  %121 = StorePropertyLooseInst %120, globalObject : object, "c" : string
 // CHECK-NEXT:  %122 = BranchInst %BB49
 // CHECK-NEXT:%BB49:
 // CHECK-NEXT:  %123 = TryEndInst

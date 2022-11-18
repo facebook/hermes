@@ -18,7 +18,7 @@ function test_two(x,y,z) {
 // CHECK-NEXT:frame = [], globals = [test_two]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test_two()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test_two" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_two" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

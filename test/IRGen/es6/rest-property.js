@@ -38,15 +38,15 @@ function f5(o) {
 // CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4, f5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %f5()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "f5" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "f5" : string
 // CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
 // CHECK-NEXT:  %12 = LoadStackInst %10
@@ -125,7 +125,7 @@ function f5(o) {
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst "a" : string, 0 : number
 // CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
 // CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %8 : object, %3, %7 : object
-// CHECK-NEXT:  %10 = StorePropertyInst %9, %6, "rest" : string
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9, %6, "rest" : string
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

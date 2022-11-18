@@ -73,12 +73,12 @@ var obj4 = {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst undefined : undefined
-// IRGEN-NEXT:  %2 = StorePropertyInst %1 : undefined, %0 : object, "d" : string
+// IRGEN-NEXT:  %2 = StorePropertyLooseInst %1 : undefined, %0 : object, "d" : string
 // IRGEN-NEXT:  %3 = HBCCreateEnvironmentInst
 // IRGEN-NEXT:  %4 = HBCCreateFunctionInst %f() : undefined, %3
-// IRGEN-NEXT:  %5 = StorePropertyInst %4 : closure, %0 : object, "f" : string
+// IRGEN-NEXT:  %5 = StorePropertyLooseInst %4 : closure, %0 : object, "f" : string
 // IRGEN-NEXT:  %6 = HBCGetGlobalObjectInst
-// IRGEN-NEXT:  %7 = StorePropertyInst %0 : object, %6 : object, "obj1" : string
+// IRGEN-NEXT:  %7 = StorePropertyLooseInst %0 : object, %6 : object, "obj1" : string
 // IRGEN-NEXT:  %8 = AllocObjectInst 18 : number, empty
 // IRGEN-NEXT:  %9 = StoreNewOwnPropertyInst %1 : undefined, %8 : object, "a" : string, true : boolean
 // IRGEN-NEXT:  %10 = StoreNewOwnPropertyInst %1 : undefined, %8 : object, "b" : string, true : boolean
@@ -99,13 +99,13 @@ var obj4 = {
 // IRGEN-NEXT:  %25 = StoreNewOwnPropertyInst %15 : number, %8 : object, "o" : string, true : boolean
 // IRGEN-NEXT:  %26 = StoreNewOwnPropertyInst %15 : number, %8 : object, "p" : string, true : boolean
 // IRGEN-NEXT:  %27 = StoreNewOwnPropertyInst %15 : number, %8 : object, "q" : string, true : boolean
-// IRGEN-NEXT:  %28 = StorePropertyInst %8 : object, %6 : object, "obj2" : string
+// IRGEN-NEXT:  %28 = StorePropertyLooseInst %8 : object, %6 : object, "obj2" : string
 // IRGEN-NEXT:  %29 = HBCAllocObjectFromBufferInst 13 : number, "f" : string, 1 : number, "g" : string, 1 : number, "h" : string, 1 : number, "i" : string, 1 : number, "j" : string, 1 : number, "k" : string, 1 : number, "l" : string, 1 : number, "m" : string, 1 : number, "n" : string, 1 : number, "o" : string, 1 : number, "p" : string, 1 : number, "q" : string, 1 : number
 // IRGEN-NEXT:  %30 = StoreOwnPropertyInst %1 : undefined, %29 : object, 1 : number, true : boolean
-// IRGEN-NEXT:  %31 = StorePropertyInst %29 : object, %6 : object, "obj3" : string
+// IRGEN-NEXT:  %31 = StorePropertyLooseInst %29 : object, %6 : object, "obj3" : string
 // IRGEN-NEXT:  %32 = HBCAllocObjectFromBufferInst 13 : number, "f" : string, 1 : number, "g" : string, 1 : number, "h" : string, 1 : number, "i" : string, 1 : number, "j" : string, 1 : number, "k" : string, 1 : number, "l" : string, 1 : number, "m" : string, 1 : number, "n" : string, 1 : number, "o" : string, 1 : number, "p" : string, 1 : number, "q" : string, 1 : number
 // IRGEN-NEXT:  %33 = StoreOwnPropertyInst %1 : undefined, %32 : object, 1 : number, true : boolean
-// IRGEN-NEXT:  %34 = StorePropertyInst %32 : object, %6 : object, "obj4" : string
+// IRGEN-NEXT:  %34 = StorePropertyLooseInst %32 : object, %6 : object, "obj4" : string
 // IRGEN-NEXT:  %35 = ReturnInst %1 : undefined
 // IRGEN-NEXT:function_end
 

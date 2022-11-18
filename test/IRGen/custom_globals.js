@@ -18,7 +18,7 @@ var x = CustomGlobalProperty;
 // CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "CustomGlobalProperty" : string
-// CHECK-NEXT:  %3 = StorePropertyInst %2, globalObject : object, "x" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2, globalObject : object, "x" : string
 // CHECK-NEXT:  %4 = LoadStackInst %0
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end

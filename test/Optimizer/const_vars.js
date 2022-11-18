@@ -26,7 +26,7 @@ foo()()
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : closure
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
 // CHECK-NEXT:  %4 = CallInst %3, undefined : undefined

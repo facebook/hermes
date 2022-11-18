@@ -17,8 +17,8 @@ a.x = a = 42;
 // CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "a" : string
-// CHECK-NEXT:  %3 = StorePropertyInst 42 : number, globalObject : object, "a" : string
-// CHECK-NEXT:  %4 = StorePropertyInst 42 : number, %2, "x" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst 42 : number, globalObject : object, "a" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst 42 : number, %2, "x" : string
 // CHECK-NEXT:  %5 = StoreStackInst 42 : number, %0
 // CHECK-NEXT:  %6 = LoadStackInst %0
 // CHECK-NEXT:  %7 = ReturnInst %6

@@ -76,15 +76,15 @@ function badThrow() {
 // CHECK-NEXT:frame = [], globals = [simple, control_flow, control_catch, multi, badThrow]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simple() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simple" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %control_flow()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "control_flow" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "control_flow" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %control_catch() : number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "control_catch" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "control_catch" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %multi() : number
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "multi" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "multi" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %badThrow() : number
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "badThrow" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "badThrow" : string
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

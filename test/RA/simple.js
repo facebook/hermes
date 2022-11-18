@@ -25,7 +25,7 @@ function main(x, y, z) {
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %main() : number, %0
 // CHECK-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "main" : string
+// CHECK-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "main" : string
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined
 // CHECK-NEXT:function_end

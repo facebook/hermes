@@ -21,7 +21,7 @@ function outer1() {
 // CHECK-NEXT:frame = [], globals = [outer1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %outer1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "outer1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "outer1" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

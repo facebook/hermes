@@ -101,15 +101,15 @@ function switch_uint32(x) {
 // CHECK-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %f() : string, %0
 // CHECK-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "f" : string
+// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "f" : string
 // CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %regress1(), %0
-// CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "regress1" : string
+// CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyLooseInst %4 : closure, %2 : object, "regress1" : string
 // CHECK-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %jump_table() : undefined|string, %0
-// CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "jump_table" : string
+// CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyLooseInst %6 : closure, %2 : object, "jump_table" : string
 // CHECK-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %string_switch() : undefined|number, %0
-// CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "string_switch" : string
+// CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyLooseInst %8 : closure, %2 : object, "string_switch" : string
 // CHECK-NEXT:  $Reg0 @10 [11...12) 	%10 = HBCCreateFunctionInst %switch_uint32() : number, %0
-// CHECK-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "switch_uint32" : string
+// CHECK-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyLooseInst %10 : closure, %2 : object, "switch_uint32" : string
 // CHECK-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @13 [empty]	%13 = ReturnInst %12 : undefined
 // CHECK-NEXT:function_end

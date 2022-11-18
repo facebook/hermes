@@ -24,12 +24,12 @@ function sink(x, y) {
 // CHECK-NEXT:frame = [], globals = [y, sink]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = StorePropertyInst 2 : number, globalObject : object, "y" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst 2 : number, globalObject : object, "y" : string
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %6 = StorePropertyInst 3 : number, %5, "bar" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst 3 : number, %5, "bar" : string
 // CHECK-NEXT:  %7 = StoreStackInst 3 : number, %2
 // CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "y" : string

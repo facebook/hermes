@@ -22,9 +22,9 @@ function bug2() {
 // CHECK-NEXT:frame = [], globals = [bug1, bug2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %bug1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "bug1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "bug1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %bug2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "bug2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "bug2" : string
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

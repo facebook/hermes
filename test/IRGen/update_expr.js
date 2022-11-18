@@ -30,21 +30,21 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:frame = [], globals = [update_field_test0, update_field_test1, update_field_test2, update_field_test3, update_variable_test0, update_variable_test1, update_variable_test2, update_variable_test3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %update_field_test0()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "update_field_test0" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "update_field_test0" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %update_field_test1()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "update_field_test1" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "update_field_test1" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %update_field_test2()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "update_field_test2" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "update_field_test2" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %update_field_test3()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "update_field_test3" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "update_field_test3" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %update_variable_test0()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "update_variable_test0" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "update_variable_test0" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %update_variable_test1()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "update_variable_test1" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "update_variable_test1" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %update_variable_test2()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "update_variable_test2" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "update_variable_test2" : string
 // CHECK-NEXT:  %14 = CreateFunctionInst %update_variable_test3()
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "update_variable_test3" : string
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "update_variable_test3" : string
 // CHECK-NEXT:  %16 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %17 = StoreStackInst undefined : undefined, %16
 // CHECK-NEXT:  %18 = LoadStackInst %16
@@ -59,7 +59,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
 // CHECK-NEXT:  %3 = AsNumericInst %2
 // CHECK-NEXT:  %4 = UnaryOperatorInst '++', %3 : number|bigint
-// CHECK-NEXT:  %5 = StorePropertyInst %4, %1, "f" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %1, "f" : string
 // CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
@@ -73,7 +73,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
 // CHECK-NEXT:  %3 = AsNumericInst %2
 // CHECK-NEXT:  %4 = UnaryOperatorInst '--', %3 : number|bigint
-// CHECK-NEXT:  %5 = StorePropertyInst %4, %1, "f" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %1, "f" : string
 // CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
@@ -86,7 +86,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %1 = LoadFrameInst [o]
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
 // CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2
-// CHECK-NEXT:  %4 = StorePropertyInst %3, %1, "f" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, %1, "f" : string
 // CHECK-NEXT:  %5 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
@@ -99,7 +99,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %1 = LoadFrameInst [o]
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
 // CHECK-NEXT:  %3 = UnaryOperatorInst '--', %2
-// CHECK-NEXT:  %4 = StorePropertyInst %3, %1, "f" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, %1, "f" : string
 // CHECK-NEXT:  %5 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined

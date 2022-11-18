@@ -32,11 +32,11 @@ function level0(x) {
 // CHECK-NEXT:frame = [], globals = [same_func_name, sink, level0]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %same_func_name()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "same_func_name" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "same_func_name" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "sink" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %level0()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "level0" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "level0" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = LoadStackInst %6

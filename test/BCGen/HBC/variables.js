@@ -38,14 +38,14 @@ function daa(a) {
 // CHECK-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  %3 = HBCLoadConstInst 5 : number
 // CHECK-NEXT:  %4 = HBCCreateFunctionInst %bar(), %0
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, %1 : object, "bar" : string
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, %1 : object, "bar" : string
 // CHECK-NEXT:  %6 = HBCCreateFunctionInst %foo(), %0
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, %1 : object, "foo" : string
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, %1 : object, "foo" : string
 // CHECK-NEXT:  %8 = HBCCreateFunctionInst %daa(), %0
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, %1 : object, "daa" : string
+// CHECK-NEXT:  %9 = StorePropertyStrictInst %8 : closure, %1 : object, "daa" : string
 // CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %11 = StoreStackInst %2 : undefined, %10
-// CHECK-NEXT:  %12 = StorePropertyInst %3 : number, %1 : object, "a" : string
+// CHECK-NEXT:  %12 = StorePropertyStrictInst %3 : number, %1 : object, "a" : string
 // CHECK-NEXT:  %13 = LoadPropertyInst %1 : object, "a" : string
 // CHECK-NEXT:  %14 = StoreStackInst %13, %10
 // CHECK-NEXT:  %15 = LoadStackInst %10
@@ -122,13 +122,13 @@ function daa(a) {
 // CHKOPT-NEXT:  %0 = HBCCreateEnvironmentInst
 // CHKOPT-NEXT:  %1 = HBCCreateFunctionInst %bar(), %0
 // CHKOPT-NEXT:  %2 = HBCGetGlobalObjectInst
-// CHKOPT-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "bar" : string
+// CHKOPT-NEXT:  %3 = StorePropertyStrictInst %1 : closure, %2 : object, "bar" : string
 // CHKOPT-NEXT:  %4 = HBCCreateFunctionInst %foo(), %0
-// CHKOPT-NEXT:  %5 = StorePropertyInst %4 : closure, %2 : object, "foo" : string
+// CHKOPT-NEXT:  %5 = StorePropertyStrictInst %4 : closure, %2 : object, "foo" : string
 // CHKOPT-NEXT:  %6 = HBCCreateFunctionInst %daa() : closure, %0
-// CHKOPT-NEXT:  %7 = StorePropertyInst %6 : closure, %2 : object, "daa" : string
+// CHKOPT-NEXT:  %7 = StorePropertyStrictInst %6 : closure, %2 : object, "daa" : string
 // CHKOPT-NEXT:  %8 = HBCLoadConstInst 5 : number
-// CHKOPT-NEXT:  %9 = StorePropertyInst %8 : number, %2 : object, "a" : string
+// CHKOPT-NEXT:  %9 = StorePropertyStrictInst %8 : number, %2 : object, "a" : string
 // CHKOPT-NEXT:  %10 = LoadPropertyInst %2 : object, "a" : string
 // CHKOPT-NEXT:  %11 = ReturnInst %10
 // CHKOPT-NEXT:function_end

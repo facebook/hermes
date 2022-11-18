@@ -43,17 +43,17 @@ fail2:
 // CHECK-NEXT:frame = [], globals = [bar, continue_test, break_test, break_label, continue_label, nested_label]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "bar" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %continue_test()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "continue_test" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "continue_test" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %break_test()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "break_test" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "break_test" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %break_label()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "break_label" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "break_label" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %continue_label()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "continue_label" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "continue_label" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %nested_label()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "nested_label" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "nested_label" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12

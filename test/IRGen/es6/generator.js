@@ -45,21 +45,21 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = [], globals = [simple2, yieldStar, destr, initializer, simple, useResult, loop]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simple()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simple" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %useResult()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "useResult" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "useResult" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %loop()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "loop" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "loop" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = CreateFunctionInst %simple2()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "simple2" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple2" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %yieldStar()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "yieldStar" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "yieldStar" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %destr()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "destr" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "destr" : string
 // CHECK-NEXT:  %14 = CreateFunctionInst %initializer()
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "initializer" : string
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "initializer" : string
 // CHECK-NEXT:  %16 = LoadStackInst %6
 // CHECK-NEXT:  %17 = ReturnInst %16
 // CHECK-NEXT:function_end

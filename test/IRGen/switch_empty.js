@@ -24,9 +24,9 @@ function onlyDefault () {
 // CHECK-NEXT:frame = [], globals = [empty, onlyDefault]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %empty()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "empty" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "empty" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %onlyDefault()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "onlyDefault" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "onlyDefault" : string
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadStackInst %4

@@ -34,11 +34,11 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst
 // CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo(), %0
 // CHKRA-NEXT:  %2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
+// CHKRA-NEXT:  %3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
 // CHKRA-NEXT:  %4 = HBCCreateFunctionInst %shadows() : undefined, %0
-// CHKRA-NEXT:  %5 = StorePropertyInst %4 : closure, %2 : object, "shadows" : string
+// CHKRA-NEXT:  %5 = StorePropertyLooseInst %4 : closure, %2 : object, "shadows" : string
 // CHKRA-NEXT:  %6 = HBCCreateFunctionInst %checkNonStaticBuiltin() : undefined, %0
-// CHKRA-NEXT:  %7 = StorePropertyInst %6 : closure, %2 : object, "checkNonStaticBuiltin" : string
+// CHKRA-NEXT:  %7 = StorePropertyLooseInst %6 : closure, %2 : object, "checkNonStaticBuiltin" : string
 // CHKRA-NEXT:  %8 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // CHKRA-NEXT:  %9 = LoadPropertyInst %2 : object, "foo" : string
 // CHKRA-NEXT:  %10 = HBCLoadConstInst undefined : undefined

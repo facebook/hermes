@@ -19,11 +19,11 @@ function three() { return z; return z;}
 // CHECK-NEXT:frame = [], globals = [one, two, three]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %one()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "one" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "one" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %two()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "two" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "two" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %three()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "three" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "three" : string
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = LoadStackInst %6

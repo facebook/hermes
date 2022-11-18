@@ -38,15 +38,15 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:frame = [], globals = [protoIsFirst, protoIsConst1, protoIsConst2, protoIsConst3, protoIsDynamic]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %protoIsFirst()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "protoIsFirst" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "protoIsFirst" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %protoIsConst1()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "protoIsConst1" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "protoIsConst1" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %protoIsConst2()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "protoIsConst2" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "protoIsConst2" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %protoIsConst3()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "protoIsConst3" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "protoIsConst3" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %protoIsDynamic()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "protoIsDynamic" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "protoIsDynamic" : string
 // CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
 // CHECK-NEXT:  %12 = LoadStackInst %10

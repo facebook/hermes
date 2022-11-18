@@ -62,17 +62,17 @@ function test_async() {
 // CHECK-NEXT:frame = [], globals = [main, return_types, test_unused_and_duplicate_params, test_rest_arguments, test_generator, test_async]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %main() : string|number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "main" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %return_types() : number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "return_types" : string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "return_types" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test_unused_and_duplicate_params() : object
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_unused_and_duplicate_params" : string
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "test_unused_and_duplicate_params" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %test_rest_arguments()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "test_rest_arguments" : string
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "test_rest_arguments" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %test_generator() : object
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "test_generator" : string
+// CHECK-NEXT:  %9 = StorePropertyStrictInst %8 : closure, globalObject : object, "test_generator" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %test_async()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "test_async" : string
+// CHECK-NEXT:  %11 = StorePropertyStrictInst %10 : closure, globalObject : object, "test_async" : string
 // CHECK-NEXT:  %12 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
 
@@ -81,7 +81,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
 // CHECK-NEXT:  %1 = CreateFunctionInst %bar() : string|number|bigint
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, %p, "p" : string
+// CHECK-NEXT:  %2 = StorePropertyStrictInst %1 : closure, %p, "p" : string
 // CHECK-NEXT:  %3 = CallInst %0 : closure, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3 : number, %4 : string|number|bigint

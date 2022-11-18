@@ -32,7 +32,7 @@ function foo(o) {
 // CHECK-NEXT:frame = [], globals = [foo]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : closure
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -84,7 +84,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst
 // CHKLIR-NEXT:  %1 = HBCCreateFunctionInst %foo() : closure, %0
 // CHKLIR-NEXT:  %2 = HBCGetGlobalObjectInst
-// CHKLIR-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
+// CHKLIR-NEXT:  %3 = StorePropertyLooseInst %1 : closure, %2 : object, "foo" : string
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst undefined : undefined
 // CHKLIR-NEXT:  %5 = ReturnInst %4 : undefined
 // CHKLIR-NEXT:function_end

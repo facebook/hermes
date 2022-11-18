@@ -25,9 +25,9 @@ function f2(a, b) {
 // CHECK-NEXT:frame = [], globals = [f1, f2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadStackInst %4

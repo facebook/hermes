@@ -29,7 +29,7 @@ export default function() {
 // CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
 // CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
 // CHECK-NEXT:  %3 = CreateFunctionInst %""()
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, %exports, "?default" : string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, %exports, "?default" : string
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

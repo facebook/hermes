@@ -44,17 +44,17 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:frame = [], globals = [sink, simple_for_in_loop, for_in_loop_with_break_continue, for_in_loop_with_named_break, check_var_decl_for_in_loop, loop_member_expr_lhs]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %simple_for_in_loop()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "simple_for_in_loop" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_for_in_loop" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %for_in_loop_with_break_continue()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "for_in_loop_with_break_continue" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "for_in_loop_with_break_continue" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %for_in_loop_with_named_break()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "for_in_loop_with_named_break" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "for_in_loop_with_named_break" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %check_var_decl_for_in_loop()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "check_var_decl_for_in_loop" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "check_var_decl_for_in_loop" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %loop_member_expr_lhs()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "loop_member_expr_lhs" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "loop_member_expr_lhs" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12
@@ -208,7 +208,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = LoadStackInst %9
 // CHECK-NEXT:  %18 = LoadFrameInst [x]
-// CHECK-NEXT:  %19 = StorePropertyInst %17, %18, "y" : string
+// CHECK-NEXT:  %19 = StorePropertyLooseInst %17, %18, "y" : string
 // CHECK-NEXT:  %20 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %21 = LoadFrameInst [x]
 // CHECK-NEXT:  %22 = LoadPropertyInst %21, "y" : string

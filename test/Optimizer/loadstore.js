@@ -36,9 +36,9 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:frame = [], globals = [foo, test2]
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// OPT-CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// OPT-CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "foo" : string
 // OPT-CHECK-NEXT:  %2 = CreateFunctionInst %test2() : undefined
-// OPT-CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test2" : string
+// OPT-CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "test2" : string
 // OPT-CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
 // OPT-CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
 // OPT-CHECK-NEXT:  %6 = ReturnInst %5
@@ -69,9 +69,9 @@ function test2(p1, p2) {
 // CHECK-NEXT:frame = [], globals = [foo, test2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %test2()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test2" : string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "test2" : string
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string

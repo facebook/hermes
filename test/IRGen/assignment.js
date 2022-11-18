@@ -19,7 +19,7 @@ function test_assignment_expr() {
 // CHECK-NEXT:frame = [], globals = [test_assignment_expr]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test_assignment_expr()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test_assignment_expr" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_assignment_expr" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
 // CHECK-NEXT:  %4 = LoadStackInst %2

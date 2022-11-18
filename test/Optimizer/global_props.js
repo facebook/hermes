@@ -21,13 +21,13 @@ process = null;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst 10 : number, globalObject : object, "a" : string
+// CHECK-NEXT:  %2 = StorePropertyStrictInst 10 : number, globalObject : object, "a" : string
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "a" : string
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
 // CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, %4, %5
 // CHECK-NEXT:  %7 = StoreStackInst %6, %0
-// CHECK-NEXT:  %8 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
+// CHECK-NEXT:  %8 = TryStoreGlobalPropertyStrictInst null : null, globalObject : object, "process" : string
 // CHECK-NEXT:  %9 = StoreStackInst null : null, %0
 // CHECK-NEXT:  %10 = LoadStackInst %0
 // CHECK-NEXT:  %11 = ReturnInst %10
@@ -36,23 +36,23 @@ process = null;
 // OPT-CHECK:function global() : null
 // OPT-CHECK-NEXT:frame = [], globals = [a]
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = StorePropertyInst 10 : number, globalObject : object, "a" : string
+// OPT-CHECK-NEXT:  %0 = StorePropertyStrictInst 10 : number, globalObject : object, "a" : string
 // OPT-CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // OPT-CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "a" : string
 // OPT-CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
 // OPT-CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, %2, %3
-// OPT-CHECK-NEXT:  %5 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
+// OPT-CHECK-NEXT:  %5 = TryStoreGlobalPropertyStrictInst null : null, globalObject : object, "process" : string
 // OPT-CHECK-NEXT:  %6 = ReturnInst null : null
 // OPT-CHECK-NEXT:function_end
 
 // OPT-NONSTRICT:function global() : null
 // OPT-NONSTRICT-NEXT:frame = [], globals = [a]
 // OPT-NONSTRICT-NEXT:%BB0:
-// OPT-NONSTRICT-NEXT:  %0 = StorePropertyInst 10 : number, globalObject : object, "a" : string
+// OPT-NONSTRICT-NEXT:  %0 = StorePropertyLooseInst 10 : number, globalObject : object, "a" : string
 // OPT-NONSTRICT-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // OPT-NONSTRICT-NEXT:  %2 = LoadPropertyInst globalObject : object, "a" : string
 // OPT-NONSTRICT-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
 // OPT-NONSTRICT-NEXT:  %4 = CallInst %1, undefined : undefined, %2, %3
-// OPT-NONSTRICT-NEXT:  %5 = StorePropertyInst null : null, globalObject : object, "process" : string
+// OPT-NONSTRICT-NEXT:  %5 = StorePropertyLooseInst null : null, globalObject : object, "process" : string
 // OPT-NONSTRICT-NEXT:  %6 = ReturnInst null : null
 // OPT-NONSTRICT-NEXT:function_end

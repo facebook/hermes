@@ -36,7 +36,7 @@ x = 10;
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
 // CHECK-NEXT:; <stdin>:10:3
-// CHECK-NEXT:  %3 = StorePropertyInst 10 : number, globalObject : object, "x" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst 10 : number, globalObject : object, "x" : string
 // CHECK-NEXT:; <stdin>:10:7
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

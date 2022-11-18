@@ -157,19 +157,19 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:frame = [], globals = [simple_try_catch_test, simple_try_catch_finally_test, simple_try_finally_test, try_catch_finally_with_return_test, nested_try_test, nested_catch_test, finally_with_break_continue_test]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simple_try_catch_test()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simple_try_catch_test" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_try_catch_test" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %simple_try_catch_finally_test()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "simple_try_catch_finally_test" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_try_catch_finally_test" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %simple_try_finally_test()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "simple_try_finally_test" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_try_finally_test" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %try_catch_finally_with_return_test()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "try_catch_finally_with_return_test" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "try_catch_finally_with_return_test" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %nested_try_test()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "nested_try_test" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "nested_try_test" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %nested_catch_test()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "nested_catch_test" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "nested_catch_test" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %finally_with_break_continue_test()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "finally_with_break_continue_test" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "finally_with_break_continue_test" : string
 // CHECK-NEXT:  %14 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
 // CHECK-NEXT:  %16 = LoadStackInst %14

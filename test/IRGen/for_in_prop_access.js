@@ -66,17 +66,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:frame = [], globals = [simple_loop, different_prop, different_obj, modify_prop, modify_value, expression_prop]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simple_loop()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simple_loop" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_loop" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %different_prop()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "different_prop" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "different_prop" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %different_obj()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "different_obj" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "different_obj" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %modify_prop()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "modify_prop" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "modify_prop" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %modify_value()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "modify_value" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "modify_value" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %expression_prop()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "expression_prop" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "expression_prop" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12
@@ -254,7 +254,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %19 = LoadPropertyInst %17, %18
 // CHECK-NEXT:  %20 = AsNumericInst %19
 // CHECK-NEXT:  %21 = UnaryOperatorInst '++', %20 : number|bigint
-// CHECK-NEXT:  %22 = StorePropertyInst %21, %17, %18
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21, %17, %18
 // CHECK-NEXT:  %23 = LoadFrameInst [ret]
 // CHECK-NEXT:  %24 = LoadFrameInst [obj]
 // CHECK-NEXT:  %25 = LoadFrameInst [x]

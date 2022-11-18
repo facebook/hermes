@@ -53,23 +53,23 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:frame = [], globals = [sink, simple_for_loop, simple_for_loop_break, simple_for_loop_break_label, simple_for_loop_continue, simple_for_loop_continue_label, for_loop_match, naked_for_loop, test_init_update_exprs]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %simple_for_loop()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "simple_for_loop" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_for_loop" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %simple_for_loop_break()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "simple_for_loop_break" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_for_loop_break" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %simple_for_loop_break_label()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "simple_for_loop_break_label" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simple_for_loop_break_label" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %simple_for_loop_continue()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "simple_for_loop_continue" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple_for_loop_continue" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %simple_for_loop_continue_label()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "simple_for_loop_continue_label" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "simple_for_loop_continue_label" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %for_loop_match()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "for_loop_match" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "for_loop_match" : string
 // CHECK-NEXT:  %14 = CreateFunctionInst %naked_for_loop()
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "naked_for_loop" : string
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "naked_for_loop" : string
 // CHECK-NEXT:  %16 = CreateFunctionInst %test_init_update_exprs()
-// CHECK-NEXT:  %17 = StorePropertyInst %16 : closure, globalObject : object, "test_init_update_exprs" : string
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "test_init_update_exprs" : string
 // CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
 // CHECK-NEXT:  %20 = LoadStackInst %18

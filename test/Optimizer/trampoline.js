@@ -42,13 +42,13 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:frame = [], globals = [test_one, test_catch_region, test_cond_branch, test_merge_blocks]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test_one()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test_one" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_one" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %test_catch_region() : undefined
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test_catch_region" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_catch_region" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test_cond_branch()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test_cond_branch" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_cond_branch" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %test_merge_blocks() : undefined
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "test_merge_blocks" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test_merge_blocks" : string
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

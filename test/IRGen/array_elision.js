@@ -18,7 +18,7 @@ function func() {
 // CHECK-NEXT:frame = [], globals = [func]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %func()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "func" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "func" : string
 // CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
 // CHECK-NEXT:  %4 = LoadStackInst %2

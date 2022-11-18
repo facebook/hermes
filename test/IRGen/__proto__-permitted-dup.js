@@ -45,17 +45,17 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:frame = [], globals = [protoDupComputed, protoDupMethod1, protoDupMethod2, protoDupAccessor1, protoDupAccessor2, protoDupAccessor3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %protoDupComputed()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "protoDupComputed" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "protoDupComputed" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %protoDupMethod1()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "protoDupMethod1" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "protoDupMethod1" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %protoDupMethod2()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "protoDupMethod2" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "protoDupMethod2" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %protoDupAccessor1()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "protoDupAccessor1" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "protoDupAccessor1" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %protoDupAccessor2()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "protoDupAccessor2" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "protoDupAccessor2" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %protoDupAccessor3()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "protoDupAccessor3" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "protoDupAccessor3" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12

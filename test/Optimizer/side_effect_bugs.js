@@ -18,7 +18,7 @@ function test0() {
 // CHECK-NEXT:frame = [], globals = [test0]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test0() : undefined
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test0" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test0" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

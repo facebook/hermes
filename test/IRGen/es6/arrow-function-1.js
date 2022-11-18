@@ -22,9 +22,9 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_2_ret
 // CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
 // CHECK-NEXT:  %5 = CreateFunctionInst %func1()
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "func1" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "func1" : string
 // CHECK-NEXT:  %7 = CreateFunctionInst %func2()
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "func2" : string
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "func2" : string
 // CHECK-NEXT:  %9 = LoadStackInst %3
 // CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:function_end

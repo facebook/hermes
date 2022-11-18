@@ -665,10 +665,18 @@ class TypeInferenceImpl {
   Type inferBinaryOperatorInst(BinaryOperatorInst *inst) {
     return inferBinaryInst(inst);
   }
-  Type inferStorePropertyInst(StorePropertyInst *inst) {
+  Type inferStorePropertyLooseInst(StorePropertyLooseInst *inst) {
     return Type::createNoType();
   }
-  Type inferTryStoreGlobalPropertyInst(TryStoreGlobalPropertyInst *inst) {
+  Type inferStorePropertyStrictInst(StorePropertyStrictInst *inst) {
+    return Type::createNoType();
+  }
+  Type inferTryStoreGlobalPropertyLooseInst(
+      TryStoreGlobalPropertyLooseInst *inst) {
+    return Type::createNoType();
+  }
+  Type inferTryStoreGlobalPropertyStrictInst(
+      TryStoreGlobalPropertyStrictInst *inst) {
     return Type::createNoType();
   }
 

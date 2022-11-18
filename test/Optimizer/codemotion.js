@@ -99,23 +99,23 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @0 [1...19) 	%0 = HBCCreateEnvironmentInst
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %hoist_branch(), %0
 // CHECK-NEXT:  $Reg1 @2 [3...20) 	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "hoist_branch" : string
+// CHECK-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyLooseInst %1 : closure, %2 : object, "hoist_branch" : string
 // CHECK-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %hoist_branch_window(), %0
-// CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "hoist_branch_window" : string
+// CHECK-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyLooseInst %4 : closure, %2 : object, "hoist_branch_window" : string
 // CHECK-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %no_hoist_inc_dec() : number|bigint, %0
-// CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "no_hoist_inc_dec" : string
+// CHECK-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyLooseInst %6 : closure, %2 : object, "no_hoist_inc_dec" : string
 // CHECK-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %hoist_loop() : undefined, %0
-// CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "hoist_loop" : string
+// CHECK-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyLooseInst %8 : closure, %2 : object, "hoist_loop" : string
 // CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = HBCCreateFunctionInst %hoist_loop_expression(), %0
-// CHECK-NEXT:  $Reg2 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "hoist_loop_expression" : string
+// CHECK-NEXT:  $Reg2 @11 [empty]	%11 = StorePropertyLooseInst %10 : closure, %2 : object, "hoist_loop_expression" : string
 // CHECK-NEXT:  $Reg2 @12 [13...14) 	%12 = HBCCreateFunctionInst %hoist_from_multiblock_loop(), %0
-// CHECK-NEXT:  $Reg2 @13 [empty]	%13 = StorePropertyInst %12 : closure, %2 : object, "hoist_from_multiblock_loop" : string
+// CHECK-NEXT:  $Reg2 @13 [empty]	%13 = StorePropertyLooseInst %12 : closure, %2 : object, "hoist_from_multiblock_loop" : string
 // CHECK-NEXT:  $Reg2 @14 [15...16) 	%14 = HBCCreateFunctionInst %hoist_with_dependencies_in_loop(), %0
-// CHECK-NEXT:  $Reg2 @15 [empty]	%15 = StorePropertyInst %14 : closure, %2 : object, "hoist_with_dependencies_in_loop" : string
+// CHECK-NEXT:  $Reg2 @15 [empty]	%15 = StorePropertyLooseInst %14 : closure, %2 : object, "hoist_with_dependencies_in_loop" : string
 // CHECK-NEXT:  $Reg2 @16 [17...18) 	%16 = HBCCreateFunctionInst %code_sinking() : number, %0
-// CHECK-NEXT:  $Reg2 @17 [empty]	%17 = StorePropertyInst %16 : closure, %2 : object, "code_sinking" : string
+// CHECK-NEXT:  $Reg2 @17 [empty]	%17 = StorePropertyLooseInst %16 : closure, %2 : object, "code_sinking" : string
 // CHECK-NEXT:  $Reg0 @18 [19...20) 	%18 = HBCCreateFunctionInst %code_sinking_in_loop() : undefined, %0
-// CHECK-NEXT:  $Reg0 @19 [empty]	%19 = StorePropertyInst %18 : closure, %2 : object, "code_sinking_in_loop" : string
+// CHECK-NEXT:  $Reg0 @19 [empty]	%19 = StorePropertyLooseInst %18 : closure, %2 : object, "code_sinking_in_loop" : string
 // CHECK-NEXT:  $Reg0 @20 [21...22) 	%20 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @21 [empty]	%21 = ReturnInst %20 : undefined
 // CHECK-NEXT:function_end
@@ -289,6 +289,6 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @8 [empty]	%5 = ReturnInst %4 : undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  $Reg2 @4 [5...6) 	%6 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  $Reg2 @5 [empty]	%7 = StorePropertyInst %1, %6 : object, %0
+// CHECK-NEXT:  $Reg2 @5 [empty]	%7 = StorePropertyLooseInst %1, %6 : object, %0
 // CHECK-NEXT:  $Reg0 @6 [empty]	%8 = BranchInst %BB1
 // CHECK-NEXT:function_end

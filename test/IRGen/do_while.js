@@ -42,13 +42,13 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:frame = [], globals = [simple_do_while_test, do_while_break_test, do_while_continue_test, for_while_do_mixed_test]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %simple_do_while_test()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "simple_do_while_test" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_do_while_test" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %do_while_break_test()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "do_while_break_test" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "do_while_break_test" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %do_while_continue_test()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "do_while_continue_test" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "do_while_continue_test" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %for_while_do_mixed_test()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "for_while_do_mixed_test" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "for_while_do_mixed_test" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8

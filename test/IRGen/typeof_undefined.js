@@ -21,7 +21,7 @@ var x = typeof foo;
 // CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %3 = UnaryOperatorInst 'typeof', %2
-// CHECK-NEXT:  %4 = StorePropertyInst %3, globalObject : object, "x" : string
+// CHECK-NEXT:  %4 = StorePropertyStrictInst %3, globalObject : object, "x" : string
 // CHECK-NEXT:  %5 = LoadStackInst %0
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end

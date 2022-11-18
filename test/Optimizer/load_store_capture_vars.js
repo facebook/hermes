@@ -78,21 +78,21 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = [], globals = [store_x_not_captured, store_x_is_captured, load_x_not_captured, load_x_is_captured, load_x_captured_as_load, abort, foo, postponed_store_in_use_block]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %store_x_not_captured() : number
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "store_x_not_captured" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "store_x_not_captured" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %store_x_is_captured() : number
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "store_x_is_captured" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "store_x_is_captured" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %load_x_not_captured() : number
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "load_x_not_captured" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "load_x_not_captured" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %load_x_is_captured() : number
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "load_x_is_captured" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "load_x_is_captured" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %load_x_captured_as_load() : number
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "load_x_captured_as_load" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "load_x_captured_as_load" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %abort()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "abort" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "abort" : string
 // CHECK-NEXT:  %12 = CreateFunctionInst %"foo 5#"()
-// CHECK-NEXT:  %13 = StorePropertyInst %12 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %14 = CreateFunctionInst %postponed_store_in_use_block() : undefined
-// CHECK-NEXT:  %15 = StorePropertyInst %14 : closure, globalObject : object, "postponed_store_in_use_block" : string
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "postponed_store_in_use_block" : string
 // CHECK-NEXT:  %16 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

@@ -41,17 +41,17 @@ function test5() {
 // CHECK-NEXT:frame = [], globals = [test0, test1, test2, test3, test4, test5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %test0()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "test0" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test0" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %test1()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "test1" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test1" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %test2()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "test2" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test2" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %test3()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "test3" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test3" : string
 // CHECK-NEXT:  %8 = CreateFunctionInst %test4()
-// CHECK-NEXT:  %9 = StorePropertyInst %8 : closure, globalObject : object, "test4" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "test4" : string
 // CHECK-NEXT:  %10 = CreateFunctionInst %test5()
-// CHECK-NEXT:  %11 = StorePropertyInst %10 : closure, globalObject : object, "test5" : string
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "test5" : string
 // CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
 // CHECK-NEXT:  %14 = LoadStackInst %12

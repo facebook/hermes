@@ -29,13 +29,13 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:frame = [], globals = [testAnd, testOr, testNullish, testComplex]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %testAnd()
-// CHECK-NEXT:  %1 = StorePropertyInst %0 : closure, globalObject : object, "testAnd" : string
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "testAnd" : string
 // CHECK-NEXT:  %2 = CreateFunctionInst %testOr()
-// CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, globalObject : object, "testOr" : string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "testOr" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %testNullish()
-// CHECK-NEXT:  %5 = StorePropertyInst %4 : closure, globalObject : object, "testNullish" : string
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "testNullish" : string
 // CHECK-NEXT:  %6 = CreateFunctionInst %testComplex()
-// CHECK-NEXT:  %7 = StorePropertyInst %6 : closure, globalObject : object, "testComplex" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "testComplex" : string
 // CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
 // CHECK-NEXT:  %10 = LoadStackInst %8
@@ -52,7 +52,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = StorePropertyInst %5, %2, "foo" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5, %2, "foo" : string
 // CHECK-NEXT:  %7 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = PhiInst %3, %BB0, %5, %BB1
@@ -71,7 +71,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = StorePropertyInst %5, %2, "foo" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5, %2, "foo" : string
 // CHECK-NEXT:  %7 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = PhiInst %3, %BB0, %5, %BB2
@@ -91,7 +91,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst [y]
-// CHECK-NEXT:  %7 = StorePropertyInst %6, %2, "foo" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6, %2, "foo" : string
 // CHECK-NEXT:  %8 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = PhiInst %3, %BB0, %6, %BB1

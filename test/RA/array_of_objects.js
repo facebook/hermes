@@ -31,7 +31,7 @@ var arr = [{a: 1}, {b: 2}, {c: 3}, {d: 4}];
 // CHECK-NEXT:  $Reg2 @15 [empty]	%15 = StoreNewOwnPropertyInst %14 : number, %13 : object, "d" : string, true : boolean
 // CHECK-NEXT:  $Reg0 @16 [empty]	%16 = StoreOwnPropertyInst %13 : object, %3 : object, 3 : number, true : boolean
 // CHECK-NEXT:  $Reg0 @17 [18...19) 	%17 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg0 @18 [empty]	%18 = StorePropertyInst %3 : object, %17 : object, "arr" : string
+// CHECK-NEXT:  $Reg0 @18 [empty]	%18 = StorePropertyLooseInst %3 : object, %17 : object, "arr" : string
 // CHECK-NEXT:  $Reg0 @19 [20...21) 	%19 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @20 [empty]	%20 = ReturnInst %19 : undefined
 // CHECK-NEXT:function_end
