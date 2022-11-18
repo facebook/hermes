@@ -9,6 +9,7 @@
 #include <hermes/BCGen/HBC/BytecodeFileFormat.h>
 #include <hermes/CompileJS.h>
 #include <hermes/Public/JSOutOfMemoryError.h>
+#include <hermes/VM/TimeLimitMonitor.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
 
@@ -338,30 +339,59 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   // Some code that exercies the async break checks.
   const char *forABit = "var t = Date.now(); while (Date.now() < t + 100) {}";
   const char *forEver = "for (;;){}";
+  uint32_t Around20MinsMS = 1234567;
+  uint32_t ShortTimeoutMS = 123;
   {
     // Single runtime with ~20 minute limit that will not be reached.
     auto rt = makeHermesRuntime();
-    rt->watchTimeLimit(1234567);
+    rt->watchTimeLimit(Around20MinsMS);
     rt->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
+  }
+  {
+    // Single runtime with timeout reset -- first a very long time out, then a
+    // short one.
+    auto rt = makeHermesRuntime();
+    rt->watchTimeLimit(Around20MinsMS);
+    rt->watchTimeLimit(ShortTimeoutMS);
+    ASSERT_THROW(
+        rt->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
+        JSIException);
   }
   {
     // Multiple runtimes, but neither will time out.
     auto rt1 = makeHermesRuntime();
-    rt1->watchTimeLimit(1234567);
+    rt1->watchTimeLimit(Around20MinsMS);
     auto rt2 = makeHermesRuntime();
-    rt2->watchTimeLimit(1234567 / 2);
+    rt2->watchTimeLimit(Around20MinsMS / 2);
     rt1->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
     rt2->evaluateJavaScript(std::make_unique<StringBuffer>(forABit), "");
   }
   {
-    // Timeout in one of the runtimes.
+    // Timeout in one of the runtimes. Make sure the first watchTimeLimit is the
+    // "infinite one" as time TimeLimitMonitor could sleep for the given timeout
+    // without properly handle the next timeouts.
     auto rt1 = makeHermesRuntime();
-    rt1->watchTimeLimit(1234567);
+    rt1->watchTimeLimit(Around20MinsMS);
     auto rt2 = makeHermesRuntime();
-    rt2->watchTimeLimit(123);
+    rt2->watchTimeLimit(ShortTimeoutMS);
     ASSERT_THROW(
         rt2->evaluateJavaScript(std::make_unique<StringBuffer>(forEver), ""),
         JSIException);
+  }
+  {
+    auto timeLimitMonitor = hermes::vm::TimeLimitMonitor::getOrCreate();
+    const auto &watchedRuntimes = timeLimitMonitor->getWatchedRuntimes();
+
+    auto rt1 = makeHermesRuntime();
+    rt1->watchTimeLimit(Around20MinsMS);
+    auto rt2 = makeHermesRuntime();
+    rt2->watchTimeLimit(Around20MinsMS);
+    auto rt3 = makeHermesRuntime();
+    rt3->watchTimeLimit(Around20MinsMS);
+    EXPECT_EQ(watchedRuntimes.size(), 3);
+
+    rt2 = nullptr;
+    EXPECT_EQ(watchedRuntimes.size(), 2);
   }
 }
 

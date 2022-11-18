@@ -36,6 +36,7 @@
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/SymbolRegistry.h"
+#include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/TwineChar16.h"
 #include "hermes/VM/VMExperiments.h"
 
@@ -836,6 +837,9 @@ class Runtime : public PointerBase,
   /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
   /// will automatically register/unregister this runtime from profiling.
   std::unique_ptr<SamplingProfiler> samplingProfiler;
+
+  /// Time limit monitor data for this runtime.
+  std::shared_ptr<TimeLimitMonitor> timeLimitMonitor;
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// Dump statistics about native calls.

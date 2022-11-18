@@ -8,15 +8,18 @@
 #ifndef HERMES_VM_TIMELIMITMONITOR_H
 #define HERMES_VM_TIMELIMITMONITOR_H
 
-#include "hermes/VM/Runtime.h"
+#include "llvh/ADT/DenseMap.h"
 
 #include <chrono>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
-#include <unordered_map>
+#include <thread>
 
 namespace hermes {
 namespace vm {
+
+class Runtime;
 
 /// In charge of monitoring runtime execution time for a specified limit.
 /// Once a runtime exceeds its execution time limit, it will be notified via
@@ -25,53 +28,53 @@ namespace vm {
 /// being used to prevent infinite executions...).
 class TimeLimitMonitor {
  public:
-  /// \return the singleton instance reference.
-  static TimeLimitMonitor &getInstance();
+  using Deadline = std::chrono::steady_clock::time_point;
 
-  /// Watch \p runtime for timeout after \p timeoutInMs.
-  void watchRuntime(Runtime &runtime, uint32_t timeoutInMs);
+  ~TimeLimitMonitor();
 
-  /// Unwatch \p runtime.
+  /// \return The time TimeLimitMonitor singleton. Its life-time is managed by
+  /// the returned shared pointer.
+  static std::shared_ptr<TimeLimitMonitor> getOrCreate();
+
+  /// Sets a deadline of now + \p timeout (ms) before \p runtime is notified of
+  /// a timeout.
+  void watchRuntime(Runtime &runtime, std::chrono::milliseconds timeout);
+
+  /// Stops watching \p runtime for timeouts.
   void unwatchRuntime(Runtime &runtime);
 
- private:
-  TimeLimitMonitor() = default;
-
-  /// \return next closest deadline to wakeup.
-  std::chrono::steady_clock::time_point getNextDeadline();
-
-  /// Process any expired work items in timeoutMap_ and remove them.
-  /// This method assumes caller has acquired timeoutMapMtx_.
-  void processAndRemoveExpiredItems();
-
-  /// Timer loop that wake periodically to process expired work items.
-  void timerLoop();
-
-  /// Notify \p runtime to check timeout.
-  void notifyRuntimeTimeout(Runtime *runtime) {
-    runtime->triggerTimeoutAsyncBreak();
+  /// Returns the map of currently-watched runtimes. Mostly for testing.
+  const llvh::DenseMap<Runtime *, Deadline> &getWatchedRuntimes() const {
+    return watchedRuntimes_;
   }
 
  private:
-  /// Mutex that protects timeoutMap_, and state_.
-  std::mutex timeoutMapMtx_;
-  /// Map from runtime to its deadline time point.
-  std::unordered_map<Runtime *, std::chrono::steady_clock::time_point>
-      timeoutMap_;
+  /// Timer loop that is in charge of notifying the runtimes in watchedRuntimes_
+  /// when their deadline elapses.
+  void timerLoop();
 
-  /// State of the timer loop.
-  enum State {
-    JOINED, // Thread was joined or has not yet been created.
-    RUNNING, // Loop can process work items.
-    STOPPING, // Transient state: loop will stop.
-    STOPPED, // Transient state: thread will be joined.
-  };
-  State state_{JOINED};
+  /// Synchronizes access to all member variables.
+  std::mutex lock_;
 
-  /// Signals an addition to timeoutMap_ or change to state_.
-  std::condition_variable cond_;
-
+  /// Manages the life-time of the timerLoop thread. Created in the constructor,
+  /// and joined in the destructor.
   std::thread timerThread_;
+
+  /// Condition variable used to "tickle" the timer loop thread -- i.e., wake it
+  /// up before nextDeadline_ is reached.
+  std::condition_variable timerLoopCond_;
+
+  /// Maps all Runtimes being watched to their respective deadlines.
+  llvh::DenseMap<Runtime *, Deadline> watchedRuntimes_;
+
+  /// Flag indicating whether the TimeLimitMonitor is enabled or not. Set to
+  /// false during destruction to stop the timerLoop thread.
+  bool enabled_{true};
+
+ public:
+  /// Constructs a new TimeLimitMonitor; only public so instances can be created
+  /// with make_shared.
+  TimeLimitMonitor();
 };
 
 } // namespace vm

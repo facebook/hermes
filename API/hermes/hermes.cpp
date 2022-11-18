@@ -1353,17 +1353,22 @@ void HermesRuntime::unregisterForProfiling() {
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
-  impl(this)->compileFlags_.emitAsyncBreakCheck = true;
-  ::hermes::vm::TimeLimitMonitor::getInstance().watchRuntime(
-      impl(this)->runtime_, timeoutInMs);
+  HermesRuntimeImpl &concrete = *impl(this);
+  vm::Runtime &runtime = concrete.runtime_;
+  auto &runtimeTimeLimitMonitor = runtime.timeLimitMonitor;
+  if (!runtimeTimeLimitMonitor) {
+    concrete.compileFlags_.emitAsyncBreakCheck = true;
+    runtimeTimeLimitMonitor = ::hermes::vm::TimeLimitMonitor::getOrCreate();
+  }
+  runtimeTimeLimitMonitor->watchRuntime(
+      runtime, std::chrono::milliseconds(timeoutInMs));
 }
 
 void HermesRuntime::unwatchTimeLimit() {
-  // Restore the default state.
-  impl(this)->compileFlags_.emitAsyncBreakCheck =
-      impl(this)->defaultEmitAsyncBreakCheck_;
-  ::hermes::vm::TimeLimitMonitor::getInstance().unwatchRuntime(
-      impl(this)->runtime_);
+  vm::Runtime &runtime = impl(this)->runtime_;
+  if (auto &runtimeTimeLimitMonitor = runtime.timeLimitMonitor) {
+    runtimeTimeLimitMonitor->unwatchRuntime(runtime);
+  }
 }
 
 jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
