@@ -102,8 +102,6 @@ static const unsigned STACK_RESERVE = 32;
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
 
-using DestructionCallback = std::function<void(Runtime &)>;
-
 #define PROP_CACHE_IDS(V) V(RegExpLastIndex, Predefined::lastIndex)
 
 /// Fixed set of ids used by the property cache in Runtime.
@@ -613,12 +611,6 @@ class Runtime : public PointerBase,
   /// thread, or a signal handler.
   void triggerTimeoutAsyncBreak() {
     triggerAsyncBreak(AsyncBreakReasonBits::Timeout);
-  }
-
-  /// Register \p callback which will be called
-  /// during runtime destruction.
-  void registerDestructionCallback(DestructionCallback callback) {
-    destructionCallbacks_.emplace_back(callback);
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -1297,9 +1289,6 @@ class Runtime : public PointerBase,
 
   /// Pointer to the code coverage profiler.
   const std::unique_ptr<CodeCoverageProfiler> codeCoverageProfiler_;
-
-  /// A list of callbacks to call before runtime destruction.
-  std::vector<DestructionCallback> destructionCallbacks_;
 
   /// Bit flags for async break request reasons.
   enum class AsyncBreakReasonBits : uint8_t {

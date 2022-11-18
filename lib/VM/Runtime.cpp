@@ -417,10 +417,6 @@ Runtime::~Runtime() {
     timeLimitMonitor->unwatchRuntime(*this);
   }
 
-  for (auto callback : destructionCallbacks_) {
-    callback(*this);
-  }
-
   crashMgr_->unregisterMemory(this);
 }
 
