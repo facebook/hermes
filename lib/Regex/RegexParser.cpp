@@ -57,6 +57,10 @@ class Parser {
   const uint32_t backRefLimit_;
   uint32_t maxBackRef_ = 0;
 
+  // When parsing, this is the default assumption we make for if there are
+  // groups or not. That means this value may not reflect reality.
+  bool hasNamedGroups_;
+
   /// Set the error \p err, if not already set to a different error.
   /// Also move our input to end, to abort parsing.
   /// \return false, for convenience.
@@ -281,6 +285,7 @@ class Parser {
       return;
     }
 
+    hasNamedGroups_ = true;
     stack.push_back(std::move(elem));
   }
   /// Open a non-capturing group, pushing it onto \p stack.
@@ -1172,6 +1177,19 @@ class Parser {
         break;
       }
 
+      case 'k': {
+        if (flags_.unicode || hasNamedGroups_) {
+          consume('k');
+          GroupName refIdentifer;
+          if (!tryConsume('<') || !tryConsumeGroupName(refIdentifer)) {
+            setError(constants::ErrorType::InvalidNamedReference);
+            return;
+          }
+          re_->pushNamedBackRef(std::move(refIdentifer));
+          break;
+        }
+        re_->sawNamedBackrefBeforeGroup();
+      }
       default: {
         re_->pushChar(consumeCharacterEscape());
         break;
@@ -1188,12 +1206,14 @@ class Parser {
       ForwardIterator start,
       ForwardIterator end,
       SyntaxFlags flags,
-      uint32_t backRefLimit)
+      uint32_t backRefLimit,
+      bool hasNamedGroups)
       : re_(re),
         current_(start),
         end_(end),
         flags_(flags),
-        backRefLimit_(backRefLimit) {}
+        backRefLimit_(backRefLimit),
+        hasNamedGroups_(hasNamedGroups) {}
 
   constants::ErrorType performParse() {
     consumeDisjunction();
@@ -1215,9 +1235,10 @@ constants::ErrorType parseRegex(
     Receiver *receiver,
     SyntaxFlags flags,
     uint32_t backRefLimit,
+    bool hasNamedGroups,
     uint32_t *outMaxBackRef) {
   Parser<Receiver, const char16_t *> parser(
-      receiver, start, end, flags, backRefLimit);
+      receiver, start, end, flags, backRefLimit, hasNamedGroups);
   auto result = parser.performParse();
   *outMaxBackRef = parser.maxBackRef();
   return result;
@@ -1230,6 +1251,7 @@ template constants::ErrorType parseRegex(
     Regex<UTF16RegexTraits> *receiver,
     SyntaxFlags flags,
     uint32_t backRefLimit,
+    bool hasNamedGroups,
     uint32_t *outMaxBackRef);
 
 } // namespace regex
