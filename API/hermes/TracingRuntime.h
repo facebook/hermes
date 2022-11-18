@@ -152,20 +152,6 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   SynthTrace::TimeSinceStart getTimeSinceStart() const;
 
-  void insertHostForwarder(const std::vector<const char *> &propertyPath);
-
-  jsi::Function *saveFunction(const std::vector<const char *> &propertyChain);
-
-  void setupDate();
-
-  // This function will traverse the properties defined in propertyPath,
-  // starting from the global object in the given runtime. This function can
-  // optionally skip the last \p skipLastAmt of properties in the given path.
-  static jsi::Object walkPropertyPath(
-      jsi::Runtime &runtime,
-      const std::vector<const char *> &propertyPath,
-      size_t skipLastAmt = 0);
-
   std::unique_ptr<jsi::Runtime> runtime_;
   SynthTrace trace_;
   std::deque<jsi::Function> savedFunctions;
