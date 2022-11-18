@@ -492,6 +492,20 @@ print('empty', res, res.length);
 print(String.prototype.trimEnd === String.prototype.trimRight);
 // CHECK-NEXT: true
 
+
+print('at');
+// CHECK-NEXT: at
+print("abc".at(1));
+// CHECK-NEXT: b
+print("abc".at(-1));
+// CHECK-NEXT: c
+print("abc".at(false));
+// CHECK-NEXT: a
+print(String.prototype.at.call(true, -1));
+// CHECK-NEXT: e
+print("".at(0));
+// CHECK-NEXT: undefined
+
 print('indexOf');
 // CHECK-LABEL: indexOf
 print('abc'.indexOf('a'))

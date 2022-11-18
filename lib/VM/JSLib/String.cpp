@@ -58,6 +58,13 @@ Handle<JSObject> createStringConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       stringPrototype,
+      Predefined::getSymbolID(Predefined::at),
+      ctx,
+      stringPrototypeAt,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
       Predefined::getSymbolID(Predefined::valueOf),
       ctx,
       stringPrototypeToString,
@@ -563,6 +570,59 @@ CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
 
 //===----------------------------------------------------------------------===//
 /// String.prototype.
+
+/// 22.1.3.1
+CallResult<HermesValue>
+stringPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  // 1. Let O be RequireObjectCoercible(this value).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, args.getThisHandle()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. Let S be ToString(O).
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = runtime.makeHandle(std::move(*strRes));
+
+  // 3. Let len be the length of S.
+  double len = S->getStringLength();
+
+  // 4. Let relativeIndex be ? ToIntegerOrInfinity(index).
+  auto idx = args.getArgHandle(0);
+  auto relativeIndexRes = toIntegerOrInfinity(runtime, idx);
+  if (LLVM_UNLIKELY(relativeIndexRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  const double relativeIndex = relativeIndexRes->getNumber();
+
+  double k;
+  // 5. If relativeIndex ≥ 0, then
+  if (relativeIndex >= 0) {
+    // a. Let k be relativeIndex.
+    k = relativeIndex;
+  } else {
+    // 6. Else,
+    // a. Let k be len + relativeIndex.
+    k = len + relativeIndex;
+  }
+
+  // 6. If k < 0 or k ≥ len, return undefined.
+  if (k < 0 || k >= len) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  // 8. Return the substring of S from k to k + 1.
+  auto sliceRes = StringPrimitive::slice(runtime, S, k, 1);
+  if (LLVM_UNLIKELY(sliceRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return sliceRes;
+}
 
 CallResult<HermesValue>
 stringPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
