@@ -54,6 +54,23 @@ void TracingRuntime::replaceNondeterministicFuncs() {
 (function(callUntraced){
   var mathRandomReal = Math.random;
   Math.random = function random() { return callUntraced(mathRandomReal); };
+
+  if(globalThis.WeakRef){
+    var WeakRefReal = globalThis.WeakRef;
+    function WeakRef(arg){
+      if (new.target){
+        // Make a dummy call so the arg is traced. This allows us to return it
+        // from calls to deref later.
+        callUntraced(() => {}, arg);
+        return new WeakRefReal(arg);
+      }
+      return WeakRefReal(arg);
+    }
+    WeakRef.prototype = WeakRefReal.prototype;
+    var derefReal = WeakRefReal.prototype.deref;
+    WeakRef.prototype.deref = function deref() { return callUntraced(derefReal.bind(this)); };
+    globalThis.WeakRef = WeakRef;
+  }
 });
 )";
   global()
@@ -64,7 +81,6 @@ void TracingRuntime::replaceNondeterministicFuncs() {
       .call(*this, {std::move(callUntraced)});
 
   setupDate();
-  setUpWeakRef();
 
   numPreambleRecords_ = trace_.records().size();
 }
@@ -93,46 +109,6 @@ void TracingRuntime::insertHostForwarder(
 
   walkPropertyPath(*this, propertyPath, 1)
       .setProperty(*this, propertyPath.back(), funcReplacement);
-}
-
-void TracingRuntime::setUpWeakRef() {
-  // WeakRef is not always defined.
-  if (runtime_->global().getProperty(*runtime_, "WeakRef").isUndefined())
-    return;
-  // The constructor, though deterministic, needs to be replaced as well. This
-  // is because the object that is returned from deref needs to have appeared in
-  // the synth trace before deref is called. Therefore, we simply insert a
-  // 'no-op' with the object as the parameter, so that the object returned from
-  // deref shows up in the trace.
-  jsi::Function nativeNoOp = jsi::Function::createFromHostFunction(
-      *this,
-      jsi::PropNameID::forAscii(*this, "WeakRef"),
-      0,
-      [](Runtime &rt,
-         const jsi::Value &thisVal,
-         const jsi::Value *args,
-         size_t count) { return jsi::Value::undefined(); });
-  auto code = R"(
-(function(nativeNoOp){
-  var WeakRefReal = WeakRef;
-  function WeakRefJSReplacement(arg){
-    if (new.target){
-      nativeNoOp(arg);
-      return new WeakRefReal(arg);
-    }
-    return WeakRefReal(arg);
-  }
-  WeakRefJSReplacement.prototype = WeakRefReal.prototype;
-  globalThis.WeakRef = WeakRefJSReplacement;
-});
-)";
-  global()
-      .getPropertyAsFunction(*this, "eval")
-      .call(*this, code)
-      .asObject(*this)
-      .asFunction(*this)
-      .call(*this, {std::move(nativeNoOp)});
-  insertHostForwarder({"WeakRef", "prototype", "deref"});
 }
 
 void TracingRuntime::setupDate() {

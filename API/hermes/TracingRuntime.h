@@ -156,8 +156,6 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::Function *saveFunction(const std::vector<const char *> &propertyChain);
 
-  void setUpWeakRef();
-
   void setupDate();
 
   // This function will traverse the properties defined in propertyPath,
