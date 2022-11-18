@@ -3054,24 +3054,14 @@ tailCall:
         if (LLVM_LIKELY(O2REG(Negate).isNumber())) {
           O1REG(Negate) =
               HermesValue::encodeDoubleValue(-O2REG(Negate).getNumber());
-        } else {
-          CAPTURE_IP(res = toNumeric_RJS(runtime, Handle<>(&O2REG(Negate))));
-          if (res == ExecutionStatus::EXCEPTION)
-            goto exception;
-          if (res->isNumber()) {
-            O1REG(Negate) = HermesValue::encodeDoubleValue(-res->getNumber());
-          } else {
-            assert(res->isBigInt() && "should be bigint");
-            CAPTURE_IP_ASSIGN(
-                auto bigint, runtime.makeHandle(res->getBigInt()));
-            CAPTURE_IP(res = BigIntPrimitive::unaryMinus(runtime, bigint));
-            if (res == ExecutionStatus::EXCEPTION) {
-              goto exception;
-            }
-            O1REG(Negate) = HermesValue::encodeBigIntValue(res->getBigInt());
-          }
-          gcScope.flushToSmallCount(KEEP_HANDLES);
+          ip = NEXTINST(Negate);
+          DISPATCH;
         }
+        CAPTURE_IP(res = doNegateSlowPath(runtime, Handle<>(&O2REG(Negate))));
+        if (res == ExecutionStatus::EXCEPTION)
+          goto exception;
+        O1REG(Negate) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Negate);
         DISPATCH;
       }
