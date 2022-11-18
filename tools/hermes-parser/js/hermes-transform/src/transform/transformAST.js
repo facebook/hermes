@@ -14,16 +14,10 @@ import type {ESNode, Program} from 'hermes-estree';
 import type {TransformVisitor} from './transform';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
 
-import {parseForESLint} from 'hermes-eslint';
 import {updateAllParentPointers} from '../detachedNode';
 import {traverseWithContext} from '../traverse/traverse';
 import {MutationContext} from './MutationContext';
 import {getTransformContext} from './TransformContext';
-import {
-  addCommentsToNode,
-  attachComments,
-  getLeadingCommentsForNode,
-} from './comments/comments';
 import {performAddCommentsMutation} from './mutations/AddComments';
 import {performCloneCommentsToMutation} from './mutations/CloneCommentsTo';
 import {performInsertStatementMutation} from './mutations/InsertStatement';
@@ -32,43 +26,18 @@ import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import type {ParseResult} from './parse';
 
-export function getTransformedAST(
-  code: string,
-  visitors: TransformVisitor,
-): {
+export type transformASTResult = {
   ast: Program,
   astWasMutated: boolean,
   mutatedCode: string,
-} {
-  const {ast, scopeManager} = parseForESLint(code, {
-    sourceType: 'module',
-  });
+};
 
-  // Don't include the docblock comment in the comment list as we don't want to attach it
-  // as it should be maintained at the top of the file as nodes are moved around.
-  let comments = ast.comments;
-  if (ast.docblock != null && ast.docblock.comment === comments[0]) {
-    const [first, ...nonDocblockComments] = comments;
-
-    // Since we will not be attaching this comment automatically we need to add the
-    // properties prettier expects for printing.
-    // $FlowExpectedError[prop-missing]
-    first.placement = 'endOfLine';
-    // $FlowExpectedError[prop-missing]
-    first.leading = true;
-    // $FlowExpectedError[prop-missing]
-    first.trailing = false;
-    // $FlowExpectedError[prop-missing]
-    first.printed = false;
-
-    comments = nonDocblockComments;
-  }
-
-  // attach comments before mutation. this will ensure that as nodes are
-  // cloned / moved around - comments remain in the correct place with respect to the node
-  attachComments(comments, ast, code);
-
+export function transformAST(
+  {ast, scopeManager, code}: ParseResult,
+  visitors: TransformVisitor,
+): transformASTResult {
   // traverse the AST and colllect the mutations
   const transformContext = getTransformContext();
   traverseWithContext(
@@ -148,19 +117,6 @@ export function getTransformedAST(
   // this is done at the end because it requires a complete traversal of the AST
   // so that we can find relevant node's attachment array
   performRemoveCommentMutations(ast, removeCommentMutations);
-
-  // The docblock comment is never attached to any AST nodes, since its technically
-  // attached to the program. However this is specific to our AST and in order for
-  // prettier to correctly print it we need to attach it to the first node in the
-  // program body.
-  if (ast.docblock != null && ast.body.length > 0) {
-    const firstNode = ast.body[0];
-    const docblockComment = ast.docblock.comment;
-    const leadingComments = getLeadingCommentsForNode(firstNode);
-    if (!leadingComments.includes(docblockComment)) {
-      addCommentsToNode(firstNode, [docblockComment], 'leading');
-    }
-  }
 
   return {
     ast,
