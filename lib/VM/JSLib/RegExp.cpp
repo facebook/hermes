@@ -923,6 +923,7 @@ CallResult<HermesValue> getSubstitution(
     Handle<StringPrimitive> str,
     uint32_t position,
     Handle<ArrayStorageSmall> captures,
+    Handle<JSObject> namedCaptures,
     Handle<StringPrimitive> replacement) {
   // 1. Assert: Type(matched) is String.
   // 2. Let matchLength be the number of code units in matched.
@@ -1036,6 +1037,49 @@ CallResult<HermesValue> getSubstitution(
         // Not a valid $n.
         result.append({c0, c1});
         i += 2;
+      }
+    } else if (c1 == u'<' && namedCaptures) {
+      // i. Let gtPos be StringIndxOf(templateRemainder, ">", 0).
+      size_t gtPos = 0;
+      for (size_t innerI = i + 2; innerI < e; innerI++) {
+        if (replacementView[innerI] == u'>') {
+          gtPos = innerI;
+          break;
+        }
+      }
+      // We couldn't find a valid identifier
+      if (gtPos == 0) {
+        result.append({c0, c1});
+        i += 2;
+      } else {
+        llvh::SmallVector<char16_t, 32> storage;
+        // 2. Let groupName be the substring of templateRemainder from 2 to
+        // gtPos.
+        auto identifier =
+            replacementView.slice(i + 2, gtPos - (i + 2)).getUTF16Ref(storage);
+        auto symbolRes =
+            runtime.getIdentifierTable().getSymbolHandle(runtime, identifier);
+        if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        auto captureRes =
+            JSObject::getNamed_RJS(namedCaptures, runtime, symbolRes->get());
+        if (LLVM_UNLIKELY(captureRes == ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
+        // 5. If capture is undefined, then
+        // a. Let refReplacement be the empty String.
+        // 6. Else,
+        if (!(*captureRes)->isUndefined()) {
+          // a. Let refReplacement be ? ToString(capture).
+          auto toStrRes =
+              toString_RJS(runtime, runtime.makeHandle(std::move(*captureRes)));
+          if (toStrRes == ExecutionStatus::EXCEPTION) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          (*toStrRes)->appendUTF16String(result);
+        }
+        // Advance the cursor past the terminating '>'.
+        i = gtPos + 1;
       }
     } else {
       // None of the replacement strings count, add both characters.
@@ -1694,10 +1738,30 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       replacement = strRes->get();
     } else {
       // n. Else,
-      // i. Let replacement be GetSubstitution(matched, S, position, captures,
+      // i. If namedCaptures is not undefined, then
+      if (hasNamedCaptures) {
+        auto objRes = toObject(runtime, namedCaptures);
+        if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        // 1. Set namedCaptures to ? ToObject(namedCaptures).
+        namedCaptures.set(*objRes);
+      }
+
+      // ii. Let replacement be GetSubstitution(matched, S, position, captures,
       // replaceValue).
       auto callRes = getSubstitution(
-          runtime, matched, S, position, capturesHandle, replaceValueStr);
+          runtime,
+          matched,
+          S,
+          position,
+          capturesHandle,
+          hasNamedCaptures ? Handle<JSObject>::vmcast(namedCaptures)
+                           : Runtime::makeNullHandle<JSObject>(),
+          replaceValueStr);
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
       replacement = vmcast<StringPrimitive>(callRes.getValue());
     }
     // o. ReturnIfAbrupt(replacement).

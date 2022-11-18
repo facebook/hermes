@@ -1678,6 +1678,7 @@ stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
       // i. Assert: Type(replaceValue) is String.
       // ii. Let captures be a new empty List.
       auto captures = Runtime::makeNullHandle<ArrayStorageSmall>();
+      auto namedCaptures = Runtime::makeNullHandle<JSObject>();
       // iii. Let replacement be ! GetSubstitution(searchString, string,
       // position, captures, undefined, replaceValue).
       auto callRes = getSubstitution(
@@ -1686,7 +1687,11 @@ stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
           string,
           (double)position,
           captures,
+          namedCaptures,
           replaceValueStr);
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
       replacement = vmcast<StringPrimitive>(*callRes);
     }
 
@@ -1992,10 +1997,17 @@ stringPrototypeReplace(void *, Runtime &runtime, NativeArgs args) {
     // 12. Else,
     // a. Let captures be an empty List.
     auto nullHandle = Runtime::makeNullHandle<ArrayStorageSmall>();
+    auto namedCaptures = Runtime::makeNullHandle<JSObject>();
     // b. Let replStr be GetSubstitution(matched, string, pos, captures,
     // replaceValue).
     auto callRes = getSubstitution(
-        runtime, searchString, string, pos, nullHandle, replaceValueStr);
+        runtime,
+        searchString,
+        string,
+        pos,
+        nullHandle,
+        namedCaptures,
+        replaceValueStr);
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
