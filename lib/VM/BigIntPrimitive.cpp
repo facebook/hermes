@@ -94,8 +94,12 @@ CallResult<HermesValue> BigIntPrimitive::asUintN(
     return BigIntPrimitive::fromSigned(runtime, 0);
   }
 
-  const uint32_t numDigits =
-      bigint::asUintNResultSize(n, src->getImmutableRef(runtime));
+  uint32_t numDigits;
+  bigint::OperationStatus status =
+      bigint::asUintNResultSize(n, src->getImmutableRef(runtime), numDigits);
+  if (LLVM_UNLIKELY(status != bigint::OperationStatus::RETURNED)) {
+    return raiseOnError(runtime, status);
+  }
   return unaryOp(
       runtime, makeTruncAdapter<&bigint::asUintN>(n), src, numDigits);
 }
