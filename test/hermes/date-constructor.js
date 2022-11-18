@@ -313,6 +313,25 @@ print(Date.parse('Tue May 05 2020 00:00:00'.padEnd(60)));  // trailing spaces.
 print(Date.parse('Tue May 05 2020'.padEnd(60)));
 // CHECK-NEXT: 1588662000000
 
+// Fault tolerance on dashes
+print(Date.parse("Friday, 02 Aug 2019 07:14:03 UTC"));
+// CHECK-NEXT: 1564730043000
+print(Date.parse("Friday, 02-Aug-2019-07:14:03 UTC"));
+// CHECK-NEXT: 1564730043000
+print(Date.parse("Friday, 02-  Aug-2019-07:14:03 UTC"));
+// CHECK-NEXT: 1564730043000
+print(Date.parse("Friday, 02-  Aug-   2019- 07:14:03 UTC"));
+// CHECK-NEXT: 1564730043000
+// Invalid use of dashes
+print(Date.parse("Friday, 02 -  Aug-2019-07:14:03 UTC"));
+// CHECK-NEXT: NaN
+print(Date.parse("Friday, 02-Aug -2019-07:14:03 UTC"));
+// CHECK-NEXT: NaN
+print(Date.parse("Friday, 02-Aug-2019-  -07:14:03 UTC"));
+// CHECK-NEXT: NaN
+print(Date.parse("Friday, 02-Aug-2019 -07:14:03 UTC"));
+// CHECK-NEXT: NaN
+
 // Quick check that getters work; internal functions are unit tested instead.
 print('getters');
 // CHECK-LABEL: getters
