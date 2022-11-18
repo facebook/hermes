@@ -469,6 +469,9 @@ void SamplingProfiler::collectStackForLoomCommon(
     uint16_t max_depth,
     void *profiler) {
   auto profilerInstance = GlobalProfiler::get();
+  if (!profilerInstance->enabled()) {
+    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+  }
   auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
   std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
 
