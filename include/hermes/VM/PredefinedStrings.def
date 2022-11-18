@@ -520,4 +520,9 @@ STR(__rnReserved20, "nativeGetThreadMajorPageFaults")
 STR(__rnReserved21, "__jsiExecutorDescription")
 STR(__rnReserved22, "nativeTraceIsTracing")
 
+#ifdef HERMES_ENABLE_FUZZILLI
+STR(fuzzilli, "fuzzilli")
+#endif
+
+
 #undef STR

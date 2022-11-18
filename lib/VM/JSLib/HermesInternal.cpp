@@ -722,6 +722,83 @@ CallResult<HermesValue> hermesInternalEnablePromiseRejectionTracker(
       .toCallResultHermesValue();
 }
 
+#ifdef HERMES_ENABLE_FUZZILLI
+
+/// Internal "fuzzilli" function used by the Fuzzilli fuzzer
+/// (https://github.com/googleprojectzero/fuzzilli) to sanity-check the engine.
+/// This function is conditionally defined in Hermes internal VM code rather
+/// than in an external fuzzing module so to catch build misconfigurations, e.g.
+/// we want to make sure that the VM is compiled with assertions enabled and
+/// doing this check out of the VM (e.g. in the fuzzing harness) doesn't
+/// guarantee that the VM has asserts on.
+///
+/// This function is defined as follow:
+/// \code
+/// HermesInternal.fuzzilli = function(op, arg) {}
+/// \endcode
+/// The first argument "op", is a string specifying the operation to be
+/// performed. Currently supported values of "op" are "FUZZILLI_CRASH", used to
+/// simulate a crash, and "FUZZILLI_PRINT", used to send data over Fuzzilli's
+/// ata write file decriptor (REPRL_DWFD). The secong argument "arg" can be an
+/// integer specifying the type of crash (if op is "FUZZILLI_CRASH") or a string
+/// which value will be sent to fuzzilli (if op is "FUZZILLI_PRINT")
+CallResult<HermesValue>
+hermesInternalFuzzilli(void *, Runtime &runtime, NativeArgs args) {
+  // REPRL = read-eval-print-reset-loop
+  // This file descriptor is being opened by Fuzzilli
+  constexpr int REPRL_DWFD = 103; // Data write file decriptor
+
+  auto operationRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(operationRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto operation = StringPrimitive::createStringView(
+      runtime, runtime.makeHandle(std::move(*operationRes)));
+
+  if (operation.equals(createUTF16Ref(u"FUZZILLI_CRASH"))) {
+    auto crashTypeRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
+    if (LLVM_UNLIKELY(crashTypeRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    switch (crashTypeRes->getNumberAs<int>()) {
+      case 0:
+        *((int *)0x41414141) = 0x1337;
+        break;
+      case 1:
+        assert(0);
+        break;
+      case 2:
+        std::abort();
+        break;
+    }
+  } else if (operation.equals(createUTF16Ref(u"FUZZILLI_PRINT"))) {
+    static FILE *fzliout = fdopen(REPRL_DWFD, "w");
+    if (!fzliout) {
+      fprintf(
+          stderr,
+          "Fuzzer output channel not available, printing to stdout instead\n");
+      fzliout = stdout;
+    }
+
+    auto printRes = toString_RJS(runtime, args.getArgHandle(1));
+    if (LLVM_UNLIKELY(printRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto print = StringPrimitive::createStringView(
+        runtime, runtime.makeHandle(std::move(*printRes)));
+
+    vm::SmallU16String<32> allocator;
+    std::string outputString;
+    ::hermes::convertUTF16ToUTF8WithReplacements(
+        outputString, print.getUTF16Ref(allocator));
+    fprintf(fzliout, "%s\n", outputString.c_str());
+    fflush(fzliout);
+  }
+
+  return HermesValue::encodeUndefinedValue();
+}
+#endif // HERMES_ENABLE_FUZZILLI
+
 Handle<JSObject> createHermesInternalObject(
     Runtime &runtime,
     const JSLibFlags &flags) {
@@ -800,6 +877,10 @@ Handle<JSObject> createHermesInternalObject(
       P::enablePromiseRejectionTracker,
       hermesInternalEnablePromiseRejectionTracker);
   defineInternMethod(P::useEngineQueue, hermesInternalUseEngineQueue);
+
+#ifdef HERMES_ENABLE_FUZZILLI
+  defineInternMethod(P::fuzzilli, hermesInternalFuzzilli);
+#endif
 
   // All functions are known to be safe can be defined above this flag check.
   if (!flags.enableHermesInternal) {
