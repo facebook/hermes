@@ -469,19 +469,23 @@ void SamplingProfiler::collectStackForLoomCommon(
     uint16_t max_depth,
     void *profiler) {
   auto profilerInstance = GlobalProfiler::get();
-  if (!profilerInstance->enableForLoomCollection()) {
-    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
-  }
-  if (!profilerInstance->sampleStacks()) {
-    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
-  }
-  if (!profilerInstance->disableForLoomCollection()) {
-    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
-  }
-  std::lock_guard<std::mutex> lk(profilerInstance->profilerLock_);
-  *depth = 0;
-  uint32_t index = 0;
   auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
+  std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
+
+  *depth = 0;
+  // Sampling stack will touch GC objects(like closure) so
+  // only do so if heap is valid.
+  if (LLVM_LIKELY(localProfiler->suspendCount_ == 0)) {
+    // Do not register domains for Loom profiling, since we don't use them for
+    // symbolication.
+    if (!profilerInstance->sampleStack(localProfiler)) {
+      return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+    }
+  } else {
+    return FBLoomStackCollectionRetcode::EMPTY_STACK;
+  }
+
+  uint32_t index = 0;
   for (unsigned i = 0; i < localProfiler->sampledStacks_.size(); ++i) {
     auto &sample = localProfiler->sampledStacks_[i];
     for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
@@ -498,6 +502,16 @@ void SamplingProfiler::collectStackForLoomCommon(
   }
   return FBLoomStackCollectionRetcode::SUCCESS;
 }
+
+/*static*/ bool SamplingProfiler::enableForLoom() {
+  auto profilerInstance = GlobalProfiler::get();
+  return profilerInstance->enableForLoomCollection();
+}
+
+/*static*/ bool SamplingProfiler::disableForLoom() {
+  auto profilerInstance = GlobalProfiler::get();
+  return profilerInstance->disableForLoomCollection();
+}
 #endif
 
 SamplingProfiler::SamplingProfiler(Runtime &runtime)
@@ -507,6 +521,10 @@ SamplingProfiler::SamplingProfiler(Runtime &runtime)
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
   fbloom_profilo_api()->fbloom_register_external_tracer_callback(
       1, this, collectStackForLoom);
+  fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
+      1, enableForLoom);
+  fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
+      1, disableForLoom);
 #endif
 }
 
@@ -680,8 +698,6 @@ bool SamplingProfiler::GlobalProfiler::disableForLoomCollection() {
     // Telling timer thread to exit.
     enabled_ = false;
   }
-  // Notify the timer thread that it has been disabled.
-  enabledCondVar_.notify_all();
   return true;
 }
 #endif
