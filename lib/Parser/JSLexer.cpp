@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Parser/JSLexer.h"
+#include "hermes/Platform/Unicode/CharacterProperties.h"
 
 #include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
@@ -544,7 +545,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         token_.setStart(curCharPtr_);
         tmpStorage_.clear();
         uint32_t cp = consumeUnicodeEscape();
-        if (!isUnicodeIdentifierStart(cp)) {
+        if (!isUnicodeIDStart(cp)) {
           errorRange(
               token_.getStartLoc(),
               "Unicode escape \\u" + Twine::utohexstr(cp) +
@@ -1028,7 +1029,7 @@ bool JSLexer::consumeIdentifierStart() {
     SMLoc startLoc = SMLoc::getFromPointer(curCharPtr_);
     tmpStorage_.clear();
     uint32_t cp = consumeUnicodeEscape();
-    if (!isUnicodeIdentifierStart(cp)) {
+    if (!isUnicodeIDStart(cp)) {
       errorRange(
           startLoc,
           "Unicode escape \\u" + Twine::utohexstr(cp) +
@@ -1043,7 +1044,7 @@ bool JSLexer::consumeIdentifierStart() {
     return false;
 
   auto decoded = _peekUTF8();
-  if (isUnicodeIdentifierStart(decoded.first)) {
+  if (isUnicodeIDStart(decoded.first)) {
     tmpStorage_.clear();
     appendUnicodeToStorage(decoded.first);
     curCharPtr_ = decoded.second;
@@ -1066,7 +1067,7 @@ bool JSLexer::consumeOneIdentifierPartNoEscape() {
     // can be a part of the identifier, we consume it, otherwise we leave it
     // alone.
     auto decoded = _peekUTF8();
-    if (isUnicodeIdentifierPart(decoded.first)) {
+    if (isUnicodeIDContinue(decoded.first)) {
       appendUnicodeToStorage(decoded.first);
       curCharPtr_ = decoded.second;
       return true;
@@ -1086,7 +1087,7 @@ void JSLexer::consumeIdentifierParts() {
       // Decode the escape.
       SMLoc startLoc = SMLoc::getFromPointer(curCharPtr_);
       uint32_t cp = consumeUnicodeEscape();
-      if (!isUnicodeIdentifierPart(cp)) {
+      if (!isUnicodeIDContinue(cp)) {
         errorRange(
             startLoc,
             "Unicode escape \\u" + Twine::utohexstr(cp) +
@@ -1683,7 +1684,7 @@ void JSLexer::scanIdentifierFastPath(const char *start) {
     // can be a part of the identifier,
     // we consume it, otherwise we leave it alone.
     auto decoded = _peekUTF8(end);
-    if (isUnicodeIdentifierPart(decoded.first)) {
+    if (isUnicodeIDContinue(decoded.first)) {
       initStorageWith(start, end);
       appendUnicodeToStorage(decoded.first);
       curCharPtr_ = decoded.second;
