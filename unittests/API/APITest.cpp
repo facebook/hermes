@@ -201,6 +201,65 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
 }
 
+TEST_F(HermesRuntimeTest, CompileWithSourceMapTest) {
+  /* original source:
+  const a: number = 12;
+  class MyClass {
+    val: number;
+    constructor(val: number) {
+      this.val = val;
+    }
+    doSomething(a: number, b: number) {
+      invalidRef.sum = a + b + this.val;
+    }
+  }
+  const c = new MyClass(3);
+  c.doSomething(a, 15);*/
+  const char *TestSource = R"#('use strict';
+var a = 12;
+var MyClass = /** @class */ (function () {
+    function MyClass(val) {
+        this.val = val;
+    }
+    MyClass.prototype.doSomething = function (a, b) {
+        invalidRef.sum = a + b + this.val;
+    };
+    return MyClass;
+}());
+var c = new MyClass(3);
+c.doSomething(a, 15);
+//# sourceMappingURL=script.js.map)#";
+  const char *TestSourceMap = R"#({
+    "version":3,
+    "file":"script.js",
+    "sourceRoot":"",
+    "sources":["script.ts"],
+    "names":[],
+    "mappings": ";AAAA,IAAM,CAAC,GAAW,EAAE,CAAC;AACrB;IAEI,iBAAY,GAAW;QACnB,IAAI,CAAC,GAAG,GAAG,GAAG,CAAC;IACnB,CAAC;IACD,6BAAW,GAAX,UAAY,CAAS,EAAE,CAAS;QAC5B,UAAU,CAAC,GAAG,GAAG,CAAC,GAAG,CAAC,GAAG,IAAI,CAAC,GAAG,CAAC;IACtC,CAAC;IACL,cAAC;AAAD,CAAC,AARD,IAQC;AACD,IAAM,CAAC,GAAG,IAAI,OAAO,CAAC,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,WAAW,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC"
+  })#";
+
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS(
+      TestSource,
+      "script.js",
+      bytecode,
+      true,
+      true,
+      nullptr,
+      std::optional<std::string_view>(TestSourceMap)));
+  EXPECT_TRUE(HermesRuntime::isHermesBytecode(
+      reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
+  try {
+    rt->evaluateJavaScript(
+        std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &err) {
+    EXPECT_STREQ(
+        "Property 'invalidRef' doesn't exist\n\nReferenceError: Property 'invalidRef' doesn't exist\n    at anonymous (script.ts:8:9)\n    at global (script.ts:12:14)",
+        err.what());
+  }
+}
+
 TEST_F(HermesRuntimeTest, JumpTableBytecodeTest) {
   std::string code = R"xyz(
     (function(){
