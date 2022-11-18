@@ -111,6 +111,12 @@ enum class ErrorType {
 
   /// The flags supplied were either invalid or contained repetition.
   InvalidFlags,
+
+  /// The name for a capture group is invalid e.g. 1id
+  InvalidCaptureGroupName,
+
+  /// Duplicate capture group name.
+  DuplicateCaptureGroupName,
 };
 
 /// \return an error message for the given \p error.
@@ -138,6 +144,10 @@ inline const char *messageForError(ErrorType error) {
       return "Pattern exceeds parse limits";
     case ErrorType::InvalidFlags:
       return "Invalid flags";
+    case ErrorType::InvalidCaptureGroupName:
+      return "Invalid capture group name";
+    case ErrorType::DuplicateCaptureGroupName:
+      return "Duplicate capture group name";
     case ErrorType::None:
       return "No error";
   }

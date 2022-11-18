@@ -218,6 +218,10 @@ class Regex {
       uint32_t backRefLimit,
       uint32_t *outMaxBackRef);
 
+  // Note- this method does not insert into the AST, it populates a different
+  // datastructure. Returns false if the given name was already defined.
+  bool addNamedCaptureGroup(GroupName &&identifier, uint32_t groupNum);
+
   void pushLeftAnchor();
   void pushRightAnchor();
   void pushMatchAny();
@@ -401,6 +405,19 @@ void Regex<Traits>::pushLookaround(
   exp.push_back(nodeHolder_.back().get());
   appendNode<LookaroundNode>(
       std::move(exp), mexpBegin, mexpEnd, invert, forwards);
+}
+
+template <class Traits>
+bool Regex<Traits>::addNamedCaptureGroup(
+    GroupName &&identifier,
+    uint32_t groupNum) {
+  // Add one to the given group number because later on this is used to index
+  // into the whole matches array, which will be prepended with the entire match
+  // string so all these group numbers will be off by one if we don't offset it
+  // here.
+  auto &elm = orderedGroupNames_.emplace_back(std::move(identifier));
+  auto res = nameMapping_.try_emplace(elm, groupNum + 1);
+  return res.second;
 }
 
 } // namespace regex
