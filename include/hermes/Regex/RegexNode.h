@@ -880,7 +880,7 @@ class LookaroundNode : public Node {
       uint16_t mexpEnd,
       bool invert,
       bool forwards)
-      : exp_(move(exp)),
+      : exp_(std::move(exp)),
         expConstraints_(matchConstraintsForList(exp_)),
         invert_(invert),
         forwards_(forwards),

@@ -132,6 +132,8 @@ public:
         }
       }
       assert(NumEntries == 0 && "Node count imbalance!");
+      // Suppress -Wunused-but-set-variable warning with new compilers.
+      (void)NumEntries;
     }
     setNumEntries(0);
     setNumTombstones(0);

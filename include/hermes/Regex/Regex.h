@@ -314,7 +314,7 @@ void Regex<Traits>::pushLoop(
       greedy,
       mexp_begin,
       markedCount_,
-      move(loopedExpr));
+      std::move(loopedExpr));
 }
 
 template <class Traits>

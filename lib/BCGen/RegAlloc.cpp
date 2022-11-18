@@ -371,6 +371,8 @@ void RegisterAllocator::calculateGlobalLiveness(ArrayRef<BasicBlock *> order) {
 
   LLVM_DEBUG(
       dbgs() << "Completed liveness in " << iterations << " iterations\n");
+  // Suppress -Wunused-but-set-variable warning with new compilers.
+  (void)iterations;
 }
 
 Interval &RegisterAllocator::getInstructionInterval(Instruction *I) {
