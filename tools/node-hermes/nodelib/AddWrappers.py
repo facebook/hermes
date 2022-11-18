@@ -27,6 +27,8 @@ def main():
 
         o.write("({")
         for arg in args.files[1:]:
+            arg = path.abspath(arg)
+
             # Ensure the file exists before writing out anything
             if not path.exists(arg):
                 raise Exception('File "{}" doesn\'t exist'.format(arg))
