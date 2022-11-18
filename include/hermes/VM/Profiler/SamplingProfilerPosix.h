@@ -341,8 +341,11 @@ class SamplingProfiler {
 
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
-  static FBLoomStackCollectionRetcode
-  collectStackForLoom(int64_t *frames, uint16_t *depth, uint16_t max_depth);
+  static FBLoomStackCollectionRetcode collectStackForLoom(
+      int64_t *frames,
+      uint16_t *depth,
+      uint16_t max_depth,
+      void *profiler);
 #endif
 
   /// Clear previous stored samples.
