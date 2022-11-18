@@ -1409,6 +1409,20 @@ void HBCISel::generateHBCLoadConstInst(
       auto parsedBigInt = bigint::ParsedBigInt::parsedBigIntFromNumericValue(
           cast<LiteralBigInt>(literal)->getValue()->str());
       assert(parsedBigInt && "should be valid");
+      if (bigint::tooManyBytes(parsedBigInt->getBytes().size())) {
+        // TODO: move this to the semantic analysis so we can get a proper
+        // warning (i.e., with the correct location for the literal).
+        std::string sizeStr;
+        {
+          llvh::raw_string_ostream OS(sizeStr);
+          OS << parsedBigInt->getBytes().size();
+        }
+        F_->getContext().getSourceErrorManager().warning(
+            Inst->getLocation(),
+            Twine("BigInt literal has too many bytes (") + sizeStr +
+                ") and a RangeError will be raised at runtime time if it "
+                "is referenced.");
+      }
       auto idx = BCFGen_->addBigInt(std::move(*parsedBigInt));
       if (idx <= UINT16_MAX) {
         BCFGen_->emitLoadConstBigInt(output, idx);

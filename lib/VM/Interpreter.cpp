@@ -3348,22 +3348,6 @@ tailCall:
       LOAD_CONST(
           LoadConstDouble,
           HermesValue::encodeDoubleValue(ip->iLoadConstDouble.op2));
-      // LoadConstBigInt will always allocate a new (heap) object (unlike, e.g.,
-      // LoadConstString). This could become an issue for code that uses lots of
-      // BigInt literals in loops, in which case the VM may need to cache the
-      // objects.
-      LOAD_CONST_CAPTURE_IP(
-          LoadConstBigInt,
-          runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
-              runtime,
-              curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
-                  ip->iLoadConstBigInt.op2))));
-      LOAD_CONST_CAPTURE_IP(
-          LoadConstBigIntLongIndex,
-          runtime.ignoreAllocationFailure(BigIntPrimitive::fromBytes(
-              runtime,
-              curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
-                  ip->iLoadConstBigIntLongIndex.op2))));
       LOAD_CONST_CAPTURE_IP(
           LoadConstString,
           HermesValue::encodeStringValue(
@@ -3382,6 +3366,34 @@ tailCall:
       LOAD_CONST(LoadConstTrue, HermesValue::encodeBoolValue(true));
       LOAD_CONST(LoadConstFalse, HermesValue::encodeBoolValue(false));
       LOAD_CONST(LoadConstZero, HermesValue::encodeDoubleValue(0));
+      CASE(LoadConstBigInt) {
+        idVal = ip->iLoadConstBigInt.op2;
+        nextIP = NEXTINST(LoadConstBigInt);
+        goto doLoadConstBigInt;
+      }
+      CASE(LoadConstBigIntLongIndex) {
+        idVal = ip->iLoadConstBigIntLongIndex.op2;
+        nextIP = NEXTINST(LoadConstBigIntLongIndex);
+        goto doLoadConstBigInt;
+      }
+    doLoadConstBigInt : {
+      CAPTURE_IP_ASSIGN(
+          auto res,
+          BigIntPrimitive::fromBytes(
+              runtime,
+              curCodeBlock->getRuntimeModule()->getBigIntBytesFromBigIntId(
+                  idVal)));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        goto exception;
+      }
+      // It is safe to access O1REG(LoadConstBigInt) or
+      // O1REG(LoadConstBigIntLongIndex) here as both instructions' O1 operands
+      // are the same size and live in the same offset w.r.t. the start of the
+      // instruction.
+      O1REG(LoadConstBigInt) = std::move(*res);
+      ip = nextIP;
+      DISPATCH;
+    }
       BINOP(Sub);
       BINOP(Mul);
       BINOP(Div);

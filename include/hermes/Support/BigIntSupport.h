@@ -72,10 +72,20 @@ inline constexpr uint32_t BigIntDigitSizeInBits = BigIntDigitSizeInBytes * 8;
 inline constexpr uint32_t BigIntMaxSizeInDigits =
     0x400; // 1k digits == 8k bytes
 
+/// Arbitrary upper limit on number of bytes a bigint may have.
+inline constexpr uint32_t BigIntMaxSizeInBytes =
+    BigIntDigitSizeInBytes * BigIntMaxSizeInDigits;
+
 /// Helper function that should be called before allocating a Digits array on
 /// the stack.
 inline constexpr bool tooManyDigits(uint32_t numDigits) {
   return BigIntMaxSizeInDigits < numDigits;
+}
+
+/// Helper function that returns if the given number of bytes exceeds the
+/// maximum BigInt size in bytes.
+inline constexpr bool tooManyBytes(uint32_t numBytes) {
+  return BigIntMaxSizeInBytes < numBytes;
 }
 
 /// \return number of BigInt digits to represent \p v bits.
