@@ -206,6 +206,56 @@ TEST(UTF16StreamTest, UTF8InputTest) {
   }
 }
 
+TEST(UTF16StreamTest, UTF16Capture) {
+  size_t N = 1000;
+  std::vector<char16_t> source(N);
+  for (size_t i = 0; i < N; i++) {
+    source[i] = i;
+  }
+  UTF16Stream stream(source);
+  stream.beginCapture();
+  while (stream.hasChar())
+    ++stream;
+  auto ref = stream.endCapture();
+  for (size_t i = 0; i < ref.size(); i++) {
+    EXPECT_EQ(source[i], ref[i]);
+  }
+}
+
+// Test UTF16Stream can handle short utf8 captures
+TEST(UTF16StreamTest, ShortUTF8Capture) {
+  size_t N = 100;
+  std::vector<uint8_t> source(N);
+  for (size_t i = 0; i < N; i++) {
+    source[i] = i;
+  }
+  UTF16Stream stream(source);
+  stream.beginCapture();
+  while (stream.hasChar())
+    ++stream;
+  auto ref = stream.endCapture();
+  for (size_t i = 0; i < ref.size(); i++) {
+    EXPECT_EQ(i % 128, ref[i]);
+  }
+}
+
+// Test UTF16Stream can handle very long utf8  captures
+TEST(UTF16StreamTest, LongUTF8Capture) {
+  size_t N = 16384;
+  std::vector<uint8_t> source(N);
+  for (size_t i = 0; i < N; i++) {
+    source[i] = i % 128;
+  }
+  UTF16Stream stream(source);
+  stream.beginCapture();
+  while (stream.hasChar())
+    ++stream;
+  auto ref = stream.endCapture();
+  for (size_t i = 0; i < ref.size(); i++) {
+    EXPECT_EQ(i % 128, ref[i]);
+  }
+}
+
 size_t countRemainingCharsInStream(UTF16Stream &&str) {
   size_t size = 0;
   while (str.hasChar()) {

@@ -8,6 +8,7 @@
 #include "JSONLexer.h"
 
 #include "hermes/VM/StringPrimitive.h"
+#include "llvh/ADT/ScopeExit.h"
 
 #include "dtoa/dtoa.h"
 
@@ -127,20 +128,30 @@ ExecutionStatus JSONLexer::scanNumber() {
 ExecutionStatus JSONLexer::scanString() {
   assert(*curCharPtr_ == '"');
   ++curCharPtr_;
+  bool hasEscape = false;
+  // Ideally we don't have to use tmpStorage. In the case of a plain string with
+  // no escapes, we construct an ArrayRef at the end of scanning that points to
+  // the beginning and end of the string.
   SmallU16String<32> tmpStorage;
+  curCharPtr_.beginCapture();
+  // Make sure we don't somehow leave a dangling open capture.
+  auto ensureCaptureClosed =
+      llvh::make_scope_exit([this] { curCharPtr_.cancelCapture(); });
 
   while (curCharPtr_.hasChar()) {
     if (*curCharPtr_ == '"') {
       // End of string.
+      llvh::ArrayRef<char16_t> strRef =
+          hasEscape ? tmpStorage.arrayRef() : curCharPtr_.endCapture();
       ++curCharPtr_;
       // If the string exists in the identifier table, use that one.
       if (auto existing =
               runtime_.getIdentifierTable().getExistingStringPrimitiveOrNull(
-                  runtime_, tmpStorage.arrayRef())) {
+                  runtime_, strRef)) {
         token_.setString(runtime_.makeHandle<StringPrimitive>(existing));
         return ExecutionStatus::RETURNED;
       }
-      auto strRes = StringPrimitive::create(runtime_, tmpStorage.arrayRef());
+      auto strRes = StringPrimitive::create(runtime_, strRef);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -150,6 +161,12 @@ ExecutionStatus JSONLexer::scanString() {
       return error(u"U+0000 thru U+001F is not allowed in string");
     }
     if (*curCharPtr_ == u'\\') {
+      if (!hasEscape) {
+        // This is the first escape character encountered, so append everything
+        // we've seen so far to tmpStorage.
+        tmpStorage.append(curCharPtr_.endCapture());
+      }
+      hasEscape = true;
       ++curCharPtr_;
       if (!curCharPtr_.hasChar()) {
         return error("Unexpected end of input");
@@ -197,7 +214,8 @@ ExecutionStatus JSONLexer::scanString() {
           return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
       }
     } else {
-      tmpStorage.push_back(*curCharPtr_);
+      if (hasEscape)
+        tmpStorage.push_back(*curCharPtr_);
       ++curCharPtr_;
     }
   }

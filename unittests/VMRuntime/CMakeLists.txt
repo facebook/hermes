@@ -44,6 +44,7 @@ set(RTSources
   InterpreterTest.cpp
   IRInstrumentationTest.cpp
   JSLibTest.cpp
+  JSONParseTest.cpp
   JSTypedArrayTest.cpp
   NativeFrameTest.cpp
   NativeFunctionTest.cpp
