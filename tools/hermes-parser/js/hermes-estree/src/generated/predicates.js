@@ -64,6 +64,7 @@ export function isMethodDefinition(node: ESNode | Token): boolean %checks {
 export function isOptionalMemberExpression(
   node: ESNode | Token,
 ): boolean %checks {
+  // $FlowFixMe[incompatible-type]
   return node.type === 'OptionalMemberExpression';
 }
 

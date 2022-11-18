@@ -56,9 +56,9 @@ class GlobalScope extends ScopeBase<
     }
 
     for (const ref of this.__referencesLeftToResolve) {
-      if (ref.maybeImplicitGlobal && !this.set.has(ref.identifier.name)) {
+      const info = ref.maybeImplicitGlobal;
+      if (info && !this.set.has(ref.identifier.name)) {
         // create an implicit global variable from assignment expression
-        const info = ref.maybeImplicitGlobal;
         const node = info.pattern;
         if (node && node.type === 'Identifier') {
           this.__defineVariable(
