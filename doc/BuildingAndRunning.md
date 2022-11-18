@@ -101,6 +101,7 @@ simply run:
 
     git clone https://github.com/facebook/hermes.git
     cmake -S hermes -B asan_build -G Ninja -D HERMES_ENABLE_ADDRESS_SANITIZER=ON
+    cmake --build ./asan_build
 
 You can verify the build by looking for `asan` symbols in the `hermes` binary:
 
