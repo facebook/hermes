@@ -2001,7 +2001,6 @@ UNSUPPORTED_FEATURES = [
     "Promise.prototype.finally",
     "Symbol.asyncIterator",
     "Symbol.species",
-    "Symbol.prototype.description",
     "Symbol.unscopables",
     "async-iteration",
     "caller",
