@@ -299,6 +299,170 @@ class HERMES_EXPORT EventObserver {
 } // namespace hermes
 } // namespace facebook
 
-#endif // HERMES_ENABLE_DEBUGGER
+#else // !HERMES_ENABLE_DEBUGGER
+
+#include <hermes/hermes.h>
+
+#include "hermes/Public/DebuggerTypes.h"
+
+namespace facebook {
+namespace hermes {
+namespace debugger {
+
+class EventObserver;
+
+struct VariableInfo {
+  String name;
+  ::facebook::jsi::Value value;
+};
+
+struct EvalResult {
+  ::facebook::jsi::Value value;
+  bool isException = false;
+  ExceptionDetails exceptionDetails;
+
+  EvalResult(EvalResult &&) = default;
+  EvalResult() = default;
+
+  EvalResult(
+      ::facebook::jsi::Value value,
+      bool isException,
+      ExceptionDetails exceptionDetails)
+      : value(std::move(value)),
+        isException(isException),
+        exceptionDetails(std::move(exceptionDetails)) {}
+};
+
+class ProgramState {
+ public:
+  ProgramState() {}
+
+  PauseReason getPauseReason() const {
+    return PauseReason::Exception;
+  }
+
+  BreakpointID getBreakpoint() const {
+    return 0;
+  }
+
+  EvalResult getEvalResult() const {
+    return EvalResult();
+  }
+
+  const StackTrace &getStackTrace() const {
+    return stackTrace_;
+  }
+
+  LexicalInfo getLexicalInfo(uint32_t frameIndex) const {
+    return LexicalInfo();
+  }
+
+  VariableInfo getVariableInfo(
+      uint32_t frameIndex,
+      ScopeDepth scopeDepth,
+      uint32_t variableIndexInScope) const {
+    return VariableInfo();
+  }
+
+  VariableInfo getVariableInfoForThis(uint32_t frameIndex) const {
+    return VariableInfo();
+  }
+
+  uint32_t getVariablesCountInFrame(uint32_t frameIndex) const {
+    return 0;
+  }
+
+  VariableInfo getVariableInfo(uint32_t frameIndex, uint32_t variableIndex)
+      const {
+    return VariableInfo();
+  }
+
+ private:
+  ProgramState(const ProgramState &) = delete;
+  ProgramState &operator=(const ProgramState &) = delete;
+
+  StackTrace stackTrace_;
+};
+
+class Command {
+ public:
+  Command(Command &&) {}
+  Command &operator=(Command &&);
+  ~Command() {}
+
+  static Command step(StepMode mode) {
+    return Command();
+  }
+  static Command continueExecution() {
+    return Command();
+  }
+  static Command eval(const String &src, uint32_t frameIndex) {
+    return Command();
+  }
+
+ private:
+  Command() {}
+};
+
+class Debugger {
+ public:
+  explicit Debugger() {}
+
+  void setEventObserver(EventObserver *observer) {}
+  void setIsDebuggerAttached(bool isAttached) {}
+  void triggerAsyncPause(AsyncPauseKind kind) {}
+  const ProgramState &getProgramState() const {
+    return programState_;
+  }
+  String getSourceMappingUrl(uint32_t fileId) const {
+    return "";
+  };
+  BreakpointID setBreakpoint(SourceLocation loc) {
+    return 0;
+  }
+  void setBreakpointCondition(
+      BreakpointID breakpoint,
+      const String &condition) {}
+  void deleteBreakpoint(BreakpointID breakpoint) {}
+  void deleteAllBreakpoints() {}
+  void setBreakpointEnabled(BreakpointID breakpoint, bool enable) {}
+  BreakpointInfo getBreakpointInfo(BreakpointID breakpoint) {
+    return BreakpointInfo();
+  }
+  std::vector<BreakpointID> getBreakpoints() {
+    return std::vector<BreakpointID>();
+  }
+  void setPauseOnThrowMode(PauseOnThrowMode mode) {}
+  PauseOnThrowMode getPauseOnThrowMode() const {
+    return PauseOnThrowMode::None;
+  }
+  void setShouldPauseOnScriptLoad(bool flag) {}
+  bool getShouldPauseOnScriptLoad() const {
+    return false;
+  }
+
+ private:
+  Debugger(const Debugger &) = delete;
+  void operator=(const Debugger &) = delete;
+  Debugger(Debugger &&) = delete;
+  void operator=(Debugger &&) = delete;
+
+  ProgramState programState_;
+};
+
+class EventObserver {
+ public:
+  virtual Command didPause(Debugger &debugger) = 0;
+  virtual void breakpointResolved(Debugger &debugger, BreakpointID breakpoint) {
+  }
+
+  virtual ~EventObserver() {}
+};
+
+} // namespace debugger
+} // namespace hermes
+} // namespace facebook
+
+#endif // !HERMES_ENABLE_DEBUGGER
 
 #endif // HERMES_DEBUGGERAPI_H

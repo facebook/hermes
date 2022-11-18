@@ -39,11 +39,9 @@ class ThreadSafeRuntime;
 
 namespace hermes {
 
-#ifdef HERMES_ENABLE_DEBUGGER
 namespace debugger {
 class Debugger;
 }
-#endif
 
 class HermesRuntimeImpl;
 
@@ -167,9 +165,10 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   void dumpOpcodeStats(std::ostream &os) const;
 #endif
 
-#ifdef HERMES_ENABLE_DEBUGGER
   /// \return a reference to the Debugger for this Runtime.
   debugger::Debugger &getDebugger();
+
+#ifdef HERMES_ENABLE_DEBUGGER
 
   struct DebugFlags {
     // Looking for the .lazy flag? It's no longer necessary.
