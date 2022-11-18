@@ -413,7 +413,7 @@ TEST_F(InterpreterFunctionTest, GetByIdSlowPathChecksForExceptions) {
 
 TEST_F(InterpreterFunctionTest, PutByIdSlowPathChecksForExceptions) {
   BFG->emitLoadConstUndefined(0);
-  BFG->emitPutById(0, 0, 0, 0);
+  BFG->emitPutByIdStrict(0, 0, 0, 0);
   BFG->emitRet(0);
   ASSERT_EQ(ExecutionStatus::EXCEPTION, run());
 }

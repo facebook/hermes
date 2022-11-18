@@ -303,7 +303,7 @@ static constexpr int32_t kLiteralSavedBytes = static_cast<int32_t>(
 // Number of bytes cost for serializing a non-literal into the buffer.
 // Cost includes a 1-byte tag and replacing with a longer put instruction.
 static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
-    1 + sizeof(inst::PutByIdInst) - sizeof(inst::PutNewOwnByIdInst));
+    1 + sizeof(inst::PutByIdLooseInst) - sizeof(inst::PutNewOwnByIdInst));
 // Max number of non-literals we allow to serialize into the buffer.
 // The number is chosen to be small and can allow most literals to be serialized
 // for most cases.

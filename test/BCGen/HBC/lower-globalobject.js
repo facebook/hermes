@@ -63,7 +63,7 @@ function foo() {
 // CHKBC-NEXT:    CreateEnvironment r0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    PutById           r0, r1, 1, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r0, r1, 1, "foo"
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    Ret               r0
 

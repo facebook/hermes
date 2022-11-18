@@ -28,7 +28,7 @@ try {
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    LoadConstFalse    r1
 //CHECK-NEXT:    GetGlobalObject   r2
-//CHECK-NEXT:    PutById           r2, r1, 1, "condition"
+//CHECK-NEXT:    PutByIdStrict     r2, r1, 1, "condition"
 //CHECK-NEXT:L8:
 //CHECK-NEXT:    ProfilePoint      7
 //CHECK-NEXT:L6:

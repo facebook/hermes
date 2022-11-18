@@ -270,18 +270,26 @@ OPERAND_STRING_ID(TryGetByIdLong, 4)
 
 /// Set an object property by string index.
 /// Arg1[stringtable[Arg4]] = Arg2.
-DEFINE_OPCODE_4(PutById, Reg8, Reg8, UInt8, UInt16)
-DEFINE_OPCODE_4(PutByIdLong, Reg8, Reg8, UInt8, UInt32)
-OPERAND_STRING_ID(PutById, 4)
-OPERAND_STRING_ID(PutByIdLong, 4)
+DEFINE_OPCODE_4(PutByIdLoose, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(PutByIdStrict, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(PutByIdLooseLong, Reg8, Reg8, UInt8, UInt32)
+DEFINE_OPCODE_4(PutByIdStrictLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(PutByIdLoose, 4)
+OPERAND_STRING_ID(PutByIdStrict, 4)
+OPERAND_STRING_ID(PutByIdLooseLong, 4)
+OPERAND_STRING_ID(PutByIdStrictLong, 4)
 
 /// Set an object property by string index, or throw if undeclared.
 /// This is similar to PutById, but intended for use with global variables
 /// where Arg1 = GetGlobalObject.
-DEFINE_OPCODE_4(TryPutById, Reg8, Reg8, UInt8, UInt16)
-DEFINE_OPCODE_4(TryPutByIdLong, Reg8, Reg8, UInt8, UInt32)
-OPERAND_STRING_ID(TryPutById, 4)
-OPERAND_STRING_ID(TryPutByIdLong, 4)
+DEFINE_OPCODE_4(TryPutByIdLoose, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(TryPutByIdStrict, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(TryPutByIdLooseLong, Reg8, Reg8, UInt8, UInt32)
+DEFINE_OPCODE_4(TryPutByIdStrictLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(TryPutByIdLoose, 4)
+OPERAND_STRING_ID(TryPutByIdStrict, 4)
+OPERAND_STRING_ID(TryPutByIdLooseLong, 4)
+OPERAND_STRING_ID(TryPutByIdStrictLong, 4)
 
 /// Create a new own property on an object. This is similar to PutById, but
 /// the destination must be an object, it only deals with own properties,
@@ -348,7 +356,8 @@ DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
 /// (unless they are array indices according to ES5.1 section 15.4, in which
 /// case this is still the right opcode).
 /// Arg1[Arg2] = Arg3
-DEFINE_OPCODE_3(PutByVal, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(PutByValLoose, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(PutByValStrict, Reg8, Reg8, Reg8)
 
 /// Delete a property by value (when the value is not known at compile time).
 /// Arg1 = delete Arg2[Arg3]
@@ -841,7 +850,13 @@ DEFINE_OPCODE_3(Store32, Reg8, Reg8, Reg8)
 // same number and type of operands.
 ASSERT_EQUAL_LAYOUT3(Call, Construct)
 ASSERT_EQUAL_LAYOUT4(GetById, TryGetById)
-ASSERT_EQUAL_LAYOUT4(PutById, TryPutById)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, PutByIdStrict)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, TryPutByIdLoose)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, TryPutByIdStrict)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, PutByIdLooseLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, PutByIdStrictLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdLooseLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdStrictLong)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)

@@ -51,9 +51,9 @@ function foo(p) {
 //CHECK-NEXT:[@ {{.*}}] CreateEnvironment 0<Reg8>
 //CHECK-NEXT:[@ {{.*}}] CreateClosure 0<Reg8>, 0<Reg8>, 1<UInt16>
 //CHECK-NEXT:[@ {{.*}}] GetGlobalObject 1<Reg8>
-//CHECK-NEXT:[@ {{.*}}] PutById 1<Reg8>, 0<Reg8>, 1<UInt8>, 4<UInt16>
+//CHECK-NEXT:[@ {{.*}}] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 4<UInt16>
 //CHECK-NEXT:[@ {{.*}}] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 0<UInt16>, 0<UInt16>
-//CHECK-NEXT:[@ {{.*}}] PutById 0<Reg8>, 1<Reg8>, 2<UInt8>, 5<UInt16>
+//CHECK-NEXT:[@ {{.*}}] PutByIdLoose 0<Reg8>, 1<Reg8>, 2<UInt8>, 5<UInt16>
 //CHECK-NEXT:[@ {{.*}}] Ret 0<Reg8>
 
 //CHECK-LABEL:Function<foo>(2 params, 1 registers, 0 symbols):

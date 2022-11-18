@@ -13,7 +13,7 @@
 //CHECK-NEXT:    CreateEnvironment r0
 //CHECK-NEXT:    CreateClosure     r1, r0, Function<test1>
 //CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    PutById           r0, r1, 1, "test1"
+//CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "test1"
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    AsyncBreakCheck
 //CHECK-NEXT:    Ret               r0

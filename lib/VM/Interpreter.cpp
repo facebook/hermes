@@ -107,19 +107,18 @@ namespace vm {
 
 /// Initialize the state of some internal variables based on the current
 /// code block.
-#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                      \
-  do {                                                           \
-    strictMode = (codeBlock)->isStrictMode();                    \
-    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);      \
-    if (EnableCrashTrace) {                                      \
-      auto *bc = (codeBlock)->getRuntimeModule()->getBytecode(); \
-      bytecodeFileStart = bc->getRawBuffer().data();             \
-      auto hash = bc->getSourceHash();                           \
-      runtime.crashTrace_.recordModule(                          \
-          bc->getSegmentID(),                                    \
-          (codeBlock)->getRuntimeModule()->getSourceURL(),       \
-          llvh::StringRef((const char *)&hash, sizeof(hash)));   \
-    }                                                            \
+#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                                \
+  do {                                                                     \
+    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(codeBlock->isStrictMode()); \
+    if (EnableCrashTrace) {                                                \
+      auto *bc = (codeBlock)->getRuntimeModule()->getBytecode();           \
+      bytecodeFileStart = bc->getRawBuffer().data();                       \
+      auto hash = bc->getSourceHash();                                     \
+      runtime.crashTrace_.recordModule(                                    \
+          bc->getSegmentID(),                                              \
+          (codeBlock)->getRuntimeModule()->getSourceURL(),                 \
+          llvh::StringRef((const char *)&hash, sizeof(hash)));             \
+    }                                                                      \
   } while (0)
 
 CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
@@ -892,8 +891,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   // Points to the first local register in the current frame.
   // This eliminates the indirect load from Runtime and the -1 offset.
   PinnedHermesValue *frameRegs;
-  // Strictness of current function.
-  bool strictMode;
   // Default flags when accessing properties.
   PropOpFlags defaultPropOpFlags;
 
@@ -1130,6 +1127,7 @@ tailCall:
       const Inst *nextIP;
       uint32_t idVal;
       bool tryProp;
+      bool strictMode;
       uint32_t callArgCount;
       // This is HermesValue::getRaw(), since HermesValue cannot be assigned
       // to. It is meant to be used only for very short durations, in the
@@ -2369,37 +2367,69 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(TryPutByIdLong) {
+      CASE(TryPutByIdLooseLong) {
         tryProp = true;
-        idVal = ip->iTryPutByIdLong.op4;
-        nextIP = NEXTINST(TryPutByIdLong);
+        strictMode = false;
+        idVal = ip->iTryPutByIdLooseLong.op4;
+        nextIP = NEXTINST(TryPutByIdLooseLong);
         goto putById;
       }
-      CASE(PutByIdLong) {
-        tryProp = false;
-        idVal = ip->iPutByIdLong.op4;
-        nextIP = NEXTINST(PutByIdLong);
-        goto putById;
-      }
-      CASE(TryPutById) {
+      CASE(TryPutByIdStrictLong) {
         tryProp = true;
-        idVal = ip->iTryPutById.op4;
-        nextIP = NEXTINST(TryPutById);
+        strictMode = true;
+        idVal = ip->iTryPutByIdStrictLong.op4;
+        nextIP = NEXTINST(TryPutByIdStrictLong);
         goto putById;
       }
-      CASE(PutById) {
+      CASE(PutByIdLooseLong) {
         tryProp = false;
-        idVal = ip->iPutById.op4;
-        nextIP = NEXTINST(PutById);
+        strictMode = false;
+        idVal = ip->iPutByIdLooseLong.op4;
+        nextIP = NEXTINST(PutByIdLooseLong);
+        goto putById;
+      }
+      CASE(PutByIdStrictLong) {
+        tryProp = false;
+        strictMode = true;
+        idVal = ip->iPutByIdStrictLong.op4;
+        nextIP = NEXTINST(PutByIdStrictLong);
+        goto putById;
+      }
+      CASE(TryPutByIdLoose) {
+        tryProp = true;
+        strictMode = false;
+        idVal = ip->iTryPutByIdLoose.op4;
+        nextIP = NEXTINST(TryPutByIdLoose);
+        goto putById;
+      }
+      CASE(TryPutByIdStrict) {
+        tryProp = true;
+        strictMode = true;
+        idVal = ip->iTryPutByIdStrict.op4;
+        nextIP = NEXTINST(TryPutByIdStrict);
+        goto putById;
+      }
+      CASE(PutByIdLoose) {
+        tryProp = false;
+        strictMode = false;
+        idVal = ip->iPutByIdLoose.op4;
+        nextIP = NEXTINST(PutByIdLoose);
+        goto putById;
+      }
+      CASE(PutByIdStrict) {
+        tryProp = false;
+        strictMode = true;
+        idVal = ip->iPutByIdStrict.op4;
+        nextIP = NEXTINST(PutByIdStrict);
       }
     putById : {
       ++NumPutById;
-      if (LLVM_LIKELY(O1REG(PutById).isObject())) {
+      if (LLVM_LIKELY(O1REG(PutByIdLoose).isObject())) {
         CAPTURE_IP_ASSIGN(
             SmallHermesValue shv,
-            SmallHermesValue::encodeHermesValue(O2REG(PutById), runtime));
-        auto *obj = vmcast<JSObject>(O1REG(PutById));
-        auto cacheIdx = ip->iPutById.op3;
+            SmallHermesValue::encodeHermesValue(O2REG(PutByIdLoose), runtime));
+        auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
+        auto cacheIdx = ip->iPutByIdLoose.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
 #ifdef HERMESVM_PROFILER_BB
@@ -2465,14 +2495,15 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
-
+        const PropOpFlags defaultPropOpFlags =
+            DEFAULT_PROP_OP_FLAGS(strictMode);
         CAPTURE_IP_ASSIGN(
             auto putRes,
             JSObject::putNamed_RJS(
-                Handle<JSObject>::vmcast(&O1REG(PutById)),
+                Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
                 runtime,
                 id,
-                Handle<>(&O2REG(PutById)),
+                Handle<>(&O2REG(PutByIdLoose)),
                 !tryProp ? defaultPropOpFlags
                          : defaultPropOpFlags.plusMustExist()));
         if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
@@ -2485,9 +2516,9 @@ tailCall:
             auto retStatus,
             Interpreter::putByIdTransient_RJS(
                 runtime,
-                Handle<>(&O1REG(PutById)),
+                Handle<>(&O1REG(PutByIdLoose)),
                 ID(idVal),
-                Handle<>(&O2REG(PutById)),
+                Handle<>(&O2REG(PutByIdLoose)),
                 strictMode));
         if (retStatus == ExecutionStatus::EXCEPTION) {
           goto exception;
@@ -2525,15 +2556,18 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(PutByVal) {
-        if (LLVM_LIKELY(O1REG(PutByVal).isObject())) {
+      CASE(PutByValLoose)
+      CASE(PutByValStrict) {
+        bool strictMode = (ip->opCode == OpCode::PutByValStrict);
+        if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
+          auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
           CAPTURE_IP_ASSIGN(
               auto putRes,
               JSObject::putComputed_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByVal)),
+                  Handle<JSObject>::vmcast(&O1REG(PutByValLoose)),
                   runtime,
-                  Handle<>(&O2REG(PutByVal)),
-                  Handle<>(&O3REG(PutByVal)),
+                  Handle<>(&O2REG(PutByValLoose)),
+                  Handle<>(&O3REG(PutByValLoose)),
                   defaultPropOpFlags));
           if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
             goto exception;
@@ -2544,16 +2578,16 @@ tailCall:
               auto retStatus,
               Interpreter::putByValTransient_RJS(
                   runtime,
-                  Handle<>(&O1REG(PutByVal)),
-                  Handle<>(&O2REG(PutByVal)),
-                  Handle<>(&O3REG(PutByVal)),
+                  Handle<>(&O1REG(PutByValLoose)),
+                  Handle<>(&O2REG(PutByValLoose)),
+                  Handle<>(&O3REG(PutByValLoose)),
                   strictMode));
           if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(PutByVal);
+        ip = NEXTINST(PutByValLoose);
         DISPATCH;
       }
 

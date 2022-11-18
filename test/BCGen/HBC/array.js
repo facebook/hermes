@@ -41,13 +41,13 @@ var z = [{}];
 //CHECK-NEXT:    LoadConstNull     r2
 //CHECK-NEXT:    PutOwnByIndex     r1, r2, 5
 //CHECK-NEXT:    GetGlobalObject   r2
-//CHECK-NEXT:    PutById           r2, r1, 1, "x"
+//CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "x"
 //CHECK-NEXT:    NewArrayWithBuffer r1, 5, 3, 11
 //CHECK-NEXT:    LoadConstUInt8    r3, 5
-//CHECK-NEXT:    PutById           r1, r3, 2, "length"
-//CHECK-NEXT:    PutById           r2, r1, 3, "y"
+//CHECK-NEXT:    PutByIdLoose      r1, r3, 2, "length"
+//CHECK-NEXT:    PutByIdLoose      r2, r1, 3, "y"
 //CHECK-NEXT:    NewArray          r1, 1
 //CHECK-NEXT:    NewObject         r3
 //CHECK-NEXT:    PutOwnByIndex     r1, r3, 0
-//CHECK-NEXT:    PutById           r2, r1, 4, "z"
+//CHECK-NEXT:    PutByIdLoose      r2, r1, 4, "z"
 //CHECK-NEXT:    Ret               r0

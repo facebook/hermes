@@ -20,12 +20,12 @@ var z = 0.0;
 //CHECK-NEXT:    DeclareGlobalVar  "z"
 //CHECK-NEXT:    LoadConstDouble   r0, 3.14
 //CHECK-NEXT:    GetGlobalObject   r1
-//CHECK-NEXT:    PutById           r1, r0, 1, "w"
+//CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "w"
 //CHECK-NEXT:    LoadConstDouble   r0, -0.00056
-//CHECK-NEXT:    PutById           r1, r0, 2, "x"
+//CHECK-NEXT:    PutByIdLoose      r1, r0, 2, "x"
 //CHECK-NEXT:    LoadConstDouble   r0, 12345670.89
-//CHECK-NEXT:    PutById           r1, r0, 3, "y"
+//CHECK-NEXT:    PutByIdLoose      r1, r0, 3, "y"
 //CHECK-NEXT:    LoadConstZero     r0
-//CHECK-NEXT:    PutById           r1, r0, 4, "z"
+//CHECK-NEXT:    PutByIdLoose      r1, r0, 4, "z"
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    Ret               r0

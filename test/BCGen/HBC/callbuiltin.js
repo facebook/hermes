@@ -140,11 +140,11 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    CreateEnvironment r1
 // CHKBC-NEXT:    CreateClosure     r2, r1, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    PutById           r0, r2, 1, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r0, r2, 1, "foo"
 // CHKBC-NEXT:    CreateClosure     r2, r1, Function<shadows>
-// CHKBC-NEXT:    PutById           r0, r2, 2, "shadows"
+// CHKBC-NEXT:    PutByIdLoose      r0, r2, 2, "shadows"
 // CHKBC-NEXT:    CreateClosure     r1, r1, Function<checkNonStaticBuiltin>
-// CHKBC-NEXT:    PutById           r0, r1, 3, "checkNonStaticBui"...
+// CHKBC-NEXT:    PutByIdLoose      r0, r1, 3, "checkNonStaticBui"...
 // CHKBC-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKBC-NEXT:    GetByIdShort      r3, r0, 2, "foo"
 // CHKBC-NEXT:    LoadConstUndefined r1

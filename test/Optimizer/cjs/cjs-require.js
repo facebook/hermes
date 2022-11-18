@@ -63,7 +63,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<bar>
 // CHKOPT-NEXT:    LoadParam         r0, 1
-// CHKOPT-NEXT:    PutById           r0, r1, 1, "bar"
+// CHKOPT-NEXT:    PutByIdLoose      r0, r1, 1, "bar"
 // CHKOPT-NEXT:    LoadConstUndefined r0
 // CHKOPT-NEXT:    Ret               r0
 
@@ -81,7 +81,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
-// CHKOPT-NEXT:    PutById           r0, r1, 1, "foo"
+// CHKOPT-NEXT:    PutByIdLoose      r0, r1, 1, "foo"
 // CHKOPT-NEXT:    LoadConstUndefined r0
 // CHKOPT-NEXT:    Ret               r0
 
@@ -100,7 +100,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
-// CHKOPT-NEXT:    PutById           r0, r1, 1, "baz"
+// CHKOPT-NEXT:    PutByIdLoose      r0, r1, 1, "baz"
 // CHKOPT-NEXT:    LoadConstUndefined r0
 // CHKOPT-NEXT:    Ret               r0
 
@@ -211,7 +211,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Call              r10, r9, 1
 // CHKDBG-NEXT:    LoadFromEnvironment r10, r0, 2
 // CHKDBG-NEXT:    LoadFromEnvironment r11, r0, 1
-// CHKDBG-NEXT:    PutById           r10, r11, 1, "bar"
+// CHKDBG-NEXT:    PutByIdLoose      r10, r11, 1, "bar"
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<bar>(1 params, 16 registers, 1 symbols):
@@ -243,7 +243,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
 // CHKDBG-NEXT:    LoadFromEnvironment r5, r0, 0
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<>
-// CHKDBG-NEXT:    PutById           r5, r6, 1, "foo"
+// CHKDBG-NEXT:    PutByIdLoose      r5, r6, 1, "foo"
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
@@ -271,7 +271,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
 // CHKDBG-NEXT:    LoadFromEnvironment r5, r0, 0
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<>
-// CHKDBG-NEXT:    PutById           r5, r6, 1, "baz"
+// CHKDBG-NEXT:    PutByIdLoose      r5, r6, 1, "baz"
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):

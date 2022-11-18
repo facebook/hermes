@@ -66,12 +66,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    CreateAsyncClosure r3, r0, NCFunction<simpleReturn>
-// CHECK-NEXT:    PutById           r1, r3, 1, "simpleReturn"
+// CHECK-NEXT:    PutByIdLoose      r1, r3, 1, "simpleReturn"
 // CHECK-NEXT:    CreateAsyncClosure r4, r0, NCFunction<simpleAwait>
-// CHECK-NEXT:    PutById           r1, r4, 2, "simpleAwait"
+// CHECK-NEXT:    PutByIdLoose      r1, r4, 2, "simpleAwait"
 // CHECK-NEXT:    Mov               r5, r2
 // CHECK-NEXT:    CreateAsyncClosure r6, r0, NCFunction<simpleAsyncFE>
-// CHECK-NEXT:    PutById           r1, r6, 3, "simpleAsyncFE"
+// CHECK-NEXT:    PutByIdLoose      r1, r6, 3, "simpleAsyncFE"
 // CHECK-NEXT:    Mov               r7, r5
 // CHECK-NEXT:    Ret               r7
 
@@ -83,7 +83,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Mov               r3, r2
 // CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<?anon_0_simpleReturn>
 // CHECK-NEXT:    GetBuiltinClosure r5, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose    r3
+// CHECK-NEXT:    ReifyArgumentsLoose r3
 // CHECK-NEXT:    Mov               r6, r3
 // CHECK-NEXT:    Mov               r12, r2
 // CHECK-NEXT:    Mov               r11, r4

@@ -59,9 +59,9 @@ function *args() {
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    CreateGeneratorClosure r3, r0, NCFunction<loop>
-// CHECK-NEXT:    PutById           r1, r3, 1, "loop"
+// CHECK-NEXT:    PutByIdLoose      r1, r3, 1, "loop"
 // CHECK-NEXT:    CreateGeneratorClosure r4, r0, NCFunction<args>
-// CHECK-NEXT:    PutById           r1, r4, 2, "args"
+// CHECK-NEXT:    PutByIdLoose      r1, r4, 2, "args"
 // CHECK-NEXT:    Mov               r5, r2
 // CHECK-NEXT:    Mov               r6, r5
 // CHECK-NEXT:    Ret               r6

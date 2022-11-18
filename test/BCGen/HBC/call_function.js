@@ -14,7 +14,7 @@
 //CHECK-NEXT:    CreateEnvironment r0
 //CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
 //CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    PutById           r0, r1, 1, "foo"
+//CHECK-NEXT:    PutByIdStrict     r0, r1, 1, "foo"
 //CHECK-NEXT:    GetByIdShort      r3, r0, 1, "foo"
 //CHECK-NEXT:    LoadConstUndefined r2
 //CHECK-NEXT:    LoadConstZero     r1

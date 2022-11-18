@@ -30,10 +30,10 @@ function foo(x) {
 //CHECK-NEXT:    StoreToEnvironment r0, 0, r1
 //CHECK-NEXT:    LoadFromEnvironment r5, r0, 0
 //CHECK-NEXT:    JmpTrue           L1, r5
-//CHECK-NEXT:    PutById           r3, r2, 1, "b"
+//CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "b"
 //CHECK-NEXT:    Jmp               L2
 //CHECK-NEXT:L1:
-//CHECK-NEXT:    PutById           r3, r2, 2, "a"
+//CHECK-NEXT:    PutByIdLoose      r3, r2, 2, "a"
 //CHECK-NEXT:L2:
 //CHECK-NEXT:    Ret               r4
 
@@ -43,12 +43,12 @@ function foo(x) {
 //CHKOPT-NEXT:    JmpTrue           L1, r0
 //CHKOPT-NEXT:    LoadConstUInt8    r1, 10
 //CHKOPT-NEXT:    GetGlobalObject   r0
-//CHKOPT-NEXT:    PutById           r0, r1, 1, "b"
+//CHKOPT-NEXT:    PutByIdLoose      r0, r1, 1, "b"
 //CHKOPT-NEXT:    Jmp               L2
 //CHKOPT-NEXT:L1:
 //CHKOPT-NEXT:    LoadConstUInt8    r1, 10
 //CHKOPT-NEXT:    GetGlobalObject   r0
-//CHKOPT-NEXT:    PutById           r0, r1, 2, "a"
+//CHKOPT-NEXT:    PutByIdLoose      r0, r1, 2, "a"
 //CHKOPT-NEXT:L2:
 //CHKOPT-NEXT:    LoadConstUndefined r0
 //CHKOPT-NEXT:    Ret               r0

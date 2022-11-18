@@ -31,5 +31,5 @@ var obj = {
 //CHECK-NEXT:    LoadConstString   r1, "d"
 //CHECK-NEXT:    PutOwnGetterSetterByVal r2, r1, r0, r3, 1
 //CHECK-NEXT:    GetGlobalObject   r1
-//CHECK-NEXT:    PutById           r1, r2, 1, "obj"
+//CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "obj"
 //CHECK-NEXT:    Ret               r0

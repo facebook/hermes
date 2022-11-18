@@ -206,12 +206,12 @@ var obj4 = {
 // BCGEN-NEXT:    DeclareGlobalVar  "obj4"
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 7, 7, 0, 0
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutById           r1, r0, 1, "d"
+// BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "d"
 // BCGEN-NEXT:    CreateEnvironment r2
 // BCGEN-NEXT:    CreateClosure     r2, r2, Function<f>
-// BCGEN-NEXT:    PutById           r1, r2, 2, "f"
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 2, "f"
 // BCGEN-NEXT:    GetGlobalObject   r2
-// BCGEN-NEXT:    PutById           r2, r1, 3, "obj1"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj1"
 // BCGEN-NEXT:    NewObject         r1
 // BCGEN-NEXT:    PutNewOwnByIdShort r1, r0, "a"
 // BCGEN-NEXT:    PutNewOwnByIdShort r1, r0, "b"
@@ -232,13 +232,13 @@ var obj4 = {
 // BCGEN-NEXT:    PutNewOwnByIdShort r1, r3, "o"
 // BCGEN-NEXT:    PutNewOwnByIdShort r1, r3, "p"
 // BCGEN-NEXT:    PutNewOwnByIdShort r1, r3, "q"
-// BCGEN-NEXT:    PutById           r2, r1, 4, "obj2"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj2"
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 13, 12, 8, 15
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
-// BCGEN-NEXT:    PutById           r2, r1, 5, "obj3"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 5, "obj3"
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 13, 12, 8, 15
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
-// BCGEN-NEXT:    PutById           r2, r1, 6, "obj4"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 6, "obj4"
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<f>(1 params, 1 registers, 0 symbols):
