@@ -83,8 +83,17 @@ if (typeof HermesInternal === 'object') {
   $262.detachArrayBuffer = HermesInternal.detachArrayBuffer;
 }
 
+// test262 requirements.
+// Leave the unimplemented features unset in $262.
+var $262 = {};
+$262.global = this;
+$262.evalScript = eval;
+if (typeof HermesInternal === 'object') {
+  $262.detachArrayBuffer = HermesInternal.detachArrayBuffer;
+}
+
 // Browser functions:
-var alert = print;
+var alert = typeof print !== 'undefined' ? print : console.log;
 
 """
 
@@ -141,7 +150,7 @@ function v8pragma_StringCharCodeAt(s, i) {
 // debug variable sometimes used in mjsunit.
 // Implemented the same way JSC does.
 var debug = function(s) {
-  print('-->', s);
+  alert('-->', s);
 };
 
 // The idea here is that some pragmas are meaningless for our JS interpreter,
