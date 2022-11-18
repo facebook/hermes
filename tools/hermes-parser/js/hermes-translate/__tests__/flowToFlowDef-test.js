@@ -229,10 +229,18 @@ describe('flowToFlowDef', () => {
         `declare export default class Foo {}`,
       );
     });
-    it('export default typecast', () => {
+    it('export default expression', () => {
       expectTranslate(
         `export default (1: number);`,
         `declare export default number;`,
+      );
+    });
+    it('export default var', () => {
+      expectTranslate(
+        `function foo() {}
+         export default foo;`,
+        `declare function foo(): void;
+         declare export default foo;`,
       );
     });
   });
@@ -461,6 +469,79 @@ describe('flowToFlowDef', () => {
            constructor(): Foo;
          }`,
       );
+    });
+  });
+  describe('Expression', () => {
+    function expectTranslateExpression(
+      expectExprCode: string,
+      toBeExprCode: string,
+    ): void {
+      expectTranslate(
+        `export const expr = ${expectExprCode};`,
+        `declare export var expr: ${toBeExprCode};`,
+      );
+    }
+    describe('Identifier', () => {
+      it('basic', () => {
+        expectTranslateExpression(`foo`, `foo`);
+      });
+    });
+    describe('ObjectExpression', () => {
+      it('empty', () => {
+        expectTranslateExpression(`{}`, `{}`);
+      });
+      it('methods', () => {
+        expectTranslateExpression(`{foo() {}}`, `{foo(): void}`);
+        expectTranslateExpression(`{get foo() {}}`, `{get foo(): void}`);
+        expectTranslateExpression(
+          `{set foo(bar: string) {}}`,
+          `{set foo(bar: string): void}`,
+        );
+      });
+      it('spread', () => {
+        expectTranslateExpression(`{...a}`, `{...a}`);
+      });
+    });
+    describe('Literals', () => {
+      it('number', () => {
+        expectTranslateExpression(`1`, `1`);
+        expectTranslateExpression(`1.99`, `1.99`);
+      });
+      it('string', () => {
+        expectTranslateExpression(`'s'`, `'s'`);
+      });
+      it('boolean', () => {
+        expectTranslateExpression(`true`, `true`);
+      });
+      it('regex', () => {
+        expectTranslateExpression(`/a/`, `RegExp`);
+      });
+      it('null', () => {
+        expectTranslateExpression(`null`, `null`);
+      });
+    });
+    describe('TypeCastExpression', () => {
+      it('basic', () => {
+        expectTranslateExpression(`(1: number)`, `number`);
+      });
+    });
+    describe('FunctionExpression', () => {
+      it('basic', () => {
+        expectTranslateExpression(`function foo() {}`, `() => void`);
+        expectTranslateExpression(
+          `function foo<T>(baz: T, bar: string) {}`,
+          `<T>(baz: T, bar: string) => void`,
+        );
+      });
+    });
+    describe('ArrowFunctionExpression', () => {
+      it('basic', () => {
+        expectTranslateExpression(`() => {}`, `() => void`);
+        expectTranslateExpression(
+          `<T>(baz: T, bar: string) => {}`,
+          `<T>(baz: T, bar: string) => void`,
+        );
+      });
     });
   });
 });

@@ -1260,14 +1260,14 @@ export interface ObjectTypeAnnotation extends BaseNode {
 }
 export interface ObjectTypeProperty extends BaseNode {
   +type: 'ObjectTypeProperty';
-  +key: Identifier;
+  +key: Identifier | StringLiteral;
   +value: TypeAnnotationType;
   +method: boolean;
   +optional: boolean;
   +static: boolean;
   +proto: false; // ???
   +variance: Variance | null;
-  +kind: 'init';
+  +kind: 'init' | 'get' | 'set';
 
   +parent: ObjectTypeAnnotation;
 }
