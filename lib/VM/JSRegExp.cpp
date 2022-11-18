@@ -56,6 +56,7 @@ void JSRegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSRegExp *>(cell);
   mb.setVTable(&JSRegExp::vt);
   mb.addField(&self->pattern_);
+  mb.addField(&self->groupNameMappings_);
 }
 
 PseudoHandle<JSRegExp> JSRegExp::create(
@@ -152,7 +153,50 @@ ExecutionStatus JSRegExp::initialize(
   }
   // The regex is valid. Compile and store its bytecode.
   auto bytecode = regex.compile();
+  // Also store the name mappings.
+  if (LLVM_UNLIKELY(
+          initializeGroupNameMappingObj(
+              runtime,
+              selfHandle,
+              regex.getOrderedNamedGroups(),
+              regex.getGroupNamesMapping()) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   initialize(selfHandle, runtime, pattern, flags, bytecode);
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
+    Runtime &runtime,
+    Handle<JSRegExp> selfHandle,
+    std::deque<llvh::SmallVector<char16_t, 5>> &orderedNamedGroups,
+    regex::ParsedGroupNamesMapping &parsedMappings) {
+  if (parsedMappings.size() == 0)
+    return ExecutionStatus::RETURNED;
+
+  auto objRes = JSObject::create(runtime, parsedMappings.size());
+  auto obj = runtime.makeHandle(objRes.get());
+
+  MutableHandle<HermesValue> numberHandle{runtime};
+  for (const auto &identifier : orderedNamedGroups) {
+    auto symbolRes =
+        runtime.getIdentifierTable().getSymbolHandle(runtime, identifier);
+    if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto idx = parsedMappings[identifier];
+    numberHandle.set(HermesValue::encodeNumberValue(idx));
+    auto res = JSObject::defineNewOwnProperty(
+        obj,
+        runtime,
+        symbolRes->get(),
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        numberHandle);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+  }
+
+  selfHandle->groupNameMappings_.set(runtime, *obj, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
