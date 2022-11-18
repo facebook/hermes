@@ -423,14 +423,14 @@ int sched_getcpu() {
 }
 
 uint64_t cpu_cycle_counter() {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
   return __rdtsc();
 #elif __has_builtin(__builtin_readcyclecounter)
   return __builtin_readcyclecounter();
 #else
   LARGE_INTEGER cnt;
   QueryPerformanceCounter(&cnt);
-  return cnt;
+  return static_cast<uint64_t>(cnt.QuadPart);
 #endif
 }
 
