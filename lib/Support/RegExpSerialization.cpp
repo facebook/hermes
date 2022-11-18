@@ -319,10 +319,14 @@ CompiledRegExp::~CompiledRegExp() {}
 CompiledRegExp::CompiledRegExp(
     std::vector<uint8_t> bytecode,
     std::string pattern,
-    std::string flags)
+    std::string flags,
+    std::deque<llvh::SmallVector<char16_t, 5>> &&orderedGroupNames,
+    regex::ParsedGroupNamesMapping &&mapping)
     : bytecode_(std::move(bytecode)),
       pattern_(std::move(pattern)),
-      flags_(flags) {}
+      flags_(std::move(flags)),
+      orderedGroupNames_(std::move(orderedGroupNames)),
+      mapping_(std::move(mapping)) {}
 
 llvh::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     StringRef pattern,
@@ -346,7 +350,12 @@ llvh::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
       *outError = messageForError(re.getError());
     return llvh::None;
   }
-  return CompiledRegExp(re.compile(), pattern, flags);
+  return CompiledRegExp(
+      re.compile(),
+      pattern,
+      flags,
+      re.acquireOrderedGroupNames(),
+      re.acquireGroupNamesMapping());
 }
 
 llvh::ArrayRef<uint8_t> CompiledRegExp::getBytecode() const {

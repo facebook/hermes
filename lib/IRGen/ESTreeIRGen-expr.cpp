@@ -6,6 +6,8 @@
  */
 
 #include "ESTreeIRGen.h"
+#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Support/UTF8.h"
 
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringSwitch.h"
@@ -41,13 +43,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   // Handle Regexp Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-regular-expression-literals
   if (auto *Lit = llvh::dyn_cast<ESTree::RegExpLiteralNode>(expr)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading regexp Literal \"" << Lit->_pattern->str()
-                     << " / " << Lit->_flags->str() << "\"\n");
-
-    return Builder.createRegExpInst(
-        Identifier::getFromPointer(Lit->_pattern),
-        Identifier::getFromPointer(Lit->_flags));
+    return genRegExpLiteral(Lit);
   }
 
   // Handle Boolean Literals.
@@ -1560,6 +1556,46 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
 
   // Return the value that we stored as the result of the expression.
   return result;
+}
+
+Value *ESTreeIRGen::genRegExpLiteral(ESTree::RegExpLiteralNode *RE) {
+  LLVM_DEBUG(llvh::dbgs() << "IRGen reg exp literal.\n");
+  LLVM_DEBUG(
+      llvh::dbgs() << "Loading regexp Literal \"" << RE->_pattern->str()
+                   << " / " << RE->_flags->str() << "\"\n");
+  auto exp = Builder.createRegExpInst(
+      Identifier::getFromPointer(RE->_pattern),
+      Identifier::getFromPointer(RE->_flags));
+
+  llvh::StringRef regexpError;
+  auto regexp = CompiledRegExp::tryCompile(
+      RE->_pattern->str(), RE->_flags->str(), &regexpError);
+  if (regexp && regexp->getMapping().size()) {
+    auto &mapping = regexp->getMapping();
+
+    HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
+    for (auto &identifier : regexp->getOrderedGroupNames()) {
+      std::string converted;
+      convertUTF16ToUTF8WithSingleSurrogates(converted, identifier);
+      auto *key = Builder.getLiteralString(converted);
+      auto groupIdxRes = mapping.find(identifier);
+      assert(
+          groupIdxRes != mapping.end() &&
+          "identifier not found in named groups");
+      auto groupIdx = groupIdxRes->second;
+      auto *val = Builder.getLiteralNumber(groupIdx);
+      propMap.emplace_back(key, val);
+    }
+    auto sz = mapping.size();
+
+    auto literalObj = Builder.createHBCAllocObjectFromBufferInst(propMap, sz);
+
+    Value *params[] = {exp, literalObj};
+    Builder.createCallBuiltinInst(
+        BuiltinMethod::HermesBuiltin_initRegexNamedGroups, params);
+  }
+
+  return exp;
 }
 
 Value *ESTreeIRGen::genLogicalAssignmentExpr(

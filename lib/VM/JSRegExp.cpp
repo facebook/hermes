@@ -206,6 +206,10 @@ Handle<JSObject> JSRegExp::getGroupNameMappings(Runtime &runtime) {
   return Runtime::makeNullHandle<JSObject>();
 }
 
+void JSRegExp::setGroupNameMappings(Runtime &runtime, JSObject *groupObj) {
+  groupNameMappings_.set(runtime, groupObj, runtime.getHeap());
+}
+
 void JSRegExp::initializeBytecode(llvh::ArrayRef<uint8_t> bytecode) {
   size_t sz = bytecode.size();
   assert(

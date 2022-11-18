@@ -98,6 +98,8 @@ class JSRegExp final : public JSObject {
 
   Handle<JSObject> getGroupNameMappings(Runtime &runtime);
 
+  void setGroupNameMappings(Runtime &runtime, JSObject *groupObj);
+
   /// Searches self for a match for \str.
   /// \p searchStartOffset is the offset from which to begin searching.
   /// If searchStartOffset exceeds the length of the string, or if no match

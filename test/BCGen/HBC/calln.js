@@ -110,7 +110,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 89
+// BCGEN-NEXT:  Bytecode version number: 90
 // BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // BCGEN-NEXT:  Function count: 6
 // BCGEN-NEXT:  String count: 6

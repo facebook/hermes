@@ -22,7 +22,7 @@ function *args() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 89
+// CHECK-NEXT:  Bytecode version number: 90
 // CHECK-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHECK-NEXT:  Function count: 5
 // CHECK-NEXT:  String count: 8
