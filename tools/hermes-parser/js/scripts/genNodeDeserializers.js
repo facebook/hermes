@@ -14,7 +14,7 @@
 
 'use strict';
 
-import {formatAndWriteDistArtifact} from './utils/scriptUtils';
+import {formatAndWriteSrcArtifact} from './utils/scriptUtils';
 
 const path = require('path');
 
@@ -30,8 +30,10 @@ const deserializers = execSync(
   {encoding: 'utf8'},
 );
 
-formatAndWriteDistArtifact({
+formatAndWriteSrcArtifact({
   code: deserializers,
   package: 'hermes-parser',
-  filename: 'HermesParserNodeDeserializers.js',
+  file: 'HermesParserNodeDeserializers.js',
+  // This file is shadowed by a manual `.js.flow` file
+  flow: false,
 });

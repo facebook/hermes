@@ -40,18 +40,25 @@ export type ESTreeJSON = $ReadOnlyArray<
   }>,
 >;
 
-// $FlowExpectedError[cannot-resolve-module]
-export const HermesESTreeJSON: ESTreeJSON = require('../dist/HermesESTreeJSON.json');
+export const HermesESTreeJSONFile: string = path.resolve(
+  __dirname,
+  '../dist/HermesESTreeJSON.json',
+);
+// $FlowExpectedError[unsupported-syntax]
+export const GetHermesESTreeJSON: () => ESTreeJSON = () =>
+  // $FlowExpectedError[unsupported-syntax]
+  require(HermesESTreeJSONFile);
 
 type FlowStyle = false | 'loose' | 'strict' | 'strict-local';
 function HEADER(flow: FlowStyle): string {
-  let flowDirective = '';
-  if (flow !== false) {
-    flowDirective = `* ${'@'}flow`;
+  let flowDirective = ``;
+  if (flow === false) {
+    flowDirective += `${'@'}noflow`;
+  } else {
+    flowDirective += `${'@'}flow`;
     if (flow !== 'loose') {
       flowDirective += ` ${flow}`;
     }
-    flowDirective += '\n';
   }
 
   return `\
@@ -61,8 +68,15 @@ function HEADER(flow: FlowStyle): string {
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
-${flowDirective}\
+ * ${flowDirective}
  * @format
+ * ${'@'}generated
+ */
+
+/*
+ * !!! GENERATED FILE !!!
+ *
+ * Any manual changes to this file will be overwritten. To regenerate run \`yarn build\`.
  */
 
 // lint directives to let us do some basic validation of generated files
@@ -79,20 +93,34 @@ type Package =
   | 'hermes-estree'
   | 'hermes-parser'
   | 'hermes-transform';
-export function formatAndWriteDistArtifact({
+
+type ArtifactOptions = $ReadOnly<{
+  code: string,
+  flow?: FlowStyle,
+  // will write to ../<package>/<file>
+  package: Package,
+  file: string,
+}>;
+
+export function formatAndWriteDistArtifact(opts: ArtifactOptions): void {
+  formatAndWriteArtifact({
+    ...opts,
+    file: path.join('dist', opts.file),
+  });
+}
+export function formatAndWriteSrcArtifact(opts: ArtifactOptions): void {
+  formatAndWriteArtifact({
+    ...opts,
+    file: path.join('src', opts.file),
+  });
+}
+
+function formatAndWriteArtifact({
   code: code_,
   flow = 'loose',
   package: pkg,
-  filename,
-  subdirSegments = [],
-}: $ReadOnly<{
-  code: string,
-  flow?: FlowStyle,
-  // will write to ../<package>/dist/<...subdirSegments>/<filename>
-  package: Package,
-  filename: string,
-  subdirSegments?: $ReadOnlyArray<string>,
-}>): void {
+  file,
+}: ArtifactOptions): void {
   // make sure the code has a header
   const code = code_.slice(0, 3) === '/**' ? code_ : HEADER(flow) + code_;
 
@@ -103,17 +131,10 @@ export function formatAndWriteDistArtifact({
   });
 
   // make sure the folder exists first
-  const folder = path.resolve(
-    __dirname,
-    '..',
-    '..',
-    pkg,
-    'dist',
-    ...subdirSegments,
-  );
+  const folder = path.resolve(__dirname, '..', '..', pkg, path.dirname(file));
   mkdirp.sync(folder);
   // write to disk
-  const artifactPath = path.resolve(folder, filename);
+  const artifactPath = path.resolve(folder, path.basename(file));
   fs.writeFileSync(artifactPath, formattedContents);
 }
 
