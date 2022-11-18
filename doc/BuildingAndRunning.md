@@ -95,6 +95,17 @@ simply run:
 
     hermes/utils/format.sh
 
+## AddressSanitizer (ASan) Build
+
+ The `-HERMES_ENABLE_ADDRESS_SANITIZER=ON` flag will create a ASan build:
+
+    git clone https://github.com/facebook/hermes.git
+    cmake -S hermes -B asan_build -G Ninja -D HERMES_ENABLE_ADDRESS_SANITIZER=ON
+
+You can verify the build by looking for `asan` symbols in the `hermes` binary:
+
+    nm asan_build/bin/hermes | grep asan
+
 ### Other Tools
 
 In addition to `hermes`, the following tools will be built:
