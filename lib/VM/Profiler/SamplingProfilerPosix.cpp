@@ -469,8 +469,12 @@ void SamplingProfiler::collectStackForLoomCommon(
     uint16_t max_depth,
     void *profiler) {
   auto profilerInstance = GlobalProfiler::get();
-  if (!profilerInstance->enabled()) {
-    return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+  {
+    std::unique_lock<std::mutex> lock(profilerInstance->profilerLock_);
+    if (!profilerInstance->enabled_) {
+      return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
+    }
+    profilerInstance->collectingStack_ = true;
   }
   auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
   std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
@@ -482,9 +486,13 @@ void SamplingProfiler::collectStackForLoomCommon(
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
     if (!profilerInstance->sampleStack(localProfiler)) {
+      profilerInstance->collectingStack_ = false;
+      profilerInstance->disableForLoomCondVar_.notify_one();
       return FBLoomStackCollectionRetcode::NO_STACK_FOR_THREAD;
     }
   } else {
+    profilerInstance->collectingStack_ = false;
+    profilerInstance->disableForLoomCondVar_.notify_one();
     return FBLoomStackCollectionRetcode::EMPTY_STACK;
   }
 
@@ -501,8 +509,12 @@ void SamplingProfiler::collectStackForLoomCommon(
   }
   localProfiler->clear();
   if (*depth == 0) {
+    profilerInstance->collectingStack_ = false;
+    profilerInstance->disableForLoomCondVar_.notify_one();
     return FBLoomStackCollectionRetcode::EMPTY_STACK;
   }
+  profilerInstance->collectingStack_ = false;
+  profilerInstance->disableForLoomCondVar_.notify_one();
   return FBLoomStackCollectionRetcode::SUCCESS;
 }
 
@@ -686,7 +698,11 @@ bool SamplingProfiler::GlobalProfiler::disable() {
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
 bool SamplingProfiler::GlobalProfiler::disableForLoomCollection() {
   {
-    std::lock_guard<std::mutex> lockGuard(profilerLock_);
+    std::unique_lock lock(profilerLock_);
+    while (collectingStack_) {
+      disableForLoomCondVar_.wait(lock);
+    }
+
     if (!enabled_) {
       // Already disabled.
       return true;
