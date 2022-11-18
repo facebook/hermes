@@ -1309,7 +1309,7 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
 
   MutableHandle<> tmpHandleKey{runtime};
   MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(runtime.getHiddenClassForPrototypeRaw(
+      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
           vmcast<JSObject>(runtime.objectPrototype),
           JSObject::numOverlapSlots<JSObject>()));
 

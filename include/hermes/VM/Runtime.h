@@ -557,13 +557,6 @@ class Runtime : public PointerBase,
       JSObject *proto,
       unsigned reservedSlots);
 
-  /// Same as above but returns a raw pointer: standard warnings apply!
-  /// TODO: Delete this function once all callers are replaced with
-  /// getHiddenClassForPrototype.
-  inline HiddenClass *getHiddenClassForPrototypeRaw(
-      JSObject *proto,
-      unsigned reservedSlots);
-
   /// Return the global object.
   Handle<JSObject> getGlobal();
 
