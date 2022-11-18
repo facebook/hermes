@@ -51,7 +51,7 @@ public class HermesInstrumentationTest extends InstrumentationTestCase {
   @Test
   public void testDateFormat() {
     Locale defaultLocale = Locale.getDefault();
-    Locale.setDefault(new Locale("en-US"));
+    Locale.setDefault(Locale.US);
 
     TimeZone defaultZone = TimeZone.getDefault();
     TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
