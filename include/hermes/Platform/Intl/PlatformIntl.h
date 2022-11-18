@@ -100,9 +100,11 @@ enum class NativeType {
 };
 
 class Collator : public vm::DecoratedObject::Decoration {
- public:
+ protected:
   Collator();
-  ~Collator();
+
+ public:
+  ~Collator() override;
 
   static constexpr NativeType getNativeType() {
     return NativeType::Collator;
@@ -113,23 +115,21 @@ class Collator : public vm::DecoratedObject::Decoration {
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
-  vm::ExecutionStatus initialize(
+  static vm::CallResult<std::unique_ptr<Collator>> create(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
   Options resolvedOptions() noexcept;
 
   double compare(const std::u16string &x, const std::u16string &y) noexcept;
-
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 class DateTimeFormat : public vm::DecoratedObject::Decoration {
- public:
+ protected:
   DateTimeFormat();
-  ~DateTimeFormat();
+
+ public:
+  ~DateTimeFormat() override;
 
   static constexpr NativeType getNativeType() {
     return NativeType::DateTimeFormat;
@@ -140,7 +140,7 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
-  vm::ExecutionStatus initialize(
+  static vm::CallResult<std::unique_ptr<DateTimeFormat>> create(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
@@ -148,16 +148,14 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
 
   std::u16string format(double jsTimeValue) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
-
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 class NumberFormat : public vm::DecoratedObject::Decoration {
- public:
+ protected:
   NumberFormat();
-  ~NumberFormat();
+
+ public:
+  ~NumberFormat() override;
 
   static constexpr NativeType getNativeType() {
     return NativeType::NumberFormat;
@@ -168,7 +166,7 @@ class NumberFormat : public vm::DecoratedObject::Decoration {
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
 
-  vm::ExecutionStatus initialize(
+  static vm::CallResult<std::unique_ptr<NumberFormat>> create(
       vm::Runtime &runtime,
       const std::vector<std::u16string> &locales,
       const Options &options) noexcept;
@@ -176,10 +174,6 @@ class NumberFormat : public vm::DecoratedObject::Decoration {
 
   std::u16string format(double jsTimeValue) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
-
- private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 } // namespace platform_intl
