@@ -3222,9 +3222,7 @@ class HBCGetArgumentsPropByValInst : public Instruction {
   HBCGetArgumentsPropByValInst(const HBCGetArgumentsPropByValInst &) = delete;
   void operator=(const HBCGetArgumentsPropByValInst &) = delete;
 
- public:
-  enum { IndexIdx, LazyRegisterIdx };
-
+ protected:
   explicit HBCGetArgumentsPropByValInst(
       ValueKind kind,
       Value *index,
@@ -3237,6 +3235,9 @@ class HBCGetArgumentsPropByValInst : public Instruction {
       const HBCGetArgumentsPropByValInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+ public:
+  enum { IndexIdx, LazyRegisterIdx };
 
   Value *getIndex() const {
     return getOperand(IndexIdx);
@@ -3313,7 +3314,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
   HBCReifyArgumentsInst(const HBCReifyArgumentsInst &) = delete;
   void operator=(const HBCReifyArgumentsInst &) = delete;
 
- public:
+ protected:
   explicit HBCReifyArgumentsInst(ValueKind kind, AllocStackInst *reg)
       : SingleOperandInst(kind, reg) {}
   explicit HBCReifyArgumentsInst(
@@ -3321,6 +3322,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
+ public:
   Value *getLazyRegister() const {
     return getSingleOperand();
   }
