@@ -26,6 +26,8 @@ import type {
   DestructuringObjectPropertyWithShorthandStaticName as DestructuringObjectPropertyWithShorthandStaticNameType,
   ESNode,
   Identifier as IdentifierType,
+  Token as TokenType,
+  Comment as CommentType,
   LineComment as LineCommentType,
   NullLiteral as NullLiteralType,
   NumericLiteral as NumericLiteralType,
@@ -36,6 +38,8 @@ import type {
   RegExpLiteral as RegExpLiteralType,
   StringLiteral as StringLiteralType,
   TemplateElement as TemplateElementType,
+  Program as ProgramType,
+  DocblockMetadata as DocblockMetadataType,
 } from 'hermes-estree';
 import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
@@ -485,5 +489,33 @@ export function ObjectPropertyWithComputedName(props: {
     computed: true,
     method: props.method,
     shorthand: false,
+  });
+}
+
+export type ProgramProps = {
+  +sourceType: ProgramType['sourceType'],
+  +body: $ReadOnlyArray<MaybeDetachedNode<ProgramType['body'][number]>>,
+  +tokens: $ReadOnlyArray<MaybeDetachedNode<TokenType>>,
+  +comments: $ReadOnlyArray<MaybeDetachedNode<CommentType>>,
+  +interpreter: null | string,
+  +docblock: null | DocblockMetadataType,
+};
+export function Program(props: {
+  ...$ReadOnly<ProgramProps>,
+}): DetachedNode<ProgramType> {
+  return detachedProps<ProgramType>(null, {
+    type: 'Program',
+    sourceType: props.sourceType,
+    body: props.body.map(n => asDetachedNode(n)),
+    tokens: props.tokens,
+    comments: props.comments,
+    interpreter:
+      props.interpreter != null
+        ? asDetachedNode({
+            type: 'InterpreterDirective',
+            value: props.interpreter,
+          })
+        : null,
+    docblock: props.docblock,
   });
 }
