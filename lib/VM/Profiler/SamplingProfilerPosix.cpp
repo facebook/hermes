@@ -362,6 +362,45 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
   return enabled_;
 }
 
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
+void SamplingProfiler::collectStackForLoomCommon(
+    const StackFrame &frame,
+    int64_t *frames,
+    uint32_t index) {
+  constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
+  switch (frame.kind) {
+    case StackFrame::FrameKind::JSFunction: {
+      auto *bcProvider = frame.jsFrame.module->getBytecode();
+      uint32_t virtualOffset =
+          bcProvider->getVirtualOffsetForFunction(frame.jsFrame.functionId) +
+          frame.jsFrame.offset;
+      uint32_t segmentID = bcProvider->getSegmentID();
+      uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
+      assert(
+          (frameAddress & kNativeFrameMask) == 0 &&
+          "Module id should take less than 32 bits");
+      frames[(index)] = static_cast<int64_t>(frameAddress);
+      break;
+    }
+
+    case StackFrame::FrameKind::NativeFunction:
+    case StackFrame::FrameKind::FinalizableNativeFunction: {
+#if defined(__ANDROID__)
+      NativeFunctionPtr nativeFrame = frame.nativeFunctionPtrForLoom;
+#else
+      NativeFunctionPtr nativeFrame = getNativeFunctionPtr(frame);
+#endif
+      frames[(index)] = ((uint64_t)nativeFrame | kNativeFrameMask);
+      break;
+    }
+
+    default:
+      llvm_unreachable("Loom: unknown frame kind");
+  }
+}
+#endif
+
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
 /*static*/ StackCollectionRetcode SamplingProfiler::collectStackForLoom(
     ucontext_t *ucontext,
@@ -405,34 +444,8 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
   // TODO: enhance this when supporting more frame types.
   sampledStackDepth = std::min(sampledStackDepth, (uint32_t)max_depth);
   for (uint32_t i = 0; i < sampledStackDepth; ++i) {
-    constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
-    switch (stackFrame.kind) {
-      case StackFrame::FrameKind::JSFunction: {
-        auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
-        uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
-                                     stackFrame.jsFrame.functionId) +
-            stackFrame.jsFrame.offset;
-
-        uint32_t segmentID = bcProvider->getSegmentID();
-        uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
-        assert(
-            (frameAddress & kNativeFrameMask) == 0 &&
-            "Module id should take less than 32 bits");
-        frames[i] = frameAddress;
-        break;
-      }
-
-      case StackFrame::FrameKind::NativeFunction:
-      case StackFrame::FrameKind::FinalizableNativeFunction: {
-        NativeFunctionPtr nativeFrame = stackFrame.nativeFunctionPtrForLoom;
-        frames[i] = ((uint64_t)nativeFrame | kNativeFrameMask);
-        break;
-      }
-
-      default:
-        llvm_unreachable("Loom: unknown frame kind");
-    }
+    localProfiler->collectStackForLoomCommon(stackFrame, frames, i);
   }
   *depth = sampledStackDepth;
   if (*depth == 0) {
@@ -460,39 +473,16 @@ bool SamplingProfiler::GlobalProfiler::enabled() {
   }
   std::lock_guard<std::mutex> lk(profilerInstance->profilerLock_);
   *depth = 0;
-  int index = 0;
+  uint32_t index = 0;
   auto *localProfiler = reinterpret_cast<SamplingProfiler *>(profiler);
-  constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
   for (unsigned i = 0; i < localProfiler->sampledStacks_.size(); ++i) {
     auto &sample = localProfiler->sampledStacks_[i];
     for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
          ++iter) {
       const StackFrame &frame = *iter;
-      switch (frame.kind) {
-        case StackFrame::FrameKind::JSFunction: {
-          auto *bcProvider = frame.jsFrame.module->getBytecode();
-          uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
-                                       frame.jsFrame.functionId) +
-              frame.jsFrame.offset;
-          uint32_t segmentID = bcProvider->getSegmentID();
-          uint64_t frameAddress = ((uint64_t)segmentID << 32) + virtualOffset;
-          frames[index++] = static_cast<int64_t>(frameAddress);
-          (*depth)++;
-          break;
-        }
-
-        case StackFrame::FrameKind::NativeFunction:
-        case StackFrame::FrameKind::FinalizableNativeFunction: {
-          NativeFunctionPtr nativeFrame =
-              localProfiler->getNativeFunctionPtr(frame);
-          frames[index++] = ((uint64_t)nativeFrame | kNativeFrameMask);
-          (*depth)++;
-          break;
-        }
-
-        default:
-          llvm_unreachable("Loom: unknown frame kind");
-      }
+      localProfiler->collectStackForLoomCommon(frame, frames, index);
+      (*depth)++;
+      index++;
     }
   }
   localProfiler->clear();
