@@ -1628,14 +1628,28 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       // v. Let n be n+1
       n++;
     }
+
+    // j. Let namedCaptures be ? Get(result, "groups").
+    MutableHandle<HermesValue> namedCaptures{runtime};
+    bool hasNamedCaptures = false;
+    auto namedCapturesRes = JSObject::getNamed_RJS(
+        result, runtime, Predefined::getSymbolID(Predefined::groups));
+    if (LLVM_UNLIKELY(namedCapturesRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!(*namedCapturesRes)->isUndefined()) {
+      namedCaptures.set(namedCapturesRes->get());
+      hasNamedCaptures = true;
+    }
+
     // m. If functionalReplace is true, then
     MutableHandle<StringPrimitive> replacement{runtime};
     if (replaceFn) {
       CallResult<PseudoHandle<>> callRes{ExecutionStatus::EXCEPTION};
       {
         // i. Let replacerArgs be «matched».
-        // Arguments: matched, captures, position, S.
-        size_t replacerArgsCount = 1 + nCaptures + 2;
+        // Arguments: matched, captures, position, S (, groups).
+        size_t replacerArgsCount = 1 + nCaptures + 2 + hasNamedCaptures;
         if (LLVM_UNLIKELY(replacerArgsCount >= UINT32_MAX))
           return runtime.raiseStackOverflow(
               Runtime::StackOverflowKind::JSRegisterStack);
@@ -1657,18 +1671,21 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
           newFrame->getArgRef(argIdx) =
               capturesHandle->at(argIdx - 1).unboxToHV(runtime);
         }
-        // iii. Append position and S as the last two elements of replacerArgs.
+        // iii. Append position and S.
         newFrame->getArgRef(argIdx++) =
             HermesValue::encodeNumberValue(position);
         newFrame->getArgRef(argIdx++) = S.getHermesValue();
-
-        // iv. Let replValue be Call(replaceValue, undefined, replacerArgs).
+        // iv. If namedCaptures is not undefined, then
+        if (hasNamedCaptures) {
+          newFrame->getArgRef(argIdx++) = *namedCaptures;
+        }
+        // v. Let replValue be Call(replaceValue, undefined, replacerArgs).
         callRes = Callable::call(replaceFn, runtime);
         if (callRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
       }
-      // v. Let replacement be ToString(replValue).
+      // vi. Let replacement be ToString(replValue).
       auto strRes = toString_RJS(
           runtime, runtime.makeHandle(std::move(callRes.getValue())));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
