@@ -44,6 +44,7 @@ set(RTSources
   InterpreterTest.cpp
   IRInstrumentationTest.cpp
   JSLibTest.cpp
+  JSTypedArrayTest.cpp
   NativeFrameTest.cpp
   NativeFunctionTest.cpp
   NativeStateTest.cpp
