@@ -555,7 +555,7 @@ class Parser {
   // UTF16 str and advances past the pair.
   bool tryConsumeAndAppendSurrogatePair(
       GroupName &str,
-      const std::function<bool(uint32_t)> &lambdaPredicate) {
+      bool (*lambdaPredicate)(uint32_t)) {
     auto saved = current_;
     auto hi = consumeCharIf(isHighSurrogate);
     auto lo = consumeCharIf(isLowSurrogate);
