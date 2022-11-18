@@ -742,7 +742,8 @@ typedArrayPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(self->getByteLength());
+  return HermesValue::encodeNumberValue(
+      self->attached(runtime) ? self->getByteLength() : 0);
 }
 
 /// ES6 22.2.3.3
@@ -1233,7 +1234,8 @@ typedArrayPrototypeLength(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(self->getLength());
+  return HermesValue::encodeNumberValue(
+      self->attached(runtime) ? self->getLength() : 0);
 }
 
 CallResult<HermesValue>
