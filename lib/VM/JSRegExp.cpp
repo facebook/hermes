@@ -200,6 +200,12 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
   return ExecutionStatus::RETURNED;
 }
 
+Handle<JSObject> JSRegExp::getGroupNameMappings(Runtime &runtime) {
+  if (auto *ptr = vmcast_or_null<JSObject>(groupNameMappings_.get(runtime)))
+    return runtime.makeHandle(ptr);
+  return Runtime::makeNullHandle<JSObject>();
+}
+
 void JSRegExp::initializeBytecode(llvh::ArrayRef<uint8_t> bytecode) {
   size_t sz = bytecode.size();
   assert(

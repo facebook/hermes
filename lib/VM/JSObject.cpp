@@ -110,6 +110,23 @@ PseudoHandle<JSObject> JSObject::create(
   return obj;
 }
 
+PseudoHandle<JSObject> JSObject::create(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    Handle<HiddenClass> clazz) {
+  auto *cell = runtime.makeAFixed<JSObject>(
+      runtime, parentHandle, clazz, GCPointerBase::NoBarriers());
+  auto obj = JSObjectInit::initToPseudoHandle(runtime, cell);
+
+  obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
+  // If the hidden class has index like property, we need to clear the fast path
+  // flag.
+  if (LLVM_UNLIKELY(
+          obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
+    obj->flags_.fastIndexProperties = false;
+  return obj;
+}
+
 void JSObject::initializeLazyObject(
     Runtime &runtime,
     Handle<JSObject> lazyObject) {

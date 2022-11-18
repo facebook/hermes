@@ -12,6 +12,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExpStringIterator.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SmallXString.h"
@@ -412,6 +413,47 @@ static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
   return Handle<JSRegExp>::vmcast(*newRegexpRes);
 }
 
+static ExecutionStatus createGroupsObject(
+    Runtime &runtime,
+    Handle<JSArray> matchObj,
+    Handle<JSObject> mappingObj) {
+  // If there are no capture groups, then set groups to undefined.
+  if (!mappingObj) {
+    return JSObject::putNamed_RJS(
+               matchObj,
+               runtime,
+               Predefined::getSymbolID(Predefined::groups),
+               runtime.makeHandle(HermesValue::encodeUndefinedValue()))
+        .getStatus();
+  }
+
+  // The `__proto__` property on the groups object is not special,
+  // and does not affect the [[Prototype]] of the resulting groups object.
+  // This means that the prototype of the resulting groups object is null.
+  auto clazzHandle = runtime.makeHandle(mappingObj->getClass(runtime));
+  auto groupsObjRes = JSObject::create(
+      runtime, Runtime::makeNullHandle<JSObject>(), clazzHandle);
+  auto groupsObj = runtime.makeHandle(groupsObjRes.get());
+
+  HiddenClass::forEachProperty(
+      clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
+        auto groupIdx =
+            JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                .getNumber(runtime);
+        JSObject::setNamedSlotValueUnsafe(
+            *groupsObj, runtime, desc.slot, matchObj->at(runtime, groupIdx));
+      });
+
+  return JSObject::defineOwnProperty(
+             matchObj,
+             runtime,
+             Predefined::getSymbolID(Predefined::groups),
+             DefinePropertyFlags::getDefaultNewPropertyFlags(),
+             groupsObj,
+             PropOpFlags().plusThrowOnError())
+      .getStatus();
+}
+
 // ES6 21.2.5.2.2
 CallResult<Handle<JSArray>> directRegExpExec(
     Handle<JSRegExp> regexp,
@@ -568,6 +610,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
     }
     idx++;
   }
+  createGroupsObject(runtime, A, regexp->getGroupNameMappings(runtime));
   return A;
 }
 

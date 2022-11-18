@@ -405,6 +405,13 @@ class JSObject : public GCCell {
       Runtime &runtime,
       Handle<HiddenClass> clazz);
 
+  /// Allocates a JSObject with the given hidden class and prototype.
+  /// If allocation fails, the GC declares an OOM.
+  static PseudoHandle<JSObject> create(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      Handle<HiddenClass> clazz);
+
   ~JSObject() = default;
 
   /// Must be called immediately after the construction of any JSObject.
