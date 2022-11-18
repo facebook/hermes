@@ -239,6 +239,25 @@ class GenJS {
     }
   }
 
+  void visit(YieldExpressionNode *node) {
+    if (node->_delegate) {
+      OS_ << "yield* ";
+    } else {
+      OS_ << "yield ";
+    }
+    printChild(node->_argument, node, ChildPos::right);
+  }
+
+  void visit(ArrayPatternNode *node) {
+    OS_ << '[';
+    int i = 0;
+    for (auto &elem : node->_elements) {
+      if (i++ != 0)
+        comma();
+      printCommaExpression(&elem, node);
+    }
+    OS_ << ']';
+  }
   void visit(ArrayExpressionNode *node) {
     OS_ << '[';
     int i = 0;
@@ -251,6 +270,13 @@ class GenJS {
       comma();
     OS_ << ']';
   }
+  void visit(RestElementNode *node) {
+    OS_ << "...";
+    space();
+    visitESTreeNode(*this, node->_argument);
+  }
+
+  void visit(EmptyNode *node) {}
 
   void visit(CallExpressionNode *node) {
     printChild(node->_callee, node, ChildPos::left);
@@ -275,6 +301,14 @@ class GenJS {
       printCommaExpression(&arg, node);
     }
     OS_.write(')');
+  }
+
+  void visit(AssignmentPatternNode *node) {
+    printChild(node->_left, node, ChildPos::left);
+    space();
+    OS_ << "=";
+    space();
+    printChild(node->_right, node, ChildPos::right);
   }
 
   void visit(AssignmentExpressionNode *node) {
@@ -890,7 +924,8 @@ PrecRTL GenJS::getPrecedence(Node *node) {
       llvh::isa<ObjectPatternNode>(node) ||
       llvh::isa<FunctionExpressionNode>(node) ||
       llvh::isa<ClassExpressionNode>(node) ||
-      llvh::isa<TemplateLiteralNode>(node)) {
+      llvh::isa<TemplateLiteralNode>(node) ||
+      llvh::isa<RestElementNode>(node)) {
     return kPrimaryPrec;
   }
 
@@ -931,7 +966,8 @@ PrecRTL GenJS::getPrecedence(Node *node) {
   if (llvh::isa<ConditionalExpressionNode>(node))
     return {kCondPrec, true};
 
-  if (llvh::isa<AssignmentExpressionNode>(node))
+  if (llvh::isa<AssignmentExpressionNode>(node) ||
+      llvh::isa<AssignmentPatternNode>(node))
     return {kAssignPrec, true};
 
   if (llvh::isa<YieldExpressionNode>(node))
