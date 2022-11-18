@@ -1563,7 +1563,11 @@ CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
   // Note that this will do nothing after the very first time a lazy function
   // is called, so we only resize before we save any registers at all.
   if (LLVM_UNLIKELY(selfHandle->getCodeBlock(runtime)->isLazy())) {
-    selfHandle->getCodeBlock(runtime)->lazyCompile(runtime);
+    if (LLVM_UNLIKELY(
+            selfHandle->getCodeBlock(runtime)->lazyCompile(runtime) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     if (LLVM_UNLIKELY(
             ArrayStorage::resize(
                 ctx,

@@ -59,7 +59,7 @@ class CodeBlock final
 
 #ifndef HERMESVM_LEAN
   /// Compiles a lazy CodeBlock. Intended to be called from lazyCompile.
-  void lazyCompileImpl(Runtime &runtime);
+  ExecutionStatus lazyCompileImpl(Runtime &runtime);
 #endif
 
   /// Helper function for getting start and end locations.
@@ -233,17 +233,20 @@ class CodeBlock final
   }
 
   /// Compiles this CodeBlock, if it's lazy and not already compiled.
-  void lazyCompile(Runtime &runtime) {
+  ExecutionStatus lazyCompile(Runtime &runtime) {
     if (LLVM_UNLIKELY(isLazy())) {
-      lazyCompileImpl(runtime);
+      return lazyCompileImpl(runtime);
     }
+    return ExecutionStatus::RETURNED;
   }
 #else
   /// Checks whether this function is lazily compiled.
   bool isLazy() const {
     return false;
   }
-  void lazyCompile(Runtime &) {}
+  ExecutionStatus lazyCompile(Runtime &) {
+    return ExecutionStatus::RETURNED;
+  }
 #endif
 
   /// Get the start location of this function, if it's lazy.

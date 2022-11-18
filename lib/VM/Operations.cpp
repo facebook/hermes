@@ -1680,7 +1680,9 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
     auto *cb = func->getCodeBlock(runtime);
     // Even though it doesn't make sense logically, we need to compile the
     // function in order to access it flags.
-    cb->lazyCompile(runtime);
+    if (LLVM_UNLIKELY(cb->lazyCompile(runtime) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     return !func->getCodeBlock(runtime)->getHeaderFlags().isCallProhibited(
         true);
   }

@@ -1323,6 +1323,10 @@ void HBCISel::generateHBCResolveEnvironment(
       "Cannot access variables in inner scopes");
   int32_t delta = curScopeDepth.getValue() - instScopeDepth.getValue();
   assert(delta > 0 && "HBCResolveEnvironment for current scope");
+  if (std::numeric_limits<uint8_t>::max() < delta) {
+    F_->getContext().getSourceErrorManager().error(
+        Inst->getLocation(), "Variable environment is out-of-reach");
+  }
   BCFGen_->emitGetEnvironment(encodeValue(Inst), delta - 1);
 }
 void HBCISel::generateHBCStoreToEnvironmentInst(

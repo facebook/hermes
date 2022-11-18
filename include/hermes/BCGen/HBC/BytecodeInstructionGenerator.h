@@ -41,7 +41,16 @@ class BytecodeInstructionGenerator {
   /// A list of opcodes.
   std::vector<opcode_atom_t> opcodes_{};
 
+  /// A flag indicating that an encoding error happened, in which case the
+  /// bytecode is wrong and shouldn't be executed.
+  bool encodingError_{};
+
  public:
+  /// Returns whether an encoding error happened during bytecode emission.
+  bool hasEncodingError() const {
+    return encodingError_;
+  }
+
   /// Returns the current location of the bytecode stream.
   offset_t getCurrentLocation() {
     return opcodes_.size();
@@ -72,13 +81,11 @@ class BytecodeInstructionGenerator {
 // We also assert that the value can fit into ctype.
 // For integer values, ((param_t)(ctype)value) == value will do the job;
 // We also want doubles to pass the check unconditionally.
-#define DEFINE_OPERAND_TYPE(name, ctype)          \
-  void emit##name(param_t value) {                \
-    assert(                                       \
-        (((param_t)(ctype)value) == value ||      \
-         std::is_floating_point<ctype>::value) && \
-        "Value does not fit in " #ctype);         \
-    emitOperand(value, sizeof(ctype));            \
+#define DEFINE_OPERAND_TYPE(name, ctype)                  \
+  void emit##name(param_t value) {                        \
+    encodingError_ |= ((param_t)(ctype)value) != value && \
+        !std::is_floating_point<ctype>::value;            \
+    emitOperand(value, sizeof(ctype));                    \
   }
 #include "hermes/BCGen/HBC/BytecodeList.def"
 

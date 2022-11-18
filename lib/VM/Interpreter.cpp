@@ -787,7 +787,10 @@ static inline const Inst *nextInstCall(const Inst *ip) {
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
-  newCodeBlock->lazyCompile(*this);
+  if (LLVM_UNLIKELY(
+          newCodeBlock->lazyCompile(*this) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
 #if defined(HERMES_MEMORY_INSTRUMENTATION) || !defined(NDEBUG)
   // We always call getCurrentIP() in a debug build as this has the effect
@@ -1586,7 +1589,10 @@ tailCall:
 #endif
 
         CodeBlock *calleeBlock = func->getCodeBlock(runtime);
-        CAPTURE_IP(calleeBlock->lazyCompile(runtime));
+        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
         curCodeBlock = calleeBlock;
         CAPTURE_IP_SET();
         goto tailCall;
@@ -1639,7 +1645,10 @@ tailCall:
 
         assert(!SingleStep && "can't single-step a call");
 
-        CAPTURE_IP(calleeBlock->lazyCompile(runtime));
+        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
         curCodeBlock = calleeBlock;
         CAPTURE_IP_SET();
         goto tailCall;

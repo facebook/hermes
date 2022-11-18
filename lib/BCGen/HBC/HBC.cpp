@@ -313,6 +313,11 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       debugCache = hbciSel.getDebugCache();
     }
 
+    if (funcGen->hasEncodingError()) {
+      M->getContext().getSourceErrorManager().error(
+          F.getSourceRange().Start, "Error encoding bytecode");
+      return nullptr;
+    }
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
   }
 
@@ -334,6 +339,10 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
       segment,
       sourceMapGen,
       std::move(baseBCProvider));
+
+  if (!BM) {
+    return {};
+  }
 
   if (options.format == OutputFormatKind::EmitBundle) {
     assert(BM != nullptr);
