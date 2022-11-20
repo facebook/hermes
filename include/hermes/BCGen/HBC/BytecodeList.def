@@ -343,10 +343,14 @@ DEFINE_OPCODE_4(PutOwnByVal, Reg8, Reg8, Reg8, UInt8)
 
 /// Delete a property by string table index.
 /// Arg1 = delete Arg2[stringtable[Arg3]]
-DEFINE_OPCODE_3(DelById, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(DelByIdLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(DelById, 3)
-OPERAND_STRING_ID(DelByIdLong, 3)
+DEFINE_OPCODE_3(DelByIdLoose, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(DelByIdStrict, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(DelByIdLooseLong, Reg8, Reg8, UInt32)
+DEFINE_OPCODE_3(DelByIdStrictLong, Reg8, Reg8, UInt32)
+OPERAND_STRING_ID(DelByIdLoose, 3)
+OPERAND_STRING_ID(DelByIdStrict, 3)
+OPERAND_STRING_ID(DelByIdLooseLong, 3)
+OPERAND_STRING_ID(DelByIdStrictLong, 3)
 
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
@@ -361,7 +365,8 @@ DEFINE_OPCODE_3(PutByValStrict, Reg8, Reg8, Reg8)
 
 /// Delete a property by value (when the value is not known at compile time).
 /// Arg1 = delete Arg2[Arg3]
-DEFINE_OPCODE_3(DelByVal, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(DelByValLoose, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(DelByValStrict, Reg8, Reg8, Reg8)
 
 /// Add a getter and a setter for a property by value.
 /// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
@@ -859,6 +864,10 @@ ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdLooseLong)
 ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdStrictLong)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
+ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdStrict)
+ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdLooseLong)
+ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdStrictLong)
+ASSERT_EQUAL_LAYOUT2(DelByValLoose, DelByValStrict)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)
 ASSERT_EQUAL_LAYOUT3(Mul, MulN)

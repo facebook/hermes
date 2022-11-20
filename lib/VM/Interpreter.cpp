@@ -107,18 +107,17 @@ namespace vm {
 
 /// Initialize the state of some internal variables based on the current
 /// code block.
-#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                                \
-  do {                                                                     \
-    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(codeBlock->isStrictMode()); \
-    if (EnableCrashTrace) {                                                \
-      auto *bc = (codeBlock)->getRuntimeModule()->getBytecode();           \
-      bytecodeFileStart = bc->getRawBuffer().data();                       \
-      auto hash = bc->getSourceHash();                                     \
-      runtime.crashTrace_.recordModule(                                    \
-          bc->getSegmentID(),                                              \
-          (codeBlock)->getRuntimeModule()->getSourceURL(),                 \
-          llvh::StringRef((const char *)&hash, sizeof(hash)));             \
-    }                                                                      \
+#define INIT_STATE_FOR_CODEBLOCK(codeBlock)                      \
+  do {                                                           \
+    if (EnableCrashTrace) {                                      \
+      auto *bc = (codeBlock)->getRuntimeModule()->getBytecode(); \
+      bytecodeFileStart = bc->getRawBuffer().data();             \
+      auto hash = bc->getSourceHash();                           \
+      runtime.crashTrace_.recordModule(                          \
+          bc->getSegmentID(),                                    \
+          (codeBlock)->getRuntimeModule()->getSourceURL(),       \
+          llvh::StringRef((const char *)&hash, sizeof(hash)));   \
+    }                                                            \
   } while (0)
 
 CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
@@ -891,8 +890,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   // Points to the first local register in the current frame.
   // This eliminates the indirect load from Runtime and the -1 offset.
   PinnedHermesValue *frameRegs;
-  // Default flags when accessing properties.
-  PropOpFlags defaultPropOpFlags;
 
 // These CAPTURE_IP* macros should wrap around any major calls out of the
 // interpreter loop. They stash and retrieve the IP via the current Runtime
@@ -2332,6 +2329,8 @@ tailCall:
             : nullptr;
 #endif
         ++NumGetByIdSlow;
+        // Getting properties is not affected by strictness, so just use false.
+        constexpr auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
         CAPTURE_IP(
             resPH = JSObject::getNamed_RJS(
                 Handle<JSObject>::vmcast(&O2REG(GetById)),
@@ -3229,38 +3228,53 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(DelByIdLong) {
-        idVal = ip->iDelByIdLong.op3;
-        nextIP = NEXTINST(DelByIdLong);
+      CASE(DelByIdLooseLong) {
+        idVal = ip->iDelByIdLooseLong.op3;
+        strictMode = false;
+        nextIP = NEXTINST(DelByIdLooseLong);
+        goto DelById;
+      }
+      CASE(DelByIdStrictLong) {
+        idVal = ip->iDelByIdStrictLong.op3;
+        strictMode = true;
+        nextIP = NEXTINST(DelByIdStrictLong);
         goto DelById;
       }
 
-      CASE(DelById) {
-        idVal = ip->iDelById.op3;
-        nextIP = NEXTINST(DelById);
+      CASE(DelByIdLoose) {
+        idVal = ip->iDelByIdLoose.op3;
+        strictMode = false;
+        nextIP = NEXTINST(DelByIdLoose);
+        goto DelById;
+      }
+      CASE(DelByIdStrict) {
+        idVal = ip->iDelByIdStrict.op3;
+        strictMode = true;
+        nextIP = NEXTINST(DelByIdStrict);
       }
     DelById : {
-      if (LLVM_LIKELY(O2REG(DelById).isObject())) {
+      auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+      if (LLVM_LIKELY(O2REG(DelByIdLoose).isObject())) {
         CAPTURE_IP_ASSIGN(
             auto status,
             JSObject::deleteNamed(
-                Handle<JSObject>::vmcast(&O2REG(DelById)),
+                Handle<JSObject>::vmcast(&O2REG(DelByIdLoose)),
                 runtime,
                 ID(idVal),
                 defaultPropOpFlags));
         if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(DelById) = HermesValue::encodeBoolValue(status.getValue());
+        O1REG(DelByIdLoose) = HermesValue::encodeBoolValue(status.getValue());
       } else {
         // This is the "slow path".
-        CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelById))));
+        CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByIdLoose))));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           // If an exception is thrown, likely we are trying to convert
           // undefined/null to an object. Passing over the name of the property
           // so that we could emit more meaningful error messages.
           CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
-              runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
+              runtime, Handle<>(&O2REG(DelByIdLoose)), "delete", ID(idVal)));
           goto exception;
         }
         tmpHandle = res.getValue();
@@ -3274,7 +3288,7 @@ tailCall:
         if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(DelById) = HermesValue::encodeBoolValue(status.getValue());
+        O1REG(DelByIdLoose) = HermesValue::encodeBoolValue(status.getValue());
         tmpHandle.clear();
       }
       gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -3282,22 +3296,26 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(DelByVal) {
-        if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
+      CASE(DelByValLoose)
+      CASE(DelByValStrict) {
+        const PropOpFlags defaultPropOpFlags =
+            DEFAULT_PROP_OP_FLAGS(ip->opCode == OpCode::DelByValStrict);
+        if (LLVM_LIKELY(O2REG(DelByValLoose).isObject())) {
           CAPTURE_IP_ASSIGN(
               auto status,
               JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(&O2REG(DelByVal)),
+                  Handle<JSObject>::vmcast(&O2REG(DelByValLoose)),
                   runtime,
-                  Handle<>(&O3REG(DelByVal)),
+                  Handle<>(&O3REG(DelByValLoose)),
                   defaultPropOpFlags));
           if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+          O1REG(DelByValLoose) =
+              HermesValue::encodeBoolValue(status.getValue());
         } else {
           // This is the "slow path".
-          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByVal))));
+          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByValLoose))));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
@@ -3307,16 +3325,17 @@ tailCall:
               JSObject::deleteComputed(
                   Handle<JSObject>::vmcast(tmpHandle),
                   runtime,
-                  Handle<>(&O3REG(DelByVal)),
+                  Handle<>(&O3REG(DelByValLoose)),
                   defaultPropOpFlags));
           if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+          O1REG(DelByValLoose) =
+              HermesValue::encodeBoolValue(status.getValue());
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         tmpHandle.clear();
-        ip = NEXTINST(DelByVal);
+        ip = NEXTINST(DelByValLoose);
         DISPATCH;
       }
       CASE(CreateRegExp) {

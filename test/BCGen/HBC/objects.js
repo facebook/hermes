@@ -30,7 +30,7 @@ function foo(p) {
 //CHECK-NEXT:[@ {{.*}}] GetByVal 3<Reg8>, 0<Reg8>, 1<Reg8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 2<Reg8>, 2<UInt8>
 //CHECK-NEXT:[@ {{.*}}] PutByValLoose 0<Reg8>, 2<Reg8>, 3<Reg8>
-//CHECK-NEXT:[@ {{.*}}] DelById 2<Reg8>, 0<Reg8>, 2<UInt16>
-//CHECK-NEXT:[@ {{.*}}] DelByVal 0<Reg8>, 0<Reg8>, 1<Reg8>
+//CHECK-NEXT:[@ {{.*}}] DelByIdLoose 2<Reg8>, 0<Reg8>, 2<UInt16>
+//CHECK-NEXT:[@ {{.*}}] DelByValLoose 0<Reg8>, 0<Reg8>, 1<Reg8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUndefined 0<Reg8>
 //CHECK-NEXT:[@ {{.*}}] Ret 0<Reg8>

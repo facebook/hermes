@@ -718,15 +718,25 @@ void HBCISel::generateDeletePropertyInst(
 
   if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
     auto id = BCFGen_->getIdentifierID(Lit);
-    if (id <= UINT16_MAX)
-      BCFGen_->emitDelById(resultReg, objReg, id);
-    else
-      BCFGen_->emitDelByIdLong(resultReg, objReg, id);
+    if (id <= UINT16_MAX) {
+      if (F_->isStrictMode())
+        BCFGen_->emitDelByIdStrict(resultReg, objReg, id);
+      else
+        BCFGen_->emitDelByIdLoose(resultReg, objReg, id);
+    } else {
+      if (F_->isStrictMode())
+        BCFGen_->emitDelByIdStrictLong(resultReg, objReg, id);
+      else
+        BCFGen_->emitDelByIdLooseLong(resultReg, objReg, id);
+    }
     return;
   }
 
   auto propReg = encodeValue(prop);
-  BCFGen_->emitDelByVal(resultReg, objReg, propReg);
+  if (F_->isStrictMode())
+    BCFGen_->emitDelByValStrict(resultReg, objReg, propReg);
+  else
+    BCFGen_->emitDelByValLoose(resultReg, objReg, propReg);
 }
 void HBCISel::generateLoadPropertyInst(
     LoadPropertyInst *Inst,

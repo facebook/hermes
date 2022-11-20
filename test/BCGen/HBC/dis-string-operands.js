@@ -27,4 +27,4 @@ delete glob.baz;
 //CHECK:    LoadConstString   {{r[0-9]+}}, "const-string"
 //CHECK:    TryPutByIdStrict  {{r[0-9]+}}, {{r[0-9]+}}, 3, "bazz"
 //CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
-//CHECK:    DelById           {{r[0-9]+}}, {{r[0-9]+}}, "baz"
+//CHECK:    DelByIdStrict     {{r[0-9]+}}, {{r[0-9]+}}, "baz"
