@@ -259,8 +259,7 @@ class InstrGen {
       ModuleGen &moduleGen,
       FunctionScopeAnalysis &scopeAnalysis,
       unsigned envSize,
-      uint32_t &nextCacheIdx,
-      bool isStrictMode)
+      uint32_t &nextCacheIdx)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
@@ -268,8 +267,7 @@ class InstrGen {
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
-        nextCacheIdx_(nextCacheIdx),
-        isStrictMode_(isStrictMode) {}
+        nextCacheIdx_(nextCacheIdx) {}
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -315,9 +313,6 @@ class InstrGen {
 
   /// Indices used to generate unique names for the jump buffers.
   uint32_t nextJBufIdx_{0};
-
-  /// True if the function being generated is in strict mode.
-  bool isStrictMode_;
 
   void unimplemented(Instruction &inst) {
     auto err = "Unimplemented " + inst.getName();
@@ -936,13 +931,15 @@ class InstrGen {
     os_ << ", " << inst.getIsEnumerable();
     os_ << ");\n";
   }
-  void generateDeletePropertyInst(DeletePropertyInst &inst) {
+  void generateDeletePropertyInstImpl(
+      DeletePropertyInst &inst,
+      bool strictMode) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
     auto prop = inst.getProperty();
     if (auto *propStr = llvh::dyn_cast<LiteralString>(prop)) {
-      if (isStrictMode_)
+      if (strictMode)
         os_ << "_sh_ljs_del_by_id_strict(";
       else
         os_ << "_sh_ljs_del_by_id_loose(";
@@ -957,7 +954,7 @@ class InstrGen {
       return;
     }
 
-    if (isStrictMode_)
+    if (strictMode)
       os_ << "_sh_ljs_del_by_val_strict(";
     else
       os_ << "_sh_ljs_del_by_val_loose(";
@@ -967,6 +964,12 @@ class InstrGen {
     os_ << ", ";
     generateRegisterPtr(*prop);
     os_ << ");\n";
+  }
+  void generateDeletePropertyLooseInst(DeletePropertyLooseInst &inst) {
+    generateDeletePropertyInstImpl(inst, false);
+  }
+  void generateDeletePropertyStrictInst(DeletePropertyStrictInst &inst) {
+    generateDeletePropertyInstImpl(inst, true);
   }
   void generateLoadPropertyInst(LoadPropertyInst &inst) {
     os_.indent(2);
@@ -1622,15 +1625,7 @@ void generateFunction(
   unsigned envSize = F.getFunctionScope()->getVariables().size();
 
   InstrGen instrGen(
-      OS,
-      RA,
-      bbMap,
-      F,
-      moduleGen,
-      scopeAnalysis,
-      envSize,
-      nextCacheIdx,
-      F.isStrictMode());
+      OS, RA, bbMap, F, moduleGen, scopeAnalysis, envSize, nextCacheIdx);
 
   for (auto &B : order) {
     OS << "\n";

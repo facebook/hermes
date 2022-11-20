@@ -117,7 +117,11 @@ DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
 MARK_LAST(BaseStoreOwnPropertyInst)
 
 DEF_VALUE(StoreGetterSetterInst, Instruction)
-DEF_VALUE(DeletePropertyInst, Instruction)
+
+MARK_FIRST(DeletePropertyInst, Instruction)
+DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)
+DEF_VALUE(DeletePropertyStrictInst, DeletePropertyInst)
+MARK_LAST(DeletePropertyInst)
 
 MARK_FIRST(BaseLoadPropertyInst, Instruction)
 DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)

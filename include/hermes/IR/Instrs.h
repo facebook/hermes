@@ -1431,6 +1431,17 @@ class DeletePropertyInst : public Instruction {
   DeletePropertyInst(const DeletePropertyInst &) = delete;
   void operator=(const DeletePropertyInst &) = delete;
 
+ protected:
+  explicit DeletePropertyInst(ValueKind kind, Value *object, Value *property)
+      : Instruction(kind) {
+    pushOperand(object);
+    pushOperand(property);
+  }
+  explicit DeletePropertyInst(
+      const DeletePropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
  public:
   enum { ObjectIdx, PropertyIdx };
 
@@ -1440,16 +1451,6 @@ class DeletePropertyInst : public Instruction {
   Value *getProperty() const {
     return getOperand(PropertyIdx);
   }
-
-  explicit DeletePropertyInst(Value *object, Value *property)
-      : Instruction(ValueKind::DeletePropertyInstKind) {
-    pushOperand(object);
-    pushOperand(property);
-  }
-  explicit DeletePropertyInst(
-      const DeletePropertyInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
 
   static bool hasOutput() {
     return true;
@@ -1464,8 +1465,47 @@ class DeletePropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::DeletePropertyInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), DeletePropertyInst);
+  }
+};
+
+class DeletePropertyLooseInst : public DeletePropertyInst {
+  DeletePropertyLooseInst(const DeletePropertyLooseInst &) = delete;
+  void operator=(const DeletePropertyLooseInst &) = delete;
+
+ public:
+  explicit DeletePropertyLooseInst(Value *object, Value *property)
+      : DeletePropertyInst(
+            ValueKind::DeletePropertyLooseInstKind,
+            object,
+            property) {}
+  explicit DeletePropertyLooseInst(
+      const DeletePropertyLooseInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : DeletePropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::DeletePropertyLooseInstKind;
+  }
+};
+
+class DeletePropertyStrictInst : public DeletePropertyInst {
+  DeletePropertyStrictInst(const DeletePropertyStrictInst &) = delete;
+  void operator=(const DeletePropertyStrictInst &) = delete;
+
+ public:
+  explicit DeletePropertyStrictInst(Value *object, Value *property)
+      : DeletePropertyInst(
+            ValueKind::DeletePropertyStrictInstKind,
+            object,
+            property) {}
+  explicit DeletePropertyStrictInst(
+      const DeletePropertyStrictInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : DeletePropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::DeletePropertyStrictInstKind;
   }
 };
 

@@ -320,6 +320,12 @@ class IRBuilder {
   TryEndInst *createTryEndInst();
 
   DeletePropertyInst *createDeletePropertyInst(Value *object, Value *property);
+  DeletePropertyLooseInst *createDeletePropertyLooseInst(
+      Value *object,
+      Value *property);
+  DeletePropertyStrictInst *createDeletePropertyStrictInst(
+      Value *object,
+      Value *property);
 
   LoadPropertyInst *createLoadPropertyInst(Value *object, Value *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(

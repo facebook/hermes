@@ -256,7 +256,7 @@ function f9(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = DeletePropertyInst %1, "b" : string
+// CHECK-NEXT:  %7 = DeletePropertyLooseInst %1, "b" : string
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined

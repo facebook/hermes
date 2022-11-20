@@ -23,7 +23,8 @@ bool isIdOperand(Instruction *I, unsigned idx) {
     return idx == INSN::PropertyIdx
 
   switch (I->getKind()) {
-    CASE_WITH_PROP_IDX(DeletePropertyInst);
+    CASE_WITH_PROP_IDX(DeletePropertyLooseInst);
+    CASE_WITH_PROP_IDX(DeletePropertyStrictInst);
     CASE_WITH_PROP_IDX(LoadPropertyInst);
     CASE_WITH_PROP_IDX(StoreNewOwnPropertyInst);
     CASE_WITH_PROP_IDX(StorePropertyLooseInst);

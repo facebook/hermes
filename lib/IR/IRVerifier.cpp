@@ -492,7 +492,12 @@ void Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {}
 void Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {}
 
-void Verifier::visitDeletePropertyInst(const DeletePropertyInst &Inst) {
+void Verifier::visitDeletePropertyLooseInst(
+    const DeletePropertyLooseInst &Inst) {
+  // Nothing to verify at this point.
+}
+void Verifier::visitDeletePropertyStrictInst(
+    const DeletePropertyStrictInst &Inst) {
   // Nothing to verify at this point.
 }
 

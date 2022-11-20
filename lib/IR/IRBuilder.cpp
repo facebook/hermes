@@ -418,7 +418,22 @@ TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
 DeletePropertyInst *IRBuilder::createDeletePropertyInst(
     Value *object,
     Value *property) {
-  auto DPI = new DeletePropertyInst(object, property);
+  if (Block->getParent()->isStrictMode())
+    return createDeletePropertyStrictInst(object, property);
+  else
+    return createDeletePropertyLooseInst(object, property);
+}
+DeletePropertyLooseInst *IRBuilder::createDeletePropertyLooseInst(
+    Value *object,
+    Value *property) {
+  auto DPI = new DeletePropertyLooseInst(object, property);
+  insert(DPI);
+  return DPI;
+}
+DeletePropertyStrictInst *IRBuilder::createDeletePropertyStrictInst(
+    Value *object,
+    Value *property) {
+  auto DPI = new DeletePropertyStrictInst(object, property);
   insert(DPI);
   return DPI;
 }

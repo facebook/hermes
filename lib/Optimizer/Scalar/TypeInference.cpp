@@ -690,7 +690,10 @@ class TypeInferenceImpl {
   Type inferStoreGetterSetterInst(StoreGetterSetterInst *inst) {
     return Type::createNoType();
   }
-  Type inferDeletePropertyInst(DeletePropertyInst *inst) {
+  Type inferDeletePropertyLooseInst(DeletePropertyLooseInst *inst) {
+    return Type::createBoolean();
+  }
+  Type inferDeletePropertyStrictInst(DeletePropertyStrictInst *inst) {
     return Type::createBoolean();
   }
   Type inferLoadPropertyInst(LoadPropertyInst *inst) {

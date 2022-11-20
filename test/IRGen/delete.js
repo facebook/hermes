@@ -74,7 +74,7 @@ function delete_expr() {
 // CHECK:function delete_variable()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeletePropertyInst globalObject : object, "x" : string
+// CHECK-NEXT:  %0 = DeletePropertyLooseInst globalObject : object, "x" : string
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined

@@ -78,8 +78,8 @@ delete_test()
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
 // CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = DeletePropertyInst %1, "f" : string
+// CHECK-NEXT:  %2 = DeletePropertyLooseInst %1, "f" : string
 // CHECK-NEXT:  %3 = LoadFrameInst [o]
-// CHECK-NEXT:  %4 = DeletePropertyInst %3, 3 : number
+// CHECK-NEXT:  %4 = DeletePropertyLooseInst %3, 3 : number
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
