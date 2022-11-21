@@ -666,7 +666,7 @@ class JSI_EXPORT Object : public Pointer {
   }
 
   /// \return the result of `this instanceOf ctor` in JS.
-  bool instanceOf(Runtime& rt, const Function& ctor) {
+  bool instanceOf(Runtime& rt, const Function& ctor) const {
     return rt.instanceOf(*this, ctor);
   }
 
