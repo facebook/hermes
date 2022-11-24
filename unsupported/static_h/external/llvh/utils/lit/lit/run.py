@@ -5,23 +5,30 @@ import lit.Test
 import lit.util
 import lit.worker
 
+
 class _Display(object):
     def __init__(self, display, provider, maxFailures):
         self.display = display
         self.provider = provider
         self.maxFailures = maxFailures or object()
         self.failedCount = 0
+
     def update(self, test):
         self.display.update(test)
-        self.failedCount += (test.result.code == lit.Test.FAIL)
+        self.failedCount += test.result.code == lit.Test.FAIL
         if self.failedCount == self.maxFailures:
             self.provider.cancel()
+
 
 # No-operation semaphore for supporting `None` for parallelism_groups.
 #   lit_config.parallelism_groups['my_group'] = None
 class NopSemaphore(object):
-    def acquire(self): pass
-    def release(self): pass
+    def acquire(self):
+        pass
+
+    def release(self):
+        pass
+
 
 class Run(object):
     """
@@ -33,9 +40,9 @@ class Run(object):
         self.tests = tests
         # Set up semaphores to limit parallelism of certain classes of tests.
         self.parallelism_semaphores = {
-                k : NopSemaphore() if v is None else
-                    multiprocessing.BoundedSemaphore(v)
-                for k, v in lit_config.parallelism_groups.items()}
+            k: NopSemaphore() if v is None else multiprocessing.BoundedSemaphore(v)
+            for k, v in lit_config.parallelism_groups.items()
+        }
 
     def execute_tests_in_pool(self, jobs, max_time):
         # We need to issue many wait calls, so compute the final deadline and
@@ -49,25 +56,31 @@ class Run(object):
         # interrupts the workers before we make it into our task callback, they
         # will each raise a KeyboardInterrupt exception and print to stderr at
         # the same time.
-        pool = multiprocessing.Pool(jobs, lit.worker.initializer,
-                                    (self.lit_config,
-                                     self.parallelism_semaphores))
+        pool = multiprocessing.Pool(
+            jobs, lit.worker.initializer, (self.lit_config, self.parallelism_semaphores)
+        )
 
         # Install a console-control signal handler on Windows.
         if lit.util.win32api is not None:
+
             def console_ctrl_handler(type):
-                print('\nCtrl-C detected, terminating.')
+                print("\nCtrl-C detected, terminating.")
                 pool.terminate()
                 pool.join()
                 lit.util.abort_now()
                 return True
+
             lit.util.win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
 
         try:
-            async_results = [pool.apply_async(lit.worker.run_one_test,
-                                              args=(test_index, test),
-                                              callback=self.consume_test_result)
-                             for test_index, test in enumerate(self.tests)]
+            async_results = [
+                pool.apply_async(
+                    lit.worker.run_one_test,
+                    args=(test_index, test),
+                    callback=self.consume_test_result,
+                )
+                for test_index, test in enumerate(self.tests)
+            ]
             pool.close()
 
             # Wait for all results to come in. The callback that runs in the
@@ -82,7 +95,7 @@ class Run(object):
                     while not a.ready():
                         a.wait(1)
                 if not a.successful():
-                    a.get() # Exceptions raised here come from the worker.
+                    a.get()  # Exceptions raised here come from the worker.
                 if self.hit_max_failures:
                     break
         except:
@@ -136,7 +149,7 @@ class Run(object):
         # Mark any tests that weren't run as UNRESOLVED.
         for test in self.tests:
             if test.result is None:
-                test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
+                test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, "", 0.0))
 
     def consume_test_result(self, pool_result):
         """Test completion callback for lit.worker.run_one_test
@@ -155,14 +168,17 @@ class Run(object):
         (test_index, test_with_result) = pool_result
         # Update the parent process copy of the test. This includes the result,
         # XFAILS, REQUIRES, and UNSUPPORTED statuses.
-        assert self.tests[test_index].file_path == test_with_result.file_path, \
-                "parent and child disagree on test path"
+        assert (
+            self.tests[test_index].file_path == test_with_result.file_path
+        ), "parent and child disagree on test path"
         self.tests[test_index] = test_with_result
         self.display.update(test_with_result)
 
         # If we've finished all the tests or too many tests have failed, notify
         # the main thread that we've stopped testing.
-        self.failure_count += (test_with_result.result.code == lit.Test.FAIL)
-        if self.lit_config.maxFailures and \
-                self.failure_count == self.lit_config.maxFailures:
+        self.failure_count += test_with_result.result.code == lit.Test.FAIL
+        if (
+            self.lit_config.maxFailures
+            and self.failure_count == self.lit_config.maxFailures
+        ):
             self.hit_max_failures = True

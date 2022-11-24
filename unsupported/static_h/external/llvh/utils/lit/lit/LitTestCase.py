@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+
 import unittest
 
 import lit.Test
@@ -7,9 +8,11 @@ import lit.Test
 TestCase adaptor for providing a 'unittest' compatible interface to 'lit' tests.
 """
 
+
 class UnresolvedError(RuntimeError):
     pass
-        
+
+
 class LitTestCase(unittest.TestCase):
     def __init__(self, test, run):
         unittest.TestCase.__init__(self)

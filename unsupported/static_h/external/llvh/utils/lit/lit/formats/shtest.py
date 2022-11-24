@@ -17,9 +17,9 @@ class ShTest(FileBasedTest):
     The ShTest files contain some number of shell-like command pipelines, along
     with assertions about what should be in the output.
     """
+
     def __init__(self, execute_external=False):
         self.execute_external = execute_external
 
     def execute(self, test, litConfig):
-        return lit.TestRunner.executeShTest(test, litConfig,
-                                            self.execute_external)
+        return lit.TestRunner.executeShTest(test, litConfig, self.execute_external)

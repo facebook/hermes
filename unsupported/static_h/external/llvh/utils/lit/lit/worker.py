@@ -9,12 +9,14 @@ import lit.util
 _lit_config = None
 _parallelism_semaphores = None
 
+
 def initializer(lit_config, parallelism_semaphores):
     """Copy expensive repeated data into worker processes"""
     global _lit_config
     global _parallelism_semaphores
     _lit_config = lit_config
     _parallelism_semaphores = parallelism_semaphores
+
 
 def run_one_test(test_index, test):
     """Run one test in a multiprocessing.Pool
@@ -31,14 +33,14 @@ def run_one_test(test_index, test):
     the display.
     """
     try:
-        _execute_test_in_parallelism_group(test, _lit_config,
-                                           _parallelism_semaphores)
+        _execute_test_in_parallelism_group(test, _lit_config, _parallelism_semaphores)
         return (test_index, test)
     except KeyboardInterrupt:
         # If a worker process gets an interrupt, abort it immediately.
         lit.util.abort_now()
     except:
         traceback.print_exc()
+
 
 def _execute_test_in_parallelism_group(test, lit_config, parallelism_semaphores):
     """Execute one test inside the appropriate parallelism group"""
@@ -55,6 +57,7 @@ def _execute_test_in_parallelism_group(test, lit_config, parallelism_semaphores)
             semaphore.release()
     else:
         _execute_test(test, lit_config)
+
 
 def _execute_test(test, lit_config):
     """Execute one test"""
@@ -74,9 +77,9 @@ def _execute_test(test, lit_config):
     except:
         if lit_config.debug:
             raise
-        output = 'Exception during script execution:\n'
+        output = "Exception during script execution:\n"
         output += traceback.format_exc()
-        output += '\n'
+        output += "\n"
         result = lit.Test.Result(lit.Test.UNRESOLVED, output)
 
     test.setResult(result)

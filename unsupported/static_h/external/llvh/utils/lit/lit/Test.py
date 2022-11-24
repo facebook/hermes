@@ -1,10 +1,11 @@
 import os
-from xml.sax.saxutils import quoteattr
 from json import JSONEncoder
+from xml.sax.saxutils import quoteattr
 
 from lit.BooleanExpression import BooleanExpression
 
 # Test result codes.
+
 
 class ResultCode(object):
     """Test result codes."""
@@ -12,11 +13,13 @@ class ResultCode(object):
     # We override __new__ and __getnewargs__ to ensure that pickling still
     # provides unique ResultCode objects in any particular instance.
     _instances = {}
+
     def __new__(cls, name, isFailure):
         res = cls._instances.get(name)
         if res is None:
             cls._instances[name] = res = super(ResultCode, cls).__new__(cls)
         return res
+
     def __getnewargs__(self):
         return (self.name, self.isFailure)
 
@@ -25,19 +28,20 @@ class ResultCode(object):
         self.isFailure = isFailure
 
     def __repr__(self):
-        return '%s%r' % (self.__class__.__name__,
-                         (self.name, self.isFailure))
+        return "%s%r" % (self.__class__.__name__, (self.name, self.isFailure))
 
-PASS        = ResultCode('PASS', False)
-FLAKYPASS   = ResultCode('FLAKYPASS', False)
-XFAIL       = ResultCode('XFAIL', False)
-FAIL        = ResultCode('FAIL', True)
-XPASS       = ResultCode('XPASS', True)
-UNRESOLVED  = ResultCode('UNRESOLVED', True)
-UNSUPPORTED = ResultCode('UNSUPPORTED', False)
-TIMEOUT     = ResultCode('TIMEOUT', True)
+
+PASS = ResultCode("PASS", False)
+FLAKYPASS = ResultCode("FLAKYPASS", False)
+XFAIL = ResultCode("XFAIL", False)
+FAIL = ResultCode("FAIL", True)
+XPASS = ResultCode("XPASS", True)
+UNRESOLVED = ResultCode("UNRESOLVED", True)
+UNSUPPORTED = ResultCode("UNSUPPORTED", False)
+TIMEOUT = ResultCode("TIMEOUT", True)
 
 # Test metric values.
+
 
 class MetricValue(object):
     def format(self):
@@ -58,6 +62,7 @@ class MetricValue(object):
         """
         raise RuntimeError("abstract method")
 
+
 class IntMetricValue(MetricValue):
     def __init__(self, value):
         self.value = value
@@ -68,21 +73,24 @@ class IntMetricValue(MetricValue):
     def todata(self):
         return self.value
 
+
 class RealMetricValue(MetricValue):
     def __init__(self, value):
         self.value = value
 
     def format(self):
-        return '%.4f' % self.value
+        return "%.4f" % self.value
 
     def todata(self):
         return self.value
 
+
 class JSONMetricValue(MetricValue):
     """
-        JSONMetricValue is used for types that are representable in the output
-        but that are otherwise uninterpreted.
+    JSONMetricValue is used for types that are representable in the output
+    but that are otherwise uninterpreted.
     """
+
     def __init__(self, value):
         # Ensure the value is a serializable by trying to encode it.
         # WARNING: The value may change before it is encoded again, and may
@@ -100,6 +108,7 @@ class JSONMetricValue(MetricValue):
 
     def todata(self):
         return self.value
+
 
 def toMetricValue(value):
     if isinstance(value, MetricValue):
@@ -123,10 +132,11 @@ def toMetricValue(value):
 
 # Test results.
 
+
 class Result(object):
     """Wrapper for the results of executing an individual test."""
 
-    def __init__(self, code, output='', elapsed=None):
+    def __init__(self, code, output="", elapsed=None):
         # The result code.
         self.code = code
         # The test output.
@@ -149,8 +159,7 @@ class Result(object):
         Each value must be an instance of a MetricValue subclass.
         """
         if name in self.metrics:
-            raise ValueError("result already includes metrics for %r" % (
-                    name,))
+            raise ValueError("result already includes metrics for %r" % (name,))
         if not isinstance(value, MetricValue):
             raise TypeError("unexpected metric value: %r" % (value,))
         self.metrics[name] = value
@@ -160,20 +169,20 @@ class Result(object):
         addMicroResult(microResult)
 
         Attach a micro-test result to the test result, with the given name and
-        result.  It is an error to attempt to attach a micro-test with the 
+        result.  It is an error to attempt to attach a micro-test with the
         same name multiple times.
 
         Each micro-test result must be an instance of the Result class.
         """
         if name in self.microResults:
-            raise ValueError("Result already includes microResult for %r" % (
-                   name,))
+            raise ValueError("Result already includes microResult for %r" % (name,))
         if not isinstance(microResult, Result):
             raise TypeError("unexpected MicroResult value %r" % (microResult,))
         self.microResults[name] = microResult
 
 
 # Test classes.
+
 
 class TestSuite:
     """TestSuite - Information on a group of tests.
@@ -194,10 +203,11 @@ class TestSuite:
     def getExecPath(self, components):
         return os.path.join(self.exec_root, *components)
 
+
 class Test:
     """Test - Information on a single test instance."""
 
-    def __init__(self, suite, path_in_suite, config, file_path = None):
+    def __init__(self, suite, path_in_suite, config, file_path=None):
         self.suite = suite
         self.path_in_suite = path_in_suite
         self.config = config
@@ -242,9 +252,9 @@ class Test:
             # Syntax error in an XFAIL line.
             self.result.code = UNRESOLVED
             self.result.output = str(e)
-        
+
     def getFullName(self):
-        return self.suite.config.name + ' :: ' + '/'.join(self.path_in_suite)
+        return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
 
     def getFilePath(self):
         if self.file_path:
@@ -269,12 +279,12 @@ class Test:
         """
 
         features = self.config.available_features
-        triple = getattr(self.suite.config, 'target_triple', "")
+        triple = getattr(self.suite.config, "target_triple", "")
 
         # Check if any of the xfails match an available feature or the target.
         for item in self.xfails:
             # If this is the wildcard, it always fails.
-            if item == '*':
+            if item == "*":
                 return True
 
             # If this is a True expression of features and target triple parts,
@@ -283,7 +293,7 @@ class Test:
                 if BooleanExpression.evaluate(item, features, triple):
                     return True
             except ValueError as e:
-                raise ValueError('Error in XFAIL list:\n%s' % str(e))
+                raise ValueError("Error in XFAIL list:\n%s" % str(e))
 
         return False
 
@@ -307,8 +317,11 @@ class Test:
             return False
 
         # Check the requirements after removing the limiting features (#2)
-        featuresMinusLimits = [f for f in self.config.available_features
-                               if not f in self.config.limit_to_features]
+        featuresMinusLimits = [
+            f
+            for f in self.config.available_features
+            if not f in self.config.limit_to_features
+        ]
         if not self.getMissingRequiredFeaturesFromList(featuresMinusLimits):
             return False
 
@@ -316,10 +329,13 @@ class Test:
 
     def getMissingRequiredFeaturesFromList(self, features):
         try:
-            return [item for item in self.requires
-                    if not BooleanExpression.evaluate(item, features)]
+            return [
+                item
+                for item in self.requires
+                if not BooleanExpression.evaluate(item, features)
+            ]
         except ValueError as e:
-            raise ValueError('Error in REQUIRES list:\n%s' % str(e))
+            raise ValueError("Error in REQUIRES list:\n%s" % str(e))
 
     def getMissingRequiredFeatures(self):
         """
@@ -342,13 +358,16 @@ class Test:
         """
 
         features = self.config.available_features
-        triple = getattr(self.suite.config, 'target_triple', "")
+        triple = getattr(self.suite.config, "target_triple", "")
 
         try:
-            return [item for item in self.unsupported
-                    if BooleanExpression.evaluate(item, features, triple)]
+            return [
+                item
+                for item in self.unsupported
+                if BooleanExpression.evaluate(item, features, triple)
+            ]
         except ValueError as e:
-            raise ValueError('Error in UNSUPPORTED list:\n%s' % str(e))
+            raise ValueError("Error in UNSUPPORTED list:\n%s" % str(e))
 
     def isEarlyTest(self):
         """
@@ -364,17 +383,21 @@ class Test:
         """Write the test's report xml representation to a file handle."""
         test_name = quoteattr(self.path_in_suite[-1])
         test_path = self.path_in_suite[:-1]
-        safe_test_path = [x.replace(".","_") for x in test_path]
-        safe_name = self.suite.name.replace(".","-")
+        safe_test_path = [x.replace(".", "_") for x in test_path]
+        safe_name = self.suite.name.replace(".", "-")
 
         if safe_test_path:
-            class_name = safe_name + "." + "/".join(safe_test_path) 
+            class_name = safe_name + "." + "/".join(safe_test_path)
         else:
             class_name = safe_name + "." + safe_name
         class_name = quoteattr(class_name)
-        testcase_template = '<testcase classname={class_name} name={test_name} time="{time:.2f}"'
+        testcase_template = (
+            '<testcase classname={class_name} name={test_name} time="{time:.2f}"'
+        )
         elapsed_time = self.result.elapsed if self.result.elapsed is not None else 0.0
-        testcase_xml = testcase_template.format(class_name=class_name, test_name=test_name, time=elapsed_time)
+        testcase_xml = testcase_template.format(
+            class_name=class_name, test_name=test_name, time=elapsed_time
+        )
         fil.write(testcase_xml)
         if self.result.code.isFailure:
             fil.write(">\n\t<failure ><![CDATA[")
@@ -384,9 +407,9 @@ class Test:
             if isinstance(self.result.output, str):
                 encoded_output = self.result.output
             elif isinstance(self.result.output, bytes):
-                encoded_output = self.result.output.decode("utf-8", 'ignore')
+                encoded_output = self.result.output.decode("utf-8", "ignore")
             else:
-                encoded_output = self.result.output.encode("utf-8", 'ignore')
+                encoded_output = self.result.output.encode("utf-8", "ignore")
             # In the unlikely case that the output contains the CDATA terminator
             # we wrap it by creating a new CDATA block
             fil.write(encoded_output.replace("]]>", "]]]]><![CDATA[>"))
@@ -398,6 +421,10 @@ class Test:
             else:
                 skip_message = "Skipping because of configuration."
 
-            fil.write(">\n\t<skipped message={} />\n</testcase>\n".format(quoteattr(skip_message)))
+            fil.write(
+                ">\n\t<skipped message={} />\n</testcase>\n".format(
+                    quoteattr(skip_message)
+                )
+            )
         else:
             fil.write("/>")

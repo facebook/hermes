@@ -3,7 +3,7 @@ import sys
 
 
 class TestingConfig:
-    """"
+    """ "
     TestingConfig - Information on the tests inside a suite.
     """
 
@@ -16,28 +16,46 @@ class TestingConfig:
         """
         # Set the environment based on the command line arguments.
         environment = {
-            'PATH' : os.pathsep.join(litConfig.path +
-                                     [os.environ.get('PATH','')]),
-            'LLVM_DISABLE_CRASH_REPORT' : '1',
-            }
+            "PATH": os.pathsep.join(litConfig.path + [os.environ.get("PATH", "")]),
+            "LLVM_DISABLE_CRASH_REPORT": "1",
+        }
 
-        pass_vars = ['LIBRARY_PATH', 'LD_LIBRARY_PATH', 'SYSTEMROOT', 'TERM',
-                     'CLANG', 'LD_PRELOAD', 'ASAN_OPTIONS', 'UBSAN_OPTIONS',
-                     'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
-                     'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
-                     'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT',
-                     'FILECHECK_DUMP_INPUT_ON_FAILURE', 'FILECHECK_OPTS',
-                     'VCINSTALLDIR', 'VCToolsinstallDir', 'VSINSTALLDIR',
-                     'WindowsSdkDir', 'WindowsSDKLibVersion']
+        pass_vars = [
+            "LIBRARY_PATH",
+            "LD_LIBRARY_PATH",
+            "SYSTEMROOT",
+            "TERM",
+            "CLANG",
+            "LD_PRELOAD",
+            "ASAN_OPTIONS",
+            "UBSAN_OPTIONS",
+            "LSAN_OPTIONS",
+            "ADB",
+            "ANDROID_SERIAL",
+            "SANITIZER_IGNORE_CVE_2016_2143",
+            "TMPDIR",
+            "TMP",
+            "TEMP",
+            "TEMPDIR",
+            "AVRLIT_BOARD",
+            "AVRLIT_PORT",
+            "FILECHECK_DUMP_INPUT_ON_FAILURE",
+            "FILECHECK_OPTS",
+            "VCINSTALLDIR",
+            "VCToolsinstallDir",
+            "VSINSTALLDIR",
+            "WindowsSdkDir",
+            "WindowsSDKLibVersion",
+        ]
 
-        if sys.platform == 'win32':
-            pass_vars.append('INCLUDE')
-            pass_vars.append('LIB')
-            pass_vars.append('PATHEXT')
-            environment['PYTHONBUFFERED'] = '1'
+        if sys.platform == "win32":
+            pass_vars.append("INCLUDE")
+            pass_vars.append("LIB")
+            pass_vars.append("PATHEXT")
+            environment["PYTHONBUFFERED"] = "1"
 
         for var in pass_vars:
-            val = os.environ.get(var, '')
+            val = os.environ.get(var, "")
             # Check for empty string as some variables such as LD_PRELOAD cannot be empty
             # ('') for OS's such as OpenBSD.
             if val:
@@ -46,22 +64,24 @@ class TestingConfig:
         # Set the default available features based on the LitConfig.
         available_features = []
         if litConfig.useValgrind:
-            available_features.append('valgrind')
+            available_features.append("valgrind")
             if litConfig.valgrindLeakCheck:
-                available_features.append('vg_leak')
+                available_features.append("vg_leak")
 
-        return TestingConfig(None,
-                             name = '<unnamed>',
-                             suffixes = set(),
-                             test_format = None,
-                             environment = environment,
-                             substitutions = [],
-                             unsupported = False,
-                             test_exec_root = None,
-                             test_source_root = None,
-                             excludes = [],
-                             available_features = available_features,
-                             pipefail = True)
+        return TestingConfig(
+            None,
+            name="<unnamed>",
+            suffixes=set(),
+            test_format=None,
+            environment=environment,
+            substitutions=[],
+            unsupported=False,
+            test_exec_root=None,
+            test_source_root=None,
+            excludes=[],
+            available_features=available_features,
+            pipefail=True,
+        )
 
     def load_from_path(self, path, litConfig):
         """
@@ -77,18 +97,18 @@ class TestingConfig:
         try:
             data = f.read()
         except:
-            litConfig.fatal('unable to load config file: %r' % (path,))
+            litConfig.fatal("unable to load config file: %r" % (path,))
         f.close()
 
         # Execute the config script to initialize the object.
         cfg_globals = dict(globals())
-        cfg_globals['config'] = self
-        cfg_globals['lit_config'] = litConfig
-        cfg_globals['__file__'] = path
+        cfg_globals["config"] = self
+        cfg_globals["lit_config"] = litConfig
+        cfg_globals["__file__"] = path
         try:
-            exec(compile(data, path, 'exec'), cfg_globals, None)
+            exec(compile(data, path, "exec"), cfg_globals, None)
             if litConfig.debug:
-                litConfig.note('... loaded config %r' % path)
+                litConfig.note("... loaded config %r" % path)
         except SystemExit:
             e = sys.exc_info()[1]
             # We allow normal system exit inside a config file to just
@@ -97,16 +117,31 @@ class TestingConfig:
                 raise
         except:
             import traceback
+
             litConfig.fatal(
-                'unable to parse config file %r, traceback: %s' % (
-                    path, traceback.format_exc()))
+                "unable to parse config file %r, traceback: %s"
+                % (path, traceback.format_exc())
+            )
         self.finish(litConfig)
 
-    def __init__(self, parent, name, suffixes, test_format,
-                 environment, substitutions, unsupported,
-                 test_exec_root, test_source_root, excludes,
-                 available_features, pipefail, limit_to_features = [],
-                 is_early = False, parallelism_group = None):
+    def __init__(
+        self,
+        parent,
+        name,
+        suffixes,
+        test_format,
+        environment,
+        substitutions,
+        unsupported,
+        test_exec_root,
+        test_source_root,
+        excludes,
+        available_features,
+        pipefail,
+        limit_to_features=[],
+        is_early=False,
+        parallelism_group=None,
+    ):
         self.parent = parent
         self.name = str(name)
         self.suffixes = set(suffixes)
@@ -152,6 +187,7 @@ class TestingConfig:
         else:
             return self.parent.root
 
+
 class SubstituteCaptures:
     """
     Helper class to indicate that the substitutions contains backreferences.
@@ -162,6 +198,7 @@ class SubstituteCaptures:
         config.substutions.append(('\b[^ ]*.cpp', SubstituteCaptures('\0.txt')))
 
     """
+
     def __init__(self, substitution):
         self.substitution = substitution
 
@@ -176,4 +213,3 @@ class SubstituteCaptures:
 
     def __getitem__(self, item):
         return self.substitution.__getitem__(item)
-
