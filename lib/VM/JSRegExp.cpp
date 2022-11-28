@@ -176,6 +176,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
     Handle<JSRegExp> selfHandle,
     std::deque<llvh::SmallVector<char16_t, 5>> &orderedNamedGroups,
     regex::ParsedGroupNamesMapping &parsedMappings) {
+  GCScope gcScope(runtime);
   if (parsedMappings.size() == 0)
     return ExecutionStatus::RETURNED;
 
@@ -184,6 +185,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
 
   MutableHandle<HermesValue> numberHandle{runtime};
   for (const auto &identifier : orderedNamedGroups) {
+    GCScopeMarkerRAII marker{gcScope};
     auto symbolRes =
         runtime.getIdentifierTable().getSymbolHandle(runtime, identifier);
     if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
