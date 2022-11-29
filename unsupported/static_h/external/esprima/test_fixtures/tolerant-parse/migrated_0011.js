@@ -1,1 +1,0 @@
-var o = {one: function() {} two:2, three: {aa: "a" bb: "b"} four: 4};

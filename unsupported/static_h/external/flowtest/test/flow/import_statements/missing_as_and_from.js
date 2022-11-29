@@ -1,2 +1,0 @@
-import *
-class X {}

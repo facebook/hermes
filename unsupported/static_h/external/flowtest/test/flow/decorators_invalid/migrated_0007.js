@@ -1,2 +1,0 @@
-@blah
-interface Foo {}

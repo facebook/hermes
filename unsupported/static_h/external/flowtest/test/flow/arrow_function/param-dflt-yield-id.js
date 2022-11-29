@@ -1,3 +1,0 @@
-function g() {
-  (x = yield) => {};
-}

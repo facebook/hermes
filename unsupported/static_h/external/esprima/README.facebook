@@ -1,6 +1,0 @@
-This directory contains test fixtures from the Esprima project on https://github.com/jquery/esprima.
-
-Only copied the test fixtures from https://github.com/jquery/esprima/tree/master/test/fixtures
-to ./test_fixtures, plus README.md and LICENSE.BSD from the github repo.
-
-Downloaded from commit 24eb7ed0fc816c8b5f51087f07dc932a28766c53 on Feb 28, 2019.

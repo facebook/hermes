@@ -1,9 +1,0 @@
-# This file contains functions from the zip library that fail with sanitizers
-# on.
-
-[alignment]
-fun:tinfl_decompress
-fun:mz_zip_reader_read_central_dir
-fun:mz_zip_reader_is_file_a_directory
-fun:mz_zip_reader_file_stat
-fun:mz_zip_reader_locate_file

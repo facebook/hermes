@@ -1,1 +1,0 @@
-type interface = string;
