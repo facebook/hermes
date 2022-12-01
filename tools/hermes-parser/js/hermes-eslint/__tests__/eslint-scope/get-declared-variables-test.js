@@ -35,7 +35,7 @@
 
 import type {Program, ESNode} from 'hermes-estree';
 
-// $FlowExpectedError[untyped-import]
+// $FlowExpectedError
 import {visit} from 'esrecurse';
 import {parse} from '../../src';
 import {analyze} from '../../src/scope-manager';

@@ -101,11 +101,14 @@ function getInterfaces(): $ReadOnlyMap<
 
 const typesThatShouldBeSkipped = new Set([
   // These types have a special union type declared to allow consumers to refine on `.computed`
-  'PropertyDefinition',
-  'MethodDefinition',
-  'MemberExpression',
-  'Property',
   'BinaryExpression',
+  'DeclareExportDeclaration',
+  'ExportNamedDeclaration',
+  'MemberExpression',
+  'MethodDefinition',
+  'ObjectTypeProperty',
+  'Property',
+  'PropertyDefinition',
 ]);
 const propertiesThatShouldBeSkipped = new Map([
   [

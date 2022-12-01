@@ -48,8 +48,6 @@ import type {
   DeclareClass as DeclareClassType,
   DeclaredPredicate as DeclaredPredicateType,
   DeclareExportAllDeclaration as DeclareExportAllDeclarationType,
-  DeclareExportDeclaration as DeclareExportDeclarationType,
-  DeclareFunction as DeclareFunctionType,
   DeclareInterface as DeclareInterfaceType,
   DeclareModule as DeclareModuleType,
   DeclareModuleExports as DeclareModuleExportsType,
@@ -71,7 +69,6 @@ import type {
   ExistsTypeAnnotation as ExistsTypeAnnotationType,
   ExportAllDeclaration as ExportAllDeclarationType,
   ExportDefaultDeclaration as ExportDefaultDeclarationType,
-  ExportNamedDeclaration as ExportNamedDeclarationType,
   ExportSpecifier as ExportSpecifierType,
   ExpressionStatement as ExpressionStatementType,
   ForInStatement as ForInStatementType,
@@ -127,7 +124,6 @@ import type {
   ObjectTypeCallProperty as ObjectTypeCallPropertyType,
   ObjectTypeIndexer as ObjectTypeIndexerType,
   ObjectTypeInternalSlot as ObjectTypeInternalSlotType,
-  ObjectTypeProperty as ObjectTypePropertyType,
   ObjectTypeSpreadProperty as ObjectTypeSpreadPropertyType,
   OpaqueType as OpaqueTypeType,
   OptionalIndexedAccessType as OptionalIndexedAccessTypeType,
@@ -315,22 +311,6 @@ export type DeclareExportAllDeclarationProps = {
   +source: MaybeDetachedNode<DeclareExportAllDeclarationType['source']>,
 };
 
-export type DeclareExportDeclarationProps = {
-  +declaration?: ?MaybeDetachedNode<
-    DeclareExportDeclarationType['declaration'],
-  >,
-  +specifiers: $ReadOnlyArray<
-    MaybeDetachedNode<DeclareExportDeclarationType['specifiers'][number]>,
-  >,
-  +source?: ?MaybeDetachedNode<DeclareExportDeclarationType['source']>,
-  +default: DeclareExportDeclarationType['default'],
-};
-
-export type DeclareFunctionProps = {
-  +id: MaybeDetachedNode<DeclareFunctionType['id']>,
-  +predicate?: ?MaybeDetachedNode<DeclareFunctionType['predicate']>,
-};
-
 export type DeclareInterfaceProps = {
   +id: MaybeDetachedNode<DeclareInterfaceType['id']>,
   +typeParameters?: ?MaybeDetachedNode<DeclareInterfaceType['typeParameters']>,
@@ -443,15 +423,6 @@ export type ExportAllDeclarationProps = {
 
 export type ExportDefaultDeclarationProps = {
   +declaration: MaybeDetachedNode<ExportDefaultDeclarationType['declaration']>,
-};
-
-export type ExportNamedDeclarationProps = {
-  +declaration?: ?MaybeDetachedNode<ExportNamedDeclarationType['declaration']>,
-  +specifiers: $ReadOnlyArray<
-    MaybeDetachedNode<ExportNamedDeclarationType['specifiers'][number]>,
-  >,
-  +source?: ?MaybeDetachedNode<ExportNamedDeclarationType['source']>,
-  +exportKind: ExportNamedDeclarationType['exportKind'],
 };
 
 export type ExportSpecifierProps = {
@@ -790,17 +761,6 @@ export type ObjectTypeInternalSlotProps = {
   +optional: ObjectTypeInternalSlotType['optional'],
   +static: ObjectTypeInternalSlotType['static'],
   +method: ObjectTypeInternalSlotType['method'],
-};
-
-export type ObjectTypePropertyProps = {
-  +key: MaybeDetachedNode<ObjectTypePropertyType['key']>,
-  +value: MaybeDetachedNode<ObjectTypePropertyType['value']>,
-  +method: ObjectTypePropertyType['method'],
-  +optional: ObjectTypePropertyType['optional'],
-  +static: ObjectTypePropertyType['static'],
-  +proto: ObjectTypePropertyType['proto'],
-  +variance?: ?MaybeDetachedNode<ObjectTypePropertyType['variance']>,
-  +kind: ObjectTypePropertyType['kind'],
 };
 
 export type ObjectTypeSpreadPropertyProps = {
@@ -1338,34 +1298,6 @@ export function DeclareExportAllDeclaration(props: {
   return node;
 }
 
-export function DeclareExportDeclaration(props: {
-  ...$ReadOnly<DeclareExportDeclarationProps>,
-  +parent?: ESNode,
-}): DetachedNode<DeclareExportDeclarationType> {
-  const node = detachedProps<DeclareExportDeclarationType>(props.parent, {
-    type: 'DeclareExportDeclaration',
-    declaration: asDetachedNode(props.declaration),
-    specifiers: props.specifiers.map(n => asDetachedNode(n)),
-    source: asDetachedNode(props.source),
-    default: props.default,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-export function DeclareFunction(props: {
-  ...$ReadOnly<DeclareFunctionProps>,
-  +parent?: ESNode,
-}): DetachedNode<DeclareFunctionType> {
-  const node = detachedProps<DeclareFunctionType>(props.parent, {
-    type: 'DeclareFunction',
-    id: asDetachedNode(props.id),
-    predicate: asDetachedNode(props.predicate),
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
 export function DeclareInterface(props: {
   ...$ReadOnly<DeclareInterfaceProps>,
   +parent?: ESNode,
@@ -1631,21 +1563,6 @@ export function ExportDefaultDeclaration(props: {
   const node = detachedProps<ExportDefaultDeclarationType>(props.parent, {
     type: 'ExportDefaultDeclaration',
     declaration: asDetachedNode(props.declaration),
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-export function ExportNamedDeclaration(props: {
-  ...$ReadOnly<ExportNamedDeclarationProps>,
-  +parent?: ESNode,
-}): DetachedNode<ExportNamedDeclarationType> {
-  const node = detachedProps<ExportNamedDeclarationType>(props.parent, {
-    type: 'ExportNamedDeclaration',
-    declaration: asDetachedNode(props.declaration),
-    specifiers: props.specifiers.map(n => asDetachedNode(n)),
-    source: asDetachedNode(props.source),
-    exportKind: props.exportKind,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2376,25 +2293,6 @@ export function ObjectTypeInternalSlot(props: {
     optional: props.optional,
     static: props.static,
     method: props.method,
-  });
-  setParentPointersInDirectChildren(node);
-  return node;
-}
-
-export function ObjectTypeProperty(props: {
-  ...$ReadOnly<ObjectTypePropertyProps>,
-  +parent?: ESNode,
-}): DetachedNode<ObjectTypePropertyType> {
-  const node = detachedProps<ObjectTypePropertyType>(props.parent, {
-    type: 'ObjectTypeProperty',
-    key: asDetachedNode(props.key),
-    value: asDetachedNode(props.value),
-    method: props.method,
-    optional: props.optional,
-    static: props.static,
-    proto: props.proto,
-    variance: asDetachedNode(props.variance),
-    kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
   return node;
