@@ -19,11 +19,13 @@ import {
   addCommentsToNode,
   getLeadingCommentsForNode,
 } from './comments/comments';
+import type {VisitorKeysType} from 'hermes-parser';
 
 export function print(
   ast: MaybeDetachedNode<Program>,
   originalCode: string,
   prettierOptions: {...} = {},
+  visitorKeys?: ?VisitorKeysType,
 ): string {
   // $FlowExpectedError[incompatible-type] This is now safe to access.
   const program: Program = ast;
@@ -80,8 +82,35 @@ export function print(
           };
         }
       }
+
+      // Prettier currently relies on comparing the the start positions to know if the import/export specifier should have a
+      // rename (eg `Name` vs `Name as Name`) when the name is exactly the same
+      // So we need to ensure that the range is always the same to avoid the useless code printing
+      if (node.type === 'ImportSpecifier') {
+        if (node.local.name === node.imported.name) {
+          if (node.local.range == null) {
+            // for our TS-ast printing which has no locs
+            // $FlowExpectedError[cannot-write]
+            node.local.range = [0, 0];
+          }
+          // $FlowExpectedError[cannot-write]
+          node.imported.range = [...node.local.range];
+        }
+      }
+      if (node.type === 'ExportSpecifier') {
+        if (node.local.name === node.exported.name) {
+          if (node.local.range == null) {
+            // for our TS-ast printing which has no locs
+            // $FlowExpectedError[cannot-write]
+            node.local.range = [0, 0];
+          }
+          // $FlowExpectedError[cannot-write]
+          node.exported.range = [...node.local.range];
+        }
+      }
     },
     leave() {},
+    visitorKeys,
   });
 
   // we need to delete the comments prop or else prettier will do

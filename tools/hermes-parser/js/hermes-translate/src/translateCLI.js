@@ -12,12 +12,22 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {translate} from './index';
+import * as translate from './index';
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 
+const translator = (() => {
+  const firstArg = process.argv[2];
+  if (firstArg === 'flow') {
+    return translate.translateFlowToFlowDef;
+  }
+  if (firstArg === 'ts') {
+    return translate.translateFlowToTSDef;
+  }
+  throw new Error('First argument must be one of "flow" or "ts".');
+})();
 const filePaths = process.argv
-  .slice(2)
+  .slice(3)
   .filter(filePath => path.extname(filePath) === '.js');
 
 filePaths.forEach(filePath => {
@@ -25,7 +35,7 @@ filePaths.forEach(filePath => {
 
   let translatedContents = '';
   try {
-    translatedContents = translate(fileContents, prettierConfig);
+    translatedContents = translator(fileContents, prettierConfig);
   } catch (e) {
     console.error(`Tranlation failed with file "${filePath}"`);
     console.error(e);
@@ -34,7 +44,9 @@ filePaths.forEach(filePath => {
 
   if (filePaths.length > 1) {
     console.log(`/**\n * TRANSLATED FILE: ${filePath}\n */`);
+    console.log(translatedContents);
+    console.log();
+  } else {
+    console.log(translatedContents);
   }
-
-  console.log(translatedContents);
 });

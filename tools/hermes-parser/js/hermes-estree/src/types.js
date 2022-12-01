@@ -38,7 +38,10 @@
 
 export type Range = [number, number];
 
-export interface BaseToken {
+export interface ObjectWithLoc {
+  +loc: SourceLocation;
+}
+export interface BaseToken extends ObjectWithLoc {
   +loc: SourceLocation;
   +range: Range;
 }
@@ -1254,7 +1257,7 @@ export interface FunctionTypeAnnotation extends BaseNode {
   +returnType: TypeAnnotationType;
   +rest: null | FunctionTypeParam;
   +typeParameters: null | TypeParameterDeclaration;
-  +this: TypeAnnotationType | null;
+  +this: FunctionTypeParam | null;
 }
 export interface FunctionTypeParam extends BaseNode {
   +type: 'FunctionTypeParam';
@@ -1353,13 +1356,13 @@ export interface ObjectTypeSpreadProperty extends BaseNode {
 
 export interface IndexedAccessType extends BaseNode {
   +type: 'IndexedAccessType';
-  +objectType: TypeAnnotation;
-  +indexType: TypeAnnotation;
+  +objectType: TypeAnnotationType;
+  +indexType: TypeAnnotationType;
 }
 export interface OptionalIndexedAccessType extends BaseNode {
   +type: 'OptionalIndexedAccessType';
-  +objectType: TypeAnnotation;
-  +indexType: TypeAnnotation;
+  +objectType: TypeAnnotationType;
+  +indexType: TypeAnnotationType;
   +optional: boolean;
 }
 

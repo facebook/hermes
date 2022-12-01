@@ -22,3 +22,4 @@ export {parse} from './transform/parse';
 export {print} from './transform/print';
 export * as t from './generated/node-types';
 export {asDetachedNode} from './detachedNode';
+export {cloneJSDocCommentsToNewNode} from './transform/comments/comments';

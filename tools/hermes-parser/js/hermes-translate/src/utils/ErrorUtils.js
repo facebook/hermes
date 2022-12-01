@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {ESNode, TypeAnnotationType} from 'hermes-estree';
+import type {ObjectWithLoc, TypeAnnotationType} from 'hermes-estree';
 import type {TranslationContext} from './TranslationUtils';
 import type {DetachedNode} from 'hermes-transform';
 
@@ -18,7 +18,7 @@ import {t} from 'hermes-transform';
 import {codeFrameColumns} from '@babel/code-frame';
 
 export function flowFixMeOrError(
-  container: ESNode,
+  container: ObjectWithLoc,
   message: string,
   context: TranslationContext,
 ): DetachedNode<TypeAnnotationType> {
@@ -28,15 +28,58 @@ export function flowFixMeOrError(
   throw translationError(container, message, context);
 }
 
-export function translationError(
-  node: ESNode,
-  message: string,
-  context: TranslationContext,
-): Error {
-  return new Error(buildCodeFrame(node, context.code, message));
+class TranslationErrorBase extends Error {
+  name: string = 'TranslationError';
+  constructor(
+    node: ObjectWithLoc,
+    message: string,
+    context: $ReadOnly<{code: string, ...}>,
+  ) {
+    const framedMessage = buildCodeFrame(node, message, context.code);
+    super(
+      // jest error snapshots will use a hard-coded string representation if
+      // `instanceof Error` which makes the code frame look awful and hard to verify:
+      //
+      // [TranslationError: > 12 | code
+      //       | ^^^^ error]
+      //
+      // this just adds a newline in jest tests so that it all lines up nicely
+      //
+      // [TranslationError:
+      // > 12 | code
+      //      | ^^^^ error]
+      process.env.JEST_WORKER_ID == null ? framedMessage : `\n${framedMessage}`,
+    );
+  }
 }
 
-function buildCodeFrame(node: ESNode, code: string, message: string): string {
+export class ExpectedTranslationError extends TranslationErrorBase {
+  name: string = 'ExpectedTranslationError';
+}
+export function translationError(
+  node: ObjectWithLoc,
+  message: string,
+  context: $ReadOnly<{code: string, ...}>,
+): Error {
+  return new ExpectedTranslationError(node, message, context);
+}
+
+export class UnexpectedTranslationError extends TranslationErrorBase {
+  name: string = 'UnexpectedTranslationError';
+}
+export function unexpectedTranslationError(
+  node: ObjectWithLoc,
+  message: string,
+  context: $ReadOnly<{code: string, ...}>,
+): Error {
+  return new UnexpectedTranslationError(node, message, context);
+}
+
+function buildCodeFrame(
+  node: ObjectWithLoc,
+  message: string,
+  code: string,
+): string {
   // babel uses 1-indexed columns
   const locForBabel = {
     start: {

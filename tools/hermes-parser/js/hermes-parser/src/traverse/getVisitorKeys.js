@@ -12,7 +12,7 @@
 
 import type {ESNode} from 'hermes-estree';
 
-import {VisitorKeys} from 'hermes-eslint';
+import {VisitorKeys as FlowVisitorKeys} from 'hermes-eslint';
 
 export function isNode(thing: mixed): boolean %checks {
   return (
@@ -20,8 +20,12 @@ export function isNode(thing: mixed): boolean %checks {
   );
 }
 
-export function getVisitorKeys<T: ESNode>(node: T): $ReadOnlyArray<$Keys<T>> {
-  const keys = VisitorKeys[node.type];
+export type VisitorKeysType = $ReadOnly<{[string]: $ReadOnlyArray<string>}>;
+export function getVisitorKeys<T: ESNode>(
+  node: T,
+  visitorKeys?: ?VisitorKeysType,
+): $ReadOnlyArray<$Keys<T>> {
+  const keys = (visitorKeys ?? FlowVisitorKeys)[node.type];
   if (keys == null) {
     throw new Error(`No visitor keys found for node type "${node.type}".`);
   }
