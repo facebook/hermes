@@ -60,6 +60,26 @@ export function print(
         // $FlowExpectedError[cannot-write]
         Object.assign(node, newNode);
       }
+
+      // Prettier currently relies on comparing the `node` vs `node.value` start positions to know if an
+      // `ObjectTypeProperty` is a method or not (instead of using the `node.method` boolean). To correctly print
+      // the node when its not a method we need the start position to be different from the `node.value`s start
+      // position.
+      if (node.type === 'ObjectTypeProperty') {
+        if (
+          !node.method &&
+          node.kind === 'init' &&
+          node.range[0] === 1 &&
+          node.value.range[0] === 1
+        ) {
+          // $FlowExpectedError[cannot-write]
+          // $FlowExpectedError[cannot-spread-interface]
+          node.value = {
+            ...node.value,
+            range: [2, node.value.range[1]],
+          };
+        }
+      }
     },
     leave() {},
   });
@@ -86,18 +106,20 @@ export function print(
 function transformChainExpression(node: ESNode) {
   switch (node.type) {
     case 'CallExpression':
-      // $FlowExpectedError[cannot-write]
-      node.type = 'OptionalCallExpression';
-      // $FlowExpectedError[cannot-write]
-      node.callee = transformChainExpression(node.callee);
-      break;
+      // $FlowExpectedError[cannot-spread-interface]
+      return {
+        ...node,
+        type: 'OptionalCallExpression',
+        callee: transformChainExpression(node.callee),
+      };
 
     case 'MemberExpression':
-      // $FlowExpectedError[cannot-write]
-      node.type = 'OptionalMemberExpression';
-      // $FlowExpectedError[cannot-write]
-      node.object = transformChainExpression(node.object);
-      break;
+      // $FlowExpectedError[cannot-spread-interface]
+      return {
+        ...node,
+        type: 'OptionalMemberExpression',
+        callee: transformChainExpression(node.object),
+      };
     // No default
   }
 

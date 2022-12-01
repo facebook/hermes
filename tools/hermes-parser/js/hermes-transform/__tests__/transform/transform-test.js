@@ -1281,4 +1281,47 @@ x?.y; //test
 x?.();
 `);
   });
+
+  it('should correctly print method functions', () => {
+    const code = `\
+      type A = {};`;
+    const result = transform(code, context => ({
+      ObjectTypeAnnotation(node) {
+        const func = t.FunctionTypeAnnotation({
+          params: [],
+          returnType: t.VoidTypeAnnotation(),
+          rest: null,
+          typeParameters: null,
+          this: null,
+        });
+        context.modifyNodeInPlace(node, {
+          properties: [
+            t.ObjectTypeProperty({
+              key: t.Identifier({name: 'a'}),
+              value: func,
+              method: true,
+              optional: false,
+              static: false,
+              proto: false,
+              variance: null,
+              kind: 'init',
+            }),
+            t.ObjectTypeProperty({
+              key: t.Identifier({name: 'b'}),
+              value: func,
+              method: false,
+              optional: false,
+              static: false,
+              proto: false,
+              variance: null,
+              kind: 'init',
+            }),
+          ],
+        });
+      },
+    }));
+    expect(result).toBe(`\
+type A = {a(): void, b: () => void};
+`);
+  });
 });
