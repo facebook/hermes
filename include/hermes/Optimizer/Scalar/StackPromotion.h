@@ -14,12 +14,13 @@
 namespace hermes {
 
 /// Promotes variables into stack allocations.
-class StackPromotion : public FunctionPass {
+/// Removes all trivially unreachable functions.
+class StackPromotion : public ModulePass {
  public:
-  explicit StackPromotion() : FunctionPass("StackPromotion") {}
+  explicit StackPromotion() : ModulePass("StackPromotion") {}
   ~StackPromotion() override = default;
 
-  bool runOnFunction(Function *F) override;
+  bool runOnModule(Module *M) override;
 };
 
 } // namespace hermes
