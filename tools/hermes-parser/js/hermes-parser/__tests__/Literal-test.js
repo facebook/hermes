@@ -96,11 +96,11 @@ describe('Literal', () => {
 
   test('ESTree', () => {
     expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      Object {
-        "body": Array [
-          Object {
+      {
+        "body": [
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "null",
               "raw": "null",
               "type": "Literal",
@@ -108,9 +108,9 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "numeric",
               "raw": "10",
               "type": "Literal",
@@ -118,9 +118,9 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "numeric",
               "raw": "0.56283",
               "type": "Literal",
@@ -128,19 +128,19 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "string",
-              "raw": "\\"test\\"",
+              "raw": ""test"",
               "type": "Literal",
               "value": "test",
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "boolean",
               "raw": "true",
               "type": "Literal",
@@ -148,12 +148,12 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "literalType": "regexp",
               "raw": "/foo/g",
-              "regex": Object {
+              "regex": {
                 "flags": "g",
                 "pattern": "foo",
               },
@@ -162,9 +162,9 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "bigint": "4321",
               "literalType": "bigint",
               "raw": "4321n",
@@ -173,9 +173,9 @@ describe('Literal', () => {
             },
             "type": "ExpressionStatement",
           },
-          Object {
+          {
             "directive": null,
-            "expression": Object {
+            "expression": {
               "bigint": "1234",
               "literalType": "bigint",
               "raw": "12_34n",

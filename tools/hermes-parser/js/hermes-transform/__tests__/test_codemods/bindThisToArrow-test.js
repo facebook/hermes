@@ -231,20 +231,20 @@ f = function y() {}.bind(foo);
 
     expect(logSpy).toHaveBeenCalledTimes(5);
     expect(logSpy.mock.calls).toMatchInlineSnapshot(`
-      Array [
-        Array [
+      [
+        [
           "[FunctionExpression:1:4] Self-referencing.",
         ],
-        Array [
+        [
           "[FunctionExpression:5:4] Is a generator.",
         ],
-        Array [
+        [
           "[Identifier:9:15] Manually typed \`this\` param.",
         ],
-        Array [
+        [
           "[FunctionExpression:15:4] Uses \`arguments\`.",
         ],
-        Array [
+        [
           "[Identifier:19:25] Not bound to \`this\`.",
         ],
       ]

@@ -243,17 +243,17 @@ describe('Comments', () => {
          */
       `;
       expect(parse(source).docblock?.directives).toMatchInlineSnapshot(`
-        Object {
-          "bar": Array [
+        {
+          "bar": [
             "bar-value",
           ],
-          "empty": Array [
+          "empty": [
             "",
           ],
-          "foo": Array [
+          "foo": [
             "foo-value",
           ],
-          "multiple": Array [
+          "multiple": [
             "one",
             "two",
           ],
@@ -273,23 +273,23 @@ describe('Comments', () => {
          */
       `;
       expect(parse(source).docblock?.directives).toMatchInlineSnapshot(`
-        Object {
-          "__proto__": Array [
+        {
+          "__proto__": [
             "",
           ],
-          "constructor": Array [
+          "constructor": [
             "",
           ],
-          "hasOwnProperty": Array [
+          "hasOwnProperty": [
             "",
           ],
-          "toLocaleString": Array [
+          "toLocaleString": [
             "",
           ],
-          "toString": Array [
+          "toString": [
             "",
           ],
-          "valueOf": Array [
+          "valueOf": [
             "",
           ],
         }

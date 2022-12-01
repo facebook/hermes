@@ -37,18 +37,18 @@ describe('Object properties', () => {
   test('ESTree', () => {
     expect(parseForSnapshot(testCase.code, {preserveRange: true}))
       .toMatchInlineSnapshot(`
-      Object {
-        "body": Array [
-          Object {
+      {
+        "body": [
+          {
             "directive": null,
-            "expression": Object {
-              "properties": Array [
-                Object {
+            "expression": {
+              "properties": [
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop1",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       18,
                       23,
                     ],
@@ -57,15 +57,15 @@ describe('Object properties', () => {
                   },
                   "kind": "init",
                   "method": false,
-                  "range": Array [
+                  "range": [
                     18,
                     26,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "literalType": "numeric",
-                    "range": Array [
+                    "range": [
                       25,
                       26,
                     ],
@@ -74,12 +74,12 @@ describe('Object properties', () => {
                     "value": 1,
                   },
                 },
-                Object {
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop2",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       36,
                       41,
                     ],
@@ -88,17 +88,17 @@ describe('Object properties', () => {
                   },
                   "kind": "init",
                   "method": false,
-                  "range": Array [
+                  "range": [
                     36,
                     56,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "async": false,
-                    "body": Object {
-                      "body": Array [],
-                      "range": Array [
+                    "body": {
+                      "body": [],
+                      "range": [
                         54,
                         56,
                       ],
@@ -107,9 +107,9 @@ describe('Object properties', () => {
                     "expression": false,
                     "generator": false,
                     "id": null,
-                    "params": Array [],
+                    "params": [],
                     "predicate": null,
-                    "range": Array [
+                    "range": [
                       41,
                       56,
                     ],
@@ -118,12 +118,12 @@ describe('Object properties', () => {
                     "typeParameters": null,
                   },
                 },
-                Object {
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop3",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       66,
                       71,
                     ],
@@ -132,17 +132,17 @@ describe('Object properties', () => {
                   },
                   "kind": "init",
                   "method": true,
-                  "range": Array [
+                  "range": [
                     66,
                     76,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "async": false,
-                    "body": Object {
-                      "body": Array [],
-                      "range": Array [
+                    "body": {
+                      "body": [],
+                      "range": [
                         74,
                         76,
                       ],
@@ -151,9 +151,9 @@ describe('Object properties', () => {
                     "expression": false,
                     "generator": false,
                     "id": null,
-                    "params": Array [],
+                    "params": [],
                     "predicate": null,
-                    "range": Array [
+                    "range": [
                       71,
                       76,
                     ],
@@ -162,12 +162,12 @@ describe('Object properties', () => {
                     "typeParameters": null,
                   },
                 },
-                Object {
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop4",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       92,
                       97,
                     ],
@@ -176,17 +176,17 @@ describe('Object properties', () => {
                   },
                   "kind": "init",
                   "method": true,
-                  "range": Array [
+                  "range": [
                     86,
                     102,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "async": true,
-                    "body": Object {
-                      "body": Array [],
-                      "range": Array [
+                    "body": {
+                      "body": [],
+                      "range": [
                         100,
                         102,
                       ],
@@ -195,9 +195,9 @@ describe('Object properties', () => {
                     "expression": false,
                     "generator": false,
                     "id": null,
-                    "params": Array [],
+                    "params": [],
                     "predicate": null,
-                    "range": Array [
+                    "range": [
                       97,
                       102,
                     ],
@@ -206,12 +206,12 @@ describe('Object properties', () => {
                     "typeParameters": null,
                   },
                 },
-                Object {
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop5",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       116,
                       121,
                     ],
@@ -220,17 +220,17 @@ describe('Object properties', () => {
                   },
                   "kind": "get",
                   "method": false,
-                  "range": Array [
+                  "range": [
                     112,
                     126,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "async": false,
-                    "body": Object {
-                      "body": Array [],
-                      "range": Array [
+                    "body": {
+                      "body": [],
+                      "range": [
                         124,
                         126,
                       ],
@@ -239,9 +239,9 @@ describe('Object properties', () => {
                     "expression": false,
                     "generator": false,
                     "id": null,
-                    "params": Array [],
+                    "params": [],
                     "predicate": null,
-                    "range": Array [
+                    "range": [
                       121,
                       126,
                     ],
@@ -250,12 +250,12 @@ describe('Object properties', () => {
                     "typeParameters": null,
                   },
                 },
-                Object {
+                {
                   "computed": false,
-                  "key": Object {
+                  "key": {
                     "name": "prop6",
                     "optional": false,
-                    "range": Array [
+                    "range": [
                       140,
                       145,
                     ],
@@ -264,17 +264,17 @@ describe('Object properties', () => {
                   },
                   "kind": "set",
                   "method": false,
-                  "range": Array [
+                  "range": [
                     136,
                     151,
                   ],
                   "shorthand": false,
                   "type": "Property",
-                  "value": Object {
+                  "value": {
                     "async": false,
-                    "body": Object {
-                      "body": Array [],
-                      "range": Array [
+                    "body": {
+                      "body": [],
+                      "range": [
                         149,
                         151,
                       ],
@@ -283,11 +283,11 @@ describe('Object properties', () => {
                     "expression": false,
                     "generator": false,
                     "id": null,
-                    "params": Array [
-                      Object {
+                    "params": [
+                      {
                         "name": "x",
                         "optional": false,
-                        "range": Array [
+                        "range": [
                           146,
                           147,
                         ],
@@ -296,7 +296,7 @@ describe('Object properties', () => {
                       },
                     ],
                     "predicate": null,
-                    "range": Array [
+                    "range": [
                       145,
                       151,
                     ],
@@ -306,13 +306,13 @@ describe('Object properties', () => {
                   },
                 },
               ],
-              "range": Array [
+              "range": [
                 8,
                 160,
               ],
               "type": "ObjectExpression",
             },
-            "range": Array [
+            "range": [
               7,
               161,
             ],

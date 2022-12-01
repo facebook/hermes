@@ -32,15 +32,15 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        Object {
-          "body": Array [
-            Object {
-              "body": Object {
-                "body": Array [
-                  Object {
+        {
+          "body": [
+            {
+              "body": {
+                "body": [
+                  {
                     "computed": false,
                     "declare": false,
-                    "key": Object {
+                    "key": {
                       "name": "private",
                       "type": "PrivateIdentifier",
                     },
@@ -54,14 +54,14 @@ describe('Private properties', () => {
                 ],
                 "type": "ClassBody",
               },
-              "decorators": Array [],
-              "id": Object {
+              "decorators": [],
+              "id": {
                 "name": "Foo",
                 "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "implements": Array [],
+              "implements": [],
               "superClass": null,
               "superTypeParameters": null,
               "type": "ClassDeclaration",
@@ -95,15 +95,15 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        Object {
-          "body": Array [
-            Object {
-              "body": Object {
-                "body": Array [
-                  Object {
+        {
+          "body": [
+            {
+              "body": {
+                "body": [
+                  {
                     "computed": false,
                     "declare": false,
-                    "key": Object {
+                    "key": {
                       "name": "private",
                       "type": "PrivateIdentifier",
                     },
@@ -114,9 +114,9 @@ describe('Private properties', () => {
                     "value": null,
                     "variance": null,
                   },
-                  Object {
+                  {
                     "computed": false,
-                    "key": Object {
+                    "key": {
                       "name": "constructor",
                       "optional": false,
                       "type": "Identifier",
@@ -125,22 +125,22 @@ describe('Private properties', () => {
                     "kind": "constructor",
                     "static": false,
                     "type": "MethodDefinition",
-                    "value": Object {
+                    "value": {
                       "async": false,
-                      "body": Object {
-                        "body": Array [
-                          Object {
+                      "body": {
+                        "body": [
+                          {
                             "directive": null,
-                            "expression": Object {
+                            "expression": {
                               "computed": false,
-                              "object": Object {
+                              "object": {
                                 "name": "foo",
                                 "optional": false,
                                 "type": "Identifier",
                                 "typeAnnotation": null,
                               },
                               "optional": false,
-                              "property": Object {
+                              "property": {
                                 "name": "private",
                                 "type": "PrivateIdentifier",
                               },
@@ -154,7 +154,7 @@ describe('Private properties', () => {
                       "expression": false,
                       "generator": false,
                       "id": null,
-                      "params": Array [],
+                      "params": [],
                       "predicate": null,
                       "returnType": null,
                       "type": "FunctionExpression",
@@ -164,14 +164,14 @@ describe('Private properties', () => {
                 ],
                 "type": "ClassBody",
               },
-              "decorators": Array [],
-              "id": Object {
+              "decorators": [],
+              "id": {
                 "name": "Foo",
                 "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "implements": Array [],
+              "implements": [],
               "superClass": null,
               "superTypeParameters": null,
               "type": "ClassDeclaration",
@@ -209,15 +209,15 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        Object {
-          "body": Array [
-            Object {
-              "body": Object {
-                "body": Array [
-                  Object {
+        {
+          "body": [
+            {
+              "body": {
+                "body": [
+                  {
                     "computed": false,
                     "declare": false,
-                    "key": Object {
+                    "key": {
                       "name": "private",
                       "type": "PrivateIdentifier",
                     },
@@ -228,9 +228,9 @@ describe('Private properties', () => {
                     "value": null,
                     "variance": null,
                   },
-                  Object {
+                  {
                     "computed": false,
-                    "key": Object {
+                    "key": {
                       "name": "constructor",
                       "optional": false,
                       "type": "Identifier",
@@ -239,19 +239,19 @@ describe('Private properties', () => {
                     "kind": "constructor",
                     "static": false,
                     "type": "MethodDefinition",
-                    "value": Object {
+                    "value": {
                       "async": false,
-                      "body": Object {
-                        "body": Array [
-                          Object {
+                      "body": {
+                        "body": [
+                          {
                             "directive": null,
-                            "expression": Object {
-                              "left": Object {
+                            "expression": {
+                              "left": {
                                 "name": "private",
                                 "type": "PrivateIdentifier",
                               },
                               "operator": "in",
-                              "right": Object {
+                              "right": {
                                 "name": "foo",
                                 "optional": false,
                                 "type": "Identifier",
@@ -267,7 +267,7 @@ describe('Private properties', () => {
                       "expression": false,
                       "generator": false,
                       "id": null,
-                      "params": Array [],
+                      "params": [],
                       "predicate": null,
                       "returnType": null,
                       "type": "FunctionExpression",
@@ -277,14 +277,14 @@ describe('Private properties', () => {
                 ],
                 "type": "ClassBody",
               },
-              "decorators": Array [],
-              "id": Object {
+              "decorators": [],
+              "id": {
                 "name": "Foo",
                 "optional": false,
                 "type": "Identifier",
                 "typeAnnotation": null,
               },
-              "implements": Array [],
+              "implements": [],
               "superClass": null,
               "superTypeParameters": null,
               "type": "ClassDeclaration",
