@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef class/members/internal-slots 1`] = `
+[ExpectedTranslationError: 
+> 12 |   [[new]](): string;
+     |   ^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "internal slots" is currently not supported.]
+`;

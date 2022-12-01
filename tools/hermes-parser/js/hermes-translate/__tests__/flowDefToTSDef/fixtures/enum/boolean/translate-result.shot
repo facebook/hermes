@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef enum/boolean 1`] = `
+[ExpectedTranslationError: 
+> 11 | enum Foo of boolean {
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 12 |   A = true,
+     | ^^^^^^^^^^^
+> 13 |   B = false,
+     | ^^^^^^^^^^^
+> 14 | }
+     | ^^ Unsupported feature: Translating "boolean enums" is currently not supported.]
+`;

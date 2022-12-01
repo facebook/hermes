@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef class/members/call-signature 1`] = `
+[ExpectedTranslationError: 
+> 12 |   (): string;
+     |   ^^^^^^^^^^ Unsupported feature: Translating "call signatures on classes" is currently not supported.]
+`;

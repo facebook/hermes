@@ -17,7 +17,7 @@
     "hermes-parser": "0.9.0"
   },
   "peerDependencies": {
-    "prettier": "^2.4.1"
+    "prettier": "^2.7.1"
   },
   "files": [
     "dist",
