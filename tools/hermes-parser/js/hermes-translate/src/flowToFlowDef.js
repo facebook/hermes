@@ -18,7 +18,6 @@ import type {
   ClassMember,
   DeclareClass,
   DeclareFunction,
-  DeclareInterface,
   DeclareOpaqueType,
   DeclareVariable,
   ESNode,
@@ -529,11 +528,11 @@ function convertExportDeclaration(
     case 'InterfaceDeclaration': {
       const [declDecl, deps] = convertInterfaceDeclaration(decl, context);
       return [
-        t.DeclareExportDeclaration({
+        t.ExportNamedDeclaration({
+          exportKind: 'type',
+          source: null,
           specifiers: [],
           declaration: declDecl,
-          default: opts.default,
-          source: null,
         }),
         deps,
       ];
@@ -747,27 +746,10 @@ function convertImportDeclaration(
 function convertInterfaceDeclaration(
   interface_: InterfaceDeclaration,
   context: TranslationContext,
-): TranslatedResult<DeclareInterface> {
-  const [resultTypeParams, typeParamsDeps] =
-    convertTypeParameterDeclarationOrNull(interface_.typeParameters, context);
-
-  const [resultExtends, extendsDeps] = convertArray(interface_.extends, ext => [
-    asDetachedNode(ext),
-    analyzeTypeDependencies(ext, context),
-  ]);
-
+): TranslatedResult<InterfaceDeclaration> {
   return [
-    t.DeclareInterface({
-      id: asDetachedNode(interface_.id),
-      typeParameters: resultTypeParams,
-      body: asDetachedNode(interface_.body),
-      extends: resultExtends,
-    }),
-    [
-      ...typeParamsDeps,
-      ...extendsDeps,
-      ...analyzeTypeDependencies(interface_.body, context),
-    ],
+    asDetachedNode(interface_),
+    analyzeTypeDependencies(interface_, context),
   ];
 }
 
