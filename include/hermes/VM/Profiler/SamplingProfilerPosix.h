@@ -315,6 +315,11 @@ class SamplingProfiler {
 
   Runtime &runtime_;
 
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  bool loomDataPushEnabled_{false};
+  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
+#endif
+
  private:
   /// Hold \p domain so that the RuntimeModule(s) used by profiler are not
   /// released during symbolication.
@@ -423,6 +428,11 @@ class SamplingProfiler {
       const StackFrame &frame,
       int64_t *frames,
       uint32_t index);
+#endif
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  bool shouldPushDataToLoom() const;
+  void pushLastSampledStackToLoom();
 #endif
 };
 
