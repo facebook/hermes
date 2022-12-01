@@ -68,7 +68,7 @@ static opt<bool> GCPrintStats(
 
 static opt<unsigned> ExecutionTimeLimit(
     "time-limit",
-    llvh::cl::desc("Number of milliseconds after which to abort JS exeuction"),
+    llvh::cl::desc("Number of milliseconds after which to abort JS execution"),
     llvh::cl::init(0));
 } // namespace cl
 
