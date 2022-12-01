@@ -23,10 +23,9 @@ module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/
 
 enums=true
 inference_mode=constrain_writes
-enforce_local_inference_annotations=true
 
 [version]
-^0.188.1
+^0.191.0
 
 [lints]
 untyped-type-import=error
