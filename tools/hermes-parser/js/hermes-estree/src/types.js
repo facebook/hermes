@@ -1188,7 +1188,8 @@ export interface NumberLiteralTypeAnnotation extends BaseNode {
 }
 export interface BigIntLiteralTypeAnnotation extends BaseNode {
   +type: 'BigIntLiteralTypeAnnotation';
-  +value: null;
+  +bigint: string;
+  +value: null /* | bigint */;
   +raw: string;
 }
 export interface BooleanLiteralTypeAnnotation extends BaseNode {

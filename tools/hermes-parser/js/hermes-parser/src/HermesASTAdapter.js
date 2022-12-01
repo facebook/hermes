@@ -169,4 +169,24 @@ export default class HermesASTAdapter {
   formatError(node: HermesNode, message: string): string {
     return `${message} (${node.loc.start.line}:${node.loc.start.column})`;
   }
+
+  getBigIntLiteralValue(bigintString: string): {
+    bigint: string,
+    value: $FlowFixMe /* bigint */,
+  } {
+    // TODO - once we update flow we can remove this
+    declare var BigInt: ?(value: $FlowFixMe) => mixed;
+
+    const bigint = bigintString
+      // estree spec is to not have a trailing `n` on this property
+      // https://github.com/estree/estree/blob/db962bb417a97effcfe9892f87fbb93c81a68584/es2020.md#bigintliteral
+      .replace(/n$/, '')
+      // `BigInt` doesn't accept numeric separator and `bigint` property should not include numeric separator
+      .replace(/_/, '');
+    return {
+      bigint,
+      // coerce the string to a bigint value if supported by the environment
+      value: typeof BigInt === 'function' ? BigInt(bigint) : null,
+    };
+  }
 }
