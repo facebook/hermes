@@ -18,15 +18,22 @@
     "eslint-plugin-jest": "^25.2.4",
     "eslint-plugin-prettier": "^4.0.0",
     "flow-bin": "^0.192.0",
+    "glob": "^8.0.3",
     "jest": "^29.2.2",
+    "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
+    "patch-package": "^6.5.0",
     "prettier": "2.4.1"
+  },
+  "resolutions": {
+    "jest-snapshot": "^29.2.2"
   },
   "scripts": {
     "build": "./scripts/build.sh",
     "lint": "eslint .",
     "flow": "flow",
     "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
+    "postinstall": "patch-package",
     "test": "jest"
   },
   "workspaces": [
@@ -35,5 +42,6 @@
     "hermes-transform",
     "hermes-translate",
     "hermes-parser"
-  ]
+  ],
+  "dependencies": {}
 }
