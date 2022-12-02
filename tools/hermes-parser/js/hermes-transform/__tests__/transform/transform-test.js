@@ -1267,6 +1267,7 @@ y; // EOL comment
     const code = `\
 x?.y;
 x?.();
+foo?.[0]?.bar;
 `;
     const result = transform(code, context => ({
       Program(node) {
@@ -1279,6 +1280,7 @@ x?.();
     expect(result).toBe(`\
 x?.y; //test
 x?.();
+foo?.[0]?.bar;
 `);
   });
 

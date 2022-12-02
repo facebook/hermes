@@ -43,7 +43,32 @@ export function print(
     }
   }
 
-  SimpleTraverser.traverse(program, {
+  // Fix up the AST to match what prettier expects.
+  mutateASTForPrettier(program, visitorKeys);
+
+  // we need to delete the comments prop or else prettier will do
+  // its own attachment pass after the mutation and duplicate the
+  // comments on each node, borking the output
+  // $FlowExpectedError[cannot-write]
+  delete program.comments;
+
+  return prettier.format(
+    originalCode,
+    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+    {
+      ...prettierOptions,
+      parser() {
+        return program;
+      },
+    },
+  );
+}
+
+function mutateASTForPrettier(
+  rootNode: ESNode,
+  visitorKeys: ?VisitorKeysType,
+): void {
+  SimpleTraverser.traverse(rootNode, {
     enter(node) {
       // prettier fully expects the parent pointers are NOT set and
       // certain cases can crash due to prettier infinite-looping
@@ -56,11 +81,23 @@ export function print(
       // so we have to apply their transform to our AST so it can actually format it.
       if (node.type === 'ChainExpression') {
         const newNode = transformChainExpression(node.expression);
-        // $FlowExpectedError[cannot-write]
-        delete node.expression;
+
+        // Clear out existing properties
+        for (const k of Object.keys(node)) {
+          // $FlowExpectedError[prop-missing]
+          delete node[k];
+        }
+
+        // Traverse `newNode` and its children.
+        mutateASTForPrettier(newNode, visitorKeys);
+
+        // Overwrite `node` to match `newNode` while retaining the reference.
         // $FlowExpectedError[prop-missing]
         // $FlowExpectedError[cannot-write]
         Object.assign(node, newNode);
+
+        // Skip traversing the existing nodes since we are replacing them.
+        throw SimpleTraverser.Skip;
       }
 
       // Prettier currently relies on comparing the `node` vs `node.value` start positions to know if an
@@ -112,27 +149,10 @@ export function print(
     leave() {},
     visitorKeys,
   });
-
-  // we need to delete the comments prop or else prettier will do
-  // its own attachment pass after the mutation and duplicate the
-  // comments on each node, borking the output
-  // $FlowExpectedError[cannot-write]
-  delete program.comments;
-
-  return prettier.format(
-    originalCode,
-    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
-    {
-      ...prettierOptions,
-      parser() {
-        return program;
-      },
-    },
-  );
 }
 
 // https://github.com/prettier/prettier/blob/d962466a828f8ef51435e3e8840178d90b7ec6cd/src/language-js/parse/postprocess/index.js#L161-L182
-function transformChainExpression(node: ESNode) {
+function transformChainExpression(node: ESNode): ESNode {
   switch (node.type) {
     case 'CallExpression':
       // $FlowExpectedError[cannot-spread-interface]
@@ -147,7 +167,7 @@ function transformChainExpression(node: ESNode) {
       return {
         ...node,
         type: 'OptionalMemberExpression',
-        callee: transformChainExpression(node.object),
+        object: transformChainExpression(node.object),
       };
     // No default
   }
