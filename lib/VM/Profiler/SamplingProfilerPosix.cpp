@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "GlobalProfiler.h"
+#include "SamplingProfilerSampler.h"
 
 #if defined(HERMESVM_SAMPLING_PROFILER_POSIX)
 
@@ -76,6 +76,7 @@
 
 namespace hermes {
 namespace vm {
+namespace sampling_profiler {
 namespace {
 
 /// Name of the semaphore.
@@ -128,13 +129,13 @@ struct SamplingProfilerPosix : SamplingProfiler {
 #endif // defined(HERMESVM_ENABLE_LOOM)
 };
 
-struct GlobalProfilerPosix : GlobalProfiler {
-  GlobalProfilerPosix();
-  ~GlobalProfilerPosix() override;
+struct SamplerPosix : Sampler {
+  SamplerPosix();
+  ~SamplerPosix() override;
   /// Pointing to the singleton SamplingProfiler instance.
   /// We need this field because accessing local static variable from
   /// signal handler is unsafe.
-  static std::atomic<GlobalProfilerPosix *> instance_;
+  static std::atomic<SamplerPosix *> instance_;
 
   /// Used to synchronise data writes between the timer thread and the signal
   /// handler in the runtime thread. Also used to send the target
@@ -181,24 +182,15 @@ SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
 SamplingProfilerPosix::~SamplingProfilerPosix() {
   // TODO(T125910634): re-introduce the requirement for destroying the sampling
   // profiler on the same thread in which it was created.
-  GlobalProfiler::get()->unregisterRuntime(this);
+  Sampler::get()->unregisterRuntime(this);
 #if defined(HERMESVM_ENABLE_LOOM_APPLE)
   fbloom_profilo_api()->fbloom_notify_profiler_destroy();
 #endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
-std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
-  return std::make_unique<SamplingProfilerPosix>(rt);
-}
+std::atomic<SamplerPosix *> SamplerPosix::instance_{nullptr};
 
-bool SamplingProfiler::belongsToCurrentThread() const {
-  return static_cast<const SamplingProfilerPosix *>(this)->currentThread_ ==
-      pthread_self();
-}
-
-std::atomic<GlobalProfilerPosix *> GlobalProfilerPosix::instance_{nullptr};
-
-std::atomic<SamplingProfiler *> GlobalProfilerPosix::profilerForSig_{nullptr};
+std::atomic<SamplingProfiler *> SamplerPosix::profilerForSig_{nullptr};
 
 namespace {
 /// invoke sigaction() posix API to register \p handler.
@@ -214,7 +206,7 @@ static int invokeSignalAction(void (*handler)(int)) {
 }
 } // namespace
 
-bool GlobalProfilerPosix::registerSignalHandlers() {
+bool SamplerPosix::registerSignalHandlers() {
   if (isSigHandlerRegistered_) {
     return true;
   }
@@ -226,7 +218,7 @@ bool GlobalProfilerPosix::registerSignalHandlers() {
   return true;
 }
 
-bool GlobalProfilerPosix::unregisterSignalHandler() {
+bool SamplerPosix::unregisterSignalHandler() {
   if (!isSigHandlerRegistered_) {
     return true;
   }
@@ -239,7 +231,7 @@ bool GlobalProfilerPosix::unregisterSignalHandler() {
   return true;
 }
 
-void GlobalProfilerPosix::profilingSignalHandler(int signo) {
+void SamplerPosix::profilingSignalHandler(int signo) {
   // Ensure that writes made on the timer thread before setting the current
   // profiler are correctly acquired.
   SamplingProfiler *localProfiler;
@@ -250,10 +242,10 @@ void GlobalProfilerPosix::profilingSignalHandler(int signo) {
   // re-assigning it.
   auto oldErrno = errno;
 
-  auto *profilerInstance = static_cast<GlobalProfilerPosix *>(instance_.load());
+  auto *profilerInstance = static_cast<SamplerPosix *>(instance_.load());
   assert(
       profilerInstance != nullptr &&
-      "Why is GlobalProfilerPosix::instance_ not initialized yet?");
+      "Why is SamplerPosix::instance_ not initialized yet?");
 
   profilerInstance->walkRuntimeStack(localProfiler);
 
@@ -267,16 +259,16 @@ void GlobalProfilerPosix::profilingSignalHandler(int signo) {
   errno = oldErrno;
 }
 
-/*static*/ GlobalProfiler *GlobalProfiler::get() {
+/*static*/ Sampler *Sampler::get() {
   // We intentionally leak this memory to avoid a case where instance is
   // accessed after it is destroyed during shutdown.
-  static GlobalProfilerPosix *instance = new GlobalProfilerPosix{};
+  static SamplerPosix *instance = new SamplerPosix{};
   return instance;
 }
 
-GlobalProfilerPosix::~GlobalProfilerPosix() = default;
+SamplerPosix::~SamplerPosix() = default;
 
-GlobalProfilerPosix::GlobalProfilerPosix() {
+SamplerPosix::SamplerPosix() {
   instance_.store(this);
 #if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   profilo_api()->register_external_tracer_callback(
@@ -284,8 +276,8 @@ GlobalProfilerPosix::GlobalProfilerPosix() {
 #endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
-bool GlobalProfiler::platformEnable() {
-  auto *self = static_cast<GlobalProfilerPosix *>(this);
+bool Sampler::platformEnable() {
+  auto *self = static_cast<SamplerPosix *>(this);
   if (!self->samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
     return false;
   }
@@ -296,8 +288,8 @@ bool GlobalProfiler::platformEnable() {
   return true;
 }
 
-bool GlobalProfiler::platformDisable() {
-  auto *self = static_cast<GlobalProfilerPosix *>(this);
+bool Sampler::platformDisable() {
+  auto *self = static_cast<SamplerPosix *>(this);
   if (!self->samplingDoneSem_.close()) {
     return false;
   }
@@ -309,9 +301,9 @@ bool GlobalProfiler::platformDisable() {
   return true;
 }
 
-void GlobalProfiler::platformRegisterRuntime(SamplingProfiler *profiler) {
+void Sampler::platformRegisterRuntime(SamplingProfiler *profiler) {
 #if defined(HERMESVM_ENABLE_LOOM_ANDROID)
-  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  auto *self = static_cast<SamplerPosix *>(this);
   assert(
       self->threadLocalProfilerForLoom_.get() == nullptr &&
       "multiple hermes runtime in the same thread");
@@ -320,16 +312,16 @@ void GlobalProfiler::platformRegisterRuntime(SamplingProfiler *profiler) {
 #endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
-void GlobalProfiler::platformUnregisterRuntime(SamplingProfiler *profiler) {
+void Sampler::platformUnregisterRuntime(SamplingProfiler *profiler) {
 #if defined(HERMESVM_ENABLE_LOOM_ANDROID)
-  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  auto *self = static_cast<SamplerPosix *>(this);
   // TODO(T125910634): re-introduce the requirement for unregistering the
   // runtime in the same thread it was registered.
   self->threadLocalProfilerForLoom_.set(nullptr);
 #endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
-void GlobalProfiler::platformPostSampleStack(SamplingProfiler *localProfiler) {
+void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {
 #if defined(HERMESVM_ENABLE_LOOM_APPLE)
   auto *posixProfiler = static_cast<SamplingProfilerPosix *>(localProfiler);
   if (posixProfiler->shouldPushDataToLoom()) {
@@ -338,8 +330,8 @@ void GlobalProfiler::platformPostSampleStack(SamplingProfiler *localProfiler) {
 #endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
-bool GlobalProfiler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
-  auto *self = static_cast<GlobalProfilerPosix *>(this);
+bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+  auto *self = static_cast<SamplerPosix *>(this);
   auto *posixProfiler = static_cast<SamplingProfilerPosix *>(profiler);
   // Guarantee that the runtime thread will not proceed until it has
   // acquired the updates to domains_.
@@ -414,7 +406,7 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
     int64_t *frames,
     uint16_t *depth,
     uint16_t max_depth) {
-  auto profilerInstance = GlobalProfilerPosix::instance_.load();
+  auto profilerInstance = SamplerPosix::instance_.load();
   SamplingProfilerPosix *localProfiler =
       profilerInstance->threadLocalProfilerForLoom_.get();
   if (localProfiler == nullptr) {
@@ -433,7 +425,7 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
     (void)curThreadRuntime;
     assert(
         profilerInstance != nullptr &&
-        "Why is GlobalProfiler::instance_ not initialized yet?");
+        "Why is Sampler::instance_ not initialized yet?");
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
     sampledStackDepth = localProfiler->walkRuntimeStack(
@@ -494,6 +486,17 @@ void SamplingProfilerPosix::pushLastSampledStackToLoom() {
   clear();
 }
 #endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
+} // namespace sampling_profiler
+
+std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
+  return std::make_unique<sampling_profiler::SamplingProfilerPosix>(rt);
+}
+
+bool SamplingProfiler::belongsToCurrentThread() const {
+  return static_cast<const sampling_profiler::SamplingProfilerPosix *>(this)
+             ->currentThread_ == pthread_self();
+}
+
 } // namespace vm
 } // namespace hermes
 

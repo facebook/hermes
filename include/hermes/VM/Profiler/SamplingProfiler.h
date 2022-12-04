@@ -25,6 +25,9 @@
 
 namespace hermes {
 namespace vm {
+namespace sampling_profiler {
+struct Sampler;
+} // namespace sampling_profiler
 
 /// Singleton wall-time based JS sampling profiler that walks VM stack frames
 /// in a configurable interval. The profiler can be enabled and disabled
@@ -141,7 +144,7 @@ class SamplingProfiler {
   }
 
  private:
-  friend struct GlobalProfiler;
+  friend struct sampling_profiler::Sampler;
 
   /// Max size of sampleStorage_.
   static const int kMaxStackDepth = 500;

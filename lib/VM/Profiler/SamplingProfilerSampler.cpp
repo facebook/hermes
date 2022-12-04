@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "GlobalProfiler.h"
+#include "SamplingProfilerSampler.h"
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
@@ -29,16 +29,17 @@
 
 namespace hermes {
 namespace vm {
+namespace sampling_profiler {
 
-GlobalProfiler::~GlobalProfiler() = default;
+Sampler::~Sampler() = default;
 
-void GlobalProfiler::registerRuntime(SamplingProfiler *profiler) {
+void Sampler::registerRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
   platformRegisterRuntime(profiler);
 }
 
-void GlobalProfiler::unregisterRuntime(SamplingProfiler *profiler) {
+void Sampler::unregisterRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   bool succeed = profilers_.erase(profiler);
   // TODO: should we allow recursive style
@@ -48,7 +49,7 @@ void GlobalProfiler::unregisterRuntime(SamplingProfiler *profiler) {
   platformUnregisterRuntime(profiler);
 }
 
-bool GlobalProfiler::sampleStacks() {
+bool Sampler::sampleStacks() {
   for (SamplingProfiler *localProfiler : profilers_) {
     std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
     if (!sampleStack(localProfiler)) {
@@ -59,7 +60,7 @@ bool GlobalProfiler::sampleStacks() {
   return true;
 }
 
-bool GlobalProfiler::sampleStack(SamplingProfiler *localProfiler) {
+bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
   if (localProfiler->suspendCount_ > 0) {
     // Sampling profiler is suspended. Copy pre-captured stack instead without
     // interrupting the VM thread.
@@ -113,7 +114,7 @@ bool GlobalProfiler::sampleStack(SamplingProfiler *localProfiler) {
   return true;
 }
 
-void GlobalProfiler::walkRuntimeStack(SamplingProfiler *profiler) {
+void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
   assert(
       profiler->suspendCount_ == 0 &&
       "Shouldn't interrupt the VM thread when the sampling profiler is "
@@ -130,7 +131,7 @@ void GlobalProfiler::walkRuntimeStack(SamplingProfiler *profiler) {
       profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
 }
 
-void GlobalProfiler::timerLoop() {
+void Sampler::timerLoop() {
   oscompat::set_thread_name("hermes-sampling-profiler");
 
   constexpr double kMeanMilliseconds = 10;
@@ -158,12 +159,12 @@ void GlobalProfiler::timerLoop() {
   }
 }
 
-bool GlobalProfiler::enabled() {
+bool Sampler::enabled() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   return enabled_;
 }
 
-bool GlobalProfiler::enable() {
+bool Sampler::enable() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   if (enabled_) {
     return true;
@@ -173,11 +174,11 @@ bool GlobalProfiler::enable() {
   }
   enabled_ = true;
   // Start timer thread.
-  timerThread_ = std::thread(&GlobalProfiler::timerLoop, this);
+  timerThread_ = std::thread(&Sampler::timerLoop, this);
   return true;
 }
 
-bool GlobalProfiler::disable() {
+bool Sampler::disable() {
   {
     std::lock_guard<std::mutex> lockGuard(profilerLock_);
     if (!enabled_) {
@@ -199,6 +200,7 @@ bool GlobalProfiler::disable() {
   return true;
 }
 
+} // namespace sampling_profiler
 } // namespace vm
 } // namespace hermes
 

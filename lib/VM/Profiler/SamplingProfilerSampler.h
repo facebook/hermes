@@ -19,47 +19,47 @@
 
 namespace hermes {
 namespace vm {
-
-/// GlobalProfiler manages the SamplingProfiler's sampling thread, and abstracts
+namespace sampling_profiler {
+/// Sampler manages the SamplingProfiler's sampling thread, and abstracts
 /// away platform-specific code for suspending the VM thread and performing the
 /// JS stack walk.
 ///
 /// Each suported platform (e.g., Posix), must have its own "flavor" of the
-/// GlobalProfiler (e.g., GlobalProfilerPosix) which must implement the
-/// GlobalProfiler::platform<<*>> methods.
+/// Sampler (e.g., SamplerPosix) which must implement the
+/// Sampler::platform<<*>> methods.
 ///
-/// Usually, the platform-agnostic GlobalProfiler invokes the platform-specific
-/// ones. For example, GlobalProfiler::enable() performs some checks, then call
-/// GlobalProfiler::platformEnable() for completing the initialization.
+/// Usually, the platform-agnostic Sampler invokes the platform-specific
+/// ones. For example, Sampler::enable() performs some checks, then call
+/// Sampler::platformEnable() for completing the initialization.
 ///
 /// Sampling happens on a separate thread whose lifetime is managed by the
-/// GlobalProfiler's platform-specific code. The sampling thread runs the
-/// GlobalProfiler::timerLoop function, which will periodically traverse the
+/// Sampler's platform-specific code. The sampling thread runs the
+/// Sampler::timerLoop function, which will periodically traverse the
 /// list of registered runtimes, and perform the stack walk, which is
 /// accomplished as follows.
 ///
-/// GlobalProfiler::timerLoop invokes GlobalProfiler::sampleStacks, which will
-/// invoke GlobalProfiler::sampleStack for each registered runtime.
+/// Sampler::timerLoop invokes Sampler::sampleStacks, which will
+/// invoke Sampler::sampleStack for each registered runtime.
 ///
-/// GlobalProfiler::sampleStack invoke the platform-specific
-/// GlobalProfiler::suspendVMAndWalkStack method. This hook should be
+/// Sampler::sampleStack invoke the platform-specific
+/// Sampler::suspendVMAndWalkStack method. This hook should be
 /// implemented on every supported platform, and it is responsible for
 /// suspending VM execution. With the stopped VM, the platform-specific code
-/// calls back into platform-agnostic code (GlobalProfiler::walkRuntimeStack) so
+/// calls back into platform-agnostic code (Sampler::walkRuntimeStack) so
 /// stack walking can continue.
 ///
-/// When GlobalProfiler::walkRuntimeStack runs the VM is suspended, but this
+/// When Sampler::walkRuntimeStack runs the VM is suspended, but this
 /// suspension can happen when the VM is in the middle of, e.g., memory
 /// allocation, or while it is holding some lock. Thus,
-/// GlobalProfiler::walkRuntimeStack should not acquire locks, or even allocate
+/// Sampler::walkRuntimeStack should not acquire locks, or even allocate
 /// memory. It should perform stack walking quickly and expeditiously. All
 /// buffers used for stack walking are pre-allocated before calling into this
 /// function.
 ///
-/// Finally, when GlobalProfiler::walkRuntimeStack returns to
-/// GlobalProfiler::suspendVMAndWalkStack, VM execution should be resumed.
-struct GlobalProfiler {
-  virtual ~GlobalProfiler();
+/// Finally, when Sampler::walkRuntimeStack returns to
+/// Sampler::suspendVMAndWalkStack, VM execution should be resumed.
+struct Sampler {
+  virtual ~Sampler();
 
   /// Lock for profiler operations and access to member fields.
   std::mutex profilerLock_;
@@ -114,10 +114,10 @@ struct GlobalProfiler {
   void unregisterRuntime(SamplingProfiler *profiler);
 
   /// \return the singleton profiler instance.
-  static GlobalProfiler *get();
+  static Sampler *get();
 
  protected:
-  GlobalProfiler() = default;
+  Sampler() = default;
 
   void walkRuntimeStack(SamplingProfiler *profiler);
 
@@ -158,6 +158,7 @@ struct GlobalProfiler {
   /// and \p profiler->runtimeDataLock_ locks held.
   bool platformSuspendVMAndWalkStack(SamplingProfiler *profiler);
 };
+} // namespace sampling_profiler
 } // namespace vm
 } // namespace hermes
 
