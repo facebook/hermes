@@ -361,6 +361,10 @@ bool num_context_switches(long &voluntary, long &involuntary) {
   return false;
 }
 
+uint64_t process_id() {
+  return GetCurrentProcessId();
+}
+
 uint64_t thread_id() {
   return GetCurrentThreadId();
 }
