@@ -29,6 +29,7 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
+#include "hermes/VM/Profiler/SamplingProfilerDefs.h"
 #include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/RegExpMatch.h"
@@ -81,10 +82,13 @@ struct RuntimeOffsets;
 class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
-class SamplingProfiler;
 class CodeCoverageProfiler;
 struct MockedEnvironment;
 struct StackTracesTree;
+
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
+class SamplingProfiler;
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -811,9 +815,11 @@ class Runtime : public PointerBase,
     return *codeCoverageProfiler_;
   }
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
   /// will automatically register/unregister this runtime from profiling.
   std::unique_ptr<SamplingProfiler> samplingProfiler;
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   /// Time limit monitor data for this runtime.
   std::shared_ptr<TimeLimitMonitor> timeLimitMonitor;

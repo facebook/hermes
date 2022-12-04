@@ -7,12 +7,13 @@
 
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#ifdef HERMESVM_SAMPLING_PROFILER_POSIX
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
+#include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
@@ -725,4 +726,4 @@ bool operator==(
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMESVM_SAMPLING_PROFILER_POSIX
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
