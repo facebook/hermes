@@ -9,9 +9,11 @@
 
 #if defined(HERMESVM_SAMPLING_PROFILER_POSIX)
 
+#include "hermes/Support/Semaphore.h"
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
+#include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -19,6 +21,12 @@
 #include "llvh/Support/Compiler.h"
 
 #include "ChromeTraceSerializer.h"
+
+#if !defined(__APPLE__)
+// Prevent "The deprecated ucontext routines require _XOPEN_SOURCE to be
+// defined" error on mac.
+#include <ucontext.h>
+#endif // !defined(__APPLE__)
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -30,14 +38,137 @@
 #include <random>
 #include <thread>
 
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#include <profilo/ExternalApi.h>
+#endif // defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#include <FBLoom/ExternalApi/ExternalApi.h>
+#endif // defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+
 namespace hermes {
 namespace vm {
+namespace {
 
-std::atomic<GlobalProfiler *> GlobalProfiler::instance_{nullptr};
+/// Name of the semaphore.
+constexpr char kSamplingDoneSemaphoreName[] = "/samplingDoneSem";
 
-std::atomic<SamplingProfiler *> GlobalProfiler::profilerForSig_{nullptr};
+struct SamplingProfilerPosix : SamplingProfiler {
+  SamplingProfilerPosix(Runtime &rt);
+  ~SamplingProfilerPosix() override;
 
-int GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
+  /// Thread that this profiler instance represents. This can currently only be
+  /// set from the constructor of SamplingProfiler, so we need to construct a
+  /// new SamplingProfiler every time the runtime is moved to a different
+  /// thread.
+  pthread_t currentThread_;
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  bool loomDataPushEnabled_{false};
+  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
+#endif
+
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  /// Registered loom callback for collecting stack frames.
+  static StackCollectionRetcode collectStackForLoom(
+      ucontext_t *ucontext,
+      int64_t *frames,
+      uint16_t *depth,
+      uint16_t max_depth);
+#endif
+
+#if (defined(__ANDROID__) || defined(__APPLE__)) && \
+    defined(HERMES_FACEBOOK_BUILD)
+  // Common code that is shared by the collectStackForLoom(), for both the
+  // Android and Apple versions.
+  void collectStackForLoomCommon(
+      const StackFrame &frame,
+      int64_t *frames,
+      uint32_t index);
+#endif
+
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  bool shouldPushDataToLoom() const;
+  void pushLastSampledStackToLoom();
+#endif
+};
+
+struct GlobalProfilerPosix : GlobalProfiler {
+  GlobalProfilerPosix();
+  ~GlobalProfilerPosix() override;
+  /// Pointing to the singleton SamplingProfiler instance.
+  /// We need this field because accessing local static variable from
+  /// signal handler is unsafe.
+  static std::atomic<GlobalProfilerPosix *> instance_;
+
+  /// Used to synchronise data writes between the timer thread and the signal
+  /// handler in the runtime thread. Also used to send the target
+  /// SamplingProfiler to be used during the stack walk.
+  static std::atomic<SamplingProfiler *> profilerForSig_;
+
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  /// Per-thread profiler instance for loom profiling.
+  /// Limitations: No recursive runtimes in one thread.
+  ThreadLocal<SamplingProfilerPosix> threadLocalProfilerForLoom_;
+#endif
+
+  /// Whether signal handler is registered or not. Protected by profilerLock_.
+  bool isSigHandlerRegistered_{false};
+
+  /// Semaphore to indicate all signal handlers have finished the sampling.
+  Semaphore samplingDoneSem_;
+
+  /// Register sampling signal handler if not done yet.
+  /// \return true to indicate success.
+  bool registerSignalHandlers();
+
+  /// Unregister sampling signal handler.
+  bool unregisterSignalHandler();
+
+  /// Signal handler to walk the stack frames.
+  static void profilingSignalHandler(int signo);
+};
+} // namespace
+
+SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
+    : SamplingProfiler(rt), currentThread_{pthread_self()} {
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
+  const int32_t tracerTypeJavascript = 1;
+  fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
+      tracerTypeJavascript, enable);
+  fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
+      tracerTypeJavascript, disable);
+  loomDataPushEnabled_ = true;
+#endif
+}
+
+SamplingProfilerPosix::~SamplingProfilerPosix() {
+  // TODO(T125910634): re-introduce the requirement for destroying the sampling
+  // profiler on the same thread in which it was created.
+  GlobalProfiler::get()->unregisterRuntime(this);
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  fbloom_profilo_api()->fbloom_notify_profiler_destroy();
+#endif
+}
+
+std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
+  return std::make_unique<SamplingProfilerPosix>(rt);
+}
+
+bool SamplingProfiler::belongsToCurrentThread() const {
+  return static_cast<const SamplingProfilerPosix *>(this)->currentThread_ ==
+      pthread_self();
+}
+
+std::atomic<GlobalProfilerPosix *> GlobalProfilerPosix::instance_{nullptr};
+
+std::atomic<SamplingProfiler *> GlobalProfilerPosix::profilerForSig_{nullptr};
+
+namespace {
+/// invoke sigaction() posix API to register \p handler.
+/// \return what sigaction() returns: 0 to indicate success.
+static int invokeSignalAction(void (*handler)(int)) {
   struct sigaction actions;
   memset(&actions, 0, sizeof(actions));
   sigemptyset(&actions.sa_mask);
@@ -46,8 +177,9 @@ int GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
   actions.sa_handler = handler;
   return sigaction(SIGPROF, &actions, nullptr);
 }
+} // namespace
 
-bool GlobalProfiler::registerSignalHandlers() {
+bool GlobalProfilerPosix::registerSignalHandlers() {
   if (isSigHandlerRegistered_) {
     return true;
   }
@@ -59,7 +191,7 @@ bool GlobalProfiler::registerSignalHandlers() {
   return true;
 }
 
-bool GlobalProfiler::unregisterSignalHandler() {
+bool GlobalProfilerPosix::unregisterSignalHandler() {
   if (!isSigHandlerRegistered_) {
     return true;
   }
@@ -72,40 +204,28 @@ bool GlobalProfiler::unregisterSignalHandler() {
   return true;
 }
 
-void GlobalProfiler::profilingSignalHandler(int signo) {
+void GlobalProfilerPosix::profilingSignalHandler(int signo) {
   // Ensure that writes made on the timer thread before setting the current
   // profiler are correctly acquired.
   SamplingProfiler *localProfiler;
   while (!(localProfiler = profilerForSig_.load(std::memory_order_acquire))) {
   }
 
-  assert(
-      localProfiler->suspendCount_ == 0 &&
-      "Shouldn't interrupt the VM thread when the sampling profiler is "
-      "suspended.");
-
   // Avoid spoiling errno in a signal handler by storing the old version and
   // re-assigning it.
   auto oldErrno = errno;
 
-  auto profilerInstance = instance_.load();
+  auto *profilerInstance = static_cast<GlobalProfilerPosix *>(instance_.load());
   assert(
       profilerInstance != nullptr &&
-      "Why is GlobalProfiler::instance_ not initialized yet?");
+      "Why is GlobalProfilerPosix::instance_ not initialized yet?");
 
-  // Sampling stack will touch GC objects(like closure) so only do so if heap
-  // is valid.
-  auto &curThreadRuntime = localProfiler->runtime_;
-  assert(
-      !curThreadRuntime.getHeap().inGC() &&
-      "sampling profiler should be suspended before GC");
-  (void)curThreadRuntime;
-  profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
-      profilerInstance->sampleStorage_, SamplingProfiler::InLoom::No);
+  profilerInstance->walkRuntimeStack(localProfiler);
+
   // Ensure that writes made in the handler are visible to the timer thread.
   profilerForSig_.store(nullptr);
 
-  if (!instance_.load()->samplingDoneSem_.notifyOne()) {
+  if (!profilerInstance->samplingDoneSem_.notifyOne()) {
     errno = oldErrno;
     abort(); // Something is wrong.
   }
@@ -115,13 +235,101 @@ void GlobalProfiler::profilingSignalHandler(int signo) {
 /*static*/ GlobalProfiler *GlobalProfiler::get() {
   // We intentionally leak this memory to avoid a case where instance is
   // accessed after it is destroyed during shutdown.
-  static GlobalProfiler *instance = new GlobalProfiler{};
+  static GlobalProfilerPosix *instance = new GlobalProfilerPosix{};
   return instance;
+}
+
+GlobalProfilerPosix::~GlobalProfilerPosix() = default;
+
+GlobalProfilerPosix::GlobalProfilerPosix() {
+  instance_.store(this);
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  profilo_api()->register_external_tracer_callback(
+      TRACER_TYPE_JAVASCRIPT, SamplingProfilerPosix::collectStackForLoom);
+#endif
+}
+
+bool GlobalProfiler::platformEnable() {
+  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  if (!self->samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
+    return false;
+  }
+  if (!self->registerSignalHandlers()) {
+    return false;
+  }
+
+  return true;
+}
+
+bool GlobalProfiler::platformDisable() {
+  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  if (!self->samplingDoneSem_.close()) {
+    return false;
+  }
+  // Unregister handlers before shutdown.
+  if (!self->unregisterSignalHandler()) {
+    return false;
+  }
+
+  return true;
+}
+
+void GlobalProfiler::platformRegisterRuntime(SamplingProfiler *profiler) {
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  assert(
+      self->threadLocalProfilerForLoom_.get() == nullptr &&
+      "multiple hermes runtime in the same thread");
+  self->threadLocalProfilerForLoom_.set(
+      static_cast<SamplingProfilerPosix *>(profiler));
+#endif
+}
+
+void GlobalProfiler::platformUnregisterRuntime(SamplingProfiler *profiler) {
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  // TODO(T125910634): re-introduce the requirement for unregistering the
+  // runtime in the same thread it was registered.
+  self->threadLocalProfilerForLoom_.set(nullptr);
+#endif
+}
+
+void GlobalProfiler::platformPostSampleStack(SamplingProfiler *localProfiler) {
+#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+  auto *posixProfiler = static_cast<SamplingProfilerPosix *>(localProfiler);
+  if (posixProfiler->shouldPushDataToLoom()) {
+    posixProfiler->pushLastSampledStackToLoom();
+  }
+#endif
+}
+
+bool GlobalProfiler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
+  auto *self = static_cast<GlobalProfilerPosix *>(this);
+  auto *posixProfiler = static_cast<SamplingProfilerPosix *>(profiler);
+  // Guarantee that the runtime thread will not proceed until it has
+  // acquired the updates to domains_.
+  self->profilerForSig_.store(profiler, std::memory_order_release);
+
+  // Signal target runtime thread to sample stack.
+  pthread_kill(posixProfiler->currentThread_, SIGPROF);
+
+  // Threading: samplingDoneSem_ will synchronise this thread with the
+  // signal handler, so that we only have one active signal at a time.
+  if (!self->samplingDoneSem_.wait()) {
+    return false;
+  }
+
+  // Guarantee that this thread will observe all changes made to data
+  // structures in the signal handler.
+  while (self->profilerForSig_.load(std::memory_order_acquire) != nullptr) {
+  }
+
+  return true;
 }
 
 #if (defined(__ANDROID__) || defined(__APPLE__)) && \
     defined(HERMES_FACEBOOK_BUILD)
-void SamplingProfiler::collectStackForLoomCommon(
+void SamplingProfilerPosix::collectStackForLoomCommon(
     const StackFrame &frame,
     int64_t *frames,
     uint32_t index) {
@@ -164,13 +372,13 @@ void SamplingProfiler::collectStackForLoomCommon(
 #endif
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-/*static*/ StackCollectionRetcode SamplingProfiler::collectStackForLoom(
+/*static*/ StackCollectionRetcode SamplingProfilerPosix::collectStackForLoom(
     ucontext_t *ucontext,
     int64_t *frames,
     uint16_t *depth,
     uint16_t max_depth) {
-  auto profilerInstance = GlobalProfiler::instance_.load();
-  SamplingProfiler *localProfiler =
+  auto profilerInstance = GlobalProfilerPosix::instance_.load();
+  SamplingProfilerPosix *localProfiler =
       profilerInstance->threadLocalProfilerForLoom_.get();
   if (localProfiler == nullptr) {
     // No runtime in this thread.
@@ -180,7 +388,7 @@ void SamplingProfiler::collectStackForLoomCommon(
   uint32_t sampledStackDepth = 0;
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (LLVM_LIKELY(localProfiler->suspendCount_ == 0)) {
+  if (LLVM_LIKELY(!localProfiler->isSuspended())) {
     Runtime &curThreadRuntime = localProfiler->runtime_;
     assert(
         !curThreadRuntime.getHeap().inGC() &&
@@ -218,7 +426,7 @@ void SamplingProfiler::collectStackForLoomCommon(
 #endif
 
 #if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-bool SamplingProfiler::shouldPushDataToLoom() const {
+bool SamplingProfilerPosix::shouldPushDataToLoom() const {
   auto now = std::chrono::system_clock::now();
   constexpr auto kLoomDelay = std::chrono::milliseconds(50);
   // The default sample stack interval in timerLoop() is between 5-15ms which
@@ -226,7 +434,7 @@ bool SamplingProfiler::shouldPushDataToLoom() const {
   return loomDataPushEnabled_ && (now - previousPushTs > kLoomDelay);
 }
 
-void SamplingProfiler::pushLastSampledStackToLoom() {
+void SamplingProfilerPosix::pushLastSampledStackToLoom() {
   constexpr uint16_t maxDepth = 512;
   int64_t frames[maxDepth];
   uint16_t depth = 0;
@@ -249,7 +457,6 @@ void SamplingProfiler::pushLastSampledStackToLoom() {
   clear();
 }
 #endif
-
 } // namespace vm
 } // namespace hermes
 

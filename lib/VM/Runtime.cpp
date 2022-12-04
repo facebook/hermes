@@ -375,7 +375,7 @@ Runtime::Runtime(
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (runtimeConfig.getEnableSampleProfiling())
-    samplingProfiler = std::make_unique<SamplingProfiler>(*this);
+    samplingProfiler = SamplingProfiler::create(*this);
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");

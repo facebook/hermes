@@ -9,7 +9,6 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-#include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/Runtime.h"
@@ -22,8 +21,6 @@
 #include "GlobalProfiler.h"
 
 #include <fcntl.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -129,28 +126,9 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   return count;
 }
 
-SamplingProfiler::SamplingProfiler(Runtime &runtime)
-    : currentThread_{pthread_self()}, runtime_{runtime} {
+SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
   GlobalProfiler::get()->registerRuntime(this);
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
-  const int32_t tracerTypeJavascript = 1;
-  fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
-      tracerTypeJavascript, enable);
-  fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
-      tracerTypeJavascript, disable);
-  loomDataPushEnabled_ = true;
-#endif
-}
-
-SamplingProfiler::~SamplingProfiler() {
-  // TODO(T125910634): re-introduce the requirement for destroying the sampling
-  // profiler on the same thread in which it was created.
-  GlobalProfiler::get()->unregisterRuntime(this);
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  fbloom_profilo_api()->fbloom_notify_profiler_destroy();
-#endif
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
@@ -212,7 +190,7 @@ void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
 
 void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  auto pid = getpid();
+  auto pid = oscompat::process_id();
   ChromeTraceSerializer serializer(
       *this, ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
   serializer.serialize(OS);
@@ -224,7 +202,8 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
   hermes::vm::serializeAsProfilerProfile(
       *this,
       OS,
-      ChromeTraceFormat::create(getpid(), threadNames_, sampledStacks_));
+      ChromeTraceFormat::create(
+          oscompat::process_id(), threadNames_, sampledStacks_));
   clear();
 }
 

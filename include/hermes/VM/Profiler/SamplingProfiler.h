@@ -18,24 +18,10 @@
 
 #include "llvh/ADT/DenseMap.h"
 
-#ifndef __APPLE__
-// Prevent "The deprecated ucontext routines require _XOPEN_SOURCE to be
-// defined" error on mac.
-#include <ucontext.h>
-#endif
-
 #include <chrono>
 #include <mutex>
 #include <unordered_set>
 #include <vector>
-
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-#include <profilo/ExternalApi.h>
-#endif
-
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-#include <FBLoom/ExternalApi/ExternalApi.h>
-#endif
 
 namespace hermes {
 namespace vm {
@@ -119,11 +105,10 @@ class SamplingProfiler {
         : tid(tid), timeStamp(ts), stack(stackStart, stackEnd) {}
   };
 
-#ifdef UNIT_TEST
-  pthread_t getCurrentThread() const {
-    return currentThread_;
-  }
-#endif // UNIT_TEST
+  /// \return true if this SamplingProfiler belongs to the current running
+  /// thread. Does not acquire any locks, and as such should not be used in
+  /// production.
+  bool belongsToCurrentThread() const;
 
   /// \returns the NativeFunctionPtr for \p stackFrame. Caller must hold
   /// runtimeDataLock_.
@@ -165,9 +150,11 @@ class SamplingProfiler {
   /// domains.
   std::mutex runtimeDataLock_;
 
+ protected:
   /// Sampled stack traces overtime. Protected by runtimeDataLock_.
   std::vector<StackTrace> sampledStacks_;
 
+ private:
   // Threading: the suspendCount/preSuspendStack are accessed by both the VM
   // thread as well as the sampling profiler timer thread, hence they are all
   // protected by runtimeDataLock_.
@@ -182,12 +169,6 @@ class SamplingProfiler {
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
 
-  /// Thread that this profiler instance represents. This can currently only be
-  /// set from the constructor of SamplingProfiler, so we need to construct a
-  /// new SamplingProfiler every time the runtime is moved to a different
-  /// thread.
-  pthread_t currentThread_;
-
   /// Unique GC event extra info strings container.
   std::unordered_set<std::string> suspendEventExtraInfoSet_;
 
@@ -199,12 +180,14 @@ class SamplingProfiler {
   /// Protected by runtimeDataLock_.
   std::vector<NativeFunction *> nativeFunctions_;
 
+ protected:
   Runtime &runtime_;
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  bool loomDataPushEnabled_{false};
-  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
-#endif
+  /// \return suspendCount_ != 0, meaning that an external agent (e.g., GC) has
+  /// suspended stack walking on this sampling profiler.
+  bool isSuspended() const {
+    return suspendCount_ != 0;
+  }
 
  private:
   /// Hold \p domain so that the RuntimeModule(s) used by profiler are not
@@ -217,6 +200,7 @@ class SamplingProfiler {
   NativeFunctionFrameInfo registerNativeFunction(
       NativeFunction *nativeFunction);
 
+ protected:
   enum class InLoom { No, Yes };
 
   /// Walk runtime stack frames and store in \p sampleStorage.
@@ -231,26 +215,20 @@ class SamplingProfiler {
       InLoom inLoom,
       uint32_t startIndex = 0);
 
+ private:
   /// Record JS stack at time of suspension, caller must hold
   /// runtimeDataLock_.
   void recordPreSuspendStack(std::string_view extraInfo);
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  /// Registered loom callback for collecting stack frames.
-  static StackCollectionRetcode collectStackForLoom(
-      ucontext_t *ucontext,
-      int64_t *frames,
-      uint16_t *depth,
-      uint16_t max_depth);
-#endif
-
+ protected:
   /// Clear previous stored samples.
   /// Note: caller should take the lock before calling.
   void clear();
 
  public:
-  explicit SamplingProfiler(Runtime &runtime);
-  ~SamplingProfiler();
+  static std::unique_ptr<SamplingProfiler> create(Runtime &rt);
+
+  virtual ~SamplingProfiler() = default;
 
   /// See documentation on \c GCBase::GCCallbacks.
   void markRootsForCompleteMarking(RootAcceptor &acceptor);
@@ -293,20 +271,8 @@ class SamplingProfiler {
   /// suspend() that hansn't been resume()d yet.
   void resume();
 
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
-  // Common code that is shared by the collectStackForLoom(), for both the
-  // Android and Apple versions.
-  void collectStackForLoomCommon(
-      const StackFrame &frame,
-      int64_t *frames,
-      uint32_t index);
-#endif
-
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  bool shouldPushDataToLoom() const;
-  void pushLastSampledStackToLoom();
-#endif
+ protected:
+  explicit SamplingProfiler(Runtime &runtime);
 };
 
 /// An RAII class for temporarily suspending (and auto-resuming) the sampling

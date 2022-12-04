@@ -1364,8 +1364,7 @@ void HermesRuntime::registerForProfiling() {
     ::hermes::hermes_fatal(
         "re-registering HermesVMs for profiling is not allowed");
   }
-  runtime.samplingProfiler =
-      std::make_unique<::hermes::vm::SamplingProfiler>(runtime);
+  runtime.samplingProfiler = ::hermes::vm::SamplingProfiler::create(runtime);
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
