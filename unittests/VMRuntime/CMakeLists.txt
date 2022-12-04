@@ -59,7 +59,7 @@ set(RTSources
   HandleTest.cpp
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
-  SamplingProfilerPosixTest.cpp
+  SamplingProfilerTest.cpp
   SegmentedArrayTest.cpp
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp

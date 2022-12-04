@@ -30,7 +30,7 @@ std::shared_ptr<Runtime> makeRuntime(bool withEnableSampleProfiling) {
   return Runtime::create(cfg);
 }
 
-TEST(SamplingProfilerPosixTest, Invariants) {
+TEST(SamplingProfilerTest, Invariants) {
   // No sample profiler registration by default
   EXPECT_EQ(Runtime::create(RuntimeConfig{})->samplingProfiler, nullptr);
 
@@ -45,7 +45,7 @@ TEST(SamplingProfilerPosixTest, Invariants) {
 }
 
 #ifndef __APPLE__
-TEST(SamplingProfilerPosixTest, MultipleRuntimes) {
+TEST(SamplingProfilerTest, MultipleRuntimes) {
   auto rt0 = makeRuntime(withSamplingProfilerEnabled);
   auto rt1 = makeRuntime(withSamplingProfilerEnabled);
   auto rt2 = makeRuntime(withSamplingProfilerEnabled);
@@ -55,7 +55,7 @@ TEST(SamplingProfilerPosixTest, MultipleRuntimes) {
   EXPECT_EQ(owningThread(*rt2->samplingProfiler), pthread_self());
 }
 
-TEST(SamplingProfilerPosixTest, MultipleProfilers) {
+TEST(SamplingProfilerTest, MultipleProfilers) {
   auto rt = makeRuntime(withSamplingProfilerEnabled);
   auto sp0 = std::make_unique<SamplingProfiler>(*rt);
   auto sp1 = std::make_unique<SamplingProfiler>(*rt);
