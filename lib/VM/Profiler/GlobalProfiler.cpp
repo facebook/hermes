@@ -36,10 +36,6 @@ namespace vm {
 /// Name of the semaphore.
 const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
 
-std::atomic<GlobalProfiler *> GlobalProfiler::instance_{nullptr};
-
-std::atomic<SamplingProfiler *> GlobalProfiler::profilerForSig_{nullptr};
-
 void GlobalProfiler::registerRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
@@ -65,81 +61,6 @@ void GlobalProfiler::unregisterRuntime(SamplingProfiler *profiler) {
   // runtime in the same thread it was registered.
   threadLocalProfilerForLoom_.set(nullptr);
 #endif
-}
-
-int GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
-  struct sigaction actions;
-  memset(&actions, 0, sizeof(actions));
-  sigemptyset(&actions.sa_mask);
-  // Allows interrupted IO primitives to restart.
-  actions.sa_flags = SA_RESTART;
-  actions.sa_handler = handler;
-  return sigaction(SIGPROF, &actions, nullptr);
-}
-
-bool GlobalProfiler::registerSignalHandlers() {
-  if (isSigHandlerRegistered_) {
-    return true;
-  }
-  if (invokeSignalAction(profilingSignalHandler) != 0) {
-    perror("signal handler registration failed");
-    return false;
-  }
-  isSigHandlerRegistered_ = true;
-  return true;
-}
-
-bool GlobalProfiler::unregisterSignalHandler() {
-  if (!isSigHandlerRegistered_) {
-    return true;
-  }
-  // Restore to default.
-  if (invokeSignalAction(SIG_DFL) != 0) {
-    perror("signal handler unregistration failed");
-    return false;
-  }
-  isSigHandlerRegistered_ = false;
-  return true;
-}
-
-void GlobalProfiler::profilingSignalHandler(int signo) {
-  // Ensure that writes made on the timer thread before setting the current
-  // profiler are correctly acquired.
-  SamplingProfiler *localProfiler;
-  while (!(localProfiler = profilerForSig_.load(std::memory_order_acquire))) {
-  }
-
-  assert(
-      localProfiler->suspendCount_ == 0 &&
-      "Shouldn't interrupt the VM thread when the sampling profiler is "
-      "suspended.");
-
-  // Avoid spoiling errno in a signal handler by storing the old version and
-  // re-assigning it.
-  auto oldErrno = errno;
-
-  auto profilerInstance = instance_.load();
-  assert(
-      profilerInstance != nullptr &&
-      "Why is GlobalProfiler::instance_ not initialized yet?");
-
-  // Sampling stack will touch GC objects(like closure) so only do so if heap
-  // is valid.
-  auto &curThreadRuntime = localProfiler->runtime_;
-  assert(
-      !curThreadRuntime.getHeap().inGC() &&
-      "sampling profiler should be suspended before GC");
-  (void)curThreadRuntime;
-  profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
-      profilerInstance->sampleStorage_, SamplingProfiler::InLoom::No);
-  // Ensure that writes made in the handler are visible to the timer thread.
-  profilerForSig_.store(nullptr);
-
-  if (!instance_.load()->samplingDoneSem_.notifyOne()) {
-    errno = oldErrno;
-    abort(); // Something is wrong.
-  }
-  errno = oldErrno;
 }
 
 bool GlobalProfiler::sampleStacks() {
@@ -252,13 +173,6 @@ void GlobalProfiler::timerLoop() {
           return !enabled_;
         });
   }
-}
-
-/*static*/ GlobalProfiler *GlobalProfiler::get() {
-  // We intentionally leak this memory to avoid a case where instance is
-  // accessed after it is destroyed during shutdown.
-  static GlobalProfiler *instance = new GlobalProfiler{};
-  return instance;
 }
 
 GlobalProfiler::GlobalProfiler() {

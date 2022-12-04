@@ -56,6 +56,7 @@ set(source_files
   Profiler/GlobalProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
   Profiler/SamplingProfiler.cpp
+  Profiler/SamplingProfilerPosix.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp
