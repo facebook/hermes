@@ -20,7 +20,7 @@ using namespace facebook::hermes;
 
 struct HermesTestHelper {
   static size_t rootsListLength(const HermesRuntime &rt) {
-    return rt.rootsListLength();
+    return rt.rootsListLengthForTests();
   }
 
   static int64_t calculateRootsListChange(
