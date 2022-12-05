@@ -369,28 +369,6 @@ TEST_F(HermesRuntimeTest, DontGrowWhenCloneObject) {
   EXPECT_EQ(rootsDelta, 0);
 }
 
-TEST_F(HermesRuntimeTest, ScopeCleansUpObjectReferences) {
-  Object o1(*rt);
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Scope s(*rt);
-    Object o2(*rt);
-    Object o3(*rt);
-  });
-  EXPECT_EQ(rootsDelta, 0);
-}
-
-TEST_F(HermesRuntimeTest, ReferencesCanEscapeScope) {
-  Value v;
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Scope s(*rt);
-    Object o1(*rt);
-    Object o2(*rt);
-    Object o3(*rt);
-    v = std::move(o2);
-  });
-  EXPECT_EQ(rootsDelta, 1);
-}
-
 TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   // Some code that exercies the async break checks.
   const char *forABit = "var t = Date.now(); while (Date.now() < t + 100) {}";

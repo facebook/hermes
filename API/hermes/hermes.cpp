@@ -2269,34 +2269,11 @@ bool HermesRuntimeImpl::instanceOf(
 }
 
 jsi::Runtime::ScopeState *HermesRuntimeImpl::pushScope() {
-  return reinterpret_cast<ScopeState *>(&hermesValues_.add(
-      vm::HermesValue::encodeNativeUInt32(kSentinelNativeValue)));
+  return nullptr;
 }
 
 void HermesRuntimeImpl::popScope(ScopeState *prv) {
-  HermesPointerValue *sentinel = reinterpret_cast<HermesPointerValue *>(prv);
-  assert(sentinel->phv.isNativeValue());
-  assert(sentinel->phv.getNativeUInt32() == kSentinelNativeValue);
-
-  for (auto it = hermesValues_.begin(); it != hermesValues_.end();) {
-    auto &value = *it;
-
-    if (&value == sentinel) {
-      hermesValues_.erase(it);
-      return;
-    }
-
-    if (value.phv.isNativeValue()) {
-      // We reached another sentinel value or we started added another native
-      // value to the hermesValue_ list. This should not happen.
-      std::terminate();
-    }
-
-    it = hermesValues_.eraseIfExpired(it);
-  }
-
-  // We did not find a sentinel value.
-  std::terminate();
+  assert(!prv && "pushScope only returns nullptrs");
 }
 
 void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
