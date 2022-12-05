@@ -162,4 +162,39 @@ TEST(ManagedChunkListTest, CollectionIsTriggered) {
   EXPECT_EQ(kElementsPerChunk, list.capacity());
 }
 
+TEST(ManagedChunkListTest, ChunksAreFreed) {
+  constexpr size_t kInitialChunkCount = 10;
+  constexpr size_t kInitialElementCount =
+      kElementsPerChunk * kInitialChunkCount;
+  IntegerList list(kOccupancyRatio, kSizingWeight);
+
+  // Populate chunks
+  for (size_t value = 0; value < kInitialElementCount; value++) {
+    list.add(value);
+  }
+  EXPECT_EQ(kInitialElementCount, list.capacity());
+
+  // Reduce the list to a fraction of its initial size
+  constexpr size_t kReductionFactor = 5;
+  size_t index = 0;
+  list.forEach([=, &index](ManagedValue &element) {
+    size_t chunkNumber = index / kElementsPerChunk;
+    if ((chunkNumber % kReductionFactor) != 0) {
+      element.free();
+    }
+    index++;
+  });
+
+  // Trigger many collections
+  for (size_t value = 0; value < kInitialElementCount * 100; value++) {
+    list.add(value).free();
+  }
+
+  // Ensure capacity was eventually reduced to the expected capacity given
+  // the occupancy ratio
+  EXPECT_EQ(
+      list.capacity(),
+      kInitialElementCount / kOccupancyRatio / kReductionFactor);
+}
+
 } // namespace
