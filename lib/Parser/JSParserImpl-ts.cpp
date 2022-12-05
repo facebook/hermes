@@ -366,24 +366,6 @@ Optional<ESTree::Node *> JSParserImpl::parseTSFunctionOrParenthesizedType(
           std::move(params), *optReturnType, typeParams));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseTSFunctionTypeWithParams(
-    SMLoc start,
-    ESTree::NodeList &&params,
-    ESTree::Node *typeParams) {
-  assert(check(TokenKind::equalgreater));
-  advance(JSLexer::GrammarContext::Type);
-
-  auto optReturnType = parseTypeAnnotationTS();
-  if (!optReturnType)
-    return None;
-
-  return setLocation(
-      start,
-      getPrevTokenEndLoc(),
-      new (context_) ESTree::TSFunctionTypeNode(
-          std::move(params), *optReturnType, typeParams));
-}
-
 bool JSParserImpl::parseTSFunctionTypeParams(
     SMLoc start,
     ESTree::NodeList &params) {

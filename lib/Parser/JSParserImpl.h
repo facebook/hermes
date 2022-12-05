@@ -1266,10 +1266,6 @@ class JSParserImpl {
       IsConstructorType isConstructorType);
   bool parseTSFunctionTypeParams(SMLoc start, ESTree::NodeList &params);
   Optional<ESTree::Node *> parseTSFunctionTypeParam();
-  Optional<ESTree::Node *> parseTSFunctionTypeWithParams(
-      SMLoc start,
-      ESTree::NodeList &&params,
-      ESTree::Node *typeParams);
 
   Optional<ESTree::Node *> parseTSObjectType();
   Optional<ESTree::Node *> parseTSObjectTypeMember();
