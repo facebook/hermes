@@ -68,6 +68,9 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
     for (auto &I : *oldBB) {
       switch (I.getKind()) {
         case ValueKind::CreateArgumentsInstKind:
+        // TODO: Make accesses to new.target safe to inline by translating the
+        // value.
+        case ValueKind::GetNewTargetInstKind:
         // TODO: we can't deal with changing the scope depth of functions yet.
         case ValueKind::CreateFunctionInstKind:
         case ValueKind::CreateGeneratorInstKind:
