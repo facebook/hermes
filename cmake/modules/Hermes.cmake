@@ -6,6 +6,7 @@
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXSourceCompiles)
+include(CheckLinkerFlag)
 include(CMakePrintHelpers)
 
 set(HERMES_TOOLS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin/${CMAKE_CFG_INTDIR}")
