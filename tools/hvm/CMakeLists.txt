@@ -6,7 +6,7 @@
 add_hermes_tool(hvm
   hvm.cpp
   LINK_OBJLIBS hermesConsoleHost_obj
-  LINK_LIBS hermesvm)
+  LINK_LIBS hermesvm_a)
 
 install(TARGETS hvm
   RUNTIME DESTINATION bin

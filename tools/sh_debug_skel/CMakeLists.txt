@@ -10,4 +10,4 @@ add_executable(sh_debug_skel
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(sh_debug_skel hermesvm)
+target_link_libraries(sh_debug_skel hermesvm_a)

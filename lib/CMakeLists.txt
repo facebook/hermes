@@ -107,8 +107,8 @@ target_link_libraries(hermescompiler PUBLIC
   zip_obj
   )
 
-add_library(hermesvm STATIC)
-target_link_libraries(hermesvm PUBLIC
+add_library(hermesvm_a STATIC)
+target_link_libraries(hermesvm_a PUBLIC
   LLVHSupport_obj
   dtoa_obj
   hermesADT_obj
@@ -134,8 +134,8 @@ target_link_libraries(hermesvm PUBLIC
   zip_obj
   )
 
-add_library(hermesvmlean STATIC)
-target_link_libraries(hermesvmlean PUBLIC
+add_library(hermesvmlean_a STATIC)
+target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
   dtoa_obj
   hermesADT_obj
@@ -154,8 +154,8 @@ target_link_libraries(hermesvmlean PUBLIC
 
 if(HERMES_ENABLE_INTL)
   set(INTL_OBJ_LIBS hermesPlatformIntl_obj hermesBCP47Parser_obj)
-  target_link_libraries(hermesvm PUBLIC ${INTL_OBJ_LIBS})
-  target_link_libraries(hermesvmlean PUBLIC ${INTL_OBJ_LIBS})
+  target_link_libraries(hermesvm_a PUBLIC ${INTL_OBJ_LIBS})
+  target_link_libraries(hermesvmlean_a PUBLIC ${INTL_OBJ_LIBS})
 endif()
 
 configure_file(config/libhermesvm-config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/libhermesvm-config.h)

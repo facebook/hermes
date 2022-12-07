@@ -6,5 +6,5 @@
 add_hermes_tool(interp-dispatch-bench
   interp-dispatch-bench.cpp
   ${ALL_HEADER_FILES}
-  LINK_LIBS hermesvm
+  LINK_LIBS hermesvm_a
   )

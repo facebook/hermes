@@ -254,8 +254,8 @@ bool invokeCC(
     }
 
     args.emplace_back(
-        params.lean == ShermesCompileParams::Lean::on ? "-lhermesvmlean"
-                                                      : "-lhermesvm");
+        params.lean == ShermesCompileParams::Lean::on ? "-lhermesvmlean_a"
+                                                      : "-lhermesvm_a");
 
     splitArgs(cfg.ldlibs, args);
   }

@@ -10,4 +10,4 @@ add_executable(sh_api_use
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(sh_api_use hermesvm)
+target_link_libraries(sh_api_use hermesvm_a)

@@ -77,7 +77,7 @@ set(RTSources
 
 add_hermes_unittest(HermesVMRuntimeTests
   ${RTSources}
-  LINK_LIBS hermesvm
+  LINK_LIBS hermesvm_a
   )
 
 add_subdirectory(Instrumentation)

@@ -24,4 +24,4 @@ add_hermes_tool(shermes
 # libraries, we might want to link against release libraries from a debug
 # compiler, so this is not the default for shermes.
 add_custom_target(shermes-dep)
-add_dependencies(shermes-dep shermes hermesvm hermesvmlean)
+add_dependencies(shermes-dep shermes hermesvm_a hermesvmlean_a)

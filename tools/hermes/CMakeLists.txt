@@ -21,7 +21,7 @@ add_hermes_tool(hermes
   hermes.cpp
   repl.cpp
   LINK_OBJLIBS hermesCompilerDriver_obj hermesConsoleHost_obj
-  LINK_LIBS hermesvm ${LIBREADLINE}
+  LINK_LIBS hermesvm_a ${LIBREADLINE}
   )
 
 if(HAVE_LIBREADLINE)

@@ -13,13 +13,13 @@ file(GLOB api_public_headers ${PROJECT_SOURCE_DIR}/public/hermes/Public/*.h)
 
 add_hermes_library(hermesapi
   ${api_sources}
-  LINK_LIBS jsi hermesvm
+  LINK_LIBS jsi hermesvm_a
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
 
 add_hermes_library(hermesapiLean
         ${api_sources}
-        LINK_LIBS jsi hermesvmlean)
+        LINK_LIBS jsi hermesvmlean_a)
 target_include_directories(hermesapiLean_obj PUBLIC ..)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
@@ -50,9 +50,9 @@ add_library(libhermes SHARED ${api_sources})
 
 # This is configured using a cmake flag instead of a separate target, because
 # we need the output to be named "libhermes.so".
-set(LIBHERMES_VM_DEP hermesvm)
+set(LIBHERMES_VM_DEP hermesvm_a)
 if(HERMES_BUILD_LEAN_LIBHERMES)
-  set(LIBHERMES_VM_DEP hermesvmlean)
+  set(LIBHERMES_VM_DEP hermesvmlean_a)
 endif()
 
 target_link_libraries(libhermes
