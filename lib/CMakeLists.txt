@@ -152,6 +152,18 @@ target_link_libraries(hermesvmlean_a PUBLIC
   zip_obj
   )
 
+# CMake requires at least one file for the target, so create an empty file.
+add_library(hermesvm SHARED dummy.cpp)
+add_library(hermesvmlean SHARED dummy.cpp)
+# Force the entire hermesvm_a library to be used by hermesvm. There is
+# no cross platform way to do this (force_load is for macOS). Once we upgrade
+# CMake 3.24, we can use the LINK_LIBRARY generator expression to do this.
+target_link_libraries(hermesvm PRIVATE -force_load hermesvm_a)
+target_link_libraries(hermesvmlean PRIVATE -force_load hermesvmlean_a)
+# Apply additional linker flags.
+target_link_options(hermesvm PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
+target_link_options(hermesvmlean PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
+
 if(HERMES_ENABLE_INTL)
   set(INTL_OBJ_LIBS hermesPlatformIntl_obj hermesBCP47Parser_obj)
   target_link_libraries(hermesvm_a PUBLIC ${INTL_OBJ_LIBS})

@@ -244,18 +244,31 @@ bool invokeCC(
       for (const auto &s : cfg.hermesLibPath)
         args.push_back("-L" + s);
 
-      args.emplace_back("-framework");
-      args.emplace_back("CoreFoundation");
-      args.emplace_back("-framework");
-      args.emplace_back("Foundation");
-      args.emplace_back("-lc++");
+      // If we are statically linking, we need to explicitly list Hermes'
+      // external dependencies.
+      if (params.staticLink == ShermesCompileParams::StaticLink::on) {
+        args.emplace_back("-framework");
+        args.emplace_back("CoreFoundation");
+        args.emplace_back("-framework");
+        args.emplace_back("Foundation");
+        args.emplace_back("-lc++");
+      } else {
+        for (const auto &s : cfg.hermesLibPath) {
+          args.emplace_back("-rpath");
+          args.emplace_back(s);
+        }
+      }
     } else {
       splitArgs(cfg.ldflags, args);
     }
 
-    args.emplace_back(
-        params.lean == ShermesCompileParams::Lean::on ? "-lhermesvmlean_a"
-                                                      : "-lhermesvm_a");
+    // Either hermesvm_a, hermesvmlean_a, hermesvm, or hermesvmlean.
+    std::string libParam = "-lhermesvm";
+    if (params.lean == ShermesCompileParams::Lean::on)
+      libParam += "lean";
+    if (params.staticLink == ShermesCompileParams::StaticLink::on)
+      libParam += "_a";
+    args.emplace_back(std::move(libParam));
 
     splitArgs(cfg.ldlibs, args);
   }

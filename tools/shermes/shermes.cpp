@@ -108,6 +108,12 @@ cl::opt<bool> Lean(
     cl::desc("Link the lean VM"),
     cl::cat(CompilerCategory));
 
+cl::opt<bool> StaticLink(
+    "static-link",
+    cl::init(false),
+    cl::desc("Statically link against the VM"),
+    cl::cat(CompilerCategory));
+
 enum class StaticBuiltinSetting {
   ForceOn,
   ForceOff,
@@ -657,6 +663,8 @@ bool compileFromCommandLineOptions() {
                              : ShermesCompileParams::EnableAsserts::off,
           cli::Lean ? ShermesCompileParams::Lean::on
                     : ShermesCompileParams::Lean::off,
+          cli::StaticLink ? ShermesCompileParams::StaticLink::on
+                          : ShermesCompileParams::StaticLink::off,
           cli::Verbose.getNumOccurrences()),
       cli::OutputLevel,
       cli::InputFilename,

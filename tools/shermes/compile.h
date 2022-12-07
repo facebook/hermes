@@ -43,6 +43,8 @@ struct ShermesCompileParams {
   EnableAsserts enableAsserts;
   enum class Lean { off, on };
   Lean lean = Lean::off;
+  enum class StaticLink { off, on };
+  StaticLink staticLink = StaticLink::off;
   int verbosity;
 
   ShermesCompileParams(
@@ -50,11 +52,13 @@ struct ShermesCompileParams {
       OptLevel nativeOptimize,
       EnableAsserts enableAsserts,
       Lean lean,
+      StaticLink staticLink,
       int verbosity)
       : genOptions(genOptions),
         nativeOptimize(nativeOptimize),
         enableAsserts(enableAsserts),
         lean(lean),
+        staticLink(staticLink),
         verbosity(verbosity) {}
 };
 
