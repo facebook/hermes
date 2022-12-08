@@ -77,6 +77,7 @@ export class SimpleTraverser {
       if (ex === SimpleTraverserSkip) {
         return;
       }
+      this._setErrorContext(ex, node);
       throw ex;
     }
 
@@ -100,8 +101,24 @@ export class SimpleTraverser {
       if (ex === SimpleTraverserSkip) {
         return;
       }
+      this._setErrorContext(ex, node);
       throw ex;
     }
+  }
+
+  /**
+   * Set useful contextual information onto the error object.
+   * @param ex The error object.
+   * @param node The current node.
+   * @private
+   */
+  _setErrorContext(ex: Error, node: ESNode): void {
+    // $FlowFixMe[prop-missing]
+    ex.currentNode = {
+      type: node.type,
+      range: node.range,
+      loc: node.loc,
+    };
   }
 
   /**
