@@ -601,7 +601,7 @@ static std::unordered_map<std::u16string, std::u16string>
 // every time the method is called, because there is a chance the default
 // timezone can change while the program is running. In that case, we would want
 // to accept both the old and new timezones.
-std::u16string getDefaultTimeZone(NSLocale *locale) {
+std::u16string getDefaultTimeZone() {
   std::u16string tz = nsStringToU16String(NSTimeZone.defaultTimeZone.name);
   // emplace won't insert duplicates if the TZ hasn't changed since the last
   // call to getDefaultTimeZone.
@@ -1371,7 +1371,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   //  25. If timeZone is undefined, then
   if (timeZoneIt == options.end()) {
     // a. Let timeZone be DefaultTimeZone().
-    timeZone = getDefaultTimeZone(localeData);
+    timeZone = getDefaultTimeZone();
     // 26. Else,
   } else {
     // a. Let timeZone be ? ToString(timeZone).
