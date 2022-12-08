@@ -571,16 +571,42 @@ std::u16string toASCIIUppercase(std::u16string_view tz) {
   return result;
 }
 
-static std::unordered_map<std::u16string, std::u16string> validTimeZoneNames() {
-  std::unordered_map<std::u16string, std::u16string> result;
-  static auto nsTimeZoneNames = [NSTimeZone.knownTimeZoneNames
-      arrayByAddingObjectsFromArray:NSTimeZone.abbreviationDictionary.allKeys];
-  for (NSString *timeZoneName in nsTimeZoneNames) {
-    result.emplace(
-        nsStringToU16String(timeZoneName.uppercaseString),
-        nsStringToU16String(timeZoneName));
-  }
-  return result;
+static std::unordered_map<std::u16string, std::u16string>
+    &validTimeZoneNames() {
+  // This stores all the timezones the Intl API considers valid. It is
+  // intentionally leaked to avoid destruction order problems.
+  static auto *validNames = [] {
+    auto nsTimeZoneNames = [NSTimeZone.knownTimeZoneNames
+        arrayByAddingObjectsFromArray:NSTimeZone.abbreviationDictionary
+                                          .allKeys];
+    auto *names = new std::unordered_map<std::u16string, std::u16string>();
+    for (NSString *timeZoneName in nsTimeZoneNames) {
+      auto canonical = nsStringToU16String(timeZoneName);
+      auto upper = toASCIIUppercase(canonical);
+      names->emplace(std::move(upper), std::move(canonical));
+    }
+    return names;
+  }();
+  return *validNames;
+}
+
+// https://402.ecma-international.org/8.0/#sec-defaulttimezone
+// There is a weird quirk on iOS regarding default time zones and
+// NSTimeZone.knownTimeZoneNames. Unforunately, knownTimeZoneNames is not
+// accurate. There is a chance the default timezone reported via
+// NSTimeZone.defaultTimeZone is not present in knownTimeZoneNames. However, the
+// NSTimeZone constructor can actually still understand this default TZ.
+// Therefore, anytime the defaultTimeZone is requested we record it by manually
+// inserting it into the timezones we consider valid. Note we have to do this
+// every time the method is called, because there is a chance the default
+// timezone can change while the program is running. In that case, we would want
+// to accept both the old and new timezones.
+std::u16string getDefaultTimeZone(NSLocale *locale) {
+  std::u16string tz = nsStringToU16String(NSTimeZone.defaultTimeZone.name);
+  // emplace won't insert duplicates if the TZ hasn't changed since the last
+  // call to getDefaultTimeZone.
+  validTimeZoneNames().emplace(toASCIIUppercase(tz), tz);
+  return tz;
 }
 
 // https://402.ecma-international.org/8.0/#sec-canonicalizetimezonename
@@ -588,7 +614,7 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database
   // such that timeZone, converted to upper case as described in 6.1, is equal
   // to ianaTimeZone, converted to upper case as described in 6.1.
-  static const auto timeZones = validTimeZoneNames();
+  const auto &timeZones = validTimeZoneNames();
   auto ianaTimeZoneIt = timeZones.find(toASCIIUppercase(tz));
   auto ianaTimeZone = (ianaTimeZoneIt != timeZones.end())
       ? ianaTimeZoneIt->second
@@ -604,14 +630,9 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   return ianaTimeZone;
 }
 
-// https://402.ecma-international.org/8.0/#sec-defaulttimezone
-std::u16string getDefaultTimeZone(NSLocale *locale) {
-  return nsStringToU16String(NSTimeZone.defaultTimeZone.name);
-}
-
 // https://402.ecma-international.org/8.0/#sec-isvalidtimezonename
 static bool isValidTimeZoneName(std::u16string_view tz) {
-  static const auto timeZones = validTimeZoneNames();
+  const auto &timeZones = validTimeZoneNames();
   return timeZones.find(toASCIIUppercase(tz)) != timeZones.end();
 }
 
