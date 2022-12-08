@@ -23,7 +23,7 @@
     "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
-    "prettier": "^2.7.1"
+    "prettier": "2.7.1"
   },
   "resolutions": {
     "jest-snapshot": "^29.2.2"
