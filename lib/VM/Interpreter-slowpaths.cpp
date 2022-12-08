@@ -578,7 +578,7 @@ CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src) {
   if (LLVM_LIKELY(!numRes->isBigInt()))
     return HermesValue::encodeDoubleValue(-numRes->getNumber());
 
-  // The result is a BigInt, perform a BigInt bitwise not.
+  // The result is a BigInt, perform a BigInt unary minus.
   auto bigint = runtime.makeHandle(numRes->getBigInt());
   return BigIntPrimitive::unaryMinus(runtime, bigint);
 }
