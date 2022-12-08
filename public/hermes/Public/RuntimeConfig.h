@@ -37,9 +37,6 @@ class PinnedHermesValue;
   /* Register Stack Size */                                            \
   F(constexpr, unsigned, MaxNumRegisters, 1024 * 1024)                 \
                                                                        \
-  /* Whether or not the JIT is enabled */                              \
-  F(constexpr, bool, EnableJIT, false)                                 \
-                                                                       \
   /* Whether to allow eval and Function ctor */                        \
   F(constexpr, bool, EnableEval, true)                                 \
                                                                        \
