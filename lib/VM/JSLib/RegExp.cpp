@@ -413,18 +413,26 @@ static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
   return Handle<JSRegExp>::vmcast(*newRegexpRes);
 }
 
-static ExecutionStatus createGroupsObject(
+static void createGroupsObject(
     Runtime &runtime,
     Handle<JSArray> matchObj,
     Handle<JSObject> mappingObj) {
+  // matchObj is created with a HiddenClass that already has the groups
+  // property.
+  NamedPropertyDescriptor groupsDesc;
+  auto pos = JSObject::getOwnNamedDescriptor(
+      matchObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::groups),
+      groupsDesc);
+  assert(pos && "match object is missing .groups property");
+  (void)pos;
+
   // If there are no capture groups, then set groups to undefined.
   if (!mappingObj) {
-    return JSObject::putNamed_RJS(
-               matchObj,
-               runtime,
-               Predefined::getSymbolID(Predefined::groups),
-               runtime.makeHandle(HermesValue::encodeUndefinedValue()))
-        .getStatus();
+    auto shv = SmallHermesValue::encodeUndefinedValue();
+    JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
+    return;
   }
 
   // The `__proto__` property on the groups object is not special,
@@ -444,14 +452,8 @@ static ExecutionStatus createGroupsObject(
             *groupsObj, runtime, desc.slot, matchObj->at(runtime, groupIdx));
       });
 
-  return JSObject::defineOwnProperty(
-             matchObj,
-             runtime,
-             Predefined::getSymbolID(Predefined::groups),
-             DefinePropertyFlags::getDefaultNewPropertyFlags(),
-             groupsObj,
-             PropOpFlags().plusThrowOnError())
-      .getStatus();
+  auto shv = SmallHermesValue::encodeObjectValue(*groupsObj, runtime);
+  JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
 }
 
 // ES6 21.2.5.2.2
@@ -560,32 +562,34 @@ CallResult<Handle<JSArray>> directRegExpExec(
     }
   }
 
-  const auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-
-  auto arrRes = JSArray::create(runtime, match.size(), match.size());
+  auto arrRes = JSArray::createAndAllocPropStorage(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.arrayPrototype),
+      Handle<HiddenClass>::vmcast(&runtime.regExpMatchClass),
+      match.size(),
+      match.size());
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   A = arrRes->get();
 
-  CallResult<bool> defineResult = JSObject::defineOwnProperty(
-      A,
-      runtime,
-      Predefined::getSymbolID(Predefined::index),
-      dpf,
-      runtime.makeHandle(
-          HermesValue::encodeNumberValue(match.front()->location)));
-  assert(
-      defineResult != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() failed on a new object");
-  (void)defineResult;
+  // A already has .index and .groups.
+  NamedPropertyDescriptor indexDesc;
+  bool res = JSObject::getOwnNamedDescriptor(
+      A, runtime, Predefined::getSymbolID(Predefined::index), indexDesc);
+  assert(res && "match object is missing .index property");
+  (void)res;
+  auto indexSHV =
+      SmallHermesValue::encodeNumberValue(match.front()->location, runtime);
+  JSObject::setNamedSlotValueUnsafe(*A, runtime, indexDesc, indexSHV);
 
-  defineResult = JSObject::defineOwnProperty(
-      A, runtime, Predefined::getSymbolID(Predefined::input), dpf, S);
-  assert(
-      defineResult != ExecutionStatus::EXCEPTION &&
-      "defineOwnProperty() failed on a new object");
-  (void)defineResult;
+  NamedPropertyDescriptor inputDesc;
+  res = JSObject::getOwnNamedDescriptor(
+      A, runtime, Predefined::getSymbolID(Predefined::input), inputDesc);
+  assert(res && "match object is missing .input property");
+  (void)res;
+  auto inputSHV = SmallHermesValue::encodeStringValue(*S, runtime);
+  JSObject::setNamedSlotValueUnsafe(*A, runtime, inputDesc, inputSHV);
 
   // Set capture groups (including the initial full match)
   size_t idx = 0;

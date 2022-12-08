@@ -306,6 +306,17 @@ class JSArray final : public ArrayImpl {
       size_type capacity = 0,
       size_type length = 0);
 
+  /// Create an instance of Array, with [[Prototype]] initialized with
+  /// \p prototypeHandle, with capacity for \p capacity elements and actual size
+  /// \p length. It also allocates the return object's property storage array
+  /// to hold all properties in \p classHandle.
+  static CallResult<Handle<JSArray>> createAndAllocPropStorage(
+      Runtime &runtime,
+      Handle<JSObject> prototypeHandle,
+      Handle<HiddenClass> classHandle,
+      size_type capacity = 0,
+      size_type length = 0);
+
   static CallResult<Handle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,

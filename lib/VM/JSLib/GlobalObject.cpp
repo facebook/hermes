@@ -461,6 +461,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           runtime, Handle<JSObject>::vmcast(&runtime.arrayPrototype))
           .getHermesValue();
 
+  // Declare the regexp match object class.
+  runtime.regExpMatchClass =
+      JSRegExp::createMatchClass(
+          runtime, Handle<HiddenClass>::vmcast(&runtime.arrayClass))
+          .getHermesValue();
+
   // "Forward declaration" of ArrayBuffer.prototype. Its properties will be
   // populated later.
   runtime.arrayBufferPrototype =
