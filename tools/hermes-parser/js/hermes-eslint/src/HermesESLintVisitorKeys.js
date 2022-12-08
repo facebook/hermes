@@ -38,6 +38,7 @@ module.exports = {
   AssignmentPattern: ['left', 'right'],
   AwaitExpression: ['argument'],
   BigIntLiteralTypeAnnotation: [],
+  BigIntTypeAnnotation: [],
   BinaryExpression: ['left', 'right'],
   BlockStatement: ['body'],
   BooleanLiteralTypeAnnotation: [],

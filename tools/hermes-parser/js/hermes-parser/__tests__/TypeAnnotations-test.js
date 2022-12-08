@@ -260,7 +260,77 @@ describe('Keyword Types', () => {
     espree: {expectToFail: false},
     babel: {expectToFail: false},
   };
-  it('should parse keyword types as special ast nodes', () => {
+
+  test('Emitted `.value` type is correct', () => {
+    // Also assert that the literal's `.value` is the correct instance type
+    expect(parse(testCase.code)).toMatchObject({
+      type: 'Program',
+      body: [
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'BooleanTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'StringTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'NumberTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'BigIntTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'AnyTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'EmptyTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'SymbolTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'MixedTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'VoidTypeAnnotation',
+          },
+        },
+        {
+          type: 'TypeAlias',
+          right: {
+            type: 'NullLiteralTypeAnnotation',
+          },
+        },
+      ],
+    });
+  });
+
+  it('estree AST', () => {
     expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
       {
         "body": [
@@ -311,14 +381,7 @@ describe('Keyword Types', () => {
               "typeAnnotation": null,
             },
             "right": {
-              "id": {
-                "name": "bigint",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "type": "GenericTypeAnnotation",
-              "typeParameters": null,
+              "type": "BigIntTypeAnnotation",
             },
             "type": "TypeAlias",
             "typeParameters": null,

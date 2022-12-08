@@ -1274,6 +1274,13 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MixedTypeAnnotation::build_template(gc, template)
         }
+        NodeKind::BigIntTypeAnnotation => {
+          let mut template = ast::template::BigIntTypeAnnotation {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::BigIntTypeAnnotation::build_template(gc, template)
+        }
         NodeKind::VoidTypeAnnotation => {
           let mut template = ast::template::VoidTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},

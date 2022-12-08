@@ -1144,6 +1144,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::StringTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == bigintIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::BigIntTypeAnnotationNode());
+      }
       if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
         advance(JSLexer::GrammarContext::Type);
         ESTree::NodeList extends{};

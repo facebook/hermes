@@ -93,6 +93,8 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
         return this.mapBigIntLiteral(node);
       case 'BigIntLiteralTypeAnnotation':
         return this.mapBigIntLiteralTypeAnnotation(node);
+      case 'BigIntTypeAnnotation':
+        return this.mapBigIntTypeAnnotation(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -421,6 +423,26 @@ export default class HermesToBabelAdapter extends HermesASTAdapter {
   mapBigIntLiteralTypeAnnotation(node: HermesNode): HermesNode {
     node.value = this.getBigIntLiteralValue(node.raw).value;
     return node;
+  }
+  /**
+   * Babel does not parse the bigint keyword type as the keyword node.
+   * So we need to down-level the AST to a plain GenericTypeAnnotation
+   */
+  mapBigIntTypeAnnotation(node: HermesNode): HermesNode {
+    return {
+      type: 'GenericTypeAnnotation',
+      id: {
+        type: 'Identifier',
+        name: 'bigint',
+        loc: node.loc,
+        start: node.start,
+        end: node.end,
+      },
+      typeParameters: null,
+      loc: node.loc,
+      start: node.start,
+      end: node.end,
+    };
   }
 
   mapPrivateProperty(nodeUnprocessed: HermesNode): HermesNode {

@@ -56,6 +56,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   BigIntLiteral: {},
   BigIntLiteralTypeAnnotation: {},
+  BigIntTypeAnnotation: {},
   BinaryExpression: {
     left: 'Node',
     right: 'Node',

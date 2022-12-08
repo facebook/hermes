@@ -452,6 +452,7 @@ macro_rules! nodekind_defs {
             ExistsTypeAnnotation[FlowType],
             EmptyTypeAnnotation[FlowType],
             StringTypeAnnotation[FlowType],
+            BigIntTypeAnnotation[FlowType],
             NumberTypeAnnotation[FlowType],
             BigIntLiteralTypeAnnotation[FlowType] {
                 raw: NodeLabel,
