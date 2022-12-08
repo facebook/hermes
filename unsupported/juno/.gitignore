@@ -1,4 +1,4 @@
 target/
 .hermes.toml
 **/Cargo.lock
-!./Cargo.lock
+!/Cargo.lock
