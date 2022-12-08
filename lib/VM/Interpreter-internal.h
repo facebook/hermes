@@ -141,6 +141,8 @@ CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src);
 
 CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src);
 
+CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src);
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H
