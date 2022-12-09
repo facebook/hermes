@@ -783,18 +783,13 @@ void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   if (elementCount == 0) {
     BCFGen_->emitNewArray(dstReg, sizeHint);
   } else {
-    SmallVector<Literal *, 8> elements;
-    for (unsigned i = 0, e = Inst->getElementCount(); i < e; ++i) {
-      elements.push_back(cast<Literal>(Inst->getArrayElement(i)));
-    }
-    auto bufIndex =
-        BCFGen_->BMGen_.addArrayBuffer(ArrayRef<Literal *>{elements});
-    if (bufIndex <= UINT16_MAX) {
+    auto bufIndex = BCFGen_->BMGen_.serializedLiteralOffsetFor(Inst);
+    if (bufIndex.first <= UINT16_MAX) {
       BCFGen_->emitNewArrayWithBuffer(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex);
+          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
     } else {
       BCFGen_->emitNewArrayWithBufferLong(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex);
+          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
     }
   }
 }
@@ -843,21 +838,13 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
     HBCAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
-  int e = Inst->getKeyValuePairCount();
-  SmallVector<Literal *, 8> objKeys;
-  SmallVector<Literal *, 8> objVals;
-  for (int ind = 0; ind < e; ind++) {
-    auto keyValuePair = Inst->getKeyValuePair(ind);
-    objKeys.push_back(cast<Literal>(keyValuePair.first));
-    objVals.push_back(cast<Literal>(keyValuePair.second));
-  }
+  unsigned e = Inst->getKeyValuePairCount();
 
   // size hint operand of NewObjectWithBuffer opcode is 16-bit.
   uint32_t sizeHint =
       std::min((uint32_t)UINT16_MAX, Inst->getSizeHint()->asUInt32());
 
-  auto buffIdxs = BCFGen_->BMGen_.addObjectBuffer(
-      llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
+  auto buffIdxs = BCFGen_->BMGen_.serializedLiteralOffsetFor(Inst);
   if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
         result, sizeHint, e, buffIdxs.first, buffIdxs.second);

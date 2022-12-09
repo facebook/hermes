@@ -43,7 +43,7 @@ void serializeValueToBuffer(
 }
 } // namespace
 
-uint32_t SerializedLiteralGenerator::serializeBuffer(
+void SerializedLiteralGenerator::serializeBuffer(
     llvh::ArrayRef<Literal *> literals,
     std::vector<unsigned char> &buff,
     bool isKeyBuffer) {
@@ -56,12 +56,6 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
   // Stores the values of each serialized Literal in a sequence so that
   // they can be added to tempBuff after the tag is finalized
   std::vector<unsigned char> tmpSeqBuffer;
-
-  // Store the constructed buffer in a separate vector.
-  // This vector will be searched for in \buff. If an exact match
-  // occurs, \buff will not be modified, and the match's offset will be
-  // returned.
-  std::vector<unsigned char> tempBuff;
 
   // Stores the length of the current type sequence
   size_t seqLength = 0;
@@ -111,9 +105,8 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
 
     if (newTag != lastTag || seqLength == SequenceMax) {
       if (seqLength > 0) {
-        appendTagToBuffer(tempBuff, lastTag, seqLength);
-        tempBuff.insert(
-            tempBuff.end(), tmpSeqBuffer.begin(), tmpSeqBuffer.end());
+        appendTagToBuffer(buff, lastTag, seqLength);
+        buff.insert(buff.end(), tmpSeqBuffer.begin(), tmpSeqBuffer.end());
         tmpSeqBuffer.resize(0);
       }
       lastTag = newTag;
@@ -159,25 +152,8 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
     }
   }
   // The last value in the buffer can't get serialized in the loop.
-  appendTagToBuffer(tempBuff, lastTag, seqLength);
-  tempBuff.insert(tempBuff.end(), tmpSeqBuffer.begin(), tmpSeqBuffer.end());
-
-  // If this array buffer has already been added, potentially as a substring of
-  // another, we can just point there instead. This simple search gives a nice
-  // little space saving, but at a quadratic cost (fast in practice though).
-  if (deDuplicate_) {
-    auto it =
-        std::search(buff.begin(), buff.end(), tempBuff.begin(), tempBuff.end());
-
-    if (it != buff.end()) {
-      return it - buff.begin();
-    }
-  }
-
-  // If it doesn't exist or we don't optimize, append it and return its offset.
-  uint32_t ret = buff.size();
-  buff.insert(buff.end(), tempBuff.begin(), tempBuff.end());
-  return ret;
+  appendTagToBuffer(buff, lastTag, seqLength);
+  buff.insert(buff.end(), tmpSeqBuffer.begin(), tmpSeqBuffer.end());
 }
 
 } // namespace hbc

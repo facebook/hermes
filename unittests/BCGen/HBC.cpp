@@ -317,48 +317,101 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
 }
 
 TEST(HBCBytecodeGen, ArrayBufferTest) {
-  // Since deserialization of the array buffer now requires a codeblock,
-  // the only thing that can be checked at BCGen time is that it uses
-  // the proper number of bytes for the serialization format.
-  std::string Result;
-  llvh::raw_string_ostream OS(Result);
-
-  auto Ctx = std::make_shared<Context>();
-  Module M(Ctx);
-  IRBuilder Builder(&M);
-
-  BytecodeModuleGenerator BMG;
-  BMG.initializeStringTable(stringsForTest({"abc"}));
-
-  Function *F = Builder.createTopLevelFunction(
-      M.getInitialScope()->createInnerScope(), true);
-  auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG->emitMov(1, 2);
-  std::vector<Literal *> arr1{
-      Builder.getLiteralNumber(1),
-      Builder.getLiteralBool(true),
-      Builder.getLiteralBool(false),
-      Builder.getLiteralNull(),
-      Builder.getLiteralNull(),
-      Builder.getLiteralString("abc"),
-  };
-  BMG.addArrayBuffer(llvh::ArrayRef<Literal *>{arr1});
-
-  BMG.setEntryPointIndex(BMG.addFunction(F));
-  BMG.setFunctionGenerator(F, std::move(BFG));
-
-  std::shared_ptr<BytecodeModule> BM = BMG.generate();
-  // auto &BF = BM->getGlobalCode();
+  auto src = R"(
+var arr = [1, true, false, null, null, 'abc']
+)";
+  auto BM = bytecodeModuleForSource(src);
   ASSERT_EQ(BM->getArrayBufferSize(), 10u);
+}
 
-  BytecodeSerializer BS{OS};
-  BS.serialize(*BM, SHA1{});
+TEST(HBCBytecodeGen, ObjectBufferTest) {
+  auto src = R"(
+var obj = {a:1, b:2, c:3};
+)";
+  auto BM = bytecodeModuleForSource(src);
+  ASSERT_EQ(BM->getObjectKeyBufferSize(), 4u);
+  ASSERT_EQ(BM->getObjectValueBufferSize(), 13u);
+}
 
-  auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      std::make_unique<StringBuffer>(OS.str()))
-                      .first;
+// For the following 'easy' tests, exact duplicate literals are used. These will
+// always be de-duplicated, so we don't have to turn optimizations on.
+TEST(HBCBytecodeGen, EasyArrayDedupBufferTest) {
+  auto singleArrCode = R"(
+var arr = [1, null, undefined, 9n, 'hi', {}, Symbol('sym')];
+)";
+  auto dupArrCode = R"(
+var arr1 = [1, null, undefined, 9n, 'hi', {}, Symbol('sym')];
+var arr2 = [1, null, undefined, 9n, 'hi', {}, Symbol('sym')];
+var arr3 = [1, null, undefined, 9n, 'hi', {}, Symbol('sym')];
+var arr4 = [1, null, undefined, 9n, 'hi', {}, Symbol('sym')];
+var s = arr1[0] + arr2[0] + arr3[0] + arr4[0];
+)";
+  auto singleArrBM = bytecodeModuleForSource(singleArrCode);
+  auto manyArrBM = bytecodeModuleForSource(dupArrCode);
+  // If de-duplication is working correctly, the amount of space that a single
+  // array literal takes up should be the same amount of space that N identical
+  // array literals take up.
+  ASSERT_EQ(singleArrBM->getArrayBufferSize(), manyArrBM->getArrayBufferSize());
+}
 
-  ASSERT_EQ(bytecode->getArrayBuffer().size(), 10u);
+TEST(HBCBytecodeGen, EasyObjectDedupBufferTest) {
+  auto singleObjCode = R"(
+var obj = {a:1, b:null, c:undefined, d:9n, e:'hi', f:{}, g:Symbol('sym')};
+)";
+  auto dupObjsCode = R"(
+var obj1 = {a:1, b:null, c:undefined, d:9n, e:'hi', f:{}, g:Symbol('sym')};
+var obj2 = {a:1, b:null, c:undefined, d:9n, e:'hi', f:{}, g:Symbol('sym')};
+var obj3 = {a:1, b:null, c:undefined, d:9n, e:'hi', f:{}, g:Symbol('sym')};
+var obj4 = {a:1, b:null, c:undefined, d:9n, e:'hi', f:{}, g:Symbol('sym')};
+var s = obj1.a + obj2.a + obj3.a + obj4.a;
+)";
+  auto singleObjBM = bytecodeModuleForSource(singleObjCode);
+  auto dedupBM = bytecodeModuleForSource(dupObjsCode);
+  // If de-duplication is working correctly, the amount of space that a single
+  // object literal takes up should be the same amount of space that N identical
+  // object literals take up.
+  ASSERT_EQ(
+      singleObjBM->getObjectKeyBufferSize(), dedupBM->getObjectKeyBufferSize());
+  ASSERT_EQ(
+      singleObjBM->getObjectValueBufferSize(),
+      dedupBM->getObjectValueBufferSize());
+}
+
+// For the next 'hard' tests, the literals are not exact duplicates. If
+// optimizations are off, we will simply give up there and not perform any
+// de-duplications. However, if optimizations are on, then we perform a more
+// advanced algorithm for de-duplicating, which will result in a smaller buffer
+// size.
+TEST(HBCBytecodeGen, HardArrayDedupBufferTest) {
+  auto almostDupCode = R"(
+var arr1 = [false,                  true, null, 'hi', null, true, false, 'bye'];
+var arr2 = ['diff', 4, 5, 6, false, true, null, 'hi', null, true, false, 'bye'];
+var s = arr1[0] + arr2[1];
+)";
+  auto dupBM = bytecodeModuleForSource(almostDupCode);
+  auto dedupOpts = BytecodeGenerationOptions::defaults();
+  dedupOpts.optimizationEnabled = true;
+  auto dedupBM = bytecodeModuleForSource(almostDupCode, dedupOpts);
+  // The bytecode module which performed optimizations should have a smaller
+  // buffer size than the one that didn't.
+  ASSERT_LT(dedupBM->getArrayBufferSize(), dupBM->getArrayBufferSize());
+}
+
+TEST(HBCBytecodeGen, HardObjectDedupBufferTest) {
+  auto almostDupCode = R"(
+var obj1 = {a:10,b:11,c:12,1:null,2:true,3:false};
+var obj2 = {a:10,b:11,c:12};
+var s = obj1.a + obj2.a;
+)";
+  auto dupBM = bytecodeModuleForSource(almostDupCode);
+  auto dedupOpts = BytecodeGenerationOptions::defaults();
+  dedupOpts.optimizationEnabled = true;
+  auto dedupBM = bytecodeModuleForSource(almostDupCode, dedupOpts);
+  // The bytecode module which performed optimizations should have a smaller
+  // buffer size than the one that didn't.
+  ASSERT_LT(dedupBM->getObjectKeyBufferSize(), dupBM->getObjectKeyBufferSize());
+  ASSERT_LT(
+      dedupBM->getObjectValueBufferSize(), dupBM->getObjectValueBufferSize());
 }
 
 TEST(SpillRegisterTest, SpillsParameters) {

@@ -55,12 +55,9 @@ class SerializedLiteralGenerator {
  private:
   /// The bytecode module generator.
   BytecodeModuleGenerator &BMGen_;
-  /// Whether to perform de-duplication optimization or not.
-  bool deDuplicate_;
 
  public:
-  SerializedLiteralGenerator(BytecodeModuleGenerator &BMGen, bool deDuplicate)
-      : BMGen_(BMGen), deDuplicate_(deDuplicate) {}
+  SerializedLiteralGenerator(BytecodeModuleGenerator &BMGen) : BMGen_(BMGen) {}
 
   using TagType = unsigned char;
 
@@ -78,10 +75,10 @@ class SerializedLiteralGenerator {
 
   static constexpr unsigned SequenceMax = (1 << 12) - 1;
 
-  /// Serialize input \p literals into \p buff.
+  /// Serialize input \p literals and append into \p buff.
   /// \p isKeyBuffer: whether this is generating object literal key buffer or
   /// not.
-  uint32_t serializeBuffer(
+  void serializeBuffer(
       llvh::ArrayRef<Literal *> literals,
       std::vector<unsigned char> &buff,
       bool isKeyBuffer);
