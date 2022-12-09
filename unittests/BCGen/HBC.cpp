@@ -515,12 +515,12 @@ TEST(HBCBytecodeGen, BytecodeFieldsFail) {
 }
 
 TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
-  TestCompileFlags flags;
-  flags.staticBuiltins = false;
-  auto bytecodeVecDefault = bytecodeForSource("print('hello world');", flags);
-  flags.staticBuiltins = true;
+  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
+  opts.staticBuiltinsEnabled = false;
+  auto bytecodeVecDefault = bytecodeForSource("print('hello world');", opts);
+  opts.staticBuiltinsEnabled = true;
   auto bytecodeVecStaticBuiltins =
-      bytecodeForSource("print('hello world');", flags);
+      bytecodeForSource("print('hello world');", opts);
 
   auto bytecodeDefault = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
                              std::make_unique<VectorBuffer>(bytecodeVecDefault))
