@@ -80,18 +80,6 @@ void BytecodeFunctionGenerator::setJumpTable(
   jumpTable_ = std::move(jumpTable);
 }
 
-uint32_t BytecodeModuleGenerator::addArrayBuffer(ArrayRef<Literal *> elements) {
-  return literalGenerator_.serializeBuffer(elements, arrayBuffer_, false);
-}
-
-std::pair<uint32_t, uint32_t> BytecodeModuleGenerator::addObjectBuffer(
-    ArrayRef<Literal *> keys,
-    ArrayRef<Literal *> vals) {
-  return std::pair<uint32_t, uint32_t>{
-      literalGenerator_.serializeBuffer(keys, objKeyBuffer_, true),
-      literalGenerator_.serializeBuffer(vals, objValBuffer_, false)};
-}
-
 std::unique_ptr<BytecodeFunction>
 BytecodeFunctionGenerator::generateBytecodeFunction(
     Function::DefinitionKind definitionKind,
@@ -238,6 +226,20 @@ void BytecodeModuleGenerator::initializeStringTable(
 
 uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
   return bigIntTable_.addBigInt(std::move(bigint));
+}
+
+void BytecodeModuleGenerator::initializeSerializedLiterals(
+    std::vector<unsigned char> &&arrayBuffer,
+    std::vector<unsigned char> &&keyBuffer,
+    std::vector<unsigned char> &&valBuffer,
+    hermes::hbc::BytecodeModuleGenerator::LiteralOffsetMapTy &&offsetMap) {
+  assert(
+      arrayBuffer_.empty() && objKeyBuffer_.empty() && objValBuffer_.empty() &&
+      literalOffsetMap_.empty() && "serialized literals already initialized");
+  arrayBuffer_ = std::move(arrayBuffer);
+  objKeyBuffer_ = std::move(keyBuffer);
+  objValBuffer_ = std::move(valBuffer);
+  literalOffsetMap_ = std::move(offsetMap);
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
