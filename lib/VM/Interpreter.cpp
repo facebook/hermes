@@ -1182,7 +1182,6 @@ tailCall:
     if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
       O1REG(name) =                                                           \
           HermesValue::encodeDoubleValue(do##name(O2REG(name).getNumber()));  \
-      gcScope.flushToSmallCount(KEEP_HANDLES);                                \
       ip = NEXTINST(name);                                                    \
       DISPATCH;                                                               \
     }                                                                         \
