@@ -636,9 +636,6 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
-  if (selfHandle->flags_.allNonConfigurable)
-    return selfHandle;
-
   if (!selfHandle->propertyMap_)
     initializeMissingPropertyMap(selfHandle, runtime);
 
@@ -672,18 +669,12 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
         assert(found && "property not found during enumeration");
         curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
       });
-
-  curHandle->flags_.allNonConfigurable = true;
-
   return std::move(curHandle);
 }
 
 Handle<HiddenClass> HiddenClass::makeAllReadOnly(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
-  if (selfHandle->flags_.allReadOnly)
-    return selfHandle;
-
   if (!selfHandle->propertyMap_)
     initializeMissingPropertyMap(selfHandle, runtime);
 
@@ -722,9 +713,6 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
         assert(found && "property not found during enumeration");
         curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
       });
-
-  curHandle->flags_.allNonConfigurable = true;
-  curHandle->flags_.allReadOnly = true;
 
   return std::move(curHandle);
 }
@@ -792,42 +780,25 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::reserveSlot(
 bool HiddenClass::areAllNonConfigurable(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
-  if (selfHandle->flags_.allNonConfigurable)
-    return true;
-
-  if (!forEachPropertyWhile(
-          selfHandle,
-          runtime,
-          [](Runtime &, SymbolID, NamedPropertyDescriptor desc) {
-            return !desc.flags.configurable;
-          })) {
-    return false;
-  }
-
-  selfHandle->flags_.allNonConfigurable = true;
-  return true;
+  return forEachPropertyWhile(
+      selfHandle,
+      runtime,
+      [](Runtime &, SymbolID, NamedPropertyDescriptor desc) {
+        return !desc.flags.configurable;
+      });
 }
 
 bool HiddenClass::areAllReadOnly(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
-  if (selfHandle->flags_.allReadOnly)
-    return true;
-
-  if (!forEachPropertyWhile(
-          selfHandle,
-          runtime,
-          [](Runtime &, SymbolID, NamedPropertyDescriptor desc) {
-            if (!desc.flags.accessor && desc.flags.writable)
-              return false;
-            return !desc.flags.configurable;
-          })) {
-    return false;
-  }
-
-  selfHandle->flags_.allNonConfigurable = true;
-  selfHandle->flags_.allReadOnly = true;
-  return true;
+  return forEachPropertyWhile(
+      selfHandle,
+      runtime,
+      [](Runtime &, SymbolID, NamedPropertyDescriptor desc) {
+        if (!desc.flags.accessor && desc.flags.writable)
+          return false;
+        return !desc.flags.configurable;
+      });
 }
 
 ExecutionStatus HiddenClass::addToPropertyMap(

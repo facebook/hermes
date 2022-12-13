@@ -55,17 +55,6 @@ struct ClassFlags {
   /// searched for - they don't exist.
   uint8_t hasIndexLikeProperties : 1;
 
-  /// All properties in this class are non-configurable. This flag can sometimes
-  /// be set lazily, after we have checked whether all properties are non-
-  /// configurable.
-  uint8_t allNonConfigurable : 1;
-
-  /// All properties in this class are both non-configurable and non-writable.
-  /// It imples that \c allNonConfigurable is also set.
-  /// This flag can sometimes be set lazily, after we have checked whether all
-  /// properties are "read-only".
-  uint8_t allReadOnly : 1;
-
   ClassFlags() {
     ::memset(this, 0, sizeof(*this));
   }
