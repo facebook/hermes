@@ -52,6 +52,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     return;
 
   PassManager PM;
+  PM.addPass(createLIRPeephole());
   PM.addPass(new LowerLoadStoreFrameInst());
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.

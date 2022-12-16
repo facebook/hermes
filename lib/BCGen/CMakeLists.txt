@@ -10,6 +10,7 @@ add_hermes_library(hermesBackend
   Lowering.cpp
   LowerBuiltinCalls.cpp
   Exceptions.cpp
+  LIRPeephole.cpp
   LINK_OBJLIBS hermesFrontend hermesOptimizer
 )
 

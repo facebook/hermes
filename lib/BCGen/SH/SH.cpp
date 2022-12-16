@@ -1650,6 +1650,7 @@ void generateModule(
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
   PassManager PM;
+  PM.addPass(createLIRPeephole());
   // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
   // it introduces calls to HermesInternal.
   PM.addPass(new LowerExponentiationOperator());
