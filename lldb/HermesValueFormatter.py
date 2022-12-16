@@ -18,6 +18,8 @@ def __lldb_init_module(debugger, _):
     """Installs a new debugger handle for formatting hermes values"""
     debugger.HandleCommand(
         "type summary add "
+        '"hermes::vm::HermesValueBase" '
+        '"hermes::vm::SHLegacyValue" '
         '"hermes::vm::HermesValue" '
         '"hermes::vm::PinnedHermesValue" '
         '"hermes::vm::GCHermesValue" '
@@ -33,10 +35,10 @@ class Tag:
     LAST_TAG = 0xFFFF
     EMPTY_INVALID_TAG = FIRST_TAG
     UNDEFINED_NULL_TAG = FIRST_TAG + 1
-    BOOL_TAG = FIRST_TAG + 2
-    SYMBOL_TAG = FIRST_TAG + 3
-    NATIVE_VALUE_TAG = FIRST_TAG + 4
-    STR_TAG = FIRST_TAG + 5
+    BOOL_SYMBOL_TAG = FIRST_TAG + 2
+    NATIVE_VALUE_TAG = FIRST_TAG + 3
+    STR_TAG = FIRST_TAG + 4
+    BIGINT_TAG = FIRST_TAG + 5
     OBJECT_TAG = FIRST_TAG + 6
 
 
@@ -45,12 +47,14 @@ class ExtendedTag:
     INVALID = Tag.EMPTY_INVALID_TAG * 2 + 1
     UNDEFINED = Tag.UNDEFINED_NULL_TAG * 2
     NULL = Tag.UNDEFINED_NULL_TAG * 2 + 1
-    BOOL = Tag.BOOL_TAG * 2
-    SYMBOL = Tag.SYMBOL_TAG * 2
+    BOOL = Tag.BOOL_SYMBOL_TAG * 2
+    SYMBOL = Tag.BOOL_SYMBOL_TAG * 2 + 1
     NATIVE1 = Tag.NATIVE_VALUE_TAG * 2
     NATIVE2 = Tag.NATIVE_VALUE_TAG * 2 + 1
     STR1 = Tag.STR_TAG * 2
     STR2 = Tag.STR_TAG * 2 + 1
+    BIGINT1 = Tag.BIGINT_TAG * 2
+    BIGINT2 = Tag.BIGINT_TAG * 2 + 1
     OBJECT1 = Tag.OBJECT_TAG * 2
     OBJECT2 = Tag.OBJECT_TAG * 2 + 1
 
@@ -66,6 +70,8 @@ class ExtendedTag:
         NATIVE2: "NativeValue",
         STR1: "String",
         STR2: "String",
+        BIGINT1: "BigInt",
+        BIGINT2: "BigInt",
         OBJECT1: "Object",
         OBJECT2: "Object",
     }
@@ -146,7 +152,10 @@ def hv_type_format(valobj, _):
     """This formats a HermesValue based on the same encoding API used by
     HermesValues. It should be kept up to date with any changes to that
     encoding."""
-    raw_val = valobj.GetChildMemberWithName("raw_")
+    # Use have to descend through GetChildAtIndex multiple times due to
+    # the union. LLDB doesn't appear to lookup through unions when using
+    # GetChildMemberWithName.
+    raw_val = valobj.GetChildAtIndex(0).GetChildAtIndex(0).GetChildMemberWithName("raw")
     return str(HermesValue(raw_val.GetValueAsUnsigned()))
 
 
