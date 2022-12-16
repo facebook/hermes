@@ -402,7 +402,7 @@ bool TracingRuntime::hasProperty(
 }
 
 void TracingRuntime::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::String &name,
     const jsi::Value &value) {
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
@@ -417,7 +417,7 @@ void TracingRuntime::setPropertyValue(
 }
 
 void TracingRuntime::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::PropNameID &name,
     const jsi::Value &value) {
   trace_.emplace_back<SynthTrace::SetPropertyRecord>(
@@ -462,7 +462,7 @@ jsi::WeakObject TracingRuntime::createWeakObject(const jsi::Object &o) {
   return RD::createWeakObject(o);
 }
 
-jsi::Value TracingRuntime::lockWeakObject(jsi::WeakObject &wo) {
+jsi::Value TracingRuntime::lockWeakObject(const jsi::WeakObject &wo) {
   // See comment in TracingRuntime::createWeakObject for why this function isn't
   // traced.
   return RD::lockWeakObject(wo);
@@ -505,7 +505,7 @@ jsi::Value TracingRuntime::getValueAtIndex(const jsi::Array &arr, size_t i) {
 }
 
 void TracingRuntime::setValueAtIndexImpl(
-    jsi::Array &arr,
+    const jsi::Array &arr,
     size_t i,
     const jsi::Value &value) {
   trace_.emplace_back<SynthTrace::ArrayWriteRecord>(

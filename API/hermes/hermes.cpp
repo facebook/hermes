@@ -506,11 +506,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
-  static ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(jsi::Pointer &pointer) {
+  static const ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(
+      const jsi::Pointer &pointer) {
     assert(
-        dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
+        dynamic_cast<const WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
-    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))
+    return static_cast<const WeakRefPointerValue *>(getPointerValue(pointer))
         ->value();
   }
 
@@ -645,11 +646,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
   bool hasProperty(const jsi::Object &, const jsi::PropNameID &name) override;
   bool hasProperty(const jsi::Object &, const jsi::String &name) override;
   void setPropertyValue(
-      jsi::Object &,
+      const jsi::Object &,
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
   void setPropertyValue(
-      jsi::Object &,
+      const jsi::Object &,
       const jsi::String &name,
       const jsi::Value &value) override;
   bool isArray(const jsi::Object &) const override;
@@ -660,7 +661,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
-  jsi::Value lockWeakObject(jsi::WeakObject &) override;
+  jsi::Value lockWeakObject(const jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
   jsi::ArrayBuffer createArrayBuffer(
@@ -669,8 +670,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
   jsi::Value getValueAtIndex(const jsi::Array &, size_t i) override;
-  void setValueAtIndexImpl(jsi::Array &, size_t i, const jsi::Value &value)
-      override;
+  void setValueAtIndexImpl(
+      const jsi::Array &,
+      size_t i,
+      const jsi::Value &value) override;
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
@@ -1916,7 +1919,7 @@ bool HermesRuntimeImpl::hasProperty(
 }
 
 void HermesRuntimeImpl::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::String &name,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
@@ -1931,7 +1934,7 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 void HermesRuntimeImpl::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::PropNameID &name,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
@@ -2000,8 +2003,8 @@ jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
       static_cast<vm::JSObject *>(phv(obj).getObject()), runtime_));
 }
 
-jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
-  vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
+jsi::Value HermesRuntimeImpl::lockWeakObject(const jsi::WeakObject &wo) {
+  const vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
 
   if (const auto ptr = wr.get(runtime_, runtime_.getHeap()))
     return add<jsi::Object>(vm::HermesValue::encodeObjectValue(ptr));
@@ -2070,7 +2073,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
 }
 
 void HermesRuntimeImpl::setValueAtIndexImpl(
-    jsi::Array &arr,
+    const jsi::Array &arr,
     size_t i,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
