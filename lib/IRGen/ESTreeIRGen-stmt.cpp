@@ -722,11 +722,12 @@ void ESTreeIRGen::genImportDeclaration(
   assert(
       Mod->getContext().getUseCJSModules() &&
       "import/export requires module mode");
-  // Modules have these arguments: (exports, require, module)
-  Parameter *require = Builder.getFunction()->getParameters()[1];
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      require->getName().str() == "require" &&
+      Builder.getFunction()->getJSDynamicParams()[2]->getName().str() ==
+          "require" &&
       "CJS module second parameter must be 'require'");
+  Value *require = curFunction()->jsParams[2];
   auto *source = genExpression(importDecl->_source);
   auto *exports =
       Builder.createCallInst(require, Builder.getLiteralUndefined(), {source});
@@ -775,15 +776,17 @@ void ESTreeIRGen::genExportNamedDeclaration(
   assert(
       Mod->getContext().getUseCJSModules() &&
       "import/export requires module mode");
-  // Modules have these arguments: (exports, require, module)
-  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      exports->getName().str() == "exports" &&
+      Builder.getFunction()->getJSDynamicParams()[1]->getName().str() ==
+          "exports" &&
       "CJS module first parameter must be 'exports'");
-  Parameter *require = Builder.getFunction()->getParameters()[1];
   assert(
-      require->getName().str() == "require" &&
+      Builder.getFunction()->getJSDynamicParams()[2]->getName().str() ==
+          "require" &&
       "CJS module second parameter must be 'require'");
+  Value *exports = curFunction()->jsParams[1];
+  Value *require = curFunction()->jsParams[2];
 
   // Generate IR for exports of declarations.
   if (auto *decl = exportDecl->_declaration) {
@@ -847,11 +850,12 @@ void ESTreeIRGen::genExportNamedDeclaration(
 
 void ESTreeIRGen::genExportDefaultDeclaration(
     ESTree::ExportDefaultDeclarationNode *exportDecl) {
-  // Modules have these arguments: (exports, require, module)
-  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      exports->getName().str() == "exports" &&
+      Builder.getFunction()->getJSDynamicParams()[1]->getName().str() ==
+          "exports" &&
       "CJS module first parameter must be 'exports'");
+  Value *exports = curFunction()->jsParams[1];
   auto *decl = exportDecl->_declaration;
   if (auto *funDecl = llvh::dyn_cast<ESTree::FunctionDeclarationNode>(decl)) {
     assert(
@@ -882,15 +886,17 @@ void ESTreeIRGen::genExportAllDeclaration(
   assert(
       Mod->getContext().getUseCJSModules() &&
       "import/export requires module mode");
-  // Modules have these arguments: (exports, require, module)
-  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      exports->getName().str() == "exports" &&
+      Builder.getFunction()->getJSDynamicParams()[1]->getName().str() ==
+          "exports" &&
       "CJS module first parameter must be 'exports'");
-  Parameter *require = Builder.getFunction()->getParameters()[1];
   assert(
-      require->getName().str() == "require" &&
+      Builder.getFunction()->getJSDynamicParams()[2]->getName().str() ==
+          "require" &&
       "CJS module second parameter must be 'require'");
+  Value *exports = curFunction()->jsParams[1];
+  Value *require = curFunction()->jsParams[2];
   // export * from 'file.js';
   auto *source = Builder.createCallInst(
       require,

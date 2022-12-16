@@ -26,9 +26,9 @@ TEST(IRUtilsTest, Dominators1) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testDominators1", Function::DefinitionKind::ES5Function, true);
-  auto Cond = Builder.createParameter(F, "cond");
-  auto Arg2 = Builder.createParameter(F, "two");
-  auto Arg3 = Builder.createParameter(F, "three");
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
+  auto Arg2 = Builder.createJSDynamicParam(F, "two");
+  auto Arg3 = Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
@@ -62,7 +62,7 @@ TEST(IRUtilsTest, Dominators2) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testDominators1", Function::DefinitionKind::ES5Function, true);
-  auto Param = Builder.createParameter(F, "param");
+  auto Param = Builder.createJSDynamicParam(F, "param");
   auto Entry = Builder.createBasicBlock(F);
 
   auto LastBB = Entry;

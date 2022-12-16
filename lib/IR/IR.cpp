@@ -189,10 +189,9 @@ Function::Function(
 
 Function::~Function() {
   // Free all parameters.
-  for (auto *p : Parameters) {
+  for (auto *p : jsDynamicParams_) {
     Value::destroy(p);
   }
-  Value::destroy(thisParameter);
 
   // Free all external scopes.
   for (auto *ES : externalScopes_)
@@ -479,16 +478,6 @@ WordBitSet<> Instruction::getChangedOperands() {
   }
 }
 
-Parameter::Parameter(Function *parent, Identifier name)
-    : Value(ValueKind::ParameterKind), Parent(parent), Name(name) {
-  assert(Parent && "Invalid parent");
-  if (name.str() == "this") {
-    Parent->setThisParameter(this);
-  } else {
-    Parent->addParameter(this);
-  }
-}
-
 Variable::Variable(
     ValueKind k,
     VariableScope *scope,
@@ -508,10 +497,6 @@ int Variable::getIndexInVariableList() const {
     index++;
   }
   llvm_unreachable("Cannot find variable in the variable list");
-}
-
-Identifier Parameter::getName() const {
-  return Name;
 }
 
 void BasicBlock::push_back(Instruction *I) {
@@ -557,8 +542,18 @@ Context &Function::getContext() const {
 void Function::addBlock(BasicBlock *BB) {
   BasicBlockList.push_back(BB);
 }
-void Function::addParameter(Parameter *A) {
-  Parameters.push_back(A);
+
+JSDynamicParam *Function::addJSDynamicParam(Identifier name) {
+  assert(jsDynamicParams_.size() < UINT32_MAX && "Too many parameters");
+  auto *param = new JSDynamicParam(this, name);
+  jsDynamicParams_.push_back(param);
+  return param;
+}
+JSDynamicParam *Function::addJSThisParam() {
+  assert(jsDynamicParams_.empty() && "'this' must be the first js parameter");
+  auto *param = addJSDynamicParam(parent_->getContext().getIdentifier("this"));
+  jsThisAdded_ = true;
+  return param;
 }
 
 Module::~Module() {
@@ -690,18 +685,13 @@ Context &Instruction::getContext() const {
 Context &BasicBlock::getContext() const {
   return Parent->getContext();
 }
-Context &Parameter::getContext() const {
-  return Parent->getContext();
+Context &JSDynamicParam::getContext() const {
+  return parent_->getContext();
 }
 
-/// \returns true if this parameter is a 'this' parameter.
-bool Parameter::isThisParameter() const {
-  return Parent->getThisParameter() == this;
-}
-
-int Parameter::getIndexInParamList() const {
-  int index = 0;
-  for (auto P : Parent->getParameters()) {
+uint32_t JSDynamicParam::getIndexInParamList() const {
+  uint32_t index = 0;
+  for (auto P : parent_->getJSDynamicParams()) {
     if (P == this)
       return index;
     index++;

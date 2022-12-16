@@ -40,13 +40,6 @@ class LoadConstants : public FunctionPass {
   bool const optimizationEnabled_;
 };
 
-class LoadParameters : public FunctionPass {
- public:
-  explicit LoadParameters() : FunctionPass("LoadParameters") {}
-  ~LoadParameters() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
 /// Lower LoadFrameInst, StoreFrameInst and CreateFunctionInst.
 class LowerLoadStoreFrameInst : public FunctionPass {
   /// Decide the correct scope to use when dealing with given variable.

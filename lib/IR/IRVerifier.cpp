@@ -156,12 +156,6 @@ void Verifier::visitFunction(const Function &F) {
     visitBasicBlock(*I);
   }
 
-  // Verify all parameters are valid
-  for (auto I = F.arg_begin(); I != F.arg_end(); I++) {
-    Assert(
-        (*I)->getParent() == &F, "Parameter's parent does not match function");
-  }
-
   // Verify Dominance Tree is valid
   DominanceInfo D(const_cast<Function *>(&F));
   Assert(
@@ -790,11 +784,7 @@ void Verifier::visitHBCLoadConstInst(hermes::HBCLoadConstInst const &Inst) {
   // Nothing to verify at this point.
 }
 
-void Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {
-  Assert(
-      Inst.getIndex()->isUInt32Representible(),
-      "LoadParamInst's LiteralNumber is not a uint32.");
-}
+void Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {}
 void Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
   visitCondBranchLikeInst(Inst);
   visitBinaryOperatorLikeInst(Inst);

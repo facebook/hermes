@@ -40,7 +40,7 @@ class Module;
 class VariableScope;
 class Function;
 class BasicBlock;
-class Parameter;
+class JSDynamicParam;
 class Instruction;
 class Context;
 class TerminatorInst;
@@ -578,40 +578,69 @@ class Value {
 
 /// This represents a function parameter.
 class Parameter : public Value {
+  friend class Function;
   Parameter(const Parameter &) = delete;
   void operator=(const Parameter &) = delete;
 
   /// The function that contains this paramter.
-  Function *Parent;
+  Function *parent_;
 
   /// The formal name of the parameter
-  Identifier Name;
+  Identifier name_;
+
+  explicit Parameter(Function *parent, Identifier name)
+      : Value(ValueKind::ParameterKind), parent_(parent), name_(name) {
+    assert(parent_ && "Invalid parent");
+  }
 
  public:
-  explicit Parameter(Function *parent, Identifier name);
-
-  void removeFromParent();
-
-  Context &getContext() const;
   Function *getParent() const {
-    return Parent;
+    return parent_;
   }
-  void setParent(Function *parent) {
-    Parent = parent;
+  /// \brief Return a constant reference to the value's name.
+  Identifier getName() const {
+    return name_;
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::ParameterKind;
+  }
+};
+
+/// This represents a JS function parameter, all of which are optional.
+class JSDynamicParam : public Value {
+  friend class Function;
+  JSDynamicParam(const JSDynamicParam &) = delete;
+  void operator=(const JSDynamicParam &) = delete;
+
+  /// The function that contains this paramter.
+  Function *parent_;
+
+  /// The formal name of the parameter
+  Identifier name_;
+
+  explicit JSDynamicParam(Function *parent, Identifier name)
+      : Value(ValueKind::JSDynamicParamKind), parent_(parent), name_(name) {
+    assert(parent_ && "Invalid parent");
+  }
+
+ public:
+  Context &getContext() const;
+
+  Function *getParent() const {
+    return parent_;
   }
 
   /// \brief Return a constant reference to the value's name.
-  Identifier getName() const;
-
-  /// \returns true if this parameter is a 'this' parameter.
-  bool isThisParameter() const;
+  Identifier getName() const {
+    return name_;
+  }
 
   /// Return the index of this parameter in the function's parameter list.
   /// "this" parameter is excluded from the list.
-  int getIndexInParamList() const;
+  uint32_t getIndexInParamList() const;
 
   static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ParameterKind;
+    return V->getKind() == ValueKind::JSDynamicParamKind;
   }
 };
 
@@ -1440,7 +1469,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
  public:
   using BasicBlockListType = llvh::iplist<BasicBlock>;
-  using ParameterListType = llvh::SmallVector<Parameter *, 8>;
 
   enum class DefinitionKind {
     ES5Function,
@@ -1464,8 +1492,11 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// The basic blocks in this function.
   BasicBlockListType BasicBlockList{};
-  /// The function parameters.
-  ParameterListType Parameters;
+  /// JS parameters, which are all technically optional. "this" is at index 0.
+  llvh::SmallVector<JSDynamicParam *, 4> jsDynamicParams_{};
+  /// Flag indicating whether the JS "this" dynamic param has been added to
+  /// params.
+  bool jsThisAdded_ = false;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
   /// If there was no inference, an empty string.
@@ -1482,9 +1513,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
   Identifier internalName_;
-
-  /// The "this" parameter.
-  Parameter *thisParameter{};
 
   /// The number of expected arguments, derived from the formal parameters given
   /// in the function signature.
@@ -1602,7 +1630,15 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   void addBlock(BasicBlock *BB);
-  void addParameter(Parameter *A);
+
+  /// Add a new JS parameter.
+  JSDynamicParam *addJSDynamicParam(Identifier name);
+  /// Add the "this" JS parameter.
+  JSDynamicParam *addJSThisParam();
+  /// \return true if JS "this" parameter was added.
+  bool jsThisAdded() const {
+    return jsThisAdded_;
+  }
 
   const BasicBlockListType &getBasicBlockList() const {
     return BasicBlockList;
@@ -1661,8 +1697,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     statementCount_ = llvh::None;
   }
 
-  ParameterListType &getParameters() {
-    return Parameters;
+  const auto &getJSDynamicParams() const {
+    return jsDynamicParams_;
+  }
+  /// \return a JS parameter by index. Index 0 is "this", 1 the first declared
+  /// parameter, etc.
+  JSDynamicParam *getJSDynamicParam(uint32_t index) const {
+    return jsDynamicParams_[index];
   }
 
   void setExpectedParamCountIncludingThis(uint32_t count) {
@@ -1671,14 +1712,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   uint32_t getExpectedParamCountIncludingThis() const {
     return expectedParamCountIncludingThis_;
-  }
-
-  void setThisParameter(Parameter *thisParam) {
-    assert(!thisParameter && "This parameter can only be created once");
-    thisParameter = thisParam;
-  }
-  Parameter *getThisParameter() const {
-    return thisParameter;
   }
 
 #ifndef HERMESVM_LEAN
@@ -1715,9 +1748,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   using reverse_iterator = BasicBlockListType::reverse_iterator;
   using const_reverse_iterator = BasicBlockListType::const_reverse_iterator;
 
-  using arg_iterator = ParameterListType::iterator;
-  using const_arg_iterator = ParameterListType::const_iterator;
-
   inline iterator begin() {
     return BasicBlockList.begin();
   }
@@ -1741,18 +1771,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
   inline const_reverse_iterator rend() const {
     return BasicBlockList.rend();
-  }
-  inline arg_iterator arg_begin() {
-    return Parameters.begin();
-  }
-  inline arg_iterator arg_end() {
-    return Parameters.end();
-  }
-  inline const_arg_iterator arg_begin() const {
-    return Parameters.begin();
-  }
-  inline const_arg_iterator arg_end() const {
-    return Parameters.end();
   }
   inline size_t size() const {
     return BasicBlockList.size();

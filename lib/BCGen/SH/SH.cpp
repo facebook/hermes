@@ -523,12 +523,12 @@ class InstrGen {
   void generateLoadParamInst(LoadParamInst &inst) {
     os_.indent(2);
     generateRegister(inst);
+    uint32_t index = inst.getParam()->getIndexInParamList();
     // Special case "this": it is always available, so we don't need a call.
-    if (inst.getIndex()->getValue() == 0) {
+    if (index == 0) {
       os_ << " = frame[" << hbc::StackFrameLayout::ThisArg << "];\n";
     } else {
-      os_ << " = _sh_ljs_param(frame, "
-          << static_cast<uint32_t>(inst.getIndex()->getValue()) << ");\n";
+      os_ << " = _sh_ljs_param(frame, " << index << ");\n";
     }
   }
   void generateHBCResolveEnvironment(HBCResolveEnvironment &inst) {
@@ -1664,7 +1664,6 @@ void generateModule(
   // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
   PM.addPass(new SwitchLowering());
   PM.addPass(new hbc::LoadConstants(true));
-  PM.addPass(new hbc::LoadParameters());
   PM.addPass(new hbc::LowerLoadStoreFrameInst());
   if (options.optimizationEnabled) {
     // Lowers AllocObjects and its sequential literal properties into a single

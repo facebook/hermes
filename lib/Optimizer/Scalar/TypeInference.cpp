@@ -350,9 +350,8 @@ static bool propagateArgs(
   }
 
   IRBuilder builder(F);
-  for (int i = 0, e = F->getParameters().size(); i < e; i++) {
-    auto *P = F->getParameters()[i];
-
+  for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
+    auto *P = F->getJSDynamicParam(i);
     Type paramTy;
     bool first = true;
 
@@ -361,12 +360,9 @@ static bool propagateArgs(
       // The argument default value is undefined.
       Value *arg = builder.getLiteralUndefined();
 
-      // Skip the 'this' argument.
-      unsigned argIdx = i + 1;
-
       // Load the argument that's passed in.
-      if (argIdx < call->getNumArguments()) {
-        arg = call->getArgument(argIdx);
+      if (i < call->getNumArguments()) {
+        arg = call->getArgument(i);
       }
 
       if (first) {
@@ -635,7 +631,8 @@ class TypeInferenceImpl {
     return inst->getSingleOperand()->getType();
   }
   Type inferLoadParamInst(LoadParamInst *inst) {
-    return Type::createAnyType();
+    // Return the type that has been inferred for the parameter.
+    return inst->getParam()->getType();
   }
   Type inferHBCResolveEnvironment(HBCResolveEnvironment *inst) {
     return Type::createEnvironment();
@@ -984,7 +981,7 @@ class TypeInferenceImpl {
           dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
       // If there are unknown call sites, we can't infer anything about the
       // parameters.
-      for (Parameter *param : F->getParameters()) {
+      for (auto *param : F->getJSDynamicParams()) {
         param->setType(Type::createAnyType());
       }
       return true;
@@ -1017,9 +1014,8 @@ static void clearTypesInFunction(Function *f) {
     }
   }
   // Parameters
-  for (Value *param : f->getParameters()) {
-    param->setType(Type::createNoType());
-  }
+  for (auto *P : f->getJSDynamicParams())
+    P->setType(Type::createNoType());
   // Variables
   if (!f->isGlobalScope()) {
     for (auto *V : f->getFunctionScope()->getVariables()) {

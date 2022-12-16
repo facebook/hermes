@@ -86,7 +86,7 @@ static void auditCallInstructions(Function *F) {
           case ValueKind::PhiInstKind:
             CallsPhi += 1;
             break;
-          case ValueKind::ParameterKind:
+          case ValueKind::JSDynamicParamKind:
             CallsParameter += 1;
             break;
           case ValueKind::CallInstKind:

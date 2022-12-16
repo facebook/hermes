@@ -257,35 +257,6 @@ bool LoadConstants::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LoadParameters::runOnFunction(Function *F) {
-  IRBuilder builder(F);
-  bool changed = false;
-
-  updateToEntryInsertionPoint(builder, F);
-
-  // Index of 0 is the "this" parameter.
-  unsigned index = 1;
-  for (Parameter *p : F->getParameters()) {
-    auto *load = builder.createLoadParamInst(builder.getLiteralNumber(index));
-    p->replaceAllUsesWith(load);
-    index++;
-    changed = true;
-  }
-
-  // Lower accesses to "this".
-  auto *thisParam = F->getThisParameter();
-  if (thisParam && thisParam->hasUsers()) {
-    // In strict mode just use param 0 directly. In non-strict, we must coerce
-    // it to an object.
-    Value *getThisInst = F->isStrictMode()
-        ? cast<Value>(builder.createLoadParamInst(builder.getLiteralNumber(0)))
-        : cast<Value>(builder.createLIRGetThisNSInst());
-    thisParam->replaceAllUsesWith(getThisInst);
-    changed = true;
-  }
-  return changed;
-}
-
 Instruction *LowerLoadStoreFrameInst::getScope(
     IRBuilder &builder,
     Variable *var,

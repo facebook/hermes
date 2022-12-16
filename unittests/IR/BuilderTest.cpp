@@ -30,8 +30,8 @@ TEST(BuilderTest, SimpleSmokeTest) {
   auto F = Builder.createFunction(
       "main", Function::DefinitionKind::ES5Function, true);
   auto BB = Builder.createBasicBlock(F);
-  Builder.createParameter(F, "argc");
-  Builder.createParameter(F, "argv");
+  Builder.createJSDynamicParam(F, "argc");
+  Builder.createJSDynamicParam(F, "argv");
   Builder.setInsertionBlock(BB);
   Builder.createBranchInst(BB);
 
@@ -52,8 +52,8 @@ TEST(BuilderTest, BuildCFG) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "forEach", Function::DefinitionKind::ES5Function, true);
-  auto Arg1 = Builder.createParameter(F, "num");
-  auto Arg2 = Builder.createParameter(F, "value");
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
+  auto Arg2 = Builder.createJSDynamicParam(F, "value");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Loop = Builder.createBasicBlock(F);
@@ -79,9 +79,9 @@ TEST(BuilderTest, ReplaceAllUsesWith) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testRAUW", Function::DefinitionKind::ES5Function, true);
-  auto Cond = Builder.createParameter(F, "cond");
-  auto Arg2 = Builder.createParameter(F, "two");
-  auto Arg3 = Builder.createParameter(F, "three");
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
+  auto Arg2 = Builder.createJSDynamicParam(F, "two");
+  auto Arg3 = Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
@@ -163,10 +163,10 @@ TEST(BuilderTest, TestValueTypes) {
   auto F = Builder.createFunction(
       "a_function_with_tests", Function::DefinitionKind::ES5Function, true);
 
-  auto Cond = Builder.createParameter(F, "cond");
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
   Cond->setType(Type::createBoolean());
 
-  auto X = Builder.createParameter(F, "x");
+  auto X = Builder.createJSDynamicParam(F, "x");
   X->setType(Type::createNumber());
 
   Builder.setInsertionBlock(Builder.createBasicBlock(F));
@@ -241,9 +241,9 @@ TEST(BuilderTest, CreateAndManipulateFrameTest) {
   auto F = Builder.createFunction(
       "a_function_with_a_scope", Function::DefinitionKind::ES5Function, true);
 
-  Builder.createParameter(F, "cond");
+  Builder.createJSDynamicParam(F, "cond");
 
-  auto X = Builder.createParameter(F, "x");
+  auto X = Builder.createJSDynamicParam(F, "x");
   Builder.setInsertionBlock(Builder.createBasicBlock(F));
 
   Identifier SomeName0 = Ctx->getIdentifier("some_name");
@@ -293,9 +293,9 @@ TEST(BuilderTest, LiteralsTest) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testRAUW", Function::DefinitionKind::ES5Function, true);
-  Builder.createParameter(F, "cond");
-  Builder.createParameter(F, "two");
-  Builder.createParameter(F, "three");
+  Builder.createJSDynamicParam(F, "cond");
+  Builder.createJSDynamicParam(F, "two");
+  Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
@@ -367,8 +367,8 @@ TEST(BuilderTest, PropertyTest) {
 
   auto *F = Builder.createFunction(
       "testProperties", Function::DefinitionKind::ES5Function, true);
-  auto *O = Builder.createParameter(F, "object");
-  auto *P = Builder.createParameter(F, "property");
+  auto *O = Builder.createJSDynamicParam(F, "object");
+  auto *P = Builder.createJSDynamicParam(F, "property");
 
   auto *Entry = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Entry);

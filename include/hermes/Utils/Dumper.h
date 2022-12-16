@@ -28,7 +28,7 @@ class Module;
 class CondBranchInst;
 class AllocaInst;
 class ReturnInst;
-class Parameter;
+class JSDynamicParam;
 class BranchInst;
 
 /// Display a nice dotty graph that depicts the function.

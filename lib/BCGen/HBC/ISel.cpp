@@ -1502,8 +1502,7 @@ void HBCISel::generateLoadParamInst(
     hermes::LoadParamInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
-  LiteralNumber *number = Inst->getIndex();
-  auto value = number->asUInt32();
+  uint32_t value = Inst->getParam()->getIndexInParamList();
   if (value <= UINT8_MAX) {
     BCFGen_->emitLoadParam(output, value);
   } else {

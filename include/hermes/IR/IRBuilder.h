@@ -134,11 +134,11 @@ class IRBuilder {
       llvh::StringRef name,
       bool declared);
 
-  /// Add a new parameter to function \p Parent.
-  Parameter *createParameter(Function *Parent, Identifier Name);
+  /// Add a new JS parameter to function \p Parent.
+  JSDynamicParam *createJSDynamicParam(Function *parent, Identifier name);
 
-  /// Add a new parameter to function \p Parent.
-  Parameter *createParameter(Function *Parent, llvh::StringRef Name);
+  /// Add a new JS parameter to function \p Parent.
+  JSDynamicParam *createJSDynamicParam(Function *parent, llvh::StringRef name);
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(
@@ -506,7 +506,7 @@ class IRBuilder {
 
   HBCLoadConstInst *createHBCLoadConstInst(Literal *value);
 
-  LoadParamInst *createLoadParamInst(LiteralNumber *value);
+  LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
   HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst();
 

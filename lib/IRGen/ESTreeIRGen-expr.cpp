@@ -137,7 +137,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
           "arrow function must have a captured this");
       return Builder.createLoadFrameInst(curFunction()->capturedThis);
     }
-    return curFunction()->function->getThisParameter();
+    return curFunction()->jsParams[0];
   }
 
   if (auto *MP = llvh::dyn_cast<ESTree::MetaPropertyNode>(expr)) {

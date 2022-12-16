@@ -123,6 +123,12 @@ class FunctionContext {
   /// prologue and delete it in the epilogue if it wasn't used.
   CreateArgumentsInst *createArgumentsInst{};
 
+  /// The instruction loading every parameter. Index 0 is "this", coerced to
+  /// object if necessary.
+  /// We always generate them in the prologue. The load of "this" is deleted
+  /// when emitting the epilogue if not used.
+  llvh::SmallVector<Instruction *, 4> jsParams{};
+
   /// Parents of arrow functions need to capture their "this" parameter so the
   /// arrow function can use it. Normal functions and constructors store their
   /// "this" in a variable and record it here, if they contain at least one

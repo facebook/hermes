@@ -29,8 +29,8 @@ TEST(IRVerifierTest, BasicBlockTest) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "forEach", Function::DefinitionKind::ES5Function, true);
-  auto Arg1 = Builder.createParameter(F, "num");
-  auto Arg2 = Builder.createParameter(F, "value");
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
+  auto Arg2 = Builder.createJSDynamicParam(F, "value");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Loop = Builder.createBasicBlock(F);
@@ -66,7 +66,7 @@ TEST(IRVerifierTest, ReturnInstTest) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testReturn", Function::DefinitionKind::ES5Function, true);
-  auto Arg1 = Builder.createParameter(F, "num");
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
   Arg1->setType(Type::createNumber());
 
   auto Body = Builder.createBasicBlock(F);
@@ -114,7 +114,7 @@ TEST(IRVerifierTest, DominanceTest) {
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
       "testBranch", Function::DefinitionKind::ES5Function, true);
-  auto Arg1 = Builder.createParameter(F, "num");
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
 
   auto Body = Builder.createBasicBlock(F);
 

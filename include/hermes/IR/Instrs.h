@@ -3160,15 +3160,15 @@ class LoadParamInst : public SingleOperandInst {
   void operator=(const LoadParamInst &) = delete;
 
  public:
-  explicit LoadParamInst(LiteralNumber *input)
-      : SingleOperandInst(ValueKind::LoadParamInstKind, input) {}
+  explicit LoadParamInst(JSDynamicParam *param)
+      : SingleOperandInst(ValueKind::LoadParamInstKind, param) {}
   explicit LoadParamInst(
       const LoadParamInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  LiteralNumber *getIndex() const {
-    return cast<LiteralNumber>(getSingleOperand());
+  JSDynamicParam *getParam() const {
+    return cast<JSDynamicParam>(getSingleOperand());
   }
 
   static bool hasOutput() {

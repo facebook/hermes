@@ -122,13 +122,15 @@ bool ResolveStaticRequireImpl::run() {
 }
 
 void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      moduleFunction->getParameters().size() == 3 &&
+      moduleFunction->getJSDynamicParams().size() == 4 &&
       "CJS module functions must have three parameters");
 
-  Parameter *requireParam = moduleFunction->getParameters()[1];
+  static constexpr unsigned kRequireIndex = 2;
   assert(
-      requireParam->getName().str() == "require" &&
+      moduleFunction->getJSDynamicParams()[kRequireIndex]->getName().str() ==
+          "require" &&
       "CJS module second parameter must be 'require'");
 
   // Visited instructions.
@@ -146,7 +148,12 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
 
   // Add all usages of the "require" parameter to the worklist, which then may
   // add more usages and so on.
-  addUsers(requireParam);
+  for (auto *I : moduleFunction->getJSDynamicParam(kRequireIndex)->getUsers()) {
+    assert(
+        llvh::isa<LoadParamInst>(I) &&
+        "Use of JSDynamicParam must be LoadParamInst");
+    addUsers(I);
+  }
 
   while (!workList.empty()) {
     Usage U = workList.pop_back_val();

@@ -396,20 +396,16 @@ Value *getKnownReturnValue(Function *F, CallInst *callSite) {
 
   // The function returns a parameter, let's inspect the call
   // site and find the value.
-  if (auto *P = llvh::dyn_cast<Parameter>(v)) {
-    // Don't handle the 'this' parameter.
-    if (P->isThisParameter())
-      return nullptr;
-
-    unsigned idx = P->getIndexInParamList();
+  if (auto *LPI = llvh::dyn_cast<LoadParamInst>(v)) {
+    uint32_t idx = LPI->getParam()->getIndexInParamList();
 
     // Returning unpassed parameter results in undef.
-    if (idx >= callSite->getNumArguments() - 1)
+    if (idx >= callSite->getNumArguments())
       return builder.getLiteralUndefined();
 
     // return the argument that the user passed in (ignore the
     // 'this' argument).
-    return callSite->getArgument(idx + 1);
+    return callSite->getArgument(idx);
   }
 
   // Returning some locally computed value.

@@ -164,12 +164,18 @@ GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
       M->getContext().getIdentifier(name), declared);
 }
 
-Parameter *IRBuilder::createParameter(Function *Parent, Identifier Name) {
-  return new Parameter(Parent, Name);
+/// Add a new JS parameter to function \p Parent.
+JSDynamicParam *IRBuilder::createJSDynamicParam(
+    Function *parent,
+    Identifier name) {
+  return parent->addJSDynamicParam(name);
 }
 
-Parameter *IRBuilder::createParameter(Function *Parent, llvh::StringRef Name) {
-  return createParameter(Parent, createIdentifier(Name));
+/// Add a new JS parameter to function \p Parent.
+JSDynamicParam *IRBuilder::createJSDynamicParam(
+    Function *parent,
+    llvh::StringRef name) {
+  return parent->addJSDynamicParam(createIdentifier(name));
 }
 
 Variable *IRBuilder::createVariable(
@@ -839,8 +845,8 @@ HBCLoadConstInst *IRBuilder::createHBCLoadConstInst(Literal *value) {
   return inst;
 }
 
-LoadParamInst *IRBuilder::createLoadParamInst(LiteralNumber *value) {
-  auto inst = new LoadParamInst(value);
+LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
+  auto inst = new LoadParamInst(param);
   insert(inst);
   return inst;
 }

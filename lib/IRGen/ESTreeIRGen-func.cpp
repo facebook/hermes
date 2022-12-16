@@ -421,7 +421,7 @@ Function *ESTreeIRGen::genAsyncFunction(
         DoEmitParameters::No);
 
     auto *genClosure = Builder.createCreateFunctionInst(gen);
-    auto *thisArg = curFunction()->function->getThisParameter();
+    auto *thisArg = curFunction()->jsParams[0];
     auto *argumentsList = curFunction()->createArgumentsInst;
 
     auto *spawnAsyncClosure = Builder.createGetBuiltinClosureInst(
@@ -448,10 +448,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   curFunction()->capturedThis = Builder.createVariable(
       scope, Variable::DeclKind::Var, genAnonymousLabelName("this"));
   emitStore(
-      Builder,
-      Builder.getFunction()->getThisParameter(),
-      curFunction()->capturedThis,
-      true);
+      Builder, curFunction()->jsParams[0], curFunction()->capturedThis, true);
 
   // "new.target".
   curFunction()->capturedNewTarget = Builder.createVariable(
@@ -495,6 +492,23 @@ void ESTreeIRGen::emitFunctionPrologue(
   // unused.
   curFunction()->createArgumentsInst = Builder.createCreateArgumentsInst();
 
+  // Always create the "this" parameter. It needs to be created before we
+  // initialized the ES5 capture state.
+  JSDynamicParam *thisParam = newFunc->addJSThisParam();
+
+  // Save the "this" parameter. We will delete it later if unused.
+  // In strict mode just use param 0 directly. In non-strict, we must coerce
+  // it to an object.
+  {
+    Instruction *thisVal = Builder.createLoadParamInst(thisParam);
+    assert(
+        curFunction()->jsParams.empty() &&
+        "jsParams must be empty in new function");
+    curFunction()->jsParams.push_back(
+        newFunc->isStrictMode() ? thisVal
+                                : Builder.createCoerceThisNSInst(thisVal));
+  }
+
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
   for (auto decl : semInfo->varDecls) {
@@ -515,10 +529,6 @@ void ESTreeIRGen::emitFunctionPrologue(
     declareVariableOrGlobalProperty(
         newFunc, VarDecl::Kind::Var, getNameFieldFromID(fd->_id));
   }
-
-  // Always create the "this" parameter. It needs to be created before we
-  // initialized the ES5 capture state.
-  Builder.createParameter(newFunc, "this");
 
   if (doInitES5CaptureState != InitES5CaptureState::No)
     initCaptureStateInES5FunctionHelper();
@@ -585,7 +595,15 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
         ? getNameFieldFromID(param)
         : genAnonymousLabelName("param");
 
-    auto *formalParam = Builder.createParameter(newFunc, formalParamName);
+    size_t jsParamIndex = newFunc->getJSDynamicParams().size();
+    if (jsParamIndex > UINT32_MAX) {
+      Mod->getContext().getSourceErrorManager().error(
+          param->getSourceRange(), "too many paramaters");
+      break;
+    }
+    Instruction *formalParam = Builder.createLoadParamInst(
+        newFunc->addJSDynamicParam(formalParamName));
+    curFunction()->jsParams.push_back(formalParam);
     createLRef(param, true)
         .emitStore(
             emitOptionalInitialization(formalParam, init, formalParamName));
@@ -620,13 +638,29 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   if (!curFunction()->createArgumentsInst->hasUsers())
     curFunction()->createArgumentsInst->eraseFromParent();
 
+  // Delete the load of "this" if unused.
+  if (!curFunction()->jsParams.empty()) {
+    Instruction *I = curFunction()->jsParams[0];
+    if (!I->hasUsers()) {
+      // If the instruction is CoerceThisNSInst, we may have to delete its
+      // operand too.
+      Instruction *load = nullptr;
+      if (auto *CT = llvh::dyn_cast<CoerceThisNSInst>(I)) {
+        load = llvh::dyn_cast<Instruction>(CT->getSingleOperand());
+      }
+      I->eraseFromParent();
+      if (load && !load->hasUsers())
+        load->eraseFromParent();
+    }
+  }
+
   curFunction()->function->clearStatementCount();
 }
 
 void ESTreeIRGen::genDummyFunction(Function *dummy) {
   IRBuilder builder{dummy};
 
-  builder.createParameter(dummy, "this");
+  dummy->addJSThisParam();
   BasicBlock *firstBlock = builder.createBasicBlock(dummy);
   builder.setInsertionBlock(firstBlock);
   builder.createUnreachableInst();
@@ -650,7 +684,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       sourceRange,
       false);
 
-  builder.createParameter(function, "this");
+  function->addJSThisParam();
   BasicBlock *firstBlock = builder.createBasicBlock(function);
   builder.setInsertionBlock(firstBlock);
 

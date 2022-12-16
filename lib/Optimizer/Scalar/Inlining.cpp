@@ -58,6 +58,7 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
   for (BasicBlock *oldBB : orderDFS(F)) {
     for (auto &I : *oldBB) {
       switch (I.getKind()) {
+        case ValueKind::LIRGetThisNSInstKind:
         case ValueKind::CreateArgumentsInstKind:
         // TODO: we can't deal with changing the scope depth of functions yet.
         case ValueKind::CreateFunctionInstKind:
@@ -119,27 +120,6 @@ static Value *inlineFunction(
       F->getStatementCount() ? *F->getStatementCount() : 0;
   intoFunction->setStatementCount(statementIndexOffset + inlineStatementCount);
 
-  // Map the parameters.
-
-  Value *thisParam;
-  if (!F->isStrictMode()) {
-    // If the callee is non-strict, we need to coerce "this" to an object.
-    thisParam = builder.createCoerceThisNSInst(CI->getThis());
-  } else {
-    thisParam = CI->getThis();
-  }
-
-  operandMap[F->getThisParameter()] = thisParam;
-  {
-    unsigned argIndex = 1;
-    for (Parameter *param : F->getParameters()) {
-      operandMap[param] = argIndex < CI->getNumArguments()
-          ? CI->getArgument(argIndex)
-          : cast<Value>(builder.getLiteralUndefined());
-      ++argIndex;
-    }
-  }
-
   auto order = orderDFS(F);
 
   // Map the basic blocks.
@@ -188,8 +168,17 @@ static Value *inlineFunction(
     builder.setInsertionBlock(newBB);
 
     for (auto &I : *oldBB) {
-      // Translate the operands.
+      // LoadParamInst is translated to a direct usage of the argument.
+      if (auto *LPI = llvh::dyn_cast<LoadParamInst>(&I)) {
+        uint32_t index = LPI->getParam()->getIndexInParamList();
+        operandMap[&I] = index < CI->getNumArguments()
+            ? CI->getArgument(index)
+            : builder.getLiteralUndefined();
+        continue;
+      }
+      assert(!llvh::isa<LIRGetThisNSInst>(I) && "Not allowed during inlining");
 
+      // Translate the operands.
       if (auto *phi = llvh::dyn_cast<PhiInst>(&I)) {
         // We cannot translate phi operands yet because the instruction is not
         // dominated by its operands (unlike all others). So, use empty

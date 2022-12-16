@@ -148,7 +148,7 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (auto L = dyn_cast<Label>(V)) {
     auto Name = L->get();
     os << "$" << quoteStr(ctx.toString(Name));
-  } else if (auto P = dyn_cast<Parameter>(V)) {
+  } else if (auto P = dyn_cast<JSDynamicParam>(V)) {
     auto Name = P->getName();
     os << "%" << ctx.toString(Name);
   } else if (auto F = dyn_cast<Function>(V)) {
@@ -172,19 +172,23 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
 }
 
 void IRPrinter::printFunctionHeader(Function *F) {
-  bool first = true;
   auto &Ctx = F->getContext();
   std::string defKindStr = F->getDefinitionKindStr(false);
 
   os << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
      << "(";
-  for (auto P : F->getParameters()) {
-    if (!first) {
+  uint32_t idx = 0u - 1;
+  for (auto *P : F->getJSDynamicParams()) {
+    ++idx;
+    // Skip "this".
+    if (idx == 0)
+      continue;
+    // Comma before the second param
+    if (idx > 1) {
       os << ", ";
     }
-    os << Ctx.toString(P->getName());
+    os << P->getName().str();
     printTypeLabel(P->getType());
-    first = false;
   }
   os << ")";
   printTypeLabel(F->getType());
