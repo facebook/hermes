@@ -109,6 +109,10 @@ bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
 bool hermes::getCallSites(
     Function *F,
     llvh::SmallVectorImpl<BaseCallInst *> &callsites) {
+  // Skip global and module functions.
+  if (F->isGlobalScope() || F->getParent()->findCJSModule(F))
+    return false;
+
   for (auto *CU : F->getUsers()) {
     auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(CU);
     if (!CFI) {
