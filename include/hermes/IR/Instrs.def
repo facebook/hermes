@@ -58,9 +58,9 @@ DEF_VALUE(ImplicitMovInst, Instruction)
 DEF_VALUE(CoerceThisNSInst, Instruction)
 DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(LoadFrameInst, Instruction)
+DEF_VALUE(LoadParamInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCLoadConstInst, Instruction)
-DEF_VALUE(HBCLoadParamInst, Instruction)
 DEF_VALUE(HBCResolveEnvironment, Instruction)
 DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
 
@@ -213,10 +213,10 @@ DEF_VALUE(ResumeGeneratorInst, Instruction)
 
 // These are target dependent instructions:
 
+DEF_VALUE(LIRGetThisNSInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
 DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
-DEF_VALUE(HBCGetThisNSInst, Instruction)
 DEF_VALUE(HBCCreateThisInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)

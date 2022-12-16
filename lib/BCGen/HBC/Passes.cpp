@@ -92,8 +92,8 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<HBCLoadConstInst>(Inst))
     return true;
 
-  // The operand of HBCLoadParamInst is a literal index.
-  if (llvh::isa<HBCLoadParamInst>(Inst))
+  // The operand of LoadParamInst is a literal index.
+  if (llvh::isa<LoadParamInst>(Inst))
     return true;
 
   if (llvh::isa<HBCAllocObjectFromBufferInst>(Inst))
@@ -266,8 +266,7 @@ bool LoadParameters::runOnFunction(Function *F) {
   // Index of 0 is the "this" parameter.
   unsigned index = 1;
   for (Parameter *p : F->getParameters()) {
-    auto *load =
-        builder.createHBCLoadParamInst(builder.getLiteralNumber(index));
+    auto *load = builder.createLoadParamInst(builder.getLiteralNumber(index));
     p->replaceAllUsesWith(load);
     index++;
     changed = true;
@@ -279,9 +278,8 @@ bool LoadParameters::runOnFunction(Function *F) {
     // In strict mode just use param 0 directly. In non-strict, we must coerce
     // it to an object.
     Value *getThisInst = F->isStrictMode()
-        ? cast<Value>(
-              builder.createHBCLoadParamInst(builder.getLiteralNumber(0)))
-        : cast<Value>(builder.createHBCGetThisNSInst());
+        ? cast<Value>(builder.createLoadParamInst(builder.getLiteralNumber(0)))
+        : cast<Value>(builder.createLIRGetThisNSInst());
     thisParam->replaceAllUsesWith(getThisInst);
     changed = true;
   }

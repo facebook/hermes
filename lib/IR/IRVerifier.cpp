@@ -790,10 +790,10 @@ void Verifier::visitHBCLoadConstInst(hermes::HBCLoadConstInst const &Inst) {
   // Nothing to verify at this point.
 }
 
-void Verifier::visitHBCLoadParamInst(hermes::HBCLoadParamInst const &Inst) {
+void Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {
   Assert(
       Inst.getIndex()->isUInt32Representible(),
-      "HBCLoadParamInst's LiteralNumber is not a uint32.");
+      "LoadParamInst's LiteralNumber is not a uint32.");
 }
 void Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
   visitCondBranchLikeInst(Inst);
@@ -819,7 +819,7 @@ void Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
       "HBCCreateGeneratorInst must take a GeneratorInnerFunction");
 }
 
-void Verifier::visitHBCGetThisNSInst(const HBCGetThisNSInst &Inst) {
+void Verifier::visitLIRGetThisNSInst(const LIRGetThisNSInst &Inst) {
   // Nothing to verify at this point.
 }
 void Verifier::visitHBCGetArgumentsPropByValLooseInst(

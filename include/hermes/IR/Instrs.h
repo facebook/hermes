@@ -3155,15 +3155,15 @@ class HBCLoadConstInst : public SingleOperandInst {
 
 /// Load a formal parameter. Parameter 0 is "this", the rest of the params start
 /// at index 1.
-class HBCLoadParamInst : public SingleOperandInst {
-  HBCLoadParamInst(const HBCLoadParamInst &) = delete;
-  void operator=(const HBCLoadParamInst &) = delete;
+class LoadParamInst : public SingleOperandInst {
+  LoadParamInst(const LoadParamInst &) = delete;
+  void operator=(const LoadParamInst &) = delete;
 
  public:
-  explicit HBCLoadParamInst(LiteralNumber *input)
-      : SingleOperandInst(ValueKind::HBCLoadParamInstKind, input) {}
-  explicit HBCLoadParamInst(
-      const HBCLoadParamInst *src,
+  explicit LoadParamInst(LiteralNumber *input)
+      : SingleOperandInst(ValueKind::LoadParamInstKind, input) {}
+  explicit LoadParamInst(
+      const LoadParamInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
@@ -3185,21 +3185,21 @@ class HBCLoadParamInst : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCLoadParamInstKind;
+    return kind == ValueKind::LoadParamInstKind;
   }
 };
 
 /// Load the "this" parameter in non-strict mode, which coerces it to an object,
 /// boxing primitives and converting "null" and "undefined" to the global
 /// object.
-class HBCGetThisNSInst : public Instruction {
-  HBCGetThisNSInst(const HBCGetThisNSInst &) = delete;
-  void operator=(const HBCGetThisNSInst &) = delete;
+class LIRGetThisNSInst : public Instruction {
+  LIRGetThisNSInst(const LIRGetThisNSInst &) = delete;
+  void operator=(const LIRGetThisNSInst &) = delete;
 
  public:
-  explicit HBCGetThisNSInst() : Instruction(ValueKind::HBCGetThisNSInstKind) {}
-  explicit HBCGetThisNSInst(
-      const HBCGetThisNSInst *src,
+  explicit LIRGetThisNSInst() : Instruction(ValueKind::LIRGetThisNSInstKind) {}
+  explicit LIRGetThisNSInst(
+      const LIRGetThisNSInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -3217,7 +3217,7 @@ class HBCGetThisNSInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetThisNSInstKind;
+    return kind == ValueKind::LIRGetThisNSInstKind;
   }
 };
 

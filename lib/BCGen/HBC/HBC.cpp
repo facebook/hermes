@@ -88,7 +88,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
     PM.addCSE();
-    // Drop unused HBCLoadParamInsts.
+    // Drop unused LoadParamInsts.
     PM.addDCE();
   }
 

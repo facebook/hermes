@@ -520,7 +520,7 @@ class InstrGen {
     generateValue(*inst.getConst());
     os_ << ";\n";
   }
-  void generateHBCLoadParamInst(HBCLoadParamInst &inst) {
+  void generateLoadParamInst(LoadParamInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     // Special case "this": it is always available, so we don't need a call.
@@ -1454,7 +1454,7 @@ class InstrGen {
     generateRegister(*inst.getSingleOperand());
     os_ << ");\n";
   }
-  void generateHBCGetThisNSInst(HBCGetThisNSInst &inst) {
+  void generateLIRGetThisNSInst(LIRGetThisNSInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_coerce_this_ns(shr, frame["
@@ -1674,7 +1674,7 @@ void generateModule(
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
     PM.addCSE();
-    // Drop unused HBCLoadParamInsts.
+    // Drop unused LoadParamInsts.
     PM.addDCE();
   }
   PM.run(M);

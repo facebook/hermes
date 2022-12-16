@@ -634,7 +634,7 @@ class TypeInferenceImpl {
   Type inferHBCLoadConstInst(HBCLoadConstInst *inst) {
     return inst->getSingleOperand()->getType();
   }
-  Type inferHBCLoadParamInst(HBCLoadParamInst *inst) {
+  Type inferLoadParamInst(LoadParamInst *inst) {
     return Type::createAnyType();
   }
   Type inferHBCResolveEnvironment(HBCResolveEnvironment *inst) {
@@ -948,7 +948,7 @@ class TypeInferenceImpl {
   Type inferHBCCreateEnvironmentInst(HBCCreateEnvironmentInst *inst) {
     return Type::createEnvironment();
   }
-  Type inferHBCGetThisNSInst(HBCGetThisNSInst *inst) {
+  Type inferLIRGetThisNSInst(LIRGetThisNSInst *inst) {
     return Type::createObject();
   }
   Type inferHBCCreateThisInst(HBCCreateThisInst *inst) {

@@ -506,11 +506,11 @@ class IRBuilder {
 
   HBCLoadConstInst *createHBCLoadConstInst(Literal *value);
 
-  HBCLoadParamInst *createHBCLoadParamInst(LiteralNumber *value);
+  LoadParamInst *createLoadParamInst(LiteralNumber *value);
 
   HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst();
 
-  HBCGetThisNSInst *createHBCGetThisNSInst();
+  LIRGetThisNSInst *createLIRGetThisNSInst();
 
   HBCGetArgumentsPropByValLooseInst *createHBCGetArgumentsPropByValLooseInst(
       Value *index,

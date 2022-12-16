@@ -839,8 +839,8 @@ HBCLoadConstInst *IRBuilder::createHBCLoadConstInst(Literal *value) {
   return inst;
 }
 
-HBCLoadParamInst *IRBuilder::createHBCLoadParamInst(LiteralNumber *value) {
-  auto inst = new HBCLoadParamInst(value);
+LoadParamInst *IRBuilder::createLoadParamInst(LiteralNumber *value) {
+  auto inst = new LoadParamInst(value);
   insert(inst);
   return inst;
 }
@@ -851,8 +851,8 @@ HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst() {
   return inst;
 }
 
-HBCGetThisNSInst *IRBuilder::createHBCGetThisNSInst() {
-  auto inst = new HBCGetThisNSInst();
+LIRGetThisNSInst *IRBuilder::createLIRGetThisNSInst() {
+  auto inst = new LIRGetThisNSInst();
   insert(inst);
   return inst;
 }

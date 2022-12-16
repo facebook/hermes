@@ -1498,8 +1498,8 @@ void HBCISel::generateHBCLoadConstInst(
       llvm_unreachable("Invalid literal type");
   }
 }
-void HBCISel::generateHBCLoadParamInst(
-    hermes::HBCLoadParamInst *Inst,
+void HBCISel::generateLoadParamInst(
+    hermes::LoadParamInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   LiteralNumber *number = Inst->getIndex();
@@ -1538,8 +1538,8 @@ void HBCISel::generateGetNewTargetInst(
   BCFGen_->emitGetNewTarget(dstReg);
 }
 
-void HBCISel::generateHBCGetThisNSInst(
-    hermes::HBCGetThisNSInst *Inst,
+void HBCISel::generateLIRGetThisNSInst(
+    hermes::LIRGetThisNSInst *Inst,
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   BCFGen_->emitLoadThisNS(dstReg);
