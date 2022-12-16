@@ -86,6 +86,12 @@ static cl::opt<bool> Verbose(
     cl::ValueDisallowed,
     cl::ZeroOrMore);
 
+cl::list<std::string> ExtraCCOptions(
+    "Wc,",
+    cl::desc("Pass extra arguments (comma separated) directly to cc"),
+    cl::Prefix,
+    cl::CommaSeparated);
+
 cl::opt<OptLevel> OptimizationLevel(
     cl::desc("Choose optimization level:"),
     cl::init(OptLevel::OMax),
@@ -112,6 +118,12 @@ cl::opt<bool> StaticLink(
     "static-link",
     cl::init(false),
     cl::desc("Statically link against the VM"),
+    cl::cat(CompilerCategory));
+
+cl::opt<bool> KeepTemp(
+    "keep-temp",
+    cl::init(false),
+    cl::desc("Keep temporary files made along the way (for debugging)"),
     cl::cat(CompilerCategory));
 
 enum class StaticBuiltinSetting {
@@ -665,6 +677,9 @@ bool compileFromCommandLineOptions() {
                     : ShermesCompileParams::Lean::off,
           cli::StaticLink ? ShermesCompileParams::StaticLink::on
                           : ShermesCompileParams::StaticLink::off,
+          cli::ExtraCCOptions,
+          cli::KeepTemp ? ShermesCompileParams::KeepTemp::on
+                        : ShermesCompileParams::KeepTemp::off,
           cli::Verbose.getNumOccurrences()),
       cli::OutputLevel,
       cli::InputFilename,

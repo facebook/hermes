@@ -45,6 +45,9 @@ struct ShermesCompileParams {
   Lean lean = Lean::off;
   enum class StaticLink { off, on };
   StaticLink staticLink = StaticLink::off;
+  llvh::ArrayRef<std::string> extraCCOptions{};
+  enum class KeepTemp { off, on };
+  KeepTemp keepTemp = KeepTemp::off;
   int verbosity;
 
   ShermesCompileParams(
@@ -53,12 +56,16 @@ struct ShermesCompileParams {
       EnableAsserts enableAsserts,
       Lean lean,
       StaticLink staticLink,
+      llvh::ArrayRef<std::string> extraCCOptions,
+      KeepTemp keepTemp,
       int verbosity)
       : genOptions(genOptions),
         nativeOptimize(nativeOptimize),
         enableAsserts(enableAsserts),
         lean(lean),
         staticLink(staticLink),
+        extraCCOptions(extraCCOptions),
+        keepTemp(keepTemp),
         verbosity(verbosity) {}
 };
 

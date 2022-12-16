@@ -234,6 +234,9 @@ bool invokeCC(
     if (params.enableAsserts == ShermesCompileParams::EnableAsserts::off) {
       args.emplace_back("-DNDEBUG");
     }
+    for (llvh::StringRef option : params.extraCCOptions) {
+      args.emplace_back(option);
+    }
   } else {
     splitArgs(cfg.cflags, args);
   }
@@ -336,11 +339,18 @@ bool compileFromC(
                  << '\n';
     return false;
   }
+  bool keepTemp = params.keepTemp == ShermesCompileParams::KeepTemp::on;
   // Don't forget to delete the temporary on exit.
-  llvh::sys::RemoveFileOnSignal(tmpPath);
-  auto removeOnExit = llvh::make_scope_exit([&tmpPath]() {
-    llvh::sys::DontRemoveFileOnSignal(tmpPath);
-    ::remove(tmpPath.c_str());
+  if (!keepTemp) {
+    llvh::sys::RemoveFileOnSignal(tmpPath);
+  }
+  auto removeOnExit = llvh::make_scope_exit([&tmpPath, keepTemp]() {
+    // Need this inside the lambda.
+    // Putting `make_scope_exit` inside an `if` would be awkward.
+    if (!keepTemp) {
+      llvh::sys::DontRemoveFileOnSignal(tmpPath);
+      ::remove(tmpPath.c_str());
+    }
   });
 
   // Emit into the temporary file.
