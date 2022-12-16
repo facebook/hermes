@@ -36,17 +36,18 @@ function foo(param) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo]
-// CHECK-NEXT:  %2 = StoreFrameInst %param, [param]
-// CHECK-NEXT:  %3 = LoadFrameInst [param]
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst "1" : string, 2 : number, "key" : string, %3
-// CHECK-NEXT:  %5 = StoreFrameInst %4 : object, [obj]
-// CHECK-NEXT:  %6 = AllocArrayInst 4 : number, 1 : number, 2 : number, 3 : number, 4 : number
-// CHECK-NEXT:  %7 = StoreFrameInst %6 : object, [foo]
-// CHECK-NEXT:  %8 = LoadFrameInst [obj]
-// CHECK-NEXT:  %9 = LoadFrameInst [foo]
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9, %8, "field" : string
-// CHECK-NEXT:  %11 = LoadFrameInst [foo]
-// CHECK-NEXT:  %12 = LoadFrameInst [obj]
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12, %11, 5 : number
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = LoadParamInst %param
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [param]
+// CHECK-NEXT:  %4 = LoadFrameInst [param]
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst "1" : string, 2 : number, "key" : string, %4
+// CHECK-NEXT:  %6 = StoreFrameInst %5 : object, [obj]
+// CHECK-NEXT:  %7 = AllocArrayInst 4 : number, 1 : number, 2 : number, 3 : number, 4 : number
+// CHECK-NEXT:  %8 = StoreFrameInst %7 : object, [foo]
+// CHECK-NEXT:  %9 = LoadFrameInst [obj]
+// CHECK-NEXT:  %10 = LoadFrameInst [foo]
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10, %9, "field" : string
+// CHECK-NEXT:  %12 = LoadFrameInst [foo]
+// CHECK-NEXT:  %13 = LoadFrameInst [obj]
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13, %12, 5 : number
+// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

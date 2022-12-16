@@ -42,15 +42,19 @@ function test_simple_call() {
 // CHECK:function Car(model, year)
 // CHECK-NEXT:frame = [model, year]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %model, [model]
-// CHECK-NEXT:  %1 = StoreFrameInst %year, [year]
-// CHECK-NEXT:  %2 = LoadFrameInst [model]
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2, %this, "model" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [year]
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %this, "year" : string
-// CHECK-NEXT:  %6 = ReturnInst "wat" : string
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = LoadParamInst %model
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [model]
+// CHECK-NEXT:  %4 = LoadParamInst %year
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [year]
+// CHECK-NEXT:  %6 = LoadFrameInst [model]
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6, %1 : object, "model" : string
+// CHECK-NEXT:  %8 = LoadFrameInst [year]
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8, %1 : object, "year" : string
+// CHECK-NEXT:  %10 = ReturnInst "wat" : string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_new()

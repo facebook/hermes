@@ -79,8 +79,9 @@ function test_init_update_exprs(param1) {
 // CHECK:function sink(a)
 // CHECK-NEXT:frame = [a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop()
@@ -226,37 +227,43 @@ function test_init_update_exprs(param1) {
 // CHECK:function for_loop_match(a, b, c, d, e, f)
 // CHECK-NEXT:frame = [a, b, c, d, e, f]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst %c, [c]
-// CHECK-NEXT:  %3 = StoreFrameInst %d, [d]
-// CHECK-NEXT:  %4 = StoreFrameInst %e, [e]
-// CHECK-NEXT:  %5 = StoreFrameInst %f, [f]
-// CHECK-NEXT:  %6 = LoadFrameInst [a]
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = BranchInst %BB1
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = LoadParamInst %c
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [c]
+// CHECK-NEXT:  %6 = LoadParamInst %d
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [d]
+// CHECK-NEXT:  %8 = LoadParamInst %e
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [e]
+// CHECK-NEXT:  %10 = LoadParamInst %f
+// CHECK-NEXT:  %11 = StoreFrameInst %10, [f]
+// CHECK-NEXT:  %12 = LoadFrameInst [a]
+// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined
+// CHECK-NEXT:  %14 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadFrameInst [d]
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:  %15 = LoadFrameInst [d]
+// CHECK-NEXT:  %16 = CallInst %15, undefined : undefined
+// CHECK-NEXT:  %17 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = LoadFrameInst [b]
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined
-// CHECK-NEXT:  %15 = CondBranchInst %14, %BB2, %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %16 = LoadFrameInst [b]
-// CHECK-NEXT:  %17 = CallInst %16, undefined : undefined
-// CHECK-NEXT:  %18 = CondBranchInst %17, %BB2, %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %19 = LoadFrameInst [c]
+// CHECK-NEXT:  %19 = LoadFrameInst [b]
 // CHECK-NEXT:  %20 = CallInst %19, undefined : undefined
-// CHECK-NEXT:  %21 = BranchInst %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %22 = LoadFrameInst [e]
+// CHECK-NEXT:  %21 = CondBranchInst %20, %BB2, %BB3
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %22 = LoadFrameInst [b]
 // CHECK-NEXT:  %23 = CallInst %22, undefined : undefined
-// CHECK-NEXT:  %24 = BranchInst %BB5
+// CHECK-NEXT:  %24 = CondBranchInst %23, %BB2, %BB3
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %25 = LoadFrameInst [c]
+// CHECK-NEXT:  %26 = CallInst %25, undefined : undefined
+// CHECK-NEXT:  %27 = BranchInst %BB4
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %28 = LoadFrameInst [e]
+// CHECK-NEXT:  %29 = CallInst %28, undefined : undefined
+// CHECK-NEXT:  %30 = BranchInst %BB5
 // CHECK-NEXT:function_end
 
 // CHECK:function naked_for_loop()
@@ -279,45 +286,46 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:frame = [i, param1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %1 = StoreFrameInst %param1, [param1]
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i]
-// CHECK-NEXT:  %3 = BranchInst %BB1
+// CHECK-NEXT:  %1 = LoadParamInst %param1
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [param1]
+// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [i]
+// CHECK-NEXT:  %4 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BranchInst %BB3
+// CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %5 = BranchInst %BB5
+// CHECK-NEXT:  %6 = BranchInst %BB5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = CondBranchInst false : boolean, %BB2, %BB4
-// CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %7 = CondBranchInst false : boolean, %BB2, %BB4
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %8 = CondBranchInst false : boolean, %BB2, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = LoadFrameInst [i]
-// CHECK-NEXT:  %9 = AsNumericInst %8
-// CHECK-NEXT:  %10 = UnaryOperatorInst '++', %9 : number|bigint
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [i]
-// CHECK-NEXT:  %12 = BranchInst %BB6
+// CHECK-NEXT:  %9 = LoadFrameInst [i]
+// CHECK-NEXT:  %10 = AsNumericInst %9
+// CHECK-NEXT:  %11 = UnaryOperatorInst '++', %10 : number|bigint
+// CHECK-NEXT:  %12 = StoreFrameInst %11, [i]
+// CHECK-NEXT:  %13 = BranchInst %BB6
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %13 = BranchInst %BB8
+// CHECK-NEXT:  %14 = BranchInst %BB8
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %14 = LoadFrameInst [param1]
-// CHECK-NEXT:  %15 = BranchInst %BB10
+// CHECK-NEXT:  %15 = LoadFrameInst [param1]
+// CHECK-NEXT:  %16 = BranchInst %BB10
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %16 = CondBranchInst false : boolean, %BB7, %BB9
-// CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %17 = CondBranchInst false : boolean, %BB7, %BB9
+// CHECK-NEXT:%BB11:
+// CHECK-NEXT:  %18 = CondBranchInst false : boolean, %BB7, %BB9
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %18 = LoadFrameInst [i]
-// CHECK-NEXT:  %19 = UnaryOperatorInst '--', %18
-// CHECK-NEXT:  %20 = StoreFrameInst %19, [i]
-// CHECK-NEXT:  %21 = BranchInst %BB11
+// CHECK-NEXT:  %19 = LoadFrameInst [i]
+// CHECK-NEXT:  %20 = UnaryOperatorInst '--', %19
+// CHECK-NEXT:  %21 = StoreFrameInst %20, [i]
+// CHECK-NEXT:  %22 = BranchInst %BB11
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %22 = BranchInst %BB13
+// CHECK-NEXT:  %23 = BranchInst %BB13
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %23 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %24 = CondBranchInst false : boolean, %BB12, %BB14
-// CHECK-NEXT:%BB15:
 // CHECK-NEXT:  %25 = CondBranchInst false : boolean, %BB12, %BB14
+// CHECK-NEXT:%BB15:
+// CHECK-NEXT:  %26 = CondBranchInst false : boolean, %BB12, %BB14
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %26 = BranchInst %BB15
+// CHECK-NEXT:  %27 = BranchInst %BB15
 // CHECK-NEXT:function_end

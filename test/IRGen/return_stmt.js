@@ -61,109 +61,119 @@ function test5() {
 // CHECK:function test0(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
 // CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = LoadFrameInst [y]
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
 // CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst [y]
 // CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %10 = LoadFrameInst [y]
+// CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = BranchInst %BB3
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [x]
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BranchInst %BB3
+// CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %7 = LoadFrameInst [y]
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
 // CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function test3(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = ReturnInst %2
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
 // CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB2, %BB3
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB2, %BB3
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst [x]
 // CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %10 = LoadFrameInst [x]
+// CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = BranchInst %BB4
+// CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %12 = BranchInst %BB4
+// CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function test4(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = ReturnInst %2
-// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
 // CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB2, %BB3
-// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB2, %BB3
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst [x]
 // CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %10 = LoadFrameInst [x]
+// CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = BranchInst %BB4
+// CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %12 = BranchInst %BB4
+// CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function test5()

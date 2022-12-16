@@ -55,7 +55,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA:function foo(x)
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  %0 = HBCLoadParamInst 1 : number
+// CHKRA-NEXT:  %0 = LoadParamInst %x
 // CHKRA-NEXT:  %1 = ImplicitMovInst undefined : undefined
 // CHKRA-NEXT:  %2 = CallBuiltinInst [Object.keys] : number, undefined : undefined, %0
 // CHKRA-NEXT:  %3 = ReturnInst %2

@@ -29,27 +29,29 @@ function foo(fn, x) {
 // CHECK:function foo(fn, x)
 // CHECK-NEXT:frame = [fn, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %fn, [fn]
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %2 = LoadFrameInst [fn]
-// CHECK-NEXT:  %3 = AllocStackInst $nextIndex
-// CHECK-NEXT:  %4 = StoreStackInst 0 : number, %3
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = AllocArrayInst 0 : number
-// CHECK-NEXT:  %7 = LoadStackInst %3
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %6 : object, %5, %7
-// CHECK-NEXT:  %9 = StoreStackInst %8, %3
-// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %2, %6 : object, undefined : undefined
-// CHECK-NEXT:  %11 = LoadFrameInst [fn]
-// CHECK-NEXT:  %12 = AllocStackInst $nextIndex
-// CHECK-NEXT:  %13 = StoreStackInst 0 : number, %12
-// CHECK-NEXT:  %14 = LoadFrameInst [x]
-// CHECK-NEXT:  %15 = AllocArrayInst 0 : number
-// CHECK-NEXT:  %16 = LoadStackInst %12
-// CHECK-NEXT:  %17 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %15 : object, %14, %16
-// CHECK-NEXT:  %18 = StoreStackInst %17, %12
-// CHECK-NEXT:  %19 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %11, %15 : object
-// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %fn
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [fn]
+// CHECK-NEXT:  %2 = LoadParamInst %x
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
+// CHECK-NEXT:  %4 = LoadFrameInst [fn]
+// CHECK-NEXT:  %5 = AllocStackInst $nextIndex
+// CHECK-NEXT:  %6 = StoreStackInst 0 : number, %5
+// CHECK-NEXT:  %7 = LoadFrameInst [x]
+// CHECK-NEXT:  %8 = AllocArrayInst 0 : number
+// CHECK-NEXT:  %9 = LoadStackInst %5
+// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %8 : object, %7, %9
+// CHECK-NEXT:  %11 = StoreStackInst %10, %5
+// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %4, %8 : object, undefined : undefined
+// CHECK-NEXT:  %13 = LoadFrameInst [fn]
+// CHECK-NEXT:  %14 = AllocStackInst $nextIndex
+// CHECK-NEXT:  %15 = StoreStackInst 0 : number, %14
+// CHECK-NEXT:  %16 = LoadFrameInst [x]
+// CHECK-NEXT:  %17 = AllocArrayInst 0 : number
+// CHECK-NEXT:  %18 = LoadStackInst %14
+// CHECK-NEXT:  %19 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %17 : object, %16, %18
+// CHECK-NEXT:  %20 = StoreStackInst %19, %14
+// CHECK-NEXT:  %21 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %13, %17 : object
+// CHECK-NEXT:  %22 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // OPT:function global() : undefined
@@ -63,11 +65,13 @@ function foo(fn, x) {
 // OPT:function foo(fn, x) : undefined
 // OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
-// OPT-NEXT:  %0 = AllocArrayInst 0 : number
-// OPT-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %0 : object, %x, 0 : number
-// OPT-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %0 : object, undefined : undefined
-// OPT-NEXT:  %3 = AllocArrayInst 0 : number
-// OPT-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %3 : object, %x, 0 : number
-// OPT-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %fn, %3 : object
-// OPT-NEXT:  %6 = ReturnInst undefined : undefined
+// OPT-NEXT:  %0 = LoadParamInst %fn
+// OPT-NEXT:  %1 = LoadParamInst %x
+// OPT-NEXT:  %2 = AllocArrayInst 0 : number
+// OPT-NEXT:  %3 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %2 : object, %1, 0 : number
+// OPT-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %0, %2 : object, undefined : undefined
+// OPT-NEXT:  %5 = AllocArrayInst 0 : number
+// OPT-NEXT:  %6 = CallBuiltinInst [HermesBuiltin.arraySpread] : number, undefined : undefined, %5 : object, %1, 0 : number
+// OPT-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.apply] : number, undefined : undefined, %0, %5 : object
+// OPT-NEXT:  %8 = ReturnInst undefined : undefined
 // OPT-NEXT:function_end

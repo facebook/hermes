@@ -25,8 +25,9 @@ function f1(a, ...b) {}
 // CHECK:function f1(a)
 // CHECK-NEXT:frame = [a, b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [b]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 1 : number
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

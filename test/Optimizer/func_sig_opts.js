@@ -79,13 +79,14 @@ function test_async() {
 // CHECK:function main(p) : string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %bar() : string|number|bigint
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1 : closure, %p, "p" : string
-// CHECK-NEXT:  %3 = CallInst %0 : closure, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %0 = LoadParamInst %p
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo() : number
+// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : string|number|bigint
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, %0, "p" : string
 // CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, 1 : number, 2 : number
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3 : number, %4 : string|number|bigint
-// CHECK-NEXT:  %6 = ReturnInst %5 : string|number
+// CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : string|number|bigint
+// CHECK-NEXT:  %7 = ReturnInst %6 : string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x : number, y : number) : number
@@ -98,8 +99,10 @@ function test_async() {
 // CHECK:function bar(x, y) : string|number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %1 = ReturnInst %0 : string|number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %3 = ReturnInst %2 : string|number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function return_types(p) : number
@@ -136,25 +139,29 @@ function test_async() {
 // CHECK:function foo2(a, b, c, d) : string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %a, 2 : number
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %0 : string|number, %c
-// CHECK-NEXT:  %2 = ReturnInst %1 : string|number
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = LoadParamInst %c
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, 2 : number
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %2 : string|number, %1
+// CHECK-NEXT:  %4 = ReturnInst %3 : string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function bar1(e) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, %e, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %e
+// CHECK-NEXT:  %1 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %0, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar2(e) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, %e, 2 : number, 3 : number, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %e
+// CHECK-NEXT:  %1 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %0, 2 : number, 3 : number, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_rest_arguments()
@@ -196,9 +203,10 @@ function test_async() {
 // CHECK-NEXT:  %3 = LoadStackInst %1
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst %x
+// CHECK-NEXT:  %5 = LoadParamInst %x
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst %2
+// CHECK-NEXT:  %7 = ReturnInst %2
 // CHECK-NEXT:function_end
 
 // CHECK:function test_async()
@@ -213,10 +221,11 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = CreateFunctionInst %?anon_0_asyncFn() : object
-// CHECK-NEXT:  %2 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, %1 : closure, %this, %0 : object
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %1 = LoadParamInst %this : undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn() : object
+// CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %1 : undefined, %0 : object
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_asyncFn() : object
@@ -235,7 +244,8 @@ function test_async() {
 // CHECK-NEXT:  %3 = LoadStackInst %1
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst %x
+// CHECK-NEXT:  %5 = LoadParamInst %x
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst %2
+// CHECK-NEXT:  %7 = ReturnInst %2
 // CHECK-NEXT:function_end

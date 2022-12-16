@@ -69,42 +69,45 @@ function test_unary(x) {
 // CHECK:function test_one(x, y) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %x, 2 : number
-// CHECK-NEXT:  %1 = CallInst %x, undefined : undefined, %0 : string|number
-// CHECK-NEXT:  %2 = CallInst %x, undefined : undefined, 4 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '*', %x, 2 : number
-// CHECK-NEXT:  %4 = BinaryOperatorInst '*', %x, 2 : number
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3 : number, %4 : number
-// CHECK-NEXT:  %6 = CallInst %x, undefined : undefined, %5 : number
-// CHECK-NEXT:  %7 = AsInt32Inst %x
-// CHECK-NEXT:  %8 = AsInt32Inst %x
-// CHECK-NEXT:  %9 = BinaryOperatorInst '+', %7 : number, %8 : number
-// CHECK-NEXT:  %10 = CallInst %x, undefined : undefined, %9 : number
-// CHECK-NEXT:  %11 = CallInst %x, undefined : undefined, "hibye" : string
-// CHECK-NEXT:  %12 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %13 = CallInst %x, undefined : undefined, %12 : string|number|bigint
-// CHECK-NEXT:  %14 = BinaryOperatorInst '+', "hi" : string, %y
-// CHECK-NEXT:  %15 = CallInst %x, undefined : undefined, %14 : string
-// CHECK-NEXT:  %16 = CallInst %x, undefined : undefined, 0 : number
-// CHECK-NEXT:  %17 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %18 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %19 = BinaryOperatorInst '+', %17 : object, %18 : object
-// CHECK-NEXT:  %20 = CallInst %x, undefined : undefined, %19 : string|number
-// CHECK-NEXT:  %21 = CallInst %x, undefined : undefined, NaN : number
-// CHECK-NEXT:  %22 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, 2 : number
+// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, %2 : string|number
+// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 4 : number
+// CHECK-NEXT:  %5 = BinaryOperatorInst '*', %0, 2 : number
+// CHECK-NEXT:  %6 = BinaryOperatorInst '*', %0, 2 : number
+// CHECK-NEXT:  %7 = BinaryOperatorInst '+', %5 : number, %6 : number
+// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, %7 : number
+// CHECK-NEXT:  %9 = AsInt32Inst %0
+// CHECK-NEXT:  %10 = AsInt32Inst %0
+// CHECK-NEXT:  %11 = BinaryOperatorInst '+', %9 : number, %10 : number
+// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, %11 : number
+// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, "hibye" : string
+// CHECK-NEXT:  %14 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %15 = CallInst %0, undefined : undefined, %14 : string|number|bigint
+// CHECK-NEXT:  %16 = BinaryOperatorInst '+', "hi" : string, %1
+// CHECK-NEXT:  %17 = CallInst %0, undefined : undefined, %16 : string
+// CHECK-NEXT:  %18 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %19 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %20 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %21 = BinaryOperatorInst '+', %19 : object, %20 : object
+// CHECK-NEXT:  %22 = CallInst %0, undefined : undefined, %21 : string|number
+// CHECK-NEXT:  %23 = CallInst %0, undefined : undefined, NaN : number
+// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unary(x) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %1 = UnaryOperatorInst 'void', %x
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, %1 : undefined
-// CHECK-NEXT:  %3 = UnaryOperatorInst '!', %x
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, %3 : boolean
-// CHECK-NEXT:  %5 = AsNumericInst %x
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, %5 : number|bigint
-// CHECK-NEXT:  %7 = UnaryOperatorInst 'typeof', %x
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, %7 : string
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %2 = UnaryOperatorInst 'void', %0
+// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, %2 : undefined
+// CHECK-NEXT:  %4 = UnaryOperatorInst '!', %0
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, %4 : boolean
+// CHECK-NEXT:  %6 = AsNumericInst %0
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, %6 : number|bigint
+// CHECK-NEXT:  %8 = UnaryOperatorInst 'typeof', %0
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, %8 : string
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

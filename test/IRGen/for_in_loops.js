@@ -64,16 +64,109 @@ function loop_member_expr_lhs() {
 // CHECK:function sink(a)
 // CHECK-NEXT:frame = [a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_in_loop(obj)
 // CHECK-NEXT:frame = [prop, obj]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
+// CHECK-NEXT:  %1 = LoadParamInst %obj
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %8 = LoadFrameInst [obj]
+// CHECK-NEXT:  %9 = StoreStackInst %8, %5
+// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %13 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %14 = LoadStackInst %10
+// CHECK-NEXT:  %15 = StoreFrameInst %14, [prop]
+// CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %17 = LoadFrameInst [prop]
+// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %19 = BranchInst %BB2
+// CHECK-NEXT:function_end
+
+// CHECK:function for_in_loop_with_break_continue(obj)
+// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
+// CHECK-NEXT:  %1 = LoadParamInst %obj
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %8 = LoadFrameInst [obj]
+// CHECK-NEXT:  %9 = StoreStackInst %8, %5
+// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %13 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %14 = LoadStackInst %10
+// CHECK-NEXT:  %15 = StoreFrameInst %14, [prop]
+// CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %17 = LoadFrameInst [prop]
+// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %19 = BranchInst %BB1
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %20 = BranchInst %BB2
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %21 = BranchInst %BB2
+// CHECK-NEXT:function_end
+
+// CHECK:function for_in_loop_with_named_break(obj)
+// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
+// CHECK-NEXT:  %1 = LoadParamInst %obj
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %8 = LoadFrameInst [obj]
+// CHECK-NEXT:  %9 = StoreStackInst %8, %5
+// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %13 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %15 = LoadStackInst %10
+// CHECK-NEXT:  %16 = StoreFrameInst %15, [prop]
+// CHECK-NEXT:  %17 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %18 = LoadFrameInst [prop]
+// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, %18
+// CHECK-NEXT:  %20 = BranchInst %BB1
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %21 = BranchInst %BB2
+// CHECK-NEXT:function_end
+
+// CHECK:function check_var_decl_for_in_loop(obj)
+// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
+// CHECK-NEXT:  %1 = LoadParamInst %obj
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx
@@ -93,94 +186,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %16 = LoadFrameInst [prop]
 // CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, %16
 // CHECK-NEXT:  %18 = BranchInst %BB2
-// CHECK-NEXT:function_end
-
-// CHECK:function for_in_loop_with_break_continue(obj)
-// CHECK-NEXT:frame = [prop, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %7 = LoadFrameInst [obj]
-// CHECK-NEXT:  %8 = StoreStackInst %7, %4
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %10 = GetPNamesInst %3, %4, %5, %6, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %12 = GetNextPNameInst %9, %4, %5, %6, %3, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = LoadStackInst %9
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [prop]
-// CHECK-NEXT:  %15 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %16 = LoadFrameInst [prop]
-// CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, %16
-// CHECK-NEXT:  %18 = BranchInst %BB1
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %19 = BranchInst %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = BranchInst %BB2
-// CHECK-NEXT:function_end
-
-// CHECK:function for_in_loop_with_named_break(obj)
-// CHECK-NEXT:frame = [prop, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [prop]
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %7 = LoadFrameInst [obj]
-// CHECK-NEXT:  %8 = StoreStackInst %7, %4
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %10 = GetPNamesInst %3, %4, %5, %6, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = BranchInst %BB3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %13 = GetNextPNameInst %9, %4, %5, %6, %3, %BB1, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = LoadStackInst %9
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [prop]
-// CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %17 = LoadFrameInst [prop]
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
-// CHECK-NEXT:  %19 = BranchInst %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = BranchInst %BB2
-// CHECK-NEXT:function_end
-
-// CHECK:function check_var_decl_for_in_loop(obj)
-// CHECK-NEXT:frame = [prop, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %6 = LoadFrameInst [obj]
-// CHECK-NEXT:  %7 = StoreStackInst %6, %3
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %9 = GetPNamesInst %2, %3, %4, %5, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = GetNextPNameInst %8, %3, %4, %5, %2, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = LoadStackInst %8
-// CHECK-NEXT:  %13 = StoreFrameInst %12, [prop]
-// CHECK-NEXT:  %14 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %15 = LoadFrameInst [prop]
-// CHECK-NEXT:  %16 = CallInst %14, undefined : undefined, %15
-// CHECK-NEXT:  %17 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function loop_member_expr_lhs()

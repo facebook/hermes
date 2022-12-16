@@ -15,13 +15,16 @@
 
 
 function test_one(x,y,z) {
-//CHECK-NEXT:    %0 = BinaryOperatorInst '+', %x, %y
+//CHECK-DAG:    [[X:%[0-9]+]] = LoadParamInst %x
+//CHECK-DAG:    [[Y:%[0-9]+]] = LoadParamInst %y
+//CHECK-DAG:    [[Z:%[0-9]+]] = LoadParamInst %z
+//CHECK-NEXT:    {{%[0-9]+}} = BinaryOperatorInst '+', [[X]], [[Y]]
   x + y
 
-//CHECK-NEXT:    %1 = BinaryOperatorInst '+', %x, 5 : number
+//CHECK-NEXT:    {{%[0-9]+}} = BinaryOperatorInst '+', [[X]], 5 : number
   x + 5
 
-//CHECK-NEXT:    %2 = BinaryOperatorInst '+', false : boolean, %y
+//CHECK-NEXT:    {{%[0-9]+}} = BinaryOperatorInst '+', false : boolean, [[Y]]
   false + y
 
 //DEAD!
@@ -37,13 +40,13 @@ function test_one(x,y,z) {
   "hi" + "bye"
 
 //Alive - result is used.
-//CHECK-NEXT:    %3 = BinaryOperatorInst '+', "hi" : string, %z
+//CHECK-NEXT:    [[RES:%[0-9]+]] = BinaryOperatorInst '+', "hi" : string, [[Z]]
   var t = "hi" + z
 
 //DEAD!
   null + "hi"
 
-//CHECK-NEXT:    %4 = ReturnInst %3 : string
+//CHECK-NEXT:    {{%[0-9]+}} = ReturnInst [[RES]] : string
 //CHECK-NEXT:function_end
   return t
 }

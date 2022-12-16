@@ -42,52 +42,56 @@ function foo(a,b) {
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:18:2)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
+// CHECK-NEXT:  %0 = LoadParamInst %a
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
 // CHECK-NEXT:; <stdin>:11:9
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
+// CHECK-NEXT:  %4 = LoadFrameInst [a]
 // CHECK-NEXT:; <stdin>:11:13
-// CHECK-NEXT:  %3 = LoadFrameInst [b]
+// CHECK-NEXT:  %5 = LoadFrameInst [b]
 // CHECK-NEXT:; <stdin>:11:9
-// CHECK-NEXT:  %4 = BinaryOperatorInst '>', %2, %3
+// CHECK-NEXT:  %6 = BinaryOperatorInst '>', %4, %5
 // CHECK-NEXT:; <stdin>:11:5
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:; <stdin>:12:9
-// CHECK-NEXT:  %6 = LoadFrameInst [a]
+// CHECK-NEXT:  %8 = LoadFrameInst [a]
 // CHECK-NEXT:; <stdin>:12:14
-// CHECK-NEXT:  %7 = LoadFrameInst [b]
+// CHECK-NEXT:  %9 = LoadFrameInst [b]
 // CHECK-NEXT:; <stdin>:12:11
-// CHECK-NEXT:  %8 = BinaryOperatorInst '-', %6, %7
+// CHECK-NEXT:  %10 = BinaryOperatorInst '-', %8, %9
 // CHECK-NEXT:; <stdin>:12:11
-// CHECK-NEXT:  %9 = StoreFrameInst %8, [a]
+// CHECK-NEXT:  %11 = StoreFrameInst %10, [a]
 // CHECK-NEXT:; <stdin>:13:9
-// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:; <stdin>:13:15
-// CHECK-NEXT:  %11 = LoadFrameInst [a]
+// CHECK-NEXT:  %13 = LoadFrameInst [a]
 // CHECK-NEXT:; <stdin>:13:14
-// CHECK-NEXT:  %12 = CallInst %10, undefined : undefined, %11
+// CHECK-NEXT:  %14 = CallInst %12, undefined : undefined, %13
 // CHECK-NEXT:; <stdin>:11:5
-// CHECK-NEXT:  %13 = BranchInst %BB3
+// CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:; <stdin>:15:9
-// CHECK-NEXT:  %14 = LoadFrameInst [b]
+// CHECK-NEXT:  %16 = LoadFrameInst [b]
 // CHECK-NEXT:; <stdin>:15:14
-// CHECK-NEXT:  %15 = LoadFrameInst [a]
+// CHECK-NEXT:  %17 = LoadFrameInst [a]
 // CHECK-NEXT:; <stdin>:15:11
-// CHECK-NEXT:  %16 = BinaryOperatorInst '-', %14, %15
+// CHECK-NEXT:  %18 = BinaryOperatorInst '-', %16, %17
 // CHECK-NEXT:; <stdin>:15:11
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [b]
+// CHECK-NEXT:  %19 = StoreFrameInst %18, [b]
 // CHECK-NEXT:; <stdin>:16:9
-// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:; <stdin>:16:15
-// CHECK-NEXT:  %19 = LoadFrameInst [b]
+// CHECK-NEXT:  %21 = LoadFrameInst [b]
 // CHECK-NEXT:; <stdin>:16:14
-// CHECK-NEXT:  %20 = CallInst %18, undefined : undefined, %19
+// CHECK-NEXT:  %22 = CallInst %20, undefined : undefined, %21
 // CHECK-NEXT:; <stdin>:11:5
-// CHECK-NEXT:  %21 = BranchInst %BB3
+// CHECK-NEXT:  %23 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:; <stdin>:18:1
-// CHECK-NEXT:  %22 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

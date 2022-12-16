@@ -74,20 +74,21 @@ function bar() {
 // CHECK-NEXT:frame = [arrow1, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow1]
-// CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
-// CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
-// CHECK-NEXT:  %6 = CreateFunctionInst %arrow1()
-// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [arrow1]
-// CHECK-NEXT:  %8 = LoadFrameInst [?anon_2_arguments]
-// CHECK-NEXT:  %9 = LoadPropertyInst %8, 0 : number
-// CHECK-NEXT:  %10 = StorePropertyStrictInst %9, globalObject : object, "dummy" : string
-// CHECK-NEXT:  %11 = LoadFrameInst [arrow1]
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %1 = LoadParamInst %this
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [arrow1]
+// CHECK-NEXT:  %3 = StoreFrameInst %1, [?anon_0_this]
+// CHECK-NEXT:  %4 = GetNewTargetInst
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [?anon_1_new.target]
+// CHECK-NEXT:  %6 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %7 = CreateFunctionInst %arrow1()
+// CHECK-NEXT:  %8 = StoreFrameInst %7 : closure, [arrow1]
+// CHECK-NEXT:  %9 = LoadFrameInst [?anon_2_arguments]
+// CHECK-NEXT:  %10 = LoadPropertyInst %9, 0 : number
+// CHECK-NEXT:  %11 = StorePropertyStrictInst %10, globalObject : object, "dummy" : string
+// CHECK-NEXT:  %12 = LoadFrameInst [arrow1]
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow1()
@@ -132,20 +133,21 @@ function bar() {
 // CHECK-NEXT:frame = [arrow3, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow3]
-// CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
-// CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
-// CHECK-NEXT:  %6 = LoadFrameInst [?anon_2_arguments]
-// CHECK-NEXT:  %7 = LoadPropertyInst %6, 0 : number
-// CHECK-NEXT:  %8 = StorePropertyStrictInst %7, globalObject : object, "dummy" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %arrow3()
-// CHECK-NEXT:  %10 = StoreFrameInst %9 : closure, [arrow3]
-// CHECK-NEXT:  %11 = LoadFrameInst [arrow3]
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %1 = LoadParamInst %this
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [arrow3]
+// CHECK-NEXT:  %3 = StoreFrameInst %1, [?anon_0_this]
+// CHECK-NEXT:  %4 = GetNewTargetInst
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [?anon_1_new.target]
+// CHECK-NEXT:  %6 = StoreFrameInst %0 : object, [?anon_2_arguments]
+// CHECK-NEXT:  %7 = LoadFrameInst [?anon_2_arguments]
+// CHECK-NEXT:  %8 = LoadPropertyInst %7, 0 : number
+// CHECK-NEXT:  %9 = StorePropertyStrictInst %8, globalObject : object, "dummy" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %arrow3()
+// CHECK-NEXT:  %11 = StoreFrameInst %10 : closure, [arrow3]
+// CHECK-NEXT:  %12 = LoadFrameInst [arrow3]
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow3()

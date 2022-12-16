@@ -67,7 +67,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg1 @0 [1...7) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg0 @2 [empty]	%2 = StoreStackInst %1 : undefined, %0
-// CHECK-NEXT:  $Reg2 @3 [4...6) 	%3 = HBCLoadParamInst 1 : number
+// CHECK-NEXT:  $Reg2 @3 [4...6) 	%3 = LoadParamInst %x
 // CHECK-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst 1 : number
 // CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = BinaryOperatorInst '+', %3, %4 : number
 // CHECK-NEXT:  $Reg0 @6 [7...8) 	%6 = HBCGetArgumentsPropByValLooseInst %5 : string|number, %0
@@ -103,7 +103,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 @0 [1...7) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
 // CHECK-NEXT:  $Reg1 @2 [empty]	%2 = StoreStackInst %1 : undefined, %0
-// CHECK-NEXT:  $Reg1 @3 [4...5) 	%3 = HBCLoadParamInst 1 : number
+// CHECK-NEXT:  $Reg1 @3 [4...5) 	%3 = LoadParamInst %x
 // CHECK-NEXT:  $Reg1 @4 [empty]	%4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg1 @9 [10...11) 	%5 = AllocArrayInst 1 : number, 1 : number

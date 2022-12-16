@@ -42,20 +42,22 @@ function sink(x, y) {
 // CHECK:function sink(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "bar" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [x]
+// CHECK-NEXT:  %5 = LoadPropertyInst %4, "bar" : string
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = LoadPropertyInst %5, "bar" : string
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %7 = LoadFrameInst [x]
+// CHECK-NEXT:  %8 = LoadPropertyInst %7, "bar" : string
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = LoadFrameInst [y]
-// CHECK-NEXT:  %10 = LoadPropertyInst %8, %9
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = LoadFrameInst [x]
+// CHECK-NEXT:  %11 = LoadFrameInst [y]
+// CHECK-NEXT:  %12 = LoadPropertyInst %10, %11
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

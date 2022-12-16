@@ -59,58 +59,62 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:frame = [__proto__, func]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-// CHECK-NEXT:  %3 = LoadFrameInst [__proto__]
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst "__proto__" : string, %3, "a" : string, 2 : number, "b" : string, 3 : number
-// CHECK-NEXT:  %5 = ReturnInst %4 : object
+// CHECK-NEXT:  %1 = LoadParamInst %func
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [func]
+// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__]
+// CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst "__proto__" : string, %4, "a" : string, 2 : number, "b" : string, 3 : number
+// CHECK-NEXT:  %6 = ReturnInst %5 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup(func)
 // CHECK-NEXT:frame = [__proto__, func]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-// CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
-// CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst null : null, %3 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %6 = LoadFrameInst [__proto__]
-// CHECK-NEXT:  %7 = StoreOwnPropertyInst %6, %3 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %8 = ReturnInst %3 : object
+// CHECK-NEXT:  %1 = LoadParamInst %func
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [func]
+// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__]
+// CHECK-NEXT:  %4 = AllocObjectInst 1 : number, empty
+// CHECK-NEXT:  %5 = LoadFrameInst [__proto__]
+// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst null : null, %4 : object, "__proto__" : string, true : boolean
+// CHECK-NEXT:  %7 = LoadFrameInst [__proto__]
+// CHECK-NEXT:  %8 = StoreOwnPropertyInst %7, %4 : object, "__proto__" : string, true : boolean
+// CHECK-NEXT:  %9 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix1(func)
 // CHECK-NEXT:frame = [__proto__, func]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-// CHECK-NEXT:  %3 = AllocObjectInst 1 : number, empty
-// CHECK-NEXT:  %4 = LoadFrameInst [__proto__]
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4, %3 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %6 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %3 : object, %6 : object
-// CHECK-NEXT:  %8 = ReturnInst %3 : object
+// CHECK-NEXT:  %1 = LoadParamInst %func
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [func]
+// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__]
+// CHECK-NEXT:  %4 = AllocObjectInst 1 : number, empty
+// CHECK-NEXT:  %5 = LoadFrameInst [__proto__]
+// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
+// CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %4 : object, %7 : object
+// CHECK-NEXT:  %9 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix2(func)
 // CHECK-NEXT:frame = [__proto__, func]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [__proto__]
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %2 = StoreFrameInst 42 : number, [__proto__]
-// CHECK-NEXT:  %3 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %4 = AllocObjectInst 1 : number, %3 : object
-// CHECK-NEXT:  %5 = LoadFrameInst [__proto__]
-// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %7 = ReturnInst %4 : object
+// CHECK-NEXT:  %1 = LoadParamInst %func
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [func]
+// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__]
+// CHECK-NEXT:  %4 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %5 = AllocObjectInst 1 : number, %4 : object
+// CHECK-NEXT:  %6 = LoadFrameInst [__proto__]
+// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6, %5 : object, "__proto__" : string, true : boolean
+// CHECK-NEXT:  %8 = ReturnInst %5 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

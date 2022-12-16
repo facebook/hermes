@@ -46,7 +46,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function foo1(f) : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
+// LRA-NEXT:  $Reg1 @0 [1...3) 	%0 = LoadParamInst %f
 // LRA-NEXT:  $Reg0 @1 [2...4) 	%1 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg2           	%2 = ImplicitMovInst %1 : undefined
 // LRA-NEXT:  $Reg1 @2 [empty]	%3 = HBCCallNInst %0, %1 : undefined
@@ -56,7 +56,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function foo2(f) : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg2 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number
+// LRA-NEXT:  $Reg2 @0 [1...4) 	%0 = LoadParamInst %f
 // LRA-NEXT:  $Reg0 @1 [2...5) 	%1 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg1 @2 [3...4) 	%2 = HBCLoadConstInst 1 : number
 // LRA-NEXT:  $Reg4           	%3 = ImplicitMovInst %1 : undefined
@@ -68,7 +68,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function foo3(f) : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg3 @0 [1...5) 	%0 = HBCLoadParamInst 1 : number
+// LRA-NEXT:  $Reg3 @0 [1...5) 	%0 = LoadParamInst %f
 // LRA-NEXT:  $Reg0 @1 [2...6) 	%1 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg2 @2 [3...5) 	%2 = HBCLoadConstInst 1 : number
 // LRA-NEXT:  $Reg1 @3 [4...5) 	%3 = HBCLoadConstInst 2 : number
@@ -82,7 +82,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function foo4(f) : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg4 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
+// LRA-NEXT:  $Reg4 @0 [1...6) 	%0 = LoadParamInst %f
 // LRA-NEXT:  $Reg0 @1 [2...7) 	%1 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg3 @2 [3...6) 	%2 = HBCLoadConstInst 1 : number
 // LRA-NEXT:  $Reg2 @3 [4...6) 	%3 = HBCLoadConstInst 2 : number
@@ -98,7 +98,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA:function foo5(f) : undefined
 // LRA-NEXT:frame = []
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg5 @0 [1...7) 	%0 = HBCLoadParamInst 1 : number
+// LRA-NEXT:  $Reg5 @0 [1...7) 	%0 = LoadParamInst %f
 // LRA-NEXT:  $Reg0 @1 [2...8) 	%1 = HBCLoadConstInst undefined : undefined
 // LRA-NEXT:  $Reg9 @2 [3...7) 	%2 = HBCLoadConstInst 1 : number
 // LRA-NEXT:  $Reg8 @3 [4...7) 	%3 = HBCLoadConstInst 2 : number

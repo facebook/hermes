@@ -66,47 +66,50 @@ function func4() {
 // CHECK:function func2(a)
 // CHECK-NEXT:frame = [a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = LoadFrameInst [a]
-// CHECK-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadFrameInst [a]
+// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = GetNewTargetInst
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %4 = GetNewTargetInst
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BranchInst %BB3
+// CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %7 = GetNewTargetInst
-// CHECK-NEXT:  %8 = BinaryOperatorInst '!==', %7, undefined : undefined
-// CHECK-NEXT:  %9 = CallInst %6, undefined : undefined, %8
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %8 = GetNewTargetInst
+// CHECK-NEXT:  %9 = BinaryOperatorInst '!==', %8, undefined : undefined
+// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, %9
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function func3()
 // CHECK-NEXT:frame = [innerArrow1, innerFunction, ?anon_0_this, ?anon_1_new.target]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [innerArrow1]
-// CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %2 = GetNewTargetInst
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
-// CHECK-NEXT:  %4 = CreateFunctionInst %innerFunction()
-// CHECK-NEXT:  %5 = StoreFrameInst %4 : closure, [innerFunction]
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %7 = GetNewTargetInst
-// CHECK-NEXT:  %8 = BinaryOperatorInst '!==', %7, undefined : undefined
-// CHECK-NEXT:  %9 = CallInst %6, undefined : undefined, %8
-// CHECK-NEXT:  %10 = CreateFunctionInst %innerArrow1()
-// CHECK-NEXT:  %11 = StoreFrameInst %10 : closure, [innerArrow1]
-// CHECK-NEXT:  %12 = LoadFrameInst [innerFunction]
-// CHECK-NEXT:  %13 = AllocArrayInst 2 : number
-// CHECK-NEXT:  %14 = StoreOwnPropertyInst %12, %13 : object, 0 : number, true : boolean
-// CHECK-NEXT:  %15 = LoadFrameInst [innerArrow1]
-// CHECK-NEXT:  %16 = StoreOwnPropertyInst %15, %13 : object, 1 : number, true : boolean
-// CHECK-NEXT:  %17 = ReturnInst %13 : object
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [innerArrow1]
+// CHECK-NEXT:  %3 = StoreFrameInst %1 : object, [?anon_0_this]
+// CHECK-NEXT:  %4 = GetNewTargetInst
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [?anon_1_new.target]
+// CHECK-NEXT:  %6 = CreateFunctionInst %innerFunction()
+// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [innerFunction]
+// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %9 = GetNewTargetInst
+// CHECK-NEXT:  %10 = BinaryOperatorInst '!==', %9, undefined : undefined
+// CHECK-NEXT:  %11 = CallInst %8, undefined : undefined, %10
+// CHECK-NEXT:  %12 = CreateFunctionInst %innerArrow1()
+// CHECK-NEXT:  %13 = StoreFrameInst %12 : closure, [innerArrow1]
+// CHECK-NEXT:  %14 = LoadFrameInst [innerFunction]
+// CHECK-NEXT:  %15 = AllocArrayInst 2 : number
+// CHECK-NEXT:  %16 = StoreOwnPropertyInst %14, %15 : object, 0 : number, true : boolean
+// CHECK-NEXT:  %17 = LoadFrameInst [innerArrow1]
+// CHECK-NEXT:  %18 = StoreOwnPropertyInst %17, %15 : object, 1 : number, true : boolean
+// CHECK-NEXT:  %19 = ReturnInst %15 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function innerFunction()

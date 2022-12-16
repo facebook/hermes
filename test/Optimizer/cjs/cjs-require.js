@@ -190,19 +190,19 @@ exports.bar = bar;
 // CHKDBG:Function<cjs_module>(4 params, 21 registers, 5 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
-// CHKDBG-NEXT:    LoadParam         r1, 1
-// CHKDBG-NEXT:    LoadParam         r2, 2
-// CHKDBG-NEXT:    LoadParam         r3, 3
-// CHKDBG-NEXT:    LoadConstUndefined r4
-// CHKDBG-NEXT:    LoadConstUInt8    r5, 1
-// CHKDBG-NEXT:    StoreNPToEnvironment r0, 0, r4
-// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r1
-// CHKDBG-NEXT:    StoreToEnvironment r0, 3, r2
-// CHKDBG-NEXT:    StoreToEnvironment r0, 4, r3
+// CHKDBG-NEXT:    LoadConstUndefined r1
+// CHKDBG-NEXT:    LoadConstUInt8    r2, 1
+// CHKDBG-NEXT:    StoreNPToEnvironment r0, 0, r1
+// CHKDBG-NEXT:    LoadParam         r3, 1
+// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
+// CHKDBG-NEXT:    LoadParam         r4, 2
+// CHKDBG-NEXT:    StoreToEnvironment r0, 3, r4
+// CHKDBG-NEXT:    LoadParam         r5, 3
+// CHKDBG-NEXT:    StoreToEnvironment r0, 4, r5
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<bar>
 // CHKDBG-NEXT:    StoreToEnvironment r0, 1, r6
 // CHKDBG-NEXT:    LoadFromEnvironment r7, r0, 3
-// CHKDBG-NEXT:    Mov               r13, r5
+// CHKDBG-NEXT:    Mov               r13, r2
 // CHKDBG-NEXT:    CallBuiltin       r7, "HermesBuiltin.requireFast", 2
 // CHKDBG-NEXT:    StoreToEnvironment r0, 0, r7
 // CHKDBG-NEXT:    LoadFromEnvironment r8, r0, 0
@@ -212,7 +212,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    LoadFromEnvironment r10, r0, 2
 // CHKDBG-NEXT:    LoadFromEnvironment r11, r0, 1
 // CHKDBG-NEXT:    PutByIdLoose      r10, r11, 1, "bar"
-// CHKDBG-NEXT:    Ret               r4
+// CHKDBG-NEXT:    Ret               r1
 
 // CHKDBG:Function<bar>(1 params, 16 registers, 1 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
@@ -234,17 +234,17 @@ exports.bar = bar;
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
-// CHKDBG-NEXT:    LoadParam         r1, 1
-// CHKDBG-NEXT:    LoadParam         r2, 2
-// CHKDBG-NEXT:    LoadParam         r3, 3
-// CHKDBG-NEXT:    LoadConstUndefined r4
-// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r1
-// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r2
-// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
+// CHKDBG-NEXT:    LoadConstUndefined r1
+// CHKDBG-NEXT:    LoadParam         r2, 1
+// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r2
+// CHKDBG-NEXT:    LoadParam         r3, 2
+// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r3
+// CHKDBG-NEXT:    LoadParam         r4, 3
+// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r4
 // CHKDBG-NEXT:    LoadFromEnvironment r5, r0, 0
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<>
 // CHKDBG-NEXT:    PutByIdLoose      r5, r6, 1, "foo"
-// CHKDBG-NEXT:    Ret               r4
+// CHKDBG-NEXT:    Ret               r1
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
@@ -262,17 +262,17 @@ exports.bar = bar;
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
-// CHKDBG-NEXT:    LoadParam         r1, 1
-// CHKDBG-NEXT:    LoadParam         r2, 2
-// CHKDBG-NEXT:    LoadParam         r3, 3
-// CHKDBG-NEXT:    LoadConstUndefined r4
-// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r1
-// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r2
-// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r3
+// CHKDBG-NEXT:    LoadConstUndefined r1
+// CHKDBG-NEXT:    LoadParam         r2, 1
+// CHKDBG-NEXT:    StoreToEnvironment r0, 0, r2
+// CHKDBG-NEXT:    LoadParam         r3, 2
+// CHKDBG-NEXT:    StoreToEnvironment r0, 1, r3
+// CHKDBG-NEXT:    LoadParam         r4, 3
+// CHKDBG-NEXT:    StoreToEnvironment r0, 2, r4
 // CHKDBG-NEXT:    LoadFromEnvironment r5, r0, 0
 // CHKDBG-NEXT:    CreateClosure     r6, r0, Function<>
 // CHKDBG-NEXT:    PutByIdLoose      r5, r6, 1, "baz"
-// CHKDBG-NEXT:    Ret               r4
+// CHKDBG-NEXT:    Ret               r1
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
 // CHKDBG-NEXT:Offset in debug table: source 0x0035, lexical 0x0000

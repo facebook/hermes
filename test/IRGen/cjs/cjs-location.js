@@ -30,13 +30,19 @@ x = 10;
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:10:8)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %0 = StoreFrameInst %exports, [exports]
+// CHECK-NEXT:  %0 = LoadParamInst %exports
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [exports]
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
+// CHECK-NEXT:  %2 = LoadParamInst %require
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:  %4 = LoadParamInst %module
+// CHECK-NEXT:; <stdin>:10:1
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
 // CHECK-NEXT:; <stdin>:10:3
-// CHECK-NEXT:  %3 = StorePropertyLooseInst 10 : number, globalObject : object, "x" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst 10 : number, globalObject : object, "x" : string
 // CHECK-NEXT:; <stdin>:10:7
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

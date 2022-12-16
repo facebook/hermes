@@ -54,103 +54,111 @@ function update_variable_test3(x) { return --x; }
 // CHECK:function update_field_test0(o)
 // CHECK-NEXT:frame = [o]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
-// CHECK-NEXT:  %3 = AsNumericInst %2
-// CHECK-NEXT:  %4 = UnaryOperatorInst '++', %3 : number|bigint
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %1, "f" : string
-// CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadFrameInst [o]
+// CHECK-NEXT:  %3 = LoadPropertyInst %2, "f" : string
+// CHECK-NEXT:  %4 = AsNumericInst %3
+// CHECK-NEXT:  %5 = UnaryOperatorInst '++', %4 : number|bigint
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5, %2, "f" : string
+// CHECK-NEXT:  %7 = ReturnInst %4 : number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test1(o)
 // CHECK-NEXT:frame = [o]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
-// CHECK-NEXT:  %3 = AsNumericInst %2
-// CHECK-NEXT:  %4 = UnaryOperatorInst '--', %3 : number|bigint
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %1, "f" : string
-// CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadFrameInst [o]
+// CHECK-NEXT:  %3 = LoadPropertyInst %2, "f" : string
+// CHECK-NEXT:  %4 = AsNumericInst %3
+// CHECK-NEXT:  %5 = UnaryOperatorInst '--', %4 : number|bigint
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5, %2, "f" : string
+// CHECK-NEXT:  %7 = ReturnInst %4 : number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test2(o)
 // CHECK-NEXT:frame = [o]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
-// CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, %1, "f" : string
-// CHECK-NEXT:  %5 = ReturnInst %3
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadFrameInst [o]
+// CHECK-NEXT:  %3 = LoadPropertyInst %2, "f" : string
+// CHECK-NEXT:  %4 = UnaryOperatorInst '++', %3
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %2, "f" : string
+// CHECK-NEXT:  %6 = ReturnInst %4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test3(o)
 // CHECK-NEXT:frame = [o]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "f" : string
-// CHECK-NEXT:  %3 = UnaryOperatorInst '--', %2
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, %1, "f" : string
-// CHECK-NEXT:  %5 = ReturnInst %3
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadFrameInst [o]
+// CHECK-NEXT:  %3 = LoadPropertyInst %2, "f" : string
+// CHECK-NEXT:  %4 = UnaryOperatorInst '--', %3
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4, %2, "f" : string
+// CHECK-NEXT:  %6 = ReturnInst %4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test0(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = AsNumericInst %1
-// CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2 : number|bigint
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [x]
-// CHECK-NEXT:  %5 = ReturnInst %2 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = AsNumericInst %2
+// CHECK-NEXT:  %4 = UnaryOperatorInst '++', %3 : number|bigint
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
+// CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test1(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = AsNumericInst %1
-// CHECK-NEXT:  %3 = UnaryOperatorInst '--', %2 : number|bigint
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [x]
-// CHECK-NEXT:  %5 = ReturnInst %2 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = AsNumericInst %2
+// CHECK-NEXT:  %4 = UnaryOperatorInst '--', %3 : number|bigint
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
+// CHECK-NEXT:  %6 = ReturnInst %3 : number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test2(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = UnaryOperatorInst '++', %1
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
-// CHECK-NEXT:  %4 = ReturnInst %2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = UnaryOperatorInst '++', %2
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [x]
+// CHECK-NEXT:  %5 = ReturnInst %3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test3(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = UnaryOperatorInst '--', %1
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
-// CHECK-NEXT:  %4 = ReturnInst %2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = UnaryOperatorInst '--', %2
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [x]
+// CHECK-NEXT:  %5 = ReturnInst %3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

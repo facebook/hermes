@@ -106,8 +106,9 @@ function outer() {
 // CHECK:function setValue(v) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %v, [envVar@outer]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %v
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [envVar@outer]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1() : undefined
@@ -120,8 +121,9 @@ function outer() {
 // CHECK:function test2(o) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 42 : number, [envVar@outer]
-// CHECK-NEXT:  %1 = CallInst %o, undefined : undefined
-// CHECK-NEXT:  %2 = StoreFrameInst 87 : number, [envVar@outer]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst 42 : number, [envVar@outer]
+// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %3 = StoreFrameInst 87 : number, [envVar@outer]
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

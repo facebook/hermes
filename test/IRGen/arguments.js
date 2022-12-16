@@ -94,10 +94,11 @@ function shadow(arguments) {
 // CHECK:function shadow(arguments)
 // CHECK-NEXT:frame = [arguments]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %arguments, [arguments]
-// CHECK-NEXT:  %1 = LoadFrameInst [arguments]
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "length" : string
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = LoadParamInst %arguments
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [arguments]
+// CHECK-NEXT:  %2 = LoadFrameInst [arguments]
+// CHECK-NEXT:  %3 = LoadPropertyInst %2, "length" : string
+// CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

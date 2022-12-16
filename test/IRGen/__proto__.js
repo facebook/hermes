@@ -56,15 +56,16 @@ function protoIsDynamic(func, getParent) {
 // CHECK:function protoIsFirst(func)
 // CHECK-NEXT:frame = [func]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %1 = LoadFrameInst [func]
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
-// CHECK-NEXT:  %3 = AllocObjectInst 2 : number, %2
-// CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %3 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3 : number, %3 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %6 = ReturnInst %3 : object
+// CHECK-NEXT:  %0 = LoadParamInst %func
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [func]
+// CHECK-NEXT:  %2 = LoadFrameInst [func]
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %4 = AllocObjectInst 2 : number, %3
+// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2 : number, %4 : object, "a" : string, true : boolean
+// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3 : number, %4 : object, "b" : string, true : boolean
+// CHECK-NEXT:  %7 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst1()
@@ -100,17 +101,19 @@ function protoIsDynamic(func, getParent) {
 // CHECK:function protoIsDynamic(func, getParent)
 // CHECK-NEXT:frame = [func, getParent]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %func, [func]
-// CHECK-NEXT:  %1 = StoreFrameInst %getParent, [getParent]
-// CHECK-NEXT:  %2 = AllocObjectInst 2 : number, empty
-// CHECK-NEXT:  %3 = LoadFrameInst [func]
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4, %2 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 10 : number, %2 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %7 = LoadFrameInst [getParent]
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
-// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %8
-// CHECK-NEXT:  %10 = ReturnInst %2 : object
+// CHECK-NEXT:  %0 = LoadParamInst %func
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [func]
+// CHECK-NEXT:  %2 = LoadParamInst %getParent
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [getParent]
+// CHECK-NEXT:  %4 = AllocObjectInst 2 : number, empty
+// CHECK-NEXT:  %5 = LoadFrameInst [func]
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6, %4 : object, "a" : string, true : boolean
+// CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 10 : number, %4 : object, "b" : string, true : boolean
+// CHECK-NEXT:  %9 = LoadFrameInst [getParent]
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %4 : object, %10
+// CHECK-NEXT:  %12 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -88,42 +88,8 @@ function expression_prop(obj) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj]
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = LoadFrameInst [ret]
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = LoadStackInst %10
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
-// CHECK-NEXT:  %17 = LoadFrameInst [ret]
-// CHECK-NEXT:  %18 = LoadFrameInst [obj]
-// CHECK-NEXT:  %19 = LoadFrameInst [x]
-// CHECK-NEXT:  %20 = LoadPropertyInst %18, %19
-// CHECK-NEXT:  %21 = BinaryOperatorInst '+', %17, %20
-// CHECK-NEXT:  %22 = StoreFrameInst %21, [ret]
-// CHECK-NEXT:  %23 = BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function different_prop(obj)
-// CHECK-NEXT:frame = [ret, x, y, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %3 = StoreFrameInst %obj, [obj]
+// CHECK-NEXT:  %2 = LoadParamInst %obj
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
 // CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
@@ -141,80 +107,6 @@ function expression_prop(obj) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadStackInst %11
 // CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = LoadFrameInst [x]
-// CHECK-NEXT:  %19 = StoreFrameInst %18, [y]
-// CHECK-NEXT:  %20 = LoadFrameInst [ret]
-// CHECK-NEXT:  %21 = LoadFrameInst [obj]
-// CHECK-NEXT:  %22 = LoadFrameInst [y]
-// CHECK-NEXT:  %23 = LoadPropertyInst %21, %22
-// CHECK-NEXT:  %24 = BinaryOperatorInst '+', %20, %23
-// CHECK-NEXT:  %25 = StoreFrameInst %24, [ret]
-// CHECK-NEXT:  %26 = BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %27 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function different_obj(obj)
-// CHECK-NEXT:frame = [ret, obj1, x, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj1]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %3 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %5 = LoadFrameInst [obj]
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [obj1]
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %11 = LoadFrameInst [obj]
-// CHECK-NEXT:  %12 = StoreStackInst %11, %8
-// CHECK-NEXT:  %13 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %14 = GetPNamesInst %7, %8, %9, %10, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %15 = LoadFrameInst [ret]
-// CHECK-NEXT:  %16 = ReturnInst %15
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %17 = GetNextPNameInst %13, %8, %9, %10, %7, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %18 = LoadStackInst %13
-// CHECK-NEXT:  %19 = StoreFrameInst %18, [x]
-// CHECK-NEXT:  %20 = LoadFrameInst [ret]
-// CHECK-NEXT:  %21 = LoadFrameInst [obj1]
-// CHECK-NEXT:  %22 = LoadFrameInst [x]
-// CHECK-NEXT:  %23 = LoadPropertyInst %21, %22
-// CHECK-NEXT:  %24 = BinaryOperatorInst '+', %20, %23
-// CHECK-NEXT:  %25 = StoreFrameInst %24, [ret]
-// CHECK-NEXT:  %26 = BranchInst %BB2
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %27 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function modify_prop(obj)
-// CHECK-NEXT:frame = [ret, x, obj]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj]
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = LoadFrameInst [ret]
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = LoadStackInst %10
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
-// CHECK-NEXT:  %17 = StoreFrameInst "a" : string, [x]
 // CHECK-NEXT:  %18 = LoadFrameInst [ret]
 // CHECK-NEXT:  %19 = LoadFrameInst [obj]
 // CHECK-NEXT:  %20 = LoadFrameInst [x]
@@ -226,44 +118,157 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %25 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
+// CHECK:function different_prop(obj)
+// CHECK-NEXT:frame = [ret, x, y, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [y]
+// CHECK-NEXT:  %3 = LoadParamInst %obj
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [obj]
+// CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %9 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %10 = LoadFrameInst [obj]
+// CHECK-NEXT:  %11 = StoreStackInst %10, %7
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %13 = GetPNamesInst %6, %7, %8, %9, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %14 = LoadFrameInst [ret]
+// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %16 = GetNextPNameInst %12, %7, %8, %9, %6, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %17 = LoadStackInst %12
+// CHECK-NEXT:  %18 = StoreFrameInst %17, [x]
+// CHECK-NEXT:  %19 = LoadFrameInst [x]
+// CHECK-NEXT:  %20 = StoreFrameInst %19, [y]
+// CHECK-NEXT:  %21 = LoadFrameInst [ret]
+// CHECK-NEXT:  %22 = LoadFrameInst [obj]
+// CHECK-NEXT:  %23 = LoadFrameInst [y]
+// CHECK-NEXT:  %24 = LoadPropertyInst %22, %23
+// CHECK-NEXT:  %25 = BinaryOperatorInst '+', %21, %24
+// CHECK-NEXT:  %26 = StoreFrameInst %25, [ret]
+// CHECK-NEXT:  %27 = BranchInst %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %28 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function different_obj(obj)
+// CHECK-NEXT:frame = [ret, obj1, x, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj1]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %3 = LoadParamInst %obj
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [obj]
+// CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
+// CHECK-NEXT:  %6 = LoadFrameInst [obj]
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [obj1]
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %9 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %10 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %11 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %12 = LoadFrameInst [obj]
+// CHECK-NEXT:  %13 = StoreStackInst %12, %9
+// CHECK-NEXT:  %14 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %15 = GetPNamesInst %8, %9, %10, %11, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %16 = LoadFrameInst [ret]
+// CHECK-NEXT:  %17 = ReturnInst %16
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %18 = GetNextPNameInst %14, %9, %10, %11, %8, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %19 = LoadStackInst %14
+// CHECK-NEXT:  %20 = StoreFrameInst %19, [x]
+// CHECK-NEXT:  %21 = LoadFrameInst [ret]
+// CHECK-NEXT:  %22 = LoadFrameInst [obj1]
+// CHECK-NEXT:  %23 = LoadFrameInst [x]
+// CHECK-NEXT:  %24 = LoadPropertyInst %22, %23
+// CHECK-NEXT:  %25 = BinaryOperatorInst '+', %21, %24
+// CHECK-NEXT:  %26 = StoreFrameInst %25, [ret]
+// CHECK-NEXT:  %27 = BranchInst %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %28 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function modify_prop(obj)
+// CHECK-NEXT:frame = [ret, x, obj]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %obj
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %9 = LoadFrameInst [obj]
+// CHECK-NEXT:  %10 = StoreStackInst %9, %6
+// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %13 = LoadFrameInst [ret]
+// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %16 = LoadStackInst %11
+// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
+// CHECK-NEXT:  %18 = StoreFrameInst "a" : string, [x]
+// CHECK-NEXT:  %19 = LoadFrameInst [ret]
+// CHECK-NEXT:  %20 = LoadFrameInst [obj]
+// CHECK-NEXT:  %21 = LoadFrameInst [x]
+// CHECK-NEXT:  %22 = LoadPropertyInst %20, %21
+// CHECK-NEXT:  %23 = BinaryOperatorInst '+', %19, %22
+// CHECK-NEXT:  %24 = StoreFrameInst %23, [ret]
+// CHECK-NEXT:  %25 = BranchInst %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %26 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
 // CHECK:function modify_value(obj)
 // CHECK-NEXT:frame = [ret, x, obj]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj]
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:  %2 = LoadParamInst %obj
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %9 = LoadFrameInst [obj]
+// CHECK-NEXT:  %10 = StoreStackInst %9, %6
+// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = LoadFrameInst [ret]
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %13 = LoadFrameInst [ret]
+// CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = LoadStackInst %10
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
-// CHECK-NEXT:  %17 = LoadFrameInst [obj]
-// CHECK-NEXT:  %18 = LoadFrameInst [x]
-// CHECK-NEXT:  %19 = LoadPropertyInst %17, %18
-// CHECK-NEXT:  %20 = AsNumericInst %19
-// CHECK-NEXT:  %21 = UnaryOperatorInst '++', %20 : number|bigint
-// CHECK-NEXT:  %22 = StorePropertyLooseInst %21, %17, %18
-// CHECK-NEXT:  %23 = LoadFrameInst [ret]
-// CHECK-NEXT:  %24 = LoadFrameInst [obj]
-// CHECK-NEXT:  %25 = LoadFrameInst [x]
-// CHECK-NEXT:  %26 = LoadPropertyInst %24, %25
-// CHECK-NEXT:  %27 = BinaryOperatorInst '+', %23, %26
-// CHECK-NEXT:  %28 = StoreFrameInst %27, [ret]
-// CHECK-NEXT:  %29 = BranchInst %BB2
+// CHECK-NEXT:  %16 = LoadStackInst %11
+// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
+// CHECK-NEXT:  %18 = LoadFrameInst [obj]
+// CHECK-NEXT:  %19 = LoadFrameInst [x]
+// CHECK-NEXT:  %20 = LoadPropertyInst %18, %19
+// CHECK-NEXT:  %21 = AsNumericInst %20
+// CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number|bigint
+// CHECK-NEXT:  %23 = StorePropertyLooseInst %22, %18, %19
+// CHECK-NEXT:  %24 = LoadFrameInst [ret]
+// CHECK-NEXT:  %25 = LoadFrameInst [obj]
+// CHECK-NEXT:  %26 = LoadFrameInst [x]
+// CHECK-NEXT:  %27 = LoadPropertyInst %25, %26
+// CHECK-NEXT:  %28 = BinaryOperatorInst '+', %24, %27
+// CHECK-NEXT:  %29 = StoreFrameInst %28, [ret]
+// CHECK-NEXT:  %30 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %30 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %31 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop(obj)
@@ -271,30 +276,31 @@ function expression_prop(obj) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj]
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:  %2 = LoadParamInst %obj
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
+// CHECK-NEXT:  %9 = LoadFrameInst [obj]
+// CHECK-NEXT:  %10 = StoreStackInst %9, %6
+// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
+// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = LoadFrameInst [ret]
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %13 = LoadFrameInst [ret]
+// CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = LoadStackInst %10
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
-// CHECK-NEXT:  %17 = LoadFrameInst [ret]
-// CHECK-NEXT:  %18 = LoadFrameInst [obj]
-// CHECK-NEXT:  %19 = LoadPropertyInst %18, "a" : string
-// CHECK-NEXT:  %20 = BinaryOperatorInst '+', %17, %19
-// CHECK-NEXT:  %21 = StoreFrameInst %20, [ret]
-// CHECK-NEXT:  %22 = BranchInst %BB2
+// CHECK-NEXT:  %16 = LoadStackInst %11
+// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
+// CHECK-NEXT:  %18 = LoadFrameInst [ret]
+// CHECK-NEXT:  %19 = LoadFrameInst [obj]
+// CHECK-NEXT:  %20 = LoadPropertyInst %19, "a" : string
+// CHECK-NEXT:  %21 = BinaryOperatorInst '+', %18, %20
+// CHECK-NEXT:  %22 = StoreFrameInst %21, [ret]
+// CHECK-NEXT:  %23 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %23 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -45,22 +45,25 @@ function test_three(x, one, two) {
 // CHECK:function test_one(x, y, z)
 // CHECK-NEXT:frame = [x, y, z]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = StoreFrameInst %z, [z]
-// CHECK-NEXT:  %3 = LoadFrameInst [x]
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadParamInst %z
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [z]
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadFrameInst [z]
-// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:  %8 = LoadFrameInst [z]
+// CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [y]
-// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst [y]
+// CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = PhiInst %7, %BB1, %5, %BB2
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %12 = PhiInst %10, %BB1, %8, %BB2
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two()
@@ -89,22 +92,25 @@ function test_three(x, one, two) {
 // CHECK:function test_three(x, one, two)
 // CHECK-NEXT:frame = [x, one, two]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %one, [one]
-// CHECK-NEXT:  %2 = StoreFrameInst %two, [two]
-// CHECK-NEXT:  %3 = LoadFrameInst [x]
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %one
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [one]
+// CHECK-NEXT:  %4 = LoadParamInst %two
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [two]
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadFrameInst [two]
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
-// CHECK-NEXT:  %7 = BranchInst %BB3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst [one]
+// CHECK-NEXT:  %8 = LoadFrameInst [two]
 // CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
 // CHECK-NEXT:  %10 = BranchInst %BB3
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %11 = LoadFrameInst [one]
+// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined
+// CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = PhiInst %9, %BB1, %6, %BB2
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %14 = PhiInst %12, %BB1, %9, %BB2
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -67,20 +67,20 @@ print(glob);
 // CHKRA:function bad(param1, param2) : null
 // CHKRA-NEXT:frame = []
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg3 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number
-// CHKRA-NEXT:  $Reg2 @1 [2...12) 	%1 = HBCLoadParamInst 2 : number
-// CHKRA-NEXT:  $Reg0 @2 [3...12) 	%2 = HBCLoadConstInst 0 : number
-// CHKRA-NEXT:  $Reg3 @3 [4...6) 	%3 = MovInst %0
+// CHKRA-NEXT:  $Reg3 @0 [1...12) 	%0 = HBCLoadConstInst 0 : number
+// CHKRA-NEXT:  $Reg2 @1 [2...4) 	%1 = LoadParamInst %param1
+// CHKRA-NEXT:  $Reg0 @2 [3...12) 	%2 = LoadParamInst %param2
+// CHKRA-NEXT:  $Reg2 @3 [4...6) 	%3 = MovInst %1
 // CHKRA-NEXT:  $Reg1 @4 [empty]	%4 = BranchInst %BB1
 // CHKRA-NEXT:%BB1:
-// CHKRA-NEXT:  $Reg3 @5 [1...7) [11...12) 	%5 = PhiInst %3, %BB0, %10, %BB2
+// CHKRA-NEXT:  $Reg2 @5 [2...7) [11...12) 	%5 = PhiInst %3, %BB0, %10, %BB2
 // CHKRA-NEXT:  $Reg1 @6 [7...14) 	%6 = MovInst %5
-// CHKRA-NEXT:  $Reg4 @7 [empty]	%7 = CondBranchInst %1, %BB3, %BB2
+// CHKRA-NEXT:  $Reg4 @7 [empty]	%7 = CondBranchInst %2, %BB3, %BB2
 // CHKRA-NEXT:%BB3:
-// CHKRA-NEXT:  $Reg4 @8 [empty]	%8 = StorePropertyLooseInst %2 : number, %1, "foo" : string
+// CHKRA-NEXT:  $Reg4 @8 [empty]	%8 = StorePropertyLooseInst %0 : number, %2, "foo" : string
 // CHKRA-NEXT:  $Reg4 @9 [empty]	%9 = BranchInst %BB2
 // CHKRA-NEXT:%BB2:
-// CHKRA-NEXT:  $Reg3 @10 [11...12) 	%10 = MovInst %1
+// CHKRA-NEXT:  $Reg2 @10 [11...12) 	%10 = MovInst %2
 // CHKRA-NEXT:  $Reg0 @11 [empty]	%11 = CondBranchInst %10, %BB1, %BB4
 // CHKRA-NEXT:%BB4:
 // CHKRA-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCGetGlobalObjectInst

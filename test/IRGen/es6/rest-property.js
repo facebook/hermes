@@ -57,21 +57,22 @@ function f5(o) {
 // CHECK-NEXT:frame = [a, t]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %t, [t]
-// CHECK-NEXT:  %2 = LoadFrameInst [t]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %1 = LoadParamInst %t
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [t]
+// CHECK-NEXT:  %3 = LoadFrameInst [t]
+// CHECK-NEXT:  %4 = BinaryOperatorInst '==', %3, null : null
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, %2, "Cannot destructure 'undefined' or 'null'." : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, %3, "Cannot destructure 'undefined' or 'null'." : string
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %7 : object, %2, undefined : undefined
-// CHECK-NEXT:  %9 = StoreFrameInst %8, [a]
-// CHECK-NEXT:  %10 = LoadFrameInst [a]
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %8 : object, %3, undefined : undefined
+// CHECK-NEXT:  %10 = StoreFrameInst %9, [a]
+// CHECK-NEXT:  %11 = LoadFrameInst [a]
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t)
@@ -80,20 +81,21 @@ function f5(o) {
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
 // CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %3 = StoreFrameInst %t, [t]
-// CHECK-NEXT:  %4 = LoadFrameInst [t]
-// CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [a]
-// CHECK-NEXT:  %7 = LoadPropertyInst %4, "b" : string
-// CHECK-NEXT:  %8 = StoreFrameInst %7, [b]
-// CHECK-NEXT:  %9 = AllocObjectLiteralInst "a" : string, 0 : number, "b" : string, 0 : number
-// CHECK-NEXT:  %10 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %10 : object, %4, %9 : object
-// CHECK-NEXT:  %12 = StoreFrameInst %11, [rest]
-// CHECK-NEXT:  %13 = LoadFrameInst [rest]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %3 = LoadParamInst %t
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [t]
+// CHECK-NEXT:  %5 = LoadFrameInst [t]
+// CHECK-NEXT:  %6 = LoadPropertyInst %5, "a" : string
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
+// CHECK-NEXT:  %8 = LoadPropertyInst %5, "b" : string
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [b]
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst "a" : string, 0 : number, "b" : string, 0 : number
+// CHECK-NEXT:  %11 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %11 : object, %5, %10 : object
+// CHECK-NEXT:  %13 = StoreFrameInst %12, [rest]
+// CHECK-NEXT:  %14 = LoadFrameInst [rest]
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t)
@@ -101,32 +103,35 @@ function f5(o) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = StoreFrameInst %t, [t]
-// CHECK-NEXT:  %3 = LoadFrameInst [t]
-// CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %7 : object, %3, %6 : object
-// CHECK-NEXT:  %9 = StoreFrameInst %8, [rest]
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = LoadParamInst %t
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [t]
+// CHECK-NEXT:  %4 = LoadFrameInst [t]
+// CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
+// CHECK-NEXT:  %6 = StoreFrameInst %5, [a]
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst "a" : string, 0 : number
+// CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %8 : object, %4, %7 : object
+// CHECK-NEXT:  %10 = StoreFrameInst %9, [rest]
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(o, t)
 // CHECK-NEXT:frame = [a, o, t]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %2 = StoreFrameInst %t, [t]
-// CHECK-NEXT:  %3 = LoadFrameInst [t]
-// CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
-// CHECK-NEXT:  %6 = LoadFrameInst [o]
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %8 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %8 : object, %3, %7 : object
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9, %6, "rest" : string
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = LoadParamInst %o
+// CHECK-NEXT:  %2 = StoreFrameInst %1, [o]
+// CHECK-NEXT:  %3 = LoadParamInst %t
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [t]
+// CHECK-NEXT:  %5 = LoadFrameInst [t]
+// CHECK-NEXT:  %6 = LoadPropertyInst %5, "a" : string
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
+// CHECK-NEXT:  %8 = LoadFrameInst [o]
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst "a" : string, 0 : number
+// CHECK-NEXT:  %10 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %10 : object, %5, %9 : object
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11, %8, "rest" : string
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(o)
@@ -134,15 +139,16 @@ function f5(o) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %3 = LoadFrameInst [o]
-// CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
-// CHECK-NEXT:  %6 = LoadPropertyInst %3, "a" : string
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst "a" : string, 0 : number
-// CHECK-NEXT:  %9 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %9 : object, %3, %8 : object
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [rest]
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = LoadParamInst %o
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [o]
+// CHECK-NEXT:  %4 = LoadFrameInst [o]
+// CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
+// CHECK-NEXT:  %6 = StoreFrameInst %5, [a]
+// CHECK-NEXT:  %7 = LoadPropertyInst %4, "a" : string
+// CHECK-NEXT:  %8 = StoreFrameInst %7, [a]
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst "a" : string, 0 : number
+// CHECK-NEXT:  %10 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %10 : object, %4, %9 : object
+// CHECK-NEXT:  %12 = StoreFrameInst %11, [rest]
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

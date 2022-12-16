@@ -95,251 +95,259 @@
 // CHECK:function foo(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [y]
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4, %5
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [x]
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = LoadFrameInst [y]
-// CHECK-NEXT:  %10 = BinaryOperatorInst '-', %8, %9
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [x]
-// CHECK-NEXT:  %12 = LoadFrameInst [x]
-// CHECK-NEXT:  %13 = LoadFrameInst [y]
-// CHECK-NEXT:  %14 = BinaryOperatorInst '*', %12, %13
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [x]
-// CHECK-NEXT:  %16 = LoadFrameInst [x]
-// CHECK-NEXT:  %17 = LoadFrameInst [y]
-// CHECK-NEXT:  %18 = BinaryOperatorInst '/', %16, %17
-// CHECK-NEXT:  %19 = StoreFrameInst %18, [x]
-// CHECK-NEXT:  %20 = LoadFrameInst [x]
-// CHECK-NEXT:  %21 = LoadFrameInst [y]
-// CHECK-NEXT:  %22 = BinaryOperatorInst '%', %20, %21
-// CHECK-NEXT:  %23 = StoreFrameInst %22, [x]
-// CHECK-NEXT:  %24 = LoadFrameInst [x]
-// CHECK-NEXT:  %25 = LoadFrameInst [y]
-// CHECK-NEXT:  %26 = BinaryOperatorInst '<<', %24, %25
-// CHECK-NEXT:  %27 = StoreFrameInst %26, [x]
-// CHECK-NEXT:  %28 = LoadFrameInst [x]
-// CHECK-NEXT:  %29 = LoadFrameInst [y]
-// CHECK-NEXT:  %30 = BinaryOperatorInst '>>', %28, %29
-// CHECK-NEXT:  %31 = StoreFrameInst %30, [x]
-// CHECK-NEXT:  %32 = LoadFrameInst [x]
-// CHECK-NEXT:  %33 = LoadFrameInst [y]
-// CHECK-NEXT:  %34 = BinaryOperatorInst '>>>', %32, %33
-// CHECK-NEXT:  %35 = StoreFrameInst %34, [x]
-// CHECK-NEXT:  %36 = LoadFrameInst [x]
-// CHECK-NEXT:  %37 = LoadFrameInst [y]
-// CHECK-NEXT:  %38 = BinaryOperatorInst '&', %36, %37
-// CHECK-NEXT:  %39 = StoreFrameInst %38, [x]
-// CHECK-NEXT:  %40 = LoadFrameInst [x]
-// CHECK-NEXT:  %41 = LoadFrameInst [y]
-// CHECK-NEXT:  %42 = BinaryOperatorInst '^', %40, %41
-// CHECK-NEXT:  %43 = StoreFrameInst %42, [x]
-// CHECK-NEXT:  %44 = LoadFrameInst [x]
-// CHECK-NEXT:  %45 = LoadFrameInst [y]
-// CHECK-NEXT:  %46 = BinaryOperatorInst '|', %44, %45
-// CHECK-NEXT:  %47 = StoreFrameInst %46, [x]
-// CHECK-NEXT:  %48 = LoadFrameInst [x]
-// CHECK-NEXT:  %49 = LoadFrameInst [y]
-// CHECK-NEXT:  %50 = StorePropertyLooseInst %49, %48, "t" : string
-// CHECK-NEXT:  %51 = LoadFrameInst [x]
-// CHECK-NEXT:  %52 = LoadPropertyInst %51, "t" : string
-// CHECK-NEXT:  %53 = LoadFrameInst [y]
-// CHECK-NEXT:  %54 = BinaryOperatorInst '+', %52, %53
-// CHECK-NEXT:  %55 = StorePropertyLooseInst %54, %51, "t" : string
-// CHECK-NEXT:  %56 = LoadFrameInst [x]
-// CHECK-NEXT:  %57 = LoadPropertyInst %56, "t" : string
-// CHECK-NEXT:  %58 = LoadFrameInst [y]
-// CHECK-NEXT:  %59 = BinaryOperatorInst '-', %57, %58
-// CHECK-NEXT:  %60 = StorePropertyLooseInst %59, %56, "t" : string
-// CHECK-NEXT:  %61 = LoadFrameInst [x]
-// CHECK-NEXT:  %62 = LoadPropertyInst %61, "t" : string
-// CHECK-NEXT:  %63 = LoadFrameInst [y]
-// CHECK-NEXT:  %64 = BinaryOperatorInst '*', %62, %63
-// CHECK-NEXT:  %65 = StorePropertyLooseInst %64, %61, "t" : string
-// CHECK-NEXT:  %66 = LoadFrameInst [x]
-// CHECK-NEXT:  %67 = LoadPropertyInst %66, "t" : string
-// CHECK-NEXT:  %68 = LoadFrameInst [y]
-// CHECK-NEXT:  %69 = BinaryOperatorInst '/', %67, %68
-// CHECK-NEXT:  %70 = StorePropertyLooseInst %69, %66, "t" : string
-// CHECK-NEXT:  %71 = LoadFrameInst [x]
-// CHECK-NEXT:  %72 = LoadPropertyInst %71, "t" : string
-// CHECK-NEXT:  %73 = LoadFrameInst [y]
-// CHECK-NEXT:  %74 = BinaryOperatorInst '%', %72, %73
-// CHECK-NEXT:  %75 = StorePropertyLooseInst %74, %71, "t" : string
-// CHECK-NEXT:  %76 = LoadFrameInst [x]
-// CHECK-NEXT:  %77 = LoadPropertyInst %76, "t" : string
-// CHECK-NEXT:  %78 = LoadFrameInst [y]
-// CHECK-NEXT:  %79 = BinaryOperatorInst '<<', %77, %78
-// CHECK-NEXT:  %80 = StorePropertyLooseInst %79, %76, "t" : string
-// CHECK-NEXT:  %81 = LoadFrameInst [x]
-// CHECK-NEXT:  %82 = LoadPropertyInst %81, "t" : string
-// CHECK-NEXT:  %83 = LoadFrameInst [y]
-// CHECK-NEXT:  %84 = BinaryOperatorInst '>>', %82, %83
-// CHECK-NEXT:  %85 = StorePropertyLooseInst %84, %81, "t" : string
-// CHECK-NEXT:  %86 = LoadFrameInst [x]
-// CHECK-NEXT:  %87 = LoadPropertyInst %86, "t" : string
-// CHECK-NEXT:  %88 = LoadFrameInst [y]
-// CHECK-NEXT:  %89 = BinaryOperatorInst '>>>', %87, %88
-// CHECK-NEXT:  %90 = StorePropertyLooseInst %89, %86, "t" : string
-// CHECK-NEXT:  %91 = LoadFrameInst [x]
-// CHECK-NEXT:  %92 = LoadPropertyInst %91, "t" : string
-// CHECK-NEXT:  %93 = LoadFrameInst [y]
-// CHECK-NEXT:  %94 = BinaryOperatorInst '&', %92, %93
-// CHECK-NEXT:  %95 = StorePropertyLooseInst %94, %91, "t" : string
-// CHECK-NEXT:  %96 = LoadFrameInst [x]
-// CHECK-NEXT:  %97 = LoadPropertyInst %96, "t" : string
-// CHECK-NEXT:  %98 = LoadFrameInst [y]
-// CHECK-NEXT:  %99 = BinaryOperatorInst '^', %97, %98
-// CHECK-NEXT:  %100 = StorePropertyLooseInst %99, %96, "t" : string
-// CHECK-NEXT:  %101 = LoadFrameInst [x]
-// CHECK-NEXT:  %102 = LoadPropertyInst %101, "t" : string
-// CHECK-NEXT:  %103 = LoadFrameInst [y]
-// CHECK-NEXT:  %104 = BinaryOperatorInst '|', %102, %103
-// CHECK-NEXT:  %105 = StorePropertyLooseInst %104, %101, "t" : string
-// CHECK-NEXT:  %106 = LoadFrameInst [x]
-// CHECK-NEXT:  %107 = LoadFrameInst [y]
-// CHECK-NEXT:  %108 = BinaryOperatorInst '==', %106, %107
-// CHECK-NEXT:  %109 = ReturnInst %108
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [y]
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
+// CHECK-NEXT:  %7 = LoadFrameInst [y]
+// CHECK-NEXT:  %8 = BinaryOperatorInst '+', %6, %7
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [x]
+// CHECK-NEXT:  %10 = LoadFrameInst [x]
+// CHECK-NEXT:  %11 = LoadFrameInst [y]
+// CHECK-NEXT:  %12 = BinaryOperatorInst '-', %10, %11
+// CHECK-NEXT:  %13 = StoreFrameInst %12, [x]
+// CHECK-NEXT:  %14 = LoadFrameInst [x]
+// CHECK-NEXT:  %15 = LoadFrameInst [y]
+// CHECK-NEXT:  %16 = BinaryOperatorInst '*', %14, %15
+// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
+// CHECK-NEXT:  %18 = LoadFrameInst [x]
+// CHECK-NEXT:  %19 = LoadFrameInst [y]
+// CHECK-NEXT:  %20 = BinaryOperatorInst '/', %18, %19
+// CHECK-NEXT:  %21 = StoreFrameInst %20, [x]
+// CHECK-NEXT:  %22 = LoadFrameInst [x]
+// CHECK-NEXT:  %23 = LoadFrameInst [y]
+// CHECK-NEXT:  %24 = BinaryOperatorInst '%', %22, %23
+// CHECK-NEXT:  %25 = StoreFrameInst %24, [x]
+// CHECK-NEXT:  %26 = LoadFrameInst [x]
+// CHECK-NEXT:  %27 = LoadFrameInst [y]
+// CHECK-NEXT:  %28 = BinaryOperatorInst '<<', %26, %27
+// CHECK-NEXT:  %29 = StoreFrameInst %28, [x]
+// CHECK-NEXT:  %30 = LoadFrameInst [x]
+// CHECK-NEXT:  %31 = LoadFrameInst [y]
+// CHECK-NEXT:  %32 = BinaryOperatorInst '>>', %30, %31
+// CHECK-NEXT:  %33 = StoreFrameInst %32, [x]
+// CHECK-NEXT:  %34 = LoadFrameInst [x]
+// CHECK-NEXT:  %35 = LoadFrameInst [y]
+// CHECK-NEXT:  %36 = BinaryOperatorInst '>>>', %34, %35
+// CHECK-NEXT:  %37 = StoreFrameInst %36, [x]
+// CHECK-NEXT:  %38 = LoadFrameInst [x]
+// CHECK-NEXT:  %39 = LoadFrameInst [y]
+// CHECK-NEXT:  %40 = BinaryOperatorInst '&', %38, %39
+// CHECK-NEXT:  %41 = StoreFrameInst %40, [x]
+// CHECK-NEXT:  %42 = LoadFrameInst [x]
+// CHECK-NEXT:  %43 = LoadFrameInst [y]
+// CHECK-NEXT:  %44 = BinaryOperatorInst '^', %42, %43
+// CHECK-NEXT:  %45 = StoreFrameInst %44, [x]
+// CHECK-NEXT:  %46 = LoadFrameInst [x]
+// CHECK-NEXT:  %47 = LoadFrameInst [y]
+// CHECK-NEXT:  %48 = BinaryOperatorInst '|', %46, %47
+// CHECK-NEXT:  %49 = StoreFrameInst %48, [x]
+// CHECK-NEXT:  %50 = LoadFrameInst [x]
+// CHECK-NEXT:  %51 = LoadFrameInst [y]
+// CHECK-NEXT:  %52 = StorePropertyLooseInst %51, %50, "t" : string
+// CHECK-NEXT:  %53 = LoadFrameInst [x]
+// CHECK-NEXT:  %54 = LoadPropertyInst %53, "t" : string
+// CHECK-NEXT:  %55 = LoadFrameInst [y]
+// CHECK-NEXT:  %56 = BinaryOperatorInst '+', %54, %55
+// CHECK-NEXT:  %57 = StorePropertyLooseInst %56, %53, "t" : string
+// CHECK-NEXT:  %58 = LoadFrameInst [x]
+// CHECK-NEXT:  %59 = LoadPropertyInst %58, "t" : string
+// CHECK-NEXT:  %60 = LoadFrameInst [y]
+// CHECK-NEXT:  %61 = BinaryOperatorInst '-', %59, %60
+// CHECK-NEXT:  %62 = StorePropertyLooseInst %61, %58, "t" : string
+// CHECK-NEXT:  %63 = LoadFrameInst [x]
+// CHECK-NEXT:  %64 = LoadPropertyInst %63, "t" : string
+// CHECK-NEXT:  %65 = LoadFrameInst [y]
+// CHECK-NEXT:  %66 = BinaryOperatorInst '*', %64, %65
+// CHECK-NEXT:  %67 = StorePropertyLooseInst %66, %63, "t" : string
+// CHECK-NEXT:  %68 = LoadFrameInst [x]
+// CHECK-NEXT:  %69 = LoadPropertyInst %68, "t" : string
+// CHECK-NEXT:  %70 = LoadFrameInst [y]
+// CHECK-NEXT:  %71 = BinaryOperatorInst '/', %69, %70
+// CHECK-NEXT:  %72 = StorePropertyLooseInst %71, %68, "t" : string
+// CHECK-NEXT:  %73 = LoadFrameInst [x]
+// CHECK-NEXT:  %74 = LoadPropertyInst %73, "t" : string
+// CHECK-NEXT:  %75 = LoadFrameInst [y]
+// CHECK-NEXT:  %76 = BinaryOperatorInst '%', %74, %75
+// CHECK-NEXT:  %77 = StorePropertyLooseInst %76, %73, "t" : string
+// CHECK-NEXT:  %78 = LoadFrameInst [x]
+// CHECK-NEXT:  %79 = LoadPropertyInst %78, "t" : string
+// CHECK-NEXT:  %80 = LoadFrameInst [y]
+// CHECK-NEXT:  %81 = BinaryOperatorInst '<<', %79, %80
+// CHECK-NEXT:  %82 = StorePropertyLooseInst %81, %78, "t" : string
+// CHECK-NEXT:  %83 = LoadFrameInst [x]
+// CHECK-NEXT:  %84 = LoadPropertyInst %83, "t" : string
+// CHECK-NEXT:  %85 = LoadFrameInst [y]
+// CHECK-NEXT:  %86 = BinaryOperatorInst '>>', %84, %85
+// CHECK-NEXT:  %87 = StorePropertyLooseInst %86, %83, "t" : string
+// CHECK-NEXT:  %88 = LoadFrameInst [x]
+// CHECK-NEXT:  %89 = LoadPropertyInst %88, "t" : string
+// CHECK-NEXT:  %90 = LoadFrameInst [y]
+// CHECK-NEXT:  %91 = BinaryOperatorInst '>>>', %89, %90
+// CHECK-NEXT:  %92 = StorePropertyLooseInst %91, %88, "t" : string
+// CHECK-NEXT:  %93 = LoadFrameInst [x]
+// CHECK-NEXT:  %94 = LoadPropertyInst %93, "t" : string
+// CHECK-NEXT:  %95 = LoadFrameInst [y]
+// CHECK-NEXT:  %96 = BinaryOperatorInst '&', %94, %95
+// CHECK-NEXT:  %97 = StorePropertyLooseInst %96, %93, "t" : string
+// CHECK-NEXT:  %98 = LoadFrameInst [x]
+// CHECK-NEXT:  %99 = LoadPropertyInst %98, "t" : string
+// CHECK-NEXT:  %100 = LoadFrameInst [y]
+// CHECK-NEXT:  %101 = BinaryOperatorInst '^', %99, %100
+// CHECK-NEXT:  %102 = StorePropertyLooseInst %101, %98, "t" : string
+// CHECK-NEXT:  %103 = LoadFrameInst [x]
+// CHECK-NEXT:  %104 = LoadPropertyInst %103, "t" : string
+// CHECK-NEXT:  %105 = LoadFrameInst [y]
+// CHECK-NEXT:  %106 = BinaryOperatorInst '|', %104, %105
+// CHECK-NEXT:  %107 = StorePropertyLooseInst %106, %103, "t" : string
+// CHECK-NEXT:  %108 = LoadFrameInst [x]
+// CHECK-NEXT:  %109 = LoadFrameInst [y]
+// CHECK-NEXT:  %110 = BinaryOperatorInst '==', %108, %109
+// CHECK-NEXT:  %111 = ReturnInst %110
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %110 = LoadFrameInst [x]
-// CHECK-NEXT:  %111 = LoadFrameInst [y]
-// CHECK-NEXT:  %112 = BinaryOperatorInst '!=', %110, %111
-// CHECK-NEXT:  %113 = ReturnInst %112
+// CHECK-NEXT:  %112 = LoadFrameInst [x]
+// CHECK-NEXT:  %113 = LoadFrameInst [y]
+// CHECK-NEXT:  %114 = BinaryOperatorInst '!=', %112, %113
+// CHECK-NEXT:  %115 = ReturnInst %114
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %114 = LoadFrameInst [x]
-// CHECK-NEXT:  %115 = LoadFrameInst [y]
-// CHECK-NEXT:  %116 = BinaryOperatorInst '===', %114, %115
-// CHECK-NEXT:  %117 = ReturnInst %116
+// CHECK-NEXT:  %116 = LoadFrameInst [x]
+// CHECK-NEXT:  %117 = LoadFrameInst [y]
+// CHECK-NEXT:  %118 = BinaryOperatorInst '===', %116, %117
+// CHECK-NEXT:  %119 = ReturnInst %118
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %118 = LoadFrameInst [x]
-// CHECK-NEXT:  %119 = LoadFrameInst [y]
-// CHECK-NEXT:  %120 = BinaryOperatorInst '<', %118, %119
-// CHECK-NEXT:  %121 = ReturnInst %120
+// CHECK-NEXT:  %120 = LoadFrameInst [x]
+// CHECK-NEXT:  %121 = LoadFrameInst [y]
+// CHECK-NEXT:  %122 = BinaryOperatorInst '<', %120, %121
+// CHECK-NEXT:  %123 = ReturnInst %122
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %122 = LoadFrameInst [x]
-// CHECK-NEXT:  %123 = LoadFrameInst [y]
-// CHECK-NEXT:  %124 = BinaryOperatorInst '<=', %122, %123
-// CHECK-NEXT:  %125 = ReturnInst %124
+// CHECK-NEXT:  %124 = LoadFrameInst [x]
+// CHECK-NEXT:  %125 = LoadFrameInst [y]
+// CHECK-NEXT:  %126 = BinaryOperatorInst '<=', %124, %125
+// CHECK-NEXT:  %127 = ReturnInst %126
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %126 = LoadFrameInst [x]
-// CHECK-NEXT:  %127 = LoadFrameInst [y]
-// CHECK-NEXT:  %128 = BinaryOperatorInst '>', %126, %127
-// CHECK-NEXT:  %129 = ReturnInst %128
+// CHECK-NEXT:  %128 = LoadFrameInst [x]
+// CHECK-NEXT:  %129 = LoadFrameInst [y]
+// CHECK-NEXT:  %130 = BinaryOperatorInst '>', %128, %129
+// CHECK-NEXT:  %131 = ReturnInst %130
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %130 = LoadFrameInst [x]
-// CHECK-NEXT:  %131 = LoadFrameInst [y]
-// CHECK-NEXT:  %132 = BinaryOperatorInst '>=', %130, %131
-// CHECK-NEXT:  %133 = ReturnInst %132
+// CHECK-NEXT:  %132 = LoadFrameInst [x]
+// CHECK-NEXT:  %133 = LoadFrameInst [y]
+// CHECK-NEXT:  %134 = BinaryOperatorInst '>=', %132, %133
+// CHECK-NEXT:  %135 = ReturnInst %134
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %134 = LoadFrameInst [x]
-// CHECK-NEXT:  %135 = LoadFrameInst [y]
-// CHECK-NEXT:  %136 = BinaryOperatorInst '<<', %134, %135
-// CHECK-NEXT:  %137 = ReturnInst %136
+// CHECK-NEXT:  %136 = LoadFrameInst [x]
+// CHECK-NEXT:  %137 = LoadFrameInst [y]
+// CHECK-NEXT:  %138 = BinaryOperatorInst '<<', %136, %137
+// CHECK-NEXT:  %139 = ReturnInst %138
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %138 = LoadFrameInst [x]
-// CHECK-NEXT:  %139 = LoadFrameInst [y]
-// CHECK-NEXT:  %140 = BinaryOperatorInst '<<', %138, %139
-// CHECK-NEXT:  %141 = ReturnInst %140
+// CHECK-NEXT:  %140 = LoadFrameInst [x]
+// CHECK-NEXT:  %141 = LoadFrameInst [y]
+// CHECK-NEXT:  %142 = BinaryOperatorInst '<<', %140, %141
+// CHECK-NEXT:  %143 = ReturnInst %142
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %142 = LoadFrameInst [x]
-// CHECK-NEXT:  %143 = LoadFrameInst [y]
-// CHECK-NEXT:  %144 = BinaryOperatorInst '>>>', %142, %143
-// CHECK-NEXT:  %145 = ReturnInst %144
+// CHECK-NEXT:  %144 = LoadFrameInst [x]
+// CHECK-NEXT:  %145 = LoadFrameInst [y]
+// CHECK-NEXT:  %146 = BinaryOperatorInst '>>>', %144, %145
+// CHECK-NEXT:  %147 = ReturnInst %146
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %146 = LoadFrameInst [x]
-// CHECK-NEXT:  %147 = LoadFrameInst [y]
-// CHECK-NEXT:  %148 = BinaryOperatorInst '+', %146, %147
-// CHECK-NEXT:  %149 = ReturnInst %148
+// CHECK-NEXT:  %148 = LoadFrameInst [x]
+// CHECK-NEXT:  %149 = LoadFrameInst [y]
+// CHECK-NEXT:  %150 = BinaryOperatorInst '+', %148, %149
+// CHECK-NEXT:  %151 = ReturnInst %150
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %150 = LoadFrameInst [x]
-// CHECK-NEXT:  %151 = LoadFrameInst [y]
-// CHECK-NEXT:  %152 = BinaryOperatorInst '-', %150, %151
-// CHECK-NEXT:  %153 = ReturnInst %152
+// CHECK-NEXT:  %152 = LoadFrameInst [x]
+// CHECK-NEXT:  %153 = LoadFrameInst [y]
+// CHECK-NEXT:  %154 = BinaryOperatorInst '-', %152, %153
+// CHECK-NEXT:  %155 = ReturnInst %154
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %154 = LoadFrameInst [x]
-// CHECK-NEXT:  %155 = LoadFrameInst [y]
-// CHECK-NEXT:  %156 = BinaryOperatorInst '*', %154, %155
-// CHECK-NEXT:  %157 = ReturnInst %156
+// CHECK-NEXT:  %156 = LoadFrameInst [x]
+// CHECK-NEXT:  %157 = LoadFrameInst [y]
+// CHECK-NEXT:  %158 = BinaryOperatorInst '*', %156, %157
+// CHECK-NEXT:  %159 = ReturnInst %158
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %158 = LoadFrameInst [x]
-// CHECK-NEXT:  %159 = LoadFrameInst [y]
-// CHECK-NEXT:  %160 = BinaryOperatorInst '/', %158, %159
-// CHECK-NEXT:  %161 = ReturnInst %160
+// CHECK-NEXT:  %160 = LoadFrameInst [x]
+// CHECK-NEXT:  %161 = LoadFrameInst [y]
+// CHECK-NEXT:  %162 = BinaryOperatorInst '/', %160, %161
+// CHECK-NEXT:  %163 = ReturnInst %162
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %162 = LoadFrameInst [x]
-// CHECK-NEXT:  %163 = LoadFrameInst [y]
-// CHECK-NEXT:  %164 = BinaryOperatorInst '%', %162, %163
-// CHECK-NEXT:  %165 = ReturnInst %164
+// CHECK-NEXT:  %164 = LoadFrameInst [x]
+// CHECK-NEXT:  %165 = LoadFrameInst [y]
+// CHECK-NEXT:  %166 = BinaryOperatorInst '%', %164, %165
+// CHECK-NEXT:  %167 = ReturnInst %166
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %166 = LoadFrameInst [x]
-// CHECK-NEXT:  %167 = LoadFrameInst [y]
-// CHECK-NEXT:  %168 = BinaryOperatorInst '|', %166, %167
-// CHECK-NEXT:  %169 = ReturnInst %168
+// CHECK-NEXT:  %168 = LoadFrameInst [x]
+// CHECK-NEXT:  %169 = LoadFrameInst [y]
+// CHECK-NEXT:  %170 = BinaryOperatorInst '|', %168, %169
+// CHECK-NEXT:  %171 = ReturnInst %170
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %170 = LoadFrameInst [x]
-// CHECK-NEXT:  %171 = LoadFrameInst [y]
-// CHECK-NEXT:  %172 = BinaryOperatorInst '^', %170, %171
-// CHECK-NEXT:  %173 = ReturnInst %172
+// CHECK-NEXT:  %172 = LoadFrameInst [x]
+// CHECK-NEXT:  %173 = LoadFrameInst [y]
+// CHECK-NEXT:  %174 = BinaryOperatorInst '^', %172, %173
+// CHECK-NEXT:  %175 = ReturnInst %174
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %174 = LoadFrameInst [x]
-// CHECK-NEXT:  %175 = LoadFrameInst [y]
-// CHECK-NEXT:  %176 = BinaryOperatorInst '&', %174, %175
-// CHECK-NEXT:  %177 = ReturnInst %176
+// CHECK-NEXT:  %176 = LoadFrameInst [x]
+// CHECK-NEXT:  %177 = LoadFrameInst [y]
+// CHECK-NEXT:  %178 = BinaryOperatorInst '&', %176, %177
+// CHECK-NEXT:  %179 = ReturnInst %178
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %178 = LoadFrameInst [x]
-// CHECK-NEXT:  %179 = LoadFrameInst [y]
-// CHECK-NEXT:  %180 = BinaryOperatorInst 'in', %178, %179
-// CHECK-NEXT:  %181 = ReturnInst %180
+// CHECK-NEXT:  %180 = LoadFrameInst [x]
+// CHECK-NEXT:  %181 = LoadFrameInst [y]
+// CHECK-NEXT:  %182 = BinaryOperatorInst 'in', %180, %181
+// CHECK-NEXT:  %183 = ReturnInst %182
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %182 = LoadFrameInst [x]
-// CHECK-NEXT:  %183 = LoadFrameInst [y]
-// CHECK-NEXT:  %184 = BinaryOperatorInst 'instanceof', %182, %183
-// CHECK-NEXT:  %185 = ReturnInst %184
+// CHECK-NEXT:  %184 = LoadFrameInst [x]
+// CHECK-NEXT:  %185 = LoadFrameInst [y]
+// CHECK-NEXT:  %186 = BinaryOperatorInst 'instanceof', %184, %185
+// CHECK-NEXT:  %187 = ReturnInst %186
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %186 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %188 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function assignment_test(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [y]
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4, %5
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [x]
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [y]
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
+// CHECK-NEXT:  %6 = LoadFrameInst [x]
+// CHECK-NEXT:  %7 = LoadFrameInst [y]
+// CHECK-NEXT:  %8 = BinaryOperatorInst '+', %6, %7
+// CHECK-NEXT:  %9 = StoreFrameInst %8, [x]
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function member_test(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "t" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [y]
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3, %4
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5, %2, "t" : string
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [x]
+// CHECK-NEXT:  %5 = LoadPropertyInst %4, "t" : string
+// CHECK-NEXT:  %6 = LoadFrameInst [y]
+// CHECK-NEXT:  %7 = BinaryOperatorInst '+', %5, %6
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7, %4, "t" : string
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function binary_ops(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = LoadFrameInst [y]
-// CHECK-NEXT:  %4 = BinaryOperatorInst '>>>', %2, %3
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadFrameInst [x]
+// CHECK-NEXT:  %5 = LoadFrameInst [y]
+// CHECK-NEXT:  %6 = BinaryOperatorInst '>>>', %4, %5
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -28,5 +28,6 @@ function f1(num) {
 // CHECK:function f1(num)
 // CHECK-NEXT:frame = [num]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst %num
+// CHECK-NEXT:  %0 = LoadParamInst %num
+// CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:function_end

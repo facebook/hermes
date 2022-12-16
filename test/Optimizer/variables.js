@@ -28,9 +28,12 @@ function foo(p1, p2, p3) {
 // OPT-CHECK:function foo(p1, p2, p3) : undefined
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = BinaryOperatorInst '+', %p1, %p2
-// OPT-CHECK-NEXT:  %1 = BinaryOperatorInst '+', %p2, %p3
-// OPT-CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// OPT-CHECK-NEXT:  %0 = LoadParamInst %p1
+// OPT-CHECK-NEXT:  %1 = LoadParamInst %p2
+// OPT-CHECK-NEXT:  %2 = LoadParamInst %p3
+// OPT-CHECK-NEXT:  %3 = BinaryOperatorInst '+', %0, %1
+// OPT-CHECK-NEXT:  %4 = BinaryOperatorInst '+', %1, %2
+// OPT-CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // OPT-CHECK-NEXT:function_end
 
 // CHECK:function global()
@@ -50,22 +53,25 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [t]
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [z]
 // CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [k]
-// CHECK-NEXT:  %3 = StoreFrameInst %p1, [p1]
-// CHECK-NEXT:  %4 = StoreFrameInst %p2, [p2]
-// CHECK-NEXT:  %5 = StoreFrameInst %p3, [p3]
-// CHECK-NEXT:  %6 = LoadFrameInst [p1]
-// CHECK-NEXT:  %7 = LoadFrameInst [p2]
-// CHECK-NEXT:  %8 = BinaryOperatorInst '+', %6, %7
-// CHECK-NEXT:  %9 = StoreFrameInst %8, [t]
+// CHECK-NEXT:  %3 = LoadParamInst %p1
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [p1]
+// CHECK-NEXT:  %5 = LoadParamInst %p2
+// CHECK-NEXT:  %6 = StoreFrameInst %5, [p2]
+// CHECK-NEXT:  %7 = LoadParamInst %p3
+// CHECK-NEXT:  %8 = StoreFrameInst %7, [p3]
+// CHECK-NEXT:  %9 = LoadFrameInst [p1]
 // CHECK-NEXT:  %10 = LoadFrameInst [p2]
-// CHECK-NEXT:  %11 = LoadFrameInst [p3]
-// CHECK-NEXT:  %12 = BinaryOperatorInst '+', %10, %11
-// CHECK-NEXT:  %13 = StoreFrameInst %12, [z]
-// CHECK-NEXT:  %14 = LoadFrameInst [z]
-// CHECK-NEXT:  %15 = LoadFrameInst [t]
-// CHECK-NEXT:  %16 = BinaryOperatorInst '+', %14, %15
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [k]
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = BinaryOperatorInst '+', %9, %10
+// CHECK-NEXT:  %12 = StoreFrameInst %11, [t]
+// CHECK-NEXT:  %13 = LoadFrameInst [p2]
+// CHECK-NEXT:  %14 = LoadFrameInst [p3]
+// CHECK-NEXT:  %15 = BinaryOperatorInst '+', %13, %14
+// CHECK-NEXT:  %16 = StoreFrameInst %15, [z]
+// CHECK-NEXT:  %17 = LoadFrameInst [z]
+// CHECK-NEXT:  %18 = LoadFrameInst [t]
+// CHECK-NEXT:  %19 = BinaryOperatorInst '+', %17, %18
+// CHECK-NEXT:  %20 = StoreFrameInst %19, [k]
+// CHECK-NEXT:  %21 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %22 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -76,59 +76,66 @@ function test_could_be_int(func) {
 // CHECK:function test_int_int(x, y) : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %x
-// CHECK-NEXT:  %1 = AsInt32Inst %y
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = AsInt32Inst %0
+// CHECK-NEXT:  %3 = AsInt32Inst %1
+// CHECK-NEXT:  %4 = BinaryOperatorInst '===', %2 : number, %3 : number
+// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %6 = ReturnInst %2 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_int_uint(x, y) : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %x
-// CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %y, 0 : number
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = AsInt32Inst %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '>>>', %1, 0 : number
+// CHECK-NEXT:  %4 = BinaryOperatorInst '===', %2 : number, %3 : number
+// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %6 = ReturnInst %2 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_uint_uint(x, y) : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '>>>', %x, 0 : number
-// CHECK-NEXT:  %1 = BinaryOperatorInst '>>>', %y, 0 : number
-// CHECK-NEXT:  %2 = BinaryOperatorInst '===', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = BinaryOperatorInst '>>>', %0, 0 : number
+// CHECK-NEXT:  %3 = BinaryOperatorInst '>>>', %1, 0 : number
+// CHECK-NEXT:  %4 = BinaryOperatorInst '===', %2 : number, %3 : number
+// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst %0 : number
+// CHECK-NEXT:  %6 = ReturnInst %2 : number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_could_be_int(func) : undefined|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CallInst %func, undefined : undefined
-// CHECK-NEXT:  %1 = BinaryOperatorInst '*', %0, 100 : number
-// CHECK-NEXT:  %2 = CallInst %func, undefined : undefined
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %func
+// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1, 100 : number
+// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = AsInt32Inst %1 : number
-// CHECK-NEXT:  %5 = BranchInst %BB2
+// CHECK-NEXT:  %5 = AsInt32Inst %2 : number
+// CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = PhiInst %4 : number, %BB1, undefined : undefined, %BB0
-// CHECK-NEXT:  %7 = BinaryOperatorInst '>>>', %1 : number, 0 : number
-// CHECK-NEXT:  %8 = BinaryOperatorInst '===', %6 : undefined|number, %7 : number
-// CHECK-NEXT:  %9 = CondBranchInst %8 : boolean, %BB3, %BB4
+// CHECK-NEXT:  %7 = PhiInst %5 : number, %BB1, undefined : undefined, %BB0
+// CHECK-NEXT:  %8 = BinaryOperatorInst '>>>', %2 : number, 0 : number
+// CHECK-NEXT:  %9 = BinaryOperatorInst '===', %7 : undefined|number, %8 : number
+// CHECK-NEXT:  %10 = CondBranchInst %9 : boolean, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst %1 : number
+// CHECK-NEXT:  %11 = ReturnInst %2 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

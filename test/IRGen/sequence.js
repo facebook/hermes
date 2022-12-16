@@ -41,41 +41,47 @@ function test2(x,y) {
 // CHECK:function sink0(a)
 // CHECK-NEXT:frame = [a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink1(a)
 // CHECK-NEXT:frame = [a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = ReturnInst 3 : number
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = ReturnInst 3 : number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "sink0" : string
-// CHECK-NEXT:  %3 = LoadFrameInst [x]
-// CHECK-NEXT:  %4 = LoadFrameInst [y]
-// CHECK-NEXT:  %5 = CallInst %2, undefined : undefined, %3, %4
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "sink1" : string
-// CHECK-NEXT:  %7 = LoadFrameInst [x]
-// CHECK-NEXT:  %8 = LoadFrameInst [y]
-// CHECK-NEXT:  %9 = CallInst %6, undefined : undefined, %7, %8
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "sink0" : string
+// CHECK-NEXT:  %5 = LoadFrameInst [x]
+// CHECK-NEXT:  %6 = LoadFrameInst [y]
+// CHECK-NEXT:  %7 = CallInst %4, undefined : undefined, %5, %6
+// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "sink1" : string
+// CHECK-NEXT:  %9 = LoadFrameInst [x]
+// CHECK-NEXT:  %10 = LoadFrameInst [y]
+// CHECK-NEXT:  %11 = CallInst %8, undefined : undefined, %9, %10
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

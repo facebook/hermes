@@ -49,37 +49,39 @@ delete_test()
 // CHECK:function unary_operator_test(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = AsNumberInst %1
-// CHECK-NEXT:  %3 = ReturnInst %2 : number
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = AsNumberInst %2
+// CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = UnaryOperatorInst '-', %4
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = LoadFrameInst [x]
+// CHECK-NEXT:  %6 = UnaryOperatorInst '-', %5
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadFrameInst [x]
-// CHECK-NEXT:  %8 = UnaryOperatorInst '~', %7
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %8 = LoadFrameInst [x]
+// CHECK-NEXT:  %9 = UnaryOperatorInst '~', %8
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst [x]
-// CHECK-NEXT:  %11 = UnaryOperatorInst '!', %10
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %11 = LoadFrameInst [x]
+// CHECK-NEXT:  %12 = UnaryOperatorInst '!', %11
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = LoadFrameInst [x]
-// CHECK-NEXT:  %14 = UnaryOperatorInst 'typeof', %13
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %14 = LoadFrameInst [x]
+// CHECK-NEXT:  %15 = UnaryOperatorInst 'typeof', %14
+// CHECK-NEXT:  %16 = ReturnInst %15
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_test(o)
 // CHECK-NEXT:frame = [o]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %o, [o]
-// CHECK-NEXT:  %1 = LoadFrameInst [o]
-// CHECK-NEXT:  %2 = DeletePropertyLooseInst %1, "f" : string
-// CHECK-NEXT:  %3 = LoadFrameInst [o]
-// CHECK-NEXT:  %4 = DeletePropertyLooseInst %3, 3 : number
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadFrameInst [o]
+// CHECK-NEXT:  %3 = DeletePropertyLooseInst %2, "f" : string
+// CHECK-NEXT:  %4 = LoadFrameInst [o]
+// CHECK-NEXT:  %5 = DeletePropertyLooseInst %4, 3 : number
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

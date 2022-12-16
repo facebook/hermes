@@ -78,8 +78,9 @@ function f5(x) {
 // CHKIR:function f5(x)
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHKIR-NEXT:  %1 = LoadPropertyInst %0, "concat" : string
-// CHKIR-NEXT:  %2 = CallInst %1, "" : string, %x
-// CHKIR-NEXT:  %3 = ReturnInst %2
+// CHKIR-NEXT:  %0 = LoadParamInst %x
+// CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+// CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
+// CHKIR-NEXT:  %3 = CallInst %2, "" : string, %0
+// CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end

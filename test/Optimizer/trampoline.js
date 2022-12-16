@@ -55,13 +55,15 @@ function test_merge_blocks(x, y) {
 // CHECK:function test_one(x, y, z)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '<', %x, %y
-// CHECK-NEXT:  %1 = CondBranchInst %0 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = BinaryOperatorInst '<', %0, %1
+// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst %x
+// CHECK-NEXT:  %4 = ReturnInst %0
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = BinaryOperatorInst '>', %y, 0 : number
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = BinaryOperatorInst '>', %1, 0 : number
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_catch_region(x, y, z) : undefined
@@ -83,14 +85,17 @@ function test_merge_blocks(x, y) {
 // CHECK:function test_cond_branch(x, y)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst %x
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:function_end
 
 // CHECK:function test_merge_blocks(x, y) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = LoadParamInst %y
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

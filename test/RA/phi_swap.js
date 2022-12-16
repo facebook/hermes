@@ -33,8 +33,8 @@ function foo (a, b) {
 // CHECK:function foo(a, b)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg0 @1 [2...4) 	%1 = HBCLoadParamInst 2 : number
+// CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = LoadParamInst %a
+// CHECK-NEXT:  $Reg0 @1 [2...4) 	%1 = LoadParamInst %b
 // CHECK-NEXT:  $Reg1 @2 [3...6) 	%2 = MovInst %0 @ $Reg1
 // CHECK-NEXT:  $Reg0 @3 [4...7) 	%3 = MovInst %1 @ $Reg0
 // CHECK-NEXT:  $Reg2 @4 [empty]	%4 = BranchInst %BB1

@@ -69,10 +69,11 @@ function test_hoisting_of_func_expr() {
 // CHECK:function test1(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = CreateFunctionInst %" 1#"()
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = CreateFunctionInst %" 1#"()
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"()
@@ -87,10 +88,11 @@ function test_hoisting_of_func_expr() {
 // CHECK:function test2(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = CreateFunctionInst %" 2#"()
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = CreateFunctionInst %" 2#"()
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"()

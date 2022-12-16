@@ -102,137 +102,175 @@ function fallthrough(b) {
 // CHECK:function days_of_the_week(day, x)
 // CHECK-NEXT:frame = [day, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %day, [day]
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %2 = LoadFrameInst [day]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '===', 0 : number, %2
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %day
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [day]
+// CHECK-NEXT:  %2 = LoadParamInst %x
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [x]
+// CHECK-NEXT:  %4 = LoadFrameInst [day]
+// CHECK-NEXT:  %5 = BinaryOperatorInst '===', 0 : number, %4
+// CHECK-NEXT:  %6 = CondBranchInst %5, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = LoadFrameInst [day]
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %7 = LoadFrameInst [day]
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %7 = StoreFrameInst "?" : string, [day]
-// CHECK-NEXT:  %8 = BranchInst %BB1
+// CHECK-NEXT:  %9 = StoreFrameInst "?" : string, [day]
+// CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = StoreFrameInst "Sunday" : string, [day]
-// CHECK-NEXT:  %10 = BranchInst %BB3
+// CHECK-NEXT:  %11 = StoreFrameInst "Sunday" : string, [day]
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = BinaryOperatorInst '===', 1 : number, %2
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB5, %BB6
+// CHECK-NEXT:  %13 = BinaryOperatorInst '===', 1 : number, %4
+// CHECK-NEXT:  %14 = CondBranchInst %13, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = StoreFrameInst "Monday" : string, [day]
-// CHECK-NEXT:  %14 = BranchInst %BB3
+// CHECK-NEXT:  %15 = StoreFrameInst "Monday" : string, [day]
+// CHECK-NEXT:  %16 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %15 = LoadFrameInst [x]
-// CHECK-NEXT:  %16 = BinaryOperatorInst '===', %15, %2
-// CHECK-NEXT:  %17 = CondBranchInst %16, %BB7, %BB8
+// CHECK-NEXT:  %17 = LoadFrameInst [x]
+// CHECK-NEXT:  %18 = BinaryOperatorInst '===', %17, %4
+// CHECK-NEXT:  %19 = CondBranchInst %18, %BB7, %BB8
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %18 = StoreFrameInst "Tuesday" : string, [day]
-// CHECK-NEXT:  %19 = BranchInst %BB3
+// CHECK-NEXT:  %20 = StoreFrameInst "Tuesday" : string, [day]
+// CHECK-NEXT:  %21 = BranchInst %BB3
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %20 = BinaryOperatorInst '===', 3 : number, %2
-// CHECK-NEXT:  %21 = CondBranchInst %20, %BB9, %BB10
+// CHECK-NEXT:  %22 = BinaryOperatorInst '===', 3 : number, %4
+// CHECK-NEXT:  %23 = CondBranchInst %22, %BB9, %BB10
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %22 = StoreFrameInst "Wednesday" : string, [day]
-// CHECK-NEXT:  %23 = BranchInst %BB3
+// CHECK-NEXT:  %24 = StoreFrameInst "Wednesday" : string, [day]
+// CHECK-NEXT:  %25 = BranchInst %BB3
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %24 = BinaryOperatorInst '===', 4 : number, %2
-// CHECK-NEXT:  %25 = CondBranchInst %24, %BB11, %BB12
+// CHECK-NEXT:  %26 = BinaryOperatorInst '===', 4 : number, %4
+// CHECK-NEXT:  %27 = CondBranchInst %26, %BB11, %BB12
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %26 = StoreFrameInst "Thursday" : string, [day]
-// CHECK-NEXT:  %27 = BranchInst %BB3
+// CHECK-NEXT:  %28 = StoreFrameInst "Thursday" : string, [day]
+// CHECK-NEXT:  %29 = BranchInst %BB3
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %28 = BinaryOperatorInst '===', 5 : number, %2
-// CHECK-NEXT:  %29 = CondBranchInst %28, %BB13, %BB14
+// CHECK-NEXT:  %30 = BinaryOperatorInst '===', 5 : number, %4
+// CHECK-NEXT:  %31 = CondBranchInst %30, %BB13, %BB14
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %30 = StoreFrameInst "Friday" : string, [day]
-// CHECK-NEXT:  %31 = BranchInst %BB3
+// CHECK-NEXT:  %32 = StoreFrameInst "Friday" : string, [day]
+// CHECK-NEXT:  %33 = BranchInst %BB3
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %32 = BinaryOperatorInst '===', 6 : number, %2
-// CHECK-NEXT:  %33 = CondBranchInst %32, %BB15, %BB16
+// CHECK-NEXT:  %34 = BinaryOperatorInst '===', 6 : number, %4
+// CHECK-NEXT:  %35 = CondBranchInst %34, %BB15, %BB16
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %34 = StoreFrameInst "Saturday" : string, [day]
-// CHECK-NEXT:  %35 = BranchInst %BB3
+// CHECK-NEXT:  %36 = StoreFrameInst "Saturday" : string, [day]
+// CHECK-NEXT:  %37 = BranchInst %BB3
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %36 = BranchInst %BB4
+// CHECK-NEXT:  %38 = BranchInst %BB4
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %37 = BranchInst %BB5
+// CHECK-NEXT:  %39 = BranchInst %BB5
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %38 = BranchInst %BB7
+// CHECK-NEXT:  %40 = BranchInst %BB7
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %39 = BranchInst %BB9
+// CHECK-NEXT:  %41 = BranchInst %BB9
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %40 = BranchInst %BB11
+// CHECK-NEXT:  %42 = BranchInst %BB11
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %41 = BranchInst %BB13
+// CHECK-NEXT:  %43 = BranchInst %BB13
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %42 = BranchInst %BB15
+// CHECK-NEXT:  %44 = BranchInst %BB15
 // CHECK-NEXT:%BB23:
-// CHECK-NEXT:  %43 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %45 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor(b)
 // CHECK-NEXT:frame = [b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %1 = LoadFrameInst [b]
-// CHECK-NEXT:  %2 = SwitchInst %1, %BB1, 1 : number, %BB2, 0 : number, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst %b
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [b]
+// CHECK-NEXT:  %2 = LoadFrameInst [b]
+// CHECK-NEXT:  %3 = SwitchInst %2, %BB1, 1 : number, %BB2, 0 : number, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst "invalid" : string
+// CHECK-NEXT:  %4 = ReturnInst "invalid" : string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst 0 : number
+// CHECK-NEXT:  %5 = ReturnInst 0 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %5 = BranchInst %BB3
+// CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst 1 : number
+// CHECK-NEXT:  %7 = ReturnInst 1 : number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %7 = BranchInst %BB1
+// CHECK-NEXT:  %8 = BranchInst %BB1
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor2(b)
 // CHECK-NEXT:frame = [b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %1 = LoadFrameInst [b]
-// CHECK-NEXT:  %2 = SwitchInst %1, %BB1, 1 : number, %BB2, 0 : number, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst %b
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [b]
+// CHECK-NEXT:  %2 = LoadFrameInst [b]
+// CHECK-NEXT:  %3 = SwitchInst %2, %BB1, 1 : number, %BB2, 0 : number, %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst 0 : number
+// CHECK-NEXT:  %5 = ReturnInst 0 : number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %5 = BranchInst %BB3
+// CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst 1 : number
+// CHECK-NEXT:  %7 = ReturnInst 1 : number
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %7 = BranchInst %BB1
+// CHECK-NEXT:  %8 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst "invalid" : string
+// CHECK-NEXT:  %9 = ReturnInst "invalid" : string
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %9 = BranchInst %BB4
+// CHECK-NEXT:  %10 = BranchInst %BB4
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0(b)
 // CHECK-NEXT:frame = [b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %1 = LoadFrameInst [b]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '===', %2, %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %b
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [b]
+// CHECK-NEXT:  %2 = LoadFrameInst [b]
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', 1 : number, 2 : number
+// CHECK-NEXT:  %4 = BinaryOperatorInst '===', %3, %2
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', 4 : number, 5 : number
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %7 = BinaryOperatorInst '+', 4 : number, 5 : number
+// CHECK-NEXT:  %8 = ReturnInst %7
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = BinaryOperatorInst '+', 2 : number, 3 : number
-// CHECK-NEXT:  %9 = BinaryOperatorInst '===', %8, %1
-// CHECK-NEXT:  %10 = CondBranchInst %9, %BB4, %BB5
+// CHECK-NEXT:  %9 = BinaryOperatorInst '+', 2 : number, 3 : number
+// CHECK-NEXT:  %10 = BinaryOperatorInst '===', %9, %2
+// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = BinaryOperatorInst '+', 6 : number, 7 : number
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %12 = BinaryOperatorInst '+', 6 : number, 7 : number
+// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %14 = BranchInst %BB6
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %15 = BinaryOperatorInst '+', 8 : number, 9 : number
+// CHECK-NEXT:  %16 = ReturnInst %15
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %17 = BranchInst %BB4
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %18 = BranchInst %BB6
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:  %19 = BranchInst %BB3
+// CHECK-NEXT:function_end
+
+// CHECK:function simple_test1(b)
+// CHECK-NEXT:frame = [b]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst %b
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [b]
+// CHECK-NEXT:  %2 = LoadFrameInst [b]
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', 1 : number, 2 : number
+// CHECK-NEXT:  %4 = BinaryOperatorInst '===', %3, %2
+// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %7 = BinaryOperatorInst '+', 4 : number, 5 : number
+// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %9 = BinaryOperatorInst '+', 2 : number, 3 : number
+// CHECK-NEXT:  %10 = BinaryOperatorInst '===', %9, %2
+// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
@@ -246,50 +284,19 @@ function fallthrough(b) {
 // CHECK-NEXT:  %18 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test1(b)
-// CHECK-NEXT:frame = [b]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %1 = LoadFrameInst [b]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '===', %2, %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', 4 : number, 5 : number
-// CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = BinaryOperatorInst '+', 2 : number, 3 : number
-// CHECK-NEXT:  %9 = BinaryOperatorInst '===', %8, %1
-// CHECK-NEXT:  %10 = CondBranchInst %9, %BB4, %BB5
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = BranchInst %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = BranchInst %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %13 = BinaryOperatorInst '+', 8 : number, 9 : number
-// CHECK-NEXT:  %14 = ReturnInst %13
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %15 = BranchInst %BB4
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %16 = BranchInst %BB6
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %17 = BranchInst %BB3
-// CHECK-NEXT:function_end
-
 // CHECK:function fallthrough(b)
 // CHECK-NEXT:frame = [b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %1 = LoadFrameInst [b]
-// CHECK-NEXT:  %2 = SwitchInst %1, %BB1, 0 : number, %BB2, 1 : number, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst %b
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [b]
+// CHECK-NEXT:  %2 = LoadFrameInst [b]
+// CHECK-NEXT:  %3 = SwitchInst %2, %BB1, 0 : number, %BB2, 1 : number, %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BranchInst %BB3
+// CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = BranchInst %BB1
+// CHECK-NEXT:  %6 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = BranchInst %BB4
+// CHECK-NEXT:  %7 = BranchInst %BB4
 // CHECK-NEXT:function_end

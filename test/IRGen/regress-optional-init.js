@@ -29,22 +29,23 @@ function foo(param = a || b) {}
 // CHECK:function foo(param)
 // CHECK-NEXT:frame = [param]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '!==', %param, undefined : undefined
-// CHECK-NEXT:  %1 = CondBranchInst %0, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %param
+// CHECK-NEXT:  %1 = BinaryOperatorInst '!==', %0, undefined : undefined
+// CHECK-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "a" : string
-// CHECK-NEXT:  %4 = StoreStackInst %3, %2
-// CHECK-NEXT:  %5 = CondBranchInst %3, %BB3, %BB4
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_logical
+// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "a" : string
+// CHECK-NEXT:  %5 = StoreStackInst %4, %3
+// CHECK-NEXT:  %6 = CondBranchInst %4, %BB3, %BB4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = PhiInst %param, %BB0, %12, %BB3
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [param]
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = PhiInst %0, %BB0, %13, %BB3
+// CHECK-NEXT:  %8 = StoreFrameInst %7, [param]
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "b" : string
-// CHECK-NEXT:  %10 = StoreStackInst %9, %2
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "b" : string
+// CHECK-NEXT:  %11 = StoreStackInst %10, %3
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = LoadStackInst %2
-// CHECK-NEXT:  %13 = BranchInst %BB1
+// CHECK-NEXT:  %13 = LoadStackInst %3
+// CHECK-NEXT:  %14 = BranchInst %BB1
 // CHECK-NEXT:function_end

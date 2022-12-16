@@ -64,32 +64,35 @@ function foo4(a) {
 // CHECK:function foo2(a) : string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '+', %a, 10 : number
-// CHECK-NEXT:  %1 = ReturnInst %0 : string|number
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %0, 10 : number
+// CHECK-NEXT:  %2 = ReturnInst %1 : string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo3(a)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CondBranchInst %a, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = CondBranchInst %0, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = PhiInst %a, %BB1, 10 : number, %BB0
-// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:  %2 = PhiInst %0, %BB1, 10 : number, %BB0
+// CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = BranchInst %BB2
+// CHECK-NEXT:  %4 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
 // CHECK:function foo4(a)
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '<', %a, 0 : number
-// CHECK-NEXT:  %1 = CondBranchInst %0 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = BinaryOperatorInst '<', %0, 0 : number
+// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = PhiInst 10 : number, %BB3, %a, %BB2, -1 : number, %BB0
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %3 = PhiInst 10 : number, %BB3, %0, %BB2, -1 : number, %BB0
+// CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BinaryOperatorInst '==', %a, 0 : number
-// CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB3, %BB1
+// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %0, 0 : number
+// CHECK-NEXT:  %6 = CondBranchInst %5 : boolean, %BB3, %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:  %7 = BranchInst %BB1
 // CHECK-NEXT:function_end

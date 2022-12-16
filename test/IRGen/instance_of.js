@@ -32,15 +32,15 @@ function simple_test0(x, y) {
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg2           	%2 = HBCLoadParamInst 2 : number
-// CHECK-NEXT:  $Reg3           	%3 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg4           	%4 = HBCStoreToEnvironmentInst %0, %1, [x]
-// CHECK-NEXT:  $Reg4           	%5 = HBCStoreToEnvironmentInst %0, %2, [y]
+// CHECK-NEXT:  $Reg1           	%1 = HBCLoadConstInst undefined : undefined
+// CHECK-NEXT:  $Reg2           	%2 = LoadParamInst %x
+// CHECK-NEXT:  $Reg3           	%3 = HBCStoreToEnvironmentInst %0, %2, [x]
+// CHECK-NEXT:  $Reg3           	%4 = LoadParamInst %y
+// CHECK-NEXT:  $Reg4           	%5 = HBCStoreToEnvironmentInst %0, %4, [y]
 // CHECK-NEXT:  $Reg4           	%6 = HBCLoadFromEnvironmentInst %0, [x]
 // CHECK-NEXT:  $Reg5           	%7 = HBCLoadFromEnvironmentInst %0, [y]
 // CHECK-NEXT:  $Reg6           	%8 = BinaryOperatorInst 'instanceof', %6, %7
 // CHECK-NEXT:  $Reg7           	%9 = ReturnInst %8
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $???           	%10 = ReturnInst %3 : undefined
+// CHECK-NEXT:  $???           	%10 = ReturnInst %1 : undefined
 // CHECK-NEXT:function_end

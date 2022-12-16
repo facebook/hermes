@@ -23,21 +23,27 @@ print('done 1');
 // CHECK:function cjs_module(exports, require, module)
 // CHECK-NEXT:frame = [exports, require, module]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %exports, [exports]
-// CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
-// CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, "done 1" : string
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %exports
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [exports]
+// CHECK-NEXT:  %2 = LoadParamInst %require
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
+// CHECK-NEXT:  %4 = LoadParamInst %module
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, "done 1" : string
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "cjs_module 1#"(exports, require, module)
 // CHECK-NEXT:frame = [exports, require, module]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %exports, [exports]
-// CHECK-NEXT:  %1 = StoreFrameInst %require, [require]
-// CHECK-NEXT:  %2 = StoreFrameInst %module, [module]
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, "done 2" : string
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %exports
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [exports]
+// CHECK-NEXT:  %2 = LoadParamInst %require
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
+// CHECK-NEXT:  %4 = LoadParamInst %module
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, "done 2" : string
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

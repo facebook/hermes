@@ -190,38 +190,40 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst $a
-// CHECK-NEXT:  %1 = StoreStackInst %x, %0
-// CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %1 = LoadParamInst %x
+// CHECK-NEXT:  %2 = StoreStackInst %1, %0
+// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = CatchInst
-// CHECK-NEXT:  %4 = LoadStackInst %0
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 100 : number
-// CHECK-NEXT:  %6 = StoreStackInst %5 : string|number, %0
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %4 = CatchInst
+// CHECK-NEXT:  %5 = LoadStackInst %0
+// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %5, 100 : number
+// CHECK-NEXT:  %7 = StoreStackInst %6 : string|number, %0
+// CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = LoadStackInst %0
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %9 = LoadStackInst %0
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadStackInst %0
-// CHECK-NEXT:  %11 = BinaryOperatorInst '+', %10, 1 : number
-// CHECK-NEXT:  %12 = StoreStackInst %11 : string|number, %0
-// CHECK-NEXT:  %13 = LoadPropertyInst globalObject : object, "abort" : string
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined
-// CHECK-NEXT:  %15 = BinaryOperatorInst '+', %11 : string|number, 2 : number
-// CHECK-NEXT:  %16 = StoreStackInst %15 : string|number, %0
-// CHECK-NEXT:  %17 = BranchInst %BB4
+// CHECK-NEXT:  %11 = LoadStackInst %0
+// CHECK-NEXT:  %12 = BinaryOperatorInst '+', %11, 1 : number
+// CHECK-NEXT:  %13 = StoreStackInst %12 : string|number, %0
+// CHECK-NEXT:  %14 = LoadPropertyInst globalObject : object, "abort" : string
+// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %16 = BinaryOperatorInst '+', %12 : string|number, 2 : number
+// CHECK-NEXT:  %17 = StoreStackInst %16 : string|number, %0
+// CHECK-NEXT:  %18 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %18 = TryEndInst
-// CHECK-NEXT:  %19 = BranchInst %BB3
+// CHECK-NEXT:  %19 = TryEndInst
+// CHECK-NEXT:  %20 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
 // CHECK:function postponed_store_in_use_block(x) : undefined
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = CreateFunctionInst %""()
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 0 : number, %1 : closure
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = CreateFunctionInst %""()
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', 0 : number, %2 : closure
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""()

@@ -41,34 +41,42 @@ function test_member_access(obj, param) {
 // CHECK:function foo(a, b, c)
 // CHECK-NEXT:frame = [a, b, c]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst %c, [c]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = LoadParamInst %c
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [c]
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(x, y, z)
 // CHECK-NEXT:frame = [x, y, z]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y]
-// CHECK-NEXT:  %2 = StoreFrameInst %z, [z]
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = LoadFrameInst [y]
-// CHECK-NEXT:  %6 = LoadFrameInst [z]
-// CHECK-NEXT:  %7 = CallInst %3, undefined : undefined, %4, %5, %6
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadParamInst %y
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
+// CHECK-NEXT:  %4 = LoadParamInst %z
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [z]
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %7 = LoadFrameInst [x]
+// CHECK-NEXT:  %8 = LoadFrameInst [y]
+// CHECK-NEXT:  %9 = LoadFrameInst [z]
+// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, %7, %8, %9
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_member_access(obj, param)
 // CHECK-NEXT:frame = [obj, param]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %obj, [obj]
-// CHECK-NEXT:  %1 = StoreFrameInst %param, [param]
-// CHECK-NEXT:  %2 = LoadFrameInst [obj]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "foo" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [param]
-// CHECK-NEXT:  %5 = CallInst %3, %2, %4
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = LoadParamInst %param
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [param]
+// CHECK-NEXT:  %4 = LoadFrameInst [obj]
+// CHECK-NEXT:  %5 = LoadPropertyInst %4, "foo" : string
+// CHECK-NEXT:  %6 = LoadFrameInst [param]
+// CHECK-NEXT:  %7 = CallInst %5, %4, %6
+// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

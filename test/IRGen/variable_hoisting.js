@@ -45,9 +45,10 @@ function main() {
 // CHECK:function foo(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [capture_me@main]
-// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [capture_me@main]
+// CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

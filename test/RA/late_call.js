@@ -47,20 +47,20 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK:function bar(a, b, c, d, e, f, g, h) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg9 @0 [1...19) 	%0 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadParamInst 2 : number
+// CHECK-NEXT:  $Reg9 @0 [1...19) 	%0 = LoadParamInst %a
+// CHECK-NEXT:  $Reg0 @1 [2...3) 	%1 = LoadParamInst %b
 // CHECK-NEXT:  $Reg8 @2 [3...19) 	%2 = BinaryOperatorInst '+', %1, %0
-// CHECK-NEXT:  $Reg0 @3 [4...5) 	%3 = HBCLoadParamInst 3 : number
+// CHECK-NEXT:  $Reg0 @3 [4...5) 	%3 = LoadParamInst %c
 // CHECK-NEXT:  $Reg7 @4 [5...19) 	%4 = BinaryOperatorInst '+', %3, %2 : string|number|bigint
-// CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = HBCLoadParamInst 4 : number
+// CHECK-NEXT:  $Reg0 @5 [6...7) 	%5 = LoadParamInst %d
 // CHECK-NEXT:  $Reg6 @6 [7...19) 	%6 = BinaryOperatorInst '+', %5, %4 : string|number|bigint
-// CHECK-NEXT:  $Reg0 @7 [8...9) 	%7 = HBCLoadParamInst 5 : number
+// CHECK-NEXT:  $Reg0 @7 [8...9) 	%7 = LoadParamInst %e
 // CHECK-NEXT:  $Reg5 @8 [9...19) 	%8 = BinaryOperatorInst '+', %7, %6 : string|number|bigint
-// CHECK-NEXT:  $Reg0 @9 [10...11) 	%9 = HBCLoadParamInst 6 : number
+// CHECK-NEXT:  $Reg0 @9 [10...11) 	%9 = LoadParamInst %f
 // CHECK-NEXT:  $Reg4 @10 [11...19) 	%10 = BinaryOperatorInst '+', %9, %8 : string|number|bigint
-// CHECK-NEXT:  $Reg0 @11 [12...13) 	%11 = HBCLoadParamInst 7 : number
+// CHECK-NEXT:  $Reg0 @11 [12...13) 	%11 = LoadParamInst %g
 // CHECK-NEXT:  $Reg3 @12 [13...19) 	%12 = BinaryOperatorInst '+', %11, %10 : string|number|bigint
-// CHECK-NEXT:  $Reg0 @13 [14...15) 	%13 = HBCLoadParamInst 8 : number
+// CHECK-NEXT:  $Reg0 @13 [14...15) 	%13 = LoadParamInst %h
 // CHECK-NEXT:  $Reg2 @14 [15...19) 	%14 = BinaryOperatorInst '+', %13, %0
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg1 @16 [17...19) 	%16 = LoadPropertyInst %15 : object, "foo" : string

@@ -49,8 +49,9 @@
 // CHECK:function " 1#"(val)
 // CHECK-NEXT:frame = [val]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %val, [val]
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %val
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [val]
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"()

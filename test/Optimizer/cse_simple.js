@@ -67,52 +67,58 @@ function cse_unary(a) {
 // CHECK:function foo(dim) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '==', %dim, %dim
-// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %dim, %dim
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0 : boolean, %1 : boolean
-// CHECK-NEXT:  %3 = BinaryOperatorInst '*', %2 : number, %2 : number
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
+// CHECK-NEXT:  %0 = LoadParamInst %dim
+// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %0, %0
+// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %0, %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : boolean, %2 : boolean
+// CHECK-NEXT:  %4 = BinaryOperatorInst '*', %3 : number, %3 : number
+// CHECK-NEXT:  %5 = ReturnInst %4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo_with_cf(dim) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryOperatorInst '==', %dim, %dim
-// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %dim, %dim
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0 : boolean, %1 : boolean
-// CHECK-NEXT:  %3 = CondBranchInst %0 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %dim
+// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %0, %0
+// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %0, %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : boolean, %2 : boolean
+// CHECK-NEXT:  %4 = CondBranchInst %1 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BranchInst %BB2
+// CHECK-NEXT:  %5 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = PhiInst %2 : number, %BB1, 0 : number, %BB0
-// CHECK-NEXT:  %6 = BinaryOperatorInst '*', %2 : number, %5 : number
-// CHECK-NEXT:  %7 = ReturnInst %6 : number
+// CHECK-NEXT:  %6 = PhiInst %3 : number, %BB1, 0 : number, %BB0
+// CHECK-NEXT:  %7 = BinaryOperatorInst '*', %3 : number, %6 : number
+// CHECK-NEXT:  %8 = ReturnInst %7 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function check_operator_kind(i) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %i
-// CHECK-NEXT:  %1 = AsInt32Inst %i
-// CHECK-NEXT:  %2 = BinaryOperatorInst '-', %0 : number, %1 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %0 : number, %1 : number
-// CHECK-NEXT:  %4 = BinaryOperatorInst '*', %2 : number, %3 : number
-// CHECK-NEXT:  %5 = ReturnInst %4 : number
+// CHECK-NEXT:  %0 = LoadParamInst %i
+// CHECK-NEXT:  %1 = AsInt32Inst %0
+// CHECK-NEXT:  %2 = AsInt32Inst %0
+// CHECK-NEXT:  %3 = BinaryOperatorInst '-', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %1 : number, %2 : number
+// CHECK-NEXT:  %5 = BinaryOperatorInst '*', %3 : number, %4 : number
+// CHECK-NEXT:  %6 = ReturnInst %5 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_this_instr() : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, %this, %this, %this, %this
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object, %1 : object, %1 : object, %1 : object
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_unary(a) : number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = UnaryOperatorInst '++', %a
-// CHECK-NEXT:  %1 = UnaryOperatorInst '-', %0 : number|bigint
-// CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1 : number|bigint, %1 : number|bigint
-// CHECK-NEXT:  %3 = ReturnInst %2 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = UnaryOperatorInst '++', %0
+// CHECK-NEXT:  %2 = UnaryOperatorInst '-', %1 : number|bigint
+// CHECK-NEXT:  %3 = BinaryOperatorInst '*', %2 : number|bigint, %2 : number|bigint
+// CHECK-NEXT:  %4 = ReturnInst %3 : number|bigint
 // CHECK-NEXT:function_end

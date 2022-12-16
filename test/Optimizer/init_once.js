@@ -35,12 +35,13 @@ function main(p) {
 // CHECK:function main(p) : closure
 // CHECK-NEXT:frame = [k, p]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %p, [p]
-// CHECK-NEXT:  %1 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %2 = StoreFrameInst %p, [k]
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [p]
-// CHECK-NEXT:  %5 = ReturnInst %1 : closure
+// CHECK-NEXT:  %0 = LoadParamInst %p
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [p]
+// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : undefined
+// CHECK-NEXT:  %3 = StoreFrameInst %0, [k]
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [p]
+// CHECK-NEXT:  %6 = ReturnInst %2 : closure
 // CHECK-NEXT:function_end
 
 // CHECK:function bar() : undefined

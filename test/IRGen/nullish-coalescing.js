@@ -37,45 +37,49 @@ function f2(a, b) {
 // CHECK:function f1(a, b)
 // CHECK-NEXT:frame = [a, b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %3 = LoadFrameInst [a]
-// CHECK-NEXT:  %4 = StoreStackInst %3, %2
-// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %3, null : null
-// CHECK-NEXT:  %6 = CondBranchInst %5, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_logical
+// CHECK-NEXT:  %5 = LoadFrameInst [a]
+// CHECK-NEXT:  %6 = StoreStackInst %5, %4
+// CHECK-NEXT:  %7 = BinaryOperatorInst '==', %5, null : null
+// CHECK-NEXT:  %8 = CondBranchInst %7, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [b]
-// CHECK-NEXT:  %8 = StoreStackInst %7, %2
-// CHECK-NEXT:  %9 = BranchInst %BB2
+// CHECK-NEXT:  %9 = LoadFrameInst [b]
+// CHECK-NEXT:  %10 = StoreStackInst %9, %4
+// CHECK-NEXT:  %11 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadStackInst %2
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %12 = LoadStackInst %4
+// CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(a, b)
 // CHECK-NEXT:frame = [a, b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = LoadFrameInst [a]
+// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %4, null : null
+// CHECK-NEXT:  %6 = CondBranchInst %5, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst 1 : number
+// CHECK-NEXT:  %7 = ReturnInst 1 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %6 = ReturnInst 2 : number
+// CHECK-NEXT:  %8 = ReturnInst 2 : number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst [b]
-// CHECK-NEXT:  %9 = CondBranchInst %8, %BB3, %BB4
+// CHECK-NEXT:  %10 = LoadFrameInst [b]
+// CHECK-NEXT:  %11 = CondBranchInst %10, %BB3, %BB4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = CondBranchInst %2, %BB3, %BB4
+// CHECK-NEXT:  %12 = CondBranchInst %4, %BB3, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %11 = BranchInst %BB5
+// CHECK-NEXT:  %13 = BranchInst %BB5
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %12 = BranchInst %BB5
+// CHECK-NEXT:  %14 = BranchInst %BB5
 // CHECK-NEXT:function_end

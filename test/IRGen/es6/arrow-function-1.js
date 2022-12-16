@@ -16,17 +16,19 @@ var func2 = () => { return 11; }
 // CHECK:function global()
 // CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target], globals = [func1, func2]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %1 = GetNewTargetInst
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_2_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = CreateFunctionInst %func1()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "func1" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %func2()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "func2" : string
-// CHECK-NEXT:  %9 = LoadStackInst %3
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
+// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+// CHECK-NEXT:  %5 = AllocStackInst $?anon_2_ret
+// CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
+// CHECK-NEXT:  %7 = CreateFunctionInst %func1()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "func1" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %func2()
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "func2" : string
+// CHECK-NEXT:  %11 = LoadStackInst %5
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func1()

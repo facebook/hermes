@@ -27,22 +27,25 @@ function foo(x = () => this) {
 // CHECK:function foo(x)
 // CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %this, [?anon_0_this]
-// CHECK-NEXT:  %1 = GetNewTargetInst
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_1_new.target]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '!==', %x, undefined : undefined
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
+// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+// CHECK-NEXT:  %5 = LoadParamInst %x
+// CHECK-NEXT:  %6 = BinaryOperatorInst '!==', %5, undefined : undefined
+// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CreateFunctionInst %x()
-// CHECK-NEXT:  %6 = BranchInst %BB1
+// CHECK-NEXT:  %8 = CreateFunctionInst %x()
+// CHECK-NEXT:  %9 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = PhiInst %x, %BB0, %5 : closure, %BB2
-// CHECK-NEXT:  %8 = StoreFrameInst %7, [x]
-// CHECK-NEXT:  %9 = LoadFrameInst [x]
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = PhiInst %5, %BB0, %8 : closure, %BB2
+// CHECK-NEXT:  %11 = StoreFrameInst %10, [x]
+// CHECK-NEXT:  %12 = LoadFrameInst [x]
+// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst %13
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x()

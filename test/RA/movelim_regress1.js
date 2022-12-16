@@ -33,26 +33,26 @@ function fib(n) {
 // CHECK:function fib(n) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg5 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg4 @1 [2...19) 	%1 = HBCLoadConstInst 0 : number
-// CHECK-NEXT:  $Reg3 @2 [3...19) 	%2 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  $Reg2 @3 [4...9) 	%3 = MovInst %1 : number
-// CHECK-NEXT:  $Reg1 @4 [5...10) 	%4 = MovInst %2 : number
-// CHECK-NEXT:  $Reg5 @5 [6...11) 	%5 = MovInst %0
+// CHECK-NEXT:  $Reg5 @0 [1...19) 	%0 = HBCLoadConstInst 0 : number
+// CHECK-NEXT:  $Reg4 @1 [2...19) 	%1 = HBCLoadConstInst 1 : number
+// CHECK-NEXT:  $Reg3 @2 [3...6) 	%2 = LoadParamInst %n
+// CHECK-NEXT:  $Reg2 @3 [4...9) 	%3 = MovInst %0 : number
+// CHECK-NEXT:  $Reg1 @4 [5...10) 	%4 = MovInst %1 : number
+// CHECK-NEXT:  $Reg3 @5 [6...11) 	%5 = MovInst %2
 // CHECK-NEXT:  $Reg0 @6 [7...20) 	%6 = MovInst %3 : number
 // CHECK-NEXT:  $Reg6 @7 [empty]	%7 = CompareBranchInst '>', %5, %6 : number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg2 @8 [4...12) [15...19) 	%8 = PhiInst %3 : number, %BB0, %14 : number, %BB1
 // CHECK-NEXT:  $Reg1 @9 [5...14) [16...19) 	%9 = PhiInst %4 : number, %BB0, %15 : number, %BB1
-// CHECK-NEXT:  $Reg5 @10 [1...19) 	%10 = PhiInst %5, %BB0, %17 : number, %BB1
+// CHECK-NEXT:  $Reg3 @10 [3...19) 	%10 = PhiInst %5, %BB0, %17 : number, %BB1
 // CHECK-NEXT:  $Reg7 @11 [12...16) 	%11 = BinaryOperatorInst '+', %8 : number, %9 : number
-// CHECK-NEXT:  $Reg5 @12 [13...18) 	%12 = BinaryOperatorInst '-', %10, %2 : number
+// CHECK-NEXT:  $Reg3 @12 [13...18) 	%12 = BinaryOperatorInst '-', %10, %1 : number
 // CHECK-NEXT:  $Reg6 @13 [14...17) 	%13 = MovInst %9 : number
 // CHECK-NEXT:  $Reg2 @14 [15...18) 	%14 = MovInst %13 : number
 // CHECK-NEXT:  $Reg1 @15 [16...18) 	%15 = MovInst %11 : number
 // CHECK-NEXT:  $Reg0 @16 [17...20) 	%16 = MovInst %14 : number
-// CHECK-NEXT:  $Reg5 @17 [18...19) 	%17 = MovInst %12 : number
-// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CompareBranchInst '>', %17 : number, %1 : number, %BB1, %BB2
+// CHECK-NEXT:  $Reg3 @17 [18...19) 	%17 = MovInst %12 : number
+// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CompareBranchInst '>', %17 : number, %0 : number, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 @19 [7...21) 	%19 = PhiInst %6 : number, %BB0, %16 : number, %BB1
 // CHECK-NEXT:  $Reg0 @20 [7...22) 	%20 = MovInst %19 : number

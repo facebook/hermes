@@ -32,21 +32,22 @@ function fibonacci(n) {
 // CHECK:function fibonacci(n)
 // CHECK-NEXT:frame = [n]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %n, [n]
-// CHECK-NEXT:  %1 = LoadFrameInst [n]
-// CHECK-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %n
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [n]
+// CHECK-NEXT:  %2 = LoadFrameInst [n]
+// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = LoadFrameInst [n]
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %4 = LoadFrameInst [n]
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "fibonacci" : string
-// CHECK-NEXT:  %6 = LoadFrameInst [n]
-// CHECK-NEXT:  %7 = CallInst %5, undefined : undefined, %6
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "fibonacci" : string
+// CHECK-NEXT:  %7 = LoadFrameInst [n]
+// CHECK-NEXT:  %8 = CallInst %6, undefined : undefined, %7
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = BranchInst %BB3
-// CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:function_end

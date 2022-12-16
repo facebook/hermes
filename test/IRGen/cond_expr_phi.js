@@ -28,30 +28,34 @@ function condExpr(a,b,c,d) {
 // CHECK:function condExpr(a, b, c, d)
 // CHECK-NEXT:frame = [a, b, c, d]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %a, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst %b, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst %c, [c]
-// CHECK-NEXT:  %3 = StoreFrameInst %d, [d]
-// CHECK-NEXT:  %4 = LoadFrameInst [a]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = LoadParamInst %c
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [c]
+// CHECK-NEXT:  %6 = LoadParamInst %d
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [d]
+// CHECK-NEXT:  %8 = LoadFrameInst [a]
+// CHECK-NEXT:  %9 = CondBranchInst %8, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = LoadFrameInst [d]
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst [d]
+// CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %9 = LoadFrameInst [b]
-// CHECK-NEXT:  %10 = StoreStackInst %9, %8
-// CHECK-NEXT:  %11 = CondBranchInst %9, %BB4, %BB5
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_logical
+// CHECK-NEXT:  %13 = LoadFrameInst [b]
+// CHECK-NEXT:  %14 = StoreStackInst %13, %12
+// CHECK-NEXT:  %15 = CondBranchInst %13, %BB4, %BB5
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst %17, %BB4, %6, %BB2
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %16 = PhiInst %21, %BB4, %10, %BB2
+// CHECK-NEXT:  %17 = ReturnInst %16
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %14 = LoadFrameInst [c]
-// CHECK-NEXT:  %15 = StoreStackInst %14, %8
-// CHECK-NEXT:  %16 = BranchInst %BB4
+// CHECK-NEXT:  %18 = LoadFrameInst [c]
+// CHECK-NEXT:  %19 = StoreStackInst %18, %12
+// CHECK-NEXT:  %20 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %17 = LoadStackInst %8
-// CHECK-NEXT:  %18 = BranchInst %BB3
+// CHECK-NEXT:  %21 = LoadStackInst %12
+// CHECK-NEXT:  %22 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %23 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

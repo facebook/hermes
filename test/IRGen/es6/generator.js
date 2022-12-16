@@ -145,36 +145,37 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [i]
-// CHECK-NEXT:  %6 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %7 = StoreFrameInst 0 : number, [i]
-// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:  %6 = LoadParamInst %x
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [x]
+// CHECK-NEXT:  %8 = StoreFrameInst 0 : number, [i]
+// CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst %2
+// CHECK-NEXT:  %10 = ReturnInst %2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = LoadFrameInst [x]
-// CHECK-NEXT:  %11 = LoadFrameInst [i]
-// CHECK-NEXT:  %12 = AsNumericInst %11
-// CHECK-NEXT:  %13 = UnaryOperatorInst '++', %12 : number|bigint
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [i]
-// CHECK-NEXT:  %15 = LoadPropertyInst %10, %12 : number|bigint
-// CHECK-NEXT:  %16 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %17 = SaveAndYieldInst %15, %BB5
+// CHECK-NEXT:  %11 = LoadFrameInst [x]
+// CHECK-NEXT:  %12 = LoadFrameInst [i]
+// CHECK-NEXT:  %13 = AsNumericInst %12
+// CHECK-NEXT:  %14 = UnaryOperatorInst '++', %13 : number|bigint
+// CHECK-NEXT:  %15 = StoreFrameInst %14, [i]
+// CHECK-NEXT:  %16 = LoadPropertyInst %11, %13 : number|bigint
+// CHECK-NEXT:  %17 = AllocStackInst $?anon_1_isReturn
+// CHECK-NEXT:  %18 = SaveAndYieldInst %16, %BB5
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %19 = CondBranchInst true : boolean, %BB4, %BB6
-// CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %20 = CondBranchInst true : boolean, %BB4, %BB6
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %21 = CondBranchInst true : boolean, %BB4, %BB6
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %21 = BranchInst %BB7
+// CHECK-NEXT:  %22 = BranchInst %BB7
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %22 = ResumeGeneratorInst %16
-// CHECK-NEXT:  %23 = LoadStackInst %16
-// CHECK-NEXT:  %24 = CondBranchInst %23, %BB9, %BB10
+// CHECK-NEXT:  %23 = ResumeGeneratorInst %17
+// CHECK-NEXT:  %24 = LoadStackInst %17
+// CHECK-NEXT:  %25 = CondBranchInst %24, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %25 = BranchInst %BB8
+// CHECK-NEXT:  %26 = BranchInst %BB8
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %26 = ReturnInst %22
+// CHECK-NEXT:  %27 = ReturnInst %23
 // CHECK-NEXT:function_end
 
 // CHECK:function simple2()
@@ -331,55 +332,56 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_3_iter
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_4_sourceOrNext
-// CHECK-NEXT:  %8 = StoreStackInst %?anon_2_param, %7
-// CHECK-NEXT:  %9 = IteratorBeginInst %7
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_5_iterDone
-// CHECK-NEXT:  %12 = StoreStackInst undefined : undefined, %11
-// CHECK-NEXT:  %13 = AllocStackInst $?anon_6_iterValue
-// CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
-// CHECK-NEXT:  %15 = BranchInst %BB3
+// CHECK-NEXT:  %6 = LoadParamInst %?anon_2_param
+// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_iter
+// CHECK-NEXT:  %8 = AllocStackInst $?anon_4_sourceOrNext
+// CHECK-NEXT:  %9 = StoreStackInst %6, %8
+// CHECK-NEXT:  %10 = IteratorBeginInst %8
+// CHECK-NEXT:  %11 = StoreStackInst %10, %7
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_5_iterDone
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = AllocStackInst $?anon_6_iterValue
+// CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
+// CHECK-NEXT:  %16 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = ReturnInst %2
+// CHECK-NEXT:  %17 = ReturnInst %2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %17 = ResumeGeneratorInst %5
-// CHECK-NEXT:  %18 = LoadStackInst %5
-// CHECK-NEXT:  %19 = CondBranchInst %18, %BB5, %BB6
+// CHECK-NEXT:  %18 = ResumeGeneratorInst %5
+// CHECK-NEXT:  %19 = LoadStackInst %5
+// CHECK-NEXT:  %20 = CondBranchInst %19, %BB5, %BB6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %20 = IteratorNextInst %6, %7
-// CHECK-NEXT:  %21 = LoadStackInst %6
-// CHECK-NEXT:  %22 = BinaryOperatorInst '===', %21, undefined : undefined
-// CHECK-NEXT:  %23 = StoreStackInst %22, %11
-// CHECK-NEXT:  %24 = CondBranchInst %22, %BB7, %BB8
+// CHECK-NEXT:  %21 = IteratorNextInst %7, %8
+// CHECK-NEXT:  %22 = LoadStackInst %7
+// CHECK-NEXT:  %23 = BinaryOperatorInst '===', %22, undefined : undefined
+// CHECK-NEXT:  %24 = StoreStackInst %23, %12
+// CHECK-NEXT:  %25 = CondBranchInst %23, %BB7, %BB8
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %25 = StoreStackInst %20, %13
-// CHECK-NEXT:  %26 = BranchInst %BB7
+// CHECK-NEXT:  %26 = StoreStackInst %21, %14
+// CHECK-NEXT:  %27 = BranchInst %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %27 = LoadStackInst %13
-// CHECK-NEXT:  %28 = StoreFrameInst %27, [x]
-// CHECK-NEXT:  %29 = LoadStackInst %11
-// CHECK-NEXT:  %30 = CondBranchInst %29, %BB9, %BB10
+// CHECK-NEXT:  %28 = LoadStackInst %14
+// CHECK-NEXT:  %29 = StoreFrameInst %28, [x]
+// CHECK-NEXT:  %30 = LoadStackInst %12
+// CHECK-NEXT:  %31 = CondBranchInst %30, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %31 = IteratorCloseInst %6, false : boolean
-// CHECK-NEXT:  %32 = BranchInst %BB9
+// CHECK-NEXT:  %32 = IteratorCloseInst %7, false : boolean
+// CHECK-NEXT:  %33 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %33 = SaveAndYieldInst undefined : undefined, %BB4
+// CHECK-NEXT:  %34 = SaveAndYieldInst undefined : undefined, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %34 = LoadFrameInst [x]
-// CHECK-NEXT:  %35 = AllocStackInst $?anon_8_isReturn
-// CHECK-NEXT:  %36 = SaveAndYieldInst %34, %BB11
+// CHECK-NEXT:  %35 = LoadFrameInst [x]
+// CHECK-NEXT:  %36 = AllocStackInst $?anon_8_isReturn
+// CHECK-NEXT:  %37 = SaveAndYieldInst %35, %BB11
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %37 = ReturnInst %17
+// CHECK-NEXT:  %38 = ReturnInst %18
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %38 = ResumeGeneratorInst %35
-// CHECK-NEXT:  %39 = LoadStackInst %35
-// CHECK-NEXT:  %40 = CondBranchInst %39, %BB12, %BB13
+// CHECK-NEXT:  %39 = ResumeGeneratorInst %36
+// CHECK-NEXT:  %40 = LoadStackInst %36
+// CHECK-NEXT:  %41 = CondBranchInst %40, %BB12, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %41 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %42 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %42 = ReturnInst %38
+// CHECK-NEXT:  %43 = ReturnInst %39
 // CHECK-NEXT:function_end
 
 // CHECK:function initializer()
@@ -401,33 +403,34 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %6 = BinaryOperatorInst '!==', %x, undefined : undefined
-// CHECK-NEXT:  %7 = CondBranchInst %6, %BB3, %BB4
+// CHECK-NEXT:  %6 = LoadParamInst %x
+// CHECK-NEXT:  %7 = BinaryOperatorInst '!==', %6, undefined : undefined
+// CHECK-NEXT:  %8 = CondBranchInst %7, %BB3, %BB4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst %2
+// CHECK-NEXT:  %9 = ReturnInst %2
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst %5
-// CHECK-NEXT:  %10 = LoadStackInst %5
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB6, %BB7
+// CHECK-NEXT:  %10 = ResumeGeneratorInst %5
+// CHECK-NEXT:  %11 = LoadStackInst %5
+// CHECK-NEXT:  %12 = CondBranchInst %11, %BB6, %BB7
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined
-// CHECK-NEXT:  %14 = BranchInst %BB3
+// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined
+// CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = PhiInst %x, %BB2, %13, %BB4
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
-// CHECK-NEXT:  %17 = SaveAndYieldInst undefined : undefined, %BB5
+// CHECK-NEXT:  %16 = PhiInst %6, %BB2, %14, %BB4
+// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
+// CHECK-NEXT:  %18 = SaveAndYieldInst undefined : undefined, %BB5
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %18 = AllocStackInst $?anon_2_isReturn
-// CHECK-NEXT:  %19 = SaveAndYieldInst 1 : number, %BB8
+// CHECK-NEXT:  %19 = AllocStackInst $?anon_2_isReturn
+// CHECK-NEXT:  %20 = SaveAndYieldInst 1 : number, %BB8
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %20 = ReturnInst %9
+// CHECK-NEXT:  %21 = ReturnInst %10
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %21 = ResumeGeneratorInst %18
-// CHECK-NEXT:  %22 = LoadStackInst %18
-// CHECK-NEXT:  %23 = CondBranchInst %22, %BB9, %BB10
+// CHECK-NEXT:  %22 = ResumeGeneratorInst %19
+// CHECK-NEXT:  %23 = LoadStackInst %19
+// CHECK-NEXT:  %24 = CondBranchInst %23, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %25 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %25 = ReturnInst %21
+// CHECK-NEXT:  %26 = ReturnInst %22
 // CHECK-NEXT:function_end

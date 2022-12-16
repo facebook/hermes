@@ -579,20 +579,22 @@ function objectCond() {
 // CHECK:function add_empty_str(x) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %1 = AddEmptyStringInst %x
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, %1 : string
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %4 = AddEmptyStringInst %x
-// CHECK-NEXT:  %5 = CallInst %3, undefined : undefined, %4 : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %2 = AddEmptyStringInst %0
+// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, %2 : string
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %5 = AddEmptyStringInst %0
+// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, %5 : string
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str_simplify(x) : string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AddEmptyStringInst %x
-// CHECK-NEXT:  %1 = ReturnInst %0 : string
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = AddEmptyStringInst %0
+// CHECK-NEXT:  %2 = ReturnInst %1 : string
 // CHECK-NEXT:function_end
 
 // CHECK:function add_null(x, y) : undefined
@@ -764,49 +766,51 @@ function objectCond() {
 // CHECK:function comp_num(x, y) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %5 = AddEmptyStringInst %y
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %14 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %15 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %16 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %17 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %y
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %6 = AddEmptyStringInst %0
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function equality(x, y) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %9 = AsInt32Inst %y
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %14 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %15 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %16 = CallInst %0, undefined : undefined, true : boolean
-// CHECK-NEXT:  %17 = CallInst %0, undefined : undefined, false : boolean
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %y
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %10 = AsInt32Inst %0
+// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, true : boolean
+// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function arith() : undefined
@@ -839,19 +843,21 @@ function objectCond() {
 // CHECK:function strip_bang(y) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %y
-// CHECK-NEXT:  %1 = CondBranchInst %0 : number, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %y
+// CHECK-NEXT:  %1 = AsInt32Inst %0
+// CHECK-NEXT:  %2 = CondBranchInst %1 : number, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = ReturnInst 1 : number
+// CHECK-NEXT:  %3 = ReturnInst 1 : number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst 2 : number
+// CHECK-NEXT:  %4 = ReturnInst 2 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_into_as_number(y) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsNumberInst %y
-// CHECK-NEXT:  %1 = ReturnInst %0 : number
+// CHECK-NEXT:  %0 = LoadParamInst %y
+// CHECK-NEXT:  %1 = AsNumberInst %0
+// CHECK-NEXT:  %2 = ReturnInst %1 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_on_literal_into_result() : number
@@ -863,8 +869,9 @@ function objectCond() {
 // CHECK:function turn_bitor_into_as_int32(y) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AsInt32Inst %y
-// CHECK-NEXT:  %1 = ReturnInst %0 : number
+// CHECK-NEXT:  %0 = LoadParamInst %y
+// CHECK-NEXT:  %1 = AsInt32Inst %0
+// CHECK-NEXT:  %2 = ReturnInst %1 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_ops(x, y) : undefined

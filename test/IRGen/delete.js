@@ -57,10 +57,11 @@ function delete_expr() {
 // CHECK:function delete_parameter(p)
 // CHECK-NEXT:frame = [p]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %p, [p]
-// CHECK-NEXT:  %1 = ReturnInst false : boolean
+// CHECK-NEXT:  %0 = LoadParamInst %p
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [p]
+// CHECK-NEXT:  %2 = ReturnInst false : boolean
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_literal()

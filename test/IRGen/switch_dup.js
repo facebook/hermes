@@ -41,43 +41,45 @@ function foo2(x) {
 // CHECK:function foo1(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = SwitchInst %1, %BB1, 10 : number, %BB2, 11 : number, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = SwitchInst %2, %BB1, 10 : number, %BB2, 11 : number, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst 1 : number
+// CHECK-NEXT:  %5 = ReturnInst 1 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %5 = BranchInst %BB5
+// CHECK-NEXT:  %6 = BranchInst %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %6 = ReturnInst 2 : number
+// CHECK-NEXT:  %7 = ReturnInst 2 : number
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = ReturnInst 3 : number
+// CHECK-NEXT:  %9 = ReturnInst 3 : number
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %9 = BranchInst %BB1
+// CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2(x)
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %x, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = SwitchInst %1, %BB1, 10 : number, %BB2, "10" : string, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst %x
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
+// CHECK-NEXT:  %2 = LoadFrameInst [x]
+// CHECK-NEXT:  %3 = SwitchInst %2, %BB1, 10 : number, %BB2, "10" : string, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst 1 : number
+// CHECK-NEXT:  %5 = ReturnInst 1 : number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %5 = BranchInst %BB3
+// CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst 2 : number
+// CHECK-NEXT:  %7 = ReturnInst 2 : number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %7 = BranchInst %BB6
+// CHECK-NEXT:  %8 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %8 = ReturnInst 3 : number
+// CHECK-NEXT:  %9 = ReturnInst 3 : number
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %9 = BranchInst %BB1
+// CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end

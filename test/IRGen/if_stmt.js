@@ -30,10 +30,11 @@ function main(boop) {
 // CHECK:function main(boop)
 // CHECK-NEXT:frame = [foo, boop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst %boop, [boop]
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [foo]
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %boop
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [boop]
+// CHECK-NEXT:  %2 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [foo]
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo()
