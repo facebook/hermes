@@ -1548,22 +1548,28 @@ ExecutionStatus iteratorClose(
       : ExecutionStatus::EXCEPTION;
 
   // 4. Let innerResult be GetMethod(iterator, "return").
-  // Do this lazily: innerResult is only actually used if GetMethod returns
-  // a callable which, when called, doesn't throw. Defer storing to innerResult
-  // until that point.
   auto returnRes = getMethod(
       runtime,
       iterator,
       runtime.makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
 
-  MutableHandle<> innerResult{runtime};
+  // The only information we need to preserve is whether innerResult is an
+  // exception, or if it contained an object. By default, initialize it to an
+  // exception, which will be overwritten if resultRes is not an exception, and
+  // the call to the closure it references does not throw.
+  CallResult<bool> innerResultIsObject{ExecutionStatus::EXCEPTION};
+
+  // 5. If innerResult.[[Type]] is normal, then
   if (LLVM_LIKELY(returnRes != ExecutionStatus::EXCEPTION)) {
-    if (!vmisa<Callable>(returnRes->getHermesValue())) {
+    // a. Let return be innerResult.[[Value]].
+    // b. If return is undefined, return Completion(completion).
+    if (returnRes->getHermesValue().isUndefined()) {
       runtime.setThrownValue(*completion);
       return completionStatus;
     }
     Handle<Callable> returnFn =
         runtime.makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
+    // c. Set innerResult to Call(return, iterator).
     auto innerResultRes = Callable::executeCall0(returnFn, runtime, iterator);
     if (LLVM_UNLIKELY(innerResultRes == ExecutionStatus::EXCEPTION)) {
       if (isUncatchableError(runtime.getThrownValue())) {
@@ -1572,29 +1578,26 @@ ExecutionStatus iteratorClose(
         // prevent more JS from executing.
         return ExecutionStatus::EXCEPTION;
       }
-      // If the error is catchable, suppress it temporarily below in lieu
-      // of the returnRes exception by writing to innerResultException.
-      // Spec text overwrites the value in `innerResult`.
     } else {
-      innerResult = std::move(*innerResultRes);
+      innerResultIsObject = innerResultRes->getHermesValue().isObject();
     }
   }
   // Runtime::thrownValue now contains the innerResult's exception if it
   // was thrown.
-  // GetMethod error here is deliberately suppressed (no "?" in the spec).
+  // GetMethod error here is deliberately deferred (no "?" in the spec).
   if (completionStatus == ExecutionStatus::EXCEPTION) {
     // 6. If completion.[[Type]] is throw, return Completion(completion).
     // Note: Overrides the innerResult exception.
     runtime.setThrownValue(*completion);
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!runtime.getThrownValue().isEmpty())) {
+  if (LLVM_UNLIKELY(innerResultIsObject == ExecutionStatus::EXCEPTION)) {
     // 7. If innerResult.[[Type]] is throw, return Completion(innerResult).
     // Note: innerResult exception is still in Runtime::thrownValue,
     // so there is no need to set it again.
     return ExecutionStatus::EXCEPTION;
   }
-  if (!innerResult->isObject()) {
+  if (!*innerResultIsObject) {
     // 8. If Type(innerResult.[[Value]]) is not Object,
     //    throw a TypeError exception.
     return runtime.raiseTypeError("iterator.return() did not return an object");
