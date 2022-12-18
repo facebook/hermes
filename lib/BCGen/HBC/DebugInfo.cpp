@@ -9,6 +9,7 @@
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/Support/UTF8.h"
 
 using namespace hermes;
 using namespace hbc;
@@ -82,7 +83,7 @@ struct FunctionDebugInfoDeserializer {
 
 /// Decodes a string at offset \p offset in \p data, updating offset in-place.
 /// \return the decoded string.
-static llvh::StringRef decodeString(
+static llvh::StringRef getString(
     uint32_t *inoutOffset,
     llvh::ArrayRef<uint8_t> data) {
   // The string is represented as its LEB-encoded length, followed by
@@ -100,6 +101,45 @@ static llvh::StringRef decodeString(
   offset += strSize;
   *inoutOffset = offset;
   return llvh::StringRef(reinterpret_cast<const char *>(ptr), size_t(strSize));
+}
+
+void DebugInfoGenerator::appendString(
+    std::vector<uint8_t> &data,
+    Identifier str) {
+  auto res = stringTableIndex_.try_emplace(
+      str.getUnderlyingPointer(), stringTable_.size());
+
+  if (res.second) {
+#ifndef NDEBUG
+    // Check that the given string is a valid UTF8 string.
+    const char *it = str.str().begin();
+    while (it < str.str().end()) {
+      constexpr bool allowSurrogates = false;
+      // keep the current position alive so it can be inspected in the debugger
+      // if the assert fails.
+      const char *pos = it;
+      (void)pos;
+      decodeUTF8<allowSurrogates>(it, [](const llvh::Twine &) {
+        assert(false && "invalid utf8 char");
+      });
+    }
+    assert(
+        it == str.str().end() && "Invalid utf8 string -- read past end of str");
+#endif // NDEBUG
+    appendSignedLEB128(stringTable_, int64_t(str.str().size()));
+    stringTable_.insert(stringTable_.end(), str.str().begin(), str.str().end());
+  }
+
+  appendSignedLEB128(data, res.first->second);
+}
+
+llvh::StringRef DebugInfo::decodeString(
+    uint32_t *inoutOffset,
+    llvh::ArrayRef<uint8_t> data) const {
+  int64_t strOffset;
+  *inoutOffset += readSignedLEB128(data, *inoutOffset, &strOffset);
+  uint32_t strOffsetU = strOffset;
+  return getString(&strOffsetU, stringTableData());
 }
 
 OptValue<uint32_t> DebugInfo::getFilenameForAddress(
@@ -204,6 +244,27 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
   }
 
   return best;
+}
+
+OptValue<llvh::StringRef> DebugInfo::getTextifiedCalleeUTF8(
+    uint32_t debugOffset,
+    uint32_t offsetInFunction) const {
+  llvh::ArrayRef<uint8_t> data = textifiedCalleeData();
+  int64_t entries;
+  debugOffset += readSignedLEB128(data, debugOffset, &entries);
+  while (entries--) {
+    int64_t location;
+    debugOffset += readSignedLEB128(data, debugOffset, &location);
+    llvh::StringRef name = decodeString(&debugOffset, data);
+    if (location == offsetInFunction) {
+      return name;
+    }
+    if (location > offsetInFunction) {
+      break;
+    }
+  }
+
+  return llvh::None;
 }
 
 /// Read \p count variable names from \p offset into the variable name section
@@ -315,7 +376,49 @@ void DebugInfo::disassembleLexicalData(llvh::raw_ostream &OS) const {
     }
   }
   assert(offset == lexData.size());
-  OS << "  " << llvh::format_hex(offset, 6) << "  end of debug lexical table\n";
+  OS << "  " << llvh::format_hex(offset, 6)
+     << "  end of debug lexical table\n\n";
+}
+
+void DebugInfo::disassembleTextifiedCallee(llvh::raw_ostream &OS) const {
+  uint32_t offset = 0;
+  llvh::ArrayRef<uint8_t> data = textifiedCalleeData();
+
+  OS << "Textified callees table:\n";
+  auto nextInt = [&]() {
+    int64_t result;
+    offset += readSignedLEB128(data, offset, &result);
+    return (int32_t)result;
+  };
+  while (offset < data.size()) {
+    OS << "  " << llvh::format_hex(offset, 6);
+    int64_t numEntries = nextInt();
+    OS << "  entries: " << numEntries << "\n";
+    while (numEntries--) {
+      int64_t location = nextInt();
+      llvh::StringRef tCallee = decodeString(&offset, data);
+
+      OS << "    bc " << location << " calls ";
+      OS.write_escaped(tCallee);
+      OS << "\n";
+    }
+  }
+  OS << "  " << llvh::format_hex(offset, 6);
+  OS << "  end of textified callees table\n\n";
+}
+
+void DebugInfo::disassembleStringTable(llvh::raw_ostream &OS) const {
+  uint32_t offset = 0;
+  llvh::ArrayRef<uint8_t> stringTable = stringTableData();
+
+  OS << "Debug string table:\n";
+  while (offset < stringTable.size()) {
+    OS << "  " << llvh::format_hex(offset, 6) << " ";
+    OS.write_escaped(getString(&offset, stringTable));
+    OS << '\n';
+  }
+  assert(offset == stringTable.size());
+  OS << "  " << llvh::format_hex(offset, 6) << "  end of debug string table\n";
 }
 
 #ifndef HERMESVM_LEAN
@@ -422,10 +525,18 @@ DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
           UniquingFilenameTable::toStorage(std::move(filenameTable))) {
   // Initialize the empty data entry in debug lexical table.
   assert(
-      lexicalData_.size() == kEmptyLexicalDataOffset &&
-      "Lexical data should initially be kEmptyLexicalDataOffset");
+      lexicalData_.size() == kMostCommonEntryOffset &&
+      "Lexical data should initially be kMostCommonEntryOffset");
+  assert(
+      textifiedCallees_.size() == kMostCommonEntryOffset &&
+      "Textified callee should initially be kMostCommonEntryOffset");
+
+  // Lexical data table.
   appendSignedLEB128(lexicalData_, -1); // parent function
   appendSignedLEB128(lexicalData_, 0); // name count
+
+  // Textified callee table.
+  appendSignedLEB128(textifiedCallees_, 0);
 }
 
 uint32_t DebugInfoGenerator::appendLexicalData(
@@ -433,13 +544,27 @@ uint32_t DebugInfoGenerator::appendLexicalData(
     llvh::ArrayRef<Identifier> names) {
   assert(validData && "DebugInfoGenerator not valid");
   if (!parentFunc.hasValue() && names.empty()) {
-    return kEmptyLexicalDataOffset;
+    return kMostCommonEntryOffset;
   }
   const uint32_t startOffset = lexicalData_.size();
   appendSignedLEB128(lexicalData_, parentFunc ? *parentFunc : int64_t(-1));
   appendSignedLEB128(lexicalData_, names.size());
   for (Identifier name : names)
-    appendString(lexicalData_, name.str());
+    appendString(lexicalData_, name);
+  return startOffset;
+}
+
+uint32_t DebugInfoGenerator::appendTextifiedCalleeData(
+    llvh::ArrayRef<DebugTextifiedCallee> textifiedCallees) {
+  if (textifiedCallees.empty()) {
+    return kMostCommonEntryOffset;
+  }
+  const uint32_t startOffset = textifiedCallees_.size();
+  appendSignedLEB128(textifiedCallees_, textifiedCallees.size());
+  for (const DebugTextifiedCallee &callee : textifiedCallees) {
+    appendSignedLEB128(textifiedCallees_, callee.address);
+    appendString(textifiedCallees_, callee.textifiedCallee);
+  }
   return startOffset;
 }
 
@@ -447,14 +572,30 @@ DebugInfo DebugInfoGenerator::serializeWithMove() {
   assert(validData);
   validData = false;
 
-  // Append the lexical data after the sources data.
-  uint32_t lexicalStart = sourcesData_.size();
   auto combinedData = std::move(sourcesData_);
+
+  combinedData.reserve(
+      combinedData.size() + lexicalData_.size() + textifiedCallees_.size() +
+      stringTable_.size());
+
+  uint32_t lexicalStart = combinedData.size();
   combinedData.insert(
       combinedData.end(), lexicalData_.begin(), lexicalData_.end());
+
+  uint32_t textifiedCalleeStart = combinedData.size();
+  combinedData.insert(
+      combinedData.end(), textifiedCallees_.begin(), textifiedCallees_.end());
+
+  // Append the string table data.
+  uint32_t stringTableStart = combinedData.size();
+  combinedData.insert(
+      combinedData.end(), stringTable_.begin(), stringTable_.end());
+
   return DebugInfo(
       std::move(filenameStrings_),
       std::move(files_),
       lexicalStart,
+      textifiedCalleeStart,
+      stringTableStart,
       StreamVector<uint8_t>(std::move(combinedData)));
 }

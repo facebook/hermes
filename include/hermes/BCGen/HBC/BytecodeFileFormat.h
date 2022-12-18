@@ -384,6 +384,10 @@ struct DebugInfoHeader {
   uint32_t fileRegionCount;
   // Byte offset in the debug data for the lexical data.
   uint32_t lexicalDataOffset;
+  // Byte offset in the debug data for the textified callee table.
+  uint32_t textifiedCalleeOffset;
+  // Byte offset in the debug data for the string table.
+  uint32_t stringTableOffset;
   // Size in bytes of the debug data.
   uint32_t debugDataSize;
 };

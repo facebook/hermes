@@ -92,7 +92,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 90
+// CHKBC-NEXT:  Bytecode version number: 91
 // CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKBC-NEXT:  Function count: 4
 // CHKBC-NEXT:  String count: 13
@@ -133,7 +133,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
 // CHKBC-NEXT:Function<global>(1 params, 12 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
@@ -154,13 +154,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(2 params, 9 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0019, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    LoadParam         r1, 1
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<shadows>(1 params, 11 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0020, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0020, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r0, r0, 1, "print"
 // CHKBC-NEXT:    NewObject         r2
@@ -172,7 +172,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<checkNonStaticBuiltin>(1 params, 11 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0030, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0030, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r2, r0, 1, "HermesInternal"
 // CHKBC-NEXT:    GetByIdShort      r1, r2, 2, "concat"
@@ -212,3 +212,10 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC:Debug lexical table:
 // CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHKBC-NEXT:  0x0002  end of debug lexical table
+
+// CHKBC:Textified callees table:
+// CHKBC-NEXT:  0x0000  entries: 0
+// CHKBC-NEXT:  0x0001  end of textified callees table
+
+// CHKBC:Debug string table:
+// CHKBC-NEXT:  0x0000  end of debug string table

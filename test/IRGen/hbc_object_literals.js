@@ -117,7 +117,7 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 90
+// BCGEN-NEXT:  Bytecode version number: 91
 // BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // BCGEN-NEXT:  Function count: 2
 // BCGEN-NEXT:  String count: 24
@@ -199,7 +199,7 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:Function<global>(1 params, 5 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
@@ -284,3 +284,10 @@ var obj4 = {
 // BCGEN:Debug lexical table:
 // BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
 // BCGEN-NEXT:  0x0002  end of debug lexical table
+
+// BCGEN:Textified callees table:
+// BCGEN-NEXT:  0x0000  entries: 0
+// BCGEN-NEXT:  0x0001  end of textified callees table
+
+// BCGEN:Debug string table:
+// BCGEN-NEXT:  0x0000  end of debug string table

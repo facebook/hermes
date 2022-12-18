@@ -132,6 +132,9 @@ void HBCISel::resolveRelocations() {
         case Relocation::DebugInfo:
           // Nothing, just keep track of the location.
           break;
+        case Relocation::TextifiedCallee:
+          // Nothing to update.
+          break;
         case Relocation::JumpTableDispatch:
           auto &switchImmInfo = switchImmInfo_[cast<SwitchImmInst>(pointer)];
           // update default target jmp
@@ -274,6 +277,15 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
     info.address = 0;
     info.statement = 0;
     BCFGen_->setSourceLocation(info);
+  }
+}
+
+void HBCISel::addDebugTextifiedCalleeInfo() {
+  for (auto &reloc : relocations_) {
+    if (reloc.type != Relocation::TextifiedCallee)
+      continue;
+    BCFGen_->addDebugTextfiedCallee(
+        {reloc.loc, llvh::cast<LiteralString>(reloc.pointer)->getValue()});
   }
 }
 
@@ -1676,11 +1688,13 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
   LLVM_DEBUG(dbgs() << "Generating the instruction " << ii->getName() << "\n");
 
   // Generate the debug info.
+  bool isDebugInfoLevelThrowing = false;
   switch (F_->getContext().getDebugInfoSetting()) {
     case DebugInfoSetting::THROWING:
       if (!ii->mayExecute()) {
         break;
       }
+      isDebugInfoLevelThrowing = true;
     // Falls through - if ii can execute.
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
@@ -1689,6 +1703,16 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
             {BCFGen_->getCurrentLocation(),
              Relocation::RelocationType::DebugInfo,
              ii});
+      }
+      if (!isDebugInfoLevelThrowing) {
+        if (auto *call = llvh::dyn_cast<CallInst>(ii)) {
+          if (LiteralString *textifiedCallee = call->getTextifiedCallee()) {
+            relocations_.push_back(
+                {BCFGen_->getCurrentLocation(),
+                 Relocation::RelocationType::TextifiedCallee,
+                 textifiedCallee});
+          }
+        }
       }
       break;
   }
@@ -1731,6 +1755,7 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   resolveRelocations();
   resolveExceptionHandlers();
   addDebugSourceLocationInfo(outSourceMap);
+  addDebugTextifiedCalleeInfo();
   generateJumpTable();
   addDebugLexicalInfo();
   populatePropertyCachingInfo();

@@ -31,7 +31,7 @@ var z = [{}];
 //CHECK-NEXT:[String 0]
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "x"
 //CHECK-NEXT:    DeclareGlobalVar  "y"
 //CHECK-NEXT:    DeclareGlobalVar  "z"

@@ -21,7 +21,7 @@ exports.bar = bar;
 // Auto-generated content below. Please do not modify manually.
 
 // CHKOPT:Bytecode File Information:
-// CHKOPT-NEXT:  Bytecode version number: 90
+// CHKOPT-NEXT:  Bytecode version number: 91
 // CHKOPT-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKOPT-NEXT:  Function count: 7
 // CHKOPT-NEXT:  String count: 7
@@ -55,7 +55,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 10 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    LoadConstUInt8    r2, 1
 // CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 // CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
@@ -68,7 +68,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<bar>(1 params, 10 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0010, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    LoadConstUInt8    r2, 2
 // CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 // CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "baz"
@@ -77,7 +77,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 2 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x001d, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
@@ -86,7 +86,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<>(1 params, 11 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0024, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    GetGlobalObject   r0
 // CHKOPT-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKOPT-NEXT:    LoadConstUndefined r1
@@ -96,7 +96,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 2 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x002e, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
@@ -105,7 +105,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<>(1 params, 11 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0035, lexical 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0035, lexical 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    GetGlobalObject   r0
 // CHKOPT-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKOPT-NEXT:    LoadConstUndefined r1
@@ -150,8 +150,15 @@ exports.bar = bar;
 // CHKOPT-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHKOPT-NEXT:  0x0002  end of debug lexical table
 
+// CHKOPT:Textified callees table:
+// CHKOPT-NEXT:  0x0000  entries: 0
+// CHKOPT-NEXT:  0x0001  end of textified callees table
+
+// CHKOPT:Debug string table:
+// CHKOPT-NEXT:  0x0000  end of debug string table
+
 // CHKDBG:Bytecode File Information:
-// CHKDBG-NEXT:  Bytecode version number: 90
+// CHKDBG-NEXT:  Bytecode version number: 91
 // CHKDBG-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKDBG-NEXT:  Function count: 7
 // CHKDBG-NEXT:  String count: 7
@@ -188,7 +195,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r2
 
 // CHKDBG:Function<cjs_module>(4 params, 21 registers, 5 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -215,7 +222,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<bar>(1 params, 16 registers, 1 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0010, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
 // CHKDBG-NEXT:    LoadConstUInt8    r2, 2
@@ -232,7 +239,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r1
 
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x001d, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -247,7 +254,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0024, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    GetGlobalObject   r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
@@ -260,7 +267,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r3
 
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x002e, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -275,7 +282,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0035, lexical 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0035, lexical 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    GetGlobalObject   r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
@@ -322,3 +329,10 @@ exports.bar = bar;
 // CHKDBG:Debug lexical table:
 // CHKDBG-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHKDBG-NEXT:  0x0002  end of debug lexical table
+
+// CHKDBG:Textified callees table:
+// CHKDBG-NEXT:  0x0000  entries: 0
+// CHKDBG-NEXT:  0x0001  end of textified callees table
+
+// CHKDBG:Debug string table:
+// CHKDBG-NEXT:  0x0000  end of debug string table

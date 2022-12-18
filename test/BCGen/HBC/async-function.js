@@ -24,7 +24,7 @@ var simpleAsyncFE = async function () {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 90
+// CHECK-NEXT:  Bytecode version number: 91
 // CHECK-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHECK-NEXT:  Function count: 10
 // CHECK-NEXT:  String count: 11
@@ -58,7 +58,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  Function ID 9 -> s0
 
 // CHECK:Function<global>(1 params, 9 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "simpleAsyncFE"
 // CHECK-NEXT:    DeclareGlobalVar  "simpleReturn"
 // CHECK-NEXT:    DeclareGlobalVar  "simpleAwait"
@@ -76,7 +76,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r7
 
 // CHECK:NCFunction<simpleReturn>(1 params, 19 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000d, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1
 // CHECK-NEXT:    LoadConstUndefined r2
@@ -112,7 +112,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r3
 
 // CHECK:NCFunction<simpleAwait>(1 params, 19 registers, 1 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1
 // CHECK-NEXT:    LoadConstUndefined r2
@@ -137,7 +137,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<?anon_0_?anon_0_simpleAwait>(1 params, 8 registers, 1 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x001b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x001b, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r1
@@ -164,7 +164,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r4
 
 // CHECK:NCFunction<simpleAsyncFE>(1 params, 19 registers, 1 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0025, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0025, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadThisNS        r1
 // CHECK-NEXT:    LoadConstUndefined r2
@@ -189,7 +189,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<?anon_0_?anon_0_simpleAsyncFE>(1 params, 8 registers, 1 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x002c, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x002c, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r1
@@ -243,3 +243,10 @@ var simpleAsyncFE = async function () {
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHECK-NEXT:  0x0002  end of debug lexical table
+
+// CHECK:Textified callees table:
+// CHECK-NEXT:  0x0000  entries: 0
+// CHECK-NEXT:  0x0001  end of textified callees table
+
+// CHECK:Debug string table:
+// CHECK-NEXT:  0x0000  end of debug string table

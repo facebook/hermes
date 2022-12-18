@@ -62,18 +62,31 @@ function Fc() {
 // CHECK:   0x{{[0-9a-f]+}}  function idx 4, {{.*}}
 // CHECK:   0x{{[0-9a-f]+}}  end of debug source table
 // CHECK: Debug lexical table:
-// CHECK-NEXT:   0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:   0x0002  lexical parent: 0, variable count: 2
-// CHECK-NEXT:     "v1a"
-// CHECK-NEXT:     "v2a"
-// CHECK-NEXT:   0x000c  lexical parent: 0, variable count: 1
-// CHECK-NEXT:     "v1b"
-// CHECK-NEXT:   0x0012  lexical parent: 0, variable count: 2
-// CHECK-NEXT:     "v1c"
-// CHECK-NEXT:     "Fcc"
-// CHECK-NEXT:   0x001c  lexical parent: 3, variable count: 1
-// CHECK-NEXT:     "v1cc"
-// CHECK-NEXT:   0x0023  end of debug lexical table
+// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
+// CHECK-NEXT:  0x0002  lexical parent: 0, variable count: 2
+// CHECK-NEXT:    "v1a"
+// CHECK-NEXT:    "v2a"
+// CHECK-NEXT:  0x0006  lexical parent: 0, variable count: 1
+// CHECK-NEXT:    "v1b"
+// CHECK-NEXT:  0x0009  lexical parent: 0, variable count: 2
+// CHECK-NEXT:    "v1c"
+// CHECK-NEXT:    "Fcc"
+// CHECK-NEXT:  0x000d  lexical parent: 3, variable count: 1
+// CHECK-NEXT:    "v1cc"
+// CHECK-NEXT:  0x0010  end of debug lexical table
+
+// CHECK: Textified callees table:
+// CHECK-NEXT:   0x0000  entries: 0
+// CHECK-NEXT:   0x0001  end of textified callees table
+
+// CHECK: Debug string table:
+// CHECK-NEXT:   0x0000 v1a
+// CHECK-NEXT:   0x0004 v2a
+// CHECK-NEXT:   0x0008 v1b
+// CHECK-NEXT:   0x000c v1c
+// CHECK-NEXT:   0x0010 Fcc
+// CHECK-NEXT:   0x0014 v1cc
+// CHECK-NEXT:   0x0019  end of debug string table
 
 // UNICODE:      Debug source table:
 // UNICODE-NEXT:   0x{{[0-9a-f]+}}  function idx 0, {{.*}}
@@ -83,15 +96,28 @@ function Fc() {
 // UNICODE:   0x{{[0-9a-f]+}}  function idx 4, {{.*}}
 // UNICODE:   0x{{[0-9a-f]+}}  end of debug source table
 // UNICODE: Debug lexical table:
-// UNICODE-NEXT:   0x0000  lexical parent: none, variable count: 0
-// UNICODE-NEXT:   0x0002  lexical parent: 0, variable count: 2
-// UNICODE-NEXT:     "v1a"
-// UNICODE-NEXT:     "v2a"
-// UNICODE-NEXT:   0x000c  lexical parent: 0, variable count: 1
-// UNICODE-NEXT:     "v1b"
-// UNICODE-NEXT:   0x0012  lexical parent: 0, variable count: 2
-// UNICODE-NEXT:     "v1c"
-// UNICODE-NEXT:     "Fcc"
-// UNICODE-NEXT:   0x001c  lexical parent: 3, variable count: 1
-// UNICODE-NEXT:     "v1cc"
-// UNICODE-NEXT:   0x0023  end of debug lexical table
+// UNICODE-NEXT:  0x0000  lexical parent: none, variable count: 0
+// UNICODE-NEXT:  0x0002  lexical parent: 0, variable count: 2
+// UNICODE-NEXT:    "v1a"
+// UNICODE-NEXT:    "v2a"
+// UNICODE-NEXT:  0x0006  lexical parent: 0, variable count: 1
+// UNICODE-NEXT:    "v1b"
+// UNICODE-NEXT:  0x0009  lexical parent: 0, variable count: 2
+// UNICODE-NEXT:    "v1c"
+// UNICODE-NEXT:    "Fcc"
+// UNICODE-NEXT:  0x000d  lexical parent: 3, variable count: 1
+// UNICODE-NEXT:    "v1cc"
+// UNICODE-NEXT:  0x0010  end of debug lexical table
+
+// UNICODE:Textified callees table:
+// UNICODE-NEXT:  0x0000  entries: 0
+// UNICODE-NEXT:  0x0001  end of textified callees table
+
+// UNICODE:Debug string table:
+// UNICODE-NEXT:  0x0000 v1a
+// UNICODE-NEXT:  0x0004 v2a
+// UNICODE-NEXT:  0x0008 v1b
+// UNICODE-NEXT:  0x000c v1c
+// UNICODE-NEXT:  0x0010 Fcc
+// UNICODE-NEXT:  0x0014 v1cc
+// UNICODE-NEXT:  0x0019  end of debug string table

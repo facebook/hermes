@@ -81,6 +81,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// Table mapping variable names to frame locations.
   std::vector<Identifier> debugVariableNames_;
 
+  /// Table mapping addresses to textified callees.
+  std::vector<DebugTextifiedCallee> textifiedCallees_;
+
   /// Lexical parent function ID, i.e. the lexically containing function.
   OptValue<uint32_t> lexicalParentID_{};
 
@@ -178,7 +181,16 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   bool hasDebugInfo() const {
     return !debugLocations_.empty() || lexicalParentID_ ||
-        !debugVariableNames_.empty();
+        !debugVariableNames_.empty() || !textifiedCallees_.empty();
+  }
+
+  // Add the textified callee string for the callable in a given location.
+  void addDebugTextfiedCallee(const DebugTextifiedCallee &tCallee) {
+    textifiedCallees_.emplace_back(tCallee);
+  }
+
+  llvh::ArrayRef<DebugTextifiedCallee> getTextifiedCallees() const {
+    return textifiedCallees_;
   }
 
   /// Add a debug variable named \name.

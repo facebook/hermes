@@ -635,6 +635,8 @@ void BCProviderFromBuffer::createDebugInfo() {
       filenameStorage,
       std::move(files),
       header->lexicalDataOffset,
+      header->textifiedCalleeOffset,
+      header->stringTableOffset,
       hbc::StreamVector<uint8_t>{buf, header->debugDataSize});
 }
 

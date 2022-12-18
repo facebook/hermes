@@ -43,6 +43,8 @@ class HBCISel {
       CatchType,
       // Debug info
       DebugInfo,
+      // Textified callee
+      TextifiedCallee,
       // Jump table dispatch
       JumpTableDispatch,
     };
@@ -141,6 +143,7 @@ class HBCISel {
 
   /// Add applicable debug info.
   void addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap);
+  void addDebugTextifiedCalleeInfo();
   void addDebugLexicalInfo();
 
   /// Populate Property caching metadata to the function.

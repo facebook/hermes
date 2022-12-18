@@ -17,6 +17,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
+#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Format.h"
 
@@ -73,6 +74,15 @@ struct DebugSourceLocation {
   }
 };
 
+/// The string representing a textual name for a call instruction's callee
+/// argument.
+struct DebugTextifiedCallee {
+  // The bytecode offset of this debug info.
+  uint32_t address{0};
+  // A textual name for the function being called. Must be a valid UTF8 string.
+  Identifier textifiedCallee;
+};
+
 /// A type wrapping up the offsets into debugging data.
 struct DebugOffsets {
   /// Offsets into the debugging data of the source locations
@@ -82,13 +92,16 @@ struct DebugOffsets {
   /// Offset into the lexical data section of the debugging data.
   uint32_t lexicalData = NO_OFFSET;
 
+  /// Offset into the textified callee data section of the debugging data.
+  uint32_t textifiedCallees = NO_OFFSET;
+
   /// Sentinel value indicating no offset.
   static constexpr uint32_t NO_OFFSET = UINT32_MAX;
 
   /// Constructors.
   DebugOffsets() = default;
-  DebugOffsets(uint32_t src, uint32_t lex)
-      : sourceLocations(src), lexicalData(lex) {}
+  DebugOffsets(uint32_t src, uint32_t lex, uint32_t tCallee)
+      : sourceLocations(src), lexicalData(lex), textifiedCallees(tCallee) {}
 };
 
 /// A result of a search for a bytecode offset for where a line/column fall.
@@ -133,10 +146,18 @@ class DebugInfo {
 
   DebugFileRegionList files_{};
   uint32_t lexicalDataOffset_ = 0;
+  uint32_t textifiedCalleeOffset_ = 0;
+  uint32_t stringTableOffset_ = 0;
   StreamVector<uint8_t> data_{};
 
   /// Get source filename as string id.
   OptValue<uint32_t> getFilenameForAddress(uint32_t debugOffset) const;
+
+  /// Decodes a string at offset \p offset in \p data, updating offset in-place.
+  /// \return the decoded string.
+  llvh::StringRef decodeString(
+      uint32_t *inoutOffset,
+      llvh::ArrayRef<uint8_t> data) const;
 
  public:
   explicit DebugInfo() = default;
@@ -146,11 +167,15 @@ class DebugInfo {
       ConsecutiveStringStorage &&filenameStrings,
       DebugFileRegionList &&files,
       uint32_t lexicalDataOffset,
+      uint32_t textifiedCalleeOffset,
+      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(filenameStrings.acquireStringTable()),
         filenameStorage_(filenameStrings.acquireStringStorage()),
         files_(std::move(files)),
         lexicalDataOffset_(lexicalDataOffset),
+        textifiedCalleeOffset_(textifiedCalleeOffset),
+        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   explicit DebugInfo(
@@ -158,11 +183,15 @@ class DebugInfo {
       std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
       uint32_t lexicalDataOffset,
+      uint32_t textifiedCalleeOffset,
+      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(std::move(filenameStrings)),
         filenameStorage_(std::move(filenameStorage)),
         files_(std::move(files)),
         lexicalDataOffset_(lexicalDataOffset),
+        textifiedCalleeOffset_(textifiedCalleeOffset),
+        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   DebugInfo &operator=(DebugInfo &&that) = default;
@@ -192,9 +221,23 @@ class DebugInfo {
     return lexicalDataOffset_;
   }
 
+  uint32_t textifiedCalleeOffset() const {
+    return textifiedCalleeOffset_;
+  }
+
+  uint32_t stringTableOffset() const {
+    return stringTableOffset_;
+  }
+
   /// Get the location of \p offsetInFunction, given the function's debug
   /// offset.
   OptValue<DebugSourceLocation> getLocationForAddress(
+      uint32_t debugOffset,
+      uint32_t offsetInFunction) const;
+
+  /// \return the name of the textified callee for the function called in the
+  /// given \p offsetInFunction. Encoding is UTF8.
+  OptValue<llvh::StringRef> getTextifiedCalleeUTF8(
       uint32_t debugOffset,
       uint32_t offsetInFunction) const;
 
@@ -216,9 +259,16 @@ class DebugInfo {
   /// none.
   OptValue<uint32_t> getParentFunctionId(uint32_t offset) const;
 
+  /// \return the size in bytes of the serialized string table.
+  uint32_t getStringTableSizeBytes() const {
+    return stringTableOffset_ - textifiedCalleeOffset_;
+  }
+
  private:
   /// Accessors for portions of data_, which looks like this:
-  /// [sourceLocations][lexicalData]
+  /// [sourceLocations][lexicalData][textifiedCallee][stringTable]
+  ///                  |            |                ^ stringTableOffset_
+  ///                  |            ^ textifiedCalleeOffset_
   ///                  ^ lexicalDataOffset_
 
   /// \return the slice of data_ reflecting the source locations.
@@ -228,18 +278,34 @@ class DebugInfo {
 
   /// \return the slice of data_ reflecting the lexical data.
   llvh::ArrayRef<uint8_t> lexicalData() const {
-    return data_.getData().slice(lexicalDataOffset_);
+    return data_.getData().slice(
+        lexicalDataOffset_, textifiedCalleeOffset_ - lexicalDataOffset_);
+  }
+
+  /// \return the slice of data_ reflecting the textified callee table.
+  llvh::ArrayRef<uint8_t> textifiedCalleeData() const {
+    return data_.getData().slice(
+        textifiedCalleeOffset_, getStringTableSizeBytes());
+  }
+
+  /// \return the slice of data_ reflecting the string table data.
+  llvh::ArrayRef<uint8_t> stringTableData() const {
+    return data_.getData().slice(stringTableOffset_);
   }
 
   void disassembleFilenames(llvh::raw_ostream &OS) const;
   void disassembleFilesAndOffsets(llvh::raw_ostream &OS) const;
   void disassembleLexicalData(llvh::raw_ostream &OS) const;
+  void disassembleTextifiedCallee(llvh::raw_ostream &OS) const;
+  void disassembleStringTable(llvh::raw_ostream &OS) const;
 
  public:
   void disassemble(llvh::raw_ostream &OS) const {
     disassembleFilenames(OS);
     disassembleFilesAndOffsets(OS);
     disassembleLexicalData(OS);
+    disassembleTextifiedCallee(OS);
+    disassembleStringTable(OS);
   }
 
 #ifndef HERMESVM_LEAN
@@ -257,16 +323,17 @@ class DebugInfo {
 
 class DebugInfoGenerator {
  private:
-  /// An offset into Debug Lexical Table pointing to a special entry,
-  /// representing the most common value in the Debug Lexical Table
+  /// A special offset for representing the most common entry in its table.
+  ///
+  /// For Debug Lexical Table, it represents the most common lexical info
   /// (vars count: 0, lexical parent: none). When compiled without -g,
   /// this common value applies to all functions without local variables.
-  /// This optimization reduces hbc bundle size.
+  /// This optimization reduces hbc bundle size; When compiled with -g, the
+  /// lexical parent is none for the global function, but not any other
+  /// functions. As a result, this optimization does not provide value.
   ///
-  /// When compiled with -g, the lexical parent is none for the global
-  /// function, but not any other functions. As a result, this optimization
-  /// does not provide value.
-  static constexpr uint32_t kEmptyLexicalDataOffset = 0;
+  /// For textified callee table, it represents an empty table.
+  static constexpr uint32_t kMostCommonEntryOffset = 0;
 
   bool validData{true};
 
@@ -284,6 +351,17 @@ class DebugInfoGenerator {
   /// associated with each code block.
   std::vector<uint8_t> lexicalData_;
 
+  /// Serialized textified callee table.
+  std::vector<uint8_t> textifiedCallees_;
+
+  /// The debug info string table. All string entries in the debug info records
+  /// point to an entry in this table. Strings are encoded as size-prefixed,
+  /// UTF8-encoded payloads.
+  std::vector<uint8_t> stringTable_;
+
+  /// An index for strings in stringTable_.
+  llvh::DenseMap<UniqueString *, uint32_t> stringTableIndex_;
+
   int32_t delta(uint32_t to, uint32_t from) {
     int64_t diff = (int64_t)to - from;
     // It's unlikely that lines or columns will ever jump from 0 to 3 billion,
@@ -294,12 +372,9 @@ class DebugInfoGenerator {
     return (int32_t)diff;
   }
 
-  /// Appends a string \p str to the given \p data.
-  /// This first appends the string's length, followed by the string bytes.
-  static void appendString(std::vector<uint8_t> &data, llvh::StringRef str) {
-    appendSignedLEB128(data, int64_t(str.size()));
-    data.insert(data.end(), str.begin(), str.end());
-  }
+  /// Appends \p str to stringTable_ if not already present, then
+  /// appends \p str's offset in stringTable_ to the given \p data.
+  void appendString(std::vector<uint8_t> &data, Identifier str);
 
   /// No copy constructor or copy assignment operator.
   /// Note that filenameStrings_ is of type ConsecutiveStringStorage, which
@@ -318,11 +393,17 @@ class DebugInfoGenerator {
       llvh::ArrayRef<DebugSourceLocation> offsets);
 
   /// Append lexical data including parent function \p parentFunctionIndex and
-  /// list of variable names \p names to the debug data. \return the offset in
-  /// the lexical section of the debug data.
+  /// list of variable names \p names to the debug data. Each string in \p names
+  /// must be a valid UTF8 string. \return the offset in the lexical section of
+  /// the debug data.
   uint32_t appendLexicalData(
       OptValue<uint32_t> parentFunctionIndex,
       llvh::ArrayRef<Identifier> names);
+
+  /// Append the textified callee data to the debug data. \return the offset in
+  /// the textified callee table of the debug data.
+  uint32_t appendTextifiedCalleeData(
+      llvh::ArrayRef<DebugTextifiedCallee> textifiedCallees);
 
   // Destructively move memory to a DebugInfo.
   DebugInfo serializeWithMove();

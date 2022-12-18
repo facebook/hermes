@@ -22,7 +22,7 @@ function *args() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 90
+// CHECK-NEXT:  Bytecode version number: 91
 // CHECK-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHECK-NEXT:  Function count: 5
 // CHECK-NEXT:  String count: 8
@@ -52,7 +52,7 @@ function *args() {
 // CHECK-NEXT:  Function ID 4 -> s0
 
 // CHECK:Function<global>(1 params, 8 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
 // CHECK-NEXT:    CreateEnvironment r0
@@ -74,7 +74,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<?anon_0_loop>(2 params, 14 registers, 2 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -121,7 +121,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<?anon_0_args>(1 params, 7 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0020, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0020, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -172,3 +172,10 @@ function *args() {
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHECK-NEXT:  0x0002  end of debug lexical table
+
+// CHECK:Textified callees table:
+// CHECK-NEXT:  0x0000  entries: 0
+// CHECK-NEXT:  0x0001  end of textified callees table
+
+// CHECK:Debug string table:
+// CHECK-NEXT:  0x0000  end of debug string table

@@ -36,7 +36,7 @@ function foo() {
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 90
+// CHKBC-NEXT:  Bytecode version number: 91
 // CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKBC-NEXT:  Function count: 2
 // CHKBC-NEXT:  String count: 3
@@ -57,7 +57,7 @@ function foo() {
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
 // CHKBC:Function<global>(1 params, 2 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    CreateEnvironment r0
@@ -68,7 +68,7 @@ function foo() {
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0007, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0007, lexical 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
 // CHKBC-NEXT:    Ret               r0
@@ -89,3 +89,10 @@ function foo() {
 // CHKBC:Debug lexical table:
 // CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0
 // CHKBC-NEXT:  0x0002  end of debug lexical table
+
+// CHKBC:Textified callees table:
+// CHKBC-NEXT:  0x0000  entries: 0
+// CHKBC-NEXT:  0x0001  end of textified callees table
+
+// CHKBC:Debug string table:
+// CHKBC-NEXT:  0x0000  end of debug string table

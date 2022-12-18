@@ -110,7 +110,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 90
+// BCGEN-NEXT:  Bytecode version number: 91
 // BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // BCGEN-NEXT:  Function count: 6
 // BCGEN-NEXT:  String count: 6
@@ -134,7 +134,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
 
 // BCGEN:Function<global>(1 params, 3 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
@@ -156,14 +156,14 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo1>(2 params, 9 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0013, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0013, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    LoadParam         r1, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    Call1             r1, r1, r0
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo2>(2 params, 11 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x001a, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x001a, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    LoadParam         r2, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    LoadConstUInt8    r1, 1
@@ -171,7 +171,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo3>(2 params, 13 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0021, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0021, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    LoadParam         r3, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    LoadConstUInt8    r2, 1
@@ -180,7 +180,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo4>(2 params, 15 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0028, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0028, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    LoadParam         r4, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    LoadConstUInt8    r3, 1
@@ -190,7 +190,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo5>(2 params, 17 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x002f, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x002f, lexical 0x0000, textified callees 0x0000
 // BCGEN-NEXT:    LoadParam         r5, 1
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    LoadConstUInt8    r9, 1
@@ -229,3 +229,10 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN:Debug lexical table:
 // BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
 // BCGEN-NEXT:  0x0002  end of debug lexical table
+
+// BCGEN:Textified callees table:
+// BCGEN-NEXT:  0x0000  entries: 0
+// BCGEN-NEXT:  0x0001  end of textified callees table
+
+// BCGEN:Debug string table:
+// BCGEN-NEXT:  0x0000  end of debug string table

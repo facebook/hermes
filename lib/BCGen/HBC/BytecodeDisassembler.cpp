@@ -1278,6 +1278,13 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
       } else {
         OS << llvh::format_hex(debugLexicalOffset, 6);
       }
+      OS << ", textified callees ";
+      uint32_t textifiedCalleeOffset = funcDebugOffsets->textifiedCallees;
+      if (textifiedCalleeOffset == DebugOffsets::NO_OFFSET) {
+        OS << "none";
+      } else {
+        OS << llvh::format_hex(textifiedCalleeOffset, 6);
+      }
       OS << '\n';
     }
     disassembleFunction(funcId, OS);
