@@ -727,25 +727,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::get for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': " + ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::get for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': " + ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::get: for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': <unknown exception>")));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::get: for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': <unknown exception>");
       }
 
       return hvFromValue(ret);
@@ -765,25 +757,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::set for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': " + ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::set for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': " + ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::set: for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': <unknown exception>")));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::set: for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': <unknown exception>");
       }
       return true;
     }
@@ -817,20 +801,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    std::string("Exception in HostObject::getPropertyNames: ") +
-                        ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::getPropertyNames: "} +
+            ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::getPropertyNames: <unknown>")));
+        return rt_.runtime_.raiseError(vm::TwineChar16{
+            "Exception in HostObject::getPropertyNames: <unknown>"});
       }
     };
   };
@@ -868,17 +844,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return runtime.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt.runtime_.setThrownValue(hvFromValue(
-            rt.global()
-                .getPropertyAsFunction(rt, "Error")
-                .call(
-                    rt,
-                    std::string("Exception in HostFunction: ") + ex.what())));
+        return runtime.raiseError(
+            vm::TwineChar16{"Exception in HostFunction: "} + ex.what());
       } catch (...) {
-        return rt.runtime_.setThrownValue(
-            hvFromValue(rt.global()
-                            .getPropertyAsFunction(rt, "Error")
-                            .call(rt, "Exception in HostFunction: <unknown>")));
+        return runtime.raiseError("Exception in HostFunction: <unknown>");
       }
 
       return hvFromValue(ret);
