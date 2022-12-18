@@ -1,0 +1,510 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHK-BCG:Bytecode File Information:
+// CHK-BCG-NEXT:  Bytecode version number: 91
+// CHK-BCG-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHK-BCG-NEXT:  Function count: 18
+// CHK-BCG-NEXT:  String count: 19
+// CHK-BCG-NEXT:  BigInt count: 0
+// CHK-BCG-NEXT:  String Kind Entry count: 2
+// CHK-BCG-NEXT:  RegExp count: 0
+// CHK-BCG-NEXT:  Segment ID: 0
+// CHK-BCG-NEXT:  CommonJS module count: 0
+// CHK-BCG-NEXT:  CommonJS module count (static): 0
+// CHK-BCG-NEXT:  Function source count: 0
+// CHK-BCG-NEXT:  Bytecode options:
+// CHK-BCG-NEXT:    staticBuiltins: 0
+// CHK-BCG-NEXT:    cjsModulesStaticallyResolved: 0
+
+// CHK-BCG:Global String Table:
+// CHK-BCG-NEXT:s0[ASCII, 0..-1]:
+// CHK-BCG-NEXT:s1[ASCII, 0..0]: :
+// CHK-BCG-NEXT:s2[ASCII, 9..14]: errors
+// CHK-BCG-NEXT:s3[ASCII, 15..20]: global
+// CHK-BCG-NEXT:s4[ASCII, 28..30]: str
+// CHK-BCG-NEXT:s5[UTF-16, 218..301]: \x0A\x00\x0A\x00\x63\x00\xE0\x00\x6C\x00\x6C\x00\x0A\x00\x20\x00\x20\x00\x54\x00\x20\x00\x20\x00\x20\x00\x20\x00\x20\x00\xF4\x00\x20\x00\x20\x00\x20\x00\x20\x00\x20\x00\xDC\x00\x0A\x00\x0A\x00\x20\x00\x6E\x00\x20\x00\x64\x00\x20\x00\x65\x00\x20\x00\x66\x00\x20\x00\x69\x00\x20\x00\x6E\x00\x20\x00\xE8\x00\x20\x00\x64\x00\x0A\x00\x0A\x00
+// CHK-BCG-NEXT:i6[ASCII, 1..4] #E7ECD7B6: name
+// CHK-BCG-NEXT:i7[ASCII, 3..9] #63D87C1C: message
+// CHK-BCG-NEXT:i8[ASCII, 19..19] #00018270: a
+// CHK-BCG-NEXT:i9[ASCII, 21..26] #CB8DFA65: concat
+// CHK-BCG-NEXT:i10[ASCII, 26..29] #1100B6AC: test
+// CHK-BCG-NEXT:i11[ASCII, 31..44] #85BBF6F9: HermesInternal
+// CHK-BCG-NEXT:i12[ASCII, 45..106] #ABFBB1BC: a0000000111111111122222222223333333333444444444455555555556666
+// CHK-BCG-NEXT:i13[ASCII, 107..209] #89B63FF5: a00000001111111111222222222233ThisShouldNotShowUpAtInTheTextifiedCallee33333333444444444455555555556666
+// CHK-BCG-NEXT:i14[ASCII, 210..210] #00018E43: b
+// CHK-BCG-NEXT:i15[ASCII, 211..215] #A689F65B: print
+// CHK-BCG-NEXT:i16[ASCII, 216..216] #0001EFDB: z
+// CHK-BCG-NEXT:i17[UTF-16, 302..425] #3CFBC16D: \xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xEA\x00\xEA\x00\xEA\x00\xEA\x00
+// CHK-BCG-NEXT:i18[UTF-16, 426..635] #71F2758E: \xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xF2\x00\xF2\x00\xFC\x00\x54\x00\x68\x00\x69\x00\x73\x00\x53\x00\x68\x00\x6F\x00\x75\x00\x6C\x00\x64\x00\x4E\x00\x6F\x00\x74\x00\x53\x00\x68\x00\x6F\x00\x77\x00\x55\x00\x70\x00\x41\x00\x74\x00\x49\x00\x6E\x00\x54\x00\x68\x00\xE8\x00\x54\x00\x65\x00\x78\x00\x74\x00\x69\x00\x66\x00\x69\x00\x65\x00\x64\x00\x43\x00\x61\x00\x6C\x00\x6C\x00\x65\x00\x65\x00\xFC\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xEA\x00\xEA\x00\xEA\x00\xEA\x00
+
+// CHK-BCG:Function<global>(1 params, 13 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0001
+// CHK-BCG-NEXT:    DeclareGlobalVar  "a"
+// CHK-BCG-NEXT:    DeclareGlobalVar  "test"
+// CHK-BCG-NEXT:    CreateEnvironment r0
+// CHK-BCG-NEXT:    CreateClosure     r2, r0, Function<test>
+// CHK-BCG-NEXT:    GetGlobalObject   r1
+// CHK-BCG-NEXT:    PutById           r1, r2, 1, "test"
+// CHK-BCG-NEXT:    TryGetById        r4, r1, 1, "print"
+// CHK-BCG-NEXT:    LoadConstUndefined r2
+// CHK-BCG-NEXT:    LoadConstString   r3, "errors"
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    NewObject         r3
+// CHK-BCG-NEXT:    CreateClosure     r4, r0, NCFunction<b>
+// CHK-BCG-NEXT:    PutNewOwnByIdShort r3, r4, "b"
+// CHK-BCG-NEXT:    PutById           r1, r3, 2, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r3, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG-NEXT:    GetByIdShort      r1, r1, 2, "test"
+// CHK-BCG-NEXT:    CreateClosure     r0, r0, NCFunction<>
+// CHK-BCG-NEXT:    Call2             r0, r1, r2, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:Function<test>(2 params, 15 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x00ae, lexical 0x0002, textified callees 0x002e
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:L4:
+// CHK-BCG-NEXT:    LoadParam         r1, 1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:L5:
+// CHK-BCG-NEXT:    Jmp               L2
+// CHK-BCG-NEXT:L1:
+// CHK-BCG-NEXT:    Catch             r0
+// CHK-BCG-NEXT:    GetGlobalObject   r1
+// CHK-BCG-NEXT:    TryGetById        r3, r1, 1, "print"
+// CHK-BCG-NEXT:    GetByIdShort      r5, r0, 2, "name"
+// CHK-BCG-NEXT:    TryGetById        r1, r1, 3, "HermesInternal"
+// CHK-BCG-NEXT:    GetByIdShort      r4, r1, 4, "concat"
+// CHK-BCG-NEXT:    LoadConstString   r2, ""
+// CHK-BCG-NEXT:    LoadConstString   r1, ":"
+// CHK-BCG-NEXT:    Call3             r2, r4, r2, r5, r1
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 5, "message"
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call3             r0, r3, r0, r2, r1
+// CHK-BCG-NEXT:L2:
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:Exception Handlers:
+// CHK-BCG-NEXT:0: start = L4, end = L5, target = L1
+
+// CHK-BCG:NCFunction<b>(1 params, 2 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x00dc, lexical 0x0004, textified callees 0x0000
+// CHK-BCG-NEXT:    NewArray          r0, 1
+// CHK-BCG-NEXT:    CreateEnvironment r1
+// CHK-BCG-NEXT:    CreateClosure     r1, r1, NCFunction<>
+// CHK-BCG-NEXT:    PutOwnByIndex     r0, r1, 0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 1 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x00ed, lexical 0x0006, textified callees 0x0000
+// CHK-BCG-NEXT:    LoadConstFalse    r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x00f5, lexical 0x0008, textified callees 0x0033
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0103, lexical 0x000a, textified callees 0x0036
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "z"
+// CHK-BCG-NEXT:    Call1             r0, r0, r1
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0115, lexical 0x000c, textified callees 0x0039
+// CHK-BCG-NEXT:    LoadConstNull     r1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0121, lexical 0x000e, textified callees 0x003c
+// CHK-BCG-NEXT:    LoadConstTrue     r1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x012d, lexical 0x0010, textified callees 0x003f
+// CHK-BCG-NEXT:    LoadConstFalse    r1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0139, lexical 0x0012, textified callees 0x0042
+// CHK-BCG-NEXT:    LoadConstString   r1, "str"
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0145, lexical 0x0014, textified callees 0x0045
+// CHK-BCG-NEXT:    LoadConstUInt8    r1, 1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0151, lexical 0x0016, textified callees 0x0048
+// CHK-BCG-NEXT:    LoadConstDouble   r1, 3.14
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x015d, lexical 0x0018, textified callees 0x004b
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "b"
+// CHK-BCG-NEXT:    Call1             r1, r0, r1
+// CHK-BCG-NEXT:    LoadConstZero     r0
+// CHK-BCG-NEXT:    GetByVal          r0, r1, r0
+// CHK-BCG-NEXT:    Call1             r1, r0, r1
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x0178, lexical 0x001a, textified callees 0x0052
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
+// CHK-BCG-NEXT:    Call1             r0, r0, r1
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x018b, lexical 0x001c, textified callees 0x0056
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
+// CHK-BCG-NEXT:    Call1             r0, r0, r1
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x019e, lexical 0x001e, textified callees 0x005a
+// CHK-BCG-NEXT:    LoadConstString   r1, "\x0a\x0ac\u00e0ll"...
+// CHK-BCG-NEXT:    LoadConstUndefined r0
+// CHK-BCG-NEXT:    Call1             r0, r1, r0
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x01aa, lexical 0x0020, textified callees 0x005e
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
+// CHK-BCG-NEXT:    Call1             r0, r0, r1
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:NCFunction<>(1 params, 9 registers, 0 symbols):
+// CHK-BCG-NEXT:Offset in debug table: source 0x01bd, lexical 0x0022, textified callees 0x0062
+// CHK-BCG-NEXT:    GetGlobalObject   r0
+// CHK-BCG-NEXT:    GetByIdShort      r1, r0, 1, "a"
+// CHK-BCG-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
+// CHK-BCG-NEXT:    Call1             r0, r0, r1
+// CHK-BCG-NEXT:    AsyncBreakCheck
+// CHK-BCG-NEXT:    Ret               r0
+
+// CHK-BCG:Debug filename table:
+// CHK-BCG-NEXT:  0: {{.*}}not-a-function.js
+
+// CHK-BCG:Debug file table:
+// CHK-BCG-NEXT:  source table offset 0x0000: filename id 0
+
+// CHK-BCG:Debug source table:
+// CHK-BCG-NEXT:  0x0000  function idx 0, starts at line 42 col 1
+// CHK-BCG-NEXT:    bc 12: line 42 col 1
+// CHK-BCG-NEXT:    bc 19: line 42 col 1
+// CHK-BCG-NEXT:    bc 25: line 44 col 1
+// CHK-BCG-NEXT:    bc 37: line 44 col 6
+// CHK-BCG-NEXT:    bc 42: line 47 col 9
+// CHK-BCG-NEXT:    bc 44: line 48 col 9
+// CHK-BCG-NEXT:    bc 49: line 47 col 9
+// CHK-BCG-NEXT:    bc 53: line 47 col 7
+// CHK-BCG-NEXT:    bc 59: line 60 col 1
+// CHK-BCG-NEXT:    bc 64: line 60 col 6
+// CHK-BCG-NEXT:    bc 69: line 60 col 5
+// CHK-BCG-NEXT:    bc 74: line 64 col 1
+// CHK-BCG-NEXT:    bc 79: line 64 col 6
+// CHK-BCG-NEXT:    bc 84: line 64 col 5
+// CHK-BCG-NEXT:    bc 89: line 68 col 1
+// CHK-BCG-NEXT:    bc 94: line 68 col 6
+// CHK-BCG-NEXT:    bc 99: line 68 col 5
+// CHK-BCG-NEXT:    bc 104: line 72 col 1
+// CHK-BCG-NEXT:    bc 109: line 72 col 6
+// CHK-BCG-NEXT:    bc 114: line 72 col 5
+// CHK-BCG-NEXT:    bc 119: line 76 col 1
+// CHK-BCG-NEXT:    bc 124: line 76 col 6
+// CHK-BCG-NEXT:    bc 129: line 76 col 5
+// CHK-BCG-NEXT:    bc 134: line 80 col 1
+// CHK-BCG-NEXT:    bc 139: line 80 col 6
+// CHK-BCG-NEXT:    bc 144: line 80 col 5
+// CHK-BCG-NEXT:    bc 149: line 84 col 1
+// CHK-BCG-NEXT:    bc 154: line 84 col 6
+// CHK-BCG-NEXT:    bc 159: line 84 col 5
+// CHK-BCG-NEXT:    bc 164: line 88 col 1
+// CHK-BCG-NEXT:    bc 169: line 88 col 6
+// CHK-BCG-NEXT:    bc 174: line 88 col 5
+// CHK-BCG-NEXT:    bc 179: line 92 col 1
+// CHK-BCG-NEXT:    bc 184: line 92 col 6
+// CHK-BCG-NEXT:    bc 189: line 92 col 5
+// CHK-BCG-NEXT:    bc 194: line 96 col 1
+// CHK-BCG-NEXT:    bc 199: line 96 col 6
+// CHK-BCG-NEXT:    bc 204: line 96 col 5
+// CHK-BCG-NEXT:    bc 209: line 100 col 1
+// CHK-BCG-NEXT:    bc 214: line 100 col 6
+// CHK-BCG-NEXT:    bc 219: line 100 col 5
+// CHK-BCG-NEXT:    bc 224: line 104 col 1
+// CHK-BCG-NEXT:    bc 229: line 104 col 6
+// CHK-BCG-NEXT:    bc 234: line 104 col 5
+// CHK-BCG-NEXT:    bc 239: line 129 col 1
+// CHK-BCG-NEXT:    bc 244: line 129 col 6
+// CHK-BCG-NEXT:    bc 249: line 129 col 5
+// CHK-BCG-NEXT:    bc 254: line 133 col 1
+// CHK-BCG-NEXT:    bc 259: line 133 col 6
+// CHK-BCG-NEXT:    bc 264: line 133 col 5
+// CHK-BCG-NEXT:    bc 270: line 133 col 187
+// CHK-BCG-NEXT:  0x00ae  function idx 1, starts at line 51 col 1
+// CHK-BCG-NEXT:    bc 1: line 52 col 5
+// CHK-BCG-NEXT:    bc 6: line 54 col 10
+// CHK-BCG-NEXT:    bc 10: line 55 col 5
+// CHK-BCG-NEXT:    bc 12: line 55 col 7
+// CHK-BCG-NEXT:    bc 16: line 56 col 9
+// CHK-BCG-NEXT:    bc 22: line 56 col 19
+// CHK-BCG-NEXT:    bc 27: line 56 col 15
+// CHK-BCG-NEXT:    bc 33: line 56 col 15
+// CHK-BCG-NEXT:    bc 46: line 56 col 15
+// CHK-BCG-NEXT:    bc 52: line 56 col 30
+// CHK-BCG-NEXT:    bc 59: line 56 col 14
+// CHK-BCG-NEXT:    bc 65: line 57 col 5
+// CHK-BCG-NEXT:    bc 67: line 58 col 1
+// CHK-BCG-NEXT:  0x00dc  function idx 2, starts at line 48 col 9
+// CHK-BCG-NEXT:    bc 0: line 48 col 15
+// CHK-BCG-NEXT:    bc 6: line 48 col 16
+// CHK-BCG-NEXT:    bc 11: line 48 col 15
+// CHK-BCG-NEXT:    bc 16: line 48 col 15
+// CHK-BCG-NEXT:  0x00ed  function idx 3, starts at line 48 col 16
+// CHK-BCG-NEXT:    bc 3: line 48 col 22
+// CHK-BCG-NEXT:  0x00f5  function idx 4, starts at line 60 col 6
+// CHK-BCG-NEXT:    bc 2: line 60 col 12
+// CHK-BCG-NEXT:    bc 9: line 60 col 13
+// CHK-BCG-NEXT:    bc 14: line 60 col 13
+// CHK-BCG-NEXT:  0x0103  function idx 5, starts at line 64 col 6
+// CHK-BCG-NEXT:    bc 2: line 64 col 12
+// CHK-BCG-NEXT:    bc 7: line 64 col 15
+// CHK-BCG-NEXT:    bc 12: line 64 col 15
+// CHK-BCG-NEXT:    bc 17: line 64 col 15
+// CHK-BCG-NEXT:  0x0115  function idx 6, starts at line 68 col 6
+// CHK-BCG-NEXT:    bc 4: line 68 col 16
+// CHK-BCG-NEXT:    bc 9: line 68 col 16
+// CHK-BCG-NEXT:  0x0121  function idx 7, starts at line 72 col 6
+// CHK-BCG-NEXT:    bc 4: line 72 col 16
+// CHK-BCG-NEXT:    bc 9: line 72 col 16
+// CHK-BCG-NEXT:  0x012d  function idx 8, starts at line 76 col 6
+// CHK-BCG-NEXT:    bc 4: line 76 col 17
+// CHK-BCG-NEXT:    bc 9: line 76 col 17
+// CHK-BCG-NEXT:  0x0139  function idx 9, starts at line 80 col 6
+// CHK-BCG-NEXT:    bc 6: line 80 col 17
+// CHK-BCG-NEXT:    bc 11: line 80 col 17
+// CHK-BCG-NEXT:  0x0145  function idx 10, starts at line 84 col 6
+// CHK-BCG-NEXT:    bc 5: line 84 col 13
+// CHK-BCG-NEXT:    bc 10: line 84 col 13
+// CHK-BCG-NEXT:  0x0151  function idx 11, starts at line 88 col 6
+// CHK-BCG-NEXT:    bc 12: line 88 col 18
+// CHK-BCG-NEXT:    bc 17: line 88 col 18
+// CHK-BCG-NEXT:  0x015d  function idx 12, starts at line 92 col 6
+// CHK-BCG-NEXT:    bc 2: line 92 col 12
+// CHK-BCG-NEXT:    bc 7: line 92 col 15
+// CHK-BCG-NEXT:    bc 12: line 92 col 15
+// CHK-BCG-NEXT:    bc 18: line 92 col 20
+// CHK-BCG-NEXT:    bc 22: line 92 col 20
+// CHK-BCG-NEXT:    bc 28: line 92 col 22
+// CHK-BCG-NEXT:    bc 33: line 92 col 22
+// CHK-BCG-NEXT:  0x0178  function idx 13, starts at line 96 col 6
+// CHK-BCG-NEXT:    bc 2: line 96 col 12
+// CHK-BCG-NEXT:    bc 7: line 96 col 76
+// CHK-BCG-NEXT:    bc 12: line 96 col 76
+// CHK-BCG-NEXT:    bc 17: line 96 col 76
+// CHK-BCG-NEXT:  0x018b  function idx 14, starts at line 100 col 6
+// CHK-BCG-NEXT:    bc 2: line 100 col 12
+// CHK-BCG-NEXT:    bc 7: line 100 col 117
+// CHK-BCG-NEXT:    bc 12: line 100 col 117
+// CHK-BCG-NEXT:    bc 17: line 100 col 117
+// CHK-BCG-NEXT:  0x019e  function idx 15, starts at line 104 col 6
+// CHK-BCG-NEXT:    bc 6: line 111 col 2
+// CHK-BCG-NEXT:    bc 11: line 111 col 2
+// CHK-BCG-NEXT:  0x01aa  function idx 16, starts at line 129 col 6
+// CHK-BCG-NEXT:    bc 2: line 129 col 12
+// CHK-BCG-NEXT:    bc 7: line 129 col 138
+// CHK-BCG-NEXT:    bc 12: line 129 col 138
+// CHK-BCG-NEXT:    bc 17: line 129 col 138
+// CHK-BCG-NEXT:  0x01bd  function idx 17, starts at line 133 col 6
+// CHK-BCG-NEXT:    bc 2: line 133 col 12
+// CHK-BCG-NEXT:    bc 7: line 133 col 184
+// CHK-BCG-NEXT:    bc 12: line 133 col 184
+// CHK-BCG-NEXT:    bc 17: line 133 col 184
+// CHK-BCG-NEXT:  0x01d0  end of debug source table
+
+// CHK-BCG:Debug lexical table:
+// CHK-BCG-NEXT:  0x0000  lexical parent: none, variable count: 0
+// CHK-BCG-NEXT:  0x0002  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0004  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0006  lexical parent: 2, variable count: 0
+// CHK-BCG-NEXT:  0x0008  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x000a  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x000c  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x000e  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0010  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0012  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0014  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0016  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0018  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x001a  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x001c  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x001e  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0020  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0022  lexical parent: 0, variable count: 0
+// CHK-BCG-NEXT:  0x0024  end of debug lexical table
+
+// CHK-BCG:Textified callees table:
+// CHK-BCG-NEXT:  0x0000  entries: 0
+// CHK-BCG-NEXT:  0x0001  entries: 15
+// CHK-BCG-NEXT:    bc 37 calls print
+// CHK-BCG-NEXT:    bc 69 calls test
+// CHK-BCG-NEXT:    bc 84 calls test
+// CHK-BCG-NEXT:    bc 99 calls test
+// CHK-BCG-NEXT:    bc 114 calls test
+// CHK-BCG-NEXT:    bc 129 calls test
+// CHK-BCG-NEXT:    bc 144 calls test
+// CHK-BCG-NEXT:    bc 159 calls test
+// CHK-BCG-NEXT:    bc 174 calls test
+// CHK-BCG-NEXT:    bc 189 calls test
+// CHK-BCG-NEXT:    bc 204 calls test
+// CHK-BCG-NEXT:    bc 219 calls test
+// CHK-BCG-NEXT:    bc 234 calls test
+// CHK-BCG-NEXT:    bc 249 calls test
+// CHK-BCG-NEXT:    bc 264 calls test
+// CHK-BCG-NEXT:  0x002e  entries: 2
+// CHK-BCG-NEXT:    bc 6 calls f
+// CHK-BCG-NEXT:    bc 59 calls print
+// CHK-BCG-NEXT:  0x0033  entries: 1
+// CHK-BCG-NEXT:    bc 9 calls a
+// CHK-BCG-NEXT:  0x0036  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls a.z
+// CHK-BCG-NEXT:  0x0039  entries: 1
+// CHK-BCG-NEXT:    bc 4 calls null
+// CHK-BCG-NEXT:  0x003c  entries: 1
+// CHK-BCG-NEXT:    bc 4 calls true
+// CHK-BCG-NEXT:  0x003f  entries: 1
+// CHK-BCG-NEXT:    bc 4 calls false
+// CHK-BCG-NEXT:  0x0042  entries: 1
+// CHK-BCG-NEXT:    bc 6 calls \"str\"
+// CHK-BCG-NEXT:  0x0045  entries: 1
+// CHK-BCG-NEXT:    bc 5 calls 1
+// CHK-BCG-NEXT:  0x0048  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls 3.14
+// CHK-BCG-NEXT:  0x004b  entries: 3
+// CHK-BCG-NEXT:    bc 12 calls a.b
+// CHK-BCG-NEXT:    bc 22 calls a.b()[0]
+// CHK-BCG-NEXT:    bc 28 calls a.b()[0]()
+// CHK-BCG-NEXT:  0x0052  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls a.a0000000111111111122222222223333333333444444444455555555556666
+// CHK-BCG-NEXT:  0x0056  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls a.a00000001111111111222222222233(...)33333333444444444455555555556666
+// CHK-BCG-NEXT:  0x005a  entries: 1
+// CHK-BCG-NEXT:    bc 6 calls `c\303\240llT     \303\264     \303\234n d e f i n \303\250 d`
+// CHK-BCG-NEXT:  0x005e  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls a.\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\252\303\252\303\252\303\252
+// CHK-BCG-NEXT:  0x0062  entries: 1
+// CHK-BCG-NEXT:    bc 12 calls a.\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\262\303\262(...)\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\252\303\252\303\252\303\252
+// CHK-BCG-NEXT:  0x0066  end of textified callees table
+
+// CHK-BCG:Debug string table:
+// CHK-BCG-NEXT:  0x0000 print
+// CHK-BCG-NEXT:  0x0006 test
+// CHK-BCG-NEXT:  0x000b f
+// CHK-BCG-NEXT:  0x000d a
+// CHK-BCG-NEXT:  0x000f a.z
+// CHK-BCG-NEXT:  0x0013 null
+// CHK-BCG-NEXT:  0x0018 true
+// CHK-BCG-NEXT:  0x001d false
+// CHK-BCG-NEXT:  0x0023 \"str\"
+// CHK-BCG-NEXT:  0x0029 1
+// CHK-BCG-NEXT:  0x002b 3.14
+// CHK-BCG-NEXT:  0x0030 a.b
+// CHK-BCG-NEXT:  0x0034 a.b()[0]
+// CHK-BCG-NEXT:  0x003d a.b()[0]()
+// CHK-BCG-NEXT:  0x0048 a.a0000000111111111122222222223333333333444444444455555555556666
+// CHK-BCG-NEXT:  0x008a a.a00000001111111111222222222233(...)33333333444444444455555555556666
+// CHK-BCG-NEXT:  0x00d1 `c\303\240llT     \303\264     \303\234n d e f i n \303\250 d`
+// CHK-BCG-NEXT:  0x00f8 a.\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\252\303\252\303\252\303\252
+// CHK-BCG-NEXT:  0x0178 a.\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\240\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\250\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\254\303\262\303\262(...)\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\262\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\271\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\242\303\252\303\252\303\252\303\252
+// CHK-BCG-NEXT:  0x01fd  end of debug string table
