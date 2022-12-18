@@ -1282,42 +1282,79 @@ ExecutionStatus Runtime::raiseTypeError(Handle<> message) {
 }
 
 ExecutionStatus Runtime::raiseTypeErrorForValue(
-    llvh::StringRef msg1,
+    const TwineChar16 &msg1,
     Handle<> value,
-    llvh::StringRef msg2) {
+    const TwineChar16 &msg2) {
   switch (value->getTag()) {
     case HermesValue::Tag::Object:
-      return raiseTypeError(msg1 + TwineChar16("Object") + msg2);
+      return raiseTypeError(msg1 + "Object" + msg2);
     case HermesValue::Tag::Str:
       return raiseTypeError(
-          msg1 + TwineChar16("'") + vmcast<StringPrimitive>(*value) + "'" +
-          msg2);
+          msg1 + "'" + vmcast<StringPrimitive>(*value) + "'" + msg2);
     case HermesValue::Tag::BoolSymbol:
       if (value->isBool()) {
         if (value->getBool()) {
-          return raiseTypeError(msg1 + TwineChar16("true") + msg2);
+          return raiseTypeError(msg1 + "true" + msg2);
         } else {
-          return raiseTypeError(msg1 + TwineChar16("false") + msg2);
+          return raiseTypeError(msg1 + "false" + msg2);
         }
       }
       return raiseTypeError(
-          msg1 + TwineChar16("Symbol(") +
-          getStringPrimFromSymbolID(value->getSymbol()) + ")" + msg2);
+          msg1 + "Symbol(" + getStringPrimFromSymbolID(value->getSymbol()) +
+          ")" + msg2);
     case HermesValue::Tag::UndefinedNull:
       if (value->isUndefined())
-        return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
+        return raiseTypeError(msg1 + "undefined" + msg2);
       else
-        return raiseTypeError(msg1 + TwineChar16("null") + msg2);
+        return raiseTypeError(msg1 + "null" + msg2);
     default:
       if (value->isNumber()) {
         char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
         size_t len = hermes::numberToString(
             value->getNumber(), buf, hermes::NUMBER_TO_STRING_BUF_SIZE);
-        return raiseTypeError(
-            msg1 + TwineChar16(llvh::StringRef{buf, len}) + msg2);
+        return raiseTypeError(msg1 + llvh::StringRef{buf, len} + msg2);
       }
   }
-  return raiseTypeError(msg1 + TwineChar16("Value") + msg2);
+  return raiseTypeError(msg1 + "Value" + msg2);
+}
+
+ExecutionStatus Runtime::raiseTypeErrorForCallable(Handle<> callable) {
+  if (CodeBlock *curCodeBlock = getCurrentFrame().getCalleeCodeBlock(*this)) {
+    if (OptValue<uint32_t> textifiedCalleeOffset =
+            curCodeBlock->getTextifiedCalleeOffset()) {
+      // Look up the textified callee for the current IP in the debug
+      // information. If one is available, use that in the error message.
+      OptValue<llvh::StringRef> tCallee =
+          curCodeBlock->getRuntimeModule()
+              ->getBytecode()
+              ->getDebugInfo()
+              ->getTextifiedCalleeUTF8(
+                  *textifiedCalleeOffset,
+                  curCodeBlock->getOffsetOf(getCurrentIP()));
+      if (tCallee.hasValue()) {
+        // The textified callee is UTF8, so it may need to be converted to
+        // UTF16.
+        if (isAllASCII(tCallee->begin(), tCallee->end())) {
+          // All ASCII means no conversion is needed.
+          return raiseTypeErrorForValue(
+              TwineChar16(*tCallee) + " is not a function (it is ",
+              callable,
+              ")");
+        }
+
+        // Convert UTF8 to UTF16 before creating the Error.
+        llvh::SmallVector<char16_t, 16> tCalleeUTF16;
+        convertUTF8WithSurrogatesToUTF16(
+            std::back_inserter(tCalleeUTF16), tCallee->begin(), tCallee->end());
+        return raiseTypeErrorForValue(
+            TwineChar16(tCalleeUTF16) + " is not a function (it is ",
+            callable,
+            ")");
+      }
+    }
+  }
+
+  return raiseTypeErrorForValue(callable, " is not a function");
 }
 
 ExecutionStatus Runtime::raiseTypeError(const TwineChar16 &msg) {

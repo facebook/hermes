@@ -212,6 +212,8 @@ class CodeBlock final
 
   OptValue<uint32_t> getDebugLexicalDataOffset() const;
 
+  OptValue<uint32_t> getTextifiedCalleeOffset() const;
+
   const inst::Inst *getOffsetPtr(uint32_t offset) const {
     assert(begin() + offset < end() && "offset out of bounds");
     return reinterpret_cast<const inst::Inst *>(begin() + offset);

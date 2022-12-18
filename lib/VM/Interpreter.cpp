@@ -277,8 +277,7 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     // Call the bound function.
     return BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
   } else {
-    return runtime.raiseTypeErrorForValue(
-        Handle<>(callTarget), " is not a function");
+    return runtime.raiseTypeErrorForCallable(Handle<>(callTarget));
   }
 }
 

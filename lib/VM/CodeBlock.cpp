@@ -289,6 +289,17 @@ OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   return ret;
 }
 
+OptValue<uint32_t> CodeBlock::getTextifiedCalleeOffset() const {
+  auto *debugOffsets =
+      runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
+  if (!debugOffsets)
+    return llvh::None;
+  uint32_t ret = debugOffsets->textifiedCallees;
+  if (ret == hbc::DebugOffsets::NO_OFFSET)
+    return llvh::None;
+  return ret;
+}
+
 SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
     bool start) const {
   assert(isLazy() && "Function must be lazy");

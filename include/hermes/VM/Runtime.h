@@ -658,9 +658,16 @@ class Runtime : public PointerBase,
   /// resumes. The string thrown concatenates \p msg1, a description of \p
   /// value, and \p msg2. \return ExecutionResult::EXCEPTION
   LLVM_NODISCARD ExecutionStatus raiseTypeErrorForValue(
-      llvh::StringRef msg1,
+      const TwineChar16 &msg1,
       Handle<> value,
-      llvh::StringRef msg2);
+      const TwineChar16 &msg2);
+
+  /// Flag the interpreter that a type error must be thrown when execution
+  /// resumes. The string thrown concatenates either the textified callable for
+  /// \p callable (if it is available) with " is not a function"; or a
+  /// description of \p callable with " is not a function". \return
+  /// ExecutionResult::EXCEPTION
+  LLVM_NODISCARD ExecutionStatus raiseTypeErrorForCallable(Handle<> callable);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
