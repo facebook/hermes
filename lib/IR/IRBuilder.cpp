@@ -387,19 +387,22 @@ StoreStackInst *IRBuilder::createStoreStackInst(
 }
 
 CallInst *IRBuilder::createCallInst(
+    LiteralString *textifiedCallee,
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(ValueKind::CallInstKind, callee, thisValue, args);
+  auto CI = new CallInst(
+      ValueKind::CallInstKind, textifiedCallee, callee, thisValue, args);
   insert(CI);
   return CI;
 }
 
 HBCCallNInst *IRBuilder::createHBCCallNInst(
+    LiteralString *textifiedCallee,
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new HBCCallNInst(callee, thisValue, args);
+  auto CI = new HBCCallNInst(textifiedCallee, callee, thisValue, args);
   insert(CI);
   return CI;
 }
@@ -906,10 +909,12 @@ CallIntrinsicInst *IRBuilder::createCallIntrinsicInst(
 #endif
 
 HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
+    LiteralString *textifiedCallee,
     Function *callee,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto *inst = new HBCCallDirectInst(callee, thisValue, arguments);
+  auto *inst =
+      new HBCCallDirectInst(textifiedCallee, callee, thisValue, arguments);
   insert(inst);
   return inst;
 }

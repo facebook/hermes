@@ -39,6 +39,8 @@ struct CodeGenerationSettings {
   bool dumpSourceLocation{false};
   /// Print the original scope for each instruction.
   bool dumpSourceLevelScope{false};
+  /// Print the textified callee of call instructions.
+  bool dumpTextifiedCallee{false};
   /// Print the use list if the instruction has any users.
   bool dumpUseList{false};
   /// Dump IR after every pass.

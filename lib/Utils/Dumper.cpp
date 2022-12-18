@@ -246,6 +246,17 @@ void IRPrinter::printInstruction(Instruction *I) {
 
   auto codeGenOpts = I->getContext().getCodeGenerationSettings();
   const char *prefix = " // ";
+
+  if (codeGenOpts.dumpTextifiedCallee) {
+    auto &ctx = I->getParent()->getParent()->getContext();
+    if (auto call = llvh::dyn_cast<CallInst>(I)) {
+      if (LiteralString *textifiedCallee = call->getTextifiedCallee()) {
+        os << prefix << "textified callee: "
+           << escapeStr(ctx.toString(textifiedCallee->getValue()));
+        prefix = ", ";
+      }
+    }
+  }
   if (codeGenOpts.dumpSourceLevelScope) {
     if (auto *originalScope = I->getSourceLevelScope()) {
       os << prefix << "scope: ";

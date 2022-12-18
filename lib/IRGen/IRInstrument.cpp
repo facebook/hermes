@@ -39,7 +39,8 @@ Value *IRInstrument::invokeHook(
   TryLoadGlobalPropertyInst *instrument =
       builder_.createTryLoadGlobalPropertyInst(globalName_);
   auto *hook = builder_.createLoadPropertyInst(instrument, name);
-  return builder_.createCallInst(hook, instrument, args);
+  return builder_.createCallInst(
+      CallInst::kNoTextifiedCallee, hook, instrument, args);
 }
 
 Value *IRInstrument::preBinaryExpression(

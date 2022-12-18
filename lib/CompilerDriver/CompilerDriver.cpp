@@ -377,6 +377,12 @@ static opt<bool> DumpSourceLevelScope(
     init(false),
     cat(CompilerCategory));
 
+static opt<bool> DumpTextifiedCallee(
+    "dump-textified-callee",
+    desc("Print the Call instruction's textified callee."),
+    init(false),
+    cat(CompilerCategory));
+
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
     desc("Print the use list if the instruction has any users."),
@@ -1031,6 +1037,7 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
+  codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;

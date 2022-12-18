@@ -498,6 +498,17 @@ Value *ESTreeIRGen::genOptionalCallExpr(
   return callResult;
 }
 
+/// \return a LiteralString with a textual representation of given \p call
+/// expression.
+static LiteralString *getTextifiedCallExpr(
+    IRBuilder &builder,
+    ESTree::CallExpressionLikeNode *call) {
+  // TODO: generate a textified version of the call expression. Returning the
+  // empty string means there's no textified string will be emitted for this
+  // p call.
+  return CallInst::kNoTextifiedCallee;
+}
+
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
@@ -515,7 +526,8 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    return Builder.createCallInst(callee, thisVal, args);
+    return Builder.createCallInst(
+        getTextifiedCallExpr(Builder, call), callee, thisVal, args);
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments
@@ -1151,6 +1163,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   // Avoid using emitIteratorNext here because the spec does not.
   Builder.setInsertionBlock(getNextBlock);
   auto *nextResult = Builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
       iteratorRecord.nextMethod,
       iteratorRecord.iterator,
       {Builder.createLoadStackInst(received)});
@@ -1205,6 +1218,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 // iv. Let innerReturnResult be
                 // ? Call(return, iterator, received.[[Value]]).
                 auto *innerReturnResult = Builder.createCallInst(
+                    CallInst::kNoTextifiedCallee,
                     returnMethod,
                     iteratorRecord.iterator,
                     {Builder.createLoadStackInst(received)});
@@ -1290,7 +1304,10 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // propagated. Normal completions from an inner throw method are
         // processed similarly to an inner next.
         auto *innerResult = Builder.createCallInst(
-            throwMethod, iteratorRecord.iterator, {catchReg});
+            CallInst::kNoTextifiedCallee,
+            throwMethod,
+            iteratorRecord.iterator,
+            {catchReg});
         // ii. 4. If Type(innerResult) is not Object,
         //        throw a TypeError exception.
         emitEnsureObject(
@@ -2002,7 +2019,8 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
     callee = genExpression(Expr->_tag);
   }
 
-  return Builder.createCallInst(callee, thisVal, tagFuncArgList);
+  return Builder.createCallInst(
+      CallInst::kNoTextifiedCallee, callee, thisVal, tagFuncArgList);
 }
 
 } // namespace irgen

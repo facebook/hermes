@@ -351,7 +351,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
       // If there are non-simple params, step the inner function once to
       // initialize them.
       Value *next = Builder.createLoadPropertyInst(gen, "next");
-      Builder.createCallInst(next, gen, {});
+      Builder.createCallInst(CallInst::kNoTextifiedCallee, next, gen, {});
     }
 
     emitFunctionEpilogue(gen);
@@ -443,6 +443,7 @@ Function *ESTreeIRGen::genAsyncFunction(
         BuiltinMethod::HermesBuiltin_spawnAsync);
 
     auto *res = Builder.createCallInst(
+        CallInst::kNoTextifiedCallee,
         spawnAsyncClosure,
         Builder.getLiteralUndefined(),
         {genClosure, thisArg, argumentsList});
@@ -682,6 +683,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
   builder.createCreateScopeInst(scopeDesc);
 
   builder.createThrowInst(builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
       loadGlobalObjectProperty(
           builder, builder.createGlobalObjectProperty("SyntaxError", false)),
       builder.getLiteralUndefined(),

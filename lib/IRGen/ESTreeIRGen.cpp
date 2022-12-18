@@ -695,6 +695,7 @@ Value *ESTreeIRGen::genHermesInternalCall(
     Value *thisValue,
     ArrayRef<Value *> args) {
   return Builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
       Builder.createLoadPropertyInst(
           Builder.createTryLoadGlobalPropertyInst("HermesInternal"), name),
       thisValue,
@@ -723,7 +724,8 @@ Value *ESTreeIRGen::emitIteratorSymbol() {
 
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   auto *method = Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
-  auto *iterator = Builder.createCallInst(method, obj, {});
+  auto *iterator =
+      Builder.createCallInst(CallInst::kNoTextifiedCallee, method, obj, {});
 
   emitEnsureObject(iterator, "iterator is not an object");
   auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
@@ -733,7 +735,10 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
 
 Value *ESTreeIRGen::emitIteratorNextSlow(IteratorRecordSlow iteratorRecord) {
   auto *nextResult = Builder.createCallInst(
-      iteratorRecord.nextMethod, iteratorRecord.iterator, {});
+      CallInst::kNoTextifiedCallee,
+      iteratorRecord.nextMethod,
+      iteratorRecord.iterator,
+      {});
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
   return nextResult;
 }
@@ -768,7 +773,11 @@ void ESTreeIRGen::emitIteratorCloseSlow(
         noReturn,
         // emitBody.
         [this, returnMethod, &iteratorRecord]() {
-          Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
+          Builder.createCallInst(
+              CallInst::kNoTextifiedCallee,
+              returnMethod,
+              iteratorRecord.iterator,
+              {});
         },
         // emitNormalCleanup.
         []() {},
@@ -779,8 +788,11 @@ void ESTreeIRGen::emitIteratorCloseSlow(
           Builder.createBranchInst(nextBlock);
         });
   } else {
-    auto *innerResult =
-        Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
+    auto *innerResult = Builder.createCallInst(
+        CallInst::kNoTextifiedCallee,
+        returnMethod,
+        iteratorRecord.iterator,
+        {});
     emitEnsureObject(innerResult, "iterator.return() did not return an object");
     Builder.createBranchInst(noReturn);
   }
