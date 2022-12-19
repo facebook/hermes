@@ -413,7 +413,7 @@ Value *getKnownReturnValue(Function *F, CallInst *callSite) {
 }
 
 Value *simplifyCallInst(CallInst *CI) {
-  if (!CI->hasUsers() || llvh::isa<ConstructInst>(CI))
+  if (!CI->hasUsers())
     return nullptr;
 
   if (Function *F = getCallee(CI->getCallee())) {
