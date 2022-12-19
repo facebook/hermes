@@ -252,6 +252,9 @@ SHERMES_EXPORT void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
 SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
     __attribute__((noreturn));
 
+/// Throw a ReferenceError for accessing uninitialized variable.
+SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
+
 /// Performs a function call. The new frame is at the top of the stack.
 /// Arguments, this, and callee must be populated.
 SHERMES_EXPORT SHLegacyValue

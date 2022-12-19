@@ -348,6 +348,8 @@ class InstrGen {
       os_ << "_sh_ljs_undefined()";
     } else if (llvh::isa<LiteralNull>(&val)) {
       os_ << "_sh_ljs_null()";
+    } else if (llvh::isa<LiteralEmpty>(&val)) {
+      os_ << "_sh_ljs_empty()";
     } else if (auto B = llvh::dyn_cast<LiteralBool>(&val)) {
       os_ << "_sh_ljs_bool(" << boolStr(B->getValue()) << ")";
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
@@ -1104,7 +1106,10 @@ class InstrGen {
     os_ << " = frame[" << hbc::StackFrameLayout::NewTarget << "];\n";
   }
   void generateThrowIfEmptyInst(ThrowIfEmptyInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    os_ << "if (_sh_ljs_is_empty(";
+    generateValue(*inst.getCheckedValue());
+    os_ << ")) _sh_throw_empty(shr);\n";
   }
   void generateIteratorBeginInst(IteratorBeginInst &inst) {
     os_.indent(2);

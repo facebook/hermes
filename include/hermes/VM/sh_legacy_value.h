@@ -215,12 +215,18 @@ static inline SHLegacyValue _sh_ljs_undefined() {
 static inline SHLegacyValue _sh_ljs_null() {
   return _sh_ljs_encode_raw_etag(0, HVETag_Null);
 }
+static inline SHLegacyValue _sh_ljs_empty() {
+  return _sh_ljs_encode_raw_etag(0, HVETag_Empty);
+}
 
 static inline bool _sh_ljs_is_undefined(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Undefined;
 }
 static inline bool _sh_ljs_is_null(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Null;
+}
+static inline bool _sh_ljs_is_empty(SHLegacyValue v) {
+  return _sh_ljs_get_etag(v) == HVETag_Empty;
 }
 static inline bool _sh_ljs_is_bool(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Bool;

@@ -327,6 +327,12 @@ extern "C" void _sh_throw(SHRuntime *shr, SHLegacyValue value) {
   _sh_throw_current(shr);
 }
 
+extern "C" void _sh_throw_empty(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseReferenceError("accessing an uninitialized variable");
+  _sh_throw_current(shr);
+}
+
 static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
   if (vmisa<SHLegacyFunction>(*callTarget)) {
     return SHLegacyFunction::_legacyCall(

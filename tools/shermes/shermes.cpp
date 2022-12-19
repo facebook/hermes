@@ -260,6 +260,13 @@ cl::opt<bool> EnableEval(
     cl::init(true),
     cl::desc("Enable support for eval()"));
 
+cl::opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cl::cat(CompilerCategory));
+
 // This is normally a compiler option, but it also applies to strings given
 // to eval or the Function constructor.
 cl::opt<bool> VerifyIR(
@@ -382,7 +389,7 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 /// \return the Context.
 std::shared_ptr<Context> createContext() {
   CodeGenerationSettings codeGenOpts;
-  // codeGenOpts.enableTDZ = cl::EnableTDZ;
+  codeGenOpts.enableTDZ = cli::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cli::DumpOperandRegisters;
   codeGenOpts.dumpUseList = cli::DumpUseList;
   codeGenOpts.dumpSourceLocation =
