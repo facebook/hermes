@@ -46,14 +46,6 @@ class MutableHandle;
 /// It also contains some convenience functions that create handles.
 class HandleRootOwner {
  public:
-  /// A dummy virtual destructor which creates a vtable and thus ensures that
-  /// cast from Runtime to HandleRootOwner is a no-op (see assert in
-  /// Runtime::Runtime).
-  /// Why a destructor and not a separate dummy virtual method? Because a
-  /// virtual method causes "virtual functions but non-virtual destructor"
-  /// warning, and the way to silence that is to add a virtual destructor.
-  virtual ~HandleRootOwner() = default;
-
   /// Convenience function to create a Handle.
   Handle<HermesValue> makeHandle(HermesValue value);
 

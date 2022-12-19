@@ -30,8 +30,9 @@ DummyRuntime::DummyRuntime(
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gcStorage_{
-          *this,
+    : gcCallbacksWrapper_(*this),
+      gcStorage_{
+          gcCallbacksWrapper_,
           *this,
           gcConfig,
           crashMgr,

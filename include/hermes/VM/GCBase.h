@@ -337,6 +337,81 @@ class GCBase {
 #endif
   };
 
+  /// Wrapper class that takes some \p RT which implements all the methods
+  /// specified in \c GCCallbacks as non-virtual functions, and creates a new
+  /// subclass of \c GCCallbacks that calls through to those non-virtual
+  /// methods.
+  template <typename RT>
+  class GCCallbacksWrapper final : public GCCallbacks {
+    RT &runtime_;
+
+   public:
+    GCCallbacksWrapper(RT &runtime) : runtime_(runtime) {}
+    void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+        override {
+      runtime_.markRoots(acceptor, markLongLived);
+    }
+    void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived)
+        override {
+      runtime_.markWeakRoots(weakAcceptor, markLongLived);
+    }
+    void markRootsForCompleteMarking(
+        RootAndSlotAcceptorWithNames &acceptor) override {
+      runtime_.markRootsForCompleteMarking(acceptor);
+    }
+    unsigned getSymbolsEnd() const override {
+      return runtime_.getSymbolsEnd();
+    }
+    void unmarkSymbols() override {
+      runtime_.unmarkSymbols();
+    }
+    void freeSymbols(const llvh::BitVector &markedSymbols) override {
+      runtime_.freeSymbols(markedSymbols);
+    }
+    void printRuntimeGCStats(JSONEmitter &json) const override {
+      runtime_.printRuntimeGCStats(json);
+    }
+    size_t mallocSize() const override {
+      return runtime_.mallocSize();
+    }
+    void visitIdentifiers(
+        const std::function<void(SymbolID, const StringPrimitive *)> &acceptor)
+        override {
+      runtime_.visitIdentifiers(acceptor);
+    }
+    std::string convertSymbolToUTF8(SymbolID id) override {
+      return runtime_.convertSymbolToUTF8(id);
+    }
+    std::string getCallStackNoAlloc() override {
+      return runtime_.getCallStackNoAlloc();
+    }
+    void onGCEvent(GCEventKind kind, const std::string &extraInfo) override {
+      runtime_.onGCEvent(kind, extraInfo);
+    }
+    const inst::Inst *getCurrentIPSlow() const override {
+      return runtime_.getCurrentIPSlow();
+    }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    StackTracesTreeNode *getCurrentStackTracesTreeNode(
+        const inst::Inst *ip) override {
+      return runtime_.getCurrentStackTracesTreeNode(ip);
+    }
+    StackTracesTree *getStackTracesTree() override {
+      return runtime_.getStackTracesTree();
+    }
+#endif
+
+#ifdef HERMES_SLOW_DEBUG
+    bool isSymbolLive(SymbolID id) override {
+      return runtime_.isSymbolLive(id);
+    }
+    const void *getStringForSymbol(SymbolID id) override {
+      return runtime_.getStringForSymbol(id);
+    }
+#endif
+  };
+
   /// Stats for collections. Time unit, where applicable, is seconds.
   struct CumulativeHeapStats {
     unsigned numCollections{0};

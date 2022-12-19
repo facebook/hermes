@@ -196,13 +196,11 @@ using CrashTrace = CrashTraceNoop;
 
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
-class Runtime : public PointerBase,
-                public HandleRootOwner,
-                private GCBase::GCCallbacks {
+class Runtime : public PointerBase, public HandleRootOwner {
  public:
   static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig);
 
-  ~Runtime() override;
+  ~Runtime();
 
   /// Add a custom function that will be executed at the start of every garbage
   /// collection to mark additional GC roots that may not be known to the
@@ -883,7 +881,7 @@ class Runtime : public PointerBase,
   /// \return a string representation of the JS stack without knowing the leaf
   /// frame ip.  Does no operations that allocate on the JS heap, so safe to use
   /// for an out-of-memory exception.
-  std::string getCallStackNoAlloc() override {
+  std::string getCallStackNoAlloc() {
     return getCallStackNoAlloc(nullptr);
   }
 
@@ -927,7 +925,7 @@ class Runtime : public PointerBase,
       ;
 
   /// Called when various GC events(e.g. collection start/end) happen.
-  void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
+  void onGCEvent(GCEventKind kind, const std::string &extraInfo);
 
 #ifdef HERMESVM_PROFILER_BB
   using ClassId = InlineCacheProfiler::ClassId;
@@ -956,76 +954,68 @@ class Runtime : public PointerBase,
   void getInlineCacheProfilerInfo(llvh::raw_ostream &ostream);
 #endif
 
- private:
-  /// Only called internally or by the wrappers used for profiling.
-  CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
-
- private:
-  explicit Runtime(
-      std::shared_ptr<StorageProvider> provider,
-      const RuntimeConfig &runtimeConfig);
-
   /// Called by the GC at the beginning of a collection. This method informs the
   /// GC of all runtime roots.  The \p markLongLived argument
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
-      override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived);
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived)
-      override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool markLongLived);
 
   /// See documentation on \c GCBase::GCCallbacks.
-  void markRootsForCompleteMarking(
-      RootAndSlotAcceptorWithNames &acceptor) override;
+  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
   /// snapshots, as it is slow. The function passed as acceptor shouldn't
   /// perform any heap operations.
   void visitIdentifiers(
-      const std::function<void(SymbolID, const StringPrimitive *)> &acceptor)
-      override;
+      const std::function<void(SymbolID, const StringPrimitive *)> &acceptor);
 
-#ifdef HERMESVM_PROFILER_BB
- public:
-#endif
   /// Convert the given symbol into its UTF-8 string representation.
-  std::string convertSymbolToUTF8(SymbolID id) override;
+  std::string convertSymbolToUTF8(SymbolID id);
 
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.
-  void printRuntimeGCStats(JSONEmitter &json) const override;
+  void printRuntimeGCStats(JSONEmitter &json) const;
 
   /// \return one higher than the largest symbol in the identifier table. This
   /// enables the GC to size its internal structures for symbol marking.
   /// Optionally invoked at the beginning of a garbage collection.
-  virtual unsigned getSymbolsEnd() const override;
+  unsigned getSymbolsEnd() const;
 
   /// If any symbols are marked by the IdentifierTable, clear that marking.
   /// Optionally invoked at the beginning of some collections.
-  virtual void unmarkSymbols() override;
+  void unmarkSymbols();
 
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols.
-  virtual void freeSymbols(const llvh::BitVector &markedSymbols) override;
+  void freeSymbols(const llvh::BitVector &markedSymbols);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
   /// table.
-  virtual bool isSymbolLive(SymbolID id) override;
+  bool isSymbolLive(SymbolID id);
 
   /// \return An associated heap cell for the symbol if one exists, null
   /// otherwise.
-  virtual const void *getStringForSymbol(SymbolID id) override;
+  const void *getStringForSymbol(SymbolID id);
 #endif
 
   /// See \c GCCallbacks for details.
-  size_t mallocSize() const override;
+  size_t mallocSize() const;
+
+ private:
+  /// Only called internally or by the wrappers used for profiling.
+  CallResult<HermesValue> interpretFunctionImpl(CodeBlock *newCodeBlock);
+
+  explicit Runtime(
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &runtimeConfig);
 
   /// Generate a bytecode buffer that contains a few special functions:
   /// 0) an empty function that returns undefined.
@@ -1101,6 +1091,7 @@ class Runtime : public PointerBase,
   void crashWriteCallStack(JSONEmitter &json);
 
  private:
+  GCBase::GCCallbacksWrapper<Runtime> gcCallbacksWrapper_;
   GCStorage heapStorage_;
 
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
@@ -1403,7 +1394,7 @@ class Runtime : public PointerBase,
   }
 
   /// This is slow compared to \c getCurrentIP() as it's virtual.
-  inline const inst::Inst *getCurrentIPSlow() const override {
+  inline const inst::Inst *getCurrentIPSlow() const {
     return getCurrentIP();
   }
 
@@ -1447,11 +1438,10 @@ class Runtime : public PointerBase,
   /// do not really want a stack-traces node. This means we can leverage our
   /// library of tests to assert getCurrentIP() would return the right value
   /// at this point without actually collecting stack-trace data.
-  StackTracesTreeNode *getCurrentStackTracesTreeNode(
-      const inst::Inst *ip) override;
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(const inst::Inst *ip);
 
   /// Return the current StackTracesTree or nullptr if it's not available.
-  StackTracesTree *getStackTracesTree() override {
+  StackTracesTree *getStackTracesTree() {
     return stackTracesTree_.get();
   }
 

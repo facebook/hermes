@@ -216,8 +216,9 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+      gcCallbacksWrapper_(*this),
       heapStorage_(
-          *this,
+          gcCallbacksWrapper_,
           *this,
           runtimeConfig.getGCConfig(),
           runtimeConfig.getCrashMgr(),
@@ -241,8 +242,8 @@ Runtime::Runtime(
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()) {
   assert(
-      (void *)this == (void *)(HandleRootOwner *)this &&
-      "cast to HandleRootOwner should be no-op");
+      (void *)this == (void *)(PointerBase *)this &&
+      "cast to PointerBase should be no-op");
 #ifdef HERMES_FACEBOOK_BUILD
   const bool isSnapshot = std::strstr(__FILE__, "hermes-snapshot");
   crashMgr_->setCustomData("HermesIsSnapshot", isSnapshot ? "true" : "false");
@@ -1969,7 +1970,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock(*this);
     if (codeBlock) {
-      res += codeBlock->getNameString(*this);
+      res += codeBlock->getNameString(gcCallbacksWrapper_);
       // Default to the function entrypoint, this
       // ensures source location is provided for leaf frame even
       // if ip is not available.

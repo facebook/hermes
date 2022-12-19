@@ -257,10 +257,9 @@ inline HermesValue operator"" _hd(long double d) {
 }
 
 /// A minimal Runtime for GC tests.
-class DummyRuntime final : public HandleRootOwner,
-                           public PointerBase,
-                           private GCBase::GCCallbacks {
+class DummyRuntime final : public HandleRootOwner, public PointerBase {
  private:
+  GCBase::GCCallbacksWrapper<DummyRuntime> gcCallbacksWrapper_;
   GCStorage gcStorage_;
 
  public:
@@ -284,7 +283,7 @@ class DummyRuntime final : public HandleRootOwner,
   /// function.
   static std::unique_ptr<StorageProvider> defaultProvider();
 
-  ~DummyRuntime() override;
+  ~DummyRuntime();
 
   template <
       typename T,
@@ -312,61 +311,58 @@ class DummyRuntime final : public HandleRootOwner,
 
   void collect();
 
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) override;
+  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool);
 
-  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool);
 
-  void markRootsForCompleteMarking(
-      RootAndSlotAcceptorWithNames &acceptor) override;
+  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
 
-  unsigned int getSymbolsEnd() const override {
+  unsigned int getSymbolsEnd() const {
     return 0;
   }
 
-  void unmarkSymbols() override {}
+  void unmarkSymbols() {}
 
-  void freeSymbols(const llvh::BitVector &) override {}
+  void freeSymbols(const llvh::BitVector &) {}
 
 #ifdef HERMES_SLOW_DEBUG
-  bool isSymbolLive(SymbolID) override {
+  bool isSymbolLive(SymbolID) {
     return true;
   }
 
-  const void *getStringForSymbol(SymbolID) override {
+  const void *getStringForSymbol(SymbolID) {
     return nullptr;
   }
 #endif
 
-  void printRuntimeGCStats(JSONEmitter &) const override {}
+  void printRuntimeGCStats(JSONEmitter &) const {}
 
   void visitIdentifiers(
-      const std::function<void(SymbolID, const StringPrimitive *)> &) override {
-  }
+      const std::function<void(SymbolID, const StringPrimitive *)> &) {}
 
-  std::string convertSymbolToUTF8(SymbolID) override;
+  std::string convertSymbolToUTF8(SymbolID);
 
-  std::string getCallStackNoAlloc() override {
+  std::string getCallStackNoAlloc() {
     return "<dummy runtime has no call stack>";
   }
 
-  void onGCEvent(GCEventKind, const std::string &) override {}
+  void onGCEvent(GCEventKind, const std::string &) {}
 
   /// It's a unit test, it doesn't care about reporting how much memory it uses.
-  size_t mallocSize() const override {
+  size_t mallocSize() const {
     return 0;
   }
 
-  const inst::Inst *getCurrentIPSlow() const override {
+  const inst::Inst *getCurrentIPSlow() const {
     return nullptr;
   }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  StackTracesTreeNode *getCurrentStackTracesTreeNode(
-      const inst::Inst *ip) override {
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(const inst::Inst *ip) {
     return nullptr;
   }
 
-  StackTracesTree *getStackTracesTree() override {
+  StackTracesTree *getStackTracesTree() {
     return nullptr;
   }
 #endif
