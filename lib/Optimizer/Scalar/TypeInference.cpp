@@ -913,7 +913,7 @@ class TypeInferenceImpl {
     return Type::createAnyType();
   }
   Type inferHBCConstructInst(HBCConstructInst *inst) {
-    return Type::createObject();
+    return Type::createAnyType();
   }
   Type inferHBCCallDirectInst(HBCCallDirectInst *inst) {
     // unimplemented
