@@ -249,6 +249,27 @@ describe('flowToFlowDef', () => {
       expectTranslateUnchanged(`export * from 'Foo';`);
     });
   });
+  describe('module.exports', () => {
+    it('export basic', () => {
+      expectTranslate(`module.exports = 1;`, `declare module.exports: 1;`);
+    });
+  });
+  describe('exports.*', () => {
+    it('export basic', () => {
+      expect(() => translate(`exports.A = 1;`))
+        .toThrowErrorMatchingInlineSnapshot(`
+        "
+        > 1 | exports.A = 1;
+            | ^^^^^^^^^^^^^^ convertExport: Named CommonJS exports not supported. Use either \`module.exports = {...}\` or ES6 exports."
+      `);
+      expect(() => translate(`module.exports.A = 1;`))
+        .toThrowErrorMatchingInlineSnapshot(`
+        "
+        > 1 | module.exports.A = 1;
+            | ^^^^^^^^^^^^^^^^^^^^^ convertExport: Named CommonJS exports not supported. Use either \`module.exports = {...}\` or ES6 exports."
+      `);
+    });
+  });
   describe('FunctionDeclation', () => {
     it('basic', () => {
       expectTranslate(

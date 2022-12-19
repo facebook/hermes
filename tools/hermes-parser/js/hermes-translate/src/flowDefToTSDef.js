@@ -1015,6 +1015,11 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         },
       ];
     },
+    DeclareModuleExports(
+      node: FlowESTree.DeclareModuleExports,
+    ): TSESTree.TypeNode {
+      throw translationError(node, 'CommonJS exports are not supported.');
+    },
     ExistsTypeAnnotation(
       node: FlowESTree.ExistsTypeAnnotation,
     ): TSESTree.TypeNode {

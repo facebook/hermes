@@ -256,6 +256,53 @@ function convertExport(
     case 'DeclareModuleExports': {
       return [asDetachedNode(stmt), analyzeTypeDependencies(stmt, context)];
     }
+    case 'ExpressionStatement': {
+      const expr = stmt.expression;
+      if (
+        expr.type === 'AssignmentExpression' &&
+        expr.left.type === 'MemberExpression'
+      ) {
+        const member = expr.left;
+        if (
+          // exports.A = 1;
+          (member.object.type === 'Identifier' &&
+            member.object.name === 'exports') ||
+          // module.exports.A = 1;
+          (member.object.type === 'MemberExpression' &&
+            member.object.object.type === 'Identifier' &&
+            member.object.object.name === 'module' &&
+            member.object.property.type === 'Identifier' &&
+            member.object.property.name === 'exports')
+        ) {
+          throw translationError(
+            stmt,
+            `convertExport: Named CommonJS exports not supported. Use either \`module.exports = {...}\` or ES6 exports.`,
+            context,
+          );
+        }
+
+        if (
+          // exports.A = 1;
+          member.object.type === 'Identifier' &&
+          member.object.name === 'module' &&
+          member.property.type === 'Identifier' &&
+          member.property.name === 'exports'
+        ) {
+          const [typeAnnotation, deps] = convertExpressionToTypeAnnotation(
+            expr.right,
+            context,
+          );
+          return [
+            t.DeclareModuleExports({
+              typeAnnotation: t.TypeAnnotation({typeAnnotation}),
+            }),
+            deps,
+          ];
+        }
+      }
+
+      return null;
+    }
     default: {
       // Skip non exported functions
       return null;
