@@ -65,7 +65,7 @@ _sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
   SHLocals locals;
   SHLegacyValue *frame = runtime.getCurrentFrame().ptr();
   SHLegacyValue *savedSP = _sh_push_locals(shr, &locals, 0);
-  locals.count = 1;
+  locals.count = 0;
   SHJmpBuf jbuf;
   bool success = true;
 
