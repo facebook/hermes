@@ -10,7 +10,9 @@
 
 'use strict';
 
-import {SimpleTraverser} from 'hermes-transform';
+import type {ESNode} from 'hermes-estree';
+
+import {SimpleTraverser} from '../src/traverse/SimpleTraverser';
 import {parse as parseOriginal} from '../src/index';
 
 export const parse: typeof parseOriginal = (source, options) => {
@@ -22,8 +24,14 @@ export function parseForSnapshot(
   source: string,
   options?: {preserveRange?: boolean},
 ): mixed {
-  const program = parse(source);
-  SimpleTraverser.traverse(program, {
+  return cleanASTForSnapshot(parse(source), options);
+}
+
+export function cleanASTForSnapshot(
+  ast: ESNode,
+  options?: {preserveRange?: boolean},
+): mixed {
+  SimpleTraverser.traverse(ast, {
     enter(node) {
       // $FlowExpectedError[cannot-write]
       delete node.loc;
@@ -37,8 +45,12 @@ export function parseForSnapshot(
     leave() {},
   });
 
-  return {
-    type: 'Program',
-    body: program.body,
-  };
+  if (ast.type === 'Program') {
+    return {
+      type: 'Program',
+      body: ast.body,
+    };
+  }
+
+  return ast;
 }
