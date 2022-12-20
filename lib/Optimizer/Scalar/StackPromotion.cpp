@@ -481,6 +481,7 @@ bool StackPromotion::runOnModule(Module *M) {
   // frame variables that may be accessed by unreachable functions - which could
   // make the IR inside the unreachable functions technically incorrect, even if
   // it is never executed.
+  llvh::SmallVector<Function *, 16> toDestroy;
   while (!maybeUnreachableFuncs.empty()) {
     Function *F = maybeUnreachableFuncs.pop_back_val();
     if (F->hasUsers())
@@ -495,6 +496,13 @@ bool StackPromotion::runOnModule(Module *M) {
       }
     }
     F->eraseFromParentNoDestroy();
+    // Defer destroying the function, since other unreachable functions may
+    // still have references to variables stored in it.
+    toDestroy.push_back(F);
+  }
+
+  for (auto *F : toDestroy) {
+    assert(F->empty() && "All basic blocks should have been deleted.");
     Value::destroy(F);
   }
 
