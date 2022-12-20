@@ -393,12 +393,12 @@ class DebugInfoGenerator {
       llvh::ArrayRef<DebugSourceLocation> offsets);
 
   /// Append lexical data including parent function \p parentFunctionIndex and
-  /// list of variable names \p names to the debug data. Each string in \p names
-  /// must be a valid UTF8 string. \return the offset in the lexical section of
-  /// the debug data.
+  /// list of variable names \p namesUTF8 to the debug data. Each string in \p
+  /// namesUTF8 must be a valid UTF8 string. \return the offset in the lexical
+  /// section of the debug data.
   uint32_t appendLexicalData(
       OptValue<uint32_t> parentFunctionIndex,
-      llvh::ArrayRef<Identifier> names);
+      llvh::ArrayRef<Identifier> namesUTF8);
 
   /// Append the textified callee data to the debug data. \return the offset in
   /// the textified callee table of the debug data.

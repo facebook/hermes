@@ -79,7 +79,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   std::vector<DebugSourceLocation> debugLocations_{};
 
   /// Table mapping variable names to frame locations.
-  std::vector<Identifier> debugVariableNames_;
+  std::vector<Identifier> debugVariableNamesUTF8_;
 
   /// Table mapping addresses to textified callees.
   std::vector<DebugTextifiedCallee> textifiedCallees_;
@@ -181,7 +181,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   bool hasDebugInfo() const {
     return !debugLocations_.empty() || lexicalParentID_ ||
-        !debugVariableNames_.empty() || !textifiedCallees_.empty();
+        !debugVariableNamesUTF8_.empty() || !textifiedCallees_.empty();
   }
 
   // Add the textified callee string for the callable in a given location.
@@ -194,16 +194,16 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   /// Add a debug variable named \name.
-  void setDebugVariableNames(std::vector<Identifier> names) {
+  void setDebugVariableNamesUTF8(std::vector<Identifier> names) {
     assert(
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    debugVariableNames_ = std::move(names);
+    debugVariableNamesUTF8_ = std::move(names);
   }
 
   /// \return the list of debug variable names.
-  llvh::ArrayRef<Identifier> getDebugVariableNames() const {
-    return debugVariableNames_;
+  llvh::ArrayRef<Identifier> getDebugVariableNamesUTF8() const {
+    return debugVariableNamesUTF8_;
   }
 
   /// Set the lexical parent ID to \p parentId.

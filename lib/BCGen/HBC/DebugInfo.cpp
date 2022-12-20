@@ -541,15 +541,15 @@ DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
 
 uint32_t DebugInfoGenerator::appendLexicalData(
     OptValue<uint32_t> parentFunc,
-    llvh::ArrayRef<Identifier> names) {
+    llvh::ArrayRef<Identifier> namesUTF8) {
   assert(validData && "DebugInfoGenerator not valid");
-  if (!parentFunc.hasValue() && names.empty()) {
+  if (!parentFunc.hasValue() && namesUTF8.empty()) {
     return kMostCommonEntryOffset;
   }
   const uint32_t startOffset = lexicalData_.size();
   appendSignedLEB128(lexicalData_, parentFunc ? *parentFunc : int64_t(-1));
-  appendSignedLEB128(lexicalData_, names.size());
-  for (Identifier name : names)
+  appendSignedLEB128(lexicalData_, namesUTF8.size());
+  for (Identifier name : namesUTF8)
     appendString(lexicalData_, name);
   return startOffset;
 }

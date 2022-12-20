@@ -2250,13 +2250,8 @@ exitLoop:
 }
 
 UniqueString *JSLexer::convertSurrogatesInString(llvh::StringRef str) {
-  llvh::SmallVector<char16_t, 8> ustr;
-  ustr.reserve(str.size());
-  char16_t *ustrEnd =
-      convertUTF8WithSurrogatesToUTF16(ustr.data(), str.begin(), str.end());
   std::string output;
-  convertUTF16ToUTF8WithReplacements(
-      output, llvh::makeArrayRef(ustr.data(), ustrEnd));
+  convertUTF8WithSurrogatesToUTF8WithReplacements(output, str);
   return strTab_.getString(output);
 }
 

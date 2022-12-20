@@ -351,7 +351,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       uint32_t sourceLocOffset = debugInfoGen.appendSourceLocations(
           BFG.getSourceLocation(), i, BFG.getDebugLocations());
       uint32_t lexicalDataOffset = debugInfoGen.appendLexicalData(
-          BFG.getLexicalParentID(), BFG.getDebugVariableNames());
+          BFG.getLexicalParentID(), BFG.getDebugVariableNamesUTF8());
       uint32_t textifiedCalleesOffset =
           debugInfoGen.appendTextifiedCalleeData(BFG.getTextifiedCallees());
       func->setDebugOffsets(

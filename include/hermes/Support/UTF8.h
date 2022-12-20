@@ -234,6 +234,13 @@ bool convertUTF16ToUTF8WithReplacements(
     llvh::ArrayRef<char16_t> input,
     size_t maxCharacters = 0);
 
+/// Convert a UTF-8 encoded string (with surrogates) \p input to a UTF-8 one
+/// (without surrogates), storing the conversion in \p output. Output characters
+/// are appended to \p output.
+void convertUTF8WithSurrogatesToUTF8WithReplacements(
+    std::string &output,
+    llvh::StringRef input);
+
 } // namespace hermes
 
 #endif // HERMES_SUPPORT_UTF8_H
