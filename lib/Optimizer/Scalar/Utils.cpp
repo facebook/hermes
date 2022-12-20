@@ -141,19 +141,17 @@ bool hermes::getCallSites(
 
       for (auto *VU : V->getUsers()) {
         if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(VU)) {
-          if (!LFI->hasOneUser())
-            return false;
-
-          Value *loadUser = LFI->getUsers()[0];
-          if (auto *loadUserCI = llvh::dyn_cast<BaseCallInst>(loadUser)) {
-            if (loadUserCI && isDirectCallee(LFI, loadUserCI)) {
-              callsites.push_back(loadUserCI);
-              continue;
+          for (Value *loadUser : LFI->getUsers()) {
+            if (auto *loadUserCI = llvh::dyn_cast<BaseCallInst>(loadUser)) {
+              if (isDirectCallee(LFI, loadUserCI)) {
+                callsites.push_back(loadUserCI);
+                continue;
+              }
             }
-          }
 
-          // Unknown load used.
-          return false;
+            // Unknown load used.
+            return false;
+          }
         }
       }
     }
