@@ -10,7 +10,7 @@
 
 import type {BaseNode, ESNode} from 'hermes-estree';
 
-import {SimpleTraverser, getVisitorKeys, isNode} from 'hermes-parser';
+import {astNodeMutationHelpers} from 'hermes-parser';
 
 export opaque type DetachedNode<+T> = T;
 export type MaybeDetachedNode<+T> = T | DetachedNode<T>;
@@ -175,31 +175,14 @@ export function deepCloneNode<T: ESNode>(
 export function setParentPointersInDirectChildren(
   node: DetachedNode<ESNode>,
 ): void {
-  for (const key of getVisitorKeys(node)) {
-    if (
-      isNode(
-        // $FlowExpectedError[prop-missing]
-        node[key],
-      )
-    ) {
-      node[key].parent = node;
-    } else if (Array.isArray(node[key])) {
-      for (const child of node[key]) {
-        child.parent = node;
-      }
-    }
-  }
+  astNodeMutationHelpers.setParentPointersInDirectChildren(node);
 }
 
 /**
  * Traverses the entire subtree to ensure the parent pointers are set correctly
  */
-export function updateAllParentPointers(node: ESNode | DetachedNode<ESNode>) {
-  SimpleTraverser.traverse(node, {
-    enter(node, parent) {
-      // $FlowExpectedError[cannot-write]
-      node.parent = parent;
-    },
-    leave() {},
-  });
+export function updateAllParentPointers(
+  node: ESNode | DetachedNode<ESNode>,
+): void {
+  astNodeMutationHelpers.updateAllParentPointers(node);
 }

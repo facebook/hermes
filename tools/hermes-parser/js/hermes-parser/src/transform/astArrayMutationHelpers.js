@@ -16,6 +16,27 @@ function assertArrayBounds<T>(array: $ReadOnlyArray<T>, index: number): void {
   }
 }
 
+export function arrayIsEqual(
+  a1: $ReadOnlyArray<mixed>,
+  a2: $ReadOnlyArray<mixed>,
+): boolean {
+  if (a1 === a2) {
+    return true;
+  }
+
+  if (a1.length !== a2.length) {
+    return false;
+  }
+
+  for (let i = 0; i < a1.length; i++) {
+    if (a1[i] !== a2[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function insertInArray<T>(
   array: $ReadOnlyArray<T>,
   index: number,
