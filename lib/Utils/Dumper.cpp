@@ -99,7 +99,7 @@ void IRPrinter::printTypeLabel(Type T) {
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
-  if (isa<CallBuiltinInst>(I) && opIndex == 0) {
+  if (isa<CallBuiltinInst>(I) && opIndex == CallInst::CalleeIdx) {
     os << "["
        << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
        << "]";

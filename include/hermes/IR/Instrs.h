@@ -745,6 +745,10 @@ class BaseCallInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
+  // Forces the code to use the appropriate getters instead of relying on
+  // hard-coded offsets when accessing the arguments.
+  using Instruction::getOperand;
+
  public:
   enum { CalleeIdx, ThisIdx };
 
@@ -767,7 +771,7 @@ class BaseCallInst : public Instruction {
   }
 
   unsigned getNumArguments() const {
-    return getNumOperands() - 1;
+    return getNumOperands() - ThisIdx;
   }
 
   static bool hasOutput() {
