@@ -1749,9 +1749,9 @@ static char s_prop_cache[];
        << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
-  _sh_initialize_units(shr, 1, &s_this_unit);
+  bool success = _sh_initialize_units(shr, 1, &s_this_unit);
   _sh_done(shr);
-  return 0;
+  return success ? 0 : 1;
 }
 )";
   }
