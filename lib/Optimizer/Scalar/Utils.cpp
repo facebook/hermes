@@ -108,7 +108,7 @@ bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
 
 bool hermes::getCallSites(
     Function *F,
-    llvh::SmallVectorImpl<BaseCallInst *> &callsites) {
+    llvh::DenseSet<BaseCallInst *> &callsites) {
   // Skip global and module functions.
   if (F->isGlobalScope() || F->getParent()->findCJSModule(F))
     return false;
@@ -124,7 +124,7 @@ bool hermes::getCallSites(
     for (auto *U : CFI->getUsers()) {
       auto *CI = llvh::dyn_cast<BaseCallInst>(U);
       if (CI && isDirectCallee(CFI, CI)) {
-        callsites.push_back(CI);
+        callsites.insert(CI);
         continue;
       }
 
@@ -144,7 +144,7 @@ bool hermes::getCallSites(
           for (Value *loadUser : LFI->getUsers()) {
             if (auto *loadUserCI = llvh::dyn_cast<BaseCallInst>(loadUser)) {
               if (isDirectCallee(LFI, loadUserCI)) {
-                callsites.push_back(loadUserCI);
+                callsites.insert(loadUserCI);
                 continue;
               }
             }

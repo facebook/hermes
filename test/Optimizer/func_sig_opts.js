@@ -136,13 +136,13 @@ function test_async() {
 // CHECK-NEXT:  %7 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2(a, b, c, d) : string|number
+// CHECK:function foo2(a, b : number, c : number, d : undefined) : string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = LoadParamInst %c
+// CHECK-NEXT:  %1 = LoadParamInst %c : number
 // CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, 2 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %2 : string|number, %1
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %2 : string|number, %1 : number
 // CHECK-NEXT:  %4 = ReturnInst %3 : string|number
 // CHECK-NEXT:function_end
 

@@ -57,7 +57,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_test" : string
 // CHECK-NEXT:  %4 = CreateFunctionInst %load_store_test() : number
 // CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "load_store_test" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %load_store_multiple_test() : string|number|bigint
+// CHECK-NEXT:  %6 = CreateFunctionInst %load_store_multiple_test() : number
 // CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "load_store_multiple_test" : string
 // CHECK-NEXT:  %8 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
@@ -108,35 +108,35 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %2 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function k(k) : number
+// CHECK:function k(k : number) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function load_store_multiple_test() : string|number|bigint
+// CHECK:function load_store_multiple_test() : number
 // CHECK-NEXT:frame = [foo : closure]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"()
+// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : number
 // CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo] : closure
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : string|number|bigint
+// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : number
 // CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst %3 : string|number|bigint
+// CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 2#"(cond, val)
+// CHECK:function "foo 2#"(cond : boolean, val : number) : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %val
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = LoadParamInst %val : number
+// CHECK-NEXT:  %1 = ReturnInst %0 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function bar() : string|number|bigint
+// CHECK:function bar() : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst [foo@load_store_multiple_test] : closure
 // CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, true : boolean, 7 : number
 // CHECK-NEXT:  %2 = CallInst %0 : closure, undefined : undefined, true : boolean, 8 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1, %2
-// CHECK-NEXT:  %4 = ReturnInst %3 : string|number|bigint
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end

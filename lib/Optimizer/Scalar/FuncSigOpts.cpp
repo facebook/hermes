@@ -60,7 +60,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   IRBuilder builder(F);
 
-  llvh::SmallVector<BaseCallInst *, 8> callsites;
+  llvh::DenseSet<BaseCallInst *> callsites;
   if (!getCallSites(F, callsites))
     return false;
 
