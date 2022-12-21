@@ -315,11 +315,12 @@ class InstrGen {
   uint32_t nextJBufIdx_{0};
 
   void unimplemented(Instruction &inst) {
-    auto err = "Unimplemented " + inst.getName();
+    std::string err{"Unimplemented "};
+    err += inst.getName();
     F_.getParent()->getContext().getSourceErrorManager().error(
         inst.getLocation(), err);
     // This can optionally be disabled.
-    hermes_fatal(err.str());
+    hermes_fatal(err);
   }
 
   const char *boolStr(bool b) {
