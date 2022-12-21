@@ -221,8 +221,6 @@ OptValue<uint32_t> toArrayIndex(StringView str);
 /// If it is possible to cheaply verify that \p value is an array index
 /// according to the rules in ES5.1 15.4, do so and return the index. Note that
 /// it this fails, the value may still be a valid index.
-OptValue<uint32_t> toArrayIndexFastPath(HermesValue value)
-    LLVM_NO_SANITIZE("float-cast-overflow");
 inline OptValue<uint32_t> toArrayIndexFastPath(HermesValue value) {
   if (value.isNumber()) {
     return hermes::doubleToArrayIndex(value.getNumber());

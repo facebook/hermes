@@ -307,14 +307,10 @@ JSTypedArray<uint8_t, CellKind::Uint8ClampedArrayKind>::toDestType(
 
 template <>
 inline float JSTypedArray<float, CellKind::Float32ArrayKind>::toDestType(
-    const HermesValue &numeric) LLVM_NO_SANITIZE("float-cast-overflow");
-
-template <>
-inline float JSTypedArray<float, CellKind::Float32ArrayKind>::toDestType(
     const HermesValue &numeric) {
   // This can overflow a float, but float overflow goes to Infinity
   // (the correct behavior) on all modern platforms.
-  return numeric.getNumber();
+  return unsafeTruncateDouble<float>(numeric.getNumber());
 }
 
 template <>

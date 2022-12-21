@@ -17,6 +17,13 @@
 
 namespace hermes {
 
+/// Helper function to silence UBSAN complaints when truncating a double to some
+/// type that cannot hold its original value (e.g. integer types and float).
+template <typename T>
+T unsafeTruncateDouble(double d) LLVM_NO_SANITIZE("float-cast-overflow") {
+  return static_cast<T>(d);
+}
+
 /// Convert a double to a 32-bit integer according to ES5.1 section 9.5.
 /// It can also be used for converting to an unsigned integer, which has the
 /// same bit pattern.
@@ -33,12 +40,11 @@ int32_t truncateToInt32SlowPath(double d);
 /// NaN and Infinity are always converted to 0. The rest of the numbers are
 /// converted to a (conceptually) infinite-width integer and the low 32 bits of
 /// the integer are then returned.
-int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
 inline int32_t truncateToInt32(double d) {
   // Check of the value can be converted to integer without loss. We want to
   // use the widest available integer because this conversion will be much
   // faster than the bit-twiddling slow path.
-  intmax_t fast = (intmax_t)d;
+  intmax_t fast = unsafeTruncateDouble<intmax_t>(d);
   if (LLVM_LIKELY(fast == d))
     return (int32_t)fast;
   return truncateToInt32SlowPath(d);
@@ -99,10 +105,8 @@ inline OptValue<uint32_t> toArrayIndex(llvh::StringRef str) {
 }
 
 /// Attempt to convert a double to a valid JavaScript array number.
-OptValue<uint32_t> doubleToArrayIndex(double d)
-    LLVM_NO_SANITIZE("float-cast-overflow");
 inline OptValue<uint32_t> doubleToArrayIndex(double d) {
-  uint32_t index = (uint32_t)d;
+  uint32_t index = unsafeTruncateDouble<uint32_t>(d);
   if (index == d && index != 0xFFFFFFFFu)
     return index;
   return llvh::None;

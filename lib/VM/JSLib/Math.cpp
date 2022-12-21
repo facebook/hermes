@@ -212,9 +212,6 @@ CallResult<HermesValue> mathRandom(void *, Runtime &runtime, NativeArgs) {
   return HermesValue::encodeDoubleValue(dist(storage->randomEngine_));
 }
 
-CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args)
-    LLVM_NO_SANITIZE("float-cast-overflow");
-
 CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -229,7 +226,7 @@ CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args) {
   // TODO(T43892577): Find an alternative that doesn't use UB (or validate that
   // the UB is ok).
   return HermesValue::encodeNumberValue(
-      static_cast<double>(static_cast<float>(x)));
+      static_cast<double>(unsafeTruncateDouble<float>(x)));
 }
 
 // ES2022 21.3.2.18

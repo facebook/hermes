@@ -381,7 +381,7 @@ class JSArray final : public ArrayImpl {
       Handle<JSArray> selfHandle,
       Runtime &runtime,
       Handle<> newLength,
-      PropOpFlags opFlags) LLVM_NO_SANITIZE("float-cast-overflow");
+      PropOpFlags opFlags);
 
   /// Update the JavaScript '.length' property, which also resizes the array.
   /// The writability of the property \b MUST already have been checked.

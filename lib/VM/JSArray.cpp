@@ -619,7 +619,7 @@ CallResult<bool> JSArray::setLength(
   // The only way this could fail is if the conversion throws an exception or
   // aborts the application, which is not the case on any platform we are
   // targeting.
-  uint32_t ulen = (uint32_t)d;
+  uint32_t ulen = unsafeTruncateDouble<uint32_t>(d);
   if (ulen != d)
     return runtime.raiseRangeError("Invalid array length");
 

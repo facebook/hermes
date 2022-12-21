@@ -300,20 +300,17 @@ class HermesValue32 {
     return fromRaw(p | static_cast<RawType>(tag));
   }
 
-  static SmiType truncateDouble(double d)
-      LLVM_NO_SANITIZE("float-cast-overflow") {
-    return d;
-  }
-
   /// Truncate \p d to an integer that fits in kNumSmiBits.
   static SmiType doubleToSmi(double d) {
     // Use a generic lambda here so the inactive case of the if constexpr does
     // not need to compile.
     return [](auto d) {
       if constexpr (kNumSmiBits <= 32)
-        return llvh::SignExtend32<kNumSmiBits>(truncateDouble(d));
+        return llvh::SignExtend32<kNumSmiBits>(
+            unsafeTruncateDouble<SmiType>(d));
       else
-        return llvh::SignExtend64<kNumSmiBits>(truncateDouble(d));
+        return llvh::SignExtend64<kNumSmiBits>(
+            unsafeTruncateDouble<SmiType>(d));
     }(d);
   }
 

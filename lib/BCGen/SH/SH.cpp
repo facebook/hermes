@@ -355,7 +355,7 @@ class InstrGen {
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
       os_ << "_sh_ljs_double(";
       if (!LN->isNegativeZero() &&
-          LN->getValue() == static_cast<int>(LN->getValue())) {
+          LN->getValue() == unsafeTruncateDouble<int>(LN->getValue())) {
         os_ << static_cast<int>(LN->getValue());
       } else {
         os_ << "((struct HermesValueBase){.raw = "
