@@ -632,18 +632,14 @@ def runTest(
         if lazy:
             run_vm = True
             fileToRun = js_source
-            onePhase = True
-            start = time.time()
-        elif shermes:
-            run_vm = True
-            fileToRun = js_source
-            onePhase = True
             start = time.time()
         else:
             errString = ""
-            fileToRun = js_source + ".hbc"
+            fileToRun = js_source + ".out"
             for optEnabled in (True, False):
-                printVerbose("\nRunning with Hermes...")
+                printVerbose(
+                    "\nRunning with {}...".format("SHermes" if shermes else "Hermes")
+                )
                 printVerbose("Optimization: {}".format(str(optEnabled)))
                 run_vm = True
                 start = time.time()
@@ -651,22 +647,36 @@ def runTest(
                 # Compile to bytecode with Hermes.
                 try:
                     printVerbose(f"Compiling: {js_source} to {fileToRun}")
-                    args = [
-                        path.join(binary_path, "hermesc"),
-                        js_source,
-                        "-hermes-parser",
-                        "-emit-binary",
-                        "-out",
-                        fileToRun,
-                    ] + extra_compile_flags
-                    if optEnabled:
-                        args.append("-O")
+                    if shermes:
+                        args = [
+                            path.join(binary_path, "shermes"),
+                            js_source,
+                            "-o",
+                            fileToRun,
+                        ]
+                        if optEnabled:
+                            args.append("-O")
+                        else:
+                            args.append("-O0")
+                        if strictEnabled:
+                            args.append("-strict")
                     else:
-                        args.append("-O0")
-                    if strictEnabled:
-                        args.append("-strict")
-                    else:
-                        args.append("-non-strict")
+                        args = [
+                            path.join(binary_path, "hermesc"),
+                            js_source,
+                            "-hermes-parser",
+                            "-emit-binary",
+                            "-out",
+                            fileToRun,
+                        ] + extra_compile_flags
+                        if optEnabled:
+                            args.append("-O")
+                        else:
+                            args.append("-O0")
+                        if strictEnabled:
+                            args.append("-strict")
+                        else:
+                            args.append("-non-strict")
                     subprocess.check_output(
                         args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
                     )
@@ -720,20 +730,24 @@ def runTest(
                 else:
                     printVerbose("Running with HBC VM: {}".format(filename))
                 # Run the hermes vm.
-                if lazy:
-                    binary = path.join(binary_path, "hermes")
-                elif shermes:
-                    binary = path.join(binary_path, "shermes")
-                else:
-                    binary = path.join(binary_path, hvm)
                 disableHandleSanFlag = (
                     ["-gc-sanitize-handles=0"]
                     if fileInSkiplist(filename, HANDLESAN_SKIP_LIST)
                     else []
                 )
                 if shermes:
-                    args = [binary, fileToRun]
+                    args = (
+                        [fileToRun]
+                        + es6_args
+                        + extra_run_args
+                        + disableHandleSanFlag
+                        + useMicrotasksFlag
+                    )
                 else:
+                    if lazy:
+                        binary = path.join(binary_path, "hermes")
+                    else:
+                        binary = path.join(binary_path, hvm)
                     args = (
                         [binary, fileToRun]
                         + es6_args
@@ -747,10 +761,6 @@ def runTest(
                         args.append("-strict")
                     else:
                         args.append("-non-strict")
-                if shermes:
-                    args.append("-exec")
-                    if strictEnabled:
-                        args.append("-strict")
 
                 env = {"LC_ALL": "en_US.UTF-8"}
                 if sys.platform == "linux":
@@ -763,9 +773,9 @@ def runTest(
                     args, timeout=TIMEOUT_VM, stderr=subprocess.STDOUT, env=env
                 )
 
-                if (not onePhase and negativePhase == "runtime") or (
-                    onePhase and negativePhase != ""
-                ):
+                # This is the last phase, so if the negativePhase is set, something
+                # should have thrown by now.
+                if negativePhase != "":
                     printVerbose("FAIL: Expected execution to throw")
                     return (
                         (skippedType, "", 0)
@@ -775,9 +785,7 @@ def runTest(
                 else:
                     printVerbose("PASS: Execution completed successfully")
             except subprocess.CalledProcessError as e:
-                if (not onePhase and negativePhase != "runtime") or (
-                    onePhase and negativePhase == ""
-                ):
+                if negativePhase == "" or (not lazy and negativePhase != "runtime"):
                     printVerbose(
                         "FAIL: Execution of {} threw unexpected error".format(filename)
                     )
