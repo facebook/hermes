@@ -130,12 +130,22 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
   locals.head.count = 1;
   locals.env = _sh_ljs_null();
 
-  SHLegacyValue closure = _sh_ljs_create_closure(
-      shr,
-      &locals.env,
-      unit->unit_main,
-      Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
-      0);
+  SHLegacyValue closure;
+  if (unit->unit_main_strict) {
+    closure = _sh_ljs_create_closure_strict(
+        shr,
+        &locals.env,
+        unit->unit_main,
+        Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
+        0);
+  } else {
+    closure = _sh_ljs_create_closure_loose(
+        shr,
+        &locals.env,
+        unit->unit_main,
+        Predefined::getSymbolID(Predefined::Str::emptyString).unsafeGetRaw(),
+        0);
+  }
 
   auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),

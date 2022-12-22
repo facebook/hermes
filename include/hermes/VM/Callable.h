@@ -481,6 +481,7 @@ class SHLegacyFunction : public Callable {
   /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<SHLegacyFunction> create(
@@ -490,6 +491,7 @@ class SHLegacyFunction : public Callable {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
+      bool strictMode,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.
@@ -500,6 +502,7 @@ class SHLegacyFunction : public Callable {
   /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
+  /// \param strictMode indicates whether the function is in strict mode.
   /// \param additionalSlotCount internal slots to reserve within the
   /// object (defaults to zero).
   static Handle<SHLegacyFunction> create(
@@ -510,6 +513,7 @@ class SHLegacyFunction : public Callable {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
+      bool strictMode,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.
