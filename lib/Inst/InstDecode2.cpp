@@ -23,7 +23,7 @@ llvh::StringRef getOpCodeString(OpCode opCode) {
 #include "hermes/BCGen/HBC/BytecodeList.def"
   };
 
-  return opCodeStrings[(int)opCode];
+  return opCodeStrings[(unsigned)opCode];
 };
 
 } // namespace inst

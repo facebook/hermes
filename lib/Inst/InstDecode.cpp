@@ -76,7 +76,7 @@ InstMetaData getInstMetaData(OpCode opCode) {
 
 uint8_t getInstSize(OpCode opCode) {
   assert(opCode < OpCode::_last && "invalid OpCode");
-  return meta[(int)opCode].size;
+  return meta[(unsigned)opCode].size;
 }
 
 uint8_t getOperandSize(OperandType type) {
