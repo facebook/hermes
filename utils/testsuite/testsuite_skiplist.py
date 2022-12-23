@@ -1820,6 +1820,19 @@ SKIP_LIST = [
     # Import attributes
     "flow/dynamic_import/migrated_0005.js",
     ### Failing Flow tests end ###
+    ### Failing Static Hermes tests ###
+    "test262/test/built-ins/Object/seal/seal-asyncfunction.js",
+    "test262/test/built-ins/Object/seal/seal-generatorfunction.js",
+    "test262/test/language/expressions/in/rhs-yield-present.js",
+    "test262/test/built-ins/AsyncFunction/",
+    # TODO(T140837786): Properly support template literals.
+    "test262/test/built-ins/String/raw/",
+    "test262/test/language/expressions/async-function/",
+    "test262/test/language/expressions/tagged-template/",
+    "test262/test/language/expressions/template-literal/",
+    "test262/test/language/statements/debugger/statement.js",
+    "test262/test/language/statements/async-function/",
+    ### Failing Static Hermes tests end ###
 ]
 
 
@@ -2030,6 +2043,9 @@ UNSUPPORTED_FEATURES = [
     "Temporal",
     "well-formed-json-stringify",
     "u180e",
+    # Static Hermes does not support generators yet.
+    "async-functions",
+    "generators",
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [
