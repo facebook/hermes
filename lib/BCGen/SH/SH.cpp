@@ -30,6 +30,10 @@ void generateBasicBlockLabel(
   OS << "L" << bbMap.find(B)->second;
 }
 
+const char *boolStr(bool b) {
+  return b ? "true" : "false";
+}
+
 /// Helper to unique and store the contents of strings.
 class SHStringTable {
   StringSetVector strings_;
@@ -321,10 +325,6 @@ class InstrGen {
         inst.getLocation(), err);
     // This can optionally be disabled.
     hermes_fatal(err);
-  }
-
-  const char *boolStr(bool b) {
-    return b ? "true" : "false";
   }
 
   /// Helper to generate a value that must always have an allocated register,
@@ -1160,7 +1160,9 @@ class InstrGen {
   void generateHBCCreateFunctionInst(HBCCreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure(shr, &";
+    os_ << " = _sh_ljs_create_closure_"
+        << (inst.getFunctionCode()->isStrictMode() ? "strict" : "loose")
+        << "(shr, &";
     generateRegister(*inst.getEnvironment());
     os_ << ", ";
     moduleGen_.generateFunctionLabel(inst.getFunctionCode(), os_);
@@ -1745,7 +1747,9 @@ static char s_prop_cache[];
        << moduleGen.literalBuffers.objValBuffer.size() << ", "
        << ".array_buffer = s_array_buffer, .array_buffer_size = "
        << moduleGen.literalBuffers.arrayBuffer.size() << ", "
-       << ".unit_main = _0_global, .unit_name = \"sh_compiled\" };\n"
+       << ".unit_main = _0_global, .unit_main_strict = "
+       << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
+       << ".unit_name = \"sh_compiled\" };\n"
        << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);

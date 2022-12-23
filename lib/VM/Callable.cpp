@@ -859,6 +859,7 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
+    bool strictMode,
     unsigned additionalSlotCount) {
   size_t reservedSlots =
       numOverlapSlots<SHLegacyFunction>() + additionalSlotCount;
@@ -880,7 +881,7 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
       paramCount,
       prototypeObjectHandle,
       Callable::WritablePrototype::Yes,
-      false);
+      strictMode);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -896,6 +897,7 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
+    bool strictMode,
     unsigned additionalSlotCount) {
   auto *cell = runtime.makeAFixed<SHLegacyFunction>(
       runtime,
@@ -914,7 +916,7 @@ Handle<SHLegacyFunction> SHLegacyFunction::create(
       paramCount,
       prototypeObjectHandle,
       Callable::WritablePrototype::Yes,
-      false);
+      strictMode);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");

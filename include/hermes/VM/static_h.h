@@ -93,6 +93,8 @@ typedef struct SHUnit {
 
   /// Unit main function.
   SHLegacyValue (*unit_main)(SHRuntime *shr);
+  /// True if the unit_main function is strict, false otherwise.
+  bool unit_main_strict;
   /// Unit name.
   const char *unit_name;
 
@@ -311,8 +313,16 @@ SHERMES_EXPORT void _sh_ljs_store_np_to_env(
     SHLegacyValue val,
     uint32_t index);
 
-/// \param env  Should be JSNull if there is no environment.
-SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
+/// Create a closure. The strictness here refers to the strictness of the
+/// function being created, rather than of the enclosing function.
+/// \param env Should be JSNull if there is no environment.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure_loose(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    SHSymbolID name,
+    uint32_t paramCount);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure_strict(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),

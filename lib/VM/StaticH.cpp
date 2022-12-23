@@ -487,12 +487,13 @@ extern "C" void _sh_ljs_store_np_to_env(
       .setNonPtr(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
 }
 
-extern "C" SHLegacyValue _sh_ljs_create_closure(
+static SHLegacyValue createClosure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
     SHSymbolID name,
-    uint32_t paramCount) {
+    uint32_t paramCount,
+    bool strictMode) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
 
@@ -521,9 +522,28 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
           SymbolID::unsafeCreate(name),
           paramCount,
           prototypeObjectHandle,
+          strictMode,
           0)
           .getHermesValue();
   return res;
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_closure_loose(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    SHSymbolID name,
+    uint32_t paramCount) {
+  return createClosure(shr, env, func, name, paramCount, false);
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_closure_strict(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    SHSymbolID name,
+    uint32_t paramCount) {
+  return createClosure(shr, env, func, name, paramCount, true);
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
