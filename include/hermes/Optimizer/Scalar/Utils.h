@@ -41,6 +41,11 @@ Function *getCallee(Value *callee);
 ///   by any of the arguments.
 bool isDirectCallee(Value *C, BaseCallInst *CI);
 
+/// \return True if \p V is an instruction that may be used in a constructor
+/// invocation of the \p closure. In the absence of other instructions that
+/// manipulate the closure, these instructions cannot leak the closure.
+bool isConstructionSetup(Value *V, Value *closure);
+
 /// Collect the Functions that a given \p call may be calling in \p callees.
 /// \return true if we have a complete set, false if there are unknown callees.
 bool getCallees(BaseCallInst *call, llvh::DenseSet<Function *> &callees);
