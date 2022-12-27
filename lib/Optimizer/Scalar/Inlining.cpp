@@ -90,7 +90,7 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
 static Value *inlineFunction(
     IRBuilder &builder,
     Function *F,
-    CallInst *CI,
+    BaseCallInst *CI,
     BasicBlock *nextBlock) {
   Function *intoFunction = builder.getInsertionBlock()->getParent();
 
@@ -173,6 +173,14 @@ static Value *inlineFunction(
         uint32_t index = LPI->getParam()->getIndexInParamList();
         operandMap[&I] = index < CI->getNumArguments()
             ? CI->getArgument(index)
+            : builder.getLiteralUndefined();
+        continue;
+      }
+
+      // For constructor calls, replace GetNewTargetInst with the closure.
+      if (llvh::isa<GetNewTargetInst>(&I)) {
+        operandMap[&I] = llvh::isa<ConstructInst>(CI)
+            ? CI->getCallee()
             : builder.getLiteralUndefined();
         continue;
       }
@@ -259,14 +267,16 @@ bool Inlining::runOnModule(Module *M) {
         continue;
 
       // Check if the function is used only once directly by a CallInst.
-      // We can't use getCallSites() (yet) because it also considers constructor
-      // calls as well usages through environment variables.
+      // We can't use getCallSites() (yet) because it also considers usages
+      // through environment variables.
 
-      if (!CFI->hasOneUser() ||
-          CFI->getUsers()[0]->getKind() != ValueKind::CallInstKind) {
+      if (!CFI->hasOneUser())
         continue;
-      }
-      auto *CI = cast<CallInst>(CFI->getUsers()[0]);
+      if (!llvh::isa<CallInst>(CFI->getUsers()[0]) &&
+          !llvh::isa<ConstructInst>(CFI->getUsers()[0]))
+        continue;
+
+      auto *CI = cast<BaseCallInst>(CFI->getUsers()[0]);
       if (!isDirectCallee(CFI, CI))
         continue;
 
