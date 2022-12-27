@@ -333,19 +333,6 @@ static bool inferFunctionReturnType(Function *F) {
 static void propagateArgs(
     llvh::DenseSet<BaseCallInst *> &callSites,
     Function *F) {
-  // In non strict mode a function can escape by accessing arguments.caller.
-  // We don't try to infer the types of the parameters in non-strict mode,
-  // unless "Hermes non-strict optimizations are enabled". These optimizations
-  // allow us to benefit from the fact that Hermes doesn't implement some
-  // aspects of non-strict mode, specifically in this case: modifying arguments
-  // indirectly, argumentrs.caller, arguments.callee.
-  if (!F->isStrictMode() &&
-      !F->getContext()
-           .getOptimizationSettings()
-           .aggressiveNonStrictModeOptimizations) {
-    return;
-  }
-
   IRBuilder builder(F);
   for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
     auto *P = F->getJSDynamicParam(i);
@@ -968,11 +955,22 @@ class TypeInferenceImpl {
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.
   void inferParams(Function *F) {
-    if (cgp_->hasUnknownCallsites(F)) {
+    // In non strict mode a function can escape by accessing arguments.caller.
+    // We don't try to infer the types of the parameters in non-strict mode,
+    // unless "Hermes non-strict optimizations are enabled". These optimizations
+    // allow us to benefit from the fact that Hermes doesn't implement some
+    // aspects of non-strict mode, specifically in this case: modifying
+    // arguments indirectly, argumentrs.caller, arguments.callee.
+    // Similarly, if there are unknown call sites, we can't infer anything about
+    // the parameters.
+    if (cgp_->hasUnknownCallsites(F) ||
+        (!F->isStrictMode() &&
+         !F->getContext()
+              .getOptimizationSettings()
+              .aggressiveNonStrictModeOptimizations)) {
       LLVM_DEBUG(
-          dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
-      // If there are unknown call sites, we can't infer anything about the
-      // parameters.
+          dbgs() << "Cannot infer parameter types for "
+                 << F->getInternalName().str() << ".\n");
       for (auto *param : F->getJSDynamicParams()) {
         param->setType(Type::createAnyType());
       }
