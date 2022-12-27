@@ -334,7 +334,11 @@ static void propagateArgs(
     llvh::DenseSet<BaseCallInst *> &callSites,
     Function *F) {
   IRBuilder builder(F);
-  for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
+  // Set the "this" parameter to always be any, since we cannot handle
+  // constructors properly yet.
+  // TODO: Handle "this" parameter.
+  F->getJSDynamicParam(0)->setType(Type::createAnyType());
+  for (uint32_t i = 1, e = F->getJSDynamicParams().size(); i < e; ++i) {
     auto *P = F->getJSDynamicParam(i);
     Type paramTy;
     bool first = true;
