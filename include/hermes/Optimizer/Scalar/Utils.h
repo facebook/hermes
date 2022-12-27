@@ -41,6 +41,10 @@ Function *getCallee(Value *callee);
 ///   by any of the arguments.
 bool isDirectCallee(Value *C, BaseCallInst *CI);
 
+/// Collect the Functions that a given \p call may be calling in \p callees.
+/// \return true if we have a complete set, false if there are unknown callees.
+bool getCallees(BaseCallInst *call, llvh::DenseSet<Function *> &callees);
+
 /// Collect the call sites for function \p F in \p callsites.
 /// \returns True if all call sites are known and \p callsites is valid.
 bool getCallSites(Function *F, llvh::DenseSet<BaseCallInst *> &callsites);

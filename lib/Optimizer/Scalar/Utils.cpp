@@ -106,6 +106,50 @@ bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
   return true;
 }
 
+bool hermes::getCallees(
+    BaseCallInst *call,
+    llvh::DenseSet<Function *> &callees) {
+  Value *callee = call->getCallee();
+
+  if (llvh::isa<NormalFunction>(callee) ||
+      llvh::isa<GeneratorFunction>(callee)) {
+    auto *F = cast<Function>(callee);
+    callees.insert(F);
+    return true;
+  }
+  if (auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(callee)) {
+    callees.insert(CFI->getFunctionCode());
+    return true;
+  }
+  if (auto LFI = llvh::dyn_cast<LoadFrameInst>(callee)) {
+    Variable *V = LFI->getLoadVariable();
+    if (V->getParent()->isGlobalScope()) {
+      return false;
+    }
+    for (auto *U : V->getUsers()) {
+      if (llvh::isa<LoadFrameInst>(U)) {
+        // Skip over a load frame using that address
+        continue;
+      }
+      auto *SF = llvh::dyn_cast<StoreFrameInst>(U);
+      if (!SF) {
+        // Unknown inst using that address ... bail out.
+        return false;
+      }
+      auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(SF->getValue());
+      if (!CFI) {
+        // Currently look only direct stores of created functions.
+        return false;
+      }
+      callees.insert(CFI->getFunctionCode());
+    }
+    return true;
+  }
+
+  // If callee is any other ValueKind, we don't know.
+  return false;
+}
+
 bool hermes::getCallSites(
     Function *F,
     llvh::DenseSet<BaseCallInst *> &callsites) {

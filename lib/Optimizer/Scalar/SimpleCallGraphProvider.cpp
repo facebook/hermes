@@ -13,53 +13,6 @@
 
 using namespace hermes;
 
-/// Auxiliary method to figure out the Functions that a given CallInst may
-/// be calling. Returns true if we have a complete set, false if there are
-/// unknown callees.
-static bool identifyCallees(
-    BaseCallInst *CI,
-    llvh::DenseSet<Function *> &callees) {
-  Value *callee = CI->getCallee();
-
-  if (llvh::isa<NormalFunction>(callee) ||
-      llvh::isa<GeneratorFunction>(callee)) {
-    auto *F = cast<Function>(callee);
-    callees.insert(F);
-    return true;
-  }
-  if (auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(callee)) {
-    callees.insert(CFI->getFunctionCode());
-    return true;
-  }
-  if (auto LFI = llvh::dyn_cast<LoadFrameInst>(callee)) {
-    Variable *V = LFI->getLoadVariable();
-    if (V->getParent()->isGlobalScope()) {
-      return false;
-    }
-    for (auto *U : V->getUsers()) {
-      if (llvh::isa<LoadFrameInst>(U)) {
-        // Skip over a load frame using that address
-        continue;
-      }
-      auto *SF = llvh::dyn_cast<StoreFrameInst>(U);
-      if (!SF) {
-        // Unknown inst using that address ... bail out.
-        return false;
-      }
-      auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(SF->getValue());
-      if (!CFI) {
-        // Currently look only direct stores of created functions.
-        return false;
-      }
-      callees.insert(CFI->getFunctionCode());
-    }
-    return true;
-  }
-
-  // If callee is any other ValueKind, we don't know.
-  return false;
-}
-
 /// The main function that computes caller-callee relationships.
 void SimpleCallGraphProvider::initCallRelationships(Function *F) {
   // (a) Initialize the callsites map.
@@ -78,7 +31,7 @@ void SimpleCallGraphProvider::initCallRelationships(Function *F) {
         continue;
 
       llvh::DenseSet<Function *> funcs;
-      if (identifyCallees(CI, funcs)) {
+      if (getCallees(CI, funcs)) {
         callees_.insert(std::make_pair(CI, funcs));
       }
     }
