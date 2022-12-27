@@ -1763,7 +1763,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   }
 
   if (!hasSpread) {
-    ConstructInst::ArgumentList args;
+    HBCConstructInst::ArgumentList args;
     for (auto &arg : N->_arguments) {
       args.push_back(genExpression(&arg));
     }

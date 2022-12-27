@@ -18,7 +18,7 @@ function decrementArguments() {
     return var3 - 1;
 }
 
-// CHKIR-LABEL: *** AFTER LowerConstruction
+// CHKIR-LABEL: *** AFTER LowerAllocObjectLiteral
 // CHKIR-LABEL: function decrementArguments() : number
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:

@@ -536,37 +536,6 @@ bool DedupReifyArguments::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LowerConstruction::runOnFunction(Function *F) {
-  IRBuilder builder(F);
-  auto *prototypeString = builder.getLiteralString("prototype");
-
-  for (BasicBlock &BB : F->getBasicBlockList()) {
-    IRBuilder::InstructionDestroyer destroyer;
-    for (Instruction &I : BB) {
-      if (auto *constructor = llvh::dyn_cast<ConstructInst>(&I)) {
-        builder.setInsertionPoint(constructor);
-        builder.setLocation(constructor->getLocation());
-        auto closure = constructor->getCallee();
-        auto prototype =
-            builder.createLoadPropertyInst(closure, prototypeString);
-        auto thisObject = builder.createHBCCreateThisInst(prototype, closure);
-
-        llvh::SmallVector<Value *, 8> args;
-        for (int i = 1, n = constructor->getNumArguments(); i < n; i++) {
-          args.push_back(constructor->getArgument(i));
-        }
-        auto newConstructor =
-            builder.createHBCConstructInst(closure, thisObject, args);
-        auto finalValue = builder.createHBCGetConstructedObjectInst(
-            thisObject, newConstructor);
-        constructor->replaceAllUsesWith(finalValue);
-        destroyer.add(constructor);
-      }
-    }
-  }
-  return true;
-}
-
 bool LowerCalls::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
@@ -749,7 +718,6 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::StoreStackInstKind:
       return false;
     case ValueKind::CallInstKind:
-    case ValueKind::ConstructInstKind:
     case ValueKind::CallBuiltinInstKind:
     case ValueKind::HBCConstructInstKind:
     case ValueKind::HBCCallDirectInstKind:

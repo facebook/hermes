@@ -69,7 +69,6 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
   // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
   PM.addPass(new LowerAllocObjectLiteral());
-  PM.addPass(new LowerConstruction());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
   PM.addPass(new DedupReifyArguments());

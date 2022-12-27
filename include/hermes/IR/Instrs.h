@@ -806,40 +806,6 @@ class CallInst : public BaseCallInst {
   }
 };
 
-class ConstructInst : public BaseCallInst {
-  ConstructInst(const ConstructInst &) = delete;
-  void operator=(const ConstructInst &) = delete;
-
- public:
-  Value *getConstructor() const {
-    return getCallee();
-  }
-
-  explicit ConstructInst(
-      Value *constructor,
-      LiteralUndefined *undefined,
-      ArrayRef<Value *> args)
-      : BaseCallInst(
-            ValueKind::ConstructInstKind,
-            constructor,
-            undefined,
-            args) {
-    setType(*getInherentTypeImpl());
-  }
-  explicit ConstructInst(
-      const ConstructInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseCallInst(src, operands) {}
-
-  static OptValue<Type> getInherentTypeImpl() {
-    return Type::createObject();
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ConstructInstKind;
-  }
-};
-
 /// Call a VM builtin with the specified number and undefined as the "this"
 /// parameter.
 class CallBuiltinInst : public BaseCallInst {

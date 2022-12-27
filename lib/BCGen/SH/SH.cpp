@@ -1404,9 +1404,6 @@ class InstrGen {
     os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
         << ");\n";
   }
-  void generateConstructInst(ConstructInst &inst) {
-    hermes_fatal("ConstructInst should have been lowered.");
-  }
   void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1666,7 +1663,6 @@ void generateModule(
   PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
   PM.addPass(new LowerAllocObjectLiteral());
-  PM.addPass(new hbc::LowerConstruction());
   PM.addPass(new hbc::LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
   PM.addPass(new hbc::DedupReifyArguments());
