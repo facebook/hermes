@@ -372,9 +372,20 @@ static void propagateArgs(
   }
 }
 
-/// Propagate return type from potential callees to a CallInst.
-/// Assumes that each funcs' type has been inferred, in F->getType().
-static Type propagateReturn(llvh::DenseSet<Function *> &funcs, CallInst *CI) {
+/// Propagate the return type from potential callees for a given ConstructInst
+/// or CallInst \p inst, identified by \p cgp.
+static Type inferBaseCallInst(CallGraphProvider *cgp, BaseCallInst *CI) {
+  if (cgp->hasUnknownCallees(CI)) {
+    LLVM_DEBUG(
+        dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
+    return Type::createAnyType();
+  }
+
+  llvh::DenseSet<Function *> &funcs = cgp->getKnownCallees(CI);
+  LLVM_DEBUG(
+      dbgs() << "Found " << funcs.size()
+             << " callees for : " << CI->getName().str() << "\n");
+
   bool first = true;
   Type retTy;
 
@@ -874,23 +885,14 @@ class TypeInferenceImpl {
   }
 
   Type inferCallInst(CallInst *inst) {
-    if (cgp_->hasUnknownCallees(inst)) {
-      LLVM_DEBUG(
-          dbgs() << "Unknown callees for : " << inst->getName().str() << "\n");
-      return Type::createAnyType();
-    }
-    llvh::DenseSet<Function *> &callees = cgp_->getKnownCallees(inst);
-    LLVM_DEBUG(
-        dbgs() << "Found " << callees.size()
-               << " callees for : " << inst->getName().str() << "\n");
-    return propagateReturn(callees, inst);
+    return inferBaseCallInst(cgp_, inst);
   }
   Type inferCallBuiltinInst(CallBuiltinInst *inst) {
     // unimplemented
     return Type::createAnyType();
   }
   Type inferConstructInst(ConstructInst *inst) {
-    return Type::createAnyType();
+    return inferBaseCallInst(cgp_, inst);
   }
   Type inferHBCCallDirectInst(HBCCallDirectInst *inst) {
     // unimplemented

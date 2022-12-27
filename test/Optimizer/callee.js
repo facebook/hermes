@@ -83,7 +83,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
 // CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
 // CHECK-NEXT:  %3 = ConstructInst %0 : closure, undefined : undefined, 12 : number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3
+// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : number
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
