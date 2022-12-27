@@ -51,13 +51,13 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // need to be eliminated now, or the "require" parameter cannot be promoted.
   PM.addDCE();
 
-  PM.addTypeInference();
   PM.addSimplifyCFG();
   PM.addStackPromotion();
   PM.addMem2Reg();
   PM.addStackPromotion();
   PM.addInlining();
   PM.addStackPromotion();
+  PM.addTypeInference();
   PM.addInstSimplify();
   PM.addDCE();
 
