@@ -1763,15 +1763,15 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   }
 
   if (!hasSpread) {
-    HBCConstructInst::ArgumentList args;
+    ConstructInst::ArgumentList args;
     for (auto &arg : N->_arguments) {
       args.push_back(genExpression(&arg));
     }
     auto *prototype = Builder.createLoadPropertyInst(
         callee, Builder.getLiteralString("prototype"));
-    auto *thisArg = Builder.createHBCCreateThisInst(prototype, callee);
-    auto *res = Builder.createHBCConstructInst(callee, thisArg, args);
-    return Builder.createHBCGetConstructedObjectInst(thisArg, res);
+    auto *thisArg = Builder.createCreateThisInst(prototype, callee);
+    auto *res = Builder.createConstructInst(callee, thisArg, args);
+    return Builder.createGetConstructedObjectInst(thisArg, res);
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments

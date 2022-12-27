@@ -1417,7 +1417,7 @@ class InstrGen {
     os_ << " = _sh_ljs_call_builtin(shr, frame, " << inst.getNumArguments() - 1
         << ", " << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
-  void generateHBCConstructInst(HBCConstructInst &inst) {
+  void generateConstructInst(ConstructInst &inst) {
     // Populate the newTarget register, which is not set by setupCallStack.
     auto newTargetRegIdx =
         ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::NewTarget;
@@ -1465,7 +1465,7 @@ class InstrGen {
     os_ << " = _sh_ljs_coerce_this_ns(shr, frame["
         << hbc::StackFrameLayout::ThisArg << "]);\n";
   }
-  void generateHBCCreateThisInst(HBCCreateThisInst &inst) {
+  void generateCreateThisInst(CreateThisInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_create_this(shr, &";
@@ -1494,7 +1494,7 @@ class InstrGen {
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCGetConstructedObjectInst(HBCGetConstructedObjectInst &inst) {
+  void generateGetConstructedObjectInst(GetConstructedObjectInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_is_object(";

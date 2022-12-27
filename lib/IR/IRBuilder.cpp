@@ -888,26 +888,25 @@ HBCReifyArgumentsStrictInst *IRBuilder::createHBCReifyArgumentsStrictInst(
   insert(inst);
   return inst;
 }
-HBCCreateThisInst *IRBuilder::createHBCCreateThisInst(
+CreateThisInst *IRBuilder::createCreateThisInst(
     Value *prototype,
     Value *closure) {
-  auto inst = new HBCCreateThisInst(prototype, closure);
+  auto inst = new CreateThisInst(prototype, closure);
   insert(inst);
   return inst;
 }
-HBCConstructInst *IRBuilder::createHBCConstructInst(
+ConstructInst *IRBuilder::createConstructInst(
     Value *closure,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto inst = new HBCConstructInst(closure, thisValue, arguments);
+  auto inst = new ConstructInst(closure, thisValue, arguments);
   insert(inst);
   return inst;
 }
-HBCGetConstructedObjectInst *IRBuilder::createHBCGetConstructedObjectInst(
-    HBCCreateThisInst *thisValue,
-    HBCConstructInst *constructorReturnValue) {
-  auto inst =
-      new HBCGetConstructedObjectInst(thisValue, constructorReturnValue);
+GetConstructedObjectInst *IRBuilder::createGetConstructedObjectInst(
+    CreateThisInst *thisValue,
+    ConstructInst *constructorReturnValue) {
+  auto inst = new GetConstructedObjectInst(thisValue, constructorReturnValue);
   insert(inst);
   return inst;
 }

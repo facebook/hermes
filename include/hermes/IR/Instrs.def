@@ -198,13 +198,16 @@ MARK_LAST(TerminatorInst)
 
 MARK_FIRST(BaseCallInst, Instruction)
 DEF_VALUE(CallInst, BaseCallInst)
+DEF_VALUE(ConstructInst, BaseCallInst)
 DEF_VALUE(CallBuiltinInst, BaseCallInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCConstructInst, BaseCallInst)
 DEF_VALUE(HBCCallDirectInst, BaseCallInst)
 DEF_VALUE(HBCCallNInst, BaseCallInst)
 #endif
 MARK_LAST(BaseCallInst)
+
+DEF_VALUE(CreateThisInst, Instruction)
+DEF_VALUE(GetConstructedObjectInst, Instruction)
 
 DEF_VALUE(GetBuiltinClosureInst, Instruction)
 DEF_VALUE(StartGeneratorInst, Instruction)
@@ -216,14 +219,12 @@ DEF_VALUE(LIRGetThisNSInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
 DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
-DEF_VALUE(HBCCreateThisInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
 DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
 DEF_VALUE(HBCGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
 MARK_LAST(HBCGetArgumentsPropByValInst)
 
-DEF_VALUE(HBCGetConstructedObjectInst, Instruction)
 DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)
 #endif

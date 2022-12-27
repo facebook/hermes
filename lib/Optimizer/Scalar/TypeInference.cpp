@@ -893,7 +893,7 @@ class TypeInferenceImpl {
     // unimplemented
     return Type::createAnyType();
   }
-  Type inferHBCConstructInst(HBCConstructInst *inst) {
+  Type inferConstructInst(ConstructInst *inst) {
     return Type::createAnyType();
   }
   Type inferHBCCallDirectInst(HBCCallDirectInst *inst) {
@@ -929,7 +929,7 @@ class TypeInferenceImpl {
   Type inferLIRGetThisNSInst(LIRGetThisNSInst *inst) {
     return Type::createObject();
   }
-  Type inferHBCCreateThisInst(HBCCreateThisInst *inst) {
+  Type inferCreateThisInst(CreateThisInst *inst) {
     return Type::createObject();
   }
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
@@ -943,7 +943,7 @@ class TypeInferenceImpl {
       HBCGetArgumentsPropByValStrictInst *inst) {
     return Type::createAnyType();
   }
-  Type inferHBCGetConstructedObjectInst(HBCGetConstructedObjectInst *inst) {
+  Type inferGetConstructedObjectInst(GetConstructedObjectInst *inst) {
     return Type::createObject();
   }
   Type inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {

@@ -1581,17 +1581,13 @@ void HBCISel::generateHBCReifyArgumentsStrictInst(
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitReifyArgumentsStrict(reg);
 }
-void HBCISel::generateHBCCreateThisInst(
-    HBCCreateThisInst *Inst,
-    BasicBlock *next) {
+void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto proto = encodeValue(Inst->getPrototype());
   auto closure = encodeValue(Inst->getClosure());
   BCFGen_->emitCreateThis(output, proto, closure);
 }
-void HBCISel::generateHBCConstructInst(
-    HBCConstructInst *Inst,
-    BasicBlock *next) {
+void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());
   verifyCall(Inst);
@@ -1602,8 +1598,8 @@ void HBCISel::generateHBCConstructInst(
     BCFGen_->emitConstructLong(output, function, Inst->getNumArguments());
   }
 }
-void HBCISel::generateHBCGetConstructedObjectInst(
-    HBCGetConstructedObjectInst *Inst,
+void HBCISel::generateGetConstructedObjectInst(
+    GetConstructedObjectInst *Inst,
     BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto thisValue = encodeValue(Inst->getThisValue());
