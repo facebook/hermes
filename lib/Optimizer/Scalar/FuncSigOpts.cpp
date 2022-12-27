@@ -81,7 +81,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   for (BaseCallInst *caller : callsites) {
     // For each parameter in the callee except "this" (which we can't analyze
     // due to ConstructInst):
-    for (uint32_t i = 1; i < numFormalParam; i++) {
+    for (uint32_t i = 0; i < numFormalParam; i++) {
       // Get the arg that matches the i'th parameter. Unpassed parameters are
       // converted into undefs.
       Value *arg = undef;
@@ -118,8 +118,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
     // The 'this' argument cannot be handled since ConstructInst doesn't
     // specify a value for it and we would incorrectly believe it to be
     // "undefined".
-    // TODO: handle "this" somehow, perhaps by running after some lowering.
-    for (unsigned i = 1, e = caller->getNumArguments(); i < e; i++) {
+    for (unsigned i = 0, e = caller->getNumArguments(); i < e; i++) {
       // Remember which arguments are unused by the callee (parameters with no
       // users and undeclared parameters).
       if (i >= numFormalParam || !F->getJSDynamicParam(i)->hasUsers()) {
@@ -134,8 +133,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   {
     IRBuilder::InstructionDestroyer destroyer{};
-    // Note: we are skipping "this".
-    for (uint32_t paramIdx = 1, e = F->getJSDynamicParams().size();
+    for (uint32_t paramIdx = 0, e = F->getJSDynamicParams().size();
          paramIdx < e;
          ++paramIdx) {
       JSDynamicParam *P = F->getJSDynamicParam(paramIdx);
