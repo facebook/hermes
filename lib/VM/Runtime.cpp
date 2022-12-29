@@ -482,8 +482,9 @@ void Runtime::markRoots(
     for (auto &clazz : rootClazzes_)
       acceptor.accept(clazz, "rootClass");
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
+#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init) \
+  RUNTIME_HV_FIELD_INSTANCE(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD_INSTANCE
     acceptor.endRootSection();
   }
 

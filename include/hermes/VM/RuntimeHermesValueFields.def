@@ -13,6 +13,11 @@
 #define RUNTIME_HV_FIELD_INSTANCE(name)
 #endif
 
+#ifndef RUNTIME_HV_FIELD_INSTANCE_INIT
+#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init) \
+  RUNTIME_HV_FIELD_INSTANCE(name)
+#endif
+
 #ifndef RUNTIME_HV_FIELD_RUNTIMEMODULE
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
 #endif
@@ -83,7 +88,8 @@ RUNTIME_HV_FIELD_PROTOTYPE(callSitePrototype)
 RUNTIME_HV_FIELD_RUNTIMEMODULE(specialCodeBlockDomain_)
 
 RUNTIME_HV_FIELD_INSTANCE(global_)
-RUNTIME_HV_FIELD_INSTANCE(thrownValue_)
+// thrownValue_ is Empty when there is no value currently being thrown.
+RUNTIME_HV_FIELD_INSTANCE_INIT(thrownValue_, HermesValue::encodeEmptyValue())
 RUNTIME_HV_FIELD_INSTANCE(keptObjects_)
 #ifdef HERMES_ENABLE_DEBUGGER
 RUNTIME_HV_FIELD_INSTANCE(debuggerInternalObject_)
@@ -103,5 +109,6 @@ RUNTIME_HV_FIELD_INSTANCE(promiseRejectionTrackingHook_)
 
 #undef RUNTIME_HV_FIELD_PROTOTYPE
 #undef RUNTIME_HV_FIELD_INSTANCE
+#undef RUNTIME_HV_FIELD_INSTANCE_INIT
 #undef RUNTIME_HV_FIELD_RUNTIMEMODULE
 #undef RUNTIME_HV_FIELD
