@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes --target=HBC -O %s | %FileCheck %s --match-full-lines
 // RUN: %hermes --target=HBC -O -dump-ra %s | %FileCheckOrRegen %s --check-prefix=CHKRA --match-full-lines
 
 // Using a Phi in a successor of a Phi predecessor block:
@@ -36,9 +35,7 @@ function bad(param1, param2) {
 
 bad("foo", null);
 print("phi");
-//CHECK: phi
 print(glob);
-//CHECK-NEXT: foo
 
 // Auto-generated content below. Please do not modify manually.
 
