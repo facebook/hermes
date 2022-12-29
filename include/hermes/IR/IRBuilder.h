@@ -588,6 +588,7 @@ class IRBuilder {
 
   CacheNewObjectInst *createCacheNewObjectInst(
       Value *thisParameter,
+      Value *newTarget,
       llvh::ArrayRef<Literal *> keys);
 
   UnreachableInst *createUnreachableInst();

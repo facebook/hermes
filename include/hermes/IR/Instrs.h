@@ -3998,14 +3998,16 @@ class CacheNewObjectInst : public Instruction {
   void operator=(const CacheNewObjectInst &) = delete;
 
  public:
-  enum { ThisIdx, FirstKeyIdx };
+  enum { ThisIdx, NewTargetIdx, FirstKeyIdx };
 
   explicit CacheNewObjectInst(
       Value *thisParameter,
+      Value *newTarget,
       llvh::ArrayRef<Literal *> keys)
       : Instruction(ValueKind::CacheNewObjectInstKind) {
     setType(Type::createObject());
     pushOperand(thisParameter);
+    pushOperand(newTarget);
     for (Literal *key : keys) {
       pushOperand(key);
     }
@@ -4017,6 +4019,16 @@ class CacheNewObjectInst : public Instruction {
 
   static bool hasOutput() {
     return true;
+  }
+
+  /// \return the this parameter modified by this instruction.
+  Value *getThis() {
+    return getOperand(ThisIdx);
+  }
+
+  /// \return the new.target value used by this instruction.
+  Value *getNewTarget() {
+    return getOperand(NewTargetIdx);
   }
 
   /// \return the number of keys in the object to cache.

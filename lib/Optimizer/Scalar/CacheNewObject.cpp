@@ -122,7 +122,9 @@ static void insertCacheInstruction(
     Instruction *thisParam) {
   IRBuilder builder{func};
   builder.setInsertionPointAfter(thisParam);
-  builder.createCacheNewObjectInst(thisParam, keys);
+
+  GetNewTargetInst *newTargetInst = builder.createGetNewTargetInst();
+  builder.createCacheNewObjectInst(thisParam, newTargetInst, keys);
 }
 
 bool CacheNewObject::runOnFunction(Function *func) {

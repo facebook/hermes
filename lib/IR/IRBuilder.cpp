@@ -1037,8 +1037,9 @@ IteratorCloseInst *IRBuilder::createIteratorCloseInst(
 
 CacheNewObjectInst *IRBuilder::createCacheNewObjectInst(
     Value *thisParameter,
+    Value *newTarget,
     llvh::ArrayRef<Literal *> keys) {
-  auto *I = new CacheNewObjectInst(thisParameter, keys);
+  auto *I = new CacheNewObjectInst(thisParameter, newTarget, keys);
   insert(I);
   return I;
 }
