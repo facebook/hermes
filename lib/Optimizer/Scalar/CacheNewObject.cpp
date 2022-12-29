@@ -53,8 +53,9 @@ constexpr size_t MIN_PROPERTIES_FOR_CACHE = 2;
 
 /// \return vector of unique property names which can be cached, in the order
 ///   in which they must be cached.
-static std::vector<Literal *> getPropsForCaching(Function *func) {
-  Parameter *thisParam = func->getThisParameter();
+static std::vector<Literal *> getPropsForCaching(
+    Function *func,
+    Instruction *thisParam) {
   BasicBlock *entryBlock = &func->front();
 
   // Put the users of 'this' into a set for fast checking of which instructions
@@ -117,13 +118,11 @@ static std::vector<Literal *> getPropsForCaching(Function *func) {
 /// \param keys the literal names of the keys of the this object.
 static void insertCacheInstruction(
     Function *func,
-    llvh::ArrayRef<Literal *> keys) {
-  BasicBlock *entryBlock = &func->front();
-
+    llvh::ArrayRef<Literal *> keys,
+    Instruction *thisParam) {
   IRBuilder builder{func};
-  builder.setInsertionPoint(&entryBlock->front());
-
-  builder.createCacheNewObjectInst(func->getThisParameter(), keys);
+  builder.setInsertionPointAfter(thisParam);
+  builder.createCacheNewObjectInst(thisParam, keys);
 }
 
 bool CacheNewObject::runOnFunction(Function *func) {
@@ -131,7 +130,17 @@ bool CacheNewObject::runOnFunction(Function *func) {
       llvh::dbgs() << "Attempting to cache new object in function: '"
                    << func->getInternalNameStr() << "'\n");
 
-  std::vector<Literal *> keys = getPropsForCaching(func);
+  Value *dynParam = func->getJSDynamicParam(0);
+  if (!dynParam->hasUsers())
+    return false;
+
+  Instruction *thisParam = llvh::cast<LoadParamInst>(dynParam->getUsers()[0]);
+  if (!thisParam->hasUsers())
+    return false;
+  if (auto CTI = llvh::dyn_cast<CoerceThisNSInst>(thisParam->getUsers()[0]))
+    thisParam = CTI;
+
+  std::vector<Literal *> keys = getPropsForCaching(func, thisParam);
 
   // Not enough stores to cache.
   if (keys.size() < MIN_PROPERTIES_FOR_CACHE) {
@@ -146,7 +155,7 @@ bool CacheNewObject::runOnFunction(Function *func) {
   LLVM_DEBUG(llvh::dbgs() << llvh::format("Caching %u keys\n", keys.size()));
 
   // Actually insert the CacheNewObject instruction.
-  insertCacheInstruction(func, keys);
+  insertCacheInstruction(func, keys, thisParam);
 
   return true;
 }

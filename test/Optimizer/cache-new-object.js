@@ -44,33 +44,47 @@ function uniq(x, y, z) {
 // CHECK:function simple(x, y) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CacheNewObjectInst %this, "x" : string, "y" : string
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %x, %this, "x" : string
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %y, %this, "y" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = CacheNewObjectInst %1 : object, "x" : string, "y" : string
+// CHECK-NEXT:  %3 = LoadParamInst %x
+// CHECK-NEXT:  %4 = LoadParamInst %y
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %3, %1 : object, "x" : string
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %4, %1 : object, "y" : string
+// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function beforeCond(x, y, z) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CacheNewObjectInst %this, "x" : string, "y" : string
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %x, %this, "x" : string
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %y, %this, "y" : string
-// CHECK-NEXT:  %3 = CondBranchInst %z, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = CacheNewObjectInst %1 : object, "x" : string, "y" : string
+// CHECK-NEXT:  %3 = LoadParamInst %x
+// CHECK-NEXT:  %4 = LoadParamInst %y
+// CHECK-NEXT:  %5 = LoadParamInst %z
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %3, %1 : object, "x" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %4, %1 : object, "y" : string
+// CHECK-NEXT:  %8 = CondBranchInst %5, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %z, %this, "z" : string
-// CHECK-NEXT:  %5 = BranchInst %BB2
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %5, %1 : object, "z" : string
+// CHECK-NEXT:  %10 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function uniq(x, y, z) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CacheNewObjectInst %this, "x" : string, "y" : string, "z" : string
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %x, %this, "x" : string
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %y, %this, "y" : string
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %z, %this, "z" : string
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %x, %this, "x" : string
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = CacheNewObjectInst %1 : object, "x" : string, "y" : string, "z" : string
+// CHECK-NEXT:  %3 = LoadParamInst %x
+// CHECK-NEXT:  %4 = LoadParamInst %y
+// CHECK-NEXT:  %5 = LoadParamInst %z
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %3, %1 : object, "x" : string
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %4, %1 : object, "y" : string
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %5, %1 : object, "z" : string
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %3, %1 : object, "x" : string
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
