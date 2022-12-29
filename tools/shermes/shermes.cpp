@@ -250,6 +250,13 @@ CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
+CLFlag CacheNewObject(
+    'f',
+    "cache-new-object",
+    true,
+    "Caching new objects to speed up construction",
+    CompilerCategory);
+
 cl::opt<bool> StrictMode(
     "strict",
     cl::desc("Enable strict mode."),
@@ -413,6 +420,7 @@ std::shared_ptr<Context> createContext() {
   // optimizationOpts.staticRequire = cl::StaticRequire;
   //
   optimizationOpts.useUnsafeIntrinsics = cli::UseUnsafeIntrinsics;
+  optimizationOpts.cacheNewObject = cli::CacheNewObject;
 
   auto context = std::make_shared<Context>(codeGenOpts, optimizationOpts);
 
