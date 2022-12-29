@@ -61,6 +61,9 @@ struct OptimizationSettings {
 
   /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
   bool useUnsafeIntrinsics{false};
+
+  /// Cache object information for new objects during construction.
+  bool cacheNewObject{false};
 };
 
 enum class DebugInfoSetting {
