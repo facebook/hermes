@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser %s
+// RUN: %hermesc -dump-ir %s
 
 function f0() { }
 function f1(a) { }

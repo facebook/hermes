@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -non-strict %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-transformed-ast -non-strict %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 // Make sure we scan directive prologues before doing everything else.
 
