@@ -83,6 +83,10 @@ void hermes::runFullOptimizationPasses(Module &M) {
 
   PM.addTypeInference();
 
+  if (M.getContext().getOptimizationSettings().cacheNewObject) {
+    PM.addCacheNewObject();
+  }
+
   // Move StartGenerator instructions to the start of functions.
   PM.addHoistStartGenerator();
 
