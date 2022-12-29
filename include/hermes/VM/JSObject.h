@@ -465,6 +465,30 @@ class JSObject : public GCCell {
     return clazz_;
   }
 
+  /// Set the HiddenClass of \p self to \p clazz and allocate storage for the
+  /// additional properties as necessary. The object must not already have any
+  /// properties, and the new class must originate from the current class of the
+  /// object.
+  static ExecutionStatus setClassUnsafe(
+      Handle<JSObject> self,
+      Handle<HiddenClass> clazz,
+      Runtime &runtime) {
+    // Conservatively check if properties have been added. If the object already
+    // has some propStorage allocated, it has definitely already had properties
+    // added to it, but the reverse is not true.
+    assert(!self->propStorage_);
+    unsigned numProperties = clazz->getNumProperties();
+    if (LLVM_UNLIKELY(
+            JSObject::allocatePropStorage(
+                createPseudoHandle(self.get()), runtime, numProperties) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    self->clazz_.set(runtime, clazz.get(), runtime.getHeap());
+    return ExecutionStatus::RETURNED;
+  }
+
   /// \return the object ID. Assign one if not yet exist. This ID can be used
   /// in Set or Map where hashing is required. We don't assign object an ID
   /// until we actually need it. An exception is lazily created objects where

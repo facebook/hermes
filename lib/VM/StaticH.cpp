@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/ConstructorNewObjectCacheEntry.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
@@ -1534,6 +1535,208 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
+/// Helper function to perform lookup and validation in the constructor new
+/// object cache. The entry at \p cacheEntryLoc must be in either the
+/// initialized or uninitialized state.
+/// If it is in the initialized state, it attempts to match \p thisArg against
+/// the entry. If it is a match (this is a constructor invocation and the
+/// prototype is unmodified), it will return the entry, otherwise, it will
+/// return nullptr.
+/// If it is in the uninitialized state, it checks whether the current
+/// invocation is eligible for caching. If it is, creates an entry, stores it at
+/// \p cacheEntryLoc, and returns it.
+/// NOTE: This function does not deal with failed entries. That is, it does not
+/// accept an entry that has already failed, and does not produce failed
+/// entries. The caller is responsible for deciding when failure has occurred,
+/// and for clearing the entry if needed.
+/// \return The corresponding cache entry if validation succeeds. If the lookup
+/// has failed, return nullptr.
+static ConstructorNewObjectCacheEntry *getConstructorNewObjectCacheEntry(
+    Runtime &runtime,
+    SHUnit *unit,
+    Handle<> newTarget,
+    Handle<JSObject> thisArg,
+    unsigned numLiterals,
+    llvh::ArrayRef<unsigned char> keyBuffer,
+    uint32_t keyBufferIndex,
+    void **cacheEntryLoc) {
+  // If this is a non-constructor invocation, thisArg may already have
+  // properties on it.
+  if (newTarget->isUndefined())
+    return nullptr;
+
+  // this argument to a constructor invocation should not have special behaviour
+  // for property accesses.
+  assert(
+      !thisArg->isProxyObject() && !thisArg->isHostObject() &&
+      !thisArg->hasFastIndexProperties());
+
+  auto *curEntry =
+      reinterpret_cast<ConstructorNewObjectCacheEntry *>(*cacheEntryLoc);
+  if (ConstructorNewObjectCacheEntry::isInitialized(curEntry)) {
+    // An entry exists, validate that none of the objects in the prototype chain
+    // has been modified.
+    auto *parent = thisArg->getParent(runtime);
+    for (const auto &cachedClazz : curEntry->getProtoClazzes()) {
+      // If the prototype chain has been modified, bail.
+      if (!parent ||
+          parent->getClassGCPtr() != cachedClazz.getNoBarrierUnsafe())
+        return nullptr;
+      parent = parent->getParent(runtime);
+    }
+
+    // If some new class has been added to the prototype chain, bail.
+    if (parent)
+      return nullptr;
+
+    // Prototype chain is unmodified, the entry is a match.
+    return curEntry;
+  }
+
+  // There is currently no entry, we need to check if caching is possible, and
+  // if so, create a new entry.
+  assert(
+      *cacheEntryLoc == ConstructorNewObjectCacheEntry::uninitialized() &&
+      "Trying to manipulate a failed entry.");
+
+  // If the resulting class would be in dictionary mode, we cannot cache it.
+  // TODO: In principle, we could still cache the first kDictionaryThreshold
+  // properties.
+  if (numLiterals > HiddenClass::kDictionaryThreshold)
+    return nullptr;
+
+  MutableHandle<JSObject> parentObj{runtime, thisArg->getParent(runtime)};
+  MutableHandle<> tmpHandleKey{runtime};
+  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  while (parentObj) {
+    // Proxy and HostObject allow arbitrary JS to execute on property
+    // assignment, so a prototype chain containing them cannot be cached.
+    if (parentObj->isProxyObject() || parentObj->isHostObject())
+      return nullptr;
+    // Dictionary classes cannot be cached.
+    if (parentObj->getClass(runtime)->isDictionary())
+      return nullptr;
+
+    // TODO: Skip this loop once the HiddenClass has a flag indicating whether
+    // it contains any accessors.
+    SHSerializedLiteralParser keyGen{
+        keyBuffer.slice(keyBufferIndex), numLiterals, nullptr};
+    while (keyGen.hasNext()) {
+      // Look up each of the given keys on the parent object.
+      auto encodedKey = keyGen.get(runtime);
+      tmpHandleKey = encodedKey.isSymbol()
+          ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(
+                unit->symbols[encodedKey.getSymbol().unsafeGetIndex()]))
+          : encodedKey;
+
+      ComputedPropertyDescriptor desc;
+      auto foundRes = JSObject::getOwnComputedPrimitiveDescriptor(
+          parentObj,
+          runtime,
+          tmpHandleKey,
+          JSObject::IgnoreProxy::Yes,
+          tmpSymbolStorage,
+          desc);
+      assert(
+          foundRes != ExecutionStatus::EXCEPTION &&
+          "Property lookup on non-proxy object failed.");
+
+      // If there is an accessor on the parent with the same name, bail.
+      if (*foundRes && desc.flags.accessor)
+        return nullptr;
+
+      marker.flush();
+    }
+    parentObj = parentObj->getParent(runtime);
+  }
+
+  // The entry is eligible for caching, record the parent classes and initialize
+  // the entry.
+  JSObject *parent = thisArg->getParent(runtime);
+  NoAllocScope noAlloc{runtime};
+  // We have to traverse the classes again to record them, since the previous
+  // loop was allowed to allocate.
+  llvh::SmallVector<HiddenClass *, 5> parentClazzes;
+  while (parent) {
+    parentClazzes.push_back(parent->getClass(runtime));
+    parent = parent->getParent(runtime);
+  }
+  auto *newEntry =
+      ConstructorNewObjectCacheEntry::create(runtime, parentClazzes);
+  *cacheEntryLoc = newEntry;
+  return newEntry;
+}
+
+/// Given an entry \p cacheEntryLoc that is not in the failed state, attempt to
+/// populate \p thisArg with the given properties in the key buffer.
+
+/// If the entry is already initialized, check that the current invocation
+/// matches the entry in the cache. If so, retrieve/create the HiddenClass for
+/// the given keys, and set it on the object. The cached class is constructed
+/// from the class of thisArg. We require that the class of thisArg is a root
+/// class, since we know it is a constructor invocation. We also require that
+/// for a given entry, the initial class of thisArg is always the same.
+///
+/// If the cache entry is uninitialized, attempt to create a new entry.
+///
+/// If retrieving or populating the cache fails for any reason, frees any
+/// existing allocated entry and puts the slot in the failed state.
+static void cacheNewObject(
+    Runtime &runtime,
+    SHUnit *unit,
+    Handle<JSObject> thisArg,
+    Handle<> newTarget,
+    unsigned numLiterals,
+    uint32_t keyBufferIndex,
+    void **cacheEntryLoc) {
+  llvh::ArrayRef<uint8_t> keyBuffer{
+      unit->obj_key_buffer, unit->obj_key_buffer_size};
+  GCScopeMarkerRAII marker{runtime};
+  // Attempt to obtain a cache entry based on the given inputs.
+  if (auto *cacheEntry = getConstructorNewObjectCacheEntry(
+          runtime,
+          unit,
+          newTarget,
+          thisArg,
+          numLiterals,
+          keyBuffer,
+          keyBufferIndex,
+          cacheEntryLoc)) {
+    // A valid cache entry was obtained. Check if the class for the new object
+    // is live, if it is we can update the class of thisArg and return.
+    if (auto clazz = cacheEntry->getClazz(runtime)) {
+      auto status =
+          JSObject::setClassUnsafe(thisArg, runtime.makeHandle(clazz), runtime);
+      assert(
+          status == ExecutionStatus::RETURNED &&
+          "Cached classes are small, and cannot fail.");
+      (void)status;
+      return;
+    }
+    // Entry is valid but class does not exist. Create a new class from the
+    // given keys and store it in the entry.
+    Handle<HiddenClass> clazz = createHiddenClassForBuffer(
+        runtime,
+        unit,
+        createPseudoHandle(thisArg->getClass(runtime)),
+        numLiterals,
+        keyBuffer,
+        keyBufferIndex);
+    assert(!clazz->isDictionary() && "Cannot cache classes in dictionary mode");
+    cacheEntry->setClazz(runtime, *clazz);
+    thisArg->setClassUnsafe(thisArg, clazz, runtime);
+    return;
+  }
+
+  // Record that caching has failed, which will permanently disable caching for
+  // this entry. If there was already an entry here, free it first.
+  if (ConstructorNewObjectCacheEntry::isInitialized(
+          reinterpret_cast<ConstructorNewObjectCacheEntry *>(*cacheEntryLoc)))
+    free(*cacheEntryLoc);
+  *cacheEntryLoc = ConstructorNewObjectCacheEntry::failed();
+}
+
 extern "C" void _sh_ljs_cache_new_object(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1541,7 +1744,17 @@ extern "C" void _sh_ljs_cache_new_object(
     SHLegacyValue *newTarget,
     uint32_t numLiterals,
     uint32_t keyBufferIndex,
-    void **cacheEntry) {}
+    void **cacheEntry) {
+  if (LLVM_UNLIKELY(*cacheEntry != ConstructorNewObjectCacheEntry::failed()))
+    cacheNewObject(
+        getRuntime(shr),
+        unit,
+        Handle<JSObject>::vmcast(toPHV(thisArg)),
+        Handle<>(toPHV(newTarget)),
+        numLiterals,
+        keyBufferIndex,
+        cacheEntry);
+}
 
 extern "C" SHLegacyValue
 _sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
