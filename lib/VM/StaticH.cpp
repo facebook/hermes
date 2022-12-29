@@ -1327,22 +1327,16 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-static Handle<HiddenClass> getHiddenClassForBuffer(
-    SHRuntime *shr,
+static Handle<HiddenClass> createHiddenClassForBuffer(
+    Runtime &runtime,
     SHUnit *unit,
+    PseudoHandle<HiddenClass> rootClazz,
     uint32_t numLiterals,
     llvh::ArrayRef<unsigned char> keyBuffer,
     uint32_t keyBufferIndex) {
-  Runtime &runtime = getRuntime(shr);
-  if (auto clazzOpt = _sh_find_object_literal_hidden_class(
-          shr, unit, numLiterals, keyBufferIndex))
-    return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
-
   MutableHandle<> tmpHandleKey{runtime};
-  MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          vmcast<JSObject>(runtime.objectPrototype),
-          JSObject::numOverlapSlots<JSObject>()));
+  MutableHandle<HiddenClass> clazz{runtime, rootClazz.get()};
+  rootClazz.invalidate();
 
   GCScopeMarkerRAII marker{runtime};
   SHSerializedLiteralParser keyGen{
@@ -1367,6 +1361,25 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
     clazz = addResult->first;
     marker.flush();
   }
+
+  return {clazz};
+}
+
+static Handle<HiddenClass> getHiddenClassForBuffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t numLiterals,
+    llvh::ArrayRef<unsigned char> keyBuffer,
+    uint32_t keyBufferIndex) {
+  Runtime &runtime = getRuntime(shr);
+  if (auto clazzOpt = _sh_find_object_literal_hidden_class(
+          shr, unit, numLiterals, keyBufferIndex))
+    return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
+  auto rootClazz = runtime.getHiddenClassForPrototype(
+      vmcast<JSObject>(runtime.objectPrototype),
+      JSObject::numOverlapSlots<JSObject>());
+  Handle<HiddenClass> clazz = createHiddenClassForBuffer(
+      runtime, unit, rootClazz, numLiterals, keyBuffer, keyBufferIndex);
 
   if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
