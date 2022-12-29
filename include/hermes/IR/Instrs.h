@@ -3993,6 +3993,55 @@ class IteratorCloseInst : public Instruction {
   }
 };
 
+class CacheNewObjectInst : public Instruction {
+  CacheNewObjectInst(const CacheNewObjectInst &) = delete;
+  void operator=(const CacheNewObjectInst &) = delete;
+
+ public:
+  enum { ThisIdx, FirstKeyIdx };
+
+  explicit CacheNewObjectInst(
+      Value *thisParameter,
+      llvh::ArrayRef<Literal *> keys)
+      : Instruction(ValueKind::CacheNewObjectInstKind) {
+    setType(Type::createObject());
+    pushOperand(thisParameter);
+    for (Literal *key : keys) {
+      pushOperand(key);
+    }
+  }
+  explicit CacheNewObjectInst(
+      const CacheNewObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  /// \return the number of keys in the object to cache.
+  unsigned getNumKeys() const {
+    return getNumOperands() - FirstKeyIdx;
+  }
+
+  /// \return the \p index key name.
+  Literal *getKey(unsigned index) const {
+    return llvh::cast<Literal>(getOperand(FirstKeyIdx + index));
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::MayWrite;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CacheNewObjectInstKind;
+  }
+};
+
 /// A bytecode version of llvm_unreachable, for use in stubs and similar.
 class UnreachableInst : public Instruction {
   UnreachableInst(const UnreachableInst &) = delete;

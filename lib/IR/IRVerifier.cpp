@@ -870,6 +870,8 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 
 void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
+void Verifier::visitCacheNewObjectInst(const CacheNewObjectInst &Inst) {}
+
 } // namespace
 
 #endif

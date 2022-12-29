@@ -1134,6 +1134,10 @@ class InstrGen {
     os_ << ", " << boolStr(inst.getIgnoreInnerException());
     os_ << ");\n";
   }
+  void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
+    // FIXME: Implement this once we have bytecode instructions for it.
+    hermes_fatal("unimplemented CacheNewObjectInst");
+  }
   void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
     os_ << "  _sh_ljs_store_to_env(shr, ";
     generateValue(*inst.getEnvironment());

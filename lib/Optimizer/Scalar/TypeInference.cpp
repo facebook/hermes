@@ -824,6 +824,9 @@ class TypeInferenceImpl {
   Type inferIteratorCloseInst(IteratorCloseInst *inst) {
     return Type::createAnyType();
   }
+  Type inferCacheNewObjectInst(CacheNewObjectInst *inst) {
+    return Type::createAnyType();
+  }
   Type inferHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst *inst) {
     return Type::createNoType();
   }
