@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ra %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -dump-ra %s -O
+// RUN: %hermesc -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -dump-ir %s -O
 
 function simple_test0(x, y) {
   return x instanceof y;
@@ -17,30 +17,14 @@ function simple_test0(x, y) {
 // CHECK:function global()
 // CHECK-NEXT:frame = [], globals = [simple_test0]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg2           	%2 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg3           	%3 = HBCCreateFunctionInst %simple_test0(), %0
-// CHECK-NEXT:  $Reg4           	%4 = StorePropertyLooseInst %3 : closure, %1 : object, "simple_test0" : string
-// CHECK-NEXT:  $Reg4           	%5 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  $Reg5           	%6 = StoreStackInst %2 : undefined, %5
-// CHECK-NEXT:  $Reg5           	%7 = LoadStackInst %5
-// CHECK-NEXT:  $Reg6           	%8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateFunctionInst %simple_test0()
+// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_test0" : string
+// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
+// CHECK-NEXT:  %4 = LoadStackInst %2
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0(x, y)
 // CHECK-NEXT:frame = [x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst
-// CHECK-NEXT:  $Reg1           	%1 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg2           	%2 = LoadParamInst %x
-// CHECK-NEXT:  $Reg3           	%3 = HBCStoreToEnvironmentInst %0, %2, [x]
-// CHECK-NEXT:  $Reg3           	%4 = LoadParamInst %y
-// CHECK-NEXT:  $Reg4           	%5 = HBCStoreToEnvironmentInst %0, %4, [y]
-// CHECK-NEXT:  $Reg4           	%6 = HBCLoadFromEnvironmentInst %0, [x]
-// CHECK-NEXT:  $Reg5           	%7 = HBCLoadFromEnvironmentInst %0, [y]
-// CHECK-NEXT:  $Reg6           	%8 = BinaryOperatorInst 'instanceof', %6, %7
-// CHECK-NEXT:  $Reg7           	%9 = ReturnInst %8
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $???           	%10 = ReturnInst %1 : undefined
-// CHECK-NEXT:function_end

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -emit-binary -O %s > %t
+// RUN: %hermesc -target=HBC -dump-ir -O %s > %t
 
 function days_of_the_w_ek(x) {
   switch (1) {
