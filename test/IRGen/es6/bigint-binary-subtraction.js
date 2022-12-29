@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O %s -dump-bytecode | %FileCheck --check-prefix=CHKBC %s
 // RUN: %hermesc -O %s -dump-ir | %FileCheck --check-prefix=CHKIR %s
 
 // Binary subtraction can no longer be assumed to return int -- it returns a
@@ -15,10 +14,6 @@
 //
 // can no longer be emitted with an AddN. This is also true for all other
 // <foo>N operations.
-
-// CHKBC-LABEL: Function<numberPlusBigInt>({{.*}}):
-// CHKBC-NOT:     AddN
-// CHKBC:         Add     r{{[0-9]+}},
 
 // CHKIR-LABEL: function numberPlusBigInt() {{.*}}
 // CHKIR:  %[[N:[0-9]+]] = BinaryOperatorInst '-', %{{[0-9]+}}
