@@ -24,11 +24,14 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/HeapRuntime.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/OrderedHashMap.h"
@@ -332,6 +335,28 @@ Runtime::Runtime(
       clazz = *addResult->first;
       rootClazzes_[i] = clazz.getHermesValue();
     }
+
+    /// Creates a special base HiddenClass where the last reserved slot is
+    /// ProxyHostObjectSecret, which is used to guarantee that the HiddenClass
+    /// of Proxies and HostObjects never compare equal to those of ordinary
+    /// objects.
+    auto createSecretClass = [this](size_t numOverlap) {
+      assert(numOverlap > 0 && "Proxy and HostObject must have fields.");
+      auto base = Handle<HiddenClass>::vmcast(&rootClazzes_[numOverlap - 1]);
+      return HiddenClass::addProperty(
+                 base,
+                 *this,
+                 Predefined::getSymbolID(
+                     Predefined::InternalPropertyProxyHostObjectSecret),
+                 {})
+          ->first.getHermesValue();
+    };
+
+    proxyClass = createSecretClass(JSObject::numOverlapSlots<JSProxy>());
+    callableProxyClass =
+        createSecretClass(JSObject::numOverlapSlots<JSCallableProxy>());
+    hostObjectClass =
+        createSecretClass(JSObject::numOverlapSlots<HostObject>());
   }
 
   global_ =

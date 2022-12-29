@@ -94,8 +94,7 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime &runtime) {
   JSProxy *proxy = runtime.makeAFixed<JSProxy>(
       runtime,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      runtime.getHiddenClassForPrototype(
-          runtime.objectPrototypeRawPtr, JSObject::numOverlapSlots<JSProxy>()));
+      Handle<HiddenClass>::vmcast(&runtime.proxyClass));
 
   proxy->flags_.proxyObject = true;
 

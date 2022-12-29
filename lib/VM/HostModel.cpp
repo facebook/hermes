@@ -107,8 +107,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   HostObject *hostObj = runtime.makeAFixed<HostObject, HasFinalizer::Yes>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<HostObject>()),
+      Handle<HiddenClass>::vmcast(&runtime.hostObjectClass),
       std::move(proxy));
 
   hostObj->flags_.hostObject = true;

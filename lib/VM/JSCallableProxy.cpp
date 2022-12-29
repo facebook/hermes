@@ -43,9 +43,7 @@ PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime &runtime) {
   auto *cproxy = runtime.makeAFixed<JSCallableProxy>(
       runtime,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      runtime.getHiddenClassForPrototype(
-          runtime.objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSCallableProxy>()));
+      Handle<HiddenClass>::vmcast(&runtime.callableProxyClass));
 
   cproxy->flags_.proxyObject = true;
 

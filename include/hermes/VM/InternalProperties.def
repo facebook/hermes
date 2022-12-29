@@ -25,6 +25,7 @@ PROP(6)
 
 /// Named internal properties. These are used to store Hermes internal state on
 /// arbitrary objects.
+NAMED_PROP(ProxyHostObjectSecret)
 NAMED_PROP(NamedPropForUnitTestOnly)
 NAMED_PROP(CapturedError)
 NAMED_PROP(IntlNativeType)
