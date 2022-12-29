@@ -5,6 +5,7 @@
 
 # RUN: sh %s %S %t %hermes
 # RUN: sh %s %S %t %hermesc
+# REQUIRES: interpreter
 
 # shellcheck disable=SC2148
 

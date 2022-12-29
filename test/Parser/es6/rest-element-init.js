@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// REQUIRES: interpreter
 
 function trycode(code) {
     try {

@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes
+# REQUIRES: interpreter
 # shellcheck shell=bash disable=SC2086
 
 # This test is an end-to-end source-map symbolication test. First it runs a
