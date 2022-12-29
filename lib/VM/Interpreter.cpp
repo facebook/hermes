@@ -42,6 +42,7 @@
 using llvh::dbgs;
 using namespace hermes::inst;
 
+#if 0
 HERMES_SLOW_STATISTIC(
     NumGetById,
     "NumGetById: Number of property 'read by id' accesses");
@@ -91,6 +92,7 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdTransient,
     "NumPutByIdTransient: Number of property 'write by id' to non-objects");
+#endif
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -732,6 +734,7 @@ static bool isCallType(OpCode opcode) {
 
 #endif
 
+#if 0
 /// \return the address of the next instruction after \p ip, which must be a
 /// call-type instruction.
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -782,6 +785,7 @@ static inline const Inst *nextInstCall(const Inst *ip) {
   const uint8_t offset = static_cast<uint8_t>(ip->opCode) - firstCall;
   return IPADD(((callSizes >> (offset * W)) & mask) + minSize);
 }
+#endif
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
@@ -846,6 +850,10 @@ template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime &runtime,
     InterpreterState &state) {
+  hermes_fatal("Interpreting HBC bytecode disabled in Static Hermes");
+
+#if 0
+
   // The interpreter is re-entrant and also saves/restores its IP via the
   // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
   // failure to preserve the IP across calls to interpreterFunction() disrupt
@@ -3758,6 +3766,8 @@ tailCall:
 
     ip = IPADD(handlerOffset - CUROFFSET);
   }
+
+#endif // 0
 }
 
 } // namespace vm

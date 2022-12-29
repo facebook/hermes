@@ -6,6 +6,7 @@
  */
 
 // RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: true
 
 var globalEval = eval;
 

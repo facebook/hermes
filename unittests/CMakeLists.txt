@@ -26,13 +26,15 @@ endif()
 
 add_subdirectory(AST)
 add_subdirectory(IR)
-add_subdirectory(BCGen)
+# HBC tests disabled in Static Hermes.
+# add_subdirectory(BCGen)
 add_subdirectory(Parser)
 add_subdirectory(VMRuntime)
 add_subdirectory(Support)
 add_subdirectory(dtoa)
 add_subdirectory(PlatformIntl)
 add_subdirectory(PlatformUnicode)
-add_subdirectory(API)
+# API tests rely on the interpreter.
+# add_subdirectory(API)
 add_subdirectory(ADT)
 add_subdirectory(Optimizer)

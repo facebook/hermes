@@ -6,6 +6,7 @@
  */
 
 // RUN: %shermes -w -exec %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: true
 
 a = 10;
 print(a);

@@ -285,9 +285,11 @@ class Runtime : public PointerBase, public HandleRootOwner {
       Handle<RequireContext> requireContext,
       RuntimeModuleFlags flags = {});
 
+#if 0
   /// Runs the internal bytecode. This is called once during initialization.
   /// \return the completion value of internal bytecode IIFE.
   Handle<JSObject> runInternalBytecode();
+#endif
 
   /// A convenience function to print an exception to a stream.
   void printException(llvh::raw_ostream &os, Handle<> valueHandle);

@@ -363,6 +363,7 @@ Runtime::Runtime(
       ignoreAllocationFailure(JSArray::create(*this, 4, 4)).get());
 #endif
 
+#if 0
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
   auto jsBuiltinsObj = runInternalBytecode();
@@ -370,6 +371,7 @@ Runtime::Runtime(
 
   // Populate JS builtins returned from internal bytecode to the builtins table.
   initJSBuiltins(builtins_, jsBuiltinsObj);
+#endif
 
   if (runtimeConfig.getEnableSampleProfiling())
     samplingProfiler = std::make_unique<SamplingProfiler>(*this);
@@ -1101,6 +1103,7 @@ ExecutionStatus Runtime::loadSegment(
   return ExecutionStatus::RETURNED;
 }
 
+#if 0
 Handle<JSObject> Runtime::runInternalBytecode() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
@@ -1129,6 +1132,7 @@ Handle<JSObject> Runtime::runInternalBytecode() {
 
   return makeHandle<JSObject>(*res);
 }
+#endif
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
   os << "Uncaught ";

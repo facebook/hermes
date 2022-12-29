@@ -63,7 +63,8 @@ add_subdirectory(BCGen)
 add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
-add_subdirectory(InternalBytecode)
+# Disable InternalBytecode for Static Hermes.
+# add_subdirectory(InternalBytecode)
 
 # Define combined libraries from all components. Components are defined as object
 # libraries. It is tricky.
@@ -120,7 +121,7 @@ target_link_libraries(hermesvm_a PUBLIC
   hermesHBCBackend_obj
   hermesInst_obj
   hermesInstrumentation_obj
-  hermesInternalBytecode_obj
+  # hermesInternalBytecode_obj
   hermesOptimizer_obj
   hermesParser_obj
   hermesPlatformUnicode_obj
@@ -142,7 +143,7 @@ target_link_libraries(hermesvmlean_a PUBLIC
   hermesHBCBackendLean_obj
   hermesInst_obj
   hermesInstrumentation_obj
-  hermesInternalBytecode_obj
+  # hermesInternalBytecode_obj
   hermesPlatformUnicode_obj
   hermesPlatform_obj
   hermesPublic_obj

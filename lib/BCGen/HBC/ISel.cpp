@@ -38,6 +38,7 @@ STATISTIC(
     NumCacheSlots,
     "Number of cache slots allocated for all put/get property instructions");
 
+#if 0
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
 /// successors. Note a jump from a block to itself is necessarily backwards.
@@ -55,6 +56,7 @@ static DenseSet<const BasicBlock *> basicBlocksWithBackwardSuccessors(
   }
   return result;
 }
+#endif
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
   if (auto *CI = llvh::dyn_cast<BaseCallInst>(I)) {
@@ -298,6 +300,7 @@ void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
 }
 
+#if 0
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());
@@ -1802,6 +1805,7 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   populatePropertyCachingInfo();
   BCFGen_->bytecodeGenerationComplete();
 }
+#endif
 
 uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
