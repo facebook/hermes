@@ -33,6 +33,7 @@ static SHLegacyValue unit_main(SHRuntime *shr);
 static SHUnit s_this_unit = {
     .num_symbols = 3,
     .num_prop_cache_entries = 3,
+    .num_constructor_new_object_cache_entries = 0,
     .ascii_pool = s_ascii_pool,
     .u16_pool = 0,
     .strings = s_strings,

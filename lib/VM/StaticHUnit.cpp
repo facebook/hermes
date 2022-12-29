@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/ConstructorNewObjectCacheEntry.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/StaticHUtils.h"
 
@@ -105,6 +106,13 @@ extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
   // We need to clean the symbol table in case the GC runs while we are
   // populating it.
   std::fill_n(unit->symbols, unit->num_symbols, SymbolID::EMPTY_ID);
+
+  // Set all entries for the constructor new object cache to the uninitialized
+  // state.
+  std::fill_n(
+      unit->constructor_new_object_cache,
+      unit->num_constructor_new_object_cache_entries,
+      ConstructorNewObjectCacheEntry::uninitialized());
 
   unit->runtime_ext = new SHUnitExt{};
 
@@ -208,6 +216,15 @@ static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit) {
 void hermes::vm::sh_unit_done(Runtime &runtime, SHUnit *unit) {
   assert(unit->in_use && "destroying unit which is not in use");
 
+  // Free any memory allocated for entries in the constructor new object cache.
+  for (size_t i = 0, e = unit->num_constructor_new_object_cache_entries; i < e;
+       ++i) {
+    auto *entry =
+        (ConstructorNewObjectCacheEntry *)unit->constructor_new_object_cache[i];
+    if (ConstructorNewObjectCacheEntry::isInitialized(entry))
+      free(unit->constructor_new_object_cache[i]);
+  }
+
   delete unit->runtime_ext;
   unit->runtime_ext = nullptr;
 
@@ -253,6 +270,14 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
     if (entry.second) {
       acceptor.acceptWeak(entry.second);
     }
+  }
+
+  for (size_t i = 0, e = unit->num_constructor_new_object_cache_entries; i < e;
+       ++i) {
+    auto *entry =
+        (ConstructorNewObjectCacheEntry *)unit->constructor_new_object_cache[i];
+    if (ConstructorNewObjectCacheEntry::isInitialized(entry))
+      entry->markCachedHiddenClasses(acceptor);
   }
 }
 

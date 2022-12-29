@@ -13,6 +13,7 @@ set(source_files
   CellKind.cpp
   CheckHeapWellFormedAcceptor.cpp
   CodeBlock.cpp
+  ConstructorNewObjectCacheEntry.cpp
   DictPropertyMap.cpp
   Domain.cpp
   DummyObject.cpp

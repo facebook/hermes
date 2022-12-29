@@ -55,6 +55,8 @@ typedef struct SHUnit {
   uint32_t num_symbols;
   /// Size of the property cache.
   uint32_t num_prop_cache_entries;
+  /// Size of the constructor new object cache.
+  uint32_t num_constructor_new_object_cache_entries;
 
   /// Pool of ASCII strings.
   const char *ascii_pool;
@@ -77,6 +79,10 @@ typedef struct SHUnit {
   /// Property cache. Points to a character array of `num_prop_cache_entries *
   /// SH_PROPERTY_CACHE_ENTRY_SIZE`. Must be zeroed initially.
   char *prop_cache;
+
+  /// New object cache. Points to an array of pointers containing
+  /// num_constructor_new_object_cache_entries entries.
+  void **constructor_new_object_cache;
 
   /// Object key buffer.
   const unsigned char *obj_key_buffer;
