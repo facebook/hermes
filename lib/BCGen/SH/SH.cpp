@@ -189,6 +189,12 @@ class SHLiteralBuffers {
     return literalGenerator_.serializeBuffer(elements, arrayBuffer, false);
   }
 
+  /// Add a list of \p keys to the object buffer.
+  /// \return the starting offset of the keys in the buffer.
+  uint32_t addKeyBuffer(ArrayRef<Literal *> keys) {
+    return literalGenerator_.serializeBuffer(keys, objKeyBuffer, true);
+  }
+
   /// Add to the the object buffer using \keys as the array of keys, and
   /// \vals as the array of values.
   /// Returns a pair where the first value is the object's offset into the
@@ -197,7 +203,7 @@ class SHLiteralBuffers {
       ArrayRef<Literal *> keys,
       ArrayRef<Literal *> vals) {
     return std::pair<uint32_t, uint32_t>{
-        literalGenerator_.serializeBuffer(keys, objKeyBuffer, true),
+        addKeyBuffer(keys),
         literalGenerator_.serializeBuffer(vals, objValBuffer, false)};
   }
 
@@ -229,6 +235,9 @@ struct ModuleGen {
 
   /// Literal buffers for objects and arrays.
   SHLiteralBuffers literalBuffers;
+
+  /// The number of CacheNewObjectInsts that we have emitted so far.
+  uint32_t nextConstructorNewObjectCacheEntryIdx = 0;
 
   explicit ModuleGen() : literalBuffers{stringTable} {}
 
@@ -1135,8 +1144,20 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
-    // FIXME: Implement this once we have bytecode instructions for it.
-    hermes_fatal("unimplemented CacheNewObjectInst");
+    llvh::SmallVector<Literal *, 8> keys;
+    size_t numKeys = inst.getNumKeys();
+    for (size_t i = 0; i < numKeys; i++)
+      keys.push_back(inst.getKey(i));
+
+    auto buffIdx = moduleGen_.literalBuffers.addKeyBuffer(keys);
+    auto cacheIdx = moduleGen_.nextConstructorNewObjectCacheEntryIdx++;
+    os_ << "  _sh_ljs_cache_new_object(shr, &s_this_unit, ";
+    generateRegisterPtr(*inst.getThis());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getNewTarget());
+    os_ << ", ";
+    os_ << numKeys << ", " << buffIdx << ", s_constructor_new_object_cache + "
+        << cacheIdx << ");\n";
   }
   void generateHBCStoreToEnvironmentInst(HBCStoreToEnvironmentInst &inst) {
     os_ << "  _sh_ljs_store_to_env(shr, ";
@@ -1721,6 +1742,7 @@ static SHUnit s_this_unit;
 
 static SHSymbolID s_symbols[];
 static char s_prop_cache[];
+static void* s_constructor_new_object_cache[];
 )";
 
     // Forward declare every JS function.
@@ -1740,11 +1762,16 @@ static char s_prop_cache[];
 
     OS << "static char s_prop_cache[" << nextCacheIdx
        << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
+       << "static void* s_constructor_new_object_cache["
+       << moduleGen.nextConstructorNewObjectCacheEntryIdx << "];\n"
        << "static SHUnit s_this_unit = { .num_symbols = "
        << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
+       << ", .num_constructor_new_object_cache_entries = "
+       << moduleGen.nextConstructorNewObjectCacheEntryIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
+       << ".constructor_new_object_cache = s_constructor_new_object_cache,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".obj_val_buffer = s_obj_val_buffer, .obj_val_buffer_size = "

@@ -570,6 +570,21 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numLiterals,
     uint32_t bufferIndex);
 
+/// \p thisArg is "this" parameter to the method.
+/// \p newTarget is the new.target value in the method.
+/// \p numLiterals is the number of keys to be considered.
+/// \p keyBufferIndex is the index into the key buffer where the serialized keys
+///    for this operation are stored.
+/// \return \p thisArg.
+SHERMES_EXPORT void _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex,
+    void **cacheEntry);
+
 /// \p base[in/out] is the object to be iterated.
 /// \p index[out] is the next index in the list.
 /// \p size[out] is the size of the list.

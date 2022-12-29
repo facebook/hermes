@@ -1534,6 +1534,15 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
+extern "C" void _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t numLiterals,
+    uint32_t keyBufferIndex,
+    void **cacheEntry) {}
+
 extern "C" SHLegacyValue
 _sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
   Runtime &runtime = getRuntime(shr);
