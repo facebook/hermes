@@ -26,7 +26,6 @@ using llvh::dbgs;
 using llvh::SmallPtrSetImpl;
 
 STATISTIC(NumTI, "Number of instructions type inferred");
-STATISTIC(NumPT, "Number of parameters type inferred");
 STATISTIC(
     UniquePropertyValue,
     "Number of instances of loads where there is a "
@@ -331,11 +330,9 @@ static bool inferFunctionReturnType(Function *F) {
 
 /// Propagate type information from call sites of F to formals of F.
 /// This assumes that all call sites of F are known.
-static bool propagateArgs(
+static void propagateArgs(
     llvh::DenseSet<BaseCallInst *> &callSites,
     Function *F) {
-  bool changed = false;
-
   // In non strict mode a function can escape by accessing arguments.caller.
   // We don't try to infer the types of the parameters in non-strict mode,
   // unless "Hermes non-strict optimizations are enabled". These optimizations
@@ -346,7 +343,7 @@ static bool propagateArgs(
       !F->getContext()
            .getOptimizationSettings()
            .aggressiveNonStrictModeOptimizations) {
-    return changed;
+    return;
   }
 
   IRBuilder builder(F);
@@ -376,7 +373,6 @@ static bool propagateArgs(
     if (first) {
       // No information retrieved from call sites, bail.
       P->setType(Type::createAnyType());
-      changed = true;
     } else {
       // Update the type if we have new information.
       P->setType(paramTy);
@@ -385,11 +381,8 @@ static bool propagateArgs(
                  << " changed to ");
       LLVM_DEBUG(paramTy.print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
-      changed = true;
     }
   }
-
-  return changed;
 }
 
 /// Propagate return type from potential callees to a CallInst.
@@ -974,8 +967,7 @@ class TypeInferenceImpl {
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.
-  bool inferParams(Function *F) {
-    bool changed;
+  void inferParams(Function *F) {
     if (cgp_->hasUnknownCallsites(F)) {
       LLVM_DEBUG(
           dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
@@ -984,20 +976,13 @@ class TypeInferenceImpl {
       for (auto *param : F->getJSDynamicParams()) {
         param->setType(Type::createAnyType());
       }
-      return true;
+      return;
     }
     llvh::DenseSet<BaseCallInst *> &callsites = cgp_->getKnownCallsites(F);
     LLVM_DEBUG(
         dbgs() << F->getInternalName().str() << " has " << callsites.size()
                << " call sites.\n");
-    changed = propagateArgs(callsites, F);
-    if (changed) {
-      LLVM_DEBUG(
-          dbgs() << "inferParams changed for function "
-                 << F->getInternalName().str() << "\n");
-      NumPT++;
-    }
-    return changed;
+    propagateArgs(callsites, F);
   }
 };
 
@@ -1027,9 +1012,6 @@ static void clearTypesInFunction(Function *f) {
 }
 
 bool TypeInferenceImpl::runOnFunction(Function *F) {
-  bool changed = false;
-  bool localChanged = false;
-
   LLVM_DEBUG(
       dbgs() << "\nStart Type Inference on " << F->getInternalName().c_str()
              << "\n");
@@ -1045,11 +1027,12 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   // so we might as well do this outside the loop because the type information
   // for those call sites will not change in the loop (except for recursive
   // functions.)
-  changed |= inferParams(F);
+  inferParams(F);
 
   // Inferring the types of instructions can help us figure out the types of
   // variables. Typed variables can help us deduce the types of loads and other
   // values. This means that we need to iterate until we reach convergence.
+  bool localChanged = false;
   do {
     localChanged = false;
 
@@ -1082,11 +1065,10 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
     if (inferredVarType)
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
     localChanged |= inferredVarType;
-
-    changed |= localChanged;
   } while (localChanged);
 
-  return changed;
+  // Since we always infer from scratch, the inference has always "changed".
+  return true;
 }
 
 bool TypeInferenceImpl::runOnModule(Module *M) {
