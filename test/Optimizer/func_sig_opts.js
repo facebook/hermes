@@ -221,10 +221,10 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this
+// CHECK-NEXT:  %1 = LoadParamInst %this : undefined
 // CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn() : object
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %1, %0 : object
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %1 : undefined, %0 : object
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 

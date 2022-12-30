@@ -45,7 +45,7 @@ function ctor_load_store_test() {
 // CHECK:function ctor_this_test() : object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %use_this()
+// CHECK-NEXT:  %0 = CreateFunctionInst %use_this() : object
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
 // CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
 // CHECK-NEXT:  %3 = ConstructInst %0 : closure, %2 : object, 12 : number
@@ -53,12 +53,12 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k : number)
+// CHECK:function use_this(k : number) : object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0, "k" : string
-// CHECK-NEXT:  %2 = ReturnInst %0
+// CHECK-NEXT:  %0 = LoadParamInst %this : object
+// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
+// CHECK-NEXT:  %2 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_load_store_test() : object
@@ -74,8 +74,8 @@ function ctor_load_store_test() {
 // CHECK:function "use_this 1#"(k : number) : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0, "k" : string
+// CHECK-NEXT:  %0 = LoadParamInst %this : object
+// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
