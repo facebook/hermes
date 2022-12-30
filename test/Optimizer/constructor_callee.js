@@ -46,8 +46,11 @@ function ctor_load_store_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %use_this()
-// CHECK-NEXT:  %1 = ConstructInst %0 : closure, undefined : undefined, 12 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
+// CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
+// CHECK-NEXT:  %2 = HBCCreateThisInst %1, %0 : closure
+// CHECK-NEXT:  %3 = HBCConstructInst %0 : closure, %2 : object, 12 : number
+// CHECK-NEXT:  %4 = HBCGetConstructedObjectInst %2 : object, %3
+// CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function use_this(k : number)
@@ -80,6 +83,9 @@ function ctor_load_store_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst [use_this@ctor_load_store_test] : closure
-// CHECK-NEXT:  %1 = ConstructInst %0 : closure, undefined : undefined, 12 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
+// CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
+// CHECK-NEXT:  %2 = HBCCreateThisInst %1, %0 : closure
+// CHECK-NEXT:  %3 = HBCConstructInst %0 : closure, %2 : object, 12 : number
+// CHECK-NEXT:  %4 = HBCGetConstructedObjectInst %2 : object, %3
+// CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
