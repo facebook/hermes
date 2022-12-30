@@ -40,7 +40,7 @@ class CallGraphProvider {
   /// Given a CallInst, are there callees that we do not know?
   /// For example, a callee could be read off of an object property
   /// which we could not analyze.
-  bool hasUnknownCallees(CallInst *CI) {
+  bool hasUnknownCallees(BaseCallInst *CI) {
     return callees_.count(CI) == 0;
   }
 
@@ -55,7 +55,7 @@ class CallGraphProvider {
   /// from a call site.  If that information is not available,
   /// then there may have been unknown callees. The protocol is to
   /// call hasUnknownCallees(CI) before this function.
-  llvh::DenseSet<Function *> &getKnownCallees(CallInst *CI) {
+  llvh::DenseSet<Function *> &getKnownCallees(BaseCallInst *CI) {
     auto a = callees_.find(CI);
     assert(a != callees_.end() && "Did not find CallInst in callees map.");
     return a->second;

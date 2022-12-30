@@ -49,7 +49,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
 // CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
 // CHECK-NEXT:  %3 = ConstructInst %0 : closure, %2 : object, 12 : number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3
+// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : object
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
@@ -86,6 +86,6 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
 // CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
 // CHECK-NEXT:  %3 = ConstructInst %0 : closure, %2 : object, 12 : number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3
+// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : undefined
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
