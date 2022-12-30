@@ -63,9 +63,9 @@ function test_simple_call() {
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ctor]
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "Car" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "prototype" : string
-// CHECK-NEXT:  %3 = HBCCreateThisInst %2, %1
-// CHECK-NEXT:  %4 = HBCConstructInst %1, %3, "Eagle" : string, 1993 : number
-// CHECK-NEXT:  %5 = HBCGetConstructedObjectInst %3, %4
+// CHECK-NEXT:  %3 = CreateThisInst %2, %1
+// CHECK-NEXT:  %4 = ConstructInst %1, %3, "Eagle" : string, 1993 : number
+// CHECK-NEXT:  %5 = GetConstructedObjectInst %3, %4
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [ctor]
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

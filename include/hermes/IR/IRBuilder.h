@@ -523,15 +523,16 @@ class IRBuilder {
   HBCReifyArgumentsStrictInst *createHBCReifyArgumentsStrictInst(
       AllocStackInst *lazyReg);
 
-  HBCCreateThisInst *createHBCCreateThisInst(Value *prototype, Value *closure);
+  CreateThisInst *createCreateThisInst(Value *prototype, Value *closure);
 
-  HBCConstructInst *createHBCConstructInst(
+  ConstructInst *createConstructInst(
       Value *closure,
       Value *thisValue,
       ArrayRef<Value *> arguments);
-  HBCGetConstructedObjectInst *createHBCGetConstructedObjectInst(
-      HBCCreateThisInst *thisValue,
-      HBCConstructInst *constructorReturnValue);
+  GetConstructedObjectInst *createGetConstructedObjectInst(
+      CreateThisInst *thisValue,
+      ConstructInst *constructorReturnValue);
+
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
   CallBuiltinInst *createCallBuiltinInst(

@@ -117,7 +117,7 @@ bool hermes::isConstructionSetup(Value *V, Value *closure) {
         if (LS->getValue().str() == "prototype")
           return true;
 
-  if (auto *CTI = llvh::dyn_cast<HBCCreateThisInst>(V)) {
+  if (auto *CTI = llvh::dyn_cast<CreateThisInst>(V)) {
     assert(
         CTI->getClosure() == closure &&
         "Closure must be closure argument to CreateThisInst");

@@ -3392,20 +3392,20 @@ class HBCReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
 };
 
 /// Create a 'this' object to be filled in by a constructor.
-class HBCCreateThisInst : public Instruction {
-  HBCCreateThisInst(const HBCCreateThisInst &) = delete;
-  void operator=(const HBCCreateThisInst &) = delete;
+class CreateThisInst : public Instruction {
+  CreateThisInst(const CreateThisInst &) = delete;
+  void operator=(const CreateThisInst &) = delete;
 
  public:
   enum { PrototypeIdx, ClosureIdx };
 
-  explicit HBCCreateThisInst(Value *prototype, Value *closure)
-      : Instruction(ValueKind::HBCCreateThisInstKind) {
+  explicit CreateThisInst(Value *prototype, Value *closure)
+      : Instruction(ValueKind::CreateThisInstKind) {
     pushOperand(prototype);
     pushOperand(closure);
   }
-  explicit HBCCreateThisInst(
-      const HBCCreateThisInst *src,
+  explicit CreateThisInst(
+      const CreateThisInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -3430,55 +3430,54 @@ class HBCCreateThisInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCCreateThisInstKind;
+    return kind == ValueKind::CreateThisInstKind;
   }
 };
 
-/// Call a constructor. thisValue can be created with HBCCreateThisInst.
-class HBCConstructInst : public BaseCallInst {
-  HBCConstructInst(const HBCConstructInst &) = delete;
-  void operator=(const HBCConstructInst &) = delete;
+/// Call a constructor. thisValue can be created with CreateThisInst.
+class ConstructInst : public BaseCallInst {
+  ConstructInst(const ConstructInst &) = delete;
+  void operator=(const ConstructInst &) = delete;
 
  public:
-  explicit HBCConstructInst(
+  explicit ConstructInst(
       Value *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : BaseCallInst(ValueKind::HBCConstructInstKind, callee, thisValue, args) {
-  }
-  explicit HBCConstructInst(
-      const HBCConstructInst *src,
+      : BaseCallInst(ValueKind::ConstructInstKind, callee, thisValue, args) {}
+  explicit ConstructInst(
+      const ConstructInst *src,
       llvh::ArrayRef<Value *> operands)
       : BaseCallInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCConstructInstKind;
+    return kind == ValueKind::ConstructInstKind;
   }
 };
 
 /// Choose between 'this' and the object returned by a constructor.
-class HBCGetConstructedObjectInst : public Instruction {
-  HBCGetConstructedObjectInst(const HBCGetConstructedObjectInst &) = delete;
-  void operator=(const HBCGetConstructedObjectInst &) = delete;
+class GetConstructedObjectInst : public Instruction {
+  GetConstructedObjectInst(const GetConstructedObjectInst &) = delete;
+  void operator=(const GetConstructedObjectInst &) = delete;
 
  public:
   enum { ThisValueIdx, ConstructorReturnValueIdx };
 
-  explicit HBCGetConstructedObjectInst(
-      HBCCreateThisInst *thisValue,
-      HBCConstructInst *constructorReturnValue)
-      : Instruction(ValueKind::HBCGetConstructedObjectInstKind) {
+  explicit GetConstructedObjectInst(
+      CreateThisInst *thisValue,
+      ConstructInst *constructorReturnValue)
+      : Instruction(ValueKind::GetConstructedObjectInstKind) {
     pushOperand(thisValue);
     pushOperand(constructorReturnValue);
   }
-  explicit HBCGetConstructedObjectInst(
-      const HBCGetConstructedObjectInst *src,
+  explicit GetConstructedObjectInst(
+      const GetConstructedObjectInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
   Value *getThisValue() const {
-    // While originally a HBCCreateThisInst, it may have been replaced by a mov
+    // While originally a CreateThisInst, it may have been replaced by a mov
     // or similar.
     return getOperand(ThisValueIdx);
   }
@@ -3500,7 +3499,7 @@ class HBCGetConstructedObjectInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetConstructedObjectInstKind;
+    return kind == ValueKind::GetConstructedObjectInstKind;
   }
 };
 
