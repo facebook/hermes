@@ -179,7 +179,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       if (fail)
         continue;
 
-      if (llvh::isa<ConstructInst>(call) || llvh::isa<HBCConstructInst>(call)) {
+      if (llvh::isa<HBCConstructInst>(call)) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             call->getLocation(),

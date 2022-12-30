@@ -597,10 +597,6 @@ void Verifier::visitThrowInst(const ThrowInst &Inst) {
       "visitThrowInst should not have successors");
 }
 
-void Verifier::visitConstructInst(const ConstructInst &Inst) {
-  // Nothing to verify at this point.
-}
-
 void Verifier::visitGetNextPNameInst(const GetNextPNameInst &Inst) {
   Assert(isTerminator(&Inst), "GetNextPNameInst must terminate the block");
   Assert(

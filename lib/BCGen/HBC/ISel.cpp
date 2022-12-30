@@ -1245,10 +1245,6 @@ void HBCISel::generateHBCCallNInst(HBCCallNInst *Inst, BasicBlock *next) {
   }
 }
 
-void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
-  llvm_unreachable("ConstructInst should have been lowered");
-}
-
 void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);

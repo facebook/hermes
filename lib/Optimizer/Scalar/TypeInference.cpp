@@ -902,9 +902,6 @@ class TypeInferenceImpl {
                << " callees for : " << inst->getName().str() << "\n");
     return propagateReturn(callees, inst);
   }
-  Type inferConstructInst(ConstructInst *inst) {
-    return Type::createObject();
-  }
   Type inferCallBuiltinInst(CallBuiltinInst *inst) {
     // unimplemented
     return Type::createAnyType();

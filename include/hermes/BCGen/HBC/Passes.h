@@ -75,13 +75,6 @@ class DedupReifyArguments : public FunctionPass {
   bool runOnFunction(Function *F) override;
 };
 
-class LowerConstruction : public FunctionPass {
- public:
-  explicit LowerConstruction() : FunctionPass("LowerConstruction") {}
-  ~LowerConstruction() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
 class LowerCalls : public FunctionPass {

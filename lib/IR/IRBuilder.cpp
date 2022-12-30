@@ -393,14 +393,6 @@ HBCCallNInst *IRBuilder::createHBCCallNInst(
   return CI;
 }
 
-ConstructInst *IRBuilder::createConstructInst(
-    Value *constructor,
-    ArrayRef<Value *> args) {
-  auto *inst = new ConstructInst(constructor, getLiteralUndefined(), args);
-  insert(inst);
-  return inst;
-}
-
 LoadPropertyInst *IRBuilder::createLoadPropertyInst(
     Value *object,
     Value *property) {
