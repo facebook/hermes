@@ -106,6 +106,26 @@ bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
   return true;
 }
 
+bool hermes::isConstructionSetup(Value *V, Value *closure) {
+  // Constructor invocations access the closure, to read the "prototype"
+  // property and to create the "this" argument. However, in the absence of
+  // other accesses (like making "prototype" a setter), these operations
+  // cannot leak the closure.
+  if (auto *LPI = llvh::dyn_cast<LoadPropertyInst>(V))
+    if (LPI->getObject() == closure)
+      if (auto *LS = llvh::dyn_cast<LiteralString>(LPI->getProperty()))
+        if (LS->getValue().str() == "prototype")
+          return true;
+
+  if (auto *CTI = llvh::dyn_cast<HBCCreateThisInst>(V)) {
+    assert(
+        CTI->getClosure() == closure &&
+        "Closure must be closure argument to CreateThisInst");
+    return true;
+  }
+  return false;
+}
+
 bool hermes::getCallSites(
     Function *F,
     llvh::DenseSet<BaseCallInst *> &callsites) {
@@ -128,6 +148,10 @@ bool hermes::getCallSites(
         continue;
       }
 
+      // Check if the closure is only being used to set up for construction.
+      if (isConstructionSetup(U, CFI))
+        continue;
+
       // Check if the variable is stored somewhere.
       auto *SFI = llvh::dyn_cast<StoreFrameInst>(U);
       if (!SFI)
@@ -148,6 +172,9 @@ bool hermes::getCallSites(
                 continue;
               }
             }
+
+            if (isConstructionSetup(loadUser, LFI))
+              continue;
 
             // Unknown load used.
             return false;
