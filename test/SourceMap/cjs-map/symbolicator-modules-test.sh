@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes | %FileCheck %s
+# REQUIRES: interpreter
 # shellcheck shell=bash disable=SC2086
 
 SRCDIR=$1
