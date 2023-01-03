@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -fstatic-require -commonjs -emit-binary %s 2>&1 > %t | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -fstatic-require -commonjs -dump-ir %s 2>&1 > %t | %FileCheck --match-full-lines %s
 
 
 

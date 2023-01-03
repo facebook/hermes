@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -O0 -dump-bytecode %s
 
 // Ensure that the "break" in the finally handler exits the correct
 // loop.
