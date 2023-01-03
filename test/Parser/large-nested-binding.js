@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: ( ! %hermes %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! printf '%0.s[' {1..100000} | %hermesc -dump-ast - 2>&1 ) | %FileCheck -match-full-lines %s
 
-var v2 = "[".repeat(100000);
 // CHECK: {{.*}}Too many nested expressions/statements/declarations{{.*}}
-var v5 = Function(v2,"return 0");

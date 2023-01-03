@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s
+// RUN: %hermesc -dump-transformed-ast %s
 
 // This should be fine in non-strict mode.
 delete a;
