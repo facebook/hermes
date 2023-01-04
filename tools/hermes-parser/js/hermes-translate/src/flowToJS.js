@@ -13,10 +13,10 @@
 import type {ScopeManager} from 'hermes-eslint';
 import type {ESNode, Program} from 'hermes-estree';
 
+import {removeAtFlowFromDocblock} from './utils/DocblockUtils';
+
 import {SimpleTransform, astNodeMutationHelpers} from 'hermes-parser';
 const {nodeWith} = astNodeMutationHelpers;
-
-const FLOW_DIRECTIVE = /(@flow(\s+(strict(-local)?|weak))?|@noflow)/;
 
 function transform(node: ESNode): ESNode | null {
   switch (node.type) {
@@ -26,23 +26,8 @@ function transform(node: ESNode): ESNode | null {
         return node;
       }
 
-      if (!FLOW_DIRECTIVE.test(docblock.comment.value)) {
-        return node;
-      }
-
       return nodeWith(node, {
-        docblock: {
-          // $FlowExpectedError[cannot-spread-interface]
-          comment: {
-            ...docblock.comment,
-            value: docblock.comment.value.replace(FLOW_DIRECTIVE, ''),
-          },
-          directives: {
-            ...docblock.directives,
-            flow: undefined,
-            noflow: undefined,
-          },
-        },
+        docblock: removeAtFlowFromDocblock(docblock),
       });
     }
 
