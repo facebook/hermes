@@ -399,8 +399,6 @@ std::shared_ptr<Context> createContext() {
 
   OptimizationSettings optimizationOpts;
 
-  optimizationOpts.aggressiveNonStrictModeOptimizations = true;
-
   optimizationOpts.inlining =
       cli::OptimizationLevel != OptLevel::O0 && cli::Inline;
 

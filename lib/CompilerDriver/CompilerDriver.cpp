@@ -1033,9 +1033,6 @@ std::shared_ptr<Context> createContext(
 
   OptimizationSettings optimizationOpts;
 
-  // Enable aggressiveNonStrictModeOptimizations if the target is HBC.
-  optimizationOpts.aggressiveNonStrictModeOptimizations = true;
-
   optimizationOpts.inlining =
       cl::OptimizationLevel != cl::OptLevel::O0 && cl::Inline;
 

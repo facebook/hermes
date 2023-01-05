@@ -40,12 +40,6 @@ struct CodeGenerationSettings {
 };
 
 struct OptimizationSettings {
-  /// Enable aggressive non-strict mode optimizations. These optimizations
-  /// assume that:
-  ///   - function arguments are never modified indirectly
-  ///   - local "eval()" or "with" are not used.
-  bool aggressiveNonStrictModeOptimizations{true};
-
   /// Enable any inlining of functions.
   bool inlining{true};
 

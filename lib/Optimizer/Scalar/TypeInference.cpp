@@ -333,19 +333,9 @@ static bool inferFunctionReturnType(Function *F) {
 static void propagateArgs(
     llvh::DenseSet<BaseCallInst *> &callSites,
     Function *F) {
-  // In non strict mode a function can escape by accessing arguments.caller.
-  // We don't try to infer the types of the parameters in non-strict mode,
-  // unless "Hermes non-strict optimizations are enabled". These optimizations
-  // allow us to benefit from the fact that Hermes doesn't implement some
-  // aspects of non-strict mode, specifically in this case: modifying arguments
-  // indirectly, argumentrs.caller, arguments.callee.
-  if (!F->isStrictMode() &&
-      !F->getContext()
-           .getOptimizationSettings()
-           .aggressiveNonStrictModeOptimizations) {
-    return;
-  }
-
+  // Hermes does not support using 'arguments' to modify the arguments to a
+  // function in loose mode. Therefore, we can safely propagate the parameter
+  // types to their usage regardless of the function's strictness.
   IRBuilder builder(F);
   for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
     auto *P = F->getJSDynamicParam(i);
