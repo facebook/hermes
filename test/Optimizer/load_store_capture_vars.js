@@ -97,54 +97,45 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_not_captured() : number
-// CHECK-NEXT:frame = [y : number]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo() : undefined
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst 9 : number
+// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo() : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 12 : number, [y@store_x_not_captured] : number
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_is_captured() : number
-// CHECK-NEXT:frame = [y : number, x : number]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = StoreFrameInst 4 : number, [x] : number
-// CHECK-NEXT:  %2 = CreateFunctionInst %"foo 1#"() : undefined
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
-// CHECK-NEXT:  %4 = StoreFrameInst 9 : number, [x] : number
-// CHECK-NEXT:  %5 = ReturnInst 9 : number
+// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 1#"() : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 1#"() : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [x@store_x_is_captured] : number
-// CHECK-NEXT:  %1 = StoreFrameInst %0 : number, [y@store_x_is_captured] : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_not_captured() : number
-// CHECK-NEXT:frame = [y : number]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 3 : number, [y] : number
-// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 2#"() : undefined
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst 4 : number
+// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"() : undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst 12 : number, [y@load_x_not_captured] : number
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_is_captured() : number

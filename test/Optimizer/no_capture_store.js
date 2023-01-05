@@ -39,7 +39,7 @@ function outer() {
       envVar = 87;
     }
 
-    return [setValue, test1, test2]
+    return [setValue, test1, test2, envVar]
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -96,11 +96,13 @@ function outer() {
 // CHECK-NEXT:  %1 = CreateFunctionInst %setValue() : undefined
 // CHECK-NEXT:  %2 = CreateFunctionInst %test1() : undefined
 // CHECK-NEXT:  %3 = CreateFunctionInst %test2() : undefined
-// CHECK-NEXT:  %4 = AllocArrayInst 3 : number
+// CHECK-NEXT:  %4 = AllocArrayInst 4 : number
 // CHECK-NEXT:  %5 = StoreOwnPropertyInst %1 : closure, %4 : object, 0 : number, true : boolean
 // CHECK-NEXT:  %6 = StoreOwnPropertyInst %2 : closure, %4 : object, 1 : number, true : boolean
 // CHECK-NEXT:  %7 = StoreOwnPropertyInst %3 : closure, %4 : object, 2 : number, true : boolean
-// CHECK-NEXT:  %8 = ReturnInst %4 : object
+// CHECK-NEXT:  %8 = LoadFrameInst [envVar]
+// CHECK-NEXT:  %9 = StoreOwnPropertyInst %8, %4 : object, 3 : number, true : boolean
+// CHECK-NEXT:  %10 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function setValue(v) : undefined

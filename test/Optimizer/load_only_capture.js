@@ -29,25 +29,20 @@ function load_only_capture(leak, foreach, n) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %leak
 // CHECK-NEXT:  %1 = LoadParamInst %n
-// CHECK-NEXT:  %2 = BinaryOperatorInst '<', 0 : number, %1
-// CHECK-NEXT:  %3 = CondBranchInst %2 : boolean, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = CreateFunctionInst %""() : number
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, %0, "k" : string
-// CHECK-NEXT:  %6 = LoadFrameInst [i] : number
-// CHECK-NEXT:  %7 = UnaryOperatorInst '++', %6 : number
-// CHECK-NEXT:  %8 = StoreFrameInst %7 : number, [i] : number
-// CHECK-NEXT:  %9 = BinaryOperatorInst '<', %7 : number, %1
-// CHECK-NEXT:  %10 = CondBranchInst %9 : boolean, %BB3, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = LoadFrameInst [i] : number
-// CHECK-NEXT:  %12 = ReturnInst %11 : number
+// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i] : number
+// CHECK-NEXT:  %3 = BinaryOperatorInst '<', 0 : number, %1
+// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = StoreFrameInst 0 : number, [i] : number
-// CHECK-NEXT:  %14 = BranchInst %BB3
+// CHECK-NEXT:  %5 = PhiInst 0 : number, %BB0, %8 : number, %BB1
+// CHECK-NEXT:  %6 = CreateFunctionInst %""() : number
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, %0, "k" : string
+// CHECK-NEXT:  %8 = UnaryOperatorInst '++', %5 : number
+// CHECK-NEXT:  %9 = StoreFrameInst %8 : number, [i] : number
+// CHECK-NEXT:  %10 = BinaryOperatorInst '<', %8 : number, %1
+// CHECK-NEXT:  %11 = CondBranchInst %10 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = StoreFrameInst 0 : number, [i] : number
-// CHECK-NEXT:  %16 = BranchInst %BB4
+// CHECK-NEXT:  %12 = PhiInst 0 : number, %BB0, %8 : number, %BB1
+// CHECK-NEXT:  %13 = ReturnInst %12 : number
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""() : number

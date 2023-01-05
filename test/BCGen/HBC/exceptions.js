@@ -59,38 +59,45 @@ function foo(a) {
 
 // CHECK:Function<foo>(2 params, 11 registers, 0 symbols):
 // CHECK-NEXT:Offset in debug table: source 0x0007, lexical 0x0000
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstUndefined r3
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    Mov               r0, r1
-// CHECK-NEXT:    Call1             r0, r0, r2
+// CHECK-NEXT:    Mov               r3, r1
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:L11:
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    Catch             r3
+// CHECK-NEXT:    Catch             r2
 // CHECK-NEXT:L8:
-// CHECK-NEXT:    Mov               r0, r3
-// CHECK-NEXT:    Call1             r0, r0, r2
+// CHECK-NEXT:    Mov               r3, r2
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:L9:
 // CHECK-NEXT:    Jmp               L4
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    Catch             r0
-// CHECK-NEXT:    Call1             r0, r0, r2
+// CHECK-NEXT:    Catch             r3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    Mov               r0, r3
-// CHECK-NEXT:    Call1             r0, r0, r2
+// CHECK-NEXT:    Mov               r3, r2
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    Mov               r0, r1
-// CHECK-NEXT:    Call1             r0, r0, r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    Mov               r3, r1
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r3, r3, r0
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    Catch             r0
-// CHECK-NEXT:    Call1             r3, r3, r2
+// CHECK-NEXT:    Mov               r3, r2
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Call1             r2, r3, r2
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L6:
 // CHECK-NEXT:    Catch             r0
-// CHECK-NEXT:    Call1             r1, r1, r2
+// CHECK-NEXT:    Mov               r2, r1
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    Call1             r1, r2, r1
 // CHECK-NEXT:    Throw             r0
 
 // CHECK:Exception Handlers:
@@ -110,23 +117,23 @@ function foo(a) {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:  0x0007  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 10: line 12 col 6
-// CHECK-NEXT:    bc 14: line 13 col 3
-// CHECK-NEXT:    bc 16: line 13 col 5
+// CHECK-NEXT:    bc 8: line 12 col 6
+// CHECK-NEXT:    bc 12: line 13 col 3
+// CHECK-NEXT:    bc 14: line 13 col 5
 // CHECK-NEXT:    bc 21: line 15 col 8
 // CHECK-NEXT:    bc 25: line 16 col 5
 // CHECK-NEXT:    bc 27: line 16 col 7
-// CHECK-NEXT:    bc 29: line 17 col 8
-// CHECK-NEXT:    bc 33: line 18 col 5
-// CHECK-NEXT:    bc 36: line 20 col 8
-// CHECK-NEXT:    bc 40: line 22 col 3
-// CHECK-NEXT:    bc 43: line 24 col 6
-// CHECK-NEXT:    bc 49: line 19 col 13
-// CHECK-NEXT:    bc 51: line 20 col 8
-// CHECK-NEXT:    bc 55: line 21 col 5
-// CHECK-NEXT:    bc 57: line 23 col 11
-// CHECK-NEXT:    bc 59: line 24 col 6
-// CHECK-NEXT:    bc 63: line 25 col 3
+// CHECK-NEXT:    bc 31: line 17 col 8
+// CHECK-NEXT:    bc 35: line 18 col 5
+// CHECK-NEXT:    bc 40: line 20 col 8
+// CHECK-NEXT:    bc 44: line 22 col 3
+// CHECK-NEXT:    bc 49: line 24 col 6
+// CHECK-NEXT:    bc 55: line 19 col 13
+// CHECK-NEXT:    bc 62: line 20 col 8
+// CHECK-NEXT:    bc 66: line 21 col 5
+// CHECK-NEXT:    bc 68: line 23 col 11
+// CHECK-NEXT:    bc 75: line 24 col 6
+// CHECK-NEXT:    bc 79: line 25 col 3
 // CHECK-NEXT:  0x003e  end of debug source table
 
 // CHECK:Debug lexical table:
