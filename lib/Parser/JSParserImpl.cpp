@@ -4545,7 +4545,8 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
     SMRange startRange = tok_->getSourceRange();
 
     bool declare = false;
-    bool isPrivate = false;
+    bool readonly = false;
+    ESTree::NodeLabel accessibility = nullptr;
 
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(declareIdent_)) {
@@ -4562,14 +4563,31 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 #endif
 
 #if HERMES_PARSE_TS
-    if (context_.getParseTS() && check(TokenKind::rw_private)) {
-      // Check for "private" class properties.
-      auto optNext = lexer_.lookahead1(llvh::None);
-      if (optNext.hasValue() &&
-          (*optNext == TokenKind::rw_static ||
-           *optNext == TokenKind::identifier)) {
-        isPrivate = true;
-        advance();
+    if (context_.getParseTS()) {
+      // In TS, modifiers may appear in this order: accessibility - static -
+      // readonly. And all of them can be used as identifier.
+      if (checkN(
+              TokenKind::rw_private,
+              TokenKind::rw_protected,
+              TokenKind::rw_public)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          accessibility = tok_->getResWordIdentifier();
+          advance();
+        }
+      }
+
+      if (check(TokenKind::rw_static)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          isStatic = true;
+          advance();
+        }
+      }
+
+      if (check(readonlyIdent_)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          readonly = true;
+          advance();
+        }
       }
     }
 #endif
@@ -4580,15 +4598,21 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         break;
 
       case TokenKind::rw_static:
-        // static MethodDefinition
-        // static FieldDefinition
-        isStatic = true;
-        advance();
+        if (context_.getParseTS() && (readonly || isStatic)) {
+          // Don't advance() when `readonly` or `static` is already seen,
+          // so the current one can be regarded as an identifier.
+          // `static` modifier cannot come after `readonly` in TS.
+        } else {
+          // static MethodDefinition
+          // static FieldDefinition
+          isStatic = true;
+          advance();
+        }
         // intentional fallthrough
       default: {
         // ClassElement
-        auto optElem =
-            parseClassElement(isStatic, startRange, declare, isPrivate);
+        auto optElem = parseClassElement(
+            isStatic, startRange, declare, readonly, accessibility);
         if (!optElem)
           return None;
         if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -4642,11 +4666,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
     bool declare,
-    bool isPrivate,
+    bool readonly,
+    ESTree::NodeLabel accessibility,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
   bool optional = false;
+  bool isPrivate = false;
 
   enum class SpecialKind {
     None,
@@ -4848,6 +4874,11 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       return None;
     }
     if (isPrivate) {
+      if (accessibility) {
+        error(
+            startRange,
+            "An accessibility modifier cannot be used with a private identifier");
+      }
       return setLocation(
           prop,
           getPrevTokenEndLoc(),
@@ -4858,7 +4889,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
               declare,
               optional,
               variance,
-              typeAnnotation));
+              typeAnnotation,
+              context_.getParseTS()
+                  ? new (context_) ESTree::TSModifiersNode(nullptr, readonly)
+                  : nullptr));
     }
     return setLocation(
         startRange,
@@ -4871,7 +4905,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             declare,
             optional,
             variance,
-            typeAnnotation));
+            typeAnnotation,
+            context_.getParseTS() ? new (context_) ESTree::TSModifiersNode(
+                                        accessibility, readonly)
+                                  : nullptr));
   }
 
   if (declare) {
