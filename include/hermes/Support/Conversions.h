@@ -20,7 +20,10 @@ namespace hermes {
 /// Helper function to silence UBSAN complaints when truncating a double to some
 /// type that cannot hold its original value (e.g. integer types and float).
 template <typename T>
-T unsafeTruncateDouble(double d) LLVM_NO_SANITIZE("float-cast-overflow") {
+T unsafeTruncateDouble(double d) LLVM_NO_SANITIZE("float-cast-overflow");
+
+template <typename T>
+T unsafeTruncateDouble(double d) {
   return static_cast<T>(d);
 }
 
