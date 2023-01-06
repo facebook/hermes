@@ -316,6 +316,7 @@ class HermesParserJSSerializer {
 #define ESTREE_NODE_6_ARGS(NAME, ...) SERIALIZE(NAME)
 #define ESTREE_NODE_7_ARGS(NAME, ...) SERIALIZE(NAME)
 #define ESTREE_NODE_8_ARGS(NAME, ...) SERIALIZE(NAME)
+#define ESTREE_NODE_9_ARGS(NAME, ...) SERIALIZE(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -504,6 +505,48 @@ class HermesParserJSSerializer {
     serializeNode(node->_##ARG5NM);  \
     serializeNode(node->_##ARG6NM);  \
     serializeNode(node->_##ARG7NM);  \
+  }
+
+#define ESTREE_NODE_9_ARGS(          \
+    NAME,                            \
+    BASE,                            \
+    ARG0TY,                          \
+    ARG0NM,                          \
+    ARG0OPT,                         \
+    ARG1TY,                          \
+    ARG1NM,                          \
+    ARG1OPT,                         \
+    ARG2TY,                          \
+    ARG2NM,                          \
+    ARG2OPT,                         \
+    ARG3TY,                          \
+    ARG3NM,                          \
+    ARG3OPT,                         \
+    ARG4TY,                          \
+    ARG4NM,                          \
+    ARG4OPT,                         \
+    ARG5TY,                          \
+    ARG5NM,                          \
+    ARG5OPT,                         \
+    ARG6TY,                          \
+    ARG6NM,                          \
+    ARG6OPT,                         \
+    ARG7TY,                          \
+    ARG7NM,                          \
+    ARG7OPT,                         \
+    ARG8TY,                          \
+    ARG8NM,                          \
+    ARG8OPT)                         \
+  void serialize(NAME##Node *node) { \
+    serializeNode(node->_##ARG0NM);  \
+    serializeNode(node->_##ARG1NM);  \
+    serializeNode(node->_##ARG2NM);  \
+    serializeNode(node->_##ARG3NM);  \
+    serializeNode(node->_##ARG4NM);  \
+    serializeNode(node->_##ARG5NM);  \
+    serializeNode(node->_##ARG6NM);  \
+    serializeNode(node->_##ARG7NM);  \
+    serializeNode(node->_##ARG8NM);  \
   }
 
 #include "hermes/AST/ESTree.def"
