@@ -2330,7 +2330,7 @@ tailCall:
 #endif
         ++NumGetByIdSlow;
         // Getting properties is not affected by strictness, so just use false.
-        constexpr auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
+        const auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
         CAPTURE_IP(
             resPH = JSObject::getNamed_RJS(
                 Handle<JSObject>::vmcast(&O2REG(GetById)),
