@@ -47,12 +47,12 @@
 ///
 #define _HERMES_CTORCONFIG_STRUCT(NAME, FIELDS, BUILD_BODY)             \
   class NAME {                                                          \
-    FIELDS(_HERMES_CTORCONFIG_FIELD_DECL);                              \
+    FIELDS(_HERMES_CTORCONFIG_FIELD_DECL)                               \
                                                                         \
    public:                                                              \
     class Builder;                                                      \
     friend Builder;                                                     \
-    FIELDS(_HERMES_CTORCONFIG_GETTER);                                  \
+    FIELDS(_HERMES_CTORCONFIG_GETTER)                                   \
                                                                         \
     /* returns a Builder that starts with the current config. */        \
     inline Builder rebuild() const;                                     \
@@ -64,7 +64,7 @@
   class NAME::Builder {                                                 \
     NAME config_;                                                       \
                                                                         \
-    FIELDS(_HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_DECL);                \
+    FIELDS(_HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_DECL)                 \
                                                                         \
    public:                                                              \
     Builder() = default;                                                \
@@ -80,8 +80,8 @@
      * the corresponding fields of \p this. */                          \
     inline Builder update(const NAME::Builder &newConfig);              \
                                                                         \
-    FIELDS(_HERMES_CTORCONFIG_SETTER);                                  \
-    FIELDS(_HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_ACCESSOR);            \
+    FIELDS(_HERMES_CTORCONFIG_SETTER)                                   \
+    FIELDS(_HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_ACCESSOR)             \
   };                                                                    \
                                                                         \
   NAME::Builder NAME::rebuild() const {                                 \
@@ -89,7 +89,7 @@
   }                                                                     \
                                                                         \
   NAME::Builder NAME::Builder::update(const NAME::Builder &newConfig) { \
-    FIELDS(_HERMES_CTORCONFIG_UPDATE);                                  \
+    FIELDS(_HERMES_CTORCONFIG_UPDATE)                                   \
     return *this;                                                       \
   }                                                                     \
                                                                         \

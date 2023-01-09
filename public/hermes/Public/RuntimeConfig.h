@@ -121,7 +121,7 @@ class PinnedHermesValue;
   F(constexpr, uint32_t, VMExperimentFlags, 0)                         \
   /* RUNTIME_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});
+_HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})
 
 #undef RUNTIME_FIELDS
 
