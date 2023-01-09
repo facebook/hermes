@@ -133,59 +133,11 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
 
     gcScope.flushToMarker(marker);
   }
-  // Make 'length' property on the raw object read-only.
-  DefinePropertyFlags readOnlyDPF{};
-  readOnlyDPF.setWritable = 1;
-  readOnlyDPF.setConfigurable = 1;
-  readOnlyDPF.writable = 0;
-  readOnlyDPF.configurable = 0;
-  auto readOnlyRes = JSObject::defineOwnProperty(
-      rawObj,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      readOnlyDPF,
-      Runtime::getUndefinedValue(),
-      PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (LLVM_UNLIKELY(!*readOnlyRes)) {
-    return runtime.raiseTypeError(
-        "Failed to set 'length' property on the raw object read-only.");
-  }
-  JSObject::preventExtensions(rawObj.get());
 
-  // Set raw object as a read-only non-enumerable property of the template
-  // object.
-  PropertyFlags constantPF{};
-  constantPF.writable = 0;
-  constantPF.configurable = 0;
-  constantPF.enumerable = 0;
-  auto putNewRes = JSObject::defineNewOwnProperty(
-      templateObj,
-      runtime,
-      Predefined::getSymbolID(Predefined::raw),
-      constantPF,
-      rawObj);
-  if (LLVM_UNLIKELY(putNewRes == ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(
+          setTemplateObjectProps(runtime, templateObj, rawObj) ==
+          ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  }
-  // Make 'length' property on the template object read-only.
-  readOnlyRes = JSObject::defineOwnProperty(
-      templateObj,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      readOnlyDPF,
-      Runtime::getUndefinedValue(),
-      PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (LLVM_UNLIKELY(!*readOnlyRes)) {
-    return runtime.raiseTypeError(
-        "Failed to set 'length' property on the raw object read-only.");
-  }
-  JSObject::preventExtensions(templateObj.get());
 
   // Cache the template object.
   runtimeModule->cacheTemplateObject(templateObjID, templateObj);

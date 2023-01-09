@@ -143,6 +143,27 @@ _sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resultOrExc);
 /// \return false if a unit threw an exception.
 SHERMES_EXPORT bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...);
 
+/// ES6.0 12.2.9.3 Runtime Semantics: GetTemplateObject ( templateLiteral )
+///
+/// Given a template literal, return a template object that looks like this:
+/// [cookedString0, cookedString1, ..., raw: [rawString0, rawString1]].
+/// This object is frozen, as well as the 'raw' object nested inside.
+/// We only pass the parts from the template literal that are needed to
+/// construct this object. That is, the raw strings and cooked strings.
+/// \param templateObjID is the unique id associated with the template object.
+/// \param dup when true, cooked strings are the same as raw strings.
+/// \param argCount the number of varargs.
+/// \param ... (const SHLegacyValue *)
+///   First raw strings are passed.
+///   Then cooked strings are optionally passed if \p dup is true.
+SHERMES_EXPORT SHLegacyValue _sh_get_template_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t templateObjID,
+    bool dup,
+    uint32_t argCount,
+    ...);
+
 /// Given \p templateObjectID, retrieve the cached template object.
 /// if it doesn't exist, return a nullptr.
 SHERMES_EXPORT void *_sh_find_cached_template_object(
