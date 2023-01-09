@@ -2197,8 +2197,11 @@ class Module : public Value {
   /// should not be used for iteration, only for checking membership.
   llvh::DenseSet<Function *> getFunctionsInSegment(uint32_t segment);
 
-  /// Given a list of raw strings from a template literal, get its unique id.
-  uint32_t getTemplateObjectID(RawStringList &&rawStrings);
+  /// \param rawStrings a list of raw strings from a template literal
+  /// \return (rawStrings, template ID) where rawStrings is valid until
+  ///   getTemplateObjectID is called again.
+  std::pair<const Module::RawStringList &, uint32_t> getTemplateObjectID(
+      RawStringList &&rawStrings);
 
   bool isLowered() const {
     return isLowered_;

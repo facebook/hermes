@@ -321,7 +321,7 @@ extern "C" SHLegacyValue _sh_get_template_object(
           "Failed to set raw value to raw object.");
 
       if (dup) {
-        // Raw value is the same as the cooked value.
+        // Cooked value is the same as the raw value.
         putRes = JSObject::defineOwnComputedPrimitive(
             templateObj, runtime, idx, dpf, value);
         assert(
