@@ -176,6 +176,15 @@ class LowerSwitchIntoJumpTables : public FunctionPass {
   bool lowerIntoJumpTable(SwitchInst *switchInst);
 };
 
+/// Lower GetTemplateObject into a CallBuiltin to
+/// HermesBuiltin.getTemplateObject, which relies on RuntimeModule.
+class LowerGetTemplateObject : public FunctionPass {
+ public:
+  explicit LowerGetTemplateObject() : FunctionPass("LowerGetTemplateObject") {}
+  ~LowerGetTemplateObject() override = default;
+  bool runOnFunction(Function *F) override;
+};
+
 } // namespace hbc
 } // namespace hermes
 #endif

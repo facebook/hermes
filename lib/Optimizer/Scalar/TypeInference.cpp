@@ -782,6 +782,9 @@ class TypeInferenceImpl {
   Type inferAllocArrayInst(AllocArrayInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferGetTemplateObjectInst(GetTemplateObjectInst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferAllocObjectLiteralInst(AllocObjectLiteralInst *inst) {
     return *inst->getInherentType();
   }

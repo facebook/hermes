@@ -1050,6 +1050,9 @@ class InstrGen {
     }
     os_ << ";\n";
   }
+  void generateGetTemplateObjectInst(GetTemplateObjectInst &inst) {
+    hermes_fatal("GetTemplateObjectInst unimplemented");
+  }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
     // This instruction should not have reached this far.
     hermes_fatal("AllocObjectLiteralInst should have been lowered.");
