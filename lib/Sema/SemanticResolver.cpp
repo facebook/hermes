@@ -550,7 +550,8 @@ void SemanticResolver::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::Node *body,
     ESTree::NodeList &params) {
-  FunctionContext newFuncCtx{*this, node, nullptr, curFunctionInfo()->strict};
+  FunctionContext newFuncCtx{
+      *this, node, curFunctionInfo(), curFunctionInfo()->strict};
 
   llvh::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
 
