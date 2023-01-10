@@ -69,7 +69,8 @@ void LexicalScope::dump(const SemContext *sd, unsigned int level) const {
 
 void FunctionInfo::dump(const SemContext *sd, unsigned level) const {
 #ifndef NDEBUG
-  llvh::outs() << ind(level) << "Func\n";
+  llvh::outs() << ind(level) << "Func " << (this->strict ? "strict" : "loose")
+               << "\n";
   std::map<const LexicalScope *, llvh::SmallVector<const LexicalScope *, 2>>
       children;
 
