@@ -375,7 +375,7 @@ constexpr auto &BigIntOper<doDec> = BigIntPrimitive::dec;
 
 template <auto Oper>
 CallResult<HermesValue>
-doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -398,20 +398,20 @@ doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
 }
 
 template CallResult<HermesValue>
-doOperSlowPath<doDiv>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doOperSlowPath_RJS<doDiv>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doOperSlowPath<doMod>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doOperSlowPath_RJS<doMod>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doOperSlowPath<doMul>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doOperSlowPath_RJS<doMul>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doOperSlowPath<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doOperSlowPath_RJS<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template <auto Oper>
 CallResult<HermesValue>
-doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -435,13 +435,13 @@ doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
 }
 
 template CallResult<HermesValue>
-doBitOperSlowPath<doBitAnd>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doBitOperSlowPath_RJS<doBitAnd>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doBitOperSlowPath<doBitOr>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doBitOperSlowPath_RJS<doBitOr>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doBitOperSlowPath<doBitXor>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doBitOperSlowPath_RJS<doBitXor>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 namespace {
 /// ToIntegral maps the \param Oper shift operation (on Number) to the function
@@ -463,7 +463,7 @@ inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
 
 template <auto Oper>
 CallResult<HermesValue>
-doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
 
@@ -492,16 +492,20 @@ doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
 }
 
 template CallResult<HermesValue>
-doShiftOperSlowPath<doLShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doShiftOperSlowPath_RJS<doLShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template CallResult<HermesValue>
-doShiftOperSlowPath<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doShiftOperSlowPath_RJS<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
-template CallResult<HermesValue>
-doShiftOperSlowPath<doURshift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template CallResult<HermesValue> doShiftOperSlowPath_RJS<doURshift>(
+    Runtime &runtime,
+    Handle<> lhs,
+    Handle<> rhs);
 
 template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src) {
+CallResult<HermesValue> doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    Handle<> src) {
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, std::move(src), PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -519,15 +523,15 @@ CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src) {
   return BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
 }
 
-template CallResult<HermesValue> doIncDecOperSlowPath<doInc>(
+template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doInc>(
     Runtime &runtime,
     Handle<> src);
 
-template CallResult<HermesValue> doIncDecOperSlowPath<doDec>(
+template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doDec>(
     Runtime &runtime,
     Handle<> src);
 
-CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src) {
+CallResult<HermesValue> doBitNotSlowPath_RJS(Runtime &runtime, Handle<> src) {
   // Try converting src to a numeric.
   auto numRes = toNumeric_RJS(runtime, src);
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
@@ -543,7 +547,7 @@ CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src) {
   return BigIntPrimitive::unaryNOT(runtime, bigint);
 }
 
-CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src) {
+CallResult<HermesValue> doNegateSlowPath_RJS(Runtime &runtime, Handle<> src) {
   // Try converting src to a numeric.
   auto numRes = toNumeric_RJS(runtime, src);
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))

@@ -1164,7 +1164,7 @@ tailCall:
       }                                                                  \
     }                                                                    \
     CAPTURE_IP(                                                          \
-        res = doOperSlowPath<do##name>(                                  \
+        res = doOperSlowPath_RJS<do##name>(                              \
             runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
     if (res == ExecutionStatus::EXCEPTION)                               \
       goto exception;                                                    \
@@ -1174,25 +1174,25 @@ tailCall:
     DISPATCH;                                                            \
   }
 
-#define INCDECOP(name)                                                        \
-  CASE(name) {                                                                \
-    if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
-      O1REG(name) =                                                           \
-          HermesValue::encodeDoubleValue(do##name(O2REG(name).getNumber()));  \
-      gcScope.flushToSmallCount(KEEP_HANDLES);                                \
-      ip = NEXTINST(name);                                                    \
-      DISPATCH;                                                               \
-    }                                                                         \
-    CAPTURE_IP(                                                               \
-        res =                                                                 \
-            doIncDecOperSlowPath<do##name>(runtime, Handle<>(&O2REG(name)))); \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                   \
-      goto exception;                                                         \
-    }                                                                         \
-    O1REG(name) = *res;                                                       \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                  \
-    ip = NEXTINST(name);                                                      \
-    DISPATCH;                                                                 \
+#define INCDECOP(name)                                                       \
+  CASE(name) {                                                               \
+    if (LLVM_LIKELY(O2REG(name).isNumber())) {                               \
+      O1REG(name) =                                                          \
+          HermesValue::encodeDoubleValue(do##name(O2REG(name).getNumber())); \
+      gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+      ip = NEXTINST(name);                                                   \
+      DISPATCH;                                                              \
+    }                                                                        \
+    CAPTURE_IP(                                                              \
+        res = doIncDecOperSlowPath_RJS<do##name>(                            \
+            runtime, Handle<>(&O2REG(name))));                               \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                  \
+      goto exception;                                                        \
+    }                                                                        \
+    O1REG(name) = *res;                                                      \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                 \
+    ip = NEXTINST(name);                                                     \
+    DISPATCH;                                                                \
   }
 
 /// Implement a shift instruction with a fast path where both
@@ -1210,7 +1210,7 @@ tailCall:
       DISPATCH;                                                                \
     }                                                                          \
     CAPTURE_IP(                                                                \
-        res = doShiftOperSlowPath<do##name>(                                   \
+        res = doShiftOperSlowPath_RJS<do##name>(                               \
             runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));         \
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                    \
       goto exception;                                                          \
@@ -1235,7 +1235,7 @@ tailCall:
       DISPATCH;                                                          \
     }                                                                    \
     CAPTURE_IP(                                                          \
-        res = doBitOperSlowPath<do##name>(                               \
+        res = doBitOperSlowPath_RJS<do##name>(                           \
             runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {              \
       goto exception;                                                    \
@@ -2813,7 +2813,8 @@ tailCall:
           ip = NEXTINST(BitNot);
           DISPATCH;
         }
-        CAPTURE_IP(res = doBitNotSlowPath(runtime, Handle<>(&O2REG(BitNot))));
+        CAPTURE_IP(
+            res = doBitNotSlowPath_RJS(runtime, Handle<>(&O2REG(BitNot))));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
@@ -3096,7 +3097,8 @@ tailCall:
           ip = NEXTINST(Negate);
           DISPATCH;
         }
-        CAPTURE_IP(res = doNegateSlowPath(runtime, Handle<>(&O2REG(Negate))));
+        CAPTURE_IP(
+            res = doNegateSlowPath_RJS(runtime, Handle<>(&O2REG(Negate))));
         if (res == ExecutionStatus::EXCEPTION)
           goto exception;
         O1REG(Negate) = *res;
@@ -3118,7 +3120,7 @@ tailCall:
           DISPATCH;
         }
         CAPTURE_IP(
-            res = doOperSlowPath<doMod>(
+            res = doOperSlowPath_RJS<doMod>(
                 runtime, Handle<>(&O2REG(Mod)), Handle<>(&O3REG(Mod))));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;

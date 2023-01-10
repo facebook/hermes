@@ -126,22 +126,24 @@ inline double doDec(double d) {
 
 template <auto Oper>
 CallResult<HermesValue>
-doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template <auto Oper>
 CallResult<HermesValue>
-doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template <auto Oper>
 CallResult<HermesValue>
-doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
 
 template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src);
+CallResult<HermesValue> doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    Handle<> src);
 
-CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src);
+CallResult<HermesValue> doBitNotSlowPath_RJS(Runtime &runtime, Handle<> src);
 
-CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src);
+CallResult<HermesValue> doNegateSlowPath_RJS(Runtime &runtime, Handle<> src);
 
 } // namespace vm
 } // namespace hermes
