@@ -26,10 +26,15 @@ using ScopeDecls = std::vector<ESTree::Node *>;
 /// Do not descend into nested functions.
 class DeclCollector {
  public:
+  /// \param recursionDepth remaining recursion depth
+  /// \param recursionDepthExceeded handler to invoke when we transition fron
+  ///     non-zero to zero remaining recursion depth.
   /// \return a DeclCollector which has collected all declarations in \p root.
   static DeclCollector run(
       ESTree::FunctionLikeNode *root,
-      const sem::Keywords &kw);
+      const sem::Keywords &kw,
+      unsigned recursionDepth,
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
   /// \param node the AST node which could have created a scope.
   ///   The only nodes which can are decorated by `ScopeDecorationBase`.
@@ -78,16 +83,40 @@ class DeclCollector {
   void visit(ESTree::ForOfStatementNode *node);
   void visit(ESTree::SwitchStatementNode *node);
 
-  /// Needed by RecursiveVisitorDispatch. Optionally can protect against too
-  /// deep nesting.
-  bool incRecursionDepth(ESTree::Node *) {
+  /// This method implements the first part of the protocol defined by
+  /// RecursiveVisitor. It is supposed to return true if everything is normal,
+  /// and false if we should not visit the current node.
+  /// It maintains the current AST nesting level, and generates an error the
+  /// first time it exceeds the maximum nesting level. Once that happens, it
+  /// always returns false.
+  bool incRecursionDepth(ESTree::Node *n) {
+    if (LLVM_UNLIKELY(recursionDepth_ == 0))
+      return false;
+    --recursionDepth_;
+    if (LLVM_UNLIKELY(recursionDepth_ == 0)) {
+      recursionDepthExceeded_(n);
+      return false;
+    }
     return true;
   }
-  void decRecursionDepth() {}
+  /// This is the second part of the protocol defined by RecursiveVisitor.
+  /// Once we have reached the maximum nesting level, it does nothing. Otherwise
+  /// it decrements the nesting level.
+  void decRecursionDepth() {
+    if (LLVM_LIKELY(recursionDepth_ != 0))
+      ++recursionDepth_;
+  }
 
  private:
-  explicit DeclCollector(ESTree::Node *root, const sem::Keywords &kw)
-      : root_(root), kw_(kw) {}
+  explicit DeclCollector(
+      ESTree::Node *root,
+      const sem::Keywords &kw,
+      unsigned recursionDepth,
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded)
+      : root_(root),
+        kw_(kw),
+        recursionDepth_(recursionDepth),
+        recursionDepthExceeded_(recursionDepthExceeded) {}
 
   /// Actually run the root node.
   void runImpl();
@@ -115,6 +144,13 @@ class DeclCollector {
   ESTree::Node *root_;
 
   const sem::Keywords &kw_;
+
+  /// The remaining recursion depth, decremented at every level, until it
+  /// reaches 0, when we report an error and stop modifying it.
+  unsigned recursionDepth_;
+
+  /// We call this when we exceed the maximum recursion depth.
+  const std::function<void(ESTree::Node *)> &recursionDepthExceeded_;
 
   /// Associate a ScopeDecls structure with the node that creates the scope.
   llvh::DenseMap<ESTree::Node *, ScopeDecls> scopes_{};

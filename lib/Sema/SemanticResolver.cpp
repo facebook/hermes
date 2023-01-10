@@ -1284,7 +1284,15 @@ FunctionContext::FunctionContext(
           strict,
           sourceVisibility)),
       node(node),
-      decls(DeclCollector::run(node, resolver.keywords())) {
+      decls(DeclCollector::run(
+          node,
+          resolver.keywords(),
+          resolver.recursionDepth_,
+          [&resolver](ESTree::Node *n) {
+            // Inform the resolver that we have gone too deep.
+            resolver.recursionDepth_ = 0;
+            resolver.recursionDepthExceeded(n);
+          })) {
   resolver.functionStack_.push_back(this);
 }
 

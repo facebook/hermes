@@ -242,9 +242,6 @@ class SemanticResolver {
   /// Once we have reached the maximum nesting level, it does nothing. Otherwise
   /// it decrements the nesting level.
   void decRecursionDepth() {
-    assert(
-        recursionDepth_ < MAX_RECURSION_DEPTH &&
-        "recursionDepth_ cannot go negative");
     if (LLVM_LIKELY(recursionDepth_ != 0))
       ++recursionDepth_;
   }
