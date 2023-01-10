@@ -26,7 +26,7 @@ function f1(num) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(num)
-// CHECK-NEXT:frame = [num]
+// CHECK-NEXT:frame = [num : notype]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %num
 // CHECK-NEXT:  %1 = ReturnInst %0

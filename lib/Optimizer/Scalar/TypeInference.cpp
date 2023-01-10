@@ -68,8 +68,7 @@ static Type inferTilde(UnaryOperatorInst *UOI) {
 /// Try to infer the type of the value that's stored into \p addr. \p addr is
 /// either a stack location or a variable.
 static Type inferMemoryLocationType(Value *addr) {
-  bool first = true;
-  Type T;
+  Type T = Type::createNoType();
 
   for (auto *U : addr->getUsers()) {
     Value *storedVal = nullptr;
@@ -102,13 +101,6 @@ static Type inferMemoryLocationType(Value *addr) {
       continue;
 
     Type storedType = storedVal->getType();
-
-    if (first && !storedType.isNoType()) {
-      // This is the first value that we are encountering.
-      T = storedType;
-      first = false;
-      continue;
-    }
 
     T = Type::unionTy(T, storedType);
   }
@@ -504,10 +496,6 @@ class TypeInferenceImpl {
         llvm_unreachable("Invalid kind");
     }
 
-    assert(
-        (inferredTy.isNoType() ^ inst->hasOutput()) &&
-        "Instructions are NoType iff they have no outputs");
-
     // Only return true if the type actually changed.
     bool changed = inferredTy != originalTy;
 
@@ -774,7 +762,14 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferAllocStackInst(AllocStackInst *inst) {
-    return inferMemoryLocationType(inst);
+    // AllocStackInst is an exceptional case, since as a convenience we have
+    // decided that it assumes the type of the allocated value (instead if
+    // "pointer to the type of the allocated value"). So, if it is never used,
+    // we can't infer anything, ending up with "notype". But we can't allow an
+    // instruction with an output to have type "notype". So, if there are no
+    // users, just assume the type is "any" as a convenience.
+    return inst->hasUsers() ? inferMemoryLocationType(inst)
+                            : Type::createAnyType();
   }
   Type inferAllocObjectInst(AllocObjectInst *inst) {
     return Type::createObject();
@@ -1055,6 +1050,17 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
     localChanged |= inferredVarType;
   } while (localChanged);
+
+#ifndef NDEBUG
+  // Validate that all instructions that need to have types do.
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      assert(
+          (I.getType().isNoType() ^ I.hasOutput()) &&
+          "Instructions are NoType iff they have no outputs");
+    }
+  }
+#endif
 
   // Since we always infer from scratch, the inference has always "changed".
   return true;
