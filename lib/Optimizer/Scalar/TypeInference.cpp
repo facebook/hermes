@@ -866,9 +866,6 @@ class TypeInferenceImpl {
   Type inferGetNextPNameInst(GetNextPNameInst *inst) {
     return Type::createNoType();
   }
-  Type inferCheckHasInstanceInst(CheckHasInstanceInst *inst) {
-    return Type::createNoType();
-  }
   Type inferTryStartInst(TryStartInst *inst) {
     return Type::createNoType();
   }

@@ -1256,9 +1256,6 @@ class InstrGen {
     generateBasicBlockLabel(inst.getOnSomeDest(), os_, bbMap_);
     os_ << ";\n";
   }
-  void generateCheckHasInstanceInst(CheckHasInstanceInst &inst) {
-    hermes_fatal("This instruction is not in use in HBC.");
-  }
   void generateTryStartInst(TryStartInst &inst) {
     // TODO(T132354002): Properly understand the nesting of try blocks so we can
     // reuse SHJmpBufs.

@@ -557,16 +557,6 @@ Arguments | This instruction takes one parameter, which is the register that con
 Semantics | This instruction is a terminator instruction that will transition the control to the CatchInst that covers this instruction with closest scope.
 Effects | May read and write memory.
 
-### CheckHasInstanceInst
-
-CheckHasInstanceInst | _
---- | --- |
-Description | Check whether an object has a particular instance.
-Example | %0 = CheckHasInstanceInst %check_result, %left, %right, %onTrue, %onFalse
-Arguments | This instruction takes 5 parameters: %check_result will be a write-only stack register and holds the check result, %left and %right are the operands of instanceof, and %onTrue and %onFalse are the jump targets in case of check returns true/false.
-Semantics | This instruction is generated as part of instanceof operator. It checks whether %right could possibly have %left as an instance, and returns the check result. If the checked object is invalid to have the target instance, it will throw an exception. It the check returns false, it jumps to the %jump_label.
-Effects | May read or write memory.
-
 ### TryStartInst
 
 TryStartInst | _

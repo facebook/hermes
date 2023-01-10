@@ -281,17 +281,6 @@ ThrowInst *IRBuilder::createThrowInst(Value *thrownValue) {
   return TI;
 }
 
-CheckHasInstanceInst *IRBuilder::createCheckHasInstanceInst(
-    AllocStackInst *result,
-    Value *left,
-    Value *right,
-    BasicBlock *onTrue,
-    BasicBlock *onFalse) {
-  auto *TI = new CheckHasInstanceInst(result, left, right, onTrue, onFalse);
-  insert(TI);
-  return TI;
-}
-
 TryStartInst *IRBuilder::createTryStartInst(
     BasicBlock *tryBodyBlock,
     BasicBlock *catchTargetBlock) {

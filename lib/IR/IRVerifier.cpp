@@ -262,7 +262,6 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
       Assert(
           llvh::isa<LoadStackInst>(Inst) || llvh::isa<StoreStackInst>(Inst) ||
               llvh::isa<CatchInst>(Inst) || llvh::isa<GetPNamesInst>(Inst) ||
-              llvh::isa<CheckHasInstanceInst>(Inst) ||
               llvh::isa<GetNextPNameInst>(Inst) ||
               llvh::isa<ResumeGeneratorInst>(Inst) ||
               llvh::isa<IteratorBeginInst>(Inst) ||
@@ -728,13 +727,6 @@ void Verifier::visitSwitchImmInst(const hermes::SwitchImmInst &Inst) {
         Inst.getCasePair(idx).first->isInt32Representible(),
         "case value must be a int32");
   }
-}
-
-void Verifier::visitCheckHasInstanceInst(const CheckHasInstanceInst &Inst) {
-  Assert(isTerminator(&Inst), "CheckHasInstanceInst must be a terminator");
-  Assert(
-      Inst.getNumSuccessors() == 2,
-      "CheckHasInstanceInst should have 2 successors");
 }
 
 void Verifier::visitDebuggerInst(DebuggerInst const &Inst) {

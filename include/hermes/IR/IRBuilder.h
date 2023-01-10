@@ -302,13 +302,6 @@ class IRBuilder {
 
   ThrowInst *createThrowInst(Value *thrownValue);
 
-  CheckHasInstanceInst *createCheckHasInstanceInst(
-      AllocStackInst *result,
-      Value *left,
-      Value *right,
-      BasicBlock *onTrue,
-      BasicBlock *onFalse);
-
   TryStartInst *createTryStartInst(
       BasicBlock *tryBodyBlock,
       BasicBlock *catchTargetBlock);

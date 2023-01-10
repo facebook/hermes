@@ -1167,11 +1167,6 @@ void HBCISel::generateGetNextPNameInst(
     registerLongJump(loc, onSomeBlock);
   }
 }
-void HBCISel::generateCheckHasInstanceInst(
-    CheckHasInstanceInst *Inst,
-    BasicBlock *next) {
-  llvm_unreachable("This instruction is not in use in HBC.");
-}
 void HBCISel::generateTryStartInst(TryStartInst *Inst, BasicBlock *next) {
   // TryStartInst is the same as BranchInst in bytecode gen.
   BasicBlock *destination = Inst->getTryBody();

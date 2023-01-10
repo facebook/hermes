@@ -177,7 +177,6 @@ TERMINATOR(SwitchInst, TerminatorInst)
 TERMINATOR(CondBranchInst, TerminatorInst)
 TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
-TERMINATOR(CheckHasInstanceInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
 
 BEGIN_TERMINATOR(CompareBranchInst, TerminatorInst)
