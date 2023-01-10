@@ -193,7 +193,7 @@ class SemanticResolver {
 
   void visit(ESTree::MetaPropertyNode *node);
 
-  void visit(ESTree::ImportDeclarationNode *node);
+  void visit(ESTree::ImportDeclarationNode *importDecl);
 
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::ClassExpressionNode *node);

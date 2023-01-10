@@ -440,9 +440,21 @@ void SemanticResolver::visit(ESTree::MetaPropertyNode *node) {
           property->_name->str());
 }
 
-void SemanticResolver::visit(ESTree::ImportDeclarationNode *node) {
-  visitESTreeChildren(*this, node);
-  // TODO: Multi-file dependency resolution.
+void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
+  // Like variable declarations, imported names must be hoisted.
+  if (!astContext_.getUseCJSModules()) {
+    sm_.error(
+        importDecl->getSourceRange(),
+        "'import' statement requires module mode");
+  }
+
+  if (compile_ && !importDecl->_assertions.empty()) {
+    sm_.error(
+        importDecl->getSourceRange(), "import assertions are not supported");
+  }
+
+  curFunctionInfo()->imports.push_back(importDecl);
+  visitESTreeChildren(*this, importDecl);
 }
 void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
   // Classes must be in strict mode.

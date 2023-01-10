@@ -150,6 +150,10 @@ class FunctionInfo {
   /// All lexical scopes in this function.
   /// The first one is the function scope.
   llvh::SmallVector<LexicalScope *, 4> scopes{};
+  /// A list of imports that need to be hoisted and materialized before we
+  /// can generate the rest of the function.
+  /// Any line of the file may use the imported values.
+  llvh::SmallVector<ESTree::ImportDeclarationNode *, 2> imports{};
   /// The implicitly declared "arguments" object.
   /// It is declared only if it is used.
   /// Should be populated by calling \c SemContext::funcArgumentsDecl.
