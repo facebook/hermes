@@ -486,12 +486,19 @@ void SemanticResolver::visit(ESTree::MetaPropertyNode *node) {
     }
     return;
   }
-}
 
-sm_.error(
-    node->getSourceRange(),
-    llvh::Twine("invalid meta property ") + meta->_name->str() + "." +
-        property->_name->str());
+  if (meta->_name->str() == "import" && property->_name->str() == "meta") {
+    if (compile_) {
+      sm_.error(
+          node->getSourceRange(), "'import.meta' is currently unsupported");
+    }
+    return;
+  }
+
+  sm_.error(
+      node->getSourceRange(),
+      llvh::Twine("invalid meta property ") + meta->_name->str() + "." +
+          property->_name->str());
 }
 
 void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
