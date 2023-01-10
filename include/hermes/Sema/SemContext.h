@@ -167,6 +167,18 @@ class FunctionInfo {
   /// False if the parameter list contains any patterns.
   bool simpleParameterList = true;
 
+  /// Whether this function references "arguments" identifier.
+  bool usesArguments = false;
+
+  /// Whether this function contains arrow functions.
+  bool containsArrowFunctions = false;
+
+  /// This is a logical or of the \c usesArguments flags of all contained
+  /// arrow functions. This will be used as a conservative estimate of
+  /// whether a non-arrow function needs to eagerly create and capture its
+  /// Arguments object.
+  bool containsArrowFunctionsUsingArguments = false;
+
   /// How many labels have been allocated in this function so far.
   uint32_t numLabels{0};
 
@@ -249,7 +261,9 @@ class SemContext {
 
   /// Create or retrieve the arguments declaration in \p func.
   /// If `func` is an arrow function, find the closest ancestor that
-  /// is not an arrow function and use that function's `arguments`.
+  /// is not an arrow function and use that function's `arguments`. If we end
+  /// up looking for `arguments` in global scope, an ambient declaration is
+  /// created and returned.
   /// \p name the object doesn't have access to the AST node, so the
   ///   "arguments" string has to be passed in.
   /// \return the special arguments declaration in the specified function.

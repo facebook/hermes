@@ -86,6 +86,12 @@ void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
     arrowFunc->_expression = false;
   }
   visitFunctionLike(arrowFunc, arrowFunc->_body, arrowFunc->_params);
+
+  curFunctionInfo()->containsArrowFunctions = true;
+  curFunctionInfo()->containsArrowFunctionsUsingArguments =
+      curFunctionInfo()->containsArrowFunctionsUsingArguments ||
+      arrowFunc->getSemInfo()->containsArrowFunctionsUsingArguments ||
+      arrowFunc->getSemInfo()->usesArguments;
 }
 
 void SemanticResolver::visit(
@@ -762,7 +768,12 @@ void SemanticResolver::resolveIdentifier(
       hermes::OptValue<Decl *> argumentsDeclOpt =
           semCtx_.funcArgumentsDecl(curFunctionInfo(), identifier->_name);
       if (argumentsDeclOpt) {
-        identifier->setDecl(argumentsDeclOpt.getValue());
+        decl = argumentsDeclOpt.getValue();
+        identifier->setDecl(decl);
+
+        // Record that the function uses arguments.
+        if (decl->special == Decl::Special::Arguments)
+          curFunctionInfo()->usesArguments = true;
       }
     }
     return;
