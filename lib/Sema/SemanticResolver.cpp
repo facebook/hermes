@@ -61,6 +61,20 @@ void SemanticResolver::visit(ESTree::FunctionExpressionNode *funcExpr) {
   visitFunctionExpression(funcExpr, funcExpr->_body, funcExpr->_params);
 }
 void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
+  // Convert expression functions to a full-body to simplify IRGen.
+  if (compile_ && arrowFunc->_expression) {
+    auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
+    retStmt->copyLocationFrom(arrowFunc->_body);
+
+    ESTree::NodeList stmtList;
+    stmtList.push_back(*retStmt);
+
+    auto *blockStmt = new (astContext_) BlockStatementNode(std::move(stmtList));
+    blockStmt->copyLocationFrom(arrowFunc->_body);
+
+    arrowFunc->_body = blockStmt;
+    arrowFunc->_expression = false;
+  }
   visitFunctionLike(arrowFunc, arrowFunc->_body, arrowFunc->_params);
 }
 
