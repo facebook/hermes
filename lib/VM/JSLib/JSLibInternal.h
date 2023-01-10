@@ -443,6 +443,7 @@ CallResult<HermesValue> createDynamicFunction(
 CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
+    bool strictCaller,
     const ScopeChain &scopeChain,
     bool singleFunction = false);
 

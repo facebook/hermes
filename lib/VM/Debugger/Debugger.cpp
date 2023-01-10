@@ -1050,6 +1050,7 @@ HermesValue Debugger::evalInFrame(
   CallResult<HermesValue> result = evalInEnvironment(
       runtime_,
       src,
+      false,
       env,
       *scopeChain,
       Handle<>(&frameInfo->frame->getThisArgRef()),

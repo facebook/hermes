@@ -609,7 +609,7 @@ SHERMES_EXPORT void _sh_ljs_iterator_close_rjs(
     bool ignoreExceptions);
 
 SHERMES_EXPORT SHLegacyValue
-_sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *input);
+_sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *evalText, bool strictCaller);
 
 /// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail.
 /// \return the double representing the result of the JS mod operation on the

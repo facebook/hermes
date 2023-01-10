@@ -323,10 +323,10 @@ Effects | May read and write memory.
 
 DirectEvalInst | _
 --- | --- |
-Description | Implement a syntactical call to `eval(arg)` where `eval` is global property.
-Example |  `%0 = DirectEvalInst %value1`
-Arguments | %value1 is the value which will be evaluated.
-Semantics | Implement the semantics of ES6 `PerformEval(%value1, evalRealm, strictCaller=true, direct=true)` (ES6 18.2.1.1). Note that we only support "strictCaller=true".
+Description | Implement direct eval.
+Example |  `%0 = DirectEvalInst %%evalText, %strictCaller`
+Arguments | %evalArg is the value which will be evaluated.
+Semantics | Implement the semantics of ES6 `PerformEval(%evalText, evalRealm, strictCaller, direct=true)` (ES6 18.2.1.1).
 Effects | Unknown
 
 ### CallInst

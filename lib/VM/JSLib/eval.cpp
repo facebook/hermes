@@ -28,6 +28,7 @@ namespace vm {
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
     llvh::StringRef utf8code,
+    bool strictCaller,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,
@@ -40,7 +41,7 @@ CallResult<HermesValue> evalInEnvironment(
   }
 
   hbc::CompileFlags compileFlags;
-  compileFlags.strict = false;
+  compileFlags.strict = strictCaller;
   compileFlags.includeLibHermes = false;
   compileFlags.verifyIR = runtime.verifyEvalIR;
   compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
@@ -100,6 +101,7 @@ CallResult<HermesValue> evalInEnvironment(
 CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
+    bool strictCaller,
     const ScopeChain &scopeChain,
     bool singleFunction) {
   // Convert the code into UTF8.
@@ -115,6 +117,7 @@ CallResult<HermesValue> directEval(
   return evalInEnvironment(
       runtime,
       code,
+      strictCaller,
       Runtime::makeNullHandle<Environment>(),
       scopeChain,
       runtime.getGlobal(),
@@ -128,7 +131,8 @@ CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
     return args.getArg(0);
   }
 
-  return directEval(runtime, args.dyncastArg<StringPrimitive>(0), {}, false);
+  return directEval(
+      runtime, args.dyncastArg<StringPrimitive>(0), false, {}, false);
 }
 
 } // namespace vm

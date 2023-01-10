@@ -428,7 +428,7 @@ class IRBuilder {
 
   UnaryOperatorInst *createUnaryOperatorInst(Value *value, ValueKind kind);
 
-  DirectEvalInst *createDirectEvalInst(Value *operand);
+  DirectEvalInst *createDirectEvalInst(Value *evalText, bool strictCaller);
 
   SwitchInst *createSwitchInst(
       Value *input,

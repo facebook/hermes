@@ -300,8 +300,8 @@ void HBCISel::populatePropertyCachingInfo() {
 
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
-  auto src = encodeValue(Inst->getSingleOperand());
-  BCFGen_->emitDirectEval(dst, src);
+  auto evalText = encodeValue(Inst->getEvalText());
+  BCFGen_->emitDirectEval(dst, evalText, Inst->getStrictCaller());
 }
 
 void HBCISel::generateAddEmptyStringInst(

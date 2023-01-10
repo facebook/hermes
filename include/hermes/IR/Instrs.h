@@ -2988,17 +2988,29 @@ class SaveAndYieldInst : public TerminatorInst {
   }
 };
 
-class DirectEvalInst : public SingleOperandInst {
+class DirectEvalInst : public Instruction {
   DirectEvalInst(const DirectEvalInst &) = delete;
   void operator=(const DirectEvalInst &) = delete;
 
  public:
-  explicit DirectEvalInst(Value *value)
-      : SingleOperandInst(ValueKind::DirectEvalInstKind, value) {}
+  enum { EvalTextIdx = 0, StrictCallerIdx = 1 };
+
+  explicit DirectEvalInst(Value *evalText, LiteralBool *strictCaller)
+      : Instruction(ValueKind::DirectEvalInstKind) {
+    pushOperand(evalText);
+    pushOperand(strictCaller);
+  }
   explicit DirectEvalInst(
       const DirectEvalInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getEvalText() const {
+    return getOperand(EvalTextIdx);
+  }
+  bool getStrictCaller() const {
+    return llvh::cast<LiteralBool>(getOperand(StrictCallerIdx))->getValue();
+  }
 
   static bool hasOutput() {
     return true;

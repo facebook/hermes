@@ -39,28 +39,59 @@ function baz() {
 // CHECK:function foo()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DirectEvalInst "1 + 1" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst [globalThis.eval] : number
+// CHECK-NEXT:  %2 = CompareBranchInst '===', %0, %1 : closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %3 = DirectEvalInst "1 + 1" : string, false : boolean
+// CHECK-NEXT:  %4 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, "1 + 1" : string
+// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2
+// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
-// CHECK-NEXT:  %3 = DirectEvalInst "2 + 2" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
+// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst [globalThis.eval] : number
+// CHECK-NEXT:  %5 = CompareBranchInst '===', %0, %4 : closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = DirectEvalInst "2 + 2" : string, false : boolean
+// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, "2 + 2" : string, %1, %3
+// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %10 = PhiInst %6, %BB1, %8, %BB2
+// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function baz()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst [globalThis.eval] : number
+// CHECK-NEXT:  %2 = CompareBranchInst '===', %0, %1 : closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %3 = DirectEvalInst undefined : undefined, false : boolean
+// CHECK-NEXT:  %4 = BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2
+// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

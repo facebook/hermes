@@ -55,6 +55,7 @@ std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
     llvh::StringRef utf8code,
+    bool strictCaller,
     Handle<Environment> environment,
     const ScopeChain &scopeChain,
     Handle<> thisArg,

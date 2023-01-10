@@ -364,11 +364,8 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Check for a direct call to eval().
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
-    if (Identifier::getFromPointer(identNode->_name) == identEval_) {
-      auto *evalVar = nameTable_.lookup(identEval_);
-      if (!evalVar || llvh::isa<GlobalObjectProperty>(evalVar))
-        return genCallEvalExpr(call);
-    }
+    if (Identifier::getFromPointer(identNode->_name) == identEval_)
+      return genCallEvalExpr(call);
   }
 
   Value *thisVal;
@@ -619,28 +616,49 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
-  if (call->_arguments.empty()) {
-    Mod->getContext().getSourceErrorManager().warning(
-        call->getSourceRange(), "eval() without arguments returns undefined");
-    return Builder.getLiteralUndefined();
-  }
-
   Mod->getContext().getSourceErrorManager().warning(
       Warning::DirectEval,
       call->getSourceRange(),
       "Direct call to eval(), but lexical scope is not supported.");
+
+  Value *callee = genExpression(call->_callee);
 
   llvh::SmallVector<Value *, 1> args;
   for (auto &arg : call->_arguments) {
     args.push_back(genExpression(&arg));
   }
 
-  if (args.size() > 1) {
-    Mod->getContext().getSourceErrorManager().warning(
-        call->getSourceRange(), "Extra eval() arguments are ignored");
-  }
+  Function *function = Builder.getFunction();
+  BasicBlock *evalBlock = Builder.createBasicBlock(function);
+  BasicBlock *callBlock = Builder.createBasicBlock(function);
+  BasicBlock *nextBlock = Builder.createBasicBlock(function);
 
-  return Builder.createDirectEvalInst(args[0]);
+  // Check if it is actually calling eval().
+  Builder.createCompareBranchInst(
+      callee,
+      Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_eval),
+      ValueKind::CmpBrStrictlyEqualInstKind,
+      evalBlock,
+      callBlock);
+
+  // Perform a direct eval.
+  Builder.setInsertionBlock(evalBlock);
+  Value *evalRes = Builder.createDirectEvalInst(
+      args.empty() ? Builder.getLiteralUndefined() : args[0],
+      curFunction()->function->isStrictMode());
+  Builder.createBranchInst(nextBlock);
+
+  // Perform a normal call.
+  Builder.setInsertionBlock(callBlock);
+  Value *callRes =
+      Builder.createCallInst(callee, Builder.getLiteralUndefined(), args);
+  Builder.createBranchInst(nextBlock);
+
+  Builder.setInsertionBlock(nextBlock);
+  PhiInst *result = Builder.createPhiInst();
+  result->addEntry(evalRes, evalBlock);
+  result->addEntry(callRes, callBlock);
+  return result;
 }
 
 /// Convert a property key node to its JavaScript string representation.

@@ -15,6 +15,8 @@
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 
+#include "JSLib/JSLibInternal.h"
+
 using namespace hermes;
 using namespace hermes::vm;
 
@@ -1637,29 +1639,27 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
 
 extern "C" SHLegacyValue _sh_ljs_direct_eval(
     SHRuntime *shr,
-    SHLegacyValue *input) {
+    SHLegacyValue *evalText,
+    bool strictCaller) {
+  if (!_sh_ljs_is_string(*evalText))
+    return *evalText;
   auto result = [&runtime = getRuntime(shr),
-                 input]() -> CallResult<HermesValue> {
+                 evalText,
+                 strictCaller]() -> CallResult<HermesValue> {
     GCScopeMarkerRAII marker{runtime};
-    auto existingEval = JSObject::getNamed_RJS(
-        runtime.getGlobal(),
-        runtime,
-        Predefined::getSymbolID(Predefined::eval));
-    if (LLVM_UNLIKELY(existingEval == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
 
-    if (auto *existingEvalCallable =
-            dyn_vmcast<Callable>(existingEval->get())) {
-      auto evalRes = Callable::executeCall1(
-          runtime.makeHandle<Callable>(existingEvalCallable),
-          runtime,
-          Runtime::getUndefinedValue(),
-          HermesValue::fromRaw(input->raw));
-      if (LLVM_UNLIKELY(evalRes == ExecutionStatus::EXCEPTION))
-        return ExecutionStatus::EXCEPTION;
-      return evalRes->getHermesValue();
-    }
-    return runtime.raiseTypeError("globalThis.eval is not a function");
+    // Create a dummy scope, so that the local eval executes in its own scope
+    // (as per the spec for strict callers, which is the only thing we support).
+
+    ScopeChain scopeChain{};
+    scopeChain.functions.emplace_back();
+
+    return vm::directEval(
+        runtime,
+        Handle<StringPrimitive>::vmcast(toPHV(evalText)),
+        strictCaller,
+        scopeChain,
+        false);
   }();
 
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))

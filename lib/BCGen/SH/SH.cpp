@@ -510,7 +510,9 @@ class InstrGen {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_direct_eval(shr, ";
-    generateRegisterPtr(*inst.getSingleOperand());
+    generateRegisterPtr(*inst.getEvalText());
+    os_ << ", ";
+    os_ << boolStr(inst.getStrictCaller());
     os_ << ");\n";
   }
   void generateLoadFrameInst(LoadFrameInst &inst) {

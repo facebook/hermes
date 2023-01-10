@@ -441,7 +441,8 @@ CallResult<HermesValue> createDynamicFunction(
   builder->appendStringPrim(body);
   builder->appendASCIIRef(functionFooter);
 
-  auto evalRes = directEval(runtime, builder->getStringPrimitive(), {}, true);
+  auto evalRes =
+      directEval(runtime, builder->getStringPrimitive(), false, {}, true);
   if (evalRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
