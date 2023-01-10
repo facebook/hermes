@@ -8,13 +8,18 @@
 #ifndef HERMES_SEMA_SEMRESOLVE_H
 #define HERMES_SEMA_SEMRESOLVE_H
 
+#include <vector>
+
 namespace hermes {
 
 class Context;
 
 namespace ESTree {
 class Node;
-}
+class ProgramNode;
+} // namespace ESTree
+
+using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
 namespace sema {
 
@@ -23,7 +28,11 @@ class SemContext;
 /// Perform semantic resolution of the entire AST, starting from the specified
 /// root, which should be ProgramNode.
 /// \return true on success, false if errors were reported.
-bool resolveAST(Context &astContext, SemContext &semCtx, ESTree::Node *root);
+bool resolveAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::Node *root,
+    const DeclarationFileListTy &ambientDecls = {});
 
 /// Perform semantic resolution of the entire AST, without preparing the AST for
 /// compilation. This will not error on features we can parse but not compile,

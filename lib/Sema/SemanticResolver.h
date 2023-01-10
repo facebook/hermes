@@ -14,6 +14,9 @@
 #include "hermes/AST/RecursiveVisitor.h"
 
 namespace hermes {
+
+using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
+
 namespace sema {
 
 class FunctionContext;
@@ -40,6 +43,10 @@ class SemanticResolver {
 
   /// Keywords we will be checking for.
   hermes::sem::Keywords kw_;
+
+  /// A list of parsed files containing global ambient declarations that should
+  /// be inserted in the global scope.
+  const DeclarationFileListTy &ambientDecls_;
 
   /// Stack of function contexts.
   std::vector<FunctionContext *> functionStack_{};
@@ -111,6 +118,7 @@ class SemanticResolver {
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
+      const DeclarationFileListTy &ambientDecls,
       bool compile);
 
   /// Run semantic resolution and store the result in \c semCtx_.
@@ -360,6 +368,9 @@ class SemanticResolver {
 
   /// We call this when we exceed the maximum recursion depth.
   void recursionDepthExceeded(ESTree::Node *n);
+
+  /// Declare the list of ambient decls that was passed to the constructor.
+  void processAmbientDecls();
 };
 
 /// RAII class which holds per-function state during resolution,

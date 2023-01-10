@@ -14,10 +14,14 @@
 namespace hermes {
 namespace sema {
 
-bool resolveAST(Context &astContext, SemContext &semCtx, ESTree::Node *root) {
+bool resolveAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::Node *root,
+    const DeclarationFileListTy &ambientDecls) {
   PerfSection validation("Resolving JavaScript function AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, true};
+  SemanticResolver resolver{astContext, semCtx, ambientDecls, true};
   return resolver.run(root);
 }
 
@@ -25,7 +29,7 @@ bool resolveASTForParser(
     Context &astContext,
     SemContext &semCtx,
     ESTree::Node *root) {
-  SemanticResolver resolver{astContext, semCtx, false};
+  SemanticResolver resolver{astContext, semCtx, {}, false};
   return resolver.run(root);
 }
 

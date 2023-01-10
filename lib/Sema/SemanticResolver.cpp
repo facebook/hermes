@@ -22,6 +22,7 @@ namespace sema {
 SemanticResolver::SemanticResolver(
     Context &astContext,
     sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     bool compile)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
@@ -29,6 +30,7 @@ SemanticResolver::SemanticResolver(
       semCtx_(semCtx),
       initialErrorCount_(sm_.getErrorCount()),
       kw_{astContext},
+      ambientDecls_(ambientDecls),
       compile_(compile) {}
 
 bool SemanticResolver::run(ESTree::Node *rootNode) {
@@ -49,6 +51,7 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
     globalScope_ = &programScope.getBindingScope();
 
     processCollectedDeclarations(node);
+    processAmbientDecls();
     visitESTreeChildren(*this, node);
   }
 }
@@ -1145,6 +1148,76 @@ ESTree::Node *SemanticResolver::findUseStrict(ESTree::NodeList &body) const {
 
     // This can also set a `canRename` flag on the identifier,
     // which we haven't implemented yet.
+  }
+}
+
+/// Declare the list of ambient decls that was passed to the constructor.
+void SemanticResolver::processAmbientDecls() {
+  assert(
+      globalScope_ &&
+      "global scope must be created when declaring ambient globals");
+
+  /// This visitor structs collects declarations within a single closure without
+  /// descending into child closures.
+  struct DeclHoisting {
+    /// The list of collected identifiers (variables and functions).
+    llvh::SmallVector<ESTree::VariableDeclaratorNode *, 8> decls{};
+
+    /// A list of functions that need to be hoisted and materialized before we
+    /// can generate the rest of the function.
+    llvh::SmallVector<ESTree::FunctionDeclarationNode *, 8> closures;
+
+    explicit DeclHoisting() = default;
+    ~DeclHoisting() = default;
+
+    /// Extract the variable name from the nodes that can define new variables.
+    /// The nodes that can define a new variable in the scope are:
+    /// VariableDeclarator and FunctionDeclaration>
+    void collectDecls(ESTree::Node *V) {
+      if (auto VD = llvh::dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
+        return decls.push_back(VD);
+      }
+
+      if (auto FD = llvh::dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
+        return closures.push_back(FD);
+      }
+    }
+
+    bool shouldVisit(ESTree::Node *V) {
+      // Collect declared names, even if we don't descend into children nodes.
+      collectDecls(V);
+
+      // Do not descend to child closures because the variables they define are
+      // not exposed to the outside function.
+      if (llvh::isa<ESTree::FunctionDeclarationNode>(V) ||
+          llvh::isa<ESTree::FunctionExpressionNode>(V) ||
+          llvh::isa<ESTree::ArrowFunctionExpressionNode>(V))
+        return false;
+      return true;
+    }
+
+    void enter(ESTree::Node *V) {}
+    void leave(ESTree::Node *V) {}
+  };
+
+  auto declareAmbientGlobal = [this](ESTree::Node *identNode) {
+    UniqueString *name = llvh::cast<ESTree::IdentifierNode>(identNode)->_name;
+    // If we find the binding, do nothing.
+    if (!bindingTable_.count(name)) {
+      Decl *decl =
+          semCtx_.newGlobal(name, Decl::Kind::UndeclaredGlobalProperty);
+      bindingTable_.insertIntoScope(globalScope_, name, Binding{decl, nullptr});
+    }
+  };
+
+  for (auto *programNode : ambientDecls_) {
+    DeclHoisting DH;
+    programNode->visit(DH);
+    // Create variable declarations for each of the hoisted variables.
+    for (auto *vd : DH.decls)
+      declareAmbientGlobal(vd->_id);
+    for (auto *fd : DH.closures)
+      declareAmbientGlobal(fd->_id);
   }
 }
 
