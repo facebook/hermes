@@ -474,21 +474,24 @@ void SemanticResolver::visit(ESTree::MetaPropertyNode *node) {
   auto *meta = llvh::cast<IdentifierNode>(node->_meta);
   auto *property = llvh::cast<IdentifierNode>(node->_property);
 
-  if (meta->_name == kw_.identNew && property->_name == kw_.identTarget &&
-      functionContext()->isGlobalScope()) {
-    // ES9.0 15.1.1:
-    // It is a Syntax Error if StatementList Contains NewTarget unless the
-    // source code containing NewTarget is eval code that is being processed
-    // by a direct eval.
-    // Hermes does not support local eval, so we assume that this is not
-    // inside a local eval call.
-    sm_.error(node->getSourceRange(), "'new.target' not in a function");
+  if (meta->_name == kw_.identNew && property->_name == kw_.identTarget) {
+    if (functionContext()->isGlobalScope()) {
+      // ES9.0 15.1.1:
+      // It is a Syntax Error if StatementList Contains NewTarget unless the
+      // source code containing NewTarget is eval code that is being processed
+      // by a direct eval.
+      // Hermes does not support local eval, so we assume that this is not
+      // inside a local eval call.
+      sm_.error(node->getSourceRange(), "'new.target' not in a function");
+    }
+    return;
   }
+}
 
-  sm_.error(
-      node->getSourceRange(),
-      llvh::Twine("invalid meta property ") + meta->_name->str() + "." +
-          property->_name->str());
+sm_.error(
+    node->getSourceRange(),
+    llvh::Twine("invalid meta property ") + meta->_name->str() + "." +
+        property->_name->str());
 }
 
 void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
