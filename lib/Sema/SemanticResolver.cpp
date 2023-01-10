@@ -445,7 +445,7 @@ void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
 void SemanticResolver::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope{*this, node};
 
-  if (auto *id = llvh::dyn_cast<IdentifierNode>(node->_param)) {
+  if (auto *id = llvh::dyn_cast_or_null<IdentifierNode>(node->_param)) {
     // For compatibility with ES5,
     // we need to treat a single catch variable specially, see:
     // B.3.5 VariableStatements in Catch Blocks
