@@ -160,7 +160,6 @@ Decl *SemContext::newDeclInScope(
     Decl::Kind kind,
     LexicalScope *scope,
     Decl::Special special) {
-  assert(!Decl::isKindGlobal(kind) && "invalid non-global declaration kind");
   decls_.emplace_back(Identifier::getFromPointer(name), kind, special, scope);
   auto res = &decls_.back();
   scope->decls.push_back(res);
