@@ -158,7 +158,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param)
-// CHECK-NEXT:frame = [x, x]
+// CHECK-NEXT:frame = [x, x#1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
@@ -196,7 +196,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %28 = BranchInst %BB7
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %29 = LoadStackInst %15
-// CHECK-NEXT:  %30 = StoreFrameInst %29, [x]
+// CHECK-NEXT:  %30 = StoreFrameInst %29, [x#1]
 // CHECK-NEXT:  %31 = LoadStackInst %13
 // CHECK-NEXT:  %32 = CondBranchInst %31, %BB9, %BB10
 // CHECK-NEXT:%BB10:
@@ -205,7 +205,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %35 = SaveAndYieldInst undefined : undefined, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %36 = LoadFrameInst [x]
+// CHECK-NEXT:  %36 = LoadFrameInst [x#1]
 // CHECK-NEXT:  %37 = AllocStackInst $?anon_8_isReturn
 // CHECK-NEXT:  %38 = SaveAndYieldInst %36, %BB11
 // CHECK-NEXT:%BB5:
@@ -215,8 +215,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %41 = LoadStackInst %37
 // CHECK-NEXT:  %42 = CondBranchInst %41, %BB12, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %43 = StoreFrameInst %40, [x]
-// CHECK-NEXT:  %44 = LoadFrameInst [x]
+// CHECK-NEXT:  %43 = StoreFrameInst %40, [x#1]
+// CHECK-NEXT:  %44 = LoadFrameInst [x#1]
 // CHECK-NEXT:  %45 = ReturnInst %44
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %46 = ReturnInst %40

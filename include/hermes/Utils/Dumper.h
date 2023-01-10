@@ -44,6 +44,26 @@ struct InstructionNamer {
   unsigned getNumber(Value *);
 };
 
+/// Utility class to print unique variable name within a function.
+class VariableNamer {
+  /// Map from a function+name to number of occurrences.
+  llvh::DenseMap<std::pair<Function *, Identifier>, unsigned> namesCounts_{};
+  /// Map from variable to suffix.
+  llvh::DenseMap<Variable *, unsigned> varMap_{};
+
+ public:
+  struct Name {
+    Identifier name;
+    unsigned suffix;
+  };
+
+  Name getName(Variable *var);
+};
+
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const VariableNamer::Name &n);
+
 using llvh::raw_ostream;
 
 struct IRPrinter : public IRVisitor<IRPrinter, void> {
@@ -59,6 +79,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
 
   InstructionNamer InstNamer;
   InstructionNamer BBNamer;
+  VariableNamer varNamer_{};
 
   explicit IRPrinter(Context &ctx, llvh::raw_ostream &ost, bool escape = false)
       : Indent(0),

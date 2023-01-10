@@ -90,6 +90,29 @@ unsigned InstructionNamer::getNumber(Value *T) {
   return Counter++;
 }
 
+VariableNamer::Name VariableNamer::getName(Variable *var) {
+  auto [varIt, newVar] = varMap_.try_emplace(var, 0);
+  if (newVar) {
+    varIt->second = ++namesCounts_[std::make_pair(
+        var->getParent()->getFunction(), var->getName())];
+  }
+
+  return Name{var->getName(), varIt->second - 1};
+}
+
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const VariableNamer::Name &n) {
+  // If the name is empty or contains spaces, quote it.
+  if (n.name.str().count(' ') || n.name.str().empty())
+    os << '"' << n.name << '"';
+  else
+    os << n.name;
+  if (n.suffix)
+    os << "#" << n.suffix;
+  return os;
+}
+
 void IRPrinter::printTypeLabel(Type T) {
   // We don't print type annotations for unknown types.
   if (T.isAnyType())
@@ -157,7 +180,7 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "%" << quoteStr(ctx.toString(VS->getFunction()->getInternalName()))
        << "()";
   } else if (auto VR = dyn_cast<Variable>(V)) {
-    os << "[" << quoteStr(ctx.toString(VR->getName()));
+    os << "[" << varNamer_.getName(VR);
     if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
       llvh::StringRef scopeName =
           VR->getParent()->getFunction()->getInternalNameStr();
@@ -196,13 +219,12 @@ void IRPrinter::printFunctionHeader(Function *F) {
 
 void IRPrinter::printFunctionVariables(Function *F) {
   bool first = true;
-  auto &Ctx = F->getContext();
   os << "frame = [";
   for (auto V : F->getFunctionScope()->getVariables()) {
     if (!first) {
       os << ", ";
     }
-    os << Ctx.toString(V->getName());
+    os << varNamer_.getName(V);
     printTypeLabel(V->getType());
     first = false;
   }
@@ -218,7 +240,7 @@ void IRPrinter::printFunctionVariables(Function *F) {
       } else {
         os << ", ";
       }
-      os << Ctx.toString(GP->getName()->getValue());
+      os << GP->getName()->getValue().str();
       first2 = false;
     }
     if (!first2)
