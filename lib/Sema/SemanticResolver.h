@@ -85,9 +85,6 @@ class SemanticResolver {
 
   /// The global scope.
   BindingTableScopeTy *globalScope_ = nullptr;
-  /// Depth of the global scope in bindingTable.
-  /// None until we have actually entered global scope.
-  hermes::OptValue<uint32_t> globalBindingScopeDepth;
 
   /// True if we are preparing the AST to be compiled by Hermes, including
   /// erroring on features which we parse but don't compile and transforming
