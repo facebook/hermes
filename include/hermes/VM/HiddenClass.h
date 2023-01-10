@@ -592,6 +592,15 @@ class HiddenClass final : public GCCell {
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.
   GCPointer<BigStorage> forInCache_{};
+
+  /// Computes the updated class flags for a class with flags \p flags for when
+  /// a property is added or updated with property flags \p pf and based on
+  /// whether a new index like property has been added.
+  /// This operation is idempotent, which means that multiple updates with the
+  /// same \p pf and \p addedIndexLike may be collapsed into a single update.
+  /// \return Updated flags that reflect the added/updated property.
+  static ClassFlags
+  computeFlags(ClassFlags flags, PropertyFlags pf, bool addedIndexLike);
 };
 
 //===----------------------------------------------------------------------===//
@@ -639,6 +648,13 @@ inline OptValue<bool> HiddenClass::tryFindPropertyFast(
     return false;
   }
   return llvh::None;
+}
+inline ClassFlags HiddenClass::computeFlags(
+    ClassFlags flags,
+    PropertyFlags pf,
+    bool addedIndexLike) {
+  flags.hasIndexLikeProperties |= addedIndexLike;
+  return flags;
 }
 
 } // namespace vm

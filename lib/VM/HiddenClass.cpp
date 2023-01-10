@@ -379,10 +379,11 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   assert(propertyFlags.isValid() && "propertyFlags must be valid");
 
   if (LLVM_UNLIKELY(selfHandle->isDictionary())) {
-    if (toArrayIndex(
-            runtime.getIdentifierTable().getStringView(runtime, name))) {
-      selfHandle->flags_.hasIndexLikeProperties = true;
-    }
+    auto isIndexLike =
+        toArrayIndex(runtime.getIdentifierTable().getStringView(runtime, name))
+            .hasValue();
+    selfHandle->flags_ =
+        computeFlags(selfHandle->flags_, propertyFlags, isIndexLike);
 
     // Allocate a new slot.
     // TODO: this changes the property map, so if we want to support OOM
@@ -452,10 +453,11 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // Do it.
     auto childHandle = copyToNewDictionary(selfHandle, runtime);
 
-    if (toArrayIndex(
-            runtime.getIdentifierTable().getStringView(runtime, name))) {
-      childHandle->flags_.hasIndexLikeProperties = true;
-    }
+    auto isIndexLike =
+        toArrayIndex(runtime.getIdentifierTable().getStringView(runtime, name))
+            .hasValue();
+    childHandle->flags_ =
+        computeFlags(childHandle->flags_, propertyFlags, isIndexLike);
 
     // Add the property to the child.
     if (LLVM_UNLIKELY(
@@ -471,11 +473,16 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     return std::make_pair(childHandle, childHandle->numProperties_++);
   }
 
+  auto isIndexLike =
+      toArrayIndex(runtime.getIdentifierTable().getStringView(runtime, name))
+          .hasValue();
+  auto newFlags = computeFlags(selfHandle->flags_, propertyFlags, isIndexLike);
+
   // Allocate the child.
   auto childHandle = runtime.makeHandle<HiddenClass>(
       runtime.ignoreAllocationFailure(HiddenClass::create(
           runtime,
-          selfHandle->flags_,
+          newFlags,
           selfHandle,
           name,
           propertyFlags,
@@ -488,10 +495,6 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   assert(
       inserted &&
       "transition already exists when adding a new property to hidden class");
-
-  if (toArrayIndex(runtime.getIdentifierTable().getStringView(runtime, name))) {
-    childHandle->flags_.hasIndexLikeProperties = true;
-  }
 
   if (selfHandle->propertyMap_) {
     assert(
@@ -542,6 +545,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
     assert(
         selfHandle->propertyMap_ &&
         "propertyMap must exist in dictionary mode");
+    selfHandle->flags_ = computeFlags(selfHandle->flags_, newFlags, false);
     DictPropertyMap::getDescriptorPair(
         selfHandle->propertyMap_.getNonNull(runtime), pos)
         ->second.flags = newFlags;
@@ -605,7 +609,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   auto childHandle = runtime.makeHandle<HiddenClass>(
       runtime.ignoreAllocationFailure(HiddenClass::create(
           runtime,
-          selfHandle->flags_,
+          computeFlags(selfHandle->flags_, newFlags, false),
           selfHandle,
           name,
           transitionFlags,
@@ -755,6 +759,7 @@ Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
     DictPropertyMap::forEachMutablePropertyDescriptor(
         mapHandle, runtime, changeFlags);
   }
+  classHandle->flags_ = computeFlags(classHandle->flags_, flagsToSet, false);
 
   return std::move(classHandle);
 }
