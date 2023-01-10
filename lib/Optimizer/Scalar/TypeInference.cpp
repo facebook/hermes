@@ -986,10 +986,8 @@ static void clearTypesInFunction(Function *f) {
   for (auto *P : f->getJSDynamicParams())
     P->setType(Type::createNoType());
   // Variables
-  if (!f->isGlobalScope()) {
-    for (auto *V : f->getFunctionScope()->getVariables()) {
-      V->setType(Type::createNoType());
-    }
+  for (auto *V : f->getFunctionScope()->getVariables()) {
+    V->setType(Type::createNoType());
   }
   // Return type
   f->setType(Type::createNoType());
@@ -1039,12 +1037,10 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
       LLVM_DEBUG(dbgs() << "Inferred function return type\n");
     localChanged |= inferredRetType;
 
-    // Infer type of F's variables, except if F is in global scope
+    // Infer type of F's variables.
     bool inferredVarType = false;
-    if (!F->isGlobalScope()) {
-      for (auto *V : F->getFunctionScope()->getVariables()) {
-        inferredVarType |= inferMemoryType(V);
-      }
+    for (auto *V : F->getFunctionScope()->getVariables()) {
+      inferredVarType |= inferMemoryType(V);
     }
     if (inferredVarType)
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
