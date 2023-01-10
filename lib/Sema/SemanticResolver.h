@@ -348,12 +348,23 @@ class SemanticResolver {
   /// identifier which is a valid LValue.
   bool isLValue(const ESTree::Node *node);
 
-  /// Scan a list of directives in the beginning of a program or function
+  /// Information about directives encountered in the beginning of a program
+  /// or function.
+  struct FoundDirectives {
+    /// If a "use strict" directive is found, this field points to the AST node
+    /// (used for error reporting),otherwise it is nullptr.
+    ESTree::Node *useStrictNode = nullptr;
+    /// If a source visibility directive is found, it is stored here, otherwise
+    /// the value is SourceVisibility::Default.
+    SourceVisibility sourceVisibility = SourceVisibility::Default;
+  };
+
+  /// Scan the list of directives in the beginning of a program or function.
   /// (see ES5.1 4.1 - a directive is a statement consisting of a single
   /// string literal).
   /// \param body list of statements to scan.
-  /// \return the node containing "use strict" or nullptr.
-  ESTree::Node *findUseStrict(ESTree::NodeList &body) const;
+  /// \return information about the encountered directives.
+  FoundDirectives scanDirectives(ESTree::NodeList &body) const;
 
   /// Mark \p scope and every one of its ancestor scopes as users of local
   /// `eval()`.
@@ -408,7 +419,8 @@ class FunctionContext {
       SemanticResolver &resolver,
       ESTree::FunctionLikeNode *node,
       FunctionInfo *semInfo,
-      bool strict);
+      bool strict,
+      SourceVisibility sourceVisibility);
 
   ~FunctionContext();
 

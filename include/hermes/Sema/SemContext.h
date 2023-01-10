@@ -160,6 +160,8 @@ class FunctionInfo {
   hermes::OptValue<Decl *> argumentsDecl{llvh::None};
   /// True if the function is strict mode.
   bool strict;
+  /// Source visibility of this function.
+  SourceVisibility sourceVisibility = SourceVisibility::Default;
   /// True if this function is an arrow function.
   bool arrow;
   /// False if the parameter list contains any patterns.
@@ -177,10 +179,12 @@ class FunctionInfo {
       ESTree::FunctionLikeNode *funcNode,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
-      bool strict)
+      bool strict,
+      SourceVisibility sourceVisibility)
       : parentFunction(parentFunction),
         parentScope(parentScope),
         strict(strict),
+        sourceVisibility(sourceVisibility),
         arrow(llvh::isa<ESTree::ArrowFunctionExpressionNode>(funcNode)) {}
 
   /// \return the top-level lexical scope of the function.
@@ -210,7 +214,8 @@ class SemContext {
       ESTree::FunctionLikeNode *funcNode,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
-      bool strict);
+      bool strict,
+      SourceVisibility sourceVisibility);
   /// \param parentFunction the function in which to put the scope, nullable.
   /// \param parentScope the parent lexical scope, nullable.
   /// \return a new lexical scope.

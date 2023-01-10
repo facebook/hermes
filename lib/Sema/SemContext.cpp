@@ -142,8 +142,10 @@ FunctionInfo *SemContext::newFunction(
     ESTree::FunctionLikeNode *funcNode,
     FunctionInfo *parentFunction,
     LexicalScope *parentScope,
-    bool strict) {
-  functions_.emplace_back(funcNode, parentFunction, parentScope, strict);
+    bool strict,
+    SourceVisibility sourceVisibility) {
+  functions_.emplace_back(
+      funcNode, parentFunction, parentScope, strict, sourceVisibility);
   return &functions_.back();
 }
 

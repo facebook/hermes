@@ -39,12 +39,19 @@ bool SemanticResolver::run(ESTree::Node *rootNode) {
 }
 
 void SemanticResolver::visit(ESTree::ProgramNode *node) {
-  FunctionContext newFuncCtx{*this, node, nullptr, astContext_.isStrictMode()};
+  FunctionContext newFuncCtx{
+      *this,
+      node,
+      nullptr,
+      astContext_.isStrictMode(),
+      SourceVisibility::Default};
   llvh::SaveAndRestore setGlobalContext{globalFunctionContext_, &newFuncCtx};
-  if (findUseStrict(node->_body)) {
+  FoundDirectives directives = scanDirectives(node->_body);
+  if (directives.useStrictNode)
     curFunctionInfo()->strict = true;
-  }
   node->strictness = makeStrictness(curFunctionInfo()->strict);
+  if (directives.sourceVisibility > curFunctionInfo()->sourceVisibility)
+    curFunctionInfo()->sourceVisibility = directives.sourceVisibility;
 
   {
     ScopeRAII programScope{*this, node};
@@ -616,24 +623,29 @@ void SemanticResolver::visitFunctionLike(
     ESTree::Node *body,
     ESTree::NodeList &params) {
   FunctionContext newFuncCtx{
-      *this, node, curFunctionInfo(), curFunctionInfo()->strict};
+      *this,
+      node,
+      curFunctionInfo(),
+      curFunctionInfo()->strict,
+      curFunctionInfo()->sourceVisibility};
 
   llvh::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
 
-  ESTree::Node *useStrictNode = nullptr;
+  FoundDirectives directives{};
 
   // Note that body might be empty (for lazy functions)
   // or an expression (for arrow functions).
   auto *blockBody = llvh::dyn_cast<BlockStatementNode>(body);
   if (blockBody) {
-    useStrictNode = findUseStrict(blockBody->_body);
+    directives = scanDirectives(blockBody->_body);
   }
 
   // Set the strictness if necessary.
-  if (useStrictNode) {
+  if (directives.useStrictNode)
     curFunctionInfo()->strict = true;
-  }
   node->strictness = makeStrictness(curFunctionInfo()->strict);
+  if (directives.sourceVisibility > curFunctionInfo()->sourceVisibility)
+    curFunctionInfo()->sourceVisibility = directives.sourceVisibility;
 
   // Create the function scope.
   // Note that we are not associating the new scope with an AST node. It should
@@ -650,9 +662,9 @@ void SemanticResolver::visitFunctionLike(
   }
   curFunctionInfo()->simpleParameterList = simpleParameterList;
 
-  if (!simpleParameterList && useStrictNode) {
+  if (!simpleParameterList && directives.useStrictNode) {
     sm_.error(
-        useStrictNode->getSourceRange(),
+        directives.useStrictNode->getSourceRange(),
         "'use strict' not allowed inside function with non-simple parameter list");
   }
 
@@ -1130,15 +1142,31 @@ void SemanticResolver::recursionDepthExceeded(ESTree::Node *n) {
       n->getEndLoc(), "Too many nested expressions/statements/declarations");
 }
 
-ESTree::Node *SemanticResolver::findUseStrict(ESTree::NodeList &body) const {
+auto SemanticResolver::scanDirectives(ESTree::NodeList &body) const
+    -> FoundDirectives {
+  FoundDirectives directives{};
   for (auto &node : body) {
-    if (auto *expr = llvh::dyn_cast<ExpressionStatementNode>(&node)) {
-      if (expr->_directive == kw_.identUseStrict) {
-        return &node;
-      }
+    auto *exprSt = llvh::dyn_cast<ESTree::ExpressionStatementNode>(&node);
+    if (!exprSt || !exprSt->_directive)
+      break;
+
+    auto *directive = exprSt->_directive;
+
+    if (directive == kw_.identUseStrict) {
+      if (!directives.useStrictNode)
+        directives.useStrictNode = exprSt;
+    } else if (directive == kw_.identShowSource) {
+      if (SourceVisibility::ShowSource > directives.sourceVisibility)
+        directives.sourceVisibility = SourceVisibility::ShowSource;
+    } else if (directive == kw_.identHideSource) {
+      if (SourceVisibility::HideSource > directives.sourceVisibility)
+        directives.sourceVisibility = SourceVisibility::HideSource;
+    } else if (directive == kw_.identSensitive) {
+      if (SourceVisibility::Sensitive > directives.sourceVisibility)
+        directives.sourceVisibility = SourceVisibility::Sensitive;
     }
   }
-  return nullptr;
+  return directives;
 }
 
 /* static */ void SemanticResolver::registerLocalEval(LexicalScope *scope) {
@@ -1246,10 +1274,15 @@ FunctionContext::FunctionContext(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *node,
     FunctionInfo *semInfo,
-    bool strict)
+    bool strict,
+    SourceVisibility sourceVisibility)
     : resolver_(resolver),
-      semInfo(resolver.semCtx_
-                  .newFunction(node, semInfo, resolver.curScope_, strict)),
+      semInfo(resolver.semCtx_.newFunction(
+          node,
+          semInfo,
+          resolver.curScope_,
+          strict,
+          sourceVisibility)),
       node(node),
       decls(DeclCollector::run(node, resolver.keywords())) {
   resolver.functionStack_.push_back(this);
