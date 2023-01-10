@@ -38,6 +38,7 @@ bool SemanticResolver::run(ESTree::Node *rootNode) {
 
 void SemanticResolver::visit(ESTree::ProgramNode *node) {
   FunctionContext newFuncCtx{*this, node, nullptr, astContext_.isStrictMode()};
+  llvh::SaveAndRestore setGlobalContext{globalFunctionContext_, &newFuncCtx};
   if (findUseStrict(node->_body)) {
     curFunctionInfo()->strict = true;
   }
