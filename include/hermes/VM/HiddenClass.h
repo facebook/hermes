@@ -55,6 +55,12 @@ struct ClassFlags {
   /// searched for - they don't exist.
   uint8_t hasIndexLikeProperties : 1;
 
+  /// There may be a accessor property somewhere in the entire chain of leading
+  /// up to this HiddenClass. Set when a property is an accessor, and can never
+  /// be unset. That means this is a pessimistic flag: if a getter/setter
+  /// property is set and then deleted, this will still be set to true.
+  uint8_t mayHaveAccessor : 1;
+
   ClassFlags() {
     ::memset(this, 0, sizeof(*this));
   }
@@ -312,6 +318,10 @@ class HiddenClass final : public GCCell {
 
   bool getHasIndexLikeProperties() const {
     return flags_.hasIndexLikeProperties;
+  }
+
+  bool getMayHaveAccessor() const {
+    return flags_.mayHaveAccessor;
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
@@ -654,6 +664,9 @@ inline ClassFlags HiddenClass::computeFlags(
     PropertyFlags pf,
     bool addedIndexLike) {
   flags.hasIndexLikeProperties |= addedIndexLike;
+  // Carry over the the existing mayHaveAccessor flag. Once an accessor property
+  // has been set, all subsequent classes must have this property marked.
+  flags.mayHaveAccessor |= pf.accessor;
   return flags;
 }
 
