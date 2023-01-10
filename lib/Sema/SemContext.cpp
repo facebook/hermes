@@ -31,6 +31,7 @@ void Decl::dump(unsigned level) const {
     CASE(Import)
     CASE(ES5Catch)
     CASE(FunctionExprName)
+    CASE(ClassExprName)
     CASE(ScopedFunction)
     CASE(Var)
     CASE(Parameter)

@@ -541,7 +541,22 @@ void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
 void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
-  visitESTreeChildren(*this, node);
+
+  if (ESTree::IdentifierNode *ident =
+          llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
+    // If there is a name, declare it.
+    ScopeRAII scope{*this, node};
+    if (validateDeclarationName(Decl::Kind::ClassExprName, ident)) {
+      Decl *decl = semCtx_.newDeclInScope(
+          ident->_name, Decl::Kind::ClassExprName, curScope_);
+      ident->setDecl(decl);
+      bindingTable_.insert(ident->_name, Binding{decl, ident});
+    }
+    visitESTreeChildren(*this, node);
+  } else {
+    // Otherwise, no extra scope needed, just move on.
+    visitESTreeChildren(*this, node);
+  }
 }
 
 void SemanticResolver::visit(PrivateNameNode *node) {

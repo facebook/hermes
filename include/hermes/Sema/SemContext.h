@@ -39,6 +39,9 @@ class Decl {
     /// Name of a function expression, which is visible within the function
     /// but not outside it.
     FunctionExprName,
+    /// Name of a class expression, which is visible within the class
+    /// but not outside it.
+    ClassExprName,
     /// Function declaration visible only in its lexical scope.
     ScopedFunction,
 

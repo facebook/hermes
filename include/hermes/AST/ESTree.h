@@ -378,6 +378,8 @@ class CoverDecoration {};
 class CallExpressionLikeDecoration {};
 class MemberExpressionLikeDecoration {};
 
+class ClassExpressionDecoration : public ScopeDecorationBase {};
+
 /// Identifiers keep track of which variable they have been resolved to,
 /// to avoid having to keep looking this up in a side table.
 /// Some identifiers may be marked "unresolvable", so the user must check
@@ -504,6 +506,10 @@ struct DecoratorTrait<IdentifierNode> {
 template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
+};
+template <>
+struct DecoratorTrait<ClassExpressionNode> {
+  using Type = ClassExpressionDecoration;
 };
 
 } // namespace detail
