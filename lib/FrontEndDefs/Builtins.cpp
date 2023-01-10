@@ -12,6 +12,8 @@
 namespace hermes {
 
 static const char *builtinName[] = {
+#define NORMAL_OBJECT(object)
+#define NORMAL_METHOD(object, name) BUILTIN_METHOD(object, name)
 #define BUILTIN_METHOD(object, name) #object "." #name,
 #define PRIVATE_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)
 #define JS_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)

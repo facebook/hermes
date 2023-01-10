@@ -1043,6 +1043,7 @@ class Runtime : public PointerBase, public HandleRootOwner {
   /// \param methodID is the SymbolID for the name of the method.
   using ForEachPublicNativeBuiltinCallback = ExecutionStatus(
       unsigned methodIndex,
+      bool frozen,
       Predefined::Str objectName,
       Handle<JSObject> &object,
       SymbolID methodID);

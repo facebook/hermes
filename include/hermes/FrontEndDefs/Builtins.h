@@ -14,6 +14,8 @@ namespace hermes {
 
 namespace BuiltinMethod {
 enum Enum : unsigned char {
+#define NORMAL_METHOD(object, name) BUILTIN_METHOD(object, name)
+#define NORMAL_OBJECT(object)
 #define BUILTIN_METHOD(object, name) object##_##name,
 #define PRIVATE_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)
 #define MARK_FIRST_PRIVATE_BUILTIN(name) _firstPrivate = PRIVATE_BUILTIN(name)

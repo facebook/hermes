@@ -1544,22 +1544,38 @@ Handle<StringPrimitive> Runtime::getCharacterString(char16_t ch) {
       ignoreAllocationFailure(StringPrimitive::create(*this, UTF16Ref(ch))));
 }
 
-// Store all object and symbol ids in a static table to conserve code size.
+static constexpr uint16_t FROZEN_FLAG = 0x8000;
+/// Store all object and symbol ids in a static table to conserve code size.
 static const struct {
-  uint16_t object, method;
+  /// The Predefined:: string id of the object. Or FROZEN_FLAG if it should be
+  /// frozen.
+  uint16_t object;
+  uint16_t method;
 #ifndef NDEBUG
   const char *name;
-#define BUILTIN_METHOD(object, method) \
-  {(uint16_t)Predefined::object,       \
-   (uint16_t)Predefined::method,       \
+#endif
+} publicNativeBuiltins[] = {
+
+#ifndef NDEBUG
+#define NORMAL_METHOD(object, method) \
+  {(uint16_t)Predefined::object,      \
+   (uint16_t)Predefined::method,      \
+   #object "::" #method},
+#define BUILTIN_METHOD(object, method)         \
+  {(uint16_t)Predefined::object | FROZEN_FLAG, \
+   (uint16_t)Predefined::method,               \
    #object "::" #method},
 #else
-#define BUILTIN_METHOD(object, method) \
+#define NORMAL_METHOD(object, method) \
   {(uint16_t)Predefined::object, (uint16_t)Predefined::method},
+#define BUILTIN_METHOD(object, method) \
+  {(uint16_t)Predefined::object | FROZEN_FLAG, (uint16_t)Predefined::method},
 #endif
+
 #define PRIVATE_BUILTIN(name)
 #define JS_BUILTIN(name)
-} publicNativeBuiltins[] = {
+#define NORMAL_OBJECT(object)
+
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
@@ -1571,6 +1587,7 @@ static_assert(
 ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     const std::function<ExecutionStatus(
         unsigned methodIndex,
+        bool frozen,
         Predefined::Str objectName,
         Handle<JSObject> &object,
         SymbolID methodID)> &callback) {
@@ -1582,7 +1599,10 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     GCScopeMarkerRAII marker{*this};
     LLVM_DEBUG(llvh::dbgs() << publicNativeBuiltins[methodIndex].name << "\n");
     // Find the object first, if it changed.
-    auto objectName = (Predefined::Str)publicNativeBuiltins[methodIndex].object;
+    bool frozen = (publicNativeBuiltins[methodIndex].object & FROZEN_FLAG) != 0;
+    auto objectName =
+        (Predefined::
+             Str)(publicNativeBuiltins[methodIndex].object & ~FROZEN_FLAG);
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
       auto cr = JSObject::getNamed_RJS(getGlobal(), *this, objectID);
@@ -1602,7 +1622,7 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     auto methodID = Predefined::getSymbolID(methodName);
 
     ExecutionStatus status =
-        callback(methodIndex, objectName, lastObject, methodID);
+        callback(methodIndex, frozen, objectName, lastObject, methodID);
     if (status != ExecutionStatus::RETURNED) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1617,6 +1637,7 @@ void Runtime::initNativeBuiltins() {
 
   (void)forEachPublicNativeBuiltin([this](
                                        unsigned methodIndex,
+                                       bool /*frozen*/,
                                        Predefined::Str /* objectName */,
                                        Handle<JSObject> &currentObject,
                                        SymbolID methodID) {
@@ -1644,6 +1665,8 @@ void Runtime::initNativeBuiltins() {
 static const struct JSBuiltin {
   uint16_t symID, builtinIndex;
 } jsBuiltins[] = {
+#define NORMAL_OBJECT(object)
+#define NORMAL_METHOD(object, method)
 #define BUILTIN_METHOD(object, method)
 #define PRIVATE_BUILTIN(name)
 #define JS_BUILTIN(name)                                \
@@ -1677,9 +1700,14 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
 
   return forEachPublicNativeBuiltin([this](
                                         unsigned methodIndex,
+                                        bool frozen,
                                         Predefined::Str /* objectName */,
                                         Handle<JSObject> &currentObject,
                                         SymbolID methodID) {
+    // Skip "normal" builtins, since they are not frozen.
+    if (!frozen)
+      return ExecutionStatus::RETURNED;
+
     auto cr = JSObject::getNamed_RJS(currentObject, *this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1715,9 +1743,14 @@ void Runtime::freezeBuiltins() {
   (void)forEachPublicNativeBuiltin(
       [this, &objectList, &methodList, &clearFlags, &setFlags](
           unsigned methodIndex,
+          bool frozen,
           Predefined::Str objectName,
           Handle<JSObject> &currentObject,
           SymbolID methodID) {
+        // Skip normal builtins.
+        if (!frozen)
+          return ExecutionStatus::RETURNED;
+
         methodList.push_back(methodID);
         // This is the last method on current object.
         if (methodIndex + 1 == BuiltinMethod::_publicCount ||

@@ -60,15 +60,18 @@ LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab) {
 
   // First insert all objects.
   int objIndex = 0;
+#define NORMAL_OBJECT(object)
+#define NORMAL_METHOD(object, name)
 #define BUILTIN_OBJECT(name) objects_[strTab.getIdentifier(#name)] = objIndex++;
 #include "hermes/FrontEndDefs/Builtins.def"
 
   // Now insert all methods.
-  int methodIndex = 0;
+#define NORMAL_OBJECT(object)
+#define NORMAL_METHOD(object, name)
 #define BUILTIN_METHOD(object, name)                                           \
   methods_[std::make_pair(                                                     \
       objects_[strTab.getIdentifier(#object)], strTab.getIdentifier(#name))] = \
-      (BuiltinMethod::Enum)(methodIndex++);
+      BuiltinMethod::object##_##name;
 #include "hermes/FrontEndDefs/Builtins.def"
 }
 

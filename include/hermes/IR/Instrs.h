@@ -847,8 +847,7 @@ class GetBuiltinClosureInst : public Instruction {
   explicit GetBuiltinClosureInst(LiteralNumber *builtinIndex)
       : Instruction(ValueKind::GetBuiltinClosureInstKind) {
     assert(
-        builtinIndex->asInt32() &&
-        builtinIndex->getValue() < (double)BuiltinMethod::_count &&
+        builtinIndex->asUInt32() < BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
     setType(*getInherentTypeImpl());

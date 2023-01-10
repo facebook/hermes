@@ -12,22 +12,25 @@
 /// All builtin functions in Hermes are registered in a vector of `Callable *`
 /// in the runtime with an index as its builtin method id.
 ///
-/// There are 3 kinds of builtins in Hermes:
-/// 1. (Public Native) Builtins: those are global objects and methods of JSLib
-///   implemented natively which the compiler can assume have not been
+/// There are 4 kinds of builtins in Hermes:
+/// 1. (Public Native) Frozen Builtins: those are global objects and methods of
+///   JSLib implemented natively which the compiler can assume have not been
 ///   overwritten and can be treated as builtins under the "static builtin"
 ///   optimizations (`-fstatic-builtins` flag).
 ///
-/// 2. Private (Native) Builtins: those are native functions meant to be only
+/// 2. Normal Builtins: global objects and methods on them. They can be
+///   overridden by user code, but their initial values are recorded and can be
+///   obtained internally.
+///
+/// 3. Private (Native) Builtins: those are native functions meant to be only
 ///   called internally by the compiler to help with implementing JS features
 ///   without introducing extra opcodes. They are notationally written as
 ///   `HermesBuiltin_name`.
 ///
-/// 3. (Private) JS Builtins: those are JS functions returned from the result of
+/// 4. (Private) JS Builtins: those are JS functions returned from the result of
 ///   executing internal bytecode. They are also there to help with implementing
 ///   JS features.
 ///
-/// At this moment,
 /// Native builtins are invoked via `CallBuiltin` instruction.
 /// JS builtins are invoked via `GetBuiltinClosure` followed by a `Call`.
 ///
@@ -39,6 +42,12 @@
 /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ///===----------------------------------------------------------------------===
 
+#ifndef NORMAL_OBJECT
+#error "Please define NORMAL_OBJECT(object)"
+#endif
+#ifndef NORMAL_METHOD
+#error "Please define NORMAL_METHOD(object, name)"
+#endif
 #ifndef BUILTIN_OBJECT
 #define BUILTIN_OBJECT(object)
 #endif
@@ -58,10 +67,17 @@
 #define MARK_FIRST_JS_BUILTIN(name)
 #endif
 
+// Begin "normal builtins", which are not frozen.
+NORMAL_OBJECT(globalThis)
+NORMAL_METHOD(globalThis, Symbol)
+NORMAL_METHOD(globalThis, eval)
+// End "normal builtins".
+
 BUILTIN_OBJECT(Array)
 // BUILTIN_METHOD(Array, from)
 BUILTIN_METHOD(Array, isArray)
 
+BUILTIN_OBJECT(Date)
 BUILTIN_METHOD(Date, UTC)
 BUILTIN_METHOD(Date, parse)
 
@@ -136,6 +152,8 @@ PRIVATE_BUILTIN(initRegexNamedGroups)
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)
 
+#undef NORMAL_OBJECT
+#undef NORMAL_METHOD
 #undef BUILTIN_OBJECT
 #undef BUILTIN_METHOD
 #undef PRIVATE_BUILTIN
