@@ -303,17 +303,41 @@ void SemanticResolver::visit(ESTree::LabeledStatementNode *node) {
   visitESTreeChildren(*this, node);
 }
 
+/// Get the LabelDecorationBase depending on the node type.
+static LabelDecorationBase *getLabelDecorationBase(StatementNode *node) {
+  if (auto *LS = llvh::dyn_cast<LoopStatementNode>(node))
+    return LS;
+  if (auto *SS = llvh::dyn_cast<SwitchStatementNode>(node))
+    return SS;
+  if (auto *BS = llvh::dyn_cast<BreakStatementNode>(node))
+    return BS;
+  if (auto *CS = llvh::dyn_cast<ContinueStatementNode>(node))
+    return CS;
+  if (auto *LabS = llvh::dyn_cast<LabeledStatementNode>(node))
+    return LabS;
+  llvm_unreachable("invalid node type");
+  return nullptr;
+}
+
 void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
   if (node->_label) {
     const NodeLabel &name = llvh::cast<IdentifierNode>(node->_label)->_name;
     auto it = functionContext()->labelMap.find(name);
-    if (it == functionContext()->labelMap.end()) {
+    if (it != functionContext()->labelMap.end()) {
+      auto labelIndex =
+          getLabelDecorationBase(it->second.targetStatement)->getLabelIndex();
+      node->setLabelIndex(labelIndex);
+    } else {
       sm_.error(
           node->getSourceRange(),
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
   } else {
-    if (!currentLoopOrSwitch_) {
+    if (currentLoopOrSwitch_) {
+      auto labelIndex =
+          getLabelDecorationBase(currentLoopOrSwitch_)->getLabelIndex();
+      node->setLabelIndex(labelIndex);
+    } else {
       sm_.error(node->getSourceRange(), "'break' not within a loop or switch");
     }
   }
@@ -325,21 +349,30 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
   if (node->_label) {
     const NodeLabel &name = llvh::cast<IdentifierNode>(node->_label)->_name;
     auto it = functionContext()->labelMap.find(name);
-    if (it == functionContext()->labelMap.end()) {
+    if (it != functionContext()->labelMap.end()) {
+      if (llvh::isa<LoopStatementNode>(it->second.targetStatement)) {
+        auto labelIndex =
+            getLabelDecorationBase(it->second.targetStatement)->getLabelIndex();
+        node->setLabelIndex(labelIndex);
+      } else {
+        sm_.error(
+            node->getSourceRange(),
+            llvh::Twine("'continue' label '") + name->str() +
+                "' is not a loop label");
+        sm_.note(
+            it->second.declarationNode->getSourceRange(), "label defined here");
+      }
+    } else {
       sm_.error(
           node->getSourceRange(),
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
-    if (!llvh::isa<LabeledStatementNode>(it->second.targetStatement)) {
-      sm_.error(
-          node->getSourceRange(),
-          llvh::Twine("'continue' label '") + name->str() +
-              "' is not a loop label");
-    }
   } else {
-    if (!currentLoopOrSwitch_) {
-      sm_.error(
-          node->getSourceRange(), "'continue' not within a loop or switch");
+    if (currentLoop_) {
+      auto labelIndex = currentLoop_->getLabelIndex();
+      node->setLabelIndex(labelIndex);
+    } else {
+      sm_.error(node->getSourceRange(), "'continue' not within a loop");
     }
   }
 
