@@ -585,6 +585,7 @@ void SemanticResolver::visitFunctionLike(
     simpleParameterList &= !llvh::isa<PatternNode>(param);
     extractDeclaredIdentsFromID(&param, paramIds);
   }
+  curFunctionInfo()->simpleParameterList = simpleParameterList;
 
   if (!simpleParameterList && useStrictNode) {
     sm_.error(

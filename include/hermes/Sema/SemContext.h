@@ -162,6 +162,9 @@ class FunctionInfo {
   bool strict;
   /// True if this function is an arrow function.
   bool arrow;
+  /// False if the parameter list contains any patterns.
+  bool simpleParameterList = true;
+
   /// How many labels have been allocated in this function so far.
   uint32_t numLabels{0};
 
