@@ -5,14 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_AST_SEMANTICRESOLVER_H
-#define HERMES_AST_SEMANTICRESOLVER_H
-
-#include "SemanticValidator.h"
+#ifndef HERMES_SEMA_SEMANTICRESOLVER_H
+#define HERMES_SEMA_SEMANTICRESOLVER_H
 
 #include "DeclCollector.h"
-#include "Keywords.h"
 #include "hermes/ADT/ScopedHashTable.h"
+#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
 
 namespace hermes {

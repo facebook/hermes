@@ -5,13 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_AST_DECLCOLLECTOR_H
-#define HERMES_AST_DECLCOLLECTOR_H
+#ifndef HERMES_SEMA_DECLCOLLECTOR_H
+#define HERMES_SEMA_DECLCOLLECTOR_H
 
-#include "Keywords.h"
+#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
-#include "hermes/AST/SemContext.h"
-#include "hermes/AST/SemValidate.h"
+#include "hermes/Sema/SemContext.h"
 
 namespace hermes {
 namespace sema {

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_AST_SCOPEDFUNCTIONPROMOTER_H
-#define HERMES_AST_SCOPEDFUNCTIONPROMOTER_H
+#ifndef HERMES_SEMA_SCOPEDFUNCTIONPROMOTER_H
+#define HERMES_SEMA_SCOPEDFUNCTIONPROMOTER_H
 
 #include "hermes/AST/ESTree.h"
 

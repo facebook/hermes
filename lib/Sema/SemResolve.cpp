@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/AST/SemResolve.h"
+#include "hermes/Sema/SemResolve.h"
 
 #include "SemanticResolver.h"
 #include "hermes/AST/ESTree.h"

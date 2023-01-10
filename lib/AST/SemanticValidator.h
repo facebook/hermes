@@ -10,7 +10,7 @@
 
 #include "hermes/AST/SemValidate.h"
 
-#include "Keywords.h"
+#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
 
 namespace hermes {

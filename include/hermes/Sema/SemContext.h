@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_AST_SEMCONTEXT_H
-#define HERMES_AST_SEMCONTEXT_H
+#ifndef HERMES_SEMA_SEMCONTEXT_H
+#define HERMES_SEMA_SEMCONTEXT_H
 
 #include "hermes/AST/ESTree.h"
 

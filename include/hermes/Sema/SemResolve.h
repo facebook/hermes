@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_AST_SEMRESOLVE_H
-#define HERMES_AST_SEMRESOLVE_H
+#ifndef HERMES_SEMA_SEMRESOLVE_H
+#define HERMES_SEMA_SEMRESOLVE_H
 
 namespace hermes {
 

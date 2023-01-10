@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/AST/SemContext.h"
+#include "hermes/Sema/SemContext.h"
 
 namespace hermes {
 namespace sema {

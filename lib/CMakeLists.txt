@@ -64,6 +64,7 @@ add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
 add_subdirectory(InternalBytecode)
+add_subdirectory(Sema)
 
 # Define combined libraries from all components. Components are defined as object
 # libraries. It is tricky.

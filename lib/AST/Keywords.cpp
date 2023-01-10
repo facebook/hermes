@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "Keywords.h"
+#include "hermes/AST/Keywords.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/Support/RegExpSerialization.h"

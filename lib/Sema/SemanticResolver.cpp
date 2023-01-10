@@ -8,7 +8,7 @@
 #include "SemanticResolver.h"
 
 #include "ScopedFunctionPromoter.h"
-#include "hermes/AST/SemContext.h"
+#include "hermes/Sema/SemContext.h"
 #include "hermes/Support/RegExpSerialization.h"
 
 #include "llvh/ADT/ScopeExit.h"
