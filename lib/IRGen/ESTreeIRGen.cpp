@@ -630,10 +630,9 @@ void ESTreeIRGen::emitEnsureObject(Value *value, llvh::StringRef message) {
 }
 
 Value *ESTreeIRGen::emitIteratorSymbol() {
-  // FIXME: use the builtin value of @@iterator. Symbol could have been
-  // overridden.
   return Builder.createLoadPropertyInst(
-      Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
+      Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_Symbol),
+      "iterator");
 }
 
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {

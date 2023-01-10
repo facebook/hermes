@@ -226,8 +226,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "Symbol" : string
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "iterator" : string
+// CHECK-NEXT:  %7 = GetBuiltinClosureInst [globalThis.Symbol] : number
+// CHECK-NEXT:  %8 = LoadPropertyInst %7 : closure, "iterator" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst %6, %8
 // CHECK-NEXT:  %10 = CallInst %9, %6
 // CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %10, "iterator is not an object" : string
