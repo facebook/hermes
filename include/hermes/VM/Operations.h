@@ -456,7 +456,7 @@ bool isIntegralNumber(double number);
 CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value);
 
 // ES2022 7.1.14 StringToBigInt
-CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value);
+CallResult<HermesValue> stringToBigInt(Runtime &runtime, Handle<> value);
 
 // ES2022 21.2.3 Properties of the BigInt Prototype Object - thisBigIntValue
 CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value);
