@@ -470,20 +470,8 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
 void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   // Check for a direct call to local `eval()`.
   if (auto *identifier = llvh::dyn_cast<IdentifierNode>(node->_callee)) {
-    if (identifier->_name == kw_.identEval) {
-      bool isEval;
-      if (Binding *binding = bindingTable_.find(identifier->_name)) {
-        Decl *decl = binding->decl;
-        isEval = decl->scope == semCtx_.getGlobalScope() &&
-            Decl::isKindVarLike(decl->kind);
-      } else {
-        identifier->setDecl(semCtx_.getEvalDecl());
-        isEval = true;
-      }
-      if (isEval) {
-        registerLocalEval(curScope_);
-      }
-    }
+    if (identifier->_name == kw_.identEval)
+      registerLocalEval(curScope_);
   }
 
   visitESTreeChildren(*this, node);
