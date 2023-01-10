@@ -709,9 +709,9 @@ void SemanticResolver::resolveIdentifier(
   }
 
   // Declare an ambient global property.
-  Decl *globalDecl = semCtx_.newGlobal(
+  decl = semCtx_.newGlobal(
       identifier->_name, Decl::Kind::UndeclaredGlobalProperty);
-  identifier->setDecl(globalDecl);
+  identifier->setDecl(decl);
 
   bindingTable_.insertIntoScope(
       globalScope_, identifier->_name, Binding{decl, identifier});
