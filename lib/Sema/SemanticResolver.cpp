@@ -632,11 +632,10 @@ void SemanticResolver::visitFunctionLike(
   }
   node->strictness = makeStrictness(curFunctionInfo()->strict);
 
-  // Create the function body scope.
-  // Note that we are associating the new scope with the body.
-  // We are doing this because function expressions need an extra scope
-  // for the name, and we associate that with the function expression itself.
-  ScopeRAII scope{*this, blockBody};
+  // Create the function scope.
+  // Note that we are not associating the new scope with an AST node. It should
+  // be accessed from FunctionInfo::getFunctionScope().
+  ScopeRAII scope{*this};
 
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;
@@ -1159,8 +1158,9 @@ SemanticResolver::ScopeRAII::ScopeRAII(
   LexicalScope *scope = resolver.semCtx_.newScope(
       resolver_.curFunctionInfo(), resolver_.curScope_);
   resolver.curScope_ = scope;
-  // Associate the scope with the node.
-  scopeNode->setScope(scope);
+  // Optionally associate the scope with the node.
+  if (scopeNode)
+    scopeNode->setScope(scope);
 }
 SemanticResolver::ScopeRAII::~ScopeRAII() {
   resolver_.curScope_ = oldScope_;

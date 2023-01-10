@@ -256,7 +256,7 @@ class SemanticResolver {
     /// \param scopeNode is the AST node with which to associate the scope.
     explicit ScopeRAII(
         SemanticResolver &resolver,
-        ESTree::ScopeDecorationBase *scopeDecoration);
+        ESTree::ScopeDecorationBase *scopeDecoration = nullptr);
 
     /// Pops the created scope if it was pushed.
     ~ScopeRAII();
