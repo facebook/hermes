@@ -124,7 +124,7 @@ class LexicalScope {
   /// True if this scope or any descendent scopes have a local eval call.
   /// If any descendent uses local eval,
   /// it's impossible to know whether local variables are modified.
-  bool localEval;
+  bool localEval = false;
 
   /// \param parentFunction must not be null.
   /// \param parentScope may be null.
