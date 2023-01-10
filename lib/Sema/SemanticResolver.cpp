@@ -633,8 +633,9 @@ void SemanticResolver::visitFunctionLike(
   visitESTreeNode(*this, body, node);
 
   // Check for local eval and run the unresolver pass in non-strict mode.
+  // TODO: enable this when non-strict direct eval is supported.
   LexicalScope *lexScope = curFunctionInfo()->getFunctionScope();
-  if (lexScope->localEval && !curFunctionInfo()->strict) {
+  if (false && lexScope->localEval && !curFunctionInfo()->strict) {
     uint32_t depth = lexScope->depth;
     Unresolver::run(depth, node);
   }
