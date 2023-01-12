@@ -15,24 +15,24 @@
 import Fuzzilli
 
 struct Profile {
-    let processArguments: [String]
-    let processEnv: [String : String]
-    let codePrefix: String
-    let codeSuffix: String
-    let ecmaVersion: ECMAScriptVersion
+  let processArguments: [String]
+  let processEnv: [String: String]
+  let codePrefix: String
+  let codeSuffix: String
+  let ecmaVersion: ECMAScriptVersion
 
-    // JavaScript code snippets that cause a crash in the target engine.
-    // Used to verify that crashes can be detected.
-    let crashTests: [String]
+  // JavaScript code snippets that cause a crash in the target engine.
+  // Used to verify that crashes can be detected.
+  let crashTests: [String]
 
-    let additionalCodeGenerators: WeightedList<CodeGenerator>
-    let additionalProgramTemplates: WeightedList<ProgramTemplate>
+  let additionalCodeGenerators: WeightedList<CodeGenerator>
+  let additionalProgramTemplates: WeightedList<ProgramTemplate>
 
-    let disabledCodeGenerators: [String]
+  let disabledCodeGenerators: [String]
 
-    let additionalBuiltins: [String: Type]
+  let additionalBuiltins: [String: Type]
 }
 
 let profiles = [
-    "hermes": hermesProfile,
+  "hermes": hermesProfile,
 ]

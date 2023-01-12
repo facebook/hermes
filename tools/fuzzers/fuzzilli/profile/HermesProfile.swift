@@ -8,30 +8,30 @@
 import Fuzzilli
 
 let hermesProfile = Profile(
-    processArguments: ["--replr"],
+  processArguments: ["--replr"],
 
-    processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
+  processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
-    codePrefix: """
+  codePrefix: """
                 function main(){
                 """,
 
-    codeSuffix: """
+  codeSuffix: """
                 }; main();
                 """,
 
-    ecmaVersion: ECMAScriptVersion.es6,
+  ecmaVersion: ECMAScriptVersion.es6,
 
-    crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
+  crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+  additionalCodeGenerators: WeightedList<CodeGenerator>([]),
 
-    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+  additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
-    disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator"],
+  disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator"],
 
-    additionalBuiltins: [
-        "gc"                : .function([] => .undefined),
-        "print"             : .function([] => .undefined),
-    ]
+  additionalBuiltins: [
+    "gc": .function([] => .undefined),
+    "print": .function([] => .undefined),
+  ]
 )
