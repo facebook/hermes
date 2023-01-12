@@ -1425,9 +1425,9 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
           "delete identifier encountered in strict mode");
       // Check if this is a known variable.
       Identifier name = getNameFieldFromID(iden);
-      auto *var = nameTable_.lookup(name);
+      auto *var = resolveIdentifier(iden);
 
-      if (!var || llvh::isa<GlobalObjectProperty>(var)) {
+      if (llvh::isa<GlobalObjectProperty>(var)) {
         // If the variable doesn't exist or if it is global, we must generate
         // a delete global property instruction.
         return Builder.createDeletePropertyInst(
@@ -1701,14 +1701,11 @@ Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
 Value *ESTreeIRGen::genIdentifierExpression(
     ESTree::IdentifierNode *Iden,
     bool afterTypeOf) {
-  LLVM_DEBUG(
-      llvh::dbgs() << "Looking for identifier \"" << Iden->_name << "\"\n");
+  auto StrName = getNameFieldFromID(Iden);
+  auto *decl = getIDDecl(Iden);
+  auto *Var = getDeclData(decl);
 
-  // 'arguments' is an array-like object holding all function arguments.
-  // If one of the parameters is called "arguments" then it shadows the
-  // arguments keyword.
-  if (Iden->_name->str() == "arguments" &&
-      !nameTable_.count(getNameFieldFromID(Iden))) {
+  if (decl->special == sema::Decl::Special::Arguments) {
     // If it is captured, we must use the captured value.
     if (curFunction()->capturedArguments) {
       return Builder.createLoadFrameInst(curFunction()->capturedArguments);
@@ -1716,11 +1713,6 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
     return curFunction()->createArgumentsInst;
   }
-
-  // Lookup variable name.
-  auto StrName = getNameFieldFromID(Iden);
-
-  auto *Var = ensureVariableExists(Iden);
 
   // For uses of undefined as the global property, we make an optimization
   // to always return undefined constant.

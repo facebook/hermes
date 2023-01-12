@@ -304,6 +304,12 @@ void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   BCFGen_->emitDirectEval(dst, evalText, Inst->getStrictCaller());
 }
 
+void HBCISel::generateDeclareGlobalVarInst(
+    DeclareGlobalVarInst *inst,
+    BasicBlock *next) {
+  BCFGen_->emitDeclareGlobalVar(BCFGen_->getIdentifierID(inst->getName()));
+}
+
 void HBCISel::generateAddEmptyStringInst(
     AddEmptyStringInst *Inst,
     BasicBlock *next) {
@@ -1666,20 +1672,6 @@ void HBCISel::generateSwitchImmInst(
           encodeValue(Inst->getInputValue()), 0, 0, min, max),
       Inst);
   switchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
-}
-
-void HBCISel::initialize() {
-  IRBuilder builder(F_->getParent());
-  if (F_->isGlobalScope()) {
-    for (auto *prop : F_->getParent()->getGlobalProperties()) {
-      // Declare every "declared" global variable.
-      if (!prop->isDeclared())
-        continue;
-      auto id = BCFGen_->getIdentifierID(
-          builder.getLiteralString(prop->getName()->getValue()));
-      BCFGen_->emitDeclareGlobalVar(id);
-    }
-  }
 }
 
 void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {

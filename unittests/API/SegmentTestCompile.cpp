@@ -9,12 +9,13 @@
 
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -38,7 +39,7 @@ std::pair<std::string, std::string> genSplitCode(
   context->setUseCJSModules(true);
 
   hermes::Module M(context);
-  hermes::sem::SemContext semCtx{};
+  hermes::sema::SemContext semCtx{*context};
 
   auto parseJS = [&](std::unique_ptr<llvh::MemoryBuffer> fileBuf,
                      bool wrapCJSModule = false) -> hermes::ESTree::NodePtr {
@@ -49,15 +50,13 @@ std::pair<std::string, std::string> genSplitCode(
       parsedAST = hermes::wrapCJSModule(
           context, cast<hermes::ESTree::ProgramNode>(parsedAST));
     }
-    validateAST(*context, semCtx, parsedAST);
+    resolveAST(*context, semCtx, parsedAST);
     return parsedAST;
   };
 
-  ::hermes::DeclarationFileListTy declFileList;
-
   auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
   auto *globalAST = parseJS(std::move(globalMemBuffer));
-  generateIRFromESTree(globalAST, &M, declFileList, {});
+  generateIRFromESTree(globalAST, &M);
   auto *topLevelFunction = M.getTopLevelFunction();
 
   auto genModule = [&](uint32_t segmentID,
@@ -71,8 +70,7 @@ std::pair<std::string, std::string> genSplitCode(
         id,
         filename,
         &M,
-        topLevelFunction,
-        declFileList);
+        topLevelFunction);
   };
 
   genModule(

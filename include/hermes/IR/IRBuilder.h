@@ -141,16 +141,10 @@ class IRBuilder {
   JSDynamicParam *createJSDynamicParam(Function *parent, llvh::StringRef name);
 
   /// Add a new variable to scope \p Parent.
-  Variable *createVariable(
-      VariableScope *Parent,
-      Variable::DeclKind declKind,
-      Identifier Name);
+  Variable *createVariable(VariableScope *Parent, Identifier Name);
 
   /// Add a new variable to scope \p Parent.
-  Variable *createVariable(
-      VariableScope *Parent,
-      Variable::DeclKind declKind,
-      llvh::StringRef Name);
+  Variable *createVariable(VariableScope *Parent, llvh::StringRef Name);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
@@ -422,6 +416,8 @@ class IRBuilder {
   UnaryOperatorInst *createUnaryOperatorInst(Value *value, ValueKind kind);
 
   DirectEvalInst *createDirectEvalInst(Value *evalText, bool strictCaller);
+
+  DeclareGlobalVarInst *createDeclareGlobalVarInst(LiteralString *name);
 
   SwitchInst *createSwitchInst(
       Value *input,

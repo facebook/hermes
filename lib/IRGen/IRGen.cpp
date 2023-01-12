@@ -17,17 +17,11 @@ namespace hermes {
 using namespace hermes::irgen;
 using llvh::dbgs;
 
-bool generateIRFromESTree(
-    ESTree::NodePtr node,
-    Module *M,
-    const DeclarationFileListTy &declFileList,
-    const ScopeChain &scopeChain) {
+void generateIRFromESTree(ESTree::NodePtr node, Module *M) {
   // Generate IR into the module M.
-  ESTreeIRGen Generator(node, declFileList, M, scopeChain);
-  Generator.doIt();
-
+  ESTreeIRGen generator(node, M);
+  generator.doIt();
   LLVM_DEBUG(dbgs() << "Finished IRGen.\n");
-  return false;
 }
 
 void generateIRForCJSModule(
@@ -36,55 +30,11 @@ void generateIRForCJSModule(
     uint32_t id,
     llvh::StringRef filename,
     Module *M,
-    Function *topLevelFunction,
-    const DeclarationFileListTy &declFileList) {
+    Function *topLevelFunction) {
   // Generate IR into the module M.
-  ESTreeIRGen generator(node, declFileList, M, {});
+  ESTreeIRGen generator(node, M);
   return generator.doCJSModule(
       topLevelFunction, node->getSemInfo(), segmentID, id, filename);
-}
-
-std::pair<Function *, Function *> generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
-    Module *M) {
-  auto &context = M->getContext();
-  SimpleDiagHandlerRAII diagHandler{context.getSourceErrorManager()};
-
-  AllocationScope alloc(context.getAllocator());
-  sem::SemContext semCtx{};
-  hermes::parser::JSParser parser(
-      context, lazyData->bufferId, parser::LazyParse);
-
-  // Note: we don't know the parent's strictness, which we need to pass, but
-  // we can just use the child's strictness, which is always stricter or equal
-  // to the parent's.
-  parser.setStrictMode(lazyData->strictMode);
-
-  auto parsed = parser.parseLazyFunction(
-      (ESTree::NodeKind)lazyData->nodeKind,
-      lazyData->paramYield,
-      lazyData->paramAwait,
-      lazyData->span.Start);
-
-  // In case of error, generate a function that just throws a SyntaxError.
-  if (!parsed ||
-      !sem::validateFunctionAST(
-          context, semCtx, *parsed, lazyData->strictMode)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Lazy AST parsing/validation failed with error: "
-                     << diagHandler.getErrorString());
-
-    auto *error = ESTreeIRGen::genSyntaxErrorFunction(
-        M,
-        lazyData->originalName,
-        lazyData->span,
-        diagHandler.getErrorString());
-
-    return {error, error};
-  }
-
-  ESTreeIRGen generator{parsed.getValue(), {}, M, {}};
-  return generator.doLazyFunction(lazyData);
 }
 
 } // namespace hermes

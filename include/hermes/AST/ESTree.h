@@ -23,13 +23,10 @@ namespace hermes {
 
 using llvh::ArrayRef;
 
-namespace sem {
-class FunctionInfo;
-} // namespace sem
-
 namespace sema {
 class Decl;
 class LexicalScope;
+class FunctionInfo;
 } // namespace sema
 
 namespace ESTree {
@@ -279,11 +276,10 @@ class ScopeDecorationBase {
 
 /// Decoration for all function-like nodes.
 class FunctionLikeDecoration : public ScopeDecorationBase {
-  sem::FunctionInfo *semInfo_{};
+  sema::FunctionInfo *semInfo_{};
 
  public:
   Strictness strictness{Strictness::NotSet};
-  SourceVisibility sourceVisibility{SourceVisibility::Default};
 
   /// Whether this function was a method definition rather than using
   /// 'function'. Note that getters and setters are also considered method
@@ -291,13 +287,13 @@ class FunctionLikeDecoration : public ScopeDecorationBase {
   /// This is used for lazy reparsing of the function.
   bool isMethodDefinition{false};
 
-  void setSemInfo(sem::FunctionInfo *semInfo) {
+  void setSemInfo(sema::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");
     assert(!semInfo_ && "semInfo is already set");
     semInfo_ = semInfo;
   }
 
-  sem::FunctionInfo *getSemInfo() const {
+  sema::FunctionInfo *getSemInfo() const {
     assert(semInfo_ && "semInfo is not set!");
     return semInfo_;
   }

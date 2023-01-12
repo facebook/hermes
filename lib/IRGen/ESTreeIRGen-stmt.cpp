@@ -73,6 +73,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
+    emitScopeDeclarations(BS->getScope());
     for (auto &Node : BS->_body) {
       genStatement(&Node);
     }
@@ -106,19 +107,19 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   if (auto *W = llvh::dyn_cast<ESTree::WhileStatementNode>(stmt)) {
     LLVM_DEBUG(llvh::dbgs() << "IRGen 'while' statement\n");
-    genForWhileLoops(W, nullptr, W->_test, W->_test, nullptr, W->_body);
-    return;
-  }
-
-  if (auto *F = llvh::dyn_cast<ESTree::ForStatementNode>(stmt)) {
-    LLVM_DEBUG(llvh::dbgs() << "IRGen 'for' statement\n");
-    genForWhileLoops(F, F->_init, F->_test, F->_test, F->_update, F->_body);
+    genWhileLoop(W);
     return;
   }
 
   if (auto *D = llvh::dyn_cast<ESTree::DoWhileStatementNode>(stmt)) {
     LLVM_DEBUG(llvh::dbgs() << "IRGen 'do..while' statement\n");
-    genForWhileLoops(D, nullptr, nullptr, D->_test, nullptr, D->_body);
+    genDoWhileLoop(D);
+    return;
+  }
+
+  if (auto *F = llvh::dyn_cast<ESTree::ForStatementNode>(stmt)) {
+    LLVM_DEBUG(llvh::dbgs() << "IRGen 'for' statement\n");
+    genForLoop(F);
     return;
   }
 
@@ -270,36 +271,75 @@ void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
   Builder.setInsertionBlock(ContinueBlock);
 }
 
-void ESTreeIRGen::genForWhileLoops(
-    ESTree::LoopStatementNode *loop,
-    ESTree::Node *init,
-    ESTree::Node *preTest,
-    ESTree::Node *postTest,
-    ESTree::Node *update,
-    ESTree::Node *body) {
-  /* In this section we generate a sequence of basic blocks that implement
-   the for, while and do..while statements. Loop inversion is applied.
-   For loops are syntactic-sugar for while
-   loops and both have pre-test and post-test. do..while loop should only
-   have post-test. They will all have the following structure:
+void ESTreeIRGen::genWhileLoop(ESTree::WhileStatementNode *loop) {
+  // Create the basic blocks that make the while structure.
+  Function *function = Builder.getInsertionBlock()->getParent();
+  BasicBlock *bodyBlock = Builder.createBasicBlock(function);
+  BasicBlock *exitBlock = Builder.createBasicBlock(function);
+  BasicBlock *postTestBlock = Builder.createBasicBlock(function);
 
-        [ current block  ]
-        [      init      ]
-        [ pre test block ]
-               |       \
-               |        \
-               |         \      ->[ exit block ]
-    /-->  [ body block ]  \____/      ^
-    |    [ update block ]             |
-    |   [ post test block ]  --------/
-    \__________/
-  */
+  // Initialize the goto labels.
+  curFunction()->initLabel(loop, exitBlock, postTestBlock);
+
+  // Branch out of the loop if the condition is false.
+  genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
+  // Generate the body.
+  Builder.setInsertionBlock(bodyBlock);
+  genStatement(loop->_body);
+  // After executing the content of the body, jump to the post test block.
+  Builder.createBranchInst(postTestBlock);
+  Builder.setInsertionBlock(postTestBlock);
+  // Branch out of the loop if the condition is false.
+  genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
+  // Following statements are inserted to the exit block.
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
+  // Create the basic blocks that make the do-while structure.
+  Function *function = Builder.getInsertionBlock()->getParent();
+  BasicBlock *bodyBlock = Builder.createBasicBlock(function);
+  BasicBlock *exitBlock = Builder.createBasicBlock(function);
+  BasicBlock *postTestBlock = Builder.createBasicBlock(function);
+
+  // Initialize the goto labels.
+  curFunction()->initLabel(loop, exitBlock, postTestBlock);
+
+  // Jump to the body.
+  Builder.createBranchInst(bodyBlock);
+  // Generate the body.
+  Builder.setInsertionBlock(bodyBlock);
+  genStatement(loop->_body);
+  // After executing the content of the body, jump to the post test block.
+  Builder.createBranchInst(postTestBlock);
+  Builder.setInsertionBlock(postTestBlock);
+  // Branch out of the loop if the condition is false.
+  genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
+  // Following statements are inserted to the exit block.
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
+  // IS this a "scoped" for loop?
+  // TODO: check if any of the declared variables are captured.
+  if (loop->_init) {
+    if (auto *VD =
+            llvh::dyn_cast<ESTree::VariableDeclarationNode>(loop->_init)) {
+      if (VD->_kind != identVar_.getUnderlyingPointer()) {
+        genScopedForLoop(loop);
+        return;
+      }
+    }
+  }
+
+  assert(
+      (!loop->getScope() || loop->getScope()->decls.empty()) &&
+      "for-loop scope must be empty if there is no scoped init");
 
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
-  BasicBlock *preTestBlock = Builder.createBasicBlock(function);
   BasicBlock *postTestBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
 
@@ -309,52 +349,189 @@ void ESTreeIRGen::genForWhileLoops(
   // Generate IR for the loop initialization.
   // The init field can be a variable declaration or any expression.
   // https://github.com/estree/estree/blob/master/spec.md#forstatement
-  if (init) {
-    if (llvh::isa<ESTree::VariableDeclarationNode>(init)) {
-      genStatement(init);
+  if (loop->_init) {
+    if (llvh::isa<ESTree::VariableDeclarationNode>(loop->_init)) {
+      genStatement(loop->_init);
     } else {
-      genExpression(init);
+      genExpression(loop->_init);
     }
   }
 
-  // Terminate the loop header section and jump to the condition block.
-  Builder.createBranchInst(preTestBlock);
-  Builder.setInsertionBlock(preTestBlock);
-
   // Branch out of the loop if the condition is false.
-  if (preTest)
-    genExpressionBranch(preTest, bodyBlock, exitBlock, nullptr);
+  if (loop->_test)
+    genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 
+  // Generate the body.
+  Builder.setInsertionBlock(bodyBlock);
+  genStatement(loop->_body);
+  Builder.createBranchInst(updateBlock);
+
   // Generate the update sequence of 'for' loops.
   Builder.setInsertionBlock(updateBlock);
-  if (update) {
-    genExpression(update);
-  }
+  if (loop->_update)
+    genExpression(loop->_update);
 
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
   Builder.setInsertionBlock(postTestBlock);
 
   // Branch out of the loop if the condition is false.
-  if (postTest)
-    genExpressionBranch(postTest, bodyBlock, exitBlock, nullptr);
+  if (loop->_test)
+    genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 
-  // Now, generate the body of the while loop.
-  // Do this last so that the test and update blocks are associated with the
-  // loop statement, and not the body statement.
+  // Following statements are inserted to the exit block.
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
+  // A scoped for-loop has "interesting" semantics. The declared variables live
+  // in a new scope for every iteration (so they can be captured). Additionally:
+  // - the init condition executes in the current iteration's scope.
+  // - the update condition executes in the next iteration's scope.
+  //
+  // The "natural" way to implement this would be to unroll the loop, so we
+  // can emit the first iteration with its own scope and then emit the update
+  // expression in the beginning of the second iteration. But that would explode
+  // the code size. So we use a flag.
+  //
+  //      let/const oldVars = loop->init()
+  //      var first = true;
+  // loopBlock:
+  //      Scope s = createScope
+  //        declare newVars in s
+  //        newVars = oldVars
+  //        if !first
+  //            loop->update(newVars)
+  //        if !loop->test(newVars)
+  //            goto exitBlock
+  //        loop->body(newVars)
+  //  updateBlock:
+  //        oldVars(ignoring constness) = newVars
+  //      end s
+  //      first = false
+  //      goto loopBlock
+
+  // Create the basic blocks that make the while structure.
+  Function *function = Builder.getInsertionBlock()->getParent();
+  BasicBlock *loopBlock = Builder.createBasicBlock(function);
+  BasicBlock *firstIterBlock =
+      loop->_update ? Builder.createBasicBlock(function) : nullptr;
+  BasicBlock *notFirstIterBlock =
+      loop->_update ? Builder.createBasicBlock(function) : nullptr;
+  BasicBlock *bodyBlock = Builder.createBasicBlock(function);
+  BasicBlock *updateBlock = Builder.createBasicBlock(function);
+  BasicBlock *exitBlock = Builder.createBasicBlock(function);
+  // Each pair is an "old" var and its corresponding "new" var
+  llvh::SmallVector<std::pair<Variable *, Variable *>, 2> vars{};
+
+  // Initialize the goto labels.
+  curFunction()->initLabel(loop, exitBlock, updateBlock);
+
+  // Declarations created by the init statement.
+  emitScopeDeclarations(loop->getScope());
+
+  // Generate IR for the loop initialization.
+  assert(
+      loop->_init && llvh::isa<ESTree::VariableDeclarationNode>(loop->_init) &&
+      "A scoped for-loop must have an init declaration");
+  genStatement(loop->_init);
+
+  Builder.setLocation(loop->_init->getDebugLoc());
+  // Create the "first" flag and set it to true.
+  AllocStackInst *firstStack = nullptr;
+  if (loop->_update) {
+    firstStack = Builder.createAllocStackInst(genAnonymousLabelName("first"));
+    Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
+  }
+  Builder.createBranchInst(loopBlock);
+
+  // The loop starts here.
+  Builder.setInsertionBlock(loopBlock);
+  Builder.setLocation(loop->_body->getDebugLoc());
+  // TODO: create a scope.
+
+  // Declare the new variables in the new scope and copy the declared variables
+  // into the new ones. Change the decls to resolve to the "new" variables, so
+  // all further accesses will refer to them.
+  assert(
+      loop->getScope() && !loop->getScope()->decls.empty() &&
+      "for-loop scope can't be empty if there is a scoped init");
+
+  IRBuilder::ScopedLocationChange slc(
+      Builder,
+      loop->_init ? loop->_init->getDebugLoc() : loop->_body->getDebugLoc());
+  for (auto *decl : loop->getScope()->decls) {
+    assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
+    Variable *oldVar = llvh::cast<Variable>(getDeclData(decl));
+    // Create a copy of the variable. Note that it doesn't need TDZ, since we
+    // are initializing it here.
+    Variable *newVar =
+        Builder.createVariable(function->getFunctionScope(), decl->name);
+    newVar->setIsConst(oldVar->isConst());
+
+    vars.emplace_back(oldVar, newVar);
+
+    // Note that we are using a direct load/store, which doesn't check TDZ. If
+    // our thinking is correct, all variables declared in the for(;;) must have
+    // been initialized.
+    Builder.createStoreFrameInst(Builder.createLoadFrameInst(oldVar), newVar);
+
+    // Update the declaration to resolve to the new variable.
+    setDeclData(decl, newVar);
+  }
+
+  if (loop->_update) {
+    // if first...
+    Builder.createCondBranchInst(
+        Builder.createLoadStackInst(firstStack),
+        firstIterBlock,
+        notFirstIterBlock);
+
+    // emit the update.
+    Builder.setLocation(loop->_update->getDebugLoc());
+    Builder.setInsertionBlock(notFirstIterBlock);
+    genExpression(loop->_update);
+    Builder.createBranchInst(firstIterBlock);
+    Builder.setInsertionBlock(firstIterBlock);
+  }
+
+  // Branch out of the loop if the condition is false.
+  if (loop->_test)
+    genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
+  else
+    Builder.createBranchInst(bodyBlock);
+
+  // Generate the body.
   Builder.setInsertionBlock(bodyBlock);
-  genStatement(body);
+  genStatement(loop->_body);
   Builder.createBranchInst(updateBlock);
+
+  // Copy the new vars back into the old ones.
+  Builder.setInsertionBlock(updateBlock);
+  for (const auto &pair : vars) {
+    // The old var is no longer considered "const".
+    pair.first->setIsConst(false);
+    Builder.createStoreFrameInst(
+        Builder.createLoadFrameInst(pair.second), pair.first);
+  }
+
+  // Set "first" to false.
+  Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
+
+  // Loop.
+  Builder.createBranchInst(loopBlock);
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
 }
 
 void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
+  emitScopeDeclarations(ForInStmt->getScope());
+
   // The state of the enumerator. Notice that the instruction writes to the
   // storage
   // variables just like Load/Store instructions write to stack allocations.
@@ -465,6 +642,8 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 }
 
 void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
+  emitScopeDeclarations(forOfStmt->getScope());
+
   auto *function = Builder.getInsertionBlock()->getParent();
   auto *getNextBlock = Builder.createBasicBlock(function);
   auto *bodyBlock = Builder.createBasicBlock(function);
@@ -583,6 +762,8 @@ bool ESTreeIRGen::areAllCasesConstant(
 
 void ESTreeIRGen::genSwitchStatement(ESTree::SwitchStatementNode *switchStmt) {
   LLVM_DEBUG(llvh::dbgs() << "IRGen 'switch' statement.\n");
+
+  emitScopeDeclarations(switchStmt->getScope());
 
   {
     llvh::SmallVector<Literal *, 8> caseLiterals{};
@@ -735,7 +916,7 @@ void ESTreeIRGen::genImportDeclaration(
   for (ESTree::Node &spec : importDecl->_specifiers) {
     if (auto *ids = llvh::dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
       // import defaultProperty from 'file.js';
-      auto *local = nameTable_.lookup(getNameFieldFromID(ids->_local));
+      auto *local = resolveIdentifierFromID(ids->_local);
       assert(local && "imported name should have been hoisted");
       emitStore(
           Builder,
@@ -746,7 +927,7 @@ void ESTreeIRGen::genImportDeclaration(
         auto *ins =
             llvh::dyn_cast<ESTree::ImportNamespaceSpecifierNode>(&spec)) {
       // import * as File from 'file.js';
-      auto *local = nameTable_.lookup(getNameFieldFromID(ins->_local));
+      auto *local = resolveIdentifierFromID(ins->_local);
       assert(local && "imported name should have been hoisted");
       emitStore(Builder, exports, local, true);
     } else {
@@ -755,7 +936,7 @@ void ESTreeIRGen::genImportDeclaration(
       auto *is = cast<ESTree::ImportSpecifierNode>(&spec);
 
       // Store to a local variable with the name is->_local.
-      auto *local = nameTable_.lookup(getNameFieldFromID(is->_local));
+      auto *local = resolveIdentifierFromID(is->_local);
       assert(local && "imported name should have been hoisted");
 
       // Get is->_imported from the exports object, because that's what the
@@ -807,7 +988,9 @@ void ESTreeIRGen::genExportNamedDeclaration(
         Identifier name = getNameFieldFromID(variableDeclarator->_id);
 
         Builder.createStorePropertyInst(
-            emitLoad(Builder, nameTable_.lookup(name)), exports, name);
+            emitLoad(Builder, resolveIdentifierFromID(variableDeclarator->_id)),
+            exports,
+            name);
       }
     } else if (
         auto *classDecl = llvh::dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
@@ -819,9 +1002,9 @@ void ESTreeIRGen::genExportNamedDeclaration(
     } else {
       auto *funDecl = llvh::dyn_cast<ESTree::FunctionDeclarationNode>(decl);
       // export function x() {}
-      Identifier name = getNameFieldFromID(funDecl->_id);
-      auto *fun = emitLoad(Builder, nameTable_.lookup(name));
-      Builder.createStorePropertyInst(fun, exports, name);
+      auto *fun = emitLoad(Builder, resolveIdentifierFromID(funDecl->_id));
+      Builder.createStorePropertyInst(
+          fun, exports, getNameFieldFromID(funDecl->_id));
     }
 
     return;
@@ -864,9 +1047,9 @@ void ESTreeIRGen::genExportDefaultDeclaration(
     // export default function foo() {}
     // The function declaration should have been hoisted,
     // so simply load it and store it in the default slot.
-    Identifier name = getNameFieldFromID(funDecl->_id);
-    auto *fun = emitLoad(Builder, nameTable_.lookup(name));
-    Builder.createStorePropertyInst(fun, exports, name);
+    auto *fun = emitLoad(Builder, resolveIdentifierFromID(funDecl->_id));
+    Builder.createStorePropertyInst(
+        fun, exports, getNameFieldFromID(funDecl->_id));
   } else if (
       auto *classDecl = llvh::dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
     (void)classDecl;

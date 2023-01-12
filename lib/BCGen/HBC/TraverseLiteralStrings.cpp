@@ -33,6 +33,9 @@ bool isIdOperand(Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyLooseInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyStrictInst);
 
+    case ValueKind::DeclareGlobalVarInstKind:
+      return idx == 0;
+
     case ValueKind::HBCAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands starting from FirstKeyIdx.
@@ -92,13 +95,6 @@ void traverseLiteralStrings(
     Module *M,
     std::function<bool(Function *)> shouldVisitFunction,
     std::function<void(llvh::StringRef, bool)> traversal) {
-  // Walk declared global properties.
-  for (auto *prop : M->getGlobalProperties()) {
-    if (prop->isDeclared()) {
-      traversal(prop->getName()->getValue().str(), /* isIdentifier */ true);
-    }
-  }
-
   // Walk functions.
   for (auto &F : *M) {
     if (!shouldVisitFunction(&F)) {

@@ -605,6 +605,9 @@ class TypeInferenceImpl {
   Type inferDirectEvalInst(DirectEvalInst *inst) {
     return Type::createAnyType();
   }
+  Type inferDeclareGlobalVarInst(DeclareGlobalVarInst *inst) {
+    return Type::createNoType();
+  }
   Type inferLoadFrameInst(LoadFrameInst *inst) {
     Type T = inst->getSingleOperand()->getType();
     return T;

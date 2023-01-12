@@ -44,7 +44,7 @@ add_hermes_library(hermesFrontend
   Utils/Dumper.cpp
   Optimizer/Wasm/WasmIntrinsics.cpp
   Optimizer/Wasm/EmitWasmIntrinsics.cpp
-  LINK_OBJLIBS hermesSupport hermesFrontEndDefs hermesAST hermesParser
+  LINK_OBJLIBS hermesSupport hermesFrontEndDefs hermesAST hermesSema hermesParser
 )
 
 add_subdirectory(VM)
@@ -102,6 +102,7 @@ target_link_libraries(hermescompiler PUBLIC
   hermesPlatform_obj
   hermesPublic_obj
   hermesRegex_obj
+  hermesSema_obj
   hermesSHBackend_obj
   hermesSourceMap_obj
   hermesSupport_obj
@@ -128,6 +129,7 @@ target_link_libraries(hermesvm_a PUBLIC
   hermesPlatform_obj
   hermesPublic_obj
   hermesRegex_obj
+  hermesSema_obj
   hermesSHBackend_obj
   hermesSourceMap_obj
   hermesSupport_obj

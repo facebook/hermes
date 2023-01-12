@@ -959,23 +959,9 @@ class GlobalObject : public Literal {
 /// This represents a JavaScript variable, that's allocated in the function.
 class Variable : public Value {
  public:
-  enum class DeclKind {
-    Var,
-    Let,
-    Const,
-  };
-
-  /// Return true if this DeclKind needs to track TDZ.
-  static bool declKindNeedsTDZ(DeclKind dk) {
-    return dk != DeclKind::Var;
-  }
-
  private:
   Variable(const Variable &) = delete;
   void operator=(const Variable &) = delete;
-
-  /// Declaration kind: var/let/const.
-  DeclKind declKind;
 
   /// The textual representation of the variable in the JavaScript program.
   Identifier text;
@@ -986,22 +972,13 @@ class Variable : public Value {
   /// If true, this variable obeys the TDZ rules.
   bool obeysTDZ_ = false;
 
- protected:
-  explicit Variable(
-      ValueKind k,
-      VariableScope *scope,
-      DeclKind declKind,
-      Identifier txt);
+  /// If true, this is a "const".
+  bool isConst_ = false;
 
  public:
-  explicit Variable(VariableScope *scope, DeclKind declKind, Identifier txt)
-      : Variable(ValueKind::VariableKind, scope, declKind, txt){};
+  explicit Variable(VariableScope *scope, Identifier txt);
 
   ~Variable();
-
-  DeclKind getDeclKind() const {
-    return declKind;
-  }
 
   Identifier getName() const {
     return text;
@@ -1015,6 +992,12 @@ class Variable : public Value {
   }
   void setObeysTDZ(bool value) {
     obeysTDZ_ = value;
+  }
+  bool isConst() const {
+    return isConst_;
+  }
+  void setIsConst(bool isConst) {
+    isConst_ = isConst;
   }
 
   /// Return the index of this variable in the function's variable list.
@@ -1209,28 +1192,6 @@ class Instruction
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), Instruction);
   }
-
-  /// An opaque class representing the variety of an instruction.
-  ///
-  /// Variety is more specific than ValueKind: it encapsulates all properties of
-  /// an instruction except its operands. For example, the "+" and "-" binary
-  /// operator instructions have the same getKind() but different getVariety().
-  class Variety {
-    friend class Instruction;
-    std::pair<unsigned, unsigned> kinds_;
-    explicit Variety(std::pair<unsigned, unsigned> kinds) : kinds_(kinds) {}
-
-   public:
-    bool operator==(const Variety &other) const {
-      return kinds_ == other.kinds_;
-    }
-    bool operator!=(const Variety &other) const {
-      return kinds_ != other.kinds_;
-    }
-    friend llvh::hash_code hash_value(Variety variety) {
-      return llvh::hash_value(variety.kinds_);
-    }
-  };
 
   /// Return the hash code the this instruction.
   llvh::hash_code getHashCode() const;
@@ -1528,32 +1489,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// and have cleared it in preparation for lowering steps.
   OptValue<uint32_t> statementCount_{0};
 
-#ifndef HERMESVM_LEAN
-  /// The source of a function, containing function type, range and buffer ID.
-  LazySource lazySource_;
-
-  /// The SerializedScope of the lazyCompilationAst.
-  std::shared_ptr<SerializedScope> lazyScope_{};
-
-  /// The parent's generated closure variable for this function. It is non-null
-  /// only if there is an alias binding from \c originalOrInferredName_ (which
-  /// must be valid) to said variable. Used only by lazy compilation.
-  ///
-  /// For a named function expresion:
-  ///     myExpression(function bar() { somecode; })
-  ///
-  /// We generate the code that's really more similar to:
-  ///     function anon_0_closure() {
-  ///         var bar=anon_0_closure;   // Nametable alias, not a real frameload
-  ///         somecode;
-  ///     }
-  ///     myExpression(anon_0_closure);
-  ///
-  /// When we generate the `function bar() {...}`, this field will be set to
-  /// the `anon_0_closure` variable to capture this relationship.
-  Variable *lazyClosureAlias_{};
-#endif
-
  protected:
   explicit Function(
       ValueKind kind,
@@ -1714,33 +1649,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return expectedParamCountIncludingThis_;
   }
 
-#ifndef HERMESVM_LEAN
-  LazySource &getLazySource() {
-    return lazySource_;
-  }
-
-  void setLazyScope(std::shared_ptr<SerializedScope> vars) {
-    lazyScope_ = std::move(vars);
-  }
-  std::shared_ptr<SerializedScope> getLazyScope() const {
-    return lazyScope_;
-  }
-
-  void setLazyClosureAlias(Variable *var) {
-    lazyClosureAlias_ = var;
-  }
-  Variable *getLazyClosureAlias() const {
-    return lazyClosureAlias_;
-  }
-#endif
-
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
-#ifdef HERMESVM_LEAN
     return false;
-#else
-    return lazySource_.nodeKind != ESTree::NodeKind::Empty;
-#endif
   }
 
   using iterator = BasicBlockListType::iterator;
@@ -2081,12 +1992,6 @@ class Module : public Value {
     // If the top level function hasn't been overridden, return the first
     // function.
     return !topLevelFunction_ ? &*FunctionList.begin() : topLevelFunction_;
-  }
-
-  using GlobalObjectPropertyIterator = GlobalObjectPropertyList::const_iterator;
-
-  llvh::iterator_range<GlobalObjectPropertyIterator> getGlobalProperties() {
-    return {globalPropertyList_.begin(), globalPropertyList_.end()};
   }
 
   /// Find the specified global property and return a pointer to it or nullptr.

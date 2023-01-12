@@ -9,12 +9,13 @@
 #include "compile.h"
 
 #include "hermes/AST/ESTreeJSONDumper.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
@@ -38,6 +39,7 @@ OutputFormatKind toOutputFormatKind(OutputLevelKind level) {
       return OutputFormatKind::DumpNone;
     case OutputLevelKind::AST:
       return OutputFormatKind::DumpAST;
+    case OutputLevelKind::Sema:
     case OutputLevelKind::TransformedAST:
       return OutputFormatKind::DumpTransformedAST;
     case OutputLevelKind::CFG:
@@ -161,6 +163,7 @@ cl::opt<OutputLevelKind> OutputLevel(
             OutputLevelKind::TransformedAST,
             "dump-transformed-ast",
             "Transformed AST as text after validation"),
+        clEnumValN(OutputLevelKind::Sema, "dump-sema", "Sema tables"),
 #ifndef NDEBUG
         clEnumValN(OutputLevelKind::CFG, "view-cfg", "View the CFG."),
 #endif
@@ -250,6 +253,13 @@ CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
+cl::opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> StrictMode(
     "strict",
     cl::desc("Enable strict mode."),
@@ -259,13 +269,6 @@ cl::opt<bool> EnableEval(
     "enable-eval",
     cl::init(true),
     cl::desc("Enable support for eval()"));
-
-cl::opt<bool> EnableTDZ(
-    "Xenable-tdz",
-    cl::init(false),
-    cl::Hidden,
-    cl::desc("UNSUPPORTED: Enable TDZ checks for let/const"),
-    cl::cat(CompilerCategory));
 
 // This is normally a compiler option, but it also applies to strings given
 // to eval or the Function constructor.
@@ -470,7 +473,8 @@ std::shared_ptr<Context> createContext() {
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
-    sem::SemContext &semCtx,
+    sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
     std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
@@ -551,7 +555,7 @@ ESTree::NodePtr parseJS(
   //   return parsedAST;
   // }
 
-  if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
+  if (!hermes::sema::resolveAST(*context, semCtx, parsedAST, ambientDecls)) {
     return nullptr;
   }
 
@@ -567,6 +571,8 @@ ESTree::NodePtr parseJS(
         cli::IncludeRawASTProp ? ESTreeRawProp::Include
                                : ESTreeRawProp::Exclude);
   }
+  if (cli::OutputLevel == OutputLevelKind::Sema)
+    semCtx.dump();
 
   return parsedAST;
 }
@@ -596,10 +602,11 @@ bool compileFromCommandLineOptions() {
   }
 
   Module M(context);
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{*context};
 
   // TODO: support input source map.
-  ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBuf));
+  ESTree::NodePtr ast =
+      parseJS(context, semCtx, declFileList, std::move(fileBuf));
   if (!ast) {
     return false;
   }
@@ -607,7 +614,7 @@ bool compileFromCommandLineOptions() {
       cli::OutputLevel < OutputLevelKind::CFG) {
     return true;
   }
-  generateIRFromESTree(ast, &M, declFileList, {});
+  generateIRFromESTree(ast, &M);
   // Bail out if there were any errors. We can't ensure that the module is in
   // a valid state.
   if (auto N = context->getSourceErrorManager().getErrorCount()) {

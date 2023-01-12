@@ -329,20 +329,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         functionNameId);
 
     if (F->isLazy()) {
-      auto lazyData = std::make_unique<LazyCompilationData>();
-      lazyData->context = F->getParent()->shareContext();
-      lazyData->parentScope = F->getLazyScope();
-      lazyData->span = F->getLazySource().functionRange;
-      lazyData->nodeKind = F->getLazySource().nodeKind;
-      lazyData->paramYield = F->getLazySource().paramYield;
-      lazyData->paramAwait = F->getLazySource().paramAwait;
-      lazyData->bufferId = F->getLazySource().bufferId;
-      lazyData->originalName = F->getOriginalOrInferredName();
-      lazyData->closureAlias = F->getLazyClosureAlias()
-          ? F->getLazyClosureAlias()->getName()
-          : Identifier();
-      lazyData->strictMode = F->isStrictMode();
-      func->setLazyCompilationData(std::move(lazyData));
+      hermes_fatal("lazy compilation not supported");
     }
 
     if (BFG.hasDebugInfo()) {

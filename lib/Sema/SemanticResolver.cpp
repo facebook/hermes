@@ -1320,6 +1320,7 @@ FunctionContext::FunctionContext(
             resolver.recursionDepthExceeded(n);
           })) {
   resolver.functionStack_.push_back(this);
+  node->setSemInfo(this->semInfo);
 }
 
 FunctionContext::~FunctionContext() {
