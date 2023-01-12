@@ -92,7 +92,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printFunctionHeader(Function *F);
   virtual void printFunctionVariables(Function *F);
   virtual void printValueLabel(Instruction *I, Value *V, unsigned opIndex);
-  virtual void printTypeLabel(Type T);
+  virtual void printTypeLabel(Value *v);
   virtual void printInstruction(Instruction *I);
   virtual void printInstructionDestination(Instruction *I);
   virtual void printSourceLocation(SMLoc loc);
