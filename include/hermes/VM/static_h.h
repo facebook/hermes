@@ -119,6 +119,16 @@ typedef struct SHJmpBuf {
   jmp_buf buf;
 } SHJmpBuf;
 
+/// Utility to concatenate a prefix with HERMESVM_MODEL
+#define _HERMESVM_JOIN_TOKENS(x, y) _HERMESVM_JOIN_HELPER(x, y)
+#define _HERMESVM_JOIN_HELPER(x, y) x##y
+
+/// The name of the model-specific exported symbol
+#define _SH_MODEL _HERMESVM_JOIN_TOKENS(_sh_model, HERMESVM_MODEL)
+
+/// A dummy export to ensure correct library is linked.
+SHERMES_EXPORT void _SH_MODEL(void);
+
 /// Create a runtime instance.
 SHERMES_EXPORT SHRuntime *_sh_init(int argc, char **argv);
 /// Destroy a runtime instance created by \c _sh_init();

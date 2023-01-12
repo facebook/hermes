@@ -171,4 +171,30 @@ if(HERMES_ENABLE_INTL)
   target_link_libraries(hermesvmlean_a PUBLIC ${INTL_OBJ_LIBS})
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(HERMESVM_DEBUG_MODE 1)
+else()
+  set(HERMESVM_DEBUG_MODE 0)
+endif()
+
+# Construct the HermesVM model string
+set(HERMESVM_MODEL "")
+
+if (HERMESVM_COMPRESSED_POINTERS)
+  string(APPEND HERMESVM_MODEL "_cp")
+endif()
+if (HERMESVM_BOXED_DOUBLES)
+  string(APPEND HERMESVM_MODEL "_bd")
+endif()
+if (HERMESVM_CONTIGUOUS_HEAP)
+  string(APPEND HERMESVM_MODEL "_ch")
+endif()
+# The pointer size is not strictly necessary, but include it for completeness.
+string(APPEND HERMESVM_MODEL "_p" ${CMAKE_SIZEOF_VOID_P})
+if (HERMESVM_DEBUG_MODE)
+  string(APPEND HERMESVM_MODEL "_dbg")
+else()
+  string(APPEND HERMESVM_MODEL "_rel")
+endif()
+
 configure_file(config/libhermesvm-config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config/libhermesvm-config.h)

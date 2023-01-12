@@ -22,5 +22,12 @@
 /// The value of `sizeof(void *)` as an integer for used by the preprocessor.
 #define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
 #endif
+#ifndef HERMESVM_DEBUG_MODE
+#cmakedefine01 HERMESVM_DEBUG_MODE
+#endif
+#ifndef HERMESVM_MODEL
+#define HERMESVM_MODEL @HERMESVM_MODEL@
+#endif
+
 
 #endif
