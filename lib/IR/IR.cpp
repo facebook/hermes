@@ -409,12 +409,12 @@ llvh::StringRef Instruction::getName() {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");
-#define DEF_VALUE(XX, PARENT) \
-  case ValueKind::XX##Kind:   \
-    return #XX;
-#define DEF_TAG(XX, PARENT) \
-  case ValueKind::XX##Kind: \
-    return #XX;
+#define DEF_INST(XX, PRINT, PARENT) \
+  case ValueKind::XX##Kind:         \
+    return PRINT;
+#define DEF_INST_TAG(XX, PRINT, PARENT) \
+  case ValueKind::XX##Kind:             \
+    return PRINT;
 #include "hermes/IR/Instrs.def"
   }
 }

@@ -20,31 +20,28 @@
 using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {
-#undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)           \
+#define TERMINATOR(CLASS, PRINT, PARENT)    \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getNumSuccessors();
-#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, "", PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }
 
 BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
-#undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)           \
+#define TERMINATOR(CLASS, PRINT, PARENT)    \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->getSuccessor(idx);
-#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, "", PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }
 
 void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
-#undef TERMINATOR
-#define TERMINATOR(CLASS, PARENT)           \
+#define TERMINATOR(CLASS, PRINT, PARENT)    \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
     return I->setSuccessor(idx, B);
-#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, "", PARENT)
 #include "hermes/IR/Instrs.def"
   llvm_unreachable("not a terminator?!");
 }

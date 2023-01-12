@@ -14,8 +14,14 @@
 #ifndef END_VALUE
 #define END_VALUE(NAME)
 #endif
+#ifndef DEF_INST
+#define DEF_INST(NAME, PRINT, PARENT) DEF_VALUE(NAME, PARENT)
+#endif
 #ifndef DEF_TAG
 #define DEF_TAG(NAME, PARENT)
+#endif
+#ifndef DEF_INST_TAG
+#define DEF_INST_TAG(NAME, PRINT, PARENT) DEF_TAG(NAME, PARENT)
 #endif
 #ifndef MARK_FIRST
 #define MARK_FIRST(NAME, PARENT)
@@ -25,7 +31,7 @@
 #endif
 
 #ifndef TERMINATOR
-#define TERMINATOR(NAME, PARENT) DEF_VALUE(NAME, PARENT)
+#define TERMINATOR(NAME, PRINT, PARENT) DEF_INST(NAME, PRINT, PARENT)
 #endif
 #ifndef BEGIN_TERMINATOR
 #define BEGIN_TERMINATOR(NAME, PARENT) BEGIN_VALUE(NAME, PARENT)
@@ -39,194 +45,224 @@
 #endif
 
 BEGIN_VALUE(UnaryOperatorInst, Instruction)
-DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
-DEF_TAG(UnaryTypeofInst, UnaryOperatorInst)
-DEF_TAG(UnaryMinusInst, UnaryOperatorInst)
-DEF_TAG(UnaryTildeInst, UnaryOperatorInst)
-DEF_TAG(UnaryBangInst, UnaryOperatorInst)
-DEF_TAG(UnaryIncInst, UnaryOperatorInst)
-DEF_TAG(UnaryDecInst, UnaryOperatorInst)
+DEF_INST_TAG(UnaryVoidInst, "js.void", UnaryOperatorInst)
+DEF_INST_TAG(UnaryTypeofInst, "js.typeof", UnaryOperatorInst)
+DEF_INST_TAG(UnaryMinusInst, "js.neg.r", UnaryOperatorInst)
+DEF_INST_TAG(UnaryTildeInst, "js.tilde.r", UnaryOperatorInst)
+DEF_INST_TAG(UnaryBangInst, "js.bang", UnaryOperatorInst)
+DEF_INST_TAG(UnaryIncInst, "js.inc.r", UnaryOperatorInst)
+DEF_INST_TAG(UnaryDecInst, "js.dec.r", UnaryOperatorInst)
 END_VALUE(UnaryOperatorInst)
 
-DEF_VALUE(AddEmptyStringInst, Instruction)
-DEF_VALUE(AsNumberInst, Instruction)
-DEF_VALUE(AsNumericInst, Instruction)
-DEF_VALUE(AsInt32Inst, Instruction)
-DEF_VALUE(LoadStackInst, Instruction)
-DEF_VALUE(MovInst, Instruction)
-DEF_VALUE(ImplicitMovInst, Instruction)
-DEF_VALUE(CoerceThisNSInst, Instruction)
-DEF_VALUE(DirectEvalInst, Instruction)
-DEF_VALUE(DeclareGlobalVarInst, Instruction)
-DEF_VALUE(LoadFrameInst, Instruction)
-DEF_VALUE(LoadParamInst, Instruction)
+DEF_INST(AddEmptyStringInst, "js.addEmptyStr.r", Instruction)
+DEF_INST(AsNumberInst, "js.asNumber.r", Instruction)
+DEF_INST(AsNumericInst, "js.asNumeric.r", Instruction)
+DEF_INST(AsInt32Inst, "js.asInt32.r", Instruction)
+DEF_INST(LoadStackInst, "js.loadStack", Instruction)
+DEF_INST(MovInst, "js.mov", Instruction)
+DEF_INST(ImplicitMovInst, "js.implicitMov", Instruction)
+DEF_INST(CoerceThisNSInst, "js.coerceThis.ns", Instruction)
+DEF_INST(DirectEvalInst, "js.directEval.r", Instruction)
+DEF_INST(DeclareGlobalVarInst, "js.declareGlobalVar", Instruction)
+DEF_INST(LoadFrameInst, "js.loadFrame", Instruction)
+DEF_INST(LoadParamInst, "js.loadParam", Instruction)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCLoadConstInst, Instruction)
-DEF_VALUE(HBCResolveEnvironment, Instruction)
-DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
+DEF_INST(HBCLoadConstInst, "js.hbc.loadConst", Instruction)
+DEF_INST(HBCResolveEnvironment, "js.hbc.resolveEnv", Instruction)
+DEF_INST(HBCGetArgumentsLengthInst, "js.getArgumentsLength", Instruction)
 
 MARK_FIRST(HBCReifyArgumentsInst, Instruction)
-DEF_VALUE(HBCReifyArgumentsStrictInst, HBCReifyArgumentsInst)
-DEF_VALUE(HBCReifyArgumentsLooseInst, HBCReifyArgumentsInst)
+DEF_INST(
+    HBCReifyArgumentsStrictInst,
+    "js.reifyArguments.s",
+    HBCReifyArgumentsInst)
+DEF_INST(
+    HBCReifyArgumentsLooseInst,
+    "js.reifyArguments.ns",
+    HBCReifyArgumentsInst)
 MARK_LAST(HBCReifyArgumentsInst)
 
-DEF_VALUE(HBCSpillMovInst, Instruction)
+DEF_INST(HBCSpillMovInst, "js.jbc.spillMov", Instruction)
 #endif
 
-DEF_VALUE(PhiInst, Instruction)
+DEF_INST(PhiInst, "phi", Instruction)
 
 BEGIN_VALUE(BinaryOperatorInst, Instruction)
-DEF_TAG(BinaryEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryNotEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryStrictlyEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryStrictlyNotEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryLessThanInst, BinaryOperatorInst)
-DEF_TAG(BinaryLessThanOrEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryGreaterThanInst, BinaryOperatorInst)
-DEF_TAG(BinaryGreaterThanOrEqualInst, BinaryOperatorInst)
-DEF_TAG(BinaryLeftShiftInst, BinaryOperatorInst)
-DEF_TAG(BinaryRightShiftInst, BinaryOperatorInst)
-DEF_TAG(BinaryUnsignedRightShiftInst, BinaryOperatorInst)
-DEF_TAG(BinaryAddInst, BinaryOperatorInst)
-DEF_TAG(BinarySubtractInst, BinaryOperatorInst)
-DEF_TAG(BinaryMultiplyInst, BinaryOperatorInst)
-DEF_TAG(BinaryDivideInst, BinaryOperatorInst)
-DEF_TAG(BinaryModuloInst, BinaryOperatorInst)
-DEF_TAG(BinaryOrInst, BinaryOperatorInst)
-DEF_TAG(BinaryXorInst, BinaryOperatorInst)
-DEF_TAG(BinaryAndInst, BinaryOperatorInst)
-DEF_TAG(BinaryExponentiationInst, BinaryOperatorInst)
-DEF_TAG(BinaryInInst, BinaryOperatorInst)
-DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
+DEF_INST_TAG(BinaryEqualInst, "js.eq.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryNotEqualInst, "js.ne.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryStrictlyEqualInst, "js.strictEq", BinaryOperatorInst)
+DEF_INST_TAG(BinaryStrictlyNotEqualInst, "js.strictNe", BinaryOperatorInst)
+DEF_INST_TAG(BinaryLessThanInst, "js.lt.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryLessThanOrEqualInst, "js.le.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryGreaterThanInst, "js.gt.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryGreaterThanOrEqualInst, "js.ge.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryLeftShiftInst, "js.shl.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryRightShiftInst, "js.sshr.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryUnsignedRightShiftInst, "js.ushr.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryAddInst, "js.add.r", BinaryOperatorInst)
+DEF_INST_TAG(BinarySubtractInst, "js.sub.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryMultiplyInst, "js.mul.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryDivideInst, "js.div.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryModuloInst, "js.mod.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryOrInst, "js.binOr.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryXorInst, "js.binXor.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryAndInst, "js.binAnd.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryExponentiationInst, "js.exp.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryInInst, "js.in.r", BinaryOperatorInst)
+DEF_INST_TAG(BinaryInstanceOfInst, "js.instanceOf.r", BinaryOperatorInst)
 END_VALUE(BinaryOperatorInst)
 
 MARK_FIRST(BaseStorePropertyInst, Instruction)
 MARK_FIRST(StorePropertyInst, BaseStorePropertyInst)
-DEF_VALUE(StorePropertyLooseInst, StorePropertyInst)
-DEF_VALUE(StorePropertyStrictInst, StorePropertyInst)
+DEF_INST(StorePropertyLooseInst, "js.storeProp.ns.r", StorePropertyInst)
+DEF_INST(StorePropertyStrictInst, "js.storeProp.s.r", StorePropertyInst)
 MARK_LAST(StorePropertyInst)
 
 MARK_FIRST(TryStoreGlobalPropertyInst, BaseStorePropertyInst)
-DEF_VALUE(TryStoreGlobalPropertyLooseInst, TryStoreGlobalPropertyInst)
-DEF_VALUE(TryStoreGlobalPropertyStrictInst, TryStoreGlobalPropertyInst)
+DEF_INST(
+    TryStoreGlobalPropertyLooseInst,
+    "js.tryStoreGlobalProp.ns.r",
+    TryStoreGlobalPropertyInst)
+DEF_INST(
+    TryStoreGlobalPropertyStrictInst,
+    "js.tryStoreGlobalPop.s.r",
+    TryStoreGlobalPropertyInst)
 MARK_LAST(TryStoreGlobalPropertyInst)
 MARK_LAST(BaseStorePropertyInst)
 
 MARK_FIRST(BaseStoreOwnPropertyInst, Instruction)
-DEF_VALUE(StoreOwnPropertyInst, BaseStoreOwnPropertyInst)
-DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
+DEF_INST(StoreOwnPropertyInst, "js.storeOwnProp", BaseStoreOwnPropertyInst)
+DEF_INST(
+    StoreNewOwnPropertyInst,
+    "js.storeNewOwnProp",
+    BaseStoreOwnPropertyInst)
 MARK_LAST(BaseStoreOwnPropertyInst)
 
-DEF_VALUE(StoreGetterSetterInst, Instruction)
+DEF_INST(StoreGetterSetterInst, "js.storeGetterSetter", Instruction)
 
 MARK_FIRST(DeletePropertyInst, Instruction)
-DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)
-DEF_VALUE(DeletePropertyStrictInst, DeletePropertyInst)
+DEF_INST(DeletePropertyLooseInst, "js.delProp.ns.r", DeletePropertyInst)
+DEF_INST(DeletePropertyStrictInst, "js.delProp.s.r", DeletePropertyInst)
 MARK_LAST(DeletePropertyInst)
 
 MARK_FIRST(BaseLoadPropertyInst, Instruction)
-DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)
-DEF_VALUE(TryLoadGlobalPropertyInst, BaseLoadPropertyInst)
+DEF_INST(LoadPropertyInst, "js.loadProp.r", BaseLoadPropertyInst)
+DEF_INST(
+    TryLoadGlobalPropertyInst,
+    "js.tryLoadGlobalProp.r",
+    BaseLoadPropertyInst)
 MARK_LAST(BaseLoadPropertyInst)
 
-DEF_VALUE(StoreStackInst, Instruction)
-DEF_VALUE(StoreFrameInst, Instruction)
-DEF_VALUE(AllocStackInst, Instruction)
-DEF_VALUE(AllocObjectInst, Instruction)
-DEF_VALUE(AllocArrayInst, Instruction)
-DEF_VALUE(AllocObjectLiteralInst, Instruction)
-DEF_VALUE(CreateArgumentsInst, Instruction)
-DEF_VALUE(CatchInst, Instruction)
-DEF_VALUE(DebuggerInst, Instruction)
-DEF_VALUE(CreateRegExpInst, Instruction)
-DEF_VALUE(TryEndInst, Instruction)
-DEF_VALUE(GetNewTargetInst, Instruction)
-DEF_VALUE(ThrowIfEmptyInst, Instruction)
-DEF_VALUE(IteratorBeginInst, Instruction)
-DEF_VALUE(IteratorNextInst, Instruction)
-DEF_VALUE(IteratorCloseInst, Instruction)
+DEF_INST(StoreStackInst, "js.storeStack", Instruction)
+DEF_INST(StoreFrameInst, "js.storeFrame", Instruction)
+DEF_INST(AllocStackInst, "js.alloca", Instruction)
+DEF_INST(AllocObjectInst, "js.allocObject", Instruction)
+DEF_INST(AllocArrayInst, "js.allocArray", Instruction)
+DEF_INST(AllocObjectLiteralInst, "js.allocObjectLiteral", Instruction)
+DEF_INST(CreateArgumentsInst, "js.createArguments", Instruction)
+DEF_INST(CatchInst, "js.catch", Instruction)
+DEF_INST(DebuggerInst, "js.debugger", Instruction)
+DEF_INST(CreateRegExpInst, "js.createRegExp", Instruction)
+DEF_INST(TryEndInst, "js.tryEnd", Instruction)
+DEF_INST(GetNewTargetInst, "js.newTarget", Instruction)
+DEF_INST(ThrowIfEmptyInst, "js.throwIfEmpty", Instruction)
+DEF_INST(IteratorBeginInst, "js.iteratorBegin.r", Instruction)
+DEF_INST(IteratorNextInst, "js.iteratorNext.r", Instruction)
+DEF_INST(IteratorCloseInst, "js.iteratorClose.r", Instruction)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
-DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
+DEF_INST(HBCStoreToEnvironmentInst, "js.hbc.storeEnv", Instruction)
+DEF_INST(HBCLoadFromEnvironmentInst, "js.hbc.loadEnv", Instruction)
 #endif
-DEF_VALUE(UnreachableInst, Instruction)
+DEF_INST(UnreachableInst, "js.unreachable", Instruction)
 
 MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
 
 MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
-DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
+DEF_INST(CreateFunctionInst, "js.createFunc", BaseCreateCallableInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateFunctionInst, BaseCreateCallableInst)
+DEF_INST(HBCCreateFunctionInst, "js.hbc.createFunc", BaseCreateCallableInst)
 #endif
 MARK_LAST(BaseCreateCallableInst)
 
-DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)
+DEF_INST(CreateGeneratorInst, "js.createGenerator", BaseCreateLexicalChildInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateGeneratorInst, BaseCreateLexicalChildInst)
+DEF_INST(
+    HBCCreateGeneratorInst,
+    "js.hbc.createGenerator",
+    BaseCreateLexicalChildInst)
 #endif
 MARK_LAST(BaseCreateLexicalChildInst)
 
 #ifdef HERMES_RUN_WASM
-DEF_VALUE(CallIntrinsicInst, Instruction)
+DEF_INST(CallIntrinsicInst, "js.wasm.callIntrinsic", Instruction)
 #endif
 
 MARK_FIRST(TerminatorInst, Instruction)
-TERMINATOR(BranchInst, TerminatorInst)
-TERMINATOR(ReturnInst, TerminatorInst)
-TERMINATOR(ThrowInst, TerminatorInst)
-TERMINATOR(SwitchInst, TerminatorInst)
-TERMINATOR(CondBranchInst, TerminatorInst)
-TERMINATOR(GetPNamesInst, TerminatorInst)
-TERMINATOR(GetNextPNameInst, TerminatorInst)
-TERMINATOR(TryStartInst, TerminatorInst)
+TERMINATOR(BranchInst, "branch", TerminatorInst)
+TERMINATOR(ReturnInst, "js.return", TerminatorInst)
+TERMINATOR(ThrowInst, "js.throw", TerminatorInst)
+TERMINATOR(SwitchInst, "js.switch", TerminatorInst)
+TERMINATOR(CondBranchInst, "condBranch", TerminatorInst)
+TERMINATOR(GetPNamesInst, "js.getPNames.r", TerminatorInst)
+TERMINATOR(GetNextPNameInst, "js.getNextPName", TerminatorInst)
+TERMINATOR(TryStartInst, "js.tryStart", TerminatorInst)
 
 BEGIN_TERMINATOR(CompareBranchInst, TerminatorInst)
 // NOTE: the ordering here matches BinaryOperatorInst!
-DEF_TAG(CmpBrEqualInst, CompareBranchInst)
-DEF_TAG(CmpBrNotEqualInst, CompareBranchInst)
-DEF_TAG(CmpBrStrictlyEqualInst, CompareBranchInst)
-DEF_TAG(CmpBrStrictlyNotEqualInst, CompareBranchInst)
-DEF_TAG(CmpBrLessThanInst, CompareBranchInst)
-DEF_TAG(CmpBrLessThanOrEqualInst, CompareBranchInst)
-DEF_TAG(CmpBrGreaterThanInst, CompareBranchInst)
-DEF_TAG(CmpBrGreaterThanOrEqualInst, CompareBranchInst)
+DEF_INST_TAG(CmpBrEqualInst, "js.cmpBrEq.r", CompareBranchInst)
+DEF_INST_TAG(CmpBrNotEqualInst, "js.cmpBrNE.r", CompareBranchInst)
+DEF_INST_TAG(CmpBrStrictlyEqualInst, "js.cmpBrStrictEq", CompareBranchInst)
+DEF_INST_TAG(CmpBrStrictlyNotEqualInst, "js.cmpBrStrictNE", CompareBranchInst)
+DEF_INST_TAG(CmpBrLessThanInst, "js.cmpBrLT.r", CompareBranchInst)
+DEF_INST_TAG(CmpBrLessThanOrEqualInst, "js.cmpBrLE.r", CompareBranchInst)
+DEF_INST_TAG(CmpBrGreaterThanInst, "js.cmpBrGT.r", CompareBranchInst)
+DEF_INST_TAG(CmpBrGreaterThanOrEqualInst, "js.cmpBrGE.r", CompareBranchInst)
 END_TERMINATOR(CompareBranchInst)
 
-TERMINATOR(SwitchImmInst, TerminatorInst)
-TERMINATOR(SaveAndYieldInst, TerminatorInst)
+TERMINATOR(SwitchImmInst, "js.switchImm", TerminatorInst)
+TERMINATOR(SaveAndYieldInst, "js.saveAndYield", TerminatorInst)
 MARK_LAST(TerminatorInst)
 
 MARK_FIRST(BaseCallInst, Instruction)
-DEF_VALUE(CallInst, BaseCallInst)
-DEF_VALUE(ConstructInst, BaseCallInst)
-DEF_VALUE(CallBuiltinInst, BaseCallInst)
+DEF_INST(CallInst, "js.call.r", BaseCallInst)
+DEF_INST(ConstructInst, "js.construct.r", BaseCallInst)
+DEF_INST(CallBuiltinInst, "js.callBuiltin.r", BaseCallInst)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCallDirectInst, BaseCallInst)
-DEF_VALUE(HBCCallNInst, BaseCallInst)
+DEF_INST(HBCCallDirectInst, "js.hbc.callDirect.r", BaseCallInst)
+DEF_INST(HBCCallNInst, "js.hbc.callN.r", BaseCallInst)
 #endif
 MARK_LAST(BaseCallInst)
 
-DEF_VALUE(CreateThisInst, Instruction)
-DEF_VALUE(GetConstructedObjectInst, Instruction)
+DEF_INST(CreateThisInst, "js.createThis", Instruction)
+DEF_INST(GetConstructedObjectInst, "js.getConstructedObject", Instruction)
 
-DEF_VALUE(GetBuiltinClosureInst, Instruction)
-DEF_VALUE(StartGeneratorInst, Instruction)
-DEF_VALUE(ResumeGeneratorInst, Instruction)
+DEF_INST(GetBuiltinClosureInst, "js.builtinClosure", Instruction)
+DEF_INST(StartGeneratorInst, "js.startGenerator.r", Instruction)
+DEF_INST(ResumeGeneratorInst, "js.resumeGenerator", Instruction)
 
 // These are target dependent instructions:
 
-DEF_VALUE(LIRGetThisNSInst, Instruction)
+DEF_INST(LIRGetThisNSInst, "js.lir.this.ns", Instruction)
 #ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
-DEF_VALUE(HBCCreateEnvironmentInst, Instruction)
+DEF_INST(HBCGetGlobalObjectInst, "js.hbc.globalObject", Instruction)
+DEF_INST(HBCCreateEnvironmentInst, "js.hbc.createEnv", Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
-DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
-DEF_VALUE(HBCGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
+DEF_INST(
+    HBCGetArgumentsPropByValLooseInst,
+    "js.hbc.getArgumentsPropByVal.ns",
+    HBCGetArgumentsPropByValInst)
+DEF_INST(
+    HBCGetArgumentsPropByValStrictInst,
+    "js.hbc.getArgumentsPropByVal.s",
+    HBCGetArgumentsPropByValInst)
 MARK_LAST(HBCGetArgumentsPropByValInst)
 
-DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
-DEF_VALUE(HBCProfilePointInst, Instruction)
+DEF_INST(
+    HBCAllocObjectFromBufferInst,
+    "js.hbc.allocObjectFromBuffer",
+    Instruction)
+DEF_INST(HBCProfilePointInst, "js.hbc.profilePoint", Instruction)
 #endif
 
 #undef INCLUDE_HBC_BACKEND
@@ -240,7 +276,9 @@ DEF_VALUE(HBCProfilePointInst, Instruction)
 #endif
 #undef BEGIN_VALUE
 #undef END_VALUE
+#undef DEF_INST
 #undef DEF_TAG
+#undef DEF_INST_TAG
 #undef TERMINATOR
 #undef BEGIN_TERMINATOR
 #undef END_TERMINATOR
