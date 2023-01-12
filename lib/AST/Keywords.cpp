@@ -35,7 +35,10 @@ Keywords::Keywords(Context &astContext)
       identAssign(astContext.getIdentifier("=").getUnderlyingPointer()),
       identNew(astContext.getIdentifier("new").getUnderlyingPointer()),
       identTarget(astContext.getIdentifier("target").getUnderlyingPointer()),
-      identTypeof(astContext.getIdentifier("typeof").getUnderlyingPointer()) {}
+      identTypeof(astContext.getIdentifier("typeof").getUnderlyingPointer()),
+      identConstructor(
+          astContext.getIdentifier("constructor").getUnderlyingPointer()),
+      identLength(astContext.getIdentifier("length").getUnderlyingPointer()) {}
 
 } // namespace sem
 } // namespace hermes

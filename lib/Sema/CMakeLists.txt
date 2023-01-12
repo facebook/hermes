@@ -9,6 +9,9 @@ add_hermes_library(hermesSema
     SemanticResolver.cpp SemanticResolver.h
     DeclCollector.cpp DeclCollector.h
     ScopedFunctionPromoter.cpp ScopedFunctionPromoter.h
+    FlowContext.cpp
+    FlowTypesDumper.cpp FlowTypesDumper.h
+    FlowChecker.cpp FlowChecker.h
     LINK_OBJLIBS
     hermesSupport
 )

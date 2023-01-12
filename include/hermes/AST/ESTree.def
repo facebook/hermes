@@ -1164,6 +1164,13 @@ ESTREE_NODE_3_ARGS(
 
 ESTREE_LAST(Cover)
 
+// ================================================
+// FlowChecker generated nodes
+
+ESTREE_NODE_1_ARGS(
+    ImplicitCheckedCast, Base,
+    NodePtr, argument, false)
+
 #endif
 
 #undef ESTREE_FIRST

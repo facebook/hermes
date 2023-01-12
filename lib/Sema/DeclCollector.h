@@ -15,10 +15,15 @@
 namespace hermes {
 namespace sema {
 
+class DeclCollector;
 class SemanticResolver;
 
 /// All the declarations in a scope.
 using ScopeDecls = std::vector<ESTree::Node *>;
+
+/// A map storing DeclCollector instances associated with every function.
+using DeclCollectorMapTy =
+    llvh::DenseMap<ESTree::FunctionLikeNode *, std::unique_ptr<DeclCollector>>;
 
 /// Collect all declarations in every scope of a function.
 /// All declarations will have to be hoisted to the top of a function or scope,
@@ -30,22 +35,23 @@ class DeclCollector {
   /// \param recursionDepthExceeded handler to invoke when we transition fron
   ///     non-zero to zero remaining recursion depth.
   /// \return a DeclCollector which has collected all declarations in \p root.
-  static DeclCollector run(
+  static std::unique_ptr<DeclCollector> run(
       ESTree::FunctionLikeNode *root,
       const sem::Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
+  void dump(llvh::raw_ostream &os, unsigned indent = 0);
+
   /// \param node the AST node which could have created a scope.
   ///   The only nodes which can are decorated by `ScopeDecorationBase`.
   /// \return the ScopeDecls if the AST node did create a scope,
-  ///   None if it didn't.
-  hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> getScopeDeclsForNode(
-      ESTree::Node *node) const {
+  ///   Nullptr if it didn't.
+  const ScopeDecls *getScopeDeclsForNode(ESTree::Node *node) const {
     auto it = scopes_.find(node);
     if (it == scopes_.end())
-      return llvh::None;
-    return {it->second};
+      return nullptr;
+    return &it->second;
   }
   /// Set the ScopeDecls for an AST node.
   /// Replaces ScopeDecls if it already exists.
@@ -69,6 +75,12 @@ class DeclCollector {
   void visit(ESTree::VariableDeclarationNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::ImportDeclarationNode *node);
+#if HERMES_PARSE_FLOW
+  void visit(ESTree::TypeAliasNode *node);
+#endif
+#if HERMES_PARSE_TS
+  void visit(ESTree::TSTypeAliasDeclarationNode *node);
+#endif
 
   void visit(ESTree::FunctionDeclarationNode *node);
 

@@ -948,6 +948,12 @@ class TypeInferenceImpl {
   Type inferHBCProfilePointInst(HBCProfilePointInst *inst) {
     return Type::createNoType();
   }
+  Type inferPrLoadInst(PrLoadInst *inst) {
+    return inst->getCheckedType();
+  }
+  Type inferPrStoreInst(PrStoreInst *inst) {
+    return Type::createNoType();
+  }
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.

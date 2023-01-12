@@ -181,6 +181,11 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genAwaitExpr(A);
   }
 
+  if (auto *ICK = llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(expr)) {
+    // FIXME: emit something.
+    return genExpression(ICK->_argument, nameHint);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));
   return Builder.getLiteralUndefined();
@@ -521,13 +526,59 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
   Value *prop = genMemberExpressionProperty(mem);
   switch (op) {
     case MemberExpressionOperation::Load:
-      return MemberExpressionResult{
-          Builder.createLoadPropertyInst(baseValue, prop), baseValue};
+      return emitMemberLoad(mem, baseValue, prop);
     case MemberExpressionOperation::Delete:
       return MemberExpressionResult{
           Builder.createDeletePropertyInst(baseValue, prop), baseValue};
   }
   llvm_unreachable("No other kind of member expression");
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
+    ESTree::MemberExpressionNode *mem,
+    Value *baseValue,
+    Value *propValue) {
+  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      size_t fieldIndex = classType->getFieldIndex(propName);
+      return MemberExpressionResult{
+          Builder.createPrLoadInst(
+              baseValue,
+              fieldIndex,
+              Builder.getLiteralString(propName),
+              flowTypeToIRType(classType->getFields()[fieldIndex].type)),
+          baseValue};
+    }
+  }
+
+  return MemberExpressionResult{
+      Builder.createLoadPropertyInst(baseValue, propValue), baseValue};
+}
+
+void ESTreeIRGen::emitMemberStore(
+    ESTree::MemberExpressionNode *mem,
+    Value *storedValue,
+    Value *baseValue,
+    Value *propValue) {
+  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (!mem->_computed) {
+      auto propName = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
+      size_t fieldIndex = classType->getFieldIndex(propName);
+      Builder.createPrStoreInst(
+          storedValue,
+          baseValue,
+          fieldIndex,
+          Builder.getLiteralString(propName),
+          flowTypeToIRType(classType->getFields()[fieldIndex].type).isNonPtr());
+      return;
+    }
+  }
+  Builder.createStorePropertyInst(storedValue, baseValue, propValue);
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
@@ -1770,6 +1821,27 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     if (llvh::isa<ESTree::SpreadElementNode>(&arg)) {
       hasSpread = true;
     }
+  }
+
+  // Is this a statically typed new?
+  if (auto *consType = llvh::dyn_cast_or_null<flow::ClassConstructorType>(
+          flowContext_.findNodeType(N->_callee))) {
+    flow::ClassType *classType = consType->getClassType();
+    assert(!hasSpread && "statically typed spread is not supported");
+
+    Value *newInst = emitClassAllocation(classType);
+
+    // If there is an explicit constructor, invoke it. Note that there is
+    // always a dummy one, which we even loaded (for TDZ), but there is no need
+    // to invoke it.
+    if (classType->getConstructorType()) {
+      ConstructInst::ArgumentList args;
+      for (auto &arg : N->_arguments)
+        args.push_back(genExpression(&arg));
+
+      Builder.createConstructInst(callee, newInst, args);
+    }
+    return newInst;
   }
 
   if (!hasSpread) {

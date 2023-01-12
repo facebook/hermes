@@ -12,13 +12,14 @@ using namespace hermes::ESTree;
 namespace hermes {
 namespace sema {
 
-/* static */ DeclCollector DeclCollector::run(
+/* static */ std::unique_ptr<DeclCollector> DeclCollector::run(
     ESTree::FunctionLikeNode *root,
     const sem::Keywords &kw,
     unsigned recursionDepth,
     const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
-  DeclCollector dc{root, kw, recursionDepth, recursionDepthExceeded};
-  dc.runImpl();
+  std::unique_ptr<DeclCollector> dc(
+      new DeclCollector(root, kw, recursionDepth, recursionDepthExceeded));
+  dc->runImpl();
   return dc;
 }
 
@@ -57,6 +58,19 @@ void DeclCollector::runImpl() {
   closeScope(root_);
 }
 
+void DeclCollector::dump(llvh::raw_ostream &os, unsigned indent) {
+#ifndef NDEBUG
+  for (const auto &p : scopes_) {
+    os << llvh::left_justify("", indent) << p.first->getNodeName() << "["
+       << llvh::format("%p", p.first) << "]:";
+    for (ESTree::Node *n : p.second) {
+      os << " " << n->getNodeName() << "[" << llvh::format("%p", n) << "]";
+    }
+    os << "\n";
+  }
+#endif
+}
+
 void DeclCollector::setScopeDeclsForNode(ESTree::Node *node, ScopeDecls decls) {
   scopes_[node] = decls;
 }
@@ -80,6 +94,18 @@ void DeclCollector::visit(ESTree::ImportDeclarationNode *node) {
   addToCur(node);
   visitESTreeChildren(*this, node);
 }
+#if HERMES_PARSE_FLOW
+void DeclCollector::visit(ESTree::TypeAliasNode *node) {
+  addToCur(node);
+  visitESTreeChildren(*this, node);
+}
+#endif
+#if HERMES_PARSE_TS
+void DeclCollector::visit(ESTree::TSTypeAliasDeclarationNode *node) {
+  addToCur(node);
+  visitESTreeChildren(*this, node);
+}
+#endif
 
 void DeclCollector::visit(ESTree::FunctionDeclarationNode *node) {
   // Record but don't descend.

@@ -210,6 +210,13 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return genExportAllDeclaration(exportDecl);
   }
 
+  if (llvh::isa<ESTree::TypeAliasNode>(stmt))
+    return;
+
+  if (auto *classDecl = llvh::dyn_cast<ESTree::ClassDeclarationNode>(stmt)) {
+    return genClassDeclaration(classDecl);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       stmt->getSourceRange(), Twine("invalid statement encountered."));
 }

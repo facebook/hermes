@@ -38,9 +38,6 @@ class SemanticResolver {
   /// All semantic tables are persisted here.
   SemContext &semCtx_;
 
-  /// Save the initial error count so we know whether we generated any errors.
-  const unsigned initialErrorCount_;
-
   /// Keywords we will be checking for.
   hermes::sem::Keywords kw_;
 
@@ -48,8 +45,12 @@ class SemanticResolver {
   /// be inserted in the global scope.
   const DeclarationFileListTy &ambientDecls_;
 
-  /// Stack of function contexts.
-  std::vector<FunctionContext *> functionStack_{};
+  /// If not null, store all instances of DeclCollector here, for use by other
+  /// passes.
+  DeclCollectorMapTy *const saveDecls_;
+
+  /// Current function context.
+  FunctionContext *curFunctionContext_ = nullptr;
 
   /// Current lexical scope.
   LexicalScope *curScope_{nullptr};
@@ -113,12 +114,15 @@ class SemanticResolver {
 
  public:
   /// \param semCtx the result of resolution will be stored here.
+  /// \param saveDecls if not null, the map will contain all DeclCollector
+  ///     instances for reuse by later passes.
   /// \param compile whether this resolution is intended to compile or just
   ///   parsing.
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
       const DeclarationFileListTy &ambientDecls,
+      DeclCollectorMapTy *saveDecls,
       bool compile);
 
   /// Run semantic resolution and store the result in \c semCtx_.
@@ -133,11 +137,11 @@ class SemanticResolver {
 
   /// \return the current function context.
   FunctionContext *functionContext() {
-    return functionStack_.back();
+    return curFunctionContext_;
   }
   /// \return the current function context.
   const FunctionContext *functionContext() const {
-    return functionStack_.back();
+    return curFunctionContext_;
   }
 
   /// Extract the declared identifiers from a declaration AST node's "id" field.
@@ -204,6 +208,8 @@ class SemanticResolver {
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
+  void visit(ESTree::ClassPropertyNode *node);
+  void visit(ESTree::MethodDefinitionNode *node);
 
   void visit(ESTree::CallExpressionNode *node);
 
@@ -219,6 +225,7 @@ class SemanticResolver {
   void visit(ESTree::CoverRestElementNode *node);
 #if HERMES_PARSE_FLOW
   void visit(ESTree::CoverTypedIdentifierNode *node);
+  void visit(ESTree::TypeAliasNode *node);
 #endif
 
   /// This method implements the first part of the protocol defined by
@@ -390,6 +397,8 @@ class SemanticResolver {
 class FunctionContext {
   SemanticResolver &resolver_;
 
+  FunctionContext *const prevContext_;
+
  public:
   struct Label {
     /// Where it was declared.
@@ -410,7 +419,7 @@ class FunctionContext {
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;
 
   /// All declarations in the function.
-  DeclCollector decls;
+  std::unique_ptr<DeclCollector> decls;
 
   explicit FunctionContext(
       SemanticResolver &resolver,

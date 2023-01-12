@@ -10,8 +10,10 @@
 
 #include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
+#include "hermes/AST/Keywords.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Sema/FlowContext.h"
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -260,10 +262,12 @@ class LReference {
       Kind kind,
       ESTreeIRGen *irgen,
       bool declInit,
+      ESTree::Node *ast,
       Value *base,
       Value *property,
       SMLoc loadLoc)
       : kind_(kind), irgen_(irgen), declInit_(declInit) {
+    ast_ = ast;
     base_ = base;
     property_ = property;
     loadLoc_ = loadLoc;
@@ -302,6 +306,9 @@ class LReference {
 
   union {
     struct {
+      /// The base AST node.
+      ESTree::Node *ast_;
+
       /// The base of the object, or the variable we load from.
       Value *base_;
       /// The name/value of the field this reference accesses, or null if this
@@ -331,6 +338,10 @@ class ESTreeIRGen {
 
   using BasicBlockListType = llvh::SmallVector<BasicBlock *, 4>;
 
+  /// Flow types context.
+  flow::FlowContext &flowContext_;
+  /// Keywords to avoid string content comparisons.
+  sem::Keywords kw_;
   /// The module we are constructing.
   Module *Mod;
   /// The IRBuilder we use to construct the module.
@@ -383,7 +394,10 @@ class ESTreeIRGen {
   }
 
  public:
-  explicit ESTreeIRGen(ESTree::Node *root, Module *M);
+  explicit ESTreeIRGen(
+      flow::FlowContext &flowContext,
+      ESTree::Node *root,
+      Module *M);
 
   /// Perform IRGeneration for the whole module.
   void doIt();
@@ -457,6 +471,18 @@ class ESTreeIRGen {
       ESTree::ExportDefaultDeclarationNode *exportDecl);
   void genExportAllDeclaration(ESTree::ExportAllDeclarationNode *exportDecl);
 
+  void genClassDeclaration(ESTree::ClassDeclarationNode *node);
+
+  /// Emit code to allocate an empty instance of the specified class and return
+  /// it.
+  Value *emitClassAllocation(flow::ClassType *classType);
+
+  /// Return the default init value for the specified type.
+  Value *getDefaultInitValue(flow::Type *type);
+
+  /// Convert a Flow type into an IR type.
+  static Type flowTypeToIRType(flow::Type *flowType);
+
   /// @}
 
  private:
@@ -526,6 +552,17 @@ class ESTreeIRGen {
   MemberExpressionResult genMemberExpression(
       ESTree::MemberExpressionNode *Mem,
       MemberExpressionOperation op);
+
+  /// Try to perform a typed member access, if the information is available.
+  MemberExpressionResult emitMemberLoad(
+      ESTree::MemberExpressionNode *mem,
+      Value *baseValue,
+      Value *propValue);
+  void emitMemberStore(
+      ESTree::MemberExpressionNode *mem,
+      Value *storedValue,
+      Value *baseValue,
+      Value *propValue);
 
   /// Generate IR for a member expression in the middle of an optional chain.
   /// \param shortCircuitBB the block to jump to upon short circuiting,

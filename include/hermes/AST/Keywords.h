@@ -52,6 +52,10 @@ class Keywords {
   const UniqueString *const identTarget;
   /// "typeof".
   const UniqueString *const identTypeof;
+  /// "constructor".
+  const UniqueString *const identConstructor;
+  /// "length".
+  const UniqueString *const identLength;
 
   Keywords(Context &astContext);
 };

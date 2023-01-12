@@ -574,6 +574,21 @@ class IRBuilder {
 
   UnreachableInst *createUnreachableInst();
 
+  PrLoadInst *createPrLoadInst(
+      Value *object,
+      size_t propIndex,
+      LiteralString *propName,
+      Type checkedType);
+
+  /// \param nonPointer can be set to true when it is known that both the old
+  ///     and the new value are not pointers.
+  PrStoreInst *createPrStoreInst(
+      Value *storedValue,
+      Value *object,
+      size_t propIndex,
+      LiteralString *propName,
+      bool nonPointer);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

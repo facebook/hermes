@@ -217,6 +217,8 @@ cl::opt<bool> ParseFlow(
     cl::desc("Parse Flow"),
     cl::init(false),
     cl::cat(CompilerCategory));
+#else
+const bool ParseFlow = false;
 #endif
 
 #if HERMES_PARSE_TS
@@ -225,7 +227,22 @@ cl::opt<bool> ParseTS(
     cl::desc("Parse TypeScript"),
     cl::init(false),
     cl::cat(CompilerCategory));
+#else
+const bool ParseTS = false;
 #endif
+
+cl::opt<bool> Typed(
+    "typed",
+    cl::desc("Enable typed mode"),
+    cl::init(true),
+    cl::cat(CompilerCategory));
+
+CLFlag StdGlobals(
+    'f',
+    "std-globals",
+    true,
+    "registration of standard globals",
+    CompilerCategory);
 
 cl::opt<unsigned> ErrorLimit(
     "ferror-limit",
@@ -407,6 +424,10 @@ std::shared_ptr<Context> createContext() {
 
   optimizationOpts.reusePropCache = cli::ReusePropCache;
 
+  // Auto enable static builtins in typed mode.
+  if (cli::Typed && cli::StaticBuiltins != cli::StaticBuiltinSetting::ForceOff)
+    cli::StaticBuiltins = cli::StaticBuiltinSetting::ForceOn;
+
   // When the setting is auto-detect, we will set the correct value after
   // parsing.
   optimizationOpts.staticBuiltins =
@@ -427,7 +448,7 @@ std::shared_ptr<Context> createContext() {
   //#define WARNING_CATEGORY(name, specifier, description) \
 //  context->getSourceErrorManager().setWarningStatus(   \
 //      Warning::name, cl::name##Warning);
-  //#include "hermes/Support/Warnings.def"
+  // #include "hermes/Support/Warnings.def"
 
   if (cli::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
@@ -443,16 +464,23 @@ std::shared_ptr<Context> createContext() {
 #endif
 
 #if HERMES_PARSE_FLOW
-  if (cli::ParseFlow) {
+  if (!cli::ParseFlow && !cli::ParseTS)
+    cli::ParseFlow = true;
+  if (cli::ParseFlow)
     context->setParseFlow(ParseFlowSetting::ALL);
-  }
 #endif
 
 #if HERMES_PARSE_TS
-  if (cli::ParseTS) {
+  if (!cli::ParseFlow && !cli::ParseTS)
+    cli::ParseTS = true;
+  if (cli::ParseTS)
     context->setParseTS(true);
-  }
 #endif
+
+  if (!cli::ParseFlow && cli::ParseTS && cli::Typed) {
+    llvh::errs() << "error: no typed dialect parser is configured\n";
+    return nullptr;
+  }
 
   // if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
   //   context->setDebugInfoSetting(DebugInfoSetting::ALL);
@@ -474,6 +502,7 @@ std::shared_ptr<Context> createContext() {
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
     sema::SemContext &semCtx,
+    flow::FlowContext *flowContext,
     const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
@@ -555,7 +584,8 @@ ESTree::NodePtr parseJS(
   //   return parsedAST;
   // }
 
-  if (!hermes::sema::resolveAST(*context, semCtx, parsedAST, ambientDecls)) {
+  if (!hermes::sema::resolveAST(
+          *context, semCtx, flowContext, parsedAST, ambientDecls)) {
     return nullptr;
   }
 
@@ -571,8 +601,9 @@ ESTree::NodePtr parseJS(
         cli::IncludeRawASTProp ? ESTreeRawProp::Include
                                : ESTreeRawProp::Exclude);
   }
-  if (cli::OutputLevel == OutputLevelKind::Sema)
-    semCtx.dump();
+  if (cli::OutputLevel == OutputLevelKind::Sema) {
+    sema::semDump(llvh::outs(), semCtx, flowContext, parsedAST);
+  }
 
   return parsedAST;
 }
@@ -589,24 +620,33 @@ bool compileFromCommandLineOptions() {
     return false;
 
   std::shared_ptr<Context> context = createContext();
+  if (!context)
+    return false;
 
   // A list of parsed global definition files.
   DeclarationFileListTy declFileList;
 
   // Load the runtime library.
-  if (!loadGlobalDefinition(
-          *context,
-          llvh::MemoryBuffer::getMemBuffer(libhermes),
-          declFileList)) {
-    return false;
+  if (cli::StdGlobals) {
+    if (!loadGlobalDefinition(
+            *context,
+            llvh::MemoryBuffer::getMemBuffer(libhermes),
+            declFileList)) {
+      return false;
+    }
   }
 
   Module M(context);
   sema::SemContext semCtx{*context};
+  flow::FlowContext flowContext{};
 
   // TODO: support input source map.
-  ESTree::NodePtr ast =
-      parseJS(context, semCtx, declFileList, std::move(fileBuf));
+  ESTree::NodePtr ast = parseJS(
+      context,
+      semCtx,
+      cli::Typed ? &flowContext : nullptr,
+      declFileList,
+      std::move(fileBuf));
   if (!ast) {
     return false;
   }
@@ -614,7 +654,7 @@ bool compileFromCommandLineOptions() {
       cli::OutputLevel < OutputLevelKind::CFG) {
     return true;
   }
-  generateIRFromESTree(ast, &M);
+  generateIRFromESTree(flowContext, ast, &M);
   // Bail out if there were any errors. We can't ensure that the module is in
   // a valid state.
   if (auto N = context->getSourceErrorManager().getErrorCount()) {

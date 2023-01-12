@@ -23,19 +23,22 @@ SemanticResolver::SemanticResolver(
     Context &astContext,
     sema::SemContext &semCtx,
     const DeclarationFileListTy &ambientDecls,
+    DeclCollectorMapTy *saveDecls,
     bool compile)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
       semCtx_(semCtx),
-      initialErrorCount_(sm_.getErrorCount()),
       kw_{astContext},
       ambientDecls_(ambientDecls),
+      saveDecls_(saveDecls),
       compile_(compile) {}
 
 bool SemanticResolver::run(ESTree::Node *rootNode) {
+  if (sm_.getErrorCount())
+    return false;
   visitESTreeNode(*this, rootNode);
-  return sm_.getErrorCount() == initialErrorCount_;
+  return sm_.getErrorCount() == 0;
 }
 
 void SemanticResolver::visit(ESTree::ProgramNode *node) {
@@ -165,15 +168,12 @@ void SemanticResolver::visit(ESTree::BlockStatementNode *node) {
     return visitESTreeChildren(*this, node);
   }
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
-          functionContext()->decls.getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII blockScope{*this, node};
+  ScopeRAII blockScope{*this, node};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
@@ -184,17 +184,14 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
 
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
-  {
-    ScopeRAII nameScope{*this, node};
-    if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
-            functionContext()->decls.getScopeDeclsForNode(node)) {
-      // Only create a lexical scope if there are declarations in it.
-      processDeclarations(*declsOpt);
-    }
-
-    for (ESTree::Node &c : node->_cases)
-      visitESTreeNode(*this, &c, node);
+  ScopeRAII nameScope{*this, node};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
+    processDeclarations(*declsOpt);
   }
+
+  for (ESTree::Node &c : node->_cases)
+    visitESTreeNode(*this, &c, node);
 }
 
 void SemanticResolver::visitForInOf(
@@ -231,15 +228,12 @@ void SemanticResolver::visitForInOf(
     validateAssignmentTarget(left);
   }
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
-          functionContext()->decls.getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII nameScope{*this, scopeDeco};
+  ScopeRAII nameScope{*this, scopeDeco};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::ForStatementNode *node) {
@@ -248,15 +242,12 @@ void SemanticResolver::visit(ESTree::ForStatementNode *node) {
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
-          functionContext()->decls.getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII nameScope{*this, node};
+  ScopeRAII nameScope{*this, node};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::DoWhileStatementNode *node) {
@@ -396,6 +387,8 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::WithStatementNode *node) {
+  sm_.error(node->getStartLoc(), "with statement is not supported");
+
   visitESTreeChildren(*this, node);
 
   uint32_t depth = curScope_->depth;
@@ -568,7 +561,40 @@ void SemanticResolver::visit(PrivateNameNode *node) {
 void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
   if (compile_)
     sm_.error(node->getSourceRange(), "private properties are not supported");
-  visitESTreeChildren(*this, node);
+  // Only visit the init expression, since it needs to be resolved.
+  if (node->_value) {
+    sm_.error(
+        node->getSourceRange(), "property initialization is not supported yet");
+    if (0) {
+      // TODO: visit the properties in the context of a synthetic method.
+      visitESTreeNode(*this, node->_value, node);
+    }
+  }
+}
+
+void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
+  // If computed property, the key expression needs to be resolved.
+  if (node->_computed)
+    visitESTreeNode(*this, node->_key, node);
+
+  // Visit the init expression, since it needs to be resolved.
+  if (node->_value) {
+    sm_.error(
+        node->getSourceRange(), "property initialization is not supported yet");
+    if (0) {
+      // TODO: visit the properties in the context of a synthetic method.
+      visitESTreeNode(*this, node->_value, node);
+    }
+  }
+}
+
+void SemanticResolver::visit(ESTree::MethodDefinitionNode *node) {
+  // If computed property, the key expression needs to be resolved.
+  if (node->_computed)
+    visitESTreeNode(*this, node->_key, node);
+
+  // Visit the body.
+  visitESTreeNode(*this, node->_value, node);
 }
 
 void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
@@ -636,6 +662,10 @@ void SemanticResolver::visit(CoverRestElementNode *node) {
 #if HERMES_PARSE_FLOW
 void SemanticResolver::visit(CoverTypedIdentifierNode *node) {
   sm_.error(node->getSourceRange(), "typecast not allowed in this context");
+}
+
+void SemanticResolver::visit(TypeAliasNode *node) {
+  // Do nothing.
 }
 #endif
 
@@ -840,14 +870,22 @@ Decl *SemanticResolver::checkIdentifierResolved(
 }
 
 void SemanticResolver::processCollectedDeclarations(ESTree::Node *scopeNode) {
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
-          functionContext()->decls.getScopeDeclsForNode(scopeNode)) {
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(scopeNode)) {
     processDeclarations(*declsOpt);
   }
 }
 
 void SemanticResolver::processDeclarations(const ScopeDecls &decls) {
   for (ESTree::Node *decl : decls) {
+    if (HERMES_PARSE_FLOW) {
+      if (llvh::isa<ESTree::TypeAliasNode>(decl))
+        continue;
+    }
+    if (HERMES_PARSE_TS) {
+      if (llvh::isa<ESTree::TSTypeAliasDeclarationNode>(decl))
+        continue;
+    }
     llvh::SmallVector<ESTree::IdentifierNode *, 4> idents{};
     Decl::Kind kind = extractIdentsFromDecl(decl, idents);
 
@@ -1303,6 +1341,7 @@ FunctionContext::FunctionContext(
     bool strict,
     SourceVisibility sourceVisibility)
     : resolver_(resolver),
+      prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
           node,
           semInfo,
@@ -1319,16 +1358,19 @@ FunctionContext::FunctionContext(
             resolver.recursionDepth_ = 0;
             resolver.recursionDepthExceeded(n);
           })) {
-  resolver.functionStack_.push_back(this);
+  resolver.curFunctionContext_ = this;
   node->setSemInfo(this->semInfo);
 }
 
 FunctionContext::~FunctionContext() {
+  // If requested, save the collected declarations.
+  if (resolver_.saveDecls_)
+    resolver_.saveDecls_->try_emplace(node, std::move(decls));
+
   assert(
       resolver_.curFunctionInfo() == semInfo &&
       "FunctionContext out of sync with SemContext");
-  // If not the global function, pop it.
-  resolver_.functionStack_.pop_back();
+  resolver_.curFunctionContext_ = prevContext_;
 }
 
 UniqueString *FunctionContext::getFunctionName() const {

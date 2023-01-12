@@ -102,7 +102,7 @@ class ScopedFunctionPromoter {
 
 void ScopedFunctionPromoter::run(FunctionLikeNode *funcNode) {
   llvh::ArrayRef<Node *> decls =
-      resolver_.functionContext()->decls.getScopedFuncDecls();
+      resolver_.functionContext()->decls->getScopedFuncDecls();
 
   // Populate the sets.
   for (Node *node : decls) {
@@ -121,7 +121,7 @@ void ScopedFunctionPromoter::visitScope(Node *node) {
 
 void ScopedFunctionPromoter::processDeclarations(Node *scope) {
   auto declsOpt =
-      resolver_.functionContext()->decls.getScopeDeclsForNode(scope);
+      resolver_.functionContext()->decls->getScopeDeclsForNode(scope);
   if (!declsOpt) {
     return;
   }
@@ -193,10 +193,10 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     // This block-scoped function declaration can (and should) be promoted.
     // 1. Don't add it to the new_decls list.
     // 2. Add it to the function scope list.
-    resolver_.functionContext()->decls.addScopeDeclForFunc(funcDecl);
+    resolver_.functionContext()->decls->addScopeDeclForFunc(funcDecl);
   }
 
-  resolver_.functionContext()->decls.setScopeDeclsForNode(
+  resolver_.functionContext()->decls->setScopeDeclsForNode(
       scope, std::move(newDecls));
 }
 
@@ -250,7 +250,7 @@ Decl::Kind ScopedFunctionPromoter::extractDeclaredIdents(
 void promoteScopedFuncDecls(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *funcNode) {
-  if (resolver.functionContext()->decls.getScopedFuncDecls().empty()) {
+  if (resolver.functionContext()->decls->getScopedFuncDecls().empty()) {
     // No scoped function declarations, nothing to promote.
     return;
   }

@@ -19,6 +19,10 @@ namespace hermes {
 
 using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
+namespace flow {
+class FlowContext;
+}
+
 namespace hbc {
 
 struct LazyCompilationData {
@@ -56,6 +60,12 @@ struct LazyCompilationData {
   bool paramAwait;
 };
 } // namespace hbc
+
+/// Lowers an ESTree program into Hermes IR in \p M.
+void generateIRFromESTree(
+    flow::FlowContext &flowContext,
+    ESTree::NodePtr node,
+    Module *M);
 
 /// Lowers an ESTree program into Hermes IR in \p M.
 void generateIRFromESTree(ESTree::NodePtr node, Module *M);
