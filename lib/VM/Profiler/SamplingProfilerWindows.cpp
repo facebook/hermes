@@ -28,7 +28,11 @@ struct SamplingProfilerWindows : SamplingProfiler {
         GetCurrentThreadId());
   }
 
-  ~SamplingProfilerWindows() override = default;
+  ~SamplingProfilerWindows() override {
+    // TODO(T125910634): re-introduce the requirement for destroying the
+    // sampling profiler on the same thread in which it was created.
+    Sampler::get()->unregisterRuntime(this);
+  }
 
   /// Thread that this profiler instance represents. This can currently only be
   /// set from the constructor of SamplingProfiler, so we need to construct a
