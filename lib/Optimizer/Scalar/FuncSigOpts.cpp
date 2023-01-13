@@ -75,7 +75,13 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   llvh::SmallVector<std::pair<Literal *, bool>, 8> args(
       numFormalParam, {undef, false});
   // A list of unused arguments passed by the caller.
-  llvh::SmallVector<std::pair<BaseCallInst *, unsigned>, 8> unusedParams;
+  struct UnusedArg {
+    BaseCallInst *call;
+    unsigned idx;
+    /// null if idx doesn't represent a formal arg.
+    JSDynamicParam *param;
+  };
+  llvh::SmallVector<UnusedArg, 8> unusedParams;
 
   // For each call site:
   for (BaseCallInst *caller : callsites) {
@@ -122,7 +128,12 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       // Remember which arguments are unused by the callee (parameters with no
       // users and undeclared parameters).
       if (i >= numFormalParam || !F->getJSDynamicParam(i)->hasUsers()) {
-        unusedParams.push_back({caller, i});
+        // Defer setting the type of the JSDynamicParam until we actually set
+        // the arg to undefined, to keep all the changes in the same place.
+        unusedParams.push_back(
+            {caller,
+             i,
+             i < numFormalParam ? F->getJSDynamicParam(i) : nullptr});
       }
     }
   }
@@ -160,11 +171,13 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   // Replace all unused arguments with undef.
   for (auto &arg : unusedParams) {
-    Value *prevArg = arg.first->getArgument(arg.second);
+    Value *prevArg = arg.call->getArgument(arg.idx);
     if (!llvh::isa<Literal>(prevArg))
-      toRedo.insert(arg.first->getParent()->getParent());
+      toRedo.insert(arg.call->getParent()->getParent());
 
-    arg.first->setArgument(undef, arg.second);
+    arg.call->setArgument(undef, arg.idx);
+    if (arg.param)
+      arg.param->setType(Type::createUndefined());
     NumArgsOpt++;
   }
 
