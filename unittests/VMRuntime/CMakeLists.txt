@@ -7,18 +7,19 @@
 # builds if they have been globally enabled.
 set(CMAKE_UNITY_BUILD OFF)
 
+# Some tests are disabled due to needing HBC to run in Static Hermes.
 set(RTSources
   AlignedHeapSegmentTest.cpp
   AlignedStorageTest.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
   BigIntPrimitiveTest.cpp
-  BytecodeProviderTest.cpp
+  # BytecodeProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
-  CodeCoverageProfilerTest.cpp
+  # CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   CrashManagerTest.cpp
   DateUtilTest.cpp
@@ -35,13 +36,13 @@ set(RTSources
   GCOOMTest.cpp
   GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
-  HeapSnapshotTest.cpp
+  # HeapSnapshotTest.cpp
   HermesValueTest.cpp
   HiddenClassTest.cpp
   IdentifierTableTest.cpp
   InstrumentationAPITest.cpp
   InternalPropertiesTest.cpp
-  InterpreterTest.cpp
+  # InterpreterTest.cpp
   IRInstrumentationTest.cpp
   JSLibTest.cpp
   JSONParseTest.cpp
@@ -50,19 +51,19 @@ set(RTSources
   NativeFunctionTest.cpp
   NativeStateTest.cpp
   MarkBitArrayNCTest.cpp
-  ObjectBufferTest.cpp
+  # ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
-  SamplingHeapProfilerTest.cpp
-  SamplingProfilerPosixTest.cpp
+  # SamplingHeapProfilerTest.cpp
+  # SamplingProfilerPosixTest.cpp
   SegmentedArrayTest.cpp
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp
-  StaticBuiltinsTest.cpp
-  StackTracesTreeTest.cpp
+  # StaticBuiltinsTest.cpp
+  # StackTracesTreeTest.cpp
   StorageProviderTest.cpp
   StringBuilderTest.cpp
   StringPrimitiveTest.cpp

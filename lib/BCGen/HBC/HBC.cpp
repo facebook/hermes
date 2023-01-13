@@ -34,6 +34,7 @@
 using namespace hermes;
 using namespace hbc;
 
+#if 0
 namespace {
 
 // If we have less than this number of instructions in a Function, and we're
@@ -138,6 +139,7 @@ UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
 }
 
 } // namespace
+#endif
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
@@ -164,6 +166,9 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     hermes::OptValue<uint32_t> segment,
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
+  hermes_fatal("Generating HBC bytecode disabled in Static Hermes");
+
+#if 0
   PerfSection perf("Bytecode Generation");
   lowerIR(M, options);
 
@@ -321,6 +326,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   }
 
   return BMGen.generate();
+#endif
 }
 
 std::unique_ptr<BytecodeModule> hbc::generateBytecode(
