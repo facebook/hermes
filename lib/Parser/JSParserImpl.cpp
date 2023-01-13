@@ -4889,10 +4889,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
 
   ESTree::Node *returnType = nullptr;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRet = parseTypeAnnotationFlow(annotStart);
+    auto optRet = parseTypeAnnotation(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;
