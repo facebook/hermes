@@ -439,6 +439,10 @@ class TypeInferenceImpl {
   /// of the call graph provider.
   CallGraphProvider *cgp_;
 
+  /// Map from various values to their types prior to the pass.
+  /// Store types for Instruction, Parameter, Variable, Function.
+  llvh::DenseMap<Value *, Type> prePassTypes_{};
+
  public:
   /// Run type inference on every instruction in the module.
   /// \return true when some types were changed.
@@ -965,37 +969,65 @@ class TypeInferenceImpl {
                << " call sites.\n");
     propagateArgs(callsites, F);
   }
-};
 
-/// Clear every type for instructions, return types, parameters and variables
-/// in the function provided.
-static void clearTypesInFunction(Function *f) {
-  // Instructions
-  for (auto &bbit : *f) {
-    for (auto &it : bbit) {
-      Instruction *inst = &it;
-      OptValue<Type> inherent = inst->getInherentType();
-      // Clear to the inherent type if possible.
-      inst->setType(inherent ? *inherent : Type::createNoType());
+  /// Clear every type for instructions, return types, parameters and variables
+  /// in the function provided.
+  /// Store the pre-pass types in prePassTypes_.
+  void clearTypesInFunction(Function *f) {
+    // Instructions
+    for (auto &bbit : *f) {
+      for (auto &it : bbit) {
+        Instruction *inst = &it;
+        OptValue<Type> inherent = inst->getInherentType();
+        prePassTypes_.try_emplace(inst, inst->getType());
+        // Clear to the inherent type if possible.
+        inst->setType(inherent ? *inherent : Type::createNoType());
+      }
     }
+    // Parameters
+    for (auto *P : f->getJSDynamicParams()) {
+      prePassTypes_.try_emplace(P, P->getType());
+      P->setType(Type::createNoType());
+    }
+    // Variables
+    for (auto *V : f->getFunctionScope()->getVariables()) {
+      prePassTypes_.try_emplace(V, V->getType());
+      V->setType(Type::createNoType());
+    }
+    // Return type
+    prePassTypes_.try_emplace(f, f->getType());
+    f->setType(Type::createNoType());
   }
-  // Parameters
-  for (auto *P : f->getJSDynamicParams())
-    P->setType(Type::createNoType());
-  // Variables
-  for (auto *V : f->getFunctionScope()->getVariables()) {
-    V->setType(Type::createNoType());
+
+  /// Ensure that the type of \p val is not wider than its type prior to the
+  /// pass by checking against the pre-pass type and intersecting the type with
+  /// it when the pre-pass type is different than \p val's type.
+  /// \return true when the type of \p val was changed.
+  bool checkAndSetPrePassType(Value *val) {
+    auto it = prePassTypes_.find(val);
+    if (it == prePassTypes_.end()) {
+      return false;
+    }
+    if (it->second != val->getType()) {
+      Type intersection = Type::intersectTy(it->second, val->getType());
+      // Narrow the type to include what we knew before the pass.
+      LLVM_DEBUG(
+          llvh::errs() << "Intersecting type of " << val->getKindStr()
+                       << " from " << val->getType() << " to " << intersection
+                       << '\n');
+      val->setType(intersection);
+      return true;
+    }
+    return false;
   }
-  // Return type
-  f->setType(Type::createNoType());
-}
+};
 
 bool TypeInferenceImpl::runOnFunction(Function *F) {
   LLVM_DEBUG(
       dbgs() << "\nStart Type Inference on " << F->getInternalName().c_str()
              << "\n");
 
-  // Begin by clearing the existing types.
+  // Begin by clearing the existing types and storing pre-pass types.
   // This prevents us from relying on the previous inference pass's type info,
   // which can be too loose (if things have been simplified, etc.).
   clearTypesInFunction(F);
@@ -1043,6 +1075,25 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
       LLVM_DEBUG(dbgs() << "Inferred variable type\n");
     localChanged |= inferredVarType;
   } while (localChanged);
+
+  // Ensure that no types were widened.
+  // Do this as a post-process step at the end to avoid possible infinite loops
+  // when the inferInstruction types widen past the pre-pass types and they keep
+  // moving back and forth.
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      checkAndSetPrePassType(&I);
+    }
+  }
+  checkAndSetPrePassType(F);
+  for (auto *param : F->getJSDynamicParams()) {
+    checkAndSetPrePassType(param);
+  }
+  if (!F->isGlobalScope()) {
+    for (auto *V : F->getFunctionScope()->getVariables()) {
+      checkAndSetPrePassType(V);
+    }
+  }
 
 #ifndef NDEBUG
   // Validate that all instructions that need to have types do.
