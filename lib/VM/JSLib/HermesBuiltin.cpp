@@ -251,12 +251,8 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     Handle<JSObject> target,
     Handle<JSObject> from,
     Handle<JSObject> excludedItems) {
-  assert(
-      from->isProxyObject() &&
-      "copyDataPropertiesSlowPath_RJS is only for Proxy");
-
   // 5. Let keys be ? from.[[OwnPropertyKeys]]().
-  auto cr = JSProxy::getOwnPropertyKeys(
+  auto cr = JSObject::getOwnPropertyKeys(
       from,
       runtime,
       OwnKeysFlags()
@@ -310,15 +306,17 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
 
     //   i. Let desc be ? from.[[GetOwnProperty]](nextKey).
     ComputedPropertyDescriptor desc;
-    CallResult<bool> crb =
-        JSProxy::getOwnProperty(from, runtime, nextKeyHandle, desc, nullptr);
+    CallResult<bool> crb = JSObject::getOwnComputedDescriptor(
+        from, runtime, nextKeyHandle, tmpSymbolStorage, desc);
     if (LLVM_UNLIKELY(crb == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
-    if (*crb && desc.flags.enumerable) {
+    // TODO(T141997867), move this special case behavior for host objects to
+    // getOwnComputedDescriptor.
+    if ((*crb && desc.flags.enumerable) || from->isHostObject()) {
       //     1. Let propValue be ? Get(from, nextKey).
       CallResult<PseudoHandle<>> crv =
-          JSProxy::getComputed(from, runtime, nextKeyHandle, from);
+          JSObject::getComputed_RJS(from, runtime, nextKeyHandle);
       if (LLVM_UNLIKELY(crv == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
       propValueHandle = std::move(*crv);
@@ -380,7 +378,13 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
       (!excludedItems || !excludedItems->isProxyObject()) &&
       "excludedItems internal List is a Proxy");
 
-  if (source->isProxyObject()) {
+  // We cannot use the fast path if the object is a proxy, host object, or when
+  // there could potentially be an accessor defined on the object. This is
+  // because in order to use JSObject::forEachOwnPropertyWhile, we must not
+  // modify the underlying property map or hidden class. However, if we have an
+  // accessor, we cannot guarantee that condition, so we use the slow path.
+  if (source->isProxyObject() || source->isHostObject() ||
+      source->getClass(runtime)->getMayHaveAccessor()) {
     return copyDataPropertiesSlowPath_RJS(
         runtime, target, source, excludedItems);
   }
@@ -458,12 +462,9 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
             return true;
         }
 
-        auto cr =
-            JSObject::getNamedPropertyValue_RJS(source, runtime, source, desc);
-        if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
-          return false;
-
-        valueHandle = std::move(*cr);
+        SmallHermesValue shv =
+            JSObject::getNamedSlotValueUnsafe(*source, runtime, desc);
+        valueHandle = runtime.makeHandle(shv.unboxToHV(runtime));
 
         // sym can be an index-like property, so we have to bypass the assert in
         // defineOwnPropertyInternal.

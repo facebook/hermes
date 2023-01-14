@@ -20,7 +20,7 @@ print('toLocaleString');
 // US-LABEL: toLocaleString
 // TR-LABEL: toLocaleString
 print(new Date(112).toLocaleString());
-// US-NEXT: Dec 31, 1969{{.+}}7:00:00 PM
+// US-NEXT: Dec 31, 1969{{.+}}7:00:00{{( | )}}PM
 // TR-NEXT: 31 Ara 1969{{.+}}19:00:00
 
 print('toLocaleDateString');
@@ -34,7 +34,7 @@ print('toLocaleTimeString');
 // US-LABEL: toLocaleTimeString
 // TR-LABEL: toLocaleTimeString
 print(new Date(112).toLocaleTimeString());
-// US-NEXT: 7:00:00 PM
+// US-NEXT: 7:00:00{{( | )}}PM
 // TR-NEXT: 19:00:00
 
 print('Invalid');

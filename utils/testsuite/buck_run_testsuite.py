@@ -18,16 +18,23 @@ def main():
     parser = get_arg_parser()
     args = parser.parse_args()
     with tempfile.TemporaryDirectory() as binary_dir:
+        rsc_package = "testsuite"
+        icudt_filename = (
+            pkg_resources.resource_string(rsc_package, "icudt_filename")
+            .decode("utf-8")
+            .strip()
+        )
+
         # Copy binaries from pkg_resources into the temporary directory.
         resources = [
             ("hermes", "hermes"),
             ("hermesc", "hermesc"),
             (args.hvm_filename, args.hvm_filename),
-            ("icudt/stubdata/icudt55l.dat", "icudt55l.dat"),
+            ("icudt_dir/stubdata/" + icudt_filename, icudt_filename),
         ]
         for rsc, out_name in resources:
             with open(os.path.join(binary_dir, out_name), "w+b") as f:
-                shutil.copyfileobj(pkg_resources.resource_stream("testsuite", rsc), f)
+                shutil.copyfileobj(pkg_resources.resource_stream(rsc_package, rsc), f)
                 st = os.stat(f.name)
                 os.chmod(f.name, st.st_mode | stat.S_IEXEC)
         return run(
