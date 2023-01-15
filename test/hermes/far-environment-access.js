@@ -7,7 +7,7 @@
 
 // RUN: (%hermesc -O -target=HBC %s --dump-bytecode 2>&1 || true) | %FileCheck --match-full-lines %s
 // RUN: (%hermes -O -target=HBC %s 2>&1 || true) | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -target=HBC %s -lazy 2>&1 | %FileCheck --match-full-lines %s --check-prefix=LAZY
+// DISABLED: %hermes -O -target=HBC %s -lazy 2>&1 | %FileCheck --match-full-lines %s --check-prefix=LAZY
 // XFAIL: windows
 // UNSUPPORTED: ubsan
 

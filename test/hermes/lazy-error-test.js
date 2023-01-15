@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
+// REQUIRES: lazy
 
 function foo() {
     break;
