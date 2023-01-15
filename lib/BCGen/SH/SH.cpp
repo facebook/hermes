@@ -1749,6 +1749,7 @@ static char s_prop_cache[];
        << ".unit_name = \"sh_compiled\" };\n"
        << R"(
 int main(int argc, char **argv) {
+  _SH_MODEL();
   SHRuntime *shr = _sh_init(argc, argv);
   bool success = _sh_initialize_units(shr, 1, &s_this_unit);
   _sh_done(shr);
