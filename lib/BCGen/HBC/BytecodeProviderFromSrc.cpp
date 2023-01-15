@@ -7,10 +7,11 @@
 
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
@@ -204,10 +205,11 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     parserMode = parser::LazyParse;
   }
 
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{*context};
   parser::JSParser parser(*context, fileBufId, parserMode);
   auto parsed = parser.parse();
-  if (!parsed || !hermes::sem::validateAST(*context, semCtx, *parsed)) {
+  if (!parsed ||
+      !hermes::sema::resolveAST(*context, semCtx, *parsed, declFileList)) {
     return {nullptr, getErrorString()};
   }
   // If we are using lazy parse mode, we should have already detected the 'use
@@ -222,7 +224,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   }
 
   Module M(context);
-  hermes::generateIRFromESTree(parsed.getValue(), &M, declFileList, scopeChain);
+  hermes::generateIRFromESTree(parsed.getValue(), &M);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }

@@ -10,7 +10,6 @@
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
@@ -29,6 +28,8 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
@@ -763,7 +764,8 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
-    sem::SemContext &semCtx,
+    sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
     std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
@@ -843,7 +845,7 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
-  if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
+  if (!hermes::sema::resolveAST(*context, semCtx, parsedAST, ambientDecls)) {
     return nullptr;
   }
 
@@ -1523,8 +1525,8 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 /// printed.
 bool generateIRForSourcesAsCJSModules(
     Module &M,
-    sem::SemContext &semCtx,
-    const DeclarationFileListTy &declFileList,
+    sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     SegmentTable fileBufs,
     SourceMapGenerator *sourceMapGen) {
   auto context = M.shareContext();
@@ -1543,11 +1545,12 @@ bool generateIRForSourcesAsCJSModules(
   // (main) module, from which other modules may be `require`d.
   auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
 
-  auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
+  auto *globalAST =
+      parseJS(context, semCtx, ambientDecls, std::move(globalMemBuffer));
   if (generateIR) {
     // If we aren't planning to do anything with the IR,
     // don't attempt to generate it.
-    generateIRFromESTree(globalAST, &M, declFileList, {});
+    generateIRFromESTree(globalAST, &M);
   }
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
@@ -1587,6 +1590,7 @@ bool generateIRForSourcesAsCJSModules(
       auto *ast = parseJS(
           context,
           semCtx,
+          ambientDecls,
           std::move(fileBuf),
           /*sourceMap*/ nullptr,
           /*sourceMapTranslator*/ nullptr,
@@ -1603,8 +1607,7 @@ bool generateIRForSourcesAsCJSModules(
           moduleInSegment.id,
           llvh::sys::path::remove_leading_dotslash(filename),
           &M,
-          topLevelFunction,
-          declFileList);
+          topLevelFunction);
     }
   }
 
@@ -1828,7 +1831,7 @@ CompileResult processSourceFiles(
   }
 
   Module M(context);
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{*context};
 
   if (context->getUseCJSModules()) {
     // Allow the IR generation function to populate inputSourceMaps to ensure
@@ -1868,6 +1871,7 @@ CompileResult processSourceFiles(
     ESTree::NodePtr ast = parseJS(
         context,
         semCtx,
+        declFileList,
         std::move(mainFileBuf.file),
         std::move(sourceMap),
         sourceMapTranslator);
@@ -1877,7 +1881,7 @@ CompileResult processSourceFiles(
     if (cl::DumpTarget < DumpIR) {
       return Success;
     }
-    generateIRFromESTree(ast, &M, declFileList, {});
+    generateIRFromESTree(ast, &M);
   }
 
   // Bail out if there were any errors. We can't ensure that the module is in

@@ -6,8 +6,9 @@
  */
 
 #include "../Parser/DiagContext.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 
 #include "gtest/gtest.h"
 
@@ -19,72 +20,85 @@ namespace {
 /// Left side of assignment must be an LValue.
 TEST(ValidatorTest, TestBadAssignmentLValue) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "a + 1 = 10;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(sema::resolveAST(ctx, semCtx, *parsed));
   EXPECT_EQ(1, diag.getErrCount());
 }
 
 /// For-in control expression must be an LValue.
 TEST(ValidatorTest, TestBadForLValue) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "for(a + 1 in x);");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   EXPECT_EQ(1, diag.getErrCount());
 }
 
 /// Test an anonymous break outside of a loop.
 TEST(ValidatorTest, UnnamedBreakLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "break; for(;;) break; break;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(2, diag.getErrCountClear());
 }
 
 /// Test an anonymous continue outside of a loop.
 TEST(ValidatorTest, UnnamedContinueLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "continue;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
+  ASSERT_EQ(1, diag.getErrCountClear());
+}
+
+/// Test an anonymous continue outside of a loop.
+TEST(ValidatorTest, ContinueInASwitchTest) {
+  Context ctx;
+  sema::SemContext semCtx{ctx};
+  DiagContext diag(ctx);
+  JSParser parser(ctx, "switch(1) { case 1: continue; }");
+  auto parsed = parser.parse();
+  ASSERT_TRUE(parsed.hasValue());
+
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(1, diag.getErrCountClear());
 }
 
 /// Test a continue with a block label.
 TEST(ValidatorTest, ContinueWithBlockLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "label1: { continue label1; }");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(1, diag.getErrCountClear());
 }
 
 /// Test that multiple labels are correctly attached to the same statement.
 TEST(ValidatorTest, ChainedNamedLabelsTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(
       ctx,
@@ -93,13 +107,13 @@ TEST(ValidatorTest, ChainedNamedLabelsTest) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_TRUE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_TRUE(resolveAST(ctx, semCtx, *parsed));
 }
 
 /// Duplicated label in the scope of the previous one.
 TEST(ValidatorTest, DuplicateNamedLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(
       ctx,
@@ -108,43 +122,43 @@ TEST(ValidatorTest, DuplicateNamedLabelTest) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(2, diag.getErrCountClear());
 }
 
 TEST(ValidatorTest, CorrectDuplicateNamedLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(
       ctx, "label1: { break label1; } label1: for(;;) break label1;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
-  ASSERT_TRUE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_TRUE(resolveAST(ctx, semCtx, *parsed));
 }
 
 TEST(ValidatorTest, ScopeNamedLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(ctx, "label1: ; for(;;) break label1;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(1, diag.getErrCountClear());
 }
 
 TEST(ValidatorTest, NamedBreakLabelTest) {
   Context ctx;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{ctx};
   DiagContext diag(ctx);
   JSParser parser(
       ctx, "break exitLoop; exitLoop: for(;;) break exitLoop; break exitLoop;");
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  ASSERT_FALSE(validateAST(ctx, semCtx, *parsed));
+  ASSERT_FALSE(resolveAST(ctx, semCtx, *parsed));
   ASSERT_EQ(2, diag.getErrCountClear());
 }
 
@@ -152,7 +166,7 @@ void assertFunctionLikeSourceVisibility(
     llvh::Optional<ESTree::FunctionLikeNode *> funcLikeNode,
     SourceVisibility sourceVisibility) {
   ASSERT_TRUE(funcLikeNode.hasValue());
-  ASSERT_EQ((*funcLikeNode)->sourceVisibility, sourceVisibility);
+  ASSERT_EQ((*funcLikeNode)->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 void assertFirstNodeAsFunctionLikeWithSourceVisibility(
@@ -164,7 +178,7 @@ void assertFirstNodeAsFunctionLikeWithSourceVisibility(
   auto *funcLikeNode =
       llvh::cast<ESTree::FunctionLikeNode>(&programNode->_body.front());
 
-  ASSERT_EQ(funcLikeNode->sourceVisibility, sourceVisibility);
+  ASSERT_EQ(funcLikeNode->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 void assertSecondNodeAsFunctionLikeWithSourceVisibility(
@@ -178,25 +192,23 @@ void assertSecondNodeAsFunctionLikeWithSourceVisibility(
   ASSERT_TRUE(llvh::isa<ESTree::FunctionLikeNode>(*it));
   auto *funcLikeNode = llvh::cast<ESTree::FunctionLikeNode>(it);
 
-  ASSERT_EQ(funcLikeNode->sourceVisibility, sourceVisibility);
+  ASSERT_EQ(funcLikeNode->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 TEST(ValidatorTest, SourceVisibilityTest) {
   Context context;
-  sem::SemContext semCtx{};
+  sema::SemContext semCtx{context};
   // Top-level program node.
   {
     JSParser parser(context, "");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::Default);
   }
   {
     JSParser parser(context, "'show source'");
     auto parsed = parser.parse();
-    // source visibility is set to default before semantic validation.
-    assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::Default);
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     // source visibility is correctly updated after semantic validation.
     assertFunctionLikeSourceVisibility(*parsed, SourceVisibility::ShowSource);
   }
@@ -204,14 +216,14 @@ TEST(ValidatorTest, SourceVisibilityTest) {
   {
     JSParser parser(context, "function func (a, b) { return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFirstNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::Default);
   }
   {
     JSParser parser(context, "function func (a, b) { 'sensitive'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFirstNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::Sensitive);
   }
@@ -219,7 +231,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
     JSParser parser(
         context, "function func (a, b) { 'hide source'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFirstNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::HideSource);
   }
@@ -227,7 +239,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
     JSParser parser(
         context, "function func (a, b) { 'show source'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFirstNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::ShowSource);
   }
@@ -235,7 +247,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
   {
     JSParser parser(context, "function foo(x) { 'sensitive' }function bar(){}");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertFirstNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::Sensitive);
     assertSecondNodeAsFunctionLikeWithSourceVisibility(
@@ -247,7 +259,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
     JSParser parser(
         context, "'show source'; function func (a, b) { return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertSecondNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::ShowSource);
   }
@@ -257,7 +269,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
         context,
         "'show source'; function func (a, b) { 'hide source'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertSecondNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::HideSource);
   }
@@ -267,7 +279,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
         context,
         "'hide source'; function func (a, b) { 'show source'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertSecondNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::HideSource);
   }
@@ -277,7 +289,7 @@ TEST(ValidatorTest, SourceVisibilityTest) {
         context,
         "'hide source'; function func (a, b) { 'sensitive'; return 10 }");
     auto parsed = parser.parse();
-    validateAST(context, semCtx, *parsed);
+    resolveAST(context, semCtx, *parsed);
     assertSecondNodeAsFunctionLikeWithSourceVisibility(
         parsed, SourceVisibility::Sensitive);
   }

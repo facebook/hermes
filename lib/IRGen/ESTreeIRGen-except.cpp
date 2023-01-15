@@ -59,11 +59,8 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
           auto *catchClauseNode =
               llvh::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
-          // Catch takes a exception variable, hence we need to create a new
-          // scope for it.
-          NameTableScopeTy newScope(nameTable_);
-
           Builder.setLocation(tryStmt->_handler->getDebugLoc());
+          emitScopeDeclarations(catchClauseNode->getScope());
           prepareCatch(catchClauseNode->_param);
 
           genStatement(catchClauseNode->_body);
@@ -90,41 +87,10 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
   auto *catchInst = Builder.createCatchInst();
 
-  if (!catchParam) {
-    // Optional catch binding allows us to emit no extra code for the catch.
-    return catchInst;
-  }
+  // Optional catch binding allows us to emit no extra code for the catch.
+  if (catchParam)
+    createLRef(catchParam, true).emitStore(catchInst);
 
-  if (!llvh::isa<ESTree::IdentifierNode>(catchParam)) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        catchParam->getSourceRange(),
-        Twine("Destructuring in catch parameters is currently unsupported"));
-    return nullptr;
-  }
-
-  auto catchVariableName =
-      getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
-
-  // Generate a unique catch variable name and use this name for IRGen purpose
-  // only. The variable lookup in the catch clause will continue to be done
-  // using the declared name.
-  auto uniquedCatchVariableName =
-      genAnonymousLabelName(catchVariableName.str());
-
-  auto errorVar = Builder.createVariable(
-      curFunction()->function->getFunctionScope(),
-      Variable::DeclKind::Var,
-      uniquedCatchVariableName);
-
-  /// Insert the synthesized variable into the function name table, so it can
-  /// be looked up internally.
-  nameTable_.insertIntoScope(
-      &curFunction()->scope, errorVar->getName(), errorVar);
-
-  // Alias the lexical name to the synthesized variable.
-  nameTable_.insert(catchVariableName, errorVar);
-
-  emitStore(Builder, catchInst, errorVar, true);
   return catchInst;
 }
 

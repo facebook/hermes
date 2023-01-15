@@ -16,6 +16,7 @@ enum class OutputLevelKind {
   None,
   AST,
   TransformedAST,
+  Sema,
   CFG,
   IR,
   LIR,

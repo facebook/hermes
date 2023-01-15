@@ -6,9 +6,10 @@
  */
 
 #include "hermes/AST/Context.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/Parser/FlowHelpers.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -93,8 +94,8 @@ extern "C" ParseResult *hermesParse(
   serialize(*parsedJs, &context->getSourceErrorManager(), *result, tokens);
 
   // Run semantic validation after AST has been serialized
-  sem::SemContext semContext{};
-  validateASTForParser(*context, semContext, *parsedJs);
+  sema::SemContext semContext{*context};
+  resolveASTForParser(*context, semContext, *parsedJs);
 
   // Return first error if errors are detected during semantic validation
   if (diagHandler.hasError()) {

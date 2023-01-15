@@ -6,12 +6,12 @@
  */
 
 #include "TestHelpers.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
-#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Utils/Options.h"
 #include "llvh/Support/SHA1.h"
 
@@ -34,16 +34,15 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   parser::JSParser jsParser(*context, source);
   auto parsed = jsParser.parse();
   assert(parsed.hasValue() && "Failed to parse source");
-  sem::SemContext semCtx{};
-  auto validated = validateAST(*context, semCtx, *parsed);
+  sema::SemContext semCtx{*context};
+  auto validated = resolveAST(*context, semCtx, *parsed);
   (void)validated;
   assert(validated && "Failed to validate source");
   auto *ast = parsed.getValue();
 
   /* Generate IR */
   Module M(context);
-  DeclarationFileListTy declFileList;
-  hermes::generateIRFromESTree(ast, &M, declFileList, {});
+  hermes::generateIRFromESTree(ast, &M);
 
   /* Generate bytecode module */
   auto bytecodeGenOpts = BytecodeGenerationOptions::defaults();
