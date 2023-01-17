@@ -20,10 +20,10 @@
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {

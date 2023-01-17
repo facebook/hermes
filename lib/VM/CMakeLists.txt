@@ -164,6 +164,7 @@ endif()
 set(link_libs
   hermesADT
   hermesInst
+  hermesRegex
   hermesSupport
   hermesPlatform
   hermesInternalBytecode

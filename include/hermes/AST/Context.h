@@ -9,8 +9,8 @@
 #define HERMES_AST_CONTEXT_H
 
 #include "hermes/Parser/PreParser.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/Allocator.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 

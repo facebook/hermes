@@ -10,9 +10,9 @@
 
 #include "hermes/BCGen/HBC/BytecodeVersion.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Compiler.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringTableEntry.h"
 

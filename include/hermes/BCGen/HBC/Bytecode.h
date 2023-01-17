@@ -16,8 +16,8 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 

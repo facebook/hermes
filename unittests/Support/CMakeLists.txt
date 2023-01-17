@@ -32,6 +32,7 @@ add_hermes_unittest(HermesSupportTests
 
 target_link_libraries(HermesSupportTests
  hermesPlatform
+ hermesRegex
  hermesSupport
  hermesPublic
  dtoa

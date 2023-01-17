@@ -7,7 +7,7 @@
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
-#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/VM/Predefined.h"
 
 #include "gtest/gtest.h"

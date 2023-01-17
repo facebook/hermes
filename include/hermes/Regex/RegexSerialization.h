@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SUPPORT_REGEXPSERIALIZATION_H
-#define HERMES_SUPPORT_REGEXPSERIALIZATION_H
+#ifndef HERMES_REGEX_REGEXSERIALIZATION_H
+#define HERMES_REGEX_REGEXSERIALIZATION_H
 
-#include "hermes/Support/RegExpSupport.h"
+#include "hermes/Regex/RegexSupport.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/StringRef.h"

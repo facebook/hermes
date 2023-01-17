@@ -11,5 +11,6 @@ add_hermes_library(hermesAST
     SemanticValidator.cpp SemanticValidator.h
     CommonJS.cpp
     LINK_LIBS
+    hermesRegex
     hermesSupport
 )

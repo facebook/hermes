@@ -10,8 +10,8 @@
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/JenkinsHash.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
 
 #include <cstdint>

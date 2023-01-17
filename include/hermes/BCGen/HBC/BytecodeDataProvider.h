@@ -11,11 +11,11 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Public/Buffer.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include "llvh/ADT/ArrayRef.h"

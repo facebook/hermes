@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SUPPORT_REGEXPSUPPORT_H
-#define HERMES_SUPPORT_REGEXPSUPPORT_H
+#ifndef HERMES_REGEX_REGEXSUPPORT_H
+#define HERMES_REGEX_REGEXSUPPORT_H
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/DenseMap.h"
@@ -23,4 +23,4 @@ using ParsedGroupNamesMapping =
 } // namespace regex
 } // namespace hermes
 
-#endif // HERMES_SUPPORT_REGEXPSUPPORT_H
+#endif // HERMES_REGEX_REGEXSUPPORT_H
