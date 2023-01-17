@@ -386,6 +386,9 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::WithStatementNode *node) {
+  if (compile_)
+    sm_.error(node->getStartLoc(), "with statement is not supported");
+
   visitESTreeChildren(*this, node);
 
   uint32_t depth = curScope_->depth;
