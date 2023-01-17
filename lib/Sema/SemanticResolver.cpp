@@ -563,7 +563,40 @@ void SemanticResolver::visit(PrivateNameNode *node) {
 void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
   if (compile_)
     sm_.error(node->getSourceRange(), "private properties are not supported");
-  visitESTreeChildren(*this, node);
+  // Only visit the init expression, since it needs to be resolved.
+  if (node->_value) {
+    sm_.error(
+        node->getSourceRange(), "property initialization is not supported yet");
+    if (0) {
+      // TODO: visit the properties in the context of a synthetic method.
+      visitESTreeNode(*this, node->_value, node);
+    }
+  }
+}
+
+void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
+  // If computed property, the key expression needs to be resolved.
+  if (node->_computed)
+    visitESTreeNode(*this, node->_key, node);
+
+  // Visit the init expression, since it needs to be resolved.
+  if (node->_value) {
+    sm_.error(
+        node->getSourceRange(), "property initialization is not supported yet");
+    if (0) {
+      // TODO: visit the properties in the context of a synthetic method.
+      visitESTreeNode(*this, node->_value, node);
+    }
+  }
+}
+
+void SemanticResolver::visit(ESTree::MethodDefinitionNode *node) {
+  // If computed property, the key expression needs to be resolved.
+  if (node->_computed)
+    visitESTreeNode(*this, node->_key, node);
+
+  // Visit the body.
+  visitESTreeNode(*this, node->_value, node);
 }
 
 void SemanticResolver::visit(ESTree::CallExpressionNode *node) {

@@ -215,6 +215,8 @@ class SemanticResolver {
   void visit(ESTree::ClassExpressionNode *node);
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
+  void visit(ESTree::ClassPropertyNode *node);
+  void visit(ESTree::MethodDefinitionNode *node);
 
   void visit(ESTree::CallExpressionNode *node);
 
