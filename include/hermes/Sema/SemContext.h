@@ -66,6 +66,11 @@ class Decl {
     Eval,
   };
 
+  /// \return true if this declaration kind obeys the TDZ.
+  static bool isKindTDZ(Kind kind) {
+    return kind <= Kind::Class;
+  }
+
   /// \return true if this kind of declaration is function scope (and can be
   /// re-declared).
   static bool isKindVarLike(Kind kind) {
@@ -94,6 +99,9 @@ class Decl {
   /// The lexical scope of the declaration. Could be nullptr for special
   /// declarations, since they are technically unscoped.
   LexicalScope *const scope;
+
+  /// Field used by the consumer of the context.
+  void *customData = nullptr;
 
   Decl(
       Identifier name,

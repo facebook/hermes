@@ -515,6 +515,11 @@ class InstrGen {
     os_ << boolStr(inst.getStrictCaller());
     os_ << ");\n";
   }
+  void generateDeclareGlobalVarInst(DeclareGlobalVarInst &inst) {
+    os_ << "  _sh_ljs_declare_global_var(shr, s_symbols["
+        << moduleGen_.stringTable.add(inst.getName()->getValue().str())
+        << "]);\n";
+  }
   void generateLoadFrameInst(LoadFrameInst &inst) {
     hermes_fatal("LoadFrameInst should have been lowered.");
   }
@@ -1612,14 +1617,6 @@ void generateFunction(
 
   for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
     OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
-
-  // Declare every "declared" global variable.
-  if (F.isGlobalScope())
-    for (auto *prop : F.getParent()->getGlobalProperties())
-      if (prop->isDeclared())
-        OS << "  _sh_ljs_declare_global_var(shr, s_symbols["
-           << moduleGen.stringTable.add(prop->getName()->getValue().str())
-           << "]);\n";
 
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;

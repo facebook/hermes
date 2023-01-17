@@ -144,9 +144,6 @@ void Verifier::visitModule(const Module &M) {
 void Verifier::visitFunction(const Function &F) {
   Assert(&F.getContext() == Ctx, "Function has wrong context");
 
-  if (F.isLazy())
-    return;
-
   FunctionState newFunctionState(this, F);
 
   // Verify all basic blocks are valid
@@ -734,6 +731,10 @@ void Verifier::visitDebuggerInst(DebuggerInst const &Inst) {
 }
 
 void Verifier::visitDirectEvalInst(DirectEvalInst const &Inst) {
+  // Nothing to verify at this point.
+}
+
+void Verifier::visitDeclareGlobalVarInst(const DeclareGlobalVarInst &Inst) {
   // Nothing to verify at this point.
 }
 

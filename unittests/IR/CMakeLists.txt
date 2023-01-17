@@ -11,7 +11,7 @@ set(IRSources
   IRVerifierTest.cpp
   LoopAnalysisTest.cpp
   ScopeAnalysisTest.cpp
-  ScopeChainTest.cpp
+#  ScopeChainTest.cpp
   )
 
 add_hermes_unittest(HermesIRTests

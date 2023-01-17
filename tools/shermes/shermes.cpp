@@ -9,7 +9,6 @@
 #include "compile.h"
 
 #include "hermes/AST/ESTreeJSONDumper.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
@@ -261,6 +260,13 @@ CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
+cl::opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    cl::init(false),
+    cl::Hidden,
+    cl::desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> StrictMode(
     "strict",
     cl::desc("Enable strict mode."),
@@ -270,13 +276,6 @@ cl::opt<bool> EnableEval(
     "enable-eval",
     cl::init(true),
     cl::desc("Enable support for eval()"));
-
-cl::opt<bool> EnableTDZ(
-    "Xenable-tdz",
-    cl::init(false),
-    cl::Hidden,
-    cl::desc("UNSUPPORTED: Enable TDZ checks for let/const"),
-    cl::cat(CompilerCategory));
 
 // This is normally a compiler option, but it also applies to strings given
 // to eval or the Function constructor.
@@ -481,7 +480,6 @@ std::shared_ptr<Context> createContext() {
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
-    sem::SemContext &oldSemCtx,
     sema::SemContext &semCtx,
     const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
@@ -579,15 +577,9 @@ ESTree::NodePtr parseJS(
         cli::DumpSourceLocation,
         cli::IncludeRawASTProp ? ESTreeRawProp::Include
                                : ESTreeRawProp::Exclude);
-    return parsedAST;
   }
   if (cli::OutputLevel == OutputLevelKind::Sema) {
     sema::semDump(llvh::outs(), semCtx, parsedAST);
-    return parsedAST;
-  }
-
-  if (!hermes::sem::validateAST(*context, oldSemCtx, parsedAST)) {
-    return nullptr;
   }
 
   return parsedAST;
@@ -620,12 +612,11 @@ bool compileFromCommandLineOptions() {
   }
 
   Module M(context);
-  sem::SemContext oldSemCtx{};
   sema::SemContext semCtx{};
 
   // TODO: support input source map.
   ESTree::NodePtr ast =
-      parseJS(context, oldSemCtx, semCtx, declFileList, std::move(fileBuf));
+      parseJS(context, semCtx, declFileList, std::move(fileBuf));
   if (!ast) {
     return false;
   }
@@ -633,7 +624,7 @@ bool compileFromCommandLineOptions() {
       cli::OutputLevel < OutputLevelKind::CFG) {
     return true;
   }
-  generateIRFromESTree(ast, &M, declFileList, {});
+  generateIRFromESTree(ast, &M);
   // Bail out if there were any errors. We can't ensure that the module is in
   // a valid state.
   if (auto N = context->getSourceErrorManager().getErrorCount()) {

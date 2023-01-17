@@ -229,23 +229,6 @@ void IRPrinter::printFunctionVariables(Function *F) {
     first = false;
   }
   os << "]";
-
-  if (F->isGlobalScope()) {
-    bool first2 = true;
-    for (auto *GP : F->getParent()->getGlobalProperties()) {
-      if (!GP->isDeclared())
-        continue;
-      if (first2) {
-        os << ", globals = [";
-      } else {
-        os << ", ";
-      }
-      os << GP->getName()->getValue().str();
-      first2 = false;
-    }
-    if (!first2)
-      os << "]";
-  }
 }
 
 void IRPrinter::printInstructionDestination(Instruction *I) {

@@ -166,8 +166,7 @@ void assertFunctionLikeSourceVisibility(
     llvh::Optional<ESTree::FunctionLikeNode *> funcLikeNode,
     SourceVisibility sourceVisibility) {
   ASSERT_TRUE(funcLikeNode.hasValue());
-  ASSERT_EQ(
-      (*funcLikeNode)->getNewSemInfo()->sourceVisibility, sourceVisibility);
+  ASSERT_EQ((*funcLikeNode)->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 void assertFirstNodeAsFunctionLikeWithSourceVisibility(
@@ -179,7 +178,7 @@ void assertFirstNodeAsFunctionLikeWithSourceVisibility(
   auto *funcLikeNode =
       llvh::cast<ESTree::FunctionLikeNode>(&programNode->_body.front());
 
-  ASSERT_EQ(funcLikeNode->getNewSemInfo()->sourceVisibility, sourceVisibility);
+  ASSERT_EQ(funcLikeNode->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 void assertSecondNodeAsFunctionLikeWithSourceVisibility(
@@ -193,7 +192,7 @@ void assertSecondNodeAsFunctionLikeWithSourceVisibility(
   ASSERT_TRUE(llvh::isa<ESTree::FunctionLikeNode>(*it));
   auto *funcLikeNode = llvh::cast<ESTree::FunctionLikeNode>(it);
 
-  ASSERT_EQ(funcLikeNode->getNewSemInfo()->sourceVisibility, sourceVisibility);
+  ASSERT_EQ(funcLikeNode->getSemInfo()->sourceVisibility, sourceVisibility);
 }
 
 TEST(ValidatorTest, SourceVisibilityTest) {

@@ -10,9 +10,9 @@
 
 #include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Debug.h"
@@ -28,8 +28,6 @@ namespace irgen {
 // Forward declarations
 class SurroundingTry;
 class ESTreeIRGen;
-
-using VarDecl = sem::FunctionInfo::VarDecl;
 
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
@@ -63,10 +61,6 @@ bool isConstantExpr(ESTree::Node *node);
 //===----------------------------------------------------------------------===//
 // FunctionContext
 
-/// Scoped hash table to represent the JS scope.
-using NameTableTy = hermes::ScopedHashTable<Identifier, Value *>;
-using NameTableScopeTy = hermes::ScopedHashTableScope<Identifier, Value *>;
-
 /// Holds the target basic block for a break and continue label.
 /// It has a 1-to-1 correspondence to SemInfoFunction::GotoLabel.
 /// Labels can be context dependent - one label can be initialized multiple
@@ -89,7 +83,7 @@ class FunctionContext {
   ESTreeIRGen *const irGen_;
 
   /// Semantic info of the function we are emitting.
-  sem::FunctionInfo *const semInfo_;
+  sema::FunctionInfo *const semInfo_;
 
   /// The old value which we save and will restore on destruction.
   FunctionContext *oldContext_;
@@ -108,9 +102,6 @@ class FunctionContext {
 
   /// The innermost surrounding try/catch node at any point.
   SurroundingTry *surroundingTry = nullptr;
-
-  /// A new variable scope that is used throughout the body of the function.
-  NameTableScopeTy scope;
 
   /// Stack Register that will hold the return value of the global scope.
   AllocStackInst *globalReturnRegister{nullptr};
@@ -153,7 +144,7 @@ class FunctionContext {
   FunctionContext(
       ESTreeIRGen *irGen,
       Function *function,
-      sem::FunctionInfo *semInfo);
+      sema::FunctionInfo *semInfo);
 
   ~FunctionContext();
 
@@ -164,7 +155,7 @@ class FunctionContext {
 
   /// \return the associated semantic information, asserting that it is
   /// present.
-  sem::FunctionInfo *getSemInfo() {
+  sema::FunctionInfo *getSemInfo() {
     assert(semInfo_ && "semInfo is not set");
     return semInfo_;
   }
@@ -348,24 +339,18 @@ class ESTreeIRGen {
   IRInstrument instrumentIR_;
   /// The root of the ESTree.
   ESTree::Node *Root;
-  /// This is a list of parsed global property declaration files.
-  const DeclarationFileListTy &DeclarationFileList;
   /// This points to the context of the top-level function, which we
   /// occasionally need.
   FunctionContext *topLevelContext{};
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
-  /// This is the scoped hash table that saves the mapping between the declared
-  /// names and an instance of Varible or GlobalObjectProperty.
-  NameTableTy nameTable_{};
-
-  /// Lexical scope chain from the runtime, used to resolve identifiers in local
-  /// eval.
-  std::shared_ptr<SerializedScope> lexicalScopeChain;
 
   /// Identifier representing the string "eval".
   const Identifier identEval_;
+
+  /// Identifier representing the string "var".
+  const Identifier identVar_;
 
   /// Identifier representing the string "let".
   const Identifier identLet_;
@@ -398,11 +383,7 @@ class ESTreeIRGen {
   }
 
  public:
-  explicit ESTreeIRGen(
-      ESTree::Node *root,
-      const DeclarationFileListTy &declFileList,
-      Module *M,
-      const ScopeChain &scopeChain);
+  explicit ESTreeIRGen(ESTree::Node *root, Module *M);
 
   /// Perform IRGeneration for the whole module.
   void doIt();
@@ -410,15 +391,10 @@ class ESTreeIRGen {
   /// Perform IR generation for a given CJS module.
   void doCJSModule(
       Function *topLevelFunction,
-      sem::FunctionInfo *semInfo,
+      sema::FunctionInfo *semInfo,
       uint32_t segmentID,
       uint32_t id,
       llvh::StringRef filename);
-
-  /// Perform IR generation for a lazy function.
-  /// \return the newly allocated generated Function IR and lexical root
-  std::pair<Function *, Function *> doLazyFunction(
-      hbc::LazyCompilationData *lazyData);
 
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
@@ -452,21 +428,11 @@ class ESTreeIRGen {
   void genReturnStatement(ESTree::ReturnStatementNode *RetStmt);
   void genForInStatement(ESTree::ForInStatementNode *ForInStmt);
   void genForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
-
-  /// Generate IR for for/while/do..while statements.
-  /// \p loop the loop statement node
-  /// \p init optional init statement for 'for' loops.
-  /// \p preTest the expression that guards the loop entrance.
-  /// \p postTest the expression that guards the loop.
-  /// \p update optional statement for the update phase of 'for' loops.
-  /// \o body the body of the loop.
-  void genForWhileLoops(
-      ESTree::LoopStatementNode *loop,
-      ESTree::Node *init,
-      ESTree::Node *preTest,
-      ESTree::Node *postTest,
-      ESTree::Node *update,
-      ESTree::Node *body);
+  void genWhileLoop(ESTree::WhileStatementNode *loop);
+  void genDoWhileLoop(ESTree::DoWhileStatementNode *loop);
+  void genForLoop(ESTree::ForStatementNode *loop);
+  /// Compile a for-loop with let/const declaration.
+  void genScopedForLoop(ESTree::ForStatementNode *loop);
 
   void genSwitchStatement(ESTree::SwitchStatementNode *switchStmt);
 
@@ -685,7 +651,7 @@ class ESTreeIRGen {
       EF emitNormalCleanup,
       EH emitHandler);
 
-  /// \param catchParam is not null, create the required variable binding
+  /// \param catchParam if not null, create the required variable binding
   ///     for the catch parameter and emit the store.
   /// \return the CatchInst.
   CatchInst *prepareCatch(ESTree::NodePtr catchParam);
@@ -728,17 +694,12 @@ class ESTreeIRGen {
   /// The body may optionally be lazy.
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
-  /// \param lazyClosureAlias an optional variable in the parent that will
-  ///   contain the closure being created. It is non-null only if an alias
-  ///   binding from  \c originalName to the variable was created and is
-  ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
   /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
   /// \returns a new Function.
   Function *genES5Function(
       Identifier originalName,
-      Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode,
       bool isGeneratorInnerFunction = false);
 
@@ -747,26 +708,12 @@ class ESTreeIRGen {
   /// inner function and returns the result.
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
-  /// \param lazyClosureAlias an optional variable in the parent that will
-  ///   contain the closure being created. It is non-null only if an alias
-  ///   binding from  \c originalName to the variable was created and is
-  ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
   /// \return the outer Function.
   Function *genGeneratorFunction(
       Identifier originalName,
-      Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);
-
-  /// Set the current scope to the lazy scope on \p function
-  /// and assigns the proper source range and information in order to
-  /// continue later in lazy compilation.
-  /// \param bodyBlock the body of the function, must be a lazy function body.
-  void setupLazyScope(
-      ESTree::FunctionLikeNode *functionNode,
-      Function *function,
-      ESTree::BlockStatementNode *bodyBlock);
 
   /// Generate the IR for an async function: it desugars async function to a
   /// generator function wrapped in a call to the JS builtin `spawnAsync` and
@@ -776,16 +723,11 @@ class ESTreeIRGen {
   ///   function<name>(){return spawnAsync(function*()<body>, this, arguments)}
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
-  /// \param lazyClosureAlias an optional variable in the parent that will
-  ///   contain the closure being created. It is non-null only if an alias
-  ///   binding from  \c originalName to the variable was created and is
-  ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
-      Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);
 
   /// In the beginning of an ES5 function, initialize the special captured
@@ -820,6 +762,14 @@ class ESTreeIRGen {
       InitES5CaptureState doInitES5CaptureState,
       DoEmitParameters doEmitParameters);
 
+  /// Declare all variables in the scope, except parameters (which are handled
+  /// separately). Variables that obey TDZ are initialized to empty.
+  /// Hoisted closures are recursively compiled and initialized. Imports are
+  /// code generated.
+  /// \param scope The lexical scope, nullabe. If null, there is no scope, so do
+  ///     nothing.
+  void emitScopeDeclarations(sema::LexicalScope *scope);
+
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
   void emitParameters(ESTree::FunctionLikeNode *funcNode);
@@ -849,30 +799,15 @@ class ESTreeIRGen {
     return functionContext_;
   }
 
-  /// Declare a variable or a global propery depending in function \p inFunc,
-  /// depending on whether it is the global scope. Do nothing if the variable
-  /// or property is already declared in that scope.
-  /// \return A pair. pair.first is the variable, and pair.second is set to true
-  ///   if it was declared, false if it already existed.
-  std::pair<Value *, bool> declareVariableOrGlobalProperty(
-      Function *inFunc,
-      VarDecl::Kind declKind,
-      Identifier name);
+  /// Resolve the identifier node to the corresponding variable or global prop.
+  Value *resolveIdentifier(ESTree::IdentifierNode *id) {
+    return getDeclData(getIDDecl(id));
+  }
 
-  /// Declare a new ambient global property, if not already declared.
-  GlobalObjectProperty *declareAmbientGlobalProperty(Identifier name);
-
-  /// Scan all the global declarations in the supplied declaration file and
-  /// declare them as global properties.
-  void processDeclarationFile(ESTree::ProgramNode *programNode);
-
-  /// This method ensures that a variable with the name \p name exists in the
-  /// current scope. The method reports an error if the variable does not exist
-  /// and creates a new variable with this name in the current scope in an
-  /// attempt to recover from the error.
-  /// \return the existing variable or global property, or a freshly created
-  ///   ambient global property in case of error.
-  Value *ensureVariableExists(ESTree::IdentifierNode *id);
+  /// Cast the node to ESTree::IdentifierNode and resolve it.
+  Value *resolveIdentifierFromID(ESTree::Node *id) {
+    return resolveIdentifier(llvh::cast<ESTree::IdentifierNode>(id));
+  }
 
   /// Generate the IR for the property field of the MemberExpressionNode.
   /// The property field may be a string literal or some computed expression.
@@ -1061,33 +996,24 @@ class ESTreeIRGen {
       Identifier nameHint);
 
  private:
-  /// "Converts" a ScopeChain into a SerializedScope by resolving the
-  /// identifiers.
-  std::shared_ptr<SerializedScope> resolveScopeIdentifiers(
-      const ScopeChain &chain);
-
-  /// Materialize the provided scope.
-  void materializeScopesInChain(
-      Function *wrapperFunction,
-      const std::shared_ptr<const SerializedScope> &scope,
-      int depth);
-
-  /// Add dummy functions for lexical scope debug info
-  void addLexicalDebugInfo(
-      Function *child,
-      Function *global,
-      const std::shared_ptr<const SerializedScope> &scope);
-
-  /// Save all variables currently in scope, for lazy compilation.
-  std::shared_ptr<SerializedScope> saveCurrentScope() {
-    return serializeScope(curFunction(), true);
+  /// Return the non-null sema::Decl associated with the identifier.
+  static sema::Decl *getIDDecl(ESTree::IdentifierNode *id) {
+    assert(id && "IdentifierNode cannot be null");
+    assert(id->getDecl() && "identifier must be resolved");
+    return id->getDecl();
   }
 
-  /// Recursively serialize scopes. The global scope is serialized
-  /// if and only if it's the first scope and includeGlobal is true.
-  std::shared_ptr<SerializedScope> serializeScope(
-      FunctionContext *ctx,
-      bool includeGlobal);
+  /// Set the customData field of the declaration with the specified value.
+  static void setDeclData(sema::Decl *decl, Value *value) {
+    assert(decl);
+    decl->customData = value;
+  }
+  /// Extract the decl's custom data field, which must be a value.
+  static Value *getDeclData(sema::Decl *decl) {
+    assert(decl);
+    assert(decl->customData);
+    return static_cast<Value *>(decl->customData);
+  }
 };
 
 template <typename EB, typename EF, typename EH>

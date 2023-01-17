@@ -57,6 +57,7 @@ DEF_VALUE(MovInst, Instruction)
 DEF_VALUE(ImplicitMovInst, Instruction)
 DEF_VALUE(CoerceThisNSInst, Instruction)
 DEF_VALUE(DirectEvalInst, Instruction)
+DEF_VALUE(DeclareGlobalVarInst, Instruction)
 DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND

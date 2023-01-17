@@ -204,6 +204,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<DeclareGlobalVarInst>(Inst))
+    return true;
+
   if (llvh::isa<DirectEvalInst>(Inst) &&
       opIndex == DirectEvalInst::StrictCallerIdx) {
     return true;
