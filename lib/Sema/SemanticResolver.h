@@ -45,8 +45,8 @@ class SemanticResolver {
   /// be inserted in the global scope.
   const DeclarationFileListTy &ambientDecls_;
 
-  /// Stack of function contexts.
-  std::vector<FunctionContext *> functionStack_{};
+  /// Current function context.
+  FunctionContext *curFunctionContext_ = nullptr;
 
   /// Current lexical scope.
   LexicalScope *curScope_{nullptr};
@@ -130,11 +130,11 @@ class SemanticResolver {
 
   /// \return the current function context.
   FunctionContext *functionContext() {
-    return functionStack_.back();
+    return curFunctionContext_;
   }
   /// \return the current function context.
   const FunctionContext *functionContext() const {
-    return functionStack_.back();
+    return curFunctionContext_;
   }
 
   /// Extract the declared identifiers from a declaration AST node's "id" field.
@@ -386,6 +386,8 @@ class SemanticResolver {
 /// At destruction: pops itself from the \c functionStack_.
 class FunctionContext {
   SemanticResolver &resolver_;
+
+  FunctionContext *const prevContext_;
 
  public:
   struct Label {
