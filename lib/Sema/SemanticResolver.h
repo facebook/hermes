@@ -45,6 +45,10 @@ class SemanticResolver {
   /// be inserted in the global scope.
   const DeclarationFileListTy &ambientDecls_;
 
+  /// If not null, store all instances of DeclCollector here, for use by other
+  /// passes.
+  DeclCollectorMapTy *const saveDecls_;
+
   /// Current function context.
   FunctionContext *curFunctionContext_ = nullptr;
 
@@ -110,13 +114,23 @@ class SemanticResolver {
 
  public:
   /// \param semCtx the result of resolution will be stored here.
+  /// \param saveDecls if not null, the map will contain all DeclCollector
+  ///     instances for reuse by later passes.
   /// \param compile whether this resolution is intended to compile or just
   ///   parsing.
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
       const DeclarationFileListTy &ambientDecls,
+      DeclCollectorMapTy *saveDecls,
       bool compile);
+
+  explicit SemanticResolver(
+      Context &astContext,
+      sema::SemContext &semCtx,
+      const DeclarationFileListTy &ambientDecls,
+      bool compile)
+      : SemanticResolver(astContext, semCtx, ambientDecls, nullptr, compile) {}
 
   /// Run semantic resolution and store the result in \c semCtx_.
   /// \param rootNode the top-level program/JS module node to run resolution on.

@@ -23,6 +23,7 @@ SemanticResolver::SemanticResolver(
     Context &astContext,
     sema::SemContext &semCtx,
     const DeclarationFileListTy &ambientDecls,
+    DeclCollectorMapTy *saveDecls,
     bool compile)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
@@ -30,6 +31,7 @@ SemanticResolver::SemanticResolver(
       semCtx_(semCtx),
       kw_{astContext},
       ambientDecls_(ambientDecls),
+      saveDecls_(saveDecls),
       compile_(compile) {}
 
 bool SemanticResolver::run(ESTree::Node *rootNode) {
@@ -1330,6 +1332,10 @@ FunctionContext::FunctionContext(
 }
 
 FunctionContext::~FunctionContext() {
+  // If requested, save the collected declarations.
+  if (resolver_.saveDecls_)
+    resolver_.saveDecls_->try_emplace(node, std::move(decls));
+
   assert(
       resolver_.curFunctionInfo() == semInfo &&
       "FunctionContext out of sync with SemContext");
