@@ -216,6 +216,7 @@ class SemanticResolver {
   void visit(ESTree::CoverRestElementNode *node);
 #if HERMES_PARSE_FLOW
   void visit(ESTree::CoverTypedIdentifierNode *node);
+  void visit(ESTree::TypeAliasNode *node);
 #endif
 
   /// This method implements the first part of the protocol defined by
