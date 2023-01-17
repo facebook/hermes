@@ -410,7 +410,7 @@ class FunctionContext {
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;
 
   /// All declarations in the function.
-  DeclCollector decls;
+  std::unique_ptr<DeclCollector> decls;
 
   explicit FunctionContext(
       SemanticResolver &resolver,

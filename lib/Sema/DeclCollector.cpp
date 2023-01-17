@@ -12,13 +12,14 @@ using namespace hermes::ESTree;
 namespace hermes {
 namespace sema {
 
-/* static */ DeclCollector DeclCollector::run(
+/* static */ std::unique_ptr<DeclCollector> DeclCollector::run(
     ESTree::FunctionLikeNode *root,
     const sem::Keywords &kw,
     unsigned recursionDepth,
     const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
-  DeclCollector dc{root, kw, recursionDepth, recursionDepthExceeded};
-  dc.runImpl();
+  std::unique_ptr<DeclCollector> dc(
+      new DeclCollector(root, kw, recursionDepth, recursionDepthExceeded));
+  dc->runImpl();
   return dc;
 }
 

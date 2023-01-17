@@ -15,6 +15,7 @@
 namespace hermes {
 namespace sema {
 
+class DeclCollector;
 class SemanticResolver;
 
 /// All the declarations in a scope.
@@ -30,7 +31,7 @@ class DeclCollector {
   /// \param recursionDepthExceeded handler to invoke when we transition fron
   ///     non-zero to zero remaining recursion depth.
   /// \return a DeclCollector which has collected all declarations in \p root.
-  static DeclCollector run(
+  static std::unique_ptr<DeclCollector> run(
       ESTree::FunctionLikeNode *root,
       const sem::Keywords &kw,
       unsigned recursionDepth,
