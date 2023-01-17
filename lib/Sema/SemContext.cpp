@@ -14,13 +14,7 @@ static llvh::FormattedString ind(unsigned level) {
   return llvh::left_justify("", level * 4);
 }
 
-SemContext::SemContext(Context &ctx) {
-  decls_.emplace_back(
-      ctx.getIdentifier("eval"),
-      Decl::Kind::UndeclaredGlobalProperty,
-      Decl::Special::Eval);
-  evalDecl_ = &decls_.back();
-}
+SemContext::SemContext() = default;
 
 SemContext::~SemContext() = default;
 
