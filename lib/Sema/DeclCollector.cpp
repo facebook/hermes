@@ -57,6 +57,19 @@ void DeclCollector::runImpl() {
   closeScope(root_);
 }
 
+void DeclCollector::dump(llvh::raw_ostream &os, unsigned indent) {
+#ifndef NDEBUG
+  for (const auto &p : scopes_) {
+    os << llvh::left_justify("", indent) << p.first->getNodeName() << "["
+       << llvh::format("%p", p.first) << "]:";
+    for (ESTree::Node *n : p.second) {
+      os << " " << n->getNodeName() << "[" << llvh::format("%p", n) << "]";
+    }
+    os << "\n";
+  }
+#endif
+}
+
 void DeclCollector::setScopeDeclsForNode(ESTree::Node *node, ScopeDecls decls) {
   scopes_[node] = decls;
 }
