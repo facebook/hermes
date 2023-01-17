@@ -644,6 +644,14 @@ void SemanticResolver::visit(ESTree::YieldExpressionNode *node) {
     sm_.error(node->getSourceRange(), "'yield' not in a generator function");
   }
 
+  if (functionContext()->isFormalParams) {
+    // For generators functions (the only time YieldExpression is parsed):
+    // It is a Syntax Error if UniqueFormalParameters Contains YieldExpression
+    // is true.
+    sm_.error(
+        node->getSourceRange(), "'yield' not allowed in a formal parameter");
+  }
+
   visitESTreeChildren(*this, node);
 }
 
