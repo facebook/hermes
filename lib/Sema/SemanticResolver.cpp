@@ -346,7 +346,7 @@ void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
       node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(
-          node->getSourceRange(),
+          node->_label->getSourceRange(),
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
   } else {
@@ -375,7 +375,7 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
         node->setNewLabelIndex(labelIndex);
       } else {
         sm_.error(
-            node->getSourceRange(),
+            node->_label->getSourceRange(),
             llvh::Twine("'continue' label '") + name->str() +
                 "' is not a loop label");
         sm_.note(
@@ -383,7 +383,7 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
       }
     } else {
       sm_.error(
-          node->getSourceRange(),
+          node->_label->getSourceRange(),
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
   } else {
