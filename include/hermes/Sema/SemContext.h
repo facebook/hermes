@@ -95,14 +95,14 @@ class Decl {
   /// declarations, since they are technically unscoped.
   LexicalScope *const scope;
 
-  Decl(Identifier name, Kind kind, LexicalScope *scope)
-      : name(name), kind(kind), special(Special::NotSpecial), scope(scope) {}
-  Decl(Identifier name, Kind kind, Special special)
-      : name(name), kind(kind), special(special), scope(nullptr) {}
-  Decl(Identifier name, Kind kind, Special special, LexicalScope *scope)
+  Decl(
+      Identifier name,
+      Kind kind,
+      Special special,
+      LexicalScope *scope = nullptr)
       : name(name), kind(kind), special(special), scope(scope) {}
-
-  void dump(unsigned level = 0) const;
+  Decl(Identifier name, Kind kind, LexicalScope *scope)
+      : Decl(name, kind, Special::NotSpecial, scope) {}
 };
 
 /// Lexical scopes within a function.
@@ -137,8 +137,6 @@ class LexicalScope {
         parentScope(parentScope) {
     assert(parentFunction && "lexical scope must be in a function");
   }
-
-  void dump(const SemContext *sem = nullptr, unsigned level = 0) const;
 };
 
 /// Semantic information about functions.
@@ -206,8 +204,6 @@ class FunctionInfo {
   LexicalScope *getFunctionScope() const {
     return scopes[0];
   }
-
-  void dump(const SemContext *sem = nullptr, unsigned level = 0) const;
 };
 
 /// Semantic information regarding the program.
@@ -218,6 +214,8 @@ class FunctionInfo {
 /// These allocated objects point to each other within the SemContext,
 /// so they can be freely passed around so long as the SemContext is alive.
 class SemContext {
+  friend class SemContextDumper;
+
  public:
   SemContext(Context &ctx);
   ~SemContext();
@@ -272,8 +270,6 @@ class SemContext {
   /// \return the special arguments declaration in the specified function.
   Decl *funcArgumentsDecl(FunctionInfo *func, UniqueString *argumentsName);
 
-  void dump() const;
-
  private:
   /// The special global "eval" declaration.
   /// Stored to use when we are performing "eval" anywhere in the function,
@@ -289,6 +285,59 @@ class SemContext {
 
   /// Storage for all variable declarations.
   std::deque<Decl> decls_{};
+};
+
+class SemContextDumper {
+ public:
+  using AnnotateDeclFunc =
+      std::function<void(llvh::raw_ostream &, const Decl *)>;
+
+ public:
+  explicit SemContextDumper() {}
+  template <typename F>
+  explicit SemContextDumper(F f) : annotateDecl_(f) {}
+
+  void printSemContext(llvh::raw_ostream &os, const SemContext &semCtx);
+
+  void printFunction(
+      llvh::raw_ostream &os,
+      const FunctionInfo &f,
+      unsigned level = 0);
+
+  void
+  printScope(llvh::raw_ostream &os, const LexicalScope *s, unsigned level = 0);
+
+  void printDecl(llvh::raw_ostream &os, const Decl *d);
+
+  void printDeclRef(llvh::raw_ostream &os, const Decl *d);
+
+ private:
+  /// Optional callback printing a Decl annotation.
+  AnnotateDeclFunc annotateDecl_{};
+
+  class PtrNumberingImpl {
+    /// The number to be assigned next.
+    size_t nextNumber_ = 1;
+    /// Map from pointer to a number.
+    llvh::DenseMap<const void *, size_t> numbers_{};
+
+   protected:
+    /// Find the existing number or allocate a new one for the specified
+    /// pointer. \return the consecutive number associated with this
+    /// declaration.
+    size_t getNumberImpl(const void *ptr);
+  };
+
+  template <typename T>
+  class Numbering : public PtrNumberingImpl {
+   public:
+    size_t getNumber(const T *ptr) {
+      return getNumberImpl(ptr);
+    }
+  };
+
+  Numbering<Decl> declNumbers_{};
+  Numbering<LexicalScope> scopeNumbers_{};
 };
 
 } // namespace sema
