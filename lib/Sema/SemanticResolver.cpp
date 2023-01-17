@@ -28,14 +28,15 @@ SemanticResolver::SemanticResolver(
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
       semCtx_(semCtx),
-      initialErrorCount_(sm_.getErrorCount()),
       kw_{astContext},
       ambientDecls_(ambientDecls),
       compile_(compile) {}
 
 bool SemanticResolver::run(ESTree::Node *rootNode) {
+  if (sm_.getErrorCount())
+    return false;
   visitESTreeNode(*this, rootNode);
-  return sm_.getErrorCount() == initialErrorCount_;
+  return sm_.getErrorCount() == 0;
 }
 
 void SemanticResolver::visit(ESTree::ProgramNode *node) {
