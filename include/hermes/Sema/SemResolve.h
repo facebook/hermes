@@ -10,6 +10,10 @@
 
 #include <vector>
 
+namespace llvh {
+class raw_ostream;
+}
+
 namespace hermes {
 
 class Context;
@@ -42,6 +46,9 @@ bool resolveASTForParser(
     Context &astContext,
     SemContext &semCtx,
     ESTree::Node *root);
+
+/// Dump the state of SemContext and the annotated AST.
+void semDump(llvh::raw_ostream &os, SemContext &semCtx, ESTree::Node *root);
 
 } // namespace sema
 } // namespace hermes
