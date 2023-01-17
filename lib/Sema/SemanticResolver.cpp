@@ -166,15 +166,12 @@ void SemanticResolver::visit(ESTree::BlockStatementNode *node) {
     return visitESTreeChildren(*this, node);
   }
 
+  ScopeRAII blockScope{*this, node};
   if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII blockScope{*this, node};
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
@@ -185,17 +182,15 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
 
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
-  {
-    ScopeRAII nameScope{*this, node};
-    if (const ScopeDecls *declsOpt =
-            functionContext()->decls->getScopeDeclsForNode(node)) {
-      // Only process a lexical scope if there are declarations in it.
-      processDeclarations(*declsOpt);
-    }
-
-    for (ESTree::Node &c : node->_cases)
-      visitESTreeNode(*this, &c, node);
+  ScopeRAII nameScope{*this, node};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
+    // Only process a lexical scope if there are declarations in it.
+    processDeclarations(*declsOpt);
   }
+
+  for (ESTree::Node &c : node->_cases)
+    visitESTreeNode(*this, &c, node);
 }
 
 void SemanticResolver::visitForInOf(
@@ -232,15 +227,12 @@ void SemanticResolver::visitForInOf(
     validateAssignmentTarget(left);
   }
 
+  ScopeRAII nameScope{*this, scopeDeco};
   if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII nameScope{*this, scopeDeco};
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::ForStatementNode *node) {
@@ -249,15 +241,12 @@ void SemanticResolver::visit(ESTree::ForStatementNode *node) {
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
+  ScopeRAII nameScope{*this, node};
   if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
-    // Only create a lexical scope if there are declarations in it.
-    ScopeRAII nameScope{*this, node};
     processDeclarations(*declsOpt);
-    visitESTreeChildren(*this, node);
-  } else {
-    visitESTreeChildren(*this, node);
   }
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::DoWhileStatementNode *node) {
