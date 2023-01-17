@@ -838,6 +838,14 @@ void SemanticResolver::processCollectedDeclarations(ESTree::Node *scopeNode) {
 
 void SemanticResolver::processDeclarations(const ScopeDecls &decls) {
   for (ESTree::Node *decl : decls) {
+#if HERMES_PARSE_FLOW
+    if (llvh::isa<ESTree::TypeAliasNode>(decl))
+      continue;
+#endif
+#if HERMES_PARSE_TS
+    if (llvh::isa<ESTree::TSTypeAliasDeclarationNode>(decl))
+      continue;
+#endif
     llvh::SmallVector<ESTree::IdentifierNode *, 4> idents{};
     Decl::Kind kind = extractIdentsFromDecl(decl, idents);
 

@@ -71,6 +71,12 @@ class DeclCollector {
   void visit(ESTree::VariableDeclarationNode *node);
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::ImportDeclarationNode *node);
+#if HERMES_PARSE_FLOW
+  void visit(ESTree::TypeAliasNode *node);
+#endif
+#if HERMES_PARSE_TS
+  void visit(ESTree::TSTypeAliasDeclarationNode *node);
+#endif
 
   void visit(ESTree::FunctionDeclarationNode *node);
 
