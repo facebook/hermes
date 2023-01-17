@@ -91,8 +91,8 @@ void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
   curFunctionInfo()->containsArrowFunctions = true;
   curFunctionInfo()->containsArrowFunctionsUsingArguments =
       curFunctionInfo()->containsArrowFunctionsUsingArguments ||
-      arrowFunc->getSemInfo()->containsArrowFunctionsUsingArguments ||
-      arrowFunc->getSemInfo()->usesArguments;
+      arrowFunc->getNewSemInfo()->containsArrowFunctionsUsingArguments ||
+      arrowFunc->getNewSemInfo()->usesArguments;
 }
 
 void SemanticResolver::visit(
@@ -178,7 +178,7 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
   // Visit the discriminant before creating a new scope.
   visitESTreeNode(*this, node->_discriminant, node);
 
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
@@ -197,7 +197,7 @@ void SemanticResolver::visitForInOf(
     ESTree::LoopStatementNode *node,
     ESTree::ScopeDecorationBase *scopeDeco,
     ESTree::Node *left) {
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
@@ -236,7 +236,7 @@ void SemanticResolver::visitForInOf(
 }
 
 void SemanticResolver::visit(ESTree::ForStatementNode *node) {
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
@@ -250,7 +250,7 @@ void SemanticResolver::visit(ESTree::ForStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::DoWhileStatementNode *node) {
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
@@ -258,7 +258,7 @@ void SemanticResolver::visit(ESTree::DoWhileStatementNode *node) {
   visitESTreeChildren(*this, node);
 }
 void SemanticResolver::visit(ESTree::WhileStatementNode *node) {
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
@@ -267,7 +267,7 @@ void SemanticResolver::visit(ESTree::WhileStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::LabeledStatementNode *node) {
-  node->setLabelIndex(curFunctionInfo()->allocateLabel());
+  node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
   // Determine the target statement. We need to check if it directly encloses
   // a loop or another label enclosing a loop.
@@ -330,9 +330,9 @@ void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
     const NodeLabel &name = llvh::cast<IdentifierNode>(node->_label)->_name;
     auto it = functionContext()->labelMap.find(name);
     if (it != functionContext()->labelMap.end()) {
-      auto labelIndex =
-          getLabelDecorationBase(it->second.targetStatement)->getLabelIndex();
-      node->setLabelIndex(labelIndex);
+      auto labelIndex = getLabelDecorationBase(it->second.targetStatement)
+                            ->getNewLabelIndex();
+      node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(
           node->getSourceRange(),
@@ -341,8 +341,8 @@ void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
   } else {
     if (currentLoopOrSwitch_) {
       auto labelIndex =
-          getLabelDecorationBase(currentLoopOrSwitch_)->getLabelIndex();
-      node->setLabelIndex(labelIndex);
+          getLabelDecorationBase(currentLoopOrSwitch_)->getNewLabelIndex();
+      node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(node->getSourceRange(), "'break' not within a loop or switch");
     }
@@ -357,9 +357,9 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
     auto it = functionContext()->labelMap.find(name);
     if (it != functionContext()->labelMap.end()) {
       if (llvh::isa<LoopStatementNode>(it->second.targetStatement)) {
-        auto labelIndex =
-            getLabelDecorationBase(it->second.targetStatement)->getLabelIndex();
-        node->setLabelIndex(labelIndex);
+        auto labelIndex = getLabelDecorationBase(it->second.targetStatement)
+                              ->getNewLabelIndex();
+        node->setNewLabelIndex(labelIndex);
       } else {
         sm_.error(
             node->getSourceRange(),
@@ -375,8 +375,8 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
     }
   } else {
     if (currentLoop_) {
-      auto labelIndex = currentLoop_->getLabelIndex();
-      node->setLabelIndex(labelIndex);
+      auto labelIndex = currentLoop_->getNewLabelIndex();
+      node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(node->getSourceRange(), "'continue' not within a loop");
     }
@@ -1319,6 +1319,7 @@ FunctionContext::FunctionContext(
             resolver.recursionDepthExceeded(n);
           })) {
   resolver.curFunctionContext_ = this;
+  node->setNewSemInfo(this->semInfo);
 }
 
 FunctionContext::~FunctionContext() {

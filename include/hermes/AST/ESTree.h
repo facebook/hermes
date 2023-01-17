@@ -30,6 +30,7 @@ class FunctionInfo;
 namespace sema {
 class Decl;
 class LexicalScope;
+class FunctionInfo;
 } // namespace sema
 
 namespace ESTree {
@@ -280,6 +281,8 @@ class ScopeDecorationBase {
 /// Decoration for all function-like nodes.
 class FunctionLikeDecoration : public ScopeDecorationBase {
   sem::FunctionInfo *semInfo_{};
+  /// Temporary, while we have two resolvers.
+  sema::FunctionInfo *newSemInfo_{};
 
  public:
   Strictness strictness{Strictness::NotSet};
@@ -301,6 +304,17 @@ class FunctionLikeDecoration : public ScopeDecorationBase {
     assert(semInfo_ && "semInfo is not set!");
     return semInfo_;
   }
+
+  void setNewSemInfo(sema::FunctionInfo *semInfo) {
+    assert(semInfo && "setting semInfo to null");
+    assert(!newSemInfo_ && "semInfo is already set");
+    newSemInfo_ = semInfo;
+  }
+
+  sema::FunctionInfo *getNewSemInfo() const {
+    assert(newSemInfo_ && "semInfo is not set!");
+    return newSemInfo_;
+  }
 };
 
 class ProgramDecoration {
@@ -313,6 +327,8 @@ class ProgramDecoration {
 class LabelDecorationBase {
   static constexpr unsigned INVALID_LABEL = ~0u;
   unsigned labelIndex_ = INVALID_LABEL;
+  /// Temporary, while we have two resolvers.
+  unsigned newLabelIndex_ = INVALID_LABEL;
 
  public:
   bool isLabelIndexSet() const {
@@ -328,6 +344,19 @@ class LabelDecorationBase {
     assert(labelIndex != INVALID_LABEL && "setting labelIndex to invalid");
     assert(!isLabelIndexSet() && "labelIndex is already set");
     labelIndex_ = labelIndex;
+  }
+
+  bool isNewLabelIndexSet() const {
+    return newLabelIndex_ != INVALID_LABEL;
+  }
+  unsigned int getNewLabelIndex() const {
+    assert(isNewLabelIndexSet() && "labelIndex is not set");
+    return newLabelIndex_;
+  }
+  void setNewLabelIndex(unsigned int newLabelIndex) {
+    assert(newLabelIndex != INVALID_LABEL && "setting labelIndex to invalid");
+    assert(!isNewLabelIndexSet() && "labelIndex is already set");
+    newLabelIndex_ = newLabelIndex;
   }
 };
 

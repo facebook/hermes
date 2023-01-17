@@ -15,6 +15,8 @@
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
@@ -38,6 +40,7 @@ OutputFormatKind toOutputFormatKind(OutputLevelKind level) {
       return OutputFormatKind::DumpNone;
     case OutputLevelKind::AST:
       return OutputFormatKind::DumpAST;
+    case OutputLevelKind::Sema:
     case OutputLevelKind::TransformedAST:
       return OutputFormatKind::DumpTransformedAST;
     case OutputLevelKind::CFG:
@@ -161,6 +164,7 @@ cl::opt<OutputLevelKind> OutputLevel(
             OutputLevelKind::TransformedAST,
             "dump-transformed-ast",
             "Transformed AST as text after validation"),
+        clEnumValN(OutputLevelKind::Sema, "dump-sema", "Sema tables"),
 #ifndef NDEBUG
         clEnumValN(OutputLevelKind::CFG, "view-cfg", "View the CFG."),
 #endif
@@ -470,7 +474,9 @@ std::shared_ptr<Context> createContext() {
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
-    sem::SemContext &semCtx,
+    sem::SemContext &oldSemCtx,
+    sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
     std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
@@ -551,7 +557,7 @@ ESTree::NodePtr parseJS(
   //   return parsedAST;
   // }
 
-  if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
+  if (!hermes::sema::resolveAST(*context, semCtx, parsedAST, ambientDecls)) {
     return nullptr;
   }
 
@@ -566,6 +572,16 @@ ESTree::NodePtr parseJS(
         cli::DumpSourceLocation,
         cli::IncludeRawASTProp ? ESTreeRawProp::Include
                                : ESTreeRawProp::Exclude);
+    return parsedAST;
+  }
+  if (cli::OutputLevel == OutputLevelKind::Sema) {
+    sema::SemContextDumper dumper{};
+    dumper.printSemContext(llvh::outs(), semCtx);
+    return parsedAST;
+  }
+
+  if (!hermes::sem::validateAST(*context, oldSemCtx, parsedAST)) {
+    return nullptr;
   }
 
   return parsedAST;
@@ -596,10 +612,12 @@ bool compileFromCommandLineOptions() {
   }
 
   Module M(context);
-  sem::SemContext semCtx{};
+  sem::SemContext oldSemCtx{};
+  sema::SemContext semCtx{*context};
 
   // TODO: support input source map.
-  ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBuf));
+  ESTree::NodePtr ast =
+      parseJS(context, oldSemCtx, semCtx, declFileList, std::move(fileBuf));
   if (!ast) {
     return false;
   }
