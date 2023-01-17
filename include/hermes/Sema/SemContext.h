@@ -246,6 +246,12 @@ class SemContext {
   /// \return a new global property.
   Decl *newGlobal(UniqueString *name, Decl::Kind kind);
 
+  /// Assert that the global function and the global scope have been created.
+  void assertGlobalFunctionAndScope() {
+    assert(!functions_.empty() && "global function has not been created");
+    assert(!scopes_.empty() && "global scope has not been created");
+  }
+
   /// \return the global function.
   FunctionInfo *getGlobalFunction() {
     return &functions_.at(0);

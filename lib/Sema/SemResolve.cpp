@@ -62,12 +62,22 @@ class ASTPrinter {
 bool resolveAST(
     Context &astContext,
     SemContext &semCtx,
-    ESTree::Node *root,
+    ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
-  PerfSection validation("Resolving JavaScript function AST");
+  PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
   SemanticResolver resolver{astContext, semCtx, ambientDecls, true};
   return resolver.run(root);
+}
+
+bool resolveCommonJSAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::FunctionExpressionNode *root) {
+  PerfSection validation("Resolving JavaScript CommonJS Module AST");
+  // Resolve the entire AST.
+  SemanticResolver resolver{astContext, semCtx, {}, true};
+  return resolver.runCommonJSModule(root);
 }
 
 void semDump(llvh::raw_ostream &os, SemContext &semCtx, ESTree::Node *root) {
@@ -83,7 +93,7 @@ bool resolveASTForParser(
     SemContext &semCtx,
     ESTree::Node *root) {
   SemanticResolver resolver{astContext, semCtx, {}, false};
-  return resolver.run(root);
+  return resolver.run(llvh::cast<ESTree::ProgramNode>(root));
 }
 
 } // namespace sema
