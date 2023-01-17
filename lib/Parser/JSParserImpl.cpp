@@ -44,7 +44,8 @@ JSParserImpl::JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass)
           context.getAllocator(),
           &context.getStringTable(),
           context.isStrictMode()),
-      pass_(pass) {
+      // TODO: re-enable lazy parsing when we are ready.
+      pass_(pass == ParserPass::LazyParse ? ParserPass::FullParse : pass) {
   preParsed_ = context.getPreParsedBufferInfo(bufferId);
   initializeIdentifiers();
 }

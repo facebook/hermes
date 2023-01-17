@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes -lazy -debug-only=codeblock -non-strict -target=HBC %s 2>&1 | %FileCheck --match-full-lines %s
-// REQUIRES: debug_options, !fbcode
+// REQUIRES: debug_options, !fbcode, lazy
 
 // lazy compilation leads to the property cache being allocated
 // in a special fashion.
