@@ -57,6 +57,49 @@ TEST(OSCompatTest, CpuCycles) {
   EXPECT_LE(start, end);
 }
 
+static constexpr size_t StorageSize = 4 * 1024 * 1024;
+
+TEST(OSCompatTest, VmCommitNull) {
+  // Committing a nullptr should not succeed on any platform
+  auto result = oscompat::vm_commit(nullptr, StorageSize);
+  EXPECT_FALSE(result);
+}
+
+TEST(OSCompatTest, VmDoubleCommit) {
+  // Double committing the same memory should succeed on every platform
+  auto result = oscompat::vm_reserve_aligned(StorageSize, StorageSize);
+  EXPECT_TRUE(oscompat::vm_commit(*result, StorageSize));
+  EXPECT_TRUE(oscompat::vm_commit(*result, StorageSize));
+}
+
+// TODO: T142209580
+//
+// These tests, which expect different results per platform, are documenting the
+// fact that right now, Windows and Posix differ in semantics when it comes
+// sending non-reserved addresses into vm_commit. Posix treats the address as a
+// hint and will perform a commit; Windows will reject the request.
+//
+// Moreover, Posix internally uses MAP_FIXED flags, which will stomp existing
+// commits of that address if they exist, which seems to open it up to race
+// conditions? If possible, we may wish to explore the use of
+// MAP_FIXED_NOREPLACE rather than MAP_FIXED.
+#ifdef _MSC_VER
+TEST(OSCompatTest, VmCommitAfterRelease) {
+  auto result = oscompat::vm_reserve_aligned(StorageSize, StorageSize);
+  oscompat::vm_release_aligned(*result, StorageSize);
+  EXPECT_FALSE(oscompat::vm_commit(*result, StorageSize));
+}
+#endif
+
+#ifdef __linux__
+TEST(OSCompatTest, VmCommitAfterRelease) {
+  // Committing reserved-then-released memory should not succeed on any platform
+  auto result = oscompat::vm_reserve_aligned(StorageSize, StorageSize);
+  oscompat::vm_release_aligned(*result, StorageSize);
+  EXPECT_TRUE(oscompat::vm_commit(*result, StorageSize));
+}
+#endif
+
 #ifdef __linux__
 TEST(OSCompatTest, Scheduling) {
   // At least one CPU should be set.

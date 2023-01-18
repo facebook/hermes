@@ -257,9 +257,9 @@ inline HermesValue operator"" _hd(long double d) {
 }
 
 /// A minimal Runtime for GC tests.
-class DummyRuntime final : public HandleRootOwner,
-                           public PointerBase,
-                           private GCBase::GCCallbacks {
+class HERMES_EMPTY_BASES DummyRuntime final : public HandleRootOwner,
+                                              public PointerBase,
+                                              private GCBase::GCCallbacks {
  private:
   GCStorage gcStorage_;
 
