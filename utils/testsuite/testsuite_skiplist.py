@@ -1841,7 +1841,6 @@ SKIP_LIST = [
     "test262/test/built-ins/Object/getOwnPropertyDescriptor/15.2.3.3-4-187.js",
     "test262/test/built-ins/Object/values/tamper-with-global-object.js",
     "test262/test/built-ins/Object/prototype/toString/Object.prototype.toString.call-function.js",
-    "test262/test/built-ins/Object/seal/seal-promise.js",
     "test262/test/built-ins/Object/seal/seal-arrowfunction.js",
     "test262/test/built-ins/Object/seal/seal-function.js",
     "test262/test/built-ins/Boolean/S9.2_A6_T1.js",

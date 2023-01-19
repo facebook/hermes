@@ -363,7 +363,6 @@ Runtime::Runtime(
       ignoreAllocationFailure(JSArray::create(*this, 4, 4)).get());
 #endif
 
-#if 0
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
   auto jsBuiltinsObj = runInternalJavaScript();
@@ -371,7 +370,6 @@ Runtime::Runtime(
 
   // Populate JS builtins returned from internal bytecode to the builtins table.
   initJSBuiltins(builtins_, jsBuiltinsObj);
-#endif
 
   if (runtimeConfig.getEnableSampleProfiling())
     samplingProfiler = std::make_unique<SamplingProfiler>(*this);
@@ -1103,36 +1101,12 @@ ExecutionStatus Runtime::loadSegment(
   return ExecutionStatus::RETURNED;
 }
 
-#if 0
 Handle<JSObject> Runtime::runInternalJavaScript() {
-  auto module = getInternalBytecode();
-  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          std::make_unique<Buffer>(module.data(), module.size()));
-  if (LLVM_UNLIKELY(!bcResult.first)) {
-    hermes_fatal((llvh::Twine("Error running internal bytecode: ") +
-                  bcResult.second.c_str())
-                     .str());
-  }
-  // The bytes backing our buffer are immortal, so we can be persistent.
-  RuntimeModuleFlags flags;
-  flags.persistent = true;
-  flags.hidesEpilogue = true;
-  auto res = runBytecode(
-      std::move(bcResult.first),
-      flags,
-      /*sourceURL*/ "InternalBytecode.js",
-      makeNullHandle<Environment>());
-  // It is a fatal error for the internal bytecode to throw an exception.
-  assert(
-      res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
-  assert(
-      res->isObject() &&
-      "Completion value of internal bytecode must be an object");
-
-  return makeHandle<JSObject>(*res);
+  SHLegacyValue resOrExc;
+  if (_sh_unit_init_guarded(getSHRuntime(*this), &internal_unit, &resOrExc))
+    return makeHandle<JSObject>(HermesValue::fromRaw(resOrExc.raw));
+  hermes_fatal("Error evaluating internal unit.");
 }
-#endif
 
 void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
   os << "Uncaught ";
@@ -1692,7 +1666,7 @@ void Runtime::initJSBuiltins(
     auto getRes = JSObject::getNamed_RJS(
         jsBuiltinsObj, *this, Predefined::getSymbolID((Predefined::Str)symID));
     assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
-    JSFunction *jsFunc = vmcast<JSFunction>(getRes->getHermesValue());
+    Callable *jsFunc = vmcast<Callable>(getRes->getHermesValue());
 
     builtins[builtinIndex] = jsFunc;
   }
