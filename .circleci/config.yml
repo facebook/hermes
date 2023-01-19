@@ -562,7 +562,7 @@ jobs:
       - run:
           name: Setup dependencies
           command: |
-            (yes | sdkmanager "cmake;3.18.1" --verbose) || true
+            (yes | sdkmanager "cmake;3.22.1" --verbose) || true
       - checkout:
           path: hermes
       - run:
