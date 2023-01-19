@@ -61,7 +61,7 @@ apple_defaults: &apple_defaults
 jobs:
   android:
     executor:
-      name: android-docker
+      name: android-machine
       tag: 2022.12.1-ndk
       sdk-version: '28'
       variant: ndk
