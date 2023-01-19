@@ -72,8 +72,8 @@ add_custom_command(
 # in the NodeBytecode.cpp as C/C++ hex literal to initialize a byte array.
 add_custom_command(
   OUTPUT NodeBytecode.inc
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalBytecode/xxd.py ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.inc
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalBytecode/xxd.py NodeBytecode.hbc
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalJavaScript/xxd.py ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.hbc > ${CMAKE_CURRENT_BINARY_DIR}/NodeBytecode.inc
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/InternalJavaScript/xxd.py NodeBytecode.hbc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )

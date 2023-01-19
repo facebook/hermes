@@ -286,9 +286,9 @@ class Runtime : public PointerBase, public HandleRootOwner {
       RuntimeModuleFlags flags = {});
 
 #if 0
-  /// Runs the internal bytecode. This is called once during initialization.
+  /// Runs the internal JavaScript. This is called once during initialization.
   /// \return the completion value of internal bytecode IIFE.
-  Handle<JSObject> runInternalBytecode();
+  Handle<JSObject> runInternalJavaScript();
 #endif
 
   /// A convenience function to print an exception to a stream.
