@@ -28,12 +28,16 @@ enum OutputFormatKind {
 };
 
 /// Options controlling the type of output to generate.
+/// TODO: Split these options for bytecode and SH code generation.
 struct BytecodeGenerationOptions {
   /// The format of the output.
   OutputFormatKind format = Execute;
 
   /// Whether optimizations are enabled.
   bool optimizationEnabled = false;
+
+  /// The name of the unit emitted by the SH backend.
+  llvh::StringRef unitName = "s_this_unit";
 
   /// Whether to strip the debug info in the bytecode binary.
   bool stripDebugInfoSection = false;
