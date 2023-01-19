@@ -12,7 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
-  android: circleci/android@2.1.2
+  android: circleci/android@2.0.0
   node: circleci/node@4.7.0
 
 workflows:
@@ -60,6 +60,10 @@ apple_defaults: &apple_defaults
 
 jobs:
   android:
+    executor:
+      name: android/android-machine
+      resource-class: large
+      tag: 2021.10.1
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
