@@ -216,7 +216,12 @@ class MallocGC final : public GCBase {
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
 
-  bool needsWriteBarrier(void *loc, GCCell *value) override;
+  bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+      const override;
+  bool needsWriteBarrier(const GCSmallHermesValue *loc, SmallHermesValue value)
+      const override;
+  bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
+      const override;
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

@@ -2162,7 +2162,34 @@ bool HadesGC::dbgContains(const void *p) const {
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
 
-bool HadesGC::needsWriteBarrier(void *loc, GCCell *value) {
+bool HadesGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+    const {
+  // Values in the YG never need a barrier.
+  if (inYoungGen(loc))
+    return false;
+  // If the old value is a pointer or a symbol, a snapshot barrier is needed.
+  if (loc->isPointer() || loc->isSymbol())
+    return true;
+  // If the new value is a pointer, a relocation barrier is needed.
+  if (value.isPointer())
+    return true;
+  return false;
+}
+bool HadesGC::needsWriteBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) const {
+  // Values in the YG never need a barrier.
+  if (inYoungGen(loc))
+    return false;
+  // If the old value is a pointer or a symbol, a snapshot barrier is needed.
+  if (loc->isPointer() || loc->isSymbol())
+    return true;
+  // If the new value is a pointer, a relocation barrier is needed.
+  if (value.isPointer())
+    return true;
+  return false;
+}
+bool HadesGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value) const {
   return !inYoungGen(loc);
 }
 #endif

@@ -1014,7 +1014,13 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool needsWriteBarrier(void *loc, GCCell *value) = 0;
+  virtual bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+      const = 0;
+  virtual bool needsWriteBarrier(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) const = 0;
+  virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
+      const = 0;
   /// \}
 #endif
 

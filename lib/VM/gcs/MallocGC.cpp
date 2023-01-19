@@ -539,7 +539,17 @@ bool MallocGC::dbgContains(const void *p) const {
   return isValid;
 }
 
-bool MallocGC::needsWriteBarrier(void *loc, GCCell *value) {
+bool MallocGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+    const {
+  return false;
+}
+bool MallocGC::needsWriteBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) const {
+  return false;
+}
+bool MallocGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
+    const {
   return false;
 }
 #endif
