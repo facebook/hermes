@@ -551,6 +551,7 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
+      tag: 2022.12.1-ndk
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
