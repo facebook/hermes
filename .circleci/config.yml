@@ -12,7 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
-  android: circleci/android@2.1.2
+  android: circleci/android@1.0.3
   node: circleci/node@4.7.0
 
 workflows:
@@ -61,8 +61,9 @@ apple_defaults: &apple_defaults
 jobs:
   android:
     executor:
-      name: android/android-docker
-      tag: 2022.12.1-ndk
+      name: android/android
+      sdk-version: '28'
+      variant: ndk
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
@@ -75,6 +76,7 @@ jobs:
             yes | sdkmanager "cmake;3.18.1" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
             sudo apt-get update
             sudo apt-get install -y cmake ninja-build libicu-dev
             wait
@@ -551,7 +553,6 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
-      tag: 2022.12.1-ndk
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
@@ -584,7 +585,6 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
-      tag: 2022.12.1-ndk
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
