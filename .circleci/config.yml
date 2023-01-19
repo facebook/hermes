@@ -76,6 +76,7 @@ jobs:
             yes | sdkmanager "cmake;3.18.1" &
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
             sudo apt-get update
             sudo apt-get install -y cmake ninja-build libicu-dev
             wait
