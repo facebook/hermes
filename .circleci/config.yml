@@ -61,7 +61,7 @@ apple_defaults: &apple_defaults
 jobs:
   android:
     executor:
-      name: android/android
+      name: android/android-machine
       sdk-version: '28'
       variant: ndk
     environment:
