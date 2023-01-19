@@ -122,7 +122,8 @@ bool compileToC(
     return false;
   if (!invokeBackend(context, M, params.genOptions, fileOS.os()))
     return false;
-  emitMain(params.genOptions.unitName, fileOS.os());
+  if (params.emitMain == ShermesCompileParams::EmitMain::on)
+    emitMain(params.genOptions.unitName, fileOS.os());
   return fileOS.close();
 }
 
@@ -374,7 +375,8 @@ bool compileFromC(
     llvh::raw_fd_ostream os{tmpFD, true};
     if (!invokeBackend(context, M, params.genOptions, os))
       return false;
-    emitMain(params.genOptions.unitName, os);
+    if (params.emitMain == ShermesCompileParams::EmitMain::on)
+      emitMain(params.genOptions.unitName, os);
     os.close();
     if (auto EC = os.error()) {
       llvh::errs() << "Error writing to " << tmpPath << ": " << EC.message()

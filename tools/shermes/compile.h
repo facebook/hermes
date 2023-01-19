@@ -48,6 +48,8 @@ struct ShermesCompileParams {
   llvh::ArrayRef<std::string> extraCCOptions{};
   enum class KeepTemp { off, on };
   KeepTemp keepTemp = KeepTemp::off;
+  enum class EmitMain { off, on };
+  EmitMain emitMain = EmitMain::off;
   int verbosity;
 
   ShermesCompileParams(
@@ -58,6 +60,7 @@ struct ShermesCompileParams {
       StaticLink staticLink,
       llvh::ArrayRef<std::string> extraCCOptions,
       KeepTemp keepTemp,
+      EmitMain emitMain,
       int verbosity)
       : genOptions(genOptions),
         nativeOptimize(nativeOptimize),
@@ -66,6 +69,7 @@ struct ShermesCompileParams {
         staticLink(staticLink),
         extraCCOptions(extraCCOptions),
         keepTemp(keepTemp),
+        emitMain(emitMain),
         verbosity(verbosity) {}
 };
 
