@@ -12,7 +12,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@2.4.0
-  android: cimg/android@2022.12.1-ndk
+  android: circleci/android@2.1.2
   node: circleci/node@4.7.0
 
 workflows:
