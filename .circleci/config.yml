@@ -584,6 +584,7 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
+      tag: 2022.12.1-ndk
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci
