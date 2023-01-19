@@ -23,6 +23,21 @@ using namespace hermes;
 
 namespace {
 
+/// Emit the main function for a standalone executable that evaluates the unit
+/// named \p unitName.
+void emitMain(llvh::StringRef unitName, llvh::raw_ostream &os) {
+  os << R"(
+int main(int argc, char **argv) {
+  SHRuntime *shr = _sh_init(argc, argv);
+  bool success = _sh_initialize_units(shr, 1, &)"
+     << unitName << ");"
+     << R"(
+  _sh_done(shr);
+  return success ? 0 : 1;
+}
+)";
+}
+
 /// Invoke the backend with the specified options. If the backend generates
 /// an error (unlikely, but possible), print the number of errors and return
 /// false.
@@ -107,6 +122,7 @@ bool compileToC(
     return false;
   if (!invokeBackend(context, M, params.genOptions, fileOS.os()))
     return false;
+  emitMain(params.genOptions.unitName, fileOS.os());
   return fileOS.close();
 }
 
@@ -358,6 +374,7 @@ bool compileFromC(
     llvh::raw_fd_ostream os{tmpFD, true};
     if (!invokeBackend(context, M, params.genOptions, os))
       return false;
+    emitMain(params.genOptions.unitName, os);
     os.close();
     if (auto EC = os.error()) {
       llvh::errs() << "Error writing to " << tmpPath << ": " << EC.message()

@@ -1743,15 +1743,7 @@ static char s_prop_cache[];
        << moduleGen.literalBuffers.arrayBuffer.size() << ", "
        << ".unit_main = _0_global, .unit_main_strict = "
        << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
-       << ".unit_name = \"sh_compiled\" };\n"
-       << R"(
-int main(int argc, char **argv) {
-  SHRuntime *shr = _sh_init(argc, argv);
-  bool success = _sh_initialize_units(shr, 1, &THIS_UNIT);
-  _sh_done(shr);
-  return success ? 0 : 1;
-}
-)";
+       << ".unit_name = \"sh_compiled\" };\n";
   }
 }
 } // namespace
