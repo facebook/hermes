@@ -112,6 +112,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               cl::EnableHermesInternalTestMethods)
+          .withMaxNumRegisters(1024 * 1024)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;

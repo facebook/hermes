@@ -35,7 +35,7 @@ class PinnedHermesValue;
   F(constexpr, PinnedHermesValue *, RegisterStack, nullptr)            \
                                                                        \
   /* Register Stack Size */                                            \
-  F(constexpr, unsigned, MaxNumRegisters, 1024 * 1024)                 \
+  F(constexpr, unsigned, MaxNumRegisters, 64 * 1024)                   \
                                                                        \
   /* Whether or not the JIT is enabled */                              \
   F(constexpr, bool, EnableJIT, false)                                 \
