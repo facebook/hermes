@@ -126,6 +126,7 @@ int main(int argc, char **argv) {
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               cl::EnableHermesInternalTestMethods)
+          .withMaxNumRegisters(1024 * 1024)
           .build();
 
   options.stabilizeInstructionCount = cl::StableInstructionCount;
