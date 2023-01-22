@@ -168,7 +168,10 @@ class JSI_EXPORT NativeState {
 /// means that the main source of unsafe behavior is to hold a jsi object
 /// in a non-Runtime-managed object, and not clean it up before the Runtime
 /// is shut down.  If your lifecycle is such that avoiding this is hard,
-/// you will probably need to do use your own locks.
+/// you will probably need to do use your own locks.  Methods will typically
+/// only throw instances of JSIException, but may throw other std::exceptions
+/// that originate in STL usage in JSI infrastructure, or exceptions that are
+/// specific to the actual underlying JavaScript engine.
 class JSI_EXPORT Runtime {
  public:
   virtual ~Runtime();
