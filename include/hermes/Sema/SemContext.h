@@ -164,7 +164,7 @@ class FunctionInfo {
   /// Source visibility of this function.
   SourceVisibility sourceVisibility = SourceVisibility::Default;
   /// True if this function is an arrow function.
-  bool arrow;
+  bool const arrow;
   /// False if the parameter list contains any patterns.
   bool simpleParameterList = true;
 
