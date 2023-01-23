@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -dump-transformed-ast -non-strict %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %shermes -dump-transformed-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 // Make sure we scan directive prologues before doing everything else.
 
@@ -37,7 +37,7 @@ function f3() {
 }
 
 function f4(eval) {
-//CHECK: {{.*}}directives-3.js:39:13: error: cannot declare 'eval'
+//CHECK: {{.*}}directives-3.js:39:13: error: cannot declare 'eval' in strict mode
 //CHECK-NEXT: function f4(eval) {
 //CHECK-NEXT:             ^~~~
 
@@ -45,6 +45,6 @@ function f4(eval) {
 }
 
 function f5(eval) {"use strict"  }
-//CHECK: {{.*}}directives-3.js:47:13: error: cannot declare 'eval'
+//CHECK: {{.*}}directives-3.js:47:13: error: cannot declare 'eval' in strict mode
 //CHECK-NEXT: function f5(eval) {"use strict"  }
 //CHECK-NEXT:             ^~~~
