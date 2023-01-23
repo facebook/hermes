@@ -1210,28 +1210,6 @@ class Instruction
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), Instruction);
   }
 
-  /// An opaque class representing the variety of an instruction.
-  ///
-  /// Variety is more specific than ValueKind: it encapsulates all properties of
-  /// an instruction except its operands. For example, the "+" and "-" binary
-  /// operator instructions have the same getKind() but different getVariety().
-  class Variety {
-    friend class Instruction;
-    std::pair<unsigned, unsigned> kinds_;
-    explicit Variety(std::pair<unsigned, unsigned> kinds) : kinds_(kinds) {}
-
-   public:
-    bool operator==(const Variety &other) const {
-      return kinds_ == other.kinds_;
-    }
-    bool operator!=(const Variety &other) const {
-      return kinds_ != other.kinds_;
-    }
-    friend llvh::hash_code hash_value(Variety variety) {
-      return llvh::hash_value(variety.kinds_);
-    }
-  };
-
   /// Return the hash code the this instruction.
   llvh::hash_code getHashCode() const;
 
