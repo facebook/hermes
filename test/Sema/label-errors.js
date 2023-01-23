@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (%hermes -hermes-parser %s 2>&1 || true) | %FileCheck %s --match-full-lines
+// RUN: (%shermes %s 2>&1 || true) | %FileCheck %s --match-full-lines
 
 break;
 //CHECK: {{.*}}label-errors.js:10:1: error: 'break' not within a loop or a switch
@@ -18,7 +18,7 @@ continue;
 //CHECK-NEXT: ^~~~~~~~~
 
 label1: { continue label1; }
-//CHECK: {{.*}}label-errors.js:20:20: error: continue label 'label1' is not a loop label
+//CHECK: {{.*}}label-errors.js:20:20: error: 'continue' label 'label1' is not a loop label
 //CHECK-NEXT: label1: { continue label1; }
 //CHECK-NEXT:                    ^~~~~~
 //CHECK: {{.*}}label-errors.js:20:1: note: label defined here
