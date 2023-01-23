@@ -1111,6 +1111,8 @@ class InstrGen {
   void generateThrowIfEmptyInst(ThrowIfEmptyInst &inst) {
     os_.indent(2);
     os_ << "if (_sh_ljs_is_empty(";
+    generateRegister(inst);
+    os_ << " = ";
     generateValue(*inst.getCheckedValue());
     os_ << ")) _sh_throw_empty(shr);\n";
   }
