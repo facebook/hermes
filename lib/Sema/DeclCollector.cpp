@@ -94,6 +94,18 @@ void DeclCollector::visit(ESTree::ImportDeclarationNode *node) {
   addToCur(node);
   visitESTreeChildren(*this, node);
 }
+#if HERMES_PARSE_FLOW
+void DeclCollector::visit(ESTree::TypeAliasNode *node) {
+  addToCur(node);
+  visitESTreeChildren(*this, node);
+}
+#endif
+#if HERMES_PARSE_TS
+void DeclCollector::visit(ESTree::TSTypeAliasDeclarationNode *node) {
+  addToCur(node);
+  visitESTreeChildren(*this, node);
+}
+#endif
 
 void DeclCollector::visit(ESTree::FunctionDeclarationNode *node) {
   // Record but don't descend.
