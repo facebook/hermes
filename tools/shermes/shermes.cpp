@@ -621,7 +621,7 @@ bool compileFromCommandLineOptions() {
 
   Module M(context);
   sem::SemContext oldSemCtx{};
-  sema::SemContext semCtx{*context};
+  sema::SemContext semCtx{};
 
   // TODO: support input source map.
   ESTree::NodePtr ast =

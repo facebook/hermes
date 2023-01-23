@@ -217,7 +217,7 @@ class SemContext {
   friend class SemContextDumper;
 
  public:
-  SemContext(Context &ctx);
+  explicit SemContext();
   ~SemContext();
 
   /// \param parentFunction may be null.
@@ -254,11 +254,6 @@ class SemContext {
   LexicalScope *getGlobalScope() {
     return &scopes_.at(0);
   }
-  /// \return the "eval" declaration, used for local "eval" calls.
-  Decl *getEvalDecl() {
-    assert(evalDecl_ && "evalDecl_ must be initialized in ctor");
-    return evalDecl_;
-  }
 
   /// Create or retrieve the arguments declaration in \p func.
   /// If `func` is an arrow function, find the closest ancestor that
@@ -271,12 +266,6 @@ class SemContext {
   Decl *funcArgumentsDecl(FunctionInfo *func, UniqueString *argumentsName);
 
  private:
-  /// The special global "eval" declaration.
-  /// Stored to use when we are performing "eval" anywhere in the function,
-  /// so the "eval" IdentifierNode can be associated with this declaration,
-  /// which is "undeclared global".
-  Decl *evalDecl_;
-
   /// Storage for all functions.
   std::deque<FunctionInfo> functions_{};
 
