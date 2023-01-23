@@ -711,6 +711,54 @@ void SemanticResolver::visit(ESTree::AwaitExpressionNode *awaitExpr) {
   visitESTreeChildren(*this, awaitExpr);
 }
 
+void SemanticResolver::visit(ESTree::ExportNamedDeclarationNode *node) {
+  if (compile_ && !astContext_.getUseCJSModules()) {
+    sm_.error(
+        node->getSourceRange(), "'export' statement requires module mode");
+  }
+
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticResolver::visit(ESTree::ExportDefaultDeclarationNode *node) {
+  if (compile_ && !astContext_.getUseCJSModules()) {
+    sm_.error(
+        node->getSourceRange(), "'export' statement requires module mode");
+  }
+
+  if (auto *funcDecl =
+          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(node->_declaration)) {
+    if (compile_ && !funcDecl->_id) {
+      // If the default function declaration has no name, then change it to a
+      // FunctionExpression node for cleaner IRGen.
+      auto *funcExpr = new (astContext_) ESTree::FunctionExpressionNode(
+          funcDecl->_id,
+          std::move(funcDecl->_params),
+          funcDecl->_body,
+          funcDecl->_typeParameters,
+          funcDecl->_returnType,
+          funcDecl->_predicate,
+          funcDecl->_generator,
+          /* async */ false);
+      funcExpr->strictness = funcDecl->strictness;
+      funcExpr->copyLocationFrom(funcDecl);
+
+      node->_declaration = funcExpr;
+    }
+  }
+
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticResolver::visit(ESTree::ExportAllDeclarationNode *node) {
+  if (compile_ && !astContext_.getUseCJSModules()) {
+    sm_.error(
+        node->getSourceRange(),
+        "'export' statement requires CommonJS module mode");
+  }
+  visitESTreeChildren(*this, node);
+}
+
 void SemanticResolver::visit(CoverEmptyArgsNode *node) {
   sm_.error(node->getSourceRange(), "invalid empty parentheses '( )'");
 }

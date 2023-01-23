@@ -222,6 +222,10 @@ class SemanticResolver {
   void visit(ESTree::YieldExpressionNode *node);
   void visit(ESTree::AwaitExpressionNode *awaitExpr);
 
+  void visit(ESTree::ExportNamedDeclarationNode *node);
+  void visit(ESTree::ExportDefaultDeclarationNode *node);
+  void visit(ESTree::ExportAllDeclarationNode *node);
+
   void visit(ESTree::CoverEmptyArgsNode *node);
   void visit(ESTree::CoverTrailingCommaNode *node);
   void visit(ESTree::CoverInitializerNode *node);
