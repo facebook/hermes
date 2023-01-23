@@ -981,14 +981,23 @@ void SemanticResolver::resolveIdentifier(
 
   // Undeclared variables outside `typeof` cause runtime errors in strict mode.
   if (!inTypeof && curFunctionInfo()->strict) {
-    UniqueString *funcName = functionContext()->getFunctionName();
+    llvh::StringRef funcName = functionContext()->getFunctionName()
+        ? functionContext()->getFunctionName()->str()
+        : "";
+    if (functionContext()->isGlobalScope() && funcName.empty())
+      funcName = "global";
+
+    llvh::StringRef funcType(
+        curFunctionInfo()->arrow ? "arrow function" : "function");
+    std::string dispName = !funcName.empty()
+        ? (funcType + " \"" + funcName + "\"").str()
+        : ("anonymous " + funcType).str();
 
     sm_.warning(
         Warning::UndefinedVariable,
         identifier->getSourceRange(),
         Twine("the variable \"") + identifier->_name->str() +
-            "\" was not declared in function \"" +
-            (funcName ? funcName->str() : "global") + "\"");
+            "\" was not declared in " + dispName);
   }
 
   // Declare an ambient global property.
