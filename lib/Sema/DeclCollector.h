@@ -21,6 +21,10 @@ class SemanticResolver;
 /// All the declarations in a scope.
 using ScopeDecls = std::vector<ESTree::Node *>;
 
+/// A map storing DeclCollector instances associated with every function.
+using DeclCollectorMapTy =
+    llvh::DenseMap<ESTree::FunctionLikeNode *, std::unique_ptr<DeclCollector>>;
+
 /// Collect all declarations in every scope of a function.
 /// All declarations will have to be hoisted to the top of a function or scope,
 /// so store them all up front in a single pass.
