@@ -38,9 +38,6 @@ class SemanticResolver {
   /// All semantic tables are persisted here.
   SemContext &semCtx_;
 
-  /// Save the initial error count so we know whether we generated any errors.
-  const unsigned initialErrorCount_;
-
   /// Keywords we will be checking for.
   hermes::sem::Keywords kw_;
 
