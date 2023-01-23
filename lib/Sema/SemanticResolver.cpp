@@ -166,7 +166,7 @@ void SemanticResolver::visit(ESTree::BlockStatementNode *node) {
     return visitESTreeChildren(*this, node);
   }
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
+  if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
     // Only create a lexical scope if there are declarations in it.
     ScopeRAII blockScope{*this, node};
@@ -187,9 +187,9 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
 
   {
     ScopeRAII nameScope{*this, node};
-    if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
+    if (const ScopeDecls *declsOpt =
             functionContext()->decls->getScopeDeclsForNode(node)) {
-      // Only create a lexical scope if there are declarations in it.
+      // Only process a lexical scope if there are declarations in it.
       processDeclarations(*declsOpt);
     }
 
@@ -232,7 +232,7 @@ void SemanticResolver::visitForInOf(
     validateAssignmentTarget(left);
   }
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
+  if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
     // Only create a lexical scope if there are declarations in it.
     ScopeRAII nameScope{*this, scopeDeco};
@@ -249,7 +249,7 @@ void SemanticResolver::visit(ESTree::ForStatementNode *node) {
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
 
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
+  if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(node)) {
     // Only create a lexical scope if there are declarations in it.
     ScopeRAII nameScope{*this, node};
@@ -841,7 +841,7 @@ Decl *SemanticResolver::checkIdentifierResolved(
 }
 
 void SemanticResolver::processCollectedDeclarations(ESTree::Node *scopeNode) {
-  if (hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> declsOpt =
+  if (const ScopeDecls *declsOpt =
           functionContext()->decls->getScopeDeclsForNode(scopeNode)) {
     processDeclarations(*declsOpt);
   }

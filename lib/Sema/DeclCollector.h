@@ -42,13 +42,12 @@ class DeclCollector {
   /// \param node the AST node which could have created a scope.
   ///   The only nodes which can are decorated by `ScopeDecorationBase`.
   /// \return the ScopeDecls if the AST node did create a scope,
-  ///   None if it didn't.
-  hermes::OptValue<llvh::ArrayRef<ESTree::Node *>> getScopeDeclsForNode(
-      ESTree::Node *node) const {
+  ///   Nullptr if it didn't.
+  const ScopeDecls *getScopeDeclsForNode(ESTree::Node *node) const {
     auto it = scopes_.find(node);
     if (it == scopes_.end())
-      return llvh::None;
-    return {it->second};
+      return nullptr;
+    return &it->second;
   }
   /// Set the ScopeDecls for an AST node.
   /// Replaces ScopeDecls if it already exists.
