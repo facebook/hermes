@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes -debug-only=codeblock -lazy -non-strict -target=HBC -O0 %s 2>&1 | %FileCheck --match-full-lines %s
-// REQUIRES: debug_options, !fbcode
+// REQUIRES: debug_options, !fbcode, lazy
 
 function foo() {
   function bar() {
