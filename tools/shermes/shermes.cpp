@@ -228,6 +228,13 @@ cl::opt<bool> ParseTS(
     cl::cat(CompilerCategory));
 #endif
 
+CLFlag StdGlobals(
+    'f',
+    "std-globals",
+    true,
+    "registration of standard globals",
+    CompilerCategory);
+
 cl::opt<unsigned> ErrorLimit(
     "ferror-limit",
     cl::desc("Maximum number of errors (0 means unlimited)"),
@@ -603,11 +610,13 @@ bool compileFromCommandLineOptions() {
   DeclarationFileListTy declFileList;
 
   // Load the runtime library.
-  if (!loadGlobalDefinition(
-          *context,
-          llvh::MemoryBuffer::getMemBuffer(libhermes),
-          declFileList)) {
-    return false;
+  if (cli::StdGlobals) {
+    if (!loadGlobalDefinition(
+            *context,
+            llvh::MemoryBuffer::getMemBuffer(libhermes),
+            declFileList)) {
+      return false;
+    }
   }
 
   Module M(context);
