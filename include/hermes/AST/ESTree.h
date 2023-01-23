@@ -1031,6 +1031,65 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
   }
 }
 
+/// Automatically get the specified decoration type from an ESTree node.
+template <typename Decoration>
+class GetDecorationHelper {
+ public:
+  static Decoration *get(Node *n) {
+    switch (n->getKind()) {
+#define ESTREE_NODE_0_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_1_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_2_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_3_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_4_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_5_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_6_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_7_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_8_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_FIRST(NAME, ...)   \
+  case NodeKind::_##NAME##_First: \
+    return nullptr;
+#define ESTREE_LAST(NAME)        \
+  case NodeKind::_##NAME##_Last: \
+    return nullptr;
+#include "hermes/AST/ESTree.def"
+    }
+  }
+
+ private:
+  static Decoration *helper(Decoration *d) {
+    return d;
+  }
+  static constexpr ScopeDecorationBase *helper(void *) {
+    return nullptr;
+  }
+};
+
+/// Return the decoration with the specified type, if it is attached to the
+/// node, or nullptr.
+template <typename Decoration>
+Decoration *getDecoration(Node *n) {
+  return GetDecorationHelper<Decoration>::get(n);
+}
+
 /// Return a reference to the parameter list of a FunctionLikeNode.
 NodeList &getParams(FunctionLikeNode *node);
 
