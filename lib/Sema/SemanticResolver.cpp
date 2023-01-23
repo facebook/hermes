@@ -346,7 +346,8 @@ void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
           getLabelDecorationBase(currentLoopOrSwitch_)->getNewLabelIndex();
       node->setNewLabelIndex(labelIndex);
     } else {
-      sm_.error(node->getSourceRange(), "'break' not within a loop or switch");
+      sm_.error(
+          node->getSourceRange(), "'break' not within a loop or a switch");
     }
   }
 
