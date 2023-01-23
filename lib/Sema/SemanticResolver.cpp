@@ -1304,6 +1304,7 @@ FunctionContext::FunctionContext(
     bool strict,
     SourceVisibility sourceVisibility)
     : resolver_(resolver),
+      prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
           node,
           semInfo,
@@ -1320,15 +1321,14 @@ FunctionContext::FunctionContext(
             resolver.recursionDepth_ = 0;
             resolver.recursionDepthExceeded(n);
           })) {
-  resolver.functionStack_.push_back(this);
+  resolver.curFunctionContext_ = this;
 }
 
 FunctionContext::~FunctionContext() {
   assert(
       resolver_.curFunctionInfo() == semInfo &&
       "FunctionContext out of sync with SemContext");
-  // If not the global function, pop it.
-  resolver_.functionStack_.pop_back();
+  resolver_.curFunctionContext_ = prevContext_;
 }
 
 UniqueString *FunctionContext::getFunctionName() const {
