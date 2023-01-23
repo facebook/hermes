@@ -126,7 +126,12 @@ class SemanticResolver {
   /// Run semantic resolution and store the result in \c semCtx_.
   /// \param rootNode the top-level program/JS module node to run resolution on.
   /// \return false on error.
-  bool run(ESTree::Node *rootNode);
+  bool run(ESTree::ProgramNode *rootNode);
+
+  /// Validate and resolve a CommonJS function expression. It will use the
+  /// existing global function and global scope, which must have been created
+  /// by a previous invocation of \c run().
+  bool runCommonJSModule(ESTree::FunctionExpressionNode *rootNode);
 
   /// \return a reference to the keywords struct.
   const sem::Keywords &keywords() const {
@@ -428,10 +433,19 @@ class FunctionContext {
   /// All declarations in the function.
   std::unique_ptr<DeclCollector> decls;
 
+  /// Just a tag for readability when invoking the special constructor.
+  struct ExistingGlobalScopeTag {};
+
+  /// Create a function context for the existing global scope.
+  explicit FunctionContext(
+      SemanticResolver &resolver,
+      FunctionInfo *globalSemInfo,
+      ExistingGlobalScopeTag);
+
   explicit FunctionContext(
       SemanticResolver &resolver,
       ESTree::FunctionLikeNode *node,
-      FunctionInfo *semInfo,
+      FunctionInfo *parentSemInfo,
       bool strict,
       SourceVisibility sourceVisibility);
 

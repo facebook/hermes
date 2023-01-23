@@ -21,6 +21,7 @@ class Context;
 namespace ESTree {
 class Node;
 class ProgramNode;
+class FunctionExpressionNode;
 } // namespace ESTree
 
 using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
@@ -35,8 +36,13 @@ class SemContext;
 bool resolveAST(
     Context &astContext,
     SemContext &semCtx,
-    ESTree::Node *root,
+    ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls = {});
+
+bool resolveCommonJSAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::FunctionExpressionNode *root);
 
 /// Perform semantic resolution of the entire AST, without preparing the AST for
 /// compilation. This will not error on features we can parse but not compile,

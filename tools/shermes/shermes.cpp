@@ -531,7 +531,7 @@ ESTree::NodePtr parseJS(
   }
   if (!parsedJs)
     return nullptr;
-  ESTree::NodePtr parsedAST = parsedJs.getValue();
+  ESTree::ProgramNode *parsedAST = parsedJs.getValue();
 
   if (cli::StaticBuiltins == cli::StaticBuiltinSetting::AutoDetect) {
     context->setStaticBuiltinOptimization(useStaticBuiltinDetected);

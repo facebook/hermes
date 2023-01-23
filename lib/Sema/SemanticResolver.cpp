@@ -34,10 +34,36 @@ SemanticResolver::SemanticResolver(
       saveDecls_(saveDecls),
       compile_(compile) {}
 
-bool SemanticResolver::run(ESTree::Node *rootNode) {
+bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
   if (sm_.getErrorCount())
     return false;
   visitESTreeNode(*this, rootNode);
+  return sm_.getErrorCount() == 0;
+}
+
+bool SemanticResolver::runCommonJSModule(
+    ESTree::FunctionExpressionNode *rootNode) {
+  semCtx_.assertGlobalFunctionAndScope();
+
+  if (sm_.getErrorCount())
+    return false;
+
+  FunctionContext newFuncCtx{
+      *this,
+      semCtx_.getGlobalFunction(),
+      FunctionContext::ExistingGlobalScopeTag{}};
+  llvh::SaveAndRestore setGlobalContext{globalFunctionContext_, &newFuncCtx};
+
+  {
+    BindingTableScopeTy programBindingScope(bindingTable_);
+    llvh::SaveAndRestore<LexicalScope *> saveLexicalScope(
+        curScope_, semCtx_.getGlobalScope());
+    llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
+        globalScope_, &programBindingScope);
+
+    visitESTreeNode(*this, rootNode);
+  }
+
   return sm_.getErrorCount() == 0;
 }
 
@@ -58,7 +84,8 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
 
   {
     ScopeRAII programScope{*this, node};
-    globalScope_ = &programScope.getBindingScope();
+    llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
+        globalScope_, &programScope.getBindingScope());
 
     processCollectedDeclarations(node);
     processAmbientDecls();
@@ -1376,15 +1403,26 @@ SemanticResolver::ScopeRAII::~ScopeRAII() {
 
 FunctionContext::FunctionContext(
     SemanticResolver &resolver,
+    FunctionInfo *globalSemInfo,
+    ExistingGlobalScopeTag)
+    : resolver_(resolver),
+      prevContext_(resolver.curFunctionContext_),
+      semInfo(globalSemInfo),
+      node(nullptr) {
+  resolver.curFunctionContext_ = this;
+}
+
+FunctionContext::FunctionContext(
+    SemanticResolver &resolver,
     ESTree::FunctionLikeNode *node,
-    FunctionInfo *semInfo,
+    FunctionInfo *parentSemInfo,
     bool strict,
     SourceVisibility sourceVisibility)
     : resolver_(resolver),
       prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
           node,
-          semInfo,
+          parentSemInfo,
           resolver.curScope_,
           strict,
           sourceVisibility)),
@@ -1404,7 +1442,7 @@ FunctionContext::FunctionContext(
 
 FunctionContext::~FunctionContext() {
   // If requested, save the collected declarations.
-  if (resolver_.saveDecls_)
+  if (resolver_.saveDecls_ && decls)
     resolver_.saveDecls_->try_emplace(node, std::move(decls));
 
   assert(
