@@ -630,6 +630,10 @@ void SemanticResolver::visit(CoverRestElementNode *node) {
 void SemanticResolver::visit(CoverTypedIdentifierNode *node) {
   sm_.error(node->getSourceRange(), "typecast not allowed in this context");
 }
+
+void SemanticResolver::visit(TypeAliasNode *node) {
+  // Do nothing.
+}
 #endif
 
 void SemanticResolver::visitFunctionLike(
