@@ -95,6 +95,11 @@ class DeclCollector {
   void visit(ESTree::ForOfStatementNode *node);
   void visit(ESTree::SwitchStatementNode *node);
 
+  /// Don't descend, to avoid recursion overflow.
+  void visit(ESTree::BinaryExpressionNode *) {}
+  /// Don't descend, to avoid recursion overflow.
+  void visit(ESTree::AssignmentExpressionNode *) {}
+
   /// This method implements the first part of the protocol defined by
   /// RecursiveVisitor. It is supposed to return true if everything is normal,
   /// and false if we should not visit the current node.

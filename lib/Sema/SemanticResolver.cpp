@@ -159,7 +159,42 @@ void SemanticResolver::visit(
   resolveIdentifier(identifier, false);
 }
 
+void SemanticResolver::visit(ESTree::BinaryExpressionNode *node) {
+  // Handle nested +/- non-recursively.
+  if (node->_operator == kw_.identPlus || node->_operator == kw_.identMinus) {
+    auto list = linearizeLeft(node, {"+", "-"});
+    if (list.size() > MAX_NESTED_BINARY) {
+      recursionDepthExceeded(node);
+      return;
+    }
+
+    visitESTreeNode(*this, list[0]->_left, list[0]);
+    for (auto *e : list) {
+      visitESTreeNode(*this, e->_right, e);
+    }
+    return;
+  }
+
+  visitESTreeChildren(*this, node);
+}
+
 void SemanticResolver::visit(ESTree::AssignmentExpressionNode *assignment) {
+  // Handle nested "=" non-recursively.
+  if (assignment->_operator == kw_.identAssign) {
+    auto list = linearizeRight(assignment, {"="});
+    if (list.size() > MAX_NESTED_ASSIGNMENTS) {
+      recursionDepthExceeded(assignment);
+      return;
+    }
+
+    for (auto *e : list) {
+      validateAssignmentTarget(e->_left);
+      visitESTreeNode(*this, e->_left, e);
+    }
+    visitESTreeNode(*this, list.back()->_right, list.back());
+    return;
+  }
+
   validateAssignmentTarget(assignment->_left);
   visitESTreeChildren(*this, assignment);
 }
