@@ -182,7 +182,8 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
 
   node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
-  llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
+  llvh::SaveAndRestore<StatementNode *> saveSwitch(
+      functionContext()->currentLoopOrSwitch, node);
 
   ScopeRAII nameScope{*this, node};
   if (const ScopeDecls *declsOpt =
@@ -201,8 +202,10 @@ void SemanticResolver::visitForInOf(
     ESTree::Node *left) {
   node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
-  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
-  llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
+  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
+      functionContext()->currentLoop, node);
+  llvh::SaveAndRestore<StatementNode *> saveSwitch(
+      functionContext()->currentLoopOrSwitch, node);
 
   // Ensure the initializer is valid.
   if (auto *vd = llvh::dyn_cast<VariableDeclarationNode>(left)) {
@@ -240,8 +243,10 @@ void SemanticResolver::visitForInOf(
 void SemanticResolver::visit(ESTree::ForStatementNode *node) {
   node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
-  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
-  llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
+  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
+      functionContext()->currentLoop, node);
+  llvh::SaveAndRestore<StatementNode *> saveSwitch(
+      functionContext()->currentLoopOrSwitch, node);
 
   ScopeRAII nameScope{*this, node};
   if (const ScopeDecls *declsOpt =
@@ -254,16 +259,20 @@ void SemanticResolver::visit(ESTree::ForStatementNode *node) {
 void SemanticResolver::visit(ESTree::DoWhileStatementNode *node) {
   node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
-  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
-  llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
+  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
+      functionContext()->currentLoop, node);
+  llvh::SaveAndRestore<StatementNode *> saveSwitch(
+      functionContext()->currentLoopOrSwitch, node);
 
   visitESTreeChildren(*this, node);
 }
 void SemanticResolver::visit(ESTree::WhileStatementNode *node) {
   node->setNewLabelIndex(curFunctionInfo()->allocateLabel());
 
-  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(currentLoop_, node);
-  llvh::SaveAndRestore<StatementNode *> saveSwitch(currentLoopOrSwitch_, node);
+  llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
+      functionContext()->currentLoop, node);
+  llvh::SaveAndRestore<StatementNode *> saveSwitch(
+      functionContext()->currentLoopOrSwitch, node);
 
   visitESTreeChildren(*this, node);
 }
@@ -341,9 +350,10 @@ void SemanticResolver::visit(ESTree::BreakStatementNode *node) {
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
   } else {
-    if (currentLoopOrSwitch_) {
+    if (functionContext()->currentLoopOrSwitch) {
       auto labelIndex =
-          getLabelDecorationBase(currentLoopOrSwitch_)->getNewLabelIndex();
+          getLabelDecorationBase(functionContext()->currentLoopOrSwitch)
+              ->getNewLabelIndex();
       node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(
@@ -377,8 +387,8 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
           llvh::Twine("label '") + name->str() + "' is not defined");
     }
   } else {
-    if (currentLoop_) {
-      auto labelIndex = currentLoop_->getNewLabelIndex();
+    if (functionContext()->currentLoop) {
+      auto labelIndex = functionContext()->currentLoop->getNewLabelIndex();
       node->setNewLabelIndex(labelIndex);
     } else {
       sm_.error(node->getSourceRange(), "'continue' not within a loop");
@@ -683,8 +693,6 @@ void SemanticResolver::visitFunctionLike(
       curFunctionInfo()->strict,
       curFunctionInfo()->sourceVisibility};
 
-  llvh::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
-
   FoundDirectives directives{};
 
   // Note that body might be empty (for lazy functions)
@@ -758,7 +766,8 @@ void SemanticResolver::visitFunctionLike(
 
   // Visit the parameters before we have hoisted the body declarations.
   {
-    llvh::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+    llvh::SaveAndRestore<bool> oldIsFormalParams{
+        functionContext()->isFormalParams, true};
     for (auto &param : getParams(node))
       visitESTreeNode(*this, &param, node);
   }

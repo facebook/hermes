@@ -55,15 +55,6 @@ class SemanticResolver {
   /// Current lexical scope.
   LexicalScope *curScope_{nullptr};
 
-  /// Most nested active loop statement.
-  ESTree::LoopStatementNode *currentLoop_{nullptr};
-
-  /// The most nested active loop or switch statement.
-  ESTree::StatementNode *currentLoopOrSwitch_{nullptr};
-
-  /// True if we are validating a formal parameter list.
-  bool isFormalParams_{false};
-
   /// Binding between an identifier and its declaration in a scope.
   struct Binding {
     Decl *decl = nullptr;
@@ -424,6 +415,15 @@ class FunctionContext {
 
   /// The currently active labels in the function.
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;
+
+  /// Most nested active loop statement.
+  ESTree::LoopStatementNode *currentLoop{nullptr};
+
+  /// The most nested active loop or switch statement.
+  ESTree::StatementNode *currentLoopOrSwitch{nullptr};
+
+  /// True if we are validating a formal parameter list.
+  bool isFormalParams{false};
 
   /// All declarations in the function.
   std::unique_ptr<DeclCollector> decls;
