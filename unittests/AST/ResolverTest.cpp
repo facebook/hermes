@@ -18,7 +18,7 @@ using namespace hermes::parser;
 namespace {
 
 /// Left side of assignment must be an LValue.
-TEST(ValidatorTest, TestBadAssignmentLValue) {
+TEST(ResolverTest, TestBadAssignmentLValue) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -31,7 +31,7 @@ TEST(ValidatorTest, TestBadAssignmentLValue) {
 }
 
 /// For-in control expression must be an LValue.
-TEST(ValidatorTest, TestBadForLValue) {
+TEST(ResolverTest, TestBadForLValue) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -44,7 +44,7 @@ TEST(ValidatorTest, TestBadForLValue) {
 }
 
 /// Test an anonymous break outside of a loop.
-TEST(ValidatorTest, UnnamedBreakLabelTest) {
+TEST(ResolverTest, UnnamedBreakLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -57,7 +57,7 @@ TEST(ValidatorTest, UnnamedBreakLabelTest) {
 }
 
 /// Test an anonymous continue outside of a loop.
-TEST(ValidatorTest, UnnamedContinueLabelTest) {
+TEST(ResolverTest, UnnamedContinueLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -70,7 +70,7 @@ TEST(ValidatorTest, UnnamedContinueLabelTest) {
 }
 
 /// Test an anonymous continue outside of a loop.
-TEST(ValidatorTest, ContinueInASwitchTest) {
+TEST(ResolverTest, ContinueInASwitchTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -83,7 +83,7 @@ TEST(ValidatorTest, ContinueInASwitchTest) {
 }
 
 /// Test a continue with a block label.
-TEST(ValidatorTest, ContinueWithBlockLabelTest) {
+TEST(ResolverTest, ContinueWithBlockLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -96,7 +96,7 @@ TEST(ValidatorTest, ContinueWithBlockLabelTest) {
 }
 
 /// Test that multiple labels are correctly attached to the same statement.
-TEST(ValidatorTest, ChainedNamedLabelsTest) {
+TEST(ResolverTest, ChainedNamedLabelsTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -111,7 +111,7 @@ TEST(ValidatorTest, ChainedNamedLabelsTest) {
 }
 
 /// Duplicated label in the scope of the previous one.
-TEST(ValidatorTest, DuplicateNamedLabelTest) {
+TEST(ResolverTest, DuplicateNamedLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -126,7 +126,7 @@ TEST(ValidatorTest, DuplicateNamedLabelTest) {
   ASSERT_EQ(2, diag.getErrCountClear());
 }
 
-TEST(ValidatorTest, CorrectDuplicateNamedLabelTest) {
+TEST(ResolverTest, CorrectDuplicateNamedLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -137,7 +137,7 @@ TEST(ValidatorTest, CorrectDuplicateNamedLabelTest) {
   ASSERT_TRUE(resolveAST(ctx, semCtx, *parsed));
 }
 
-TEST(ValidatorTest, ScopeNamedLabelTest) {
+TEST(ResolverTest, ScopeNamedLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -149,7 +149,7 @@ TEST(ValidatorTest, ScopeNamedLabelTest) {
   ASSERT_EQ(1, diag.getErrCountClear());
 }
 
-TEST(ValidatorTest, NamedBreakLabelTest) {
+TEST(ResolverTest, NamedBreakLabelTest) {
   Context ctx;
   sema::SemContext semCtx{};
   DiagContext diag(ctx);
@@ -196,7 +196,7 @@ void assertSecondNodeAsFunctionLikeWithSourceVisibility(
   ASSERT_EQ(funcLikeNode->getNewSemInfo()->sourceVisibility, sourceVisibility);
 }
 
-TEST(ValidatorTest, SourceVisibilityTest) {
+TEST(ResolverTest, SourceVisibilityTest) {
   Context context;
   sema::SemContext semCtx{};
   // Top-level program node.
