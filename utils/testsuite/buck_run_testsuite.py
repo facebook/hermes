@@ -34,7 +34,8 @@ def main():
         ]
         for rsc, out_name in resources:
             with open(os.path.join(binary_dir, out_name), "w+b") as f:
-                shutil.copyfileobj(pkg_resources.resource_stream(rsc_package, rsc), f)
+                with pkg_resources.resource_stream(rsc_package, rsc) as t:
+                    shutil.copyfileobj(t, f)
                 st = os.stat(f.name)
                 os.chmod(f.name, st.st_mode | stat.S_IEXEC)
         return run(

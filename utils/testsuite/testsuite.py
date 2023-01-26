@@ -551,7 +551,8 @@ def runTest(
             0,
         )
 
-    content = open(filename, "rb").read().decode("utf-8")
+    with open(filename, "rb") as test_contents:
+        content = test_contents.read().decode("utf-8")
 
     shouldRun, skipReason, permanent, flags, strictModes = testShouldRun(
         filename, content
