@@ -52,6 +52,9 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addDCE();
 
   PM.addSimplifyCFG();
+  // SimplifyCFG may remove all callsites of a particular local function.
+  // Run DCE after SimplifyCFG to remove such functions if any.
+  PM.addDCE();
   PM.addStackPromotion();
   PM.addMem2Reg();
   PM.addStackPromotion();
