@@ -61,6 +61,15 @@ bool deleteIncomingBlockFromPhis(
 /// due to an inserted block (and can therefore fail when called twice).
 void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to);
 
+/// Delete all variables that have no remaining loads and stores to them.
+/// \return true if anything was deleted, false otherwise.
+bool deleteUnusedVariables(Module *M);
+
+/// Delete all unused functions, and then delete any variables that have no
+/// remaining loads and stores.
+/// \return true if anything was deleted, false otherwise.
+bool deleteUnusedFunctionsAndVariables(Module *M);
+
 /// \returns True if the instruction \p I has no side effects, can be combined
 /// with identical instructions or duplicated without changing semantics, and
 /// can be placed anywhere in the middle of a basic block.

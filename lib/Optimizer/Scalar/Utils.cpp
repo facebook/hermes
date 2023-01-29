@@ -253,6 +253,73 @@ void hermes::splitCriticalEdge(
   builder->setInsertionPoint(branch);
 }
 
+bool hermes::deleteUnusedVariables(Module *M) {
+  bool changed = false;
+  for (Function &F : *M) {
+    llvh::SmallVectorImpl<Variable *> &vars =
+        F.getFunctionScope()->getVariables();
+    // Delete variables without any users. Do this in a separate loop since we
+    // are putting vars in an invalid state.
+    for (Variable *&var : vars) {
+      if (!var->hasUsers()) {
+        Value::destroy(var);
+        var = nullptr;
+        changed = true;
+      }
+    }
+    // Clean up the variable list to remove destroyed entries.
+    llvh::erase_if(vars, [](Variable *var) { return !var; });
+  }
+
+  return changed;
+}
+
+bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
+  // A list of unused functions to deallocate from memory.
+  // We need to destroy the memory at the very end of this function because a
+  // dead function may have a variable that is referenced by an inner function
+  // (which will also become dead once the outer function is removed). However,
+  // we cannot destroy the outer function right away until we destroy the inner
+  // function.
+  llvh::SmallVector<Function *, 16> toDestroy;
+
+  bool changed = false, localChanged = false;
+  do {
+    // A list of unused functions to remove from the module without being
+    // destroyed. We have to collect these separately since we can't remove the
+    // functions as we iterate over the module.
+    llvh::SmallVector<Function *, 16> toRemove;
+    localChanged = false;
+    for (auto &F : *M) {
+      // Delete any functions that are unused. The top level function does not
+      // have an explicit user, so check for it directly.
+      if (&F != M->getTopLevelFunction() && !F.hasUsers()) {
+        toRemove.push_back(&F);
+        toDestroy.push_back(&F);
+        changed = true;
+        localChanged = true;
+      }
+    }
+
+    // We erase the basic blocks and instructions from each function in
+    // toRemove, and also remove the function from the module. However, the
+    // memory of the function remains alive.
+    for (auto *F : toRemove)
+      F->eraseFromParentNoDestroy();
+  } while (localChanged);
+
+  // Now that all instructions have been destroyed from each dead function, it's
+  // now safe to destroy them including the variables in them.
+  for (auto *F : toDestroy) {
+    assert(F->empty() && "All basic blocks should have been deleted.");
+    Value::destroy(F);
+  }
+
+  // Deleting functions will make some variables unused, delete them.
+  changed |= deleteUnusedVariables(M);
+  return changed;
+}
+
 bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
   if (I->hasSideEffect()) {
     return false;

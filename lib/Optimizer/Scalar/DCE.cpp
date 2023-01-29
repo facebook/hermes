@@ -13,6 +13,7 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -23,7 +24,6 @@ using namespace hermes;
 using llvh::dbgs;
 
 STATISTIC(NumDCE, "Number of instructions DCE'd");
-STATISTIC(NumFuncDCE, "Number of functions DCE'd");
 
 static bool performFunctionDCE(Function *F) {
   bool changed = false;
@@ -65,14 +65,6 @@ static bool performFunctionDCE(Function *F) {
 bool DCE::runOnModule(Module *M) {
   bool changed = false;
 
-  // A list of unused functions to deallocate from memory.
-  // We need to destroy the memory at the very end of this function because
-  // a dead function may have a variable that is referrenced by an inner
-  // function (which will also become dead once the outer function is removed).
-  // However we cannot destroy the outer function right away until we destroy
-  // the inner function.
-  llvh::SmallVector<Function *, 16> toDestroy;
-
   // Perform per-function DCE.
   for (auto &F : *M) {
     LLVM_DEBUG(
@@ -81,50 +73,9 @@ bool DCE::runOnModule(Module *M) {
     changed |= performFunctionDCE(&F);
   }
 
-  bool localChanged = false;
-  do {
-    // A list of unused functions to remove from the module without being
-    // destroyed.
-    llvh::SmallVector<Function *, 16> toRemove;
-    localChanged = false;
-    for (auto &F : *M) {
-      // Try to remove unused functions. Notice that the top-level-function has
-      // no external users so we must check for it explicitly.
-      if (M->findCJSModule(&F)) {
-        // If the function is a top-level module.
-        continue;
-      }
-      // Don't delete the function if it is at global scope, or if it is the
-      // entry point of a module.
-      if (!F.isGlobalScope() && &F != M->getTopLevelFunction() &&
-          !F.hasUsers()) {
-        toRemove.push_back(&F);
-        toDestroy.push_back(&F);
-        changed = true;
-        localChanged = true;
-        NumFuncDCE++;
-      }
-    }
+  changed |= deleteUnusedFunctionsAndVariables(M);
 
-    // We erase the basic blocks and instructions from each function in
-    // toRemove, and also remove the function from the module. However
-    // the memory of the function remain alive.
-    for (auto *F : toRemove) {
-      LLVM_DEBUG(
-          dbgs() << "\tDCE: Erasing function \"" << F->getInternalName()
-                 << "\"\n");
-      F->eraseFromParentNoDestroy();
-    }
-  } while (localChanged);
-
-  // Now that all instructions have been destroyed from each dead function,
-  // it's now safe to destroy them including the variables in them.
-  for (auto *F : toDestroy) {
-    assert(F->empty() && "All basic blocks should have been deleted.");
-    Value::destroy(F);
-  }
-
-  return changed | localChanged;
+  return changed;
 }
 
 Pass *hermes::createDCE() {
