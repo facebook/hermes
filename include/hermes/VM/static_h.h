@@ -9,6 +9,7 @@
 #define HERMES_STATIC_H_H
 
 #include "hermes/VM/sh_legacy_value.h"
+#include "hermes/VM/sh_mirror.h"
 
 #include <math.h>
 #include <setjmp.h>
@@ -74,9 +75,9 @@ typedef struct SHUnit {
   /// Symbols populated by the init code from strings above. This pointer is
   /// initialized by the owner of the struct and typically points into BSS.
   SHSymbolID *symbols;
-  /// Property cache. Points to a character array of `num_prop_cache_entries *
-  /// SH_PROPERTY_CACHE_ENTRY_SIZE`. Must be zeroed initially.
-  char *prop_cache;
+  /// Property cache. Points to an array with `num_prop_cache_entries` elements.
+  /// Must be zeroed initially.
+  SHPropertyCacheEntry *prop_cache;
 
   /// Object key buffer.
   const unsigned char *obj_key_buffer;
@@ -101,12 +102,6 @@ typedef struct SHUnit {
   /// Data managed by the runtime. Field populated by the runtime.
   SHUnitExt *runtime_ext;
 } SHUnit;
-
-#if defined(HERMESVM_COMPRESSED_POINTERS) || HERMESVM_SIZEOF_VOID_P == 4
-#define SH_PROPERTY_CACHE_ENTRY_SIZE 8
-#else
-#define SH_PROPERTY_CACHE_ENTRY_SIZE 16
-#endif
 
 typedef struct SHLocals {
   struct SHLocals *prev;
@@ -337,25 +332,25 @@ SHERMES_EXPORT void _sh_ljs_put_by_id_loose_rjs(
     const SHLegacyValue *target,
     SHSymbolID symID,
     const SHLegacyValue *value,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
     const SHLegacyValue *target,
     SHSymbolID symID,
     const SHLegacyValue *value,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_try_put_by_id_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_try_put_by_id_strict_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -371,12 +366,12 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    char *propCacheEntry);
+    SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,

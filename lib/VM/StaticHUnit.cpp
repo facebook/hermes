@@ -14,8 +14,6 @@
 using namespace hermes;
 using namespace hermes::vm;
 
-static_assert(SH_PROPERTY_CACHE_ENTRY_SIZE == sizeof(PropertyCacheEntry));
-
 /// Data associated with SHUnit, but fully managed by the runtime.
 struct SHUnitExt {
   /// A map from NewObjectWithBuffer's <keyBufferIndex, numLiterals> tuple to

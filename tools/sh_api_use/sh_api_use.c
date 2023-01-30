@@ -26,7 +26,7 @@ static SHSymbolID s_symbols[3];
 // put "make"
 // get "print"
 // get "make"
-static char s_prop_cache[3 * SH_PROPERTY_CACHE_ENTRY_SIZE];
+static SHPropertyCacheEntry s_prop_cache[3];
 
 static SHLegacyValue unit_main(SHRuntime *shr);
 
@@ -104,21 +104,11 @@ static SHLegacyValue unit_main(SHRuntime *shr) {
       _sh_ljs_create_closure_loose(shr, &locals.t0, make, s_symbols[2], 2);
   locals.t0 = _sh_ljs_get_global_object(shr);
   _sh_ljs_put_by_id_loose_rjs(
-      shr,
-      &locals.t0,
-      s_symbols[2],
-      &locals.t1,
-      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 0);
+      shr, &locals.t0, s_symbols[2], &locals.t1, s_prop_cache + 0);
   locals.t2 = _sh_ljs_try_get_by_id_rjs(
-      shr,
-      &locals.t0,
-      s_symbols[1],
-      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 1);
-  locals.t0 = _sh_ljs_get_by_id_rjs(
-      shr,
-      &locals.t0,
-      s_symbols[2],
-      s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * 2);
+      shr, &locals.t0, s_symbols[1], s_prop_cache + 1);
+  locals.t0 =
+      _sh_ljs_get_by_id_rjs(shr, &locals.t0, s_symbols[2], s_prop_cache + 2);
 
   frame[5] = locals.t0;
   frame[4] = _sh_ljs_undefined(); // this

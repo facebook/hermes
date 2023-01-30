@@ -697,7 +697,7 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
     const SHLegacyValue *target,
     SHSymbolID symID,
     const SHLegacyValue *value,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, false>(
       getRuntime(shr),
       toPHV(target),
@@ -711,7 +711,7 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
     const SHLegacyValue *target,
     SHSymbolID symID,
     const SHLegacyValue *value,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, true>(
       getRuntime(shr),
       toPHV(target),
@@ -725,7 +725,7 @@ extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
@@ -739,7 +739,7 @@ extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
@@ -959,7 +959,7 @@ extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<true>(
       getRuntime(shr),
       toPHV(source),
@@ -970,7 +970,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    char *propCacheEntry) {
+    SHPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<false>(
       getRuntime(shr),
       toPHV(source),

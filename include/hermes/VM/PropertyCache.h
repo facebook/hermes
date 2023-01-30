@@ -11,6 +11,7 @@
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/WeakRoot.h"
+#include "hermes/VM/sh_mirror.h"
 
 namespace hermes {
 namespace vm {
@@ -29,6 +30,8 @@ struct PropertyCacheEntry {
   /// Cached property index.
   SlotIndex slot{0};
 };
+
+static_assert(sizeof(SHPropertyCacheEntry) == sizeof(PropertyCacheEntry));
 
 } // namespace vm
 } // namespace hermes

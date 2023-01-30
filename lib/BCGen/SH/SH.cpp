@@ -793,8 +793,7 @@ class InstrGen {
       os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
           << "], &";
       generateRegister(*inst.getStoredValue());
-      os_ << ", s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
-          << nextCacheIdx_++ << ");\n";
+      os_ << ", s_prop_cache + " << nextCacheIdx_++ << ");\n";
       return;
     }
 
@@ -836,8 +835,7 @@ class InstrGen {
                moduleGen_.stringTable.add(propStr->getValue().str()))
         << ", ";
     generateRegisterPtr(*inst.getStoredValue());
-    os_ << ", s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
-        << nextCacheIdx_++;
+    os_ << ", s_prop_cache + " << nextCacheIdx_++;
 
     os_ << ");\n";
   }
@@ -984,8 +982,7 @@ class InstrGen {
       os_ << "_sh_ljs_get_by_id_rjs(shr,&";
       generateRegister(*inst.getObject());
       os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
-          << "], s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
-          << nextCacheIdx_++ << ");\n";
+          << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
       return;
     }
     os_ << "_sh_ljs_get_by_val_rjs(shr,&";
@@ -1002,8 +999,7 @@ class InstrGen {
     os_ << "_sh_ljs_try_get_by_id_rjs(shr,&";
     generateRegister(*inst.getObject());
     os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
-        << "], s_prop_cache + SH_PROPERTY_CACHE_ENTRY_SIZE * "
-        << nextCacheIdx_++ << ");\n";
+        << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
   }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
@@ -1713,7 +1709,7 @@ void generateModule(
 static SHUnit s_this_unit;
 
 static SHSymbolID s_symbols[];
-static char s_prop_cache[];
+static SHPropertyCacheEntry s_prop_cache[];
 )";
 
     // Forward declare every JS function.
@@ -1731,8 +1727,7 @@ static char s_prop_cache[];
     moduleGen.stringTable.generate(OS);
     moduleGen.literalBuffers.generate(OS);
 
-    OS << "static char s_prop_cache[" << nextCacheIdx
-       << " * SH_PROPERTY_CACHE_ENTRY_SIZE];\n"
+    OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
        << "static SHUnit s_this_unit = { .num_symbols = "
        << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
