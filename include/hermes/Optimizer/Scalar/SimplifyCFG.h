@@ -13,12 +13,12 @@
 
 namespace hermes {
 
-class SimplifyCFG : public FunctionPass {
+class SimplifyCFG : public ModulePass {
  public:
-  explicit SimplifyCFG() : FunctionPass("SimplifyCFG") {}
+  explicit SimplifyCFG() : ModulePass("SimplifyCFG") {}
   ~SimplifyCFG() override = default;
 
-  bool runOnFunction(Function *F) override;
+  bool runOnModule(Module *M) override;
 };
 } // namespace hermes
 

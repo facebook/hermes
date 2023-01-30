@@ -12,6 +12,7 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IREval.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/SmallPtrSet.h"
@@ -380,17 +381,21 @@ static bool removeUnreachedBasicBlocks(Function *F) {
   return changed;
 }
 
-bool SimplifyCFG::runOnFunction(hermes::Function *F) {
+bool SimplifyCFG::runOnModule(hermes::Module *M) {
   bool changed = false;
 
-  bool iterChanged = false;
-  // Keep iterating over deleting unreachable code and removing trampolines as
-  // long as we are making progress.
-  do {
-    iterChanged = optimizeStaticBranches(F) || removeUnreachedBasicBlocks(F);
-    changed |= iterChanged;
-  } while (iterChanged);
+  for (auto &F : *M) {
+    bool iterChanged = false;
+    // Keep iterating over deleting unreachable code and removing trampolines as
+    // long as we are making progress.
+    do {
+      iterChanged =
+          optimizeStaticBranches(&F) || removeUnreachedBasicBlocks(&F);
+      changed |= iterChanged;
+    } while (iterChanged);
+  }
 
+  changed |= deleteUnusedFunctionsAndVariables(M);
   return changed;
 }
 
