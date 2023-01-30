@@ -2028,7 +2028,6 @@ UNSUPPORTED_FEATURES = [
     "ShadowRealm",
     "tail-call-optimization",
     "Temporal",
-    "well-formed-json-stringify",
     "u180e",
 ]
 
