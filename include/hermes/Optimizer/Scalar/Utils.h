@@ -61,12 +61,12 @@ bool deleteIncomingBlockFromPhis(
 /// due to an inserted block (and can therefore fail when called twice).
 void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to);
 
-/// Delete all variables that have no remaining loads and stores to them.
+/// Delete all variables that have no remaining uses.
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnusedVariables(Module *M);
 
 /// Delete all unused functions, and then delete any variables that have no
-/// remaining loads and stores.
+/// remaining uses.
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnusedFunctionsAndVariables(Module *M);
 
