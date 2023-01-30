@@ -234,6 +234,13 @@ bool invokeCC(
     if (params.enableAsserts == ShermesCompileParams::EnableAsserts::off) {
       args.emplace_back("-DNDEBUG");
     }
+    // We depend on reading/writing certain properties in C++ objects in
+    // generated C code through C structs that mirror those C++ objects. This
+    // means that unrelated types may alias in our code, and we must disable
+    // strict aliasing.
+    args.emplace_back("-fno-strict-aliasing");
+    // Avoid arbitrary UB on signed integer and pointer overflow.
+    args.emplace_back("-fno-strict-overflow");
     for (llvh::StringRef option : params.extraCCOptions) {
       args.emplace_back(option);
     }

@@ -489,6 +489,12 @@ endif()
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  # We depend on reading/writing certain properties in C++ objects in generated
+  # C code through C structs that mirror those C++ objects. This means that
+  # unrelated types may alias in our code, and we must disable strict aliasing.
+  # We would also like to avoid arbitrary UB on signed integer and pointer
+  # overflow, so disable strict overflow as well.
+  append("-fno-strict-aliasing -fno-strict-overflow" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # C4068 unknown pragma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
@@ -502,6 +508,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   if (HERMES_MSVC_MP)
     add_definitions( /MP )
   endif()
+  # MSVC does not have strict aliasing so there is no need to support it.
+  # Similar to GCC/Clang above, disable strict signed integer overflow.
+  append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
