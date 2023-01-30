@@ -10,7 +10,6 @@
 #include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/Scalar/Auditor.h"
 #include "hermes/Optimizer/Scalar/DCE.h"
-#include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/Optimizer/Scalar/StackPromotion.h"
 #include "hermes/Optimizer/Scalar/TypeInference.h"
 

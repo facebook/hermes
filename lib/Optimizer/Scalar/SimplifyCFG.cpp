@@ -7,11 +7,11 @@
 
 #define DEBUG_TYPE "simplifycfg"
 
-#include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IREval.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -381,7 +381,7 @@ static bool removeUnreachedBasicBlocks(Function *F) {
   return changed;
 }
 
-bool SimplifyCFG::runOnModule(hermes::Module *M) {
+static bool runSimplifyCFG(Module *M) {
   bool changed = false;
 
   for (auto &F : *M) {
@@ -400,7 +400,15 @@ bool SimplifyCFG::runOnModule(hermes::Module *M) {
 }
 
 Pass *hermes::createSimplifyCFG() {
-  return new SimplifyCFG();
+  class ThisPass : public ModulePass {
+   public:
+    explicit ThisPass() : ModulePass("SimplifyCFG") {}
+    ~ThisPass() override = default;
+    bool runOnModule(Module *M) override {
+      return runSimplifyCFG(M);
+    }
+  };
+  return new ThisPass();
 }
 
 #undef DEBUG_TYPE
