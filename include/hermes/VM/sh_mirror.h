@@ -24,4 +24,22 @@ typedef struct SHPropertyCacheEntry {
   uint32_t slot;
 } SHPropertyCacheEntry;
 
+/// Struct mirroring the layout of GCCell.
+typedef struct SHGCCell {
+  SH_COMPRESSED_POINTER_RAW_TYPE kindAndSize;
+#ifndef NDEBUG
+  uint16_t magic;
+  uint32_t debugAllocationId;
+#endif
+} SHGCCell;
+
+/// Struct mirroring the layout of JSObject (without the direct props).
+typedef struct SHJSObject {
+  SHGCCell base;
+  uint32_t flags;
+  SH_COMPRESSED_POINTER_RAW_TYPE parent;
+  SH_COMPRESSED_POINTER_RAW_TYPE clazz;
+  SH_COMPRESSED_POINTER_RAW_TYPE propStorage;
+} SHJSObject;
+
 #endif

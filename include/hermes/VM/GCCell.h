@@ -13,6 +13,7 @@
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/sh_mirror.h"
 
 #include <cassert>
 #include <cstddef>
@@ -276,6 +277,8 @@ class GCCell {
     return KindAndSize::maxSize();
   }
 };
+
+static_assert(sizeof(GCCell) == sizeof(SHGCCell));
 
 /// A VariableSizeRuntimeCell is a GCCell with a variable size only known
 /// at runtime, whereas GCCell is for fixed-size objects.

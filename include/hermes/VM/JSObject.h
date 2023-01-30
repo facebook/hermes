@@ -1491,6 +1491,9 @@ class JSObject : public GCCell {
   /// direct property slots).
   static inline constexpr size_t cellSizeJSObject();
 
+  /// Dummy function for static asserts that may need private fields.
+  static inline void staticAsserts();
+
  public:
   // Implementation of cellSize. Do not use this directly.
   template <class C>
@@ -1546,6 +1549,15 @@ constexpr size_t JSObject::cellSizeJSObject() {
           sizeof(JSObjectAndDirectProps),
       "Wasted direct slot due to alignment");
   return sizeof(JSObjectAndDirectProps);
+}
+
+void JSObject::staticAsserts() {
+  static_assert(sizeof(JSObject) == sizeof(SHJSObject));
+  static_assert(offsetof(JSObject, flags_) == offsetof(SHJSObject, flags));
+  static_assert(offsetof(JSObject, clazz_) == offsetof(SHJSObject, clazz));
+  static_assert(
+      offsetof(JSObject, propStorage_) == offsetof(SHJSObject, propStorage));
+  llvm_unreachable("staticAsserts must never be called.");
 }
 
 /// \return an array that contains all enumerable properties of obj (including
