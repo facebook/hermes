@@ -11,7 +11,9 @@
 // Include windows.h first because other includes from windows API need it.
 // The blank line after the include is necessary to avoid lint error.
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX // do not define min/max macros
+#endif
 #include <windows.h>
 
 #include <psapi.h>

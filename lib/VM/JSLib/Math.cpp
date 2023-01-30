@@ -17,7 +17,9 @@
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
 
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
 #include <float.h>
 #include <math.h>
 #include <random>

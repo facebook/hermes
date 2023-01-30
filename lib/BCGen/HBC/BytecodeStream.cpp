@@ -190,7 +190,8 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
       if (isLayout_) {
         // Deduplicate the bytecode during layout phase.
         DedupKey key = entry->getOpcodeArray();
-        auto pair = bcMap.insert(std::make_pair(key, loc_));
+        auto pair =
+            bcMap.insert(std::make_pair(key, static_cast<uint32_t>(loc_)));
         if (!pair.second) {
           reuse = true;
           entry->setOffset(pair.first->second);

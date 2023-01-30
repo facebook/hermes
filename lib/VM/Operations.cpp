@@ -1104,11 +1104,11 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // ToNumber(x) == y.
       CASE_S_S(Bool, NUMBER_TAG) {
         // Do both conversions and check numerical equality.
-        return x->getBool() == y->getNumber();
+        return static_cast<double>(x->getBool()) == y->getNumber();
       }
       CASE_S_M(Bool, Str) {
         // Do string parsing and check double equality.
-        return x->getBool() ==
+        return static_cast<double>(x->getBool()) ==
             stringToNumber(runtime, Handle<StringPrimitive>::vmcast(y));
       }
       CASE_S_M(Bool, BigInt) {
@@ -1121,11 +1121,11 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // 9. If Type(y) is Boolean, return the result of the comparison x == !
       // ToNumber(y).
       CASE_S_S(NUMBER_TAG, Bool) {
-        return x->getNumber() == y->getBool();
+        return x->getNumber() == static_cast<double>(y->getBool());
       }
       CASE_M_S(Str, Bool) {
         return stringToNumber(runtime, Handle<StringPrimitive>::vmcast(x)) ==
-            y->getBool();
+            static_cast<double>(y->getBool());
       }
       CASE_M_S(BigInt, Bool) {
         return x->getBigInt()->compare(static_cast<int32_t>(y->getBool())) == 0;

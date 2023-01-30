@@ -2015,7 +2015,8 @@ static std::tuple<uint32_t, bool> getShiftAmountAndSign(
     // shiftAmnt is outside of the
     // [MinNegativeShiftAmountInBits, MaxPositiveShiftAmountInBits]; thus return
     // a really large shift amount.
-    return std::make_tuple(reallyLargeShiftAmount, shiftAmntIsNeg);
+    return std::make_tuple(
+        static_cast<uint32_t>(reallyLargeShiftAmount), shiftAmntIsNeg);
   }
 
   const SignedBigIntDigitType sa = (shiftAmnt.numDigits == 0)
@@ -2026,7 +2027,8 @@ static std::tuple<uint32_t, bool> getShiftAmountAndSign(
        shiftAmnt.digits[0] != std::numeric_limits<BigIntDigitType>::min()) &&
       "shiftAmnt is MIN_INT, hence -signedShiftAmnt is MIN_INT");
   // Always return a positive result -- thus negate sa if shiftAmnt is negative.
-  return std::make_tuple(shiftAmntIsNeg ? -sa : sa, shiftAmntIsNeg);
+  return std::make_tuple(
+      static_cast<uint32_t>(shiftAmntIsNeg ? -sa : sa), shiftAmntIsNeg);
 }
 
 } // namespace

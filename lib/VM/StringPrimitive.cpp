@@ -97,7 +97,15 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     }
     auto output = runtime.makeHandle<StringPrimitive>(*result);
     // Copy directly into the StringPrimitive storage.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+
     std::copy(str.begin(), str.end(), output->castToASCIIPointerForWrite());
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     return output.getHermesValue();
   }
 
@@ -200,8 +208,15 @@ CallResult<HermesValue> StringPrimitive::createDynamic(
       return ExecutionStatus::EXCEPTION;
     }
     // Copy directly into the StringPrimitive storage.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
     std::copy(
         str.begin(), str.end(), res->getString()->castToASCIIPointerForWrite());
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     return res;
   } else {
     return DynamicUTF16StringPrimitive::create(runtime, str);
