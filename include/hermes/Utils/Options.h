@@ -49,6 +49,10 @@ struct BytecodeGenerationOptions {
   /// alphanumeric characters and underscores.
   llvh::StringRef unitName = "this_unit";
 
+  /// Whether the SH backend should emit a main function that executes the
+  /// generated unit.
+  bool emitMain = true;
+
   /// Whether to strip the debug info in the bytecode binary.
   bool stripDebugInfoSection = false;
 

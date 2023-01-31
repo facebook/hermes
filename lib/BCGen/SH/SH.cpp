@@ -1744,8 +1744,9 @@ static SHPropertyCacheEntry s_prop_cache[];
        << moduleGen.literalBuffers.arrayBuffer.size() << ", "
        << ".unit_main = _0_global, .unit_main_strict = "
        << boolStr(M->getTopLevelFunction()->isStrictMode()) << ", "
-       << ".unit_name = \"sh_compiled\" };\n"
-       << R"(
+       << ".unit_name = \"sh_compiled\" };\n";
+    if (options.emitMain) {
+      OS << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
   bool success = _sh_initialize_units(shr, 1, &THIS_UNIT);
@@ -1753,6 +1754,7 @@ int main(int argc, char **argv) {
   return success ? 0 : 1;
 }
 )";
+    }
   }
 }
 } // namespace
