@@ -1041,7 +1041,7 @@ class InstrGen {
       auto bufIndex = moduleGen_.literalBuffers.addArrayBuffer(
           ArrayRef<Literal *>{elements});
 
-      os_ << "_sh_ljs_new_array_with_buffer(shr, &s_this_unit, ";
+      os_ << "_sh_ljs_new_array_with_buffer(shr, &THIS_UNIT, ";
       os_ << sizeHint << ", ";
       os_ << elementCount << ", ";
       os_ << bufIndex << ")";
@@ -1522,7 +1522,7 @@ class InstrGen {
     auto buffIdxs = moduleGen_.literalBuffers.addObjectBuffer(
         llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
     os_ << " = ";
-    os_ << "_sh_ljs_new_object_with_buffer(shr, &s_this_unit, ";
+    os_ << "_sh_ljs_new_object_with_buffer(shr, &THIS_UNIT, ";
     os_ << sizeHint << ", ";
     os_ << numLiterals << ", ";
     os_ << buffIdxs.first << ", ";
@@ -1703,10 +1703,14 @@ void generateModule(
   FunctionScopeAnalysis scopeAnalysis{topLevelFunc};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
-    OS << R"(
+    if (!isValidSHUnitName(options.unitName))
+      hermes_fatal("Invalid unit name passed to SH backend.");
+    // Note that we prefix the unit name with sh_export_ to avoid potential
+    // conflicts.
+    OS << "#define THIS_UNIT sh_export_" << options.unitName << R"(
 #include "hermes/VM/static_h.h"
 
-static SHUnit s_this_unit;
+SHUnit THIS_UNIT;
 
 static SHSymbolID s_symbols[];
 static SHPropertyCacheEntry s_prop_cache[];
@@ -1728,8 +1732,7 @@ static SHPropertyCacheEntry s_prop_cache[];
     moduleGen.literalBuffers.generate(OS);
 
     OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
-       << "static SHUnit s_this_unit = { .num_symbols = "
-       << moduleGen.stringTable.size()
+       << "SHUnit THIS_UNIT = { .num_symbols = " << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
@@ -1745,7 +1748,7 @@ static SHPropertyCacheEntry s_prop_cache[];
        << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
-  bool success = _sh_initialize_units(shr, 1, &s_this_unit);
+  bool success = _sh_initialize_units(shr, 1, &THIS_UNIT);
   _sh_done(shr);
   return success ? 0 : 1;
 }
