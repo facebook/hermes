@@ -18,6 +18,12 @@ add_hermes_tool(shermes
   compile.cpp compile.h
   LINK_LIBS hermescompiler)
 
+# The compiler is used as part of the build of the VM.
+# During cross-compilation, the compiler needs to be built for the host system,
+# then used to build the VM for the target system.
+# Namespace added to avoid clashing the imported binary with the target binary.
+export(TARGETS shermes FILE ${CMAKE_BINARY_DIR}/ImportShermes.cmake NAMESPACE imported-)
+
 # A target building both the shermes compiler and the libraries potentially
 # needed for linking of a compiled binary.
 # Note that it is not a given that we always want to link against these

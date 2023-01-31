@@ -13,7 +13,7 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
-#include "hermes/InternalBytecode/InternalBytecode.h"
+#include "hermes/InternalBytecode/internal_unit.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
