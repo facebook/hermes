@@ -13,7 +13,7 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
-#include "hermes/InternalBytecode/internal_unit.h"
+#include "hermes/InternalJavaScript/internal_unit.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
@@ -366,7 +366,7 @@ Runtime::Runtime(
 #if 0
   codeCoverageProfiler_->disable();
   // Execute our internal bytecode.
-  auto jsBuiltinsObj = runInternalBytecode();
+  auto jsBuiltinsObj = runInternalJavaScript();
   codeCoverageProfiler_->restore();
 
   // Populate JS builtins returned from internal bytecode to the builtins table.
@@ -1104,7 +1104,7 @@ ExecutionStatus Runtime::loadSegment(
 }
 
 #if 0
-Handle<JSObject> Runtime::runInternalBytecode() {
+Handle<JSObject> Runtime::runInternalJavaScript() {
   auto module = getInternalBytecode();
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
