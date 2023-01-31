@@ -225,6 +225,10 @@ void SamplingProfiler::clear() {
 }
 
 void SamplingProfiler::suspend(std::string_view extraInfo) {
+  // Need to check whether the profiler is enabled without holding the
+  // runtimeDataLock_. Otherwise, we'd have a lock inversion.
+  bool enabled = sampling_profiler::Sampler::get()->enabled();
+
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   if (++suspendCount_ > 1 || extraInfo.empty()) {
     // If there are multiple nested suspend calls use a default "suspended"
@@ -234,8 +238,7 @@ void SamplingProfiler::suspend(std::string_view extraInfo) {
   }
 
   // Only record the stack trace for the first suspend() call.
-  if (LLVM_UNLIKELY(
-          sampling_profiler::Sampler::get()->enabled() && suspendCount_ == 1)) {
+  if (LLVM_UNLIKELY(enabled && suspendCount_ == 1)) {
     recordPreSuspendStack(extraInfo);
   }
 }
