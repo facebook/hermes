@@ -130,10 +130,15 @@ class Foo {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false
+// CHECK-NEXT:             "declare": false,
+// CHECK-NEXT:             "tsModifiers": {
+// CHECK-NEXT:               "type": "TSModifiers",
+// CHECK-NEXT:               "accessibility": null,
+// CHECK-NEXT:               "readonly": false
+// CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
-// CHECK-NEXT:             "type": "ClassPrivateProperty",
+// CHECK-NEXT:             "type": "ClassProperty",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "x"
@@ -143,8 +148,14 @@ class Foo {
 // CHECK-NEXT:               "value": 3,
 // CHECK-NEXT:               "raw": "3"
 // CHECK-NEXT:             },
+// CHECK-NEXT:             "computed": false,
 // CHECK-NEXT:             "static": false,
-// CHECK-NEXT:             "declare": false
+// CHECK-NEXT:             "declare": false,
+// CHECK-NEXT:             "tsModifiers": {
+// CHECK-NEXT:               "type": "TSModifiers",
+// CHECK-NEXT:               "accessibility": "private",
+// CHECK-NEXT:               "readonly": false
+// CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       }

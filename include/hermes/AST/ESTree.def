@@ -488,7 +488,7 @@ ESTREE_NODE_1_ARGS(
     ClassBody, Base,
     NodeList, body, false)
 
-ESTREE_NODE_8_ARGS(
+ESTREE_NODE_9_ARGS(
     ClassProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
@@ -497,12 +497,14 @@ ESTREE_NODE_8_ARGS(
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
-    NodePtr, typeAnnotation, true)
+    NodePtr, typeAnnotation, true,
+    NodePtr, tsModifiers, true)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, tsModifiers)
 
-ESTREE_NODE_7_ARGS(
+ESTREE_NODE_8_ARGS(
     ClassPrivateProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
@@ -510,10 +512,12 @@ ESTREE_NODE_7_ARGS(
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
-    NodePtr, typeAnnotation, true)
+    NodePtr, typeAnnotation, true,
+    NodePtr, tsModifiers, true)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, typeAnnotation)
+ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, tsModifiers)
 
 ESTREE_NODE_5_ARGS(
     MethodDefinition, Base,
@@ -1117,6 +1121,11 @@ ESTREE_NODE_2_ARGS(
     TSCallSignatureDeclaration, Base,
     NodeList, params, false,
     NodePtr, returnType, true)
+
+ESTREE_NODE_2_ARGS(
+    TSModifiers, Base,
+    NodeLabel, accessibility, false,
+    NodeBoolean, readonly, false)
 #endif
 
 // ================================================
@@ -1180,3 +1189,4 @@ ESTREE_LAST(Cover)
 #undef ESTREE_NODE_6_ARGS
 #undef ESTREE_NODE_7_ARGS
 #undef ESTREE_NODE_8_ARGS
+#undef ESTREE_NODE_9_ARGS

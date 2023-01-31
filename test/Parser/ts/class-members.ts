@@ -41,6 +41,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -58,6 +63,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
@@ -92,7 +102,12 @@ class Point {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "computed": false,
 // CHECK-NEXT:            "static": false,
-// CHECK-NEXT:            "declare": false
+// CHECK-NEXT:            "declare": false,
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "type": "ClassProperty",
@@ -107,7 +122,12 @@ class Point {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "computed": false,
 // CHECK-NEXT:            "static": false,
-// CHECK-NEXT:            "declare": false
+// CHECK-NEXT:            "declare": false,
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
+// CHECK-NEXT:            }
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:      }
@@ -148,6 +168,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -165,6 +190,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -276,6 +306,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -293,6 +328,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -423,6 +463,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -440,6 +485,11 @@ class Point {
 // CHECK-NEXT:              "typeAnnotation": {
 // CHECK-NEXT:                "type": "TSNumberKeyword"
 // CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
 // CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
@@ -572,7 +622,12 @@ class Point {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "computed": false,
 // CHECK-NEXT:            "static": false,
-// CHECK-NEXT:            "declare": false
+// CHECK-NEXT:            "declare": false,
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "type": "ClassProperty",
@@ -587,7 +642,12 @@ class Point {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "computed": false,
 // CHECK-NEXT:            "static": false,
-// CHECK-NEXT:            "declare": false
+// CHECK-NEXT:            "declare": false,
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "type": "MethodDefinition",
@@ -710,7 +770,12 @@ class Thing {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "computed": false,
 // CHECK-NEXT:            "static": false,
-// CHECK-NEXT:            "declare": false
+// CHECK-NEXT:            "declare": false,
+// CHECK-NEXT:            "tsModifiers": {
+// CHECK-NEXT:              "type": "TSModifiers",
+// CHECK-NEXT:              "accessibility": null,
+// CHECK-NEXT:              "readonly": false
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
 // CHECK-NEXT:            "type": "MethodDefinition",
