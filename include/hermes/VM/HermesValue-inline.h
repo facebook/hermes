@@ -54,11 +54,8 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
     HERMES_SLOW_ASSERT(
         gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
         "Setting an invalid pointer into a GCHermesValue");
-    assert(
-        NeedsBarriers::value ||
-        !gc.needsWriteBarrier(
-            this, static_cast<GCCell *>(hv.getPointer(gc.getPointerBase()))));
   }
+  assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
   if (NeedsBarriers::value)
     gc.writeBarrier(this, hv);
   HVType::setNoBarrier(hv);
