@@ -191,6 +191,12 @@ cl::opt<OutputLevelKind> OutputLevel(
             "Execute the compiled binary")),
     cl::cat(CompilerCategory));
 
+static cl::opt<std::string> ExportedUnit(
+    "exported-unit",
+    cl::desc("Produce an SHUnit with the given name to be used by other code. "
+             "When this is specified, no main function will be produced."),
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> DumpBetweenPasses(
     "Xdump-between-passes",
     cl::init(false),
@@ -598,6 +604,20 @@ bool compileFromCommandLineOptions() {
     llvh::errs() << "Error: unused exec arguments\n";
     return false;
   }
+  if (!cli::ExportedUnit.empty()) {
+    if (cli::OutputLevel == OutputLevelKind::Run ||
+        cli::OutputLevel == OutputLevelKind::Executable) {
+      llvh::errs()
+          << "Error: cannot produce an executable when exported unit is specified.\n";
+      return false;
+    }
+
+    if (!isValidSHUnitName(cli::ExportedUnit)) {
+      llvh::errs() << "Error: exported name may only contain alphanumeric "
+                      "characters and underscores.\n";
+      return false;
+    }
+  }
 
   std::unique_ptr<llvh::MemoryBuffer> fileBuf =
       memoryBufferFromFile(cli::InputFilename, true);
@@ -695,6 +715,11 @@ bool compileFromCommandLineOptions() {
   //    cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cli::StripFunctionNames;
+
+  // If we are not exporting a unit, produce the main function.
+  genOptions.emitMain = cli::ExportedUnit.empty();
+  if (!cli::ExportedUnit.empty())
+    genOptions.unitName = cli::ExportedUnit;
 
   return shermesCompile(
       context.get(),
