@@ -87,6 +87,9 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
+    // TODO(T140823187): Run before CodeMotion too.
+    // Avoid pushing HBCLoadConstInsts down into individual blocks,
+    // preventing their elimination.
     PM.addCSE();
     // Drop unused LoadParamInsts.
     PM.addDCE();
