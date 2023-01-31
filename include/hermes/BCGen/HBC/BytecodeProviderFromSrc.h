@@ -219,7 +219,7 @@ class BCProviderLazy final : public BCProviderBase {
 
   /// No debug information will be available without compiling it.
   void createDebugInfo() override {
-    llvm_unreachable("Accessing debug info from a lazy module");
+    hermes_fatal("Accessing debug info from a lazy module");
   }
 
  public:
@@ -234,20 +234,20 @@ class BCProviderLazy final : public BCProviderBase {
   }
 
   StringTableEntry getStringTableEntry(uint32_t index) const override {
-    llvm_unreachable("Accessing string table from a lazy module");
+    hermes_fatal("Accessing string table from a lazy module");
   }
 
   const uint8_t *getBytecode(uint32_t) const override {
-    llvm_unreachable("Accessing bytecode from a lazy module");
+    hermes_fatal("Accessing bytecode from a lazy module");
   }
 
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t) const override {
-    llvm_unreachable("Accessing exception info from a lazy module");
+    hermes_fatal("Accessing exception info from a lazy module");
   }
 
   const hbc::DebugOffsets *getDebugOffsets(uint32_t) const override {
-    llvm_unreachable("Accessing debug offsets from a lazy module");
+    hermes_fatal("Accessing debug offsets from a lazy module");
   }
 
   bool isFunctionLazy(uint32_t) const override {
