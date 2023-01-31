@@ -3,20 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-message(STATUS "CMAKE_HOST_SYSTEM_NAME = ${CMAKE_HOST_SYSTEM_NAME}")
-message(STATUS "CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}")
-message(STATUS "HERMES_APPLE_TARGET_PLATFORM = ${HERMES_APPLE_TARGET_PLATFORM}")
-
-# Apple cross-compilation is different from other cross-compilation, so instead
-# we use HERMES_APPLE_TARGET_PLATFORM to tell if a host hermesc is required.
-if(HERMES_APPLE_TARGET_PLATFORM)
-  set(CMAKE_CROSSCOMPILING TRUE)
-endif()
-
-message(STATUS "CMAKE_CROSSCOMPILING = ${CMAKE_CROSSCOMPILING}")
-
-if(CMAKE_CROSSCOMPILING)
-  set(IMPORT_SHERMES "IMPORTFILE-NOTFOUND" CACHE FILEPATH "shermes export file")
+if(IMPORT_SHERMES)
   file(TO_CMAKE_PATH "${IMPORT_SHERMES}" IMPORT_SHERMES_CMAKE)
   include(${IMPORT_SHERMES_CMAKE})
   set(shermes_EXE imported-shermes)

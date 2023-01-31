@@ -282,6 +282,9 @@ set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
 
+set(IMPORT_SHERMES "" CACHE FILEPATH
+  "Import the shermes compiler from another build using the given CMake file.")
+
 if (HERMES_UNICODE_LITE)
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_LITE)
 elseif (HERMES_IS_ANDROID)
