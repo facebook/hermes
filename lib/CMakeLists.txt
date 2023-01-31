@@ -11,6 +11,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/DCE.cpp
   Optimizer/Scalar/Mem2Reg.cpp
   Optimizer/Scalar/TypeInference.cpp
+  Optimizer/Scalar/SimpleStackPromotion.cpp
   Optimizer/Scalar/StackPromotion.cpp
   Optimizer/Scalar/InstSimplify.cpp
   Optimizer/Scalar/Auditor.cpp
