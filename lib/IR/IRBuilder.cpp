@@ -100,13 +100,15 @@ Function *IRBuilder::createTopLevelFunction(
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
-  return createFunction(
+  auto *F = createFunction(
       "global",
       Function::DefinitionKind::ES5Function,
       strictMode,
       sourceVisibility,
       sourceRange,
       true);
+  M->setTopLevelFunction(F);
+  return F;
 }
 
 NormalFunction *IRBuilder::createFunction(

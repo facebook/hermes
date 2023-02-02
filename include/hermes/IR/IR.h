@@ -1973,16 +1973,16 @@ class Module : public Value {
     assert(
         topLevelFunction->getParent() == this &&
         "topLevelFunction from a different module");
+    assert(!topLevelFunction_ && "Top level function is already set.");
     topLevelFunction_ = topLevelFunction;
   }
 
   /// Return the top-level function.
   Function *getTopLevelFunction() {
-    assert(
-        !FunctionList.empty() && "top-level function hasn't been created yet");
+    assert(topLevelFunction_ && "top-level function hasn't been created yet");
     // If the top level function hasn't been overridden, return the first
     // function.
-    return !topLevelFunction_ ? &*FunctionList.begin() : topLevelFunction_;
+    return topLevelFunction_;
   }
 
   /// Find the specified global property and return a pointer to it or nullptr.

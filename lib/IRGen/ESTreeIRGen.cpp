@@ -176,8 +176,6 @@ void ESTreeIRGen::doIt() {
       Program->getSemInfo()->sourceVisibility,
       Program->getSourceRange());
 
-  Mod->setTopLevelFunction(topLevelFunction);
-
   // Function context for topLevelFunction.
   FunctionContext topLevelFunctionContext{
       this, topLevelFunction, Program->getSemInfo()};
