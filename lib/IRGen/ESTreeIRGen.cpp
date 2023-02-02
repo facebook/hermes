@@ -135,11 +135,15 @@ GlobalObjectProperty *LReference::castAsGlobalObjectProperty() const {
 //===----------------------------------------------------------------------===//
 // ESTreeIRGen
 
-ESTreeIRGen::ESTreeIRGen(ESTree::Node *root, Module *M)
+ESTreeIRGen::ESTreeIRGen(
+    Module *M,
+    sema::SemContext &semCtx,
+    ESTree::Node *root)
     : Mod(M),
+      semCtx_(semCtx),
+      Root(root),
       Builder(Mod),
       instrumentIR_(M, Builder),
-      Root(root),
       identEval_(Builder.createIdentifier("eval")),
       identVar_(Builder.createIdentifier("var")),
       identLet_(Builder.createIdentifier("let")),

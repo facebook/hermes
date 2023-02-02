@@ -94,6 +94,190 @@ Decl *SemContext::funcArgumentsDecl(
   return decl;
 }
 
+Decl *SemContext::getDeclarationDecl(ESTree::IdentifierNode *node) {
+  using ID = ESTree::IdentifierDecoration;
+  if (node->declState_ & ID::BitHaveDecl) {
+    return (Decl *)node->decl_;
+  } else if (node->declState_ & ID::BitSideDecl) {
+    auto it = sideIdentifierDeclarationDecl_.find(node);
+    assert(
+        it != sideIdentifierDeclarationDecl_.end() &&
+        "IdentifierNode with BitSideDecl must be in the side table");
+    return it->second;
+  } else {
+    return nullptr;
+  }
+}
+
+void SemContext::setDeclarationDecl(ESTree::IdentifierNode *node, Decl *decl) {
+  using ID = ESTree::IdentifierDecoration;
+
+  // Are we setting a "declaration decl" or erasing one?
+  if (LLVM_LIKELY(decl)) {
+    // We are setting a new "declaration decl". Update the state
+    // correspondingly.
+    switch (node->declState_) {
+      // We have an existing "expression decl". Depending on whether the
+      // "declaration decl" has the same value, either just set its bit, or
+      // record it in the side table.
+      case ID::BitHaveExpr:
+        if (node->decl_ == decl) {
+          node->declState_ = ID::BitHaveExpr | ID::BitHaveDecl;
+        } else {
+          node->declState_ = ID::BitHaveExpr | ID::BitSideDecl;
+          sideIdentifierDeclarationDecl_[node] = decl;
+        }
+        break;
+
+      // We have both an existing and "expression decl" and a "declaration
+      // decl", which is in the side table. We have been asked to update the
+      // "declaration decl". If the new value happens to be the same as the
+      // "expression decl", we no longer need the side table, otherwise we just
+      // update the value in the side table.
+      case ID::BitHaveExpr | ID::BitSideDecl:
+        if (node->decl_ == decl) {
+          node->declState_ = ID::BitHaveExpr | ID::BitHaveDecl;
+          bool erased = sideIdentifierDeclarationDecl_.erase(node);
+          (void)erased;
+          assert(
+              erased &&
+              "IdentifierNode with BitSideDecl must be in side table");
+        } else {
+          sideIdentifierDeclarationDecl_[node] = decl;
+        }
+        break;
+
+      // We don't have an "expression decl", so we just update the "declaration
+      // decl" and set the bit to know it is there.
+      default:
+        assert(
+            (node->declState_ == 0 || node->declState_ == ID::BitHaveDecl) &&
+            "Invalid declState");
+        node->decl_ = decl;
+        node->declState_ = ID::BitHaveDecl;
+        break;
+    }
+  } else {
+    // We are "unsetting" a "declaration decl". Update the state for that.
+    switch (node->declState_) {
+      // We have a "declaration decl" and an "expression decl" sharing the
+      // same value. Just unset the bit for the "declaration decl".
+      case ID::BitHaveDecl | ID::BitHaveExpr:
+        node->declState_ = ID::BitHaveExpr;
+        break;
+
+      // We have only a "declaration decl". Unset the bit and clear the value.
+      case ID::BitHaveDecl:
+        node->declState_ = 0;
+        node->decl_ = nullptr;
+        break;
+
+      // We have a "declaration decl" in the side table and an expression decl.
+      // Remove the former from the side table and clear its bit.
+      case ID::BitSideDecl | ID::BitHaveExpr: {
+        node->declState_ = ID::BitHaveExpr;
+        bool erased = sideIdentifierDeclarationDecl_.erase(node);
+        (void)erased;
+        assert(
+            erased && "IdentifierNode with BitSideDecl must be in side table");
+      } break;
+
+      // We don't have a "declaration decl", so do nothing.
+      default:
+        assert(
+            (node->declState_ == 0 || node->declState_ == ID::BitHaveExpr) &&
+            "Invalid declState");
+        break;
+    }
+  }
+}
+
+void SemContext::setExpressionDecl(ESTree::IdentifierNode *node, Decl *decl) {
+  using ID = ESTree::IdentifierDecoration;
+
+  // Are we setting an "expression decl" or erasing one?
+  if (LLVM_LIKELY(decl)) {
+    // We are setting a new "expression decl". Update the state
+    // correspondingly.
+    assert(
+        !node->isUnresolvable() &&
+        "Attempt to set decl for unresolvable identifier");
+
+    switch (node->declState_) {
+      // We already have a "declaration decl" and possibly an "expression decl".
+      // Depending on whether the new "expression decl" has the same value as
+      // the existing "declaration decl" or not, we have to move the existing
+      // "declaration decl" into the side table.
+      case ID::BitHaveDecl:
+      case ID::BitHaveDecl | ID::BitHaveExpr:
+        if (decl == node->decl_) {
+          node->declState_ = ID::BitHaveExpr | ID::BitHaveDecl;
+        } else {
+          node->declState_ = ID::BitHaveExpr | ID::BitSideDecl;
+          sideIdentifierDeclarationDecl_[node] = (Decl *)node->decl_;
+          node->decl_ = decl;
+        }
+        break;
+
+      // We have an existing "expression decl" and a different "declaration
+      // decl" stored in the side table. If the new "expression decl" matches
+      // the "declaration decl", then we need to remove the declaration decl"
+      // from the side table.
+      case ID::BitSideDecl | ID::BitHaveExpr: {
+        node->decl_ = decl;
+        auto it = sideIdentifierDeclarationDecl_.find(node);
+        assert(
+            it != sideIdentifierDeclarationDecl_.end() &&
+            "IdentifierNode with BitSideDecl must be in side table");
+        if (decl == it->second) {
+          node->declState_ = ID::BitHaveDecl | ID::BitHaveExpr;
+          sideIdentifierDeclarationDecl_.erase(it);
+        }
+      } break;
+
+      // Just update the value and set the bit.
+      default:
+        assert(node->declState_ == 0 || node->declState_ == ID::BitHaveExpr);
+        node->decl_ = decl;
+        node->declState_ = ID::BitHaveExpr;
+        break;
+    }
+  } else {
+    // We are "unsetting" an "expression decl". Update the state for that.
+    switch (node->declState_) {
+      // Unset the existing "expression decl" and clear the pointer.
+      case ID::BitHaveExpr:
+        node->declState_ = 0;
+        node->decl_ = nullptr;
+        break;
+
+      // We have both an "expression decl" and a "declaration decl", sharing
+      // a value. Clear the "have expression bit".
+      case ID::BitHaveExpr | ID::BitHaveDecl:
+        node->declState_ = ID::BitHaveDecl;
+        break;
+
+      // We have "expression decl" and a "declaration decl" with a different
+      // value in a side table. Move the "declaration decl" out of the side
+      // table.
+      case ID::BitHaveExpr | ID::BitSideDecl: {
+        auto it = sideIdentifierDeclarationDecl_.find(node);
+        assert(
+            it != sideIdentifierDeclarationDecl_.end() &&
+            "IdentifierNode with BitSideDecl must be in side table");
+        node->decl_ = it->second;
+        node->declState_ = ID::BitHaveDecl;
+      } break;
+
+      default:
+        assert(
+            (node->declState_ == 0 || node->declState_ == ID::BitHaveDecl) &&
+            "Invalid declState");
+        break;
+    }
+  }
+}
+
 void SemContextDumper::printSemContext(
     llvh::raw_ostream &os,
     const SemContext &semCtx) {
@@ -223,9 +407,12 @@ void SemContextDumper::printDecl(llvh::raw_ostream &os, const Decl *d) {
     annotateDecl_(os, d);
 }
 
-void SemContextDumper::printDeclRef(llvh::raw_ostream &os, const Decl *d) {
+void SemContextDumper::printDeclRef(
+    llvh::raw_ostream &os,
+    const Decl *d,
+    bool printName) {
   os << "%d." << declNumbers_.getNumber(d);
-  if (d->name.isValid())
+  if (printName && d->name.isValid())
     os << " '" << d->name << '\'';
 }
 

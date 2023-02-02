@@ -60,8 +60,12 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               llvh::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
           Builder.setLocation(tryStmt->_handler->getDebugLoc());
+          auto *catchInst = Builder.createCatchInst();
           emitScopeDeclarations(catchClauseNode->getScope());
-          prepareCatch(catchClauseNode->_param);
+          // Optional catch binding allows us to emit no extra code for the
+          // catch.
+          if (catchClauseNode->_param)
+            createLRef(catchClauseNode->_param, true).emitStore(catchInst);
 
           genStatement(catchClauseNode->_body);
 
@@ -86,16 +90,6 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
       });
 
   Builder.setInsertionBlock(nextBlock);
-}
-
-CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
-  auto *catchInst = Builder.createCatchInst();
-
-  // Optional catch binding allows us to emit no extra code for the catch.
-  if (catchParam)
-    createLRef(catchParam, true).emitStore(catchInst);
-
-  return catchInst;
 }
 
 void ESTreeIRGen::genFinallyBeforeControlChange(

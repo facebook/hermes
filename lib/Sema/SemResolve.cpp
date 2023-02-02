@@ -16,12 +16,16 @@ namespace sema {
 
 class ASTPrinter {
   llvh::raw_ostream &os_;
+  SemContext &semCtx_;
   SemContextDumper &semDumper_;
   unsigned depth_ = 0;
 
  public:
-  ASTPrinter(llvh::raw_ostream &os, SemContextDumper &semDumper)
-      : os_(os), semDumper_(semDumper) {}
+  ASTPrinter(
+      llvh::raw_ostream &os,
+      SemContext &semCtx,
+      SemContextDumper &semDumper)
+      : os_(os), semCtx_(semCtx), semDumper_(semDumper) {}
 
   void run(ESTree::Node *root) {
     ESTree::ESTreeVisit(*this, root);
@@ -44,11 +48,29 @@ class ASTPrinter {
     ++depth_;
     os_ << llvh::left_justify("", (depth_ - 1) * 4);
     os_ << "Id '" << V->_name->str() << '\'';
-    if (V->getDecl()) {
+
+    sema::Decl *declD = semCtx_.getDeclarationDecl(V);
+    sema::Decl *exprD = semCtx_.getExpressionDecl(V);
+    if (declD || exprD) {
       os_ << " [";
-      semDumper_.printDeclRef(os_, V->getDecl());
+      if (!declD || declD == exprD) {
+        os_ << "D:E:";
+        semDumper_.printDeclRef(os_, exprD);
+      } else if (exprD) {
+        os_ << "D:";
+        semDumper_.printDeclRef(os_, declD, false);
+        os_ << " E:";
+        semDumper_.printDeclRef(os_, exprD, true);
+      } else {
+        // The only remaining case.
+        assert(declD && !exprD);
+        os_ << "D:";
+        semDumper_.printDeclRef(os_, declD);
+      }
       os_ << ']';
     }
+    if (V->isUnresolvable())
+      os_ << " UNR";
     printNodeType(V);
     os_ << '\n';
   }
@@ -94,7 +116,7 @@ void semDump(llvh::raw_ostream &os, SemContext &semCtx, ESTree::Node *root) {
   SemContextDumper semDumper;
   semDumper.printSemContext(os, semCtx);
   os << '\n';
-  ASTPrinter ap(os, semDumper);
+  ASTPrinter ap(os, semCtx, semDumper);
   ap.run(root);
 }
 

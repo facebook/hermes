@@ -129,7 +129,7 @@ class FunctionContext {
   class AllowRecompileRAII {
    public:
     explicit AllowRecompileRAII(FunctionContext &) {}
-  }
+  };
 #endif
 
   /// Stack Register that will hold the return value of the global scope.
@@ -357,12 +357,14 @@ class ESTreeIRGen {
 
   /// The module we are constructing.
   Module *Mod;
+  /// Semantic resolution tables.
+  sema::SemContext &semCtx_;
+  /// The root of the ESTree.
+  ESTree::Node *Root;
   /// The IRBuilder we use to construct the module.
   IRBuilder Builder;
   /// Optional instrumentation
   IRInstrument instrumentIR_;
-  /// The root of the ESTree.
-  ESTree::Node *Root;
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
@@ -438,7 +440,7 @@ class ESTreeIRGen {
   }
 
  public:
-  explicit ESTreeIRGen(ESTree::Node *root, Module *M);
+  explicit ESTreeIRGen(Module *M, sema::SemContext &semCtx, ESTree::Node *root);
 
   /// Perform IRGeneration for the whole module.
   void doIt();
@@ -705,11 +707,6 @@ class ESTreeIRGen {
       EF emitNormalCleanup,
       EH emitHandler);
 
-  /// \param catchParam if not null, create the required variable binding
-  ///     for the catch parameter and emit the store.
-  /// \return the CatchInst.
-  CatchInst *prepareCatch(ESTree::NodePtr catchParam);
-
   /// When we see a control change such as return, break, continue,
   /// we need to make sure to generate code for finally block if
   /// we are under a try/catch.
@@ -854,12 +851,14 @@ class ESTreeIRGen {
     return functionContext_;
   }
 
-  /// Resolve the identifier node to the corresponding variable or global prop.
+  /// Resolve the identifier node to the corresponding variable or global prop
+  /// in expression context.
   Value *resolveIdentifier(ESTree::IdentifierNode *id) {
     return getDeclData(getIDDecl(id));
   }
 
-  /// Cast the node to ESTree::IdentifierNode and resolve it.
+  /// Cast the node to ESTree::IdentifierNode and resolve it to an expression
+  /// decl.
   Value *resolveIdentifierFromID(ESTree::Node *id) {
     return resolveIdentifier(llvh::cast<ESTree::IdentifierNode>(id));
   }
@@ -1085,11 +1084,12 @@ class ESTreeIRGen {
   /// Run all tasks in the compilation queue until it is empty.
   void drainCompilationQueue();
 
-  /// Return the non-null sema::Decl associated with the identifier.
-  static sema::Decl *getIDDecl(ESTree::IdentifierNode *id) {
+  /// Return the non-null expression sema::Decl associated with the identifier.
+  sema::Decl *getIDDecl(ESTree::IdentifierNode *id) {
     assert(id && "IdentifierNode cannot be null");
-    assert(id->getDecl() && "identifier must be resolved");
-    return id->getDecl();
+    sema::Decl *decl = semCtx_.getExpressionDecl(id);
+    assert(decl && "identifier must be resolved");
+    return decl;
   }
 
   /// Set the customData field of the declaration with the specified value.

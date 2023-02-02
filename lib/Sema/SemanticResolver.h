@@ -479,7 +479,7 @@ class Unresolver {
  public:
   /// Mark all declarations that are at a lower depth than \p depth as
   /// unresolvable, starting at \p root.
-  static void run(uint32_t depth, ESTree::Node *root);
+  static void run(SemContext &semCtx, uint32_t depth, ESTree::Node *root);
 
   void visit(ESTree::Node *node) {
     visitESTreeChildren(*this, node);
@@ -495,9 +495,12 @@ class Unresolver {
   void decRecursionDepth() {}
 
  private:
-  explicit Unresolver(uint32_t depth) : depth_(depth) {}
+  explicit Unresolver(SemContext &semCtx, uint32_t depth)
+      : semCtx_(semCtx), depth_(depth) {}
 
  private:
+  SemContext &semCtx_;
+
   /// Depth of the scope which contains the construct which could shadow
   /// variables dynamically.
   /// e.g. the depth of the function containing a local `eval()`.

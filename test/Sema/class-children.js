@@ -27,7 +27,7 @@ class Cls {
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'Cls' [%d.1 'Cls']
+// CHECK-NEXT:        Id 'Cls' [D:E:%d.1 'Cls']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            ClassProperty
 // CHECK-NEXT:                Id 'a'

@@ -224,7 +224,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
   }
 
   Module M(context);
-  hermes::generateIRFromESTree(parsed.getValue(), &M);
+  hermes::generateIRFromESTree(&M, semCtx, parsed.getValue());
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
