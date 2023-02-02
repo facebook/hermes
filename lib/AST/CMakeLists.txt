@@ -8,8 +8,6 @@ add_hermes_library(hermesAST
     ESTree.cpp
     ESTreeJSONDumper.cpp
     Keywords.cpp
-    SemValidate.cpp
-    SemanticValidator.cpp SemanticValidator.h
     CommonJS.cpp
     LINK_OBJLIBS
     hermesSupport

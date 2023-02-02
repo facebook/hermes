@@ -6,7 +6,6 @@
 set(ASTSources
   JSONTest.cpp
   ESTreeTest.cpp
-  ValidatorTest.cpp
   ResolverTest.cpp
   )
 

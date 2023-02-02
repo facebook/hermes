@@ -147,7 +147,7 @@ class HBCISel {
   void populatePropertyCachingInfo();
 
   /// Emit instructions at the entry block to handle several special cases.
-  void initialize();
+  void initialize(){};
 
   /// Emit a mov, or none if it would be a no-op.
   void emitMovIfNeeded(param_t dest, param_t src);

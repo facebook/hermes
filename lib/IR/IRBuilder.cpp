@@ -178,18 +178,14 @@ JSDynamicParam *IRBuilder::createJSDynamicParam(
   return parent->addJSDynamicParam(createIdentifier(name));
 }
 
-Variable *IRBuilder::createVariable(
-    VariableScope *Parent,
-    Variable::DeclKind declKind,
-    Identifier Name) {
-  return new Variable(Parent, declKind, Name);
+Variable *IRBuilder::createVariable(VariableScope *Parent, Identifier Name) {
+  return new Variable(Parent, Name);
 }
 
 Variable *IRBuilder::createVariable(
     VariableScope *Parent,
-    Variable::DeclKind declKind,
     llvh::StringRef Name) {
-  return createVariable(Parent, declKind, createIdentifier(Name));
+  return createVariable(Parent, createIdentifier(Name));
 }
 
 LiteralNumber *IRBuilder::getLiteralNumber(double value) {
@@ -818,6 +814,13 @@ DirectEvalInst *IRBuilder::createDirectEvalInst(
     Value *evalText,
     bool strictCaller) {
   auto *inst = new DirectEvalInst(evalText, getLiteralBool(strictCaller));
+  insert(inst);
+  return inst;
+}
+
+DeclareGlobalVarInst *IRBuilder::createDeclareGlobalVarInst(
+    LiteralString *name) {
+  auto *inst = new DeclareGlobalVarInst(name);
   insert(inst);
   return inst;
 }

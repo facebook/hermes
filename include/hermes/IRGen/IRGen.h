@@ -19,6 +19,10 @@ namespace hermes {
 
 using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
+namespace sema {
+class SemContext;
+}
+
 namespace hbc {
 
 struct LazyCompilationData {
@@ -58,14 +62,7 @@ struct LazyCompilationData {
 } // namespace hbc
 
 /// Lowers an ESTree program into Hermes IR in \p M.
-/// \param declFileList a list of parsed global property definition files.
-/// \param scopeChain identifiers in the environment, if compiling for local
-/// eval. \returns True if an error occured and a message was emitted.
-bool generateIRFromESTree(
-    ESTree::NodePtr node,
-    Module *M,
-    const DeclarationFileListTy &declFileList,
-    const ScopeChain &scopeChain);
+void generateIRFromESTree(ESTree::NodePtr node, Module *M);
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.
@@ -76,20 +73,11 @@ bool generateIRFromESTree(
 ///           (index when reading filenames for the first time).
 /// \param filename the relative filename to the CommonJS module.
 void generateIRForCJSModule(
+    sema::SemContext &semContext,
     ESTree::FunctionExpressionNode *node,
     uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename,
-    Module *M,
-    Function *topLevelFunction,
-    const DeclarationFileListTy &declFileList);
-
-/// Generate IR from the AST of a previously pre-parsed "lazy" function by
-/// parsing it again and validating it. On error, a stub function which throws
-/// a SyntaxError will be emitted instead.
-/// \return the newly generated function IR and lexical scope root
-std::pair<Function *, Function *> generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
     Module *M);
 
 } // namespace hermes

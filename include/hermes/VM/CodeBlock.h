@@ -54,11 +54,6 @@ class CodeBlock final
   /// cache.
   const uint32_t writePropCacheOffset_;
 
-#ifndef HERMESVM_LEAN
-  /// Compiles a lazy CodeBlock. Intended to be called from lazyCompile.
-  ExecutionStatus lazyCompileImpl(Runtime &runtime);
-#endif
-
   /// Helper function for getting start and end locations.
   /// Given an SMLoc, returns the source coordinates of it in the lazy function.
   /// \param start if true, return the start coordinates, else end coordinates.
@@ -222,21 +217,6 @@ class CodeBlock final
     return offset;
   }
 
-#ifndef HERMESVM_LEAN
-  /// Checks whether this function is lazily compiled.
-  bool isLazy() const {
-    // null bytecode_ indicates that this is a lazy code block.
-    return !bytecode_;
-  }
-
-  /// Compiles this CodeBlock, if it's lazy and not already compiled.
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    if (LLVM_UNLIKELY(isLazy())) {
-      return lazyCompileImpl(runtime);
-    }
-    return ExecutionStatus::RETURNED;
-  }
-#else
   /// Checks whether this function is lazily compiled.
   bool isLazy() const {
     return false;
@@ -244,7 +224,6 @@ class CodeBlock final
   ExecutionStatus lazyCompile(Runtime &) {
     return ExecutionStatus::RETURNED;
   }
-#endif
 
   /// Get the start location of this function, if it's lazy.
   SourceErrorManager::SourceCoords getLazyFunctionStartLoc() const {

@@ -8,8 +8,6 @@
 #ifndef HERMES_AST_KEYWORDS_H
 #define HERMES_AST_KEYWORDS_H
 
-#include "hermes/AST/SemValidate.h"
-
 #include "hermes/AST/RecursiveVisitor.h"
 
 namespace hermes {
