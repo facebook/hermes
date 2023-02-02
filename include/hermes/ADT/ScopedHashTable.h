@@ -63,20 +63,25 @@ class ScopedHashTable {
   // The current scope. Owned by the user.
   ScopedHashTableScope<K, V> *scope_{nullptr};
 
-  /// Unlinks the innermost Node for a key and returns it.
-  ScopedHashTableNode<K, V> *pop(const K &key) {
-    ScopedHashTableNode<K, V> *&entry = map_[key];
+  /// Unlinks the specified entry, which must be the innermost, and returns it.
+  ScopedHashTableNode<K, V> *pop(typename decltype(map_)::iterator it) {
+    auto *entry = it->second;
     assert(entry && "Asked to pop an empty scope value");
     assert(
         entry->depth_ == scope_->depth_ &&
         "Asked to pop value not from innermost scope");
     auto *ret = entry;
     if (entry->nextShadowed_) {
-      entry = entry->nextShadowed_;
+      it->second = entry->nextShadowed_;
     } else {
-      map_.erase(key);
+      map_.erase(it);
     }
     return ret;
+  }
+
+  /// Unlinks the innermost Node for a key and returns it.
+  ScopedHashTableNode<K, V> *pop(const K &key) {
+    return pop(map_.find(key));
   }
 
   /// Unlinks and deallocates all keys in the current scope.
@@ -146,6 +151,39 @@ class ScopedHashTable {
       // Otherwise, create a new node in the current scope.
       insertNewNode(scope_, key, value, entry);
     }
+  }
+
+  /// Erase the specified node from the current scope.
+  /// If the node doesn't exist in the current scope, do nothing and return
+  /// false. This function is O(number-of-elements-in-cur-scope).
+  ///
+  /// \return true if the node was found in the current scope and deleted,
+  ///     otherwise false.
+  bool eraseFromCurrentScope(const K &key) {
+    auto it = map_.find(key);
+    if (it == map_.end())
+      return false;
+
+    ScopedHashTableNode<K, V> *node = it->second;
+    if (node->depth_ != scope_->depth_)
+      return false;
+
+    // Find the previous node in the current scope.
+    ScopedHashTableNode<K, V> **pNext = &scope_->head_;
+    while (*pNext != node)
+      pNext = &(*pNext)->nextInScope_;
+
+    // Unlink the node from the current scope.
+    *pNext = node->nextInScope_;
+
+    // Unlink the node from the hash table.
+    pop(it);
+
+    // Finally deallocate the node.
+    delete node;
+
+    // We succeeded in deleting it!
+    return true;
   }
 
   /// Returns 1 if the value is defined, 0 if it's not.

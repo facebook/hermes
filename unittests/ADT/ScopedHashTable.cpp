@@ -99,4 +99,89 @@ TEST(ScopedHashTable, SetInCurrentScope) {
   EXPECT_EQ("true", table.lookup("foo"));
 }
 
+TEST(ScopedHashTable, EraseFromCurrentScope) {
+  Table table{};
+
+  // Try to erase missing element with no scopes.
+  EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
+
+  Scope outer(table);
+  // Try to erase missing element with a scope.
+  EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
+
+  table.insert("foo", "10");
+  {
+    Scope inner(table);
+    // Try to erase element from a parent scope.
+    EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
+  }
+
+  // Erase the only element in the only scope.
+  EXPECT_TRUE(table.eraseFromCurrentScope("foo"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
+
+  table.insert("foo", "10");
+  table.insert("bar", "20");
+
+  // Erase the last added element.
+  EXPECT_TRUE(table.eraseFromCurrentScope("bar"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("bar"));
+
+  table.insert("bar", "20");
+
+  // Erase the first added element.
+  EXPECT_TRUE(table.eraseFromCurrentScope("foo"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("foo"));
+
+  // Erase the remaining element.
+  EXPECT_TRUE(table.eraseFromCurrentScope("bar"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("bar"));
+
+  table.insert("1", "10");
+  table.insert("2", "20");
+  table.insert("3", "30");
+
+  // Erase the middle element
+  EXPECT_TRUE(table.eraseFromCurrentScope("2"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("2"));
+  // Erase the rest.
+  EXPECT_TRUE(table.eraseFromCurrentScope("1"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("1"));
+  EXPECT_TRUE(table.eraseFromCurrentScope("3"));
+  EXPECT_FALSE(table.eraseFromCurrentScope("3"));
+
+  table.insert("1", "10");
+  table.insert("2", "20");
+  table.insert("3", "30");
+  {
+    Scope inner(table);
+
+    table.insert("1", "10");
+    table.insert("2", "20");
+    table.insert("3", "30");
+
+    // Erase the middle element in a nested scope, with a shadowed element.
+    EXPECT_TRUE(table.eraseFromCurrentScope("2"));
+    EXPECT_FALSE(table.eraseFromCurrentScope("2"));
+
+    {
+      auto scopes = table.getKeysByScope();
+      EXPECT_EQ(2u, scopes->size());
+      auto &top = scopes->at(0);
+      EXPECT_EQ(2u, top.size());
+      EXPECT_TRUE(std::find(top.begin(), top.end(), "1") != top.end());
+      EXPECT_TRUE(std::find(top.begin(), top.end(), "3") != top.end());
+    }
+  }
+  {
+    auto scopes = table.getKeysByScope();
+    EXPECT_EQ(1u, scopes->size());
+    auto &top = scopes->at(0);
+    EXPECT_EQ(3u, top.size());
+    EXPECT_TRUE(std::find(top.begin(), top.end(), "1") != top.end());
+    EXPECT_TRUE(std::find(top.begin(), top.end(), "2") != top.end());
+    EXPECT_TRUE(std::find(top.begin(), top.end(), "3") != top.end());
+  }
+}
+
 } // anonymous namespace
