@@ -257,17 +257,29 @@ bool invokeCC(
       // If we are statically linking, we need to explicitly list Hermes'
       // external dependencies.
       if (params.staticLink == ShermesCompileParams::StaticLink::on) {
+#ifdef __APPLE__
         args.emplace_back("-framework");
         args.emplace_back("CoreFoundation");
         args.emplace_back("-framework");
         args.emplace_back("Foundation");
         args.emplace_back("-lc++");
+#else
+        llvh::errs() << "Static linking unsupported on this platform\n";
+        return false;
+#endif
       } else {
         for (const auto &s : cfg.hermesLibPath) {
-          args.emplace_back("-rpath");
+          args.emplace_back("-Wl,-rpath");
           args.emplace_back(s);
         }
       }
+
+#ifndef __APPLE__
+      // -lm is needed in both compilation modes because it is directly used by
+      // the shermes C output.
+      args.emplace_back("-lm");
+#endif
+
     } else {
       splitArgs(cfg.ldflags, args);
     }
