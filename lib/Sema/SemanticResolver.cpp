@@ -192,24 +192,25 @@ void SemanticResolver::visit(ESTree::AssignmentExpressionNode *assignment) {
     }
 
     for (auto *e : list) {
-      validateAssignmentTarget(e->_left);
       visitESTreeNode(*this, e->_left, e);
+      validateAssignmentTarget(e->_left);
     }
     visitESTreeNode(*this, list.back()->_right, list.back());
     return;
   }
 
+  visitESTreeNode(*this, assignment->_left, assignment);
   validateAssignmentTarget(assignment->_left);
-  visitESTreeChildren(*this, assignment);
+  visitESTreeNode(*this, assignment->_right, assignment);
 }
 
 void SemanticResolver::visit(ESTree::UpdateExpressionNode *node) {
+  visitESTreeChildren(*this, node);
   if (!isLValue(node->_argument)) {
     sm_.error(
         node->_argument->getSourceRange(),
         "invalid operand in update operation");
   }
-  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ESTree::UnaryExpressionNode *node) {
@@ -262,16 +263,33 @@ void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
     visitESTreeNode(*this, &c, node);
 }
 
+void SemanticResolver::visit(ESTree::ForInStatementNode *node) {
+  visitForInOf(node, node, node->_left, node->_right, node->_body);
+}
+
+void SemanticResolver::visit(ESTree::ForOfStatementNode *node) {
+  visitForInOf(node, node, node->_left, node->_right, node->_body);
+}
+
 void SemanticResolver::visitForInOf(
     ESTree::LoopStatementNode *node,
     ESTree::ScopeDecorationBase *scopeDeco,
-    ESTree::Node *left) {
+    ESTree::Node *left,
+    ESTree::Node *right,
+    ESTree::Node *body) {
   node->setLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
       functionContext()->currentLoop, node);
   llvh::SaveAndRestore<StatementNode *> saveSwitch(
       functionContext()->currentLoopOrSwitch, node);
+
+  ScopeRAII nameScope{*this, scopeDeco};
+  if (const ScopeDecls *declsOpt =
+          functionContext()->decls->getScopeDeclsForNode(node)) {
+    processDeclarations(*declsOpt);
+  }
+  visitESTreeNode(*this, left, node);
 
   // Ensure the initializer is valid.
   if (auto *vd = llvh::dyn_cast<VariableDeclarationNode>(left)) {
@@ -298,12 +316,8 @@ void SemanticResolver::visitForInOf(
     validateAssignmentTarget(left);
   }
 
-  ScopeRAII nameScope{*this, scopeDeco};
-  if (const ScopeDecls *declsOpt =
-          functionContext()->decls->getScopeDeclsForNode(node)) {
-    processDeclarations(*declsOpt);
-  }
-  visitESTreeChildren(*this, node);
+  visitESTreeNode(*this, right, node);
+  visitESTreeNode(*this, body, node);
 }
 
 void SemanticResolver::visit(ESTree::ForStatementNode *node) {
