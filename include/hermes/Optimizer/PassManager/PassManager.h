@@ -73,10 +73,13 @@ class PassManager {
   void run(Module *M);
 
  private:
+  /// Adds \p P to the pipeline managed by this pass manager.
   void addPass(std::unique_ptr<Pass> P);
 
+  /// \return A pass that dumps the IR before/after \p pass runs. The options
+  /// controlling the IR dump live in CodeGenSettings.
   std::unique_ptr<Pass> makeDumpPass(std::unique_ptr<Pass> pass);
 };
 } // namespace hermes
-#undef DEBUG_TYPE
+
 #endif // HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H

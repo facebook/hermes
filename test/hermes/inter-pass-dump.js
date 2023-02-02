@@ -11,6 +11,8 @@
 // RUN: %hermesc -O --dump-bytecode %s --Xdump-after Auditor 2>&1 | %FileCheck --check-prefix AFTER-PASS %s
 // RUN: %hermesc -O --dump-bytecode %s --Xdump-before-all 2>&1 | %FileCheck --check-prefix BEFORE-ALL %s
 // RUN: %hermesc -O --dump-bytecode %s --Xdump-before Auditor 2>&1 | %FileCheck --check-prefix BEFORE-PASS %s
+// RUN: %hermesc -O --dump-bytecode %s --Xdump-after-all --Xfunctions-to-dump firstFunction 2>&1 | %FileCheck --check-prefix DUMP-FIRST-FUNCTION %s
+// RUN: %hermesc -O --dump-bytecode %s --Xdump-before Auditor --Xfunctions-to-dump _2ndFunction 2>&1 | %FileCheck --check-prefix DUMP-SECOND-FUNCTION %s
 
 function firstFunction() { print(10); }
 
@@ -35,3 +37,20 @@ function _2ndFunction() { print(20); }
 // BEFORE-PASS: *** BEFORE Function pass Auditor
 // BEFORE-PASS: *** BEFORE Function pass Auditor
 // BEFORE-PASS-NOT: ***
+
+// Only firstFunction should appear in the output.
+// DUMP-FIRST-FUNCTION-NOT: function global#{{[0-9]}}()#{{[0-9]}}
+// DUMP-FIRST-FUNCTION-NOT: function _2ndFunction#{{[0-9]}}#{{[0-9]}}()#{{[0-9]}}
+
+// DUMP-FIRST-FUNCTION: function firstFunction#{{[0-9]}}#{{[0-9]}}()#{{[0-9]}}
+
+// DUMP-FIRST-FUNCTION-NOT: function global#{{[0-9]}}()#{{[0-9]}}
+// DUMP-FIRST-FUNCTION-NOT: function _2ndFunction#{{[0-9]}}#{{[0-9]}}()#{{[0-9]}}
+
+// Only _2ndFunction should appear in the output.
+// DUMP-SECOND-FUNCTION-NOT: function global#{{[0-9]}}()#{{[0-9]}}
+// DUMP-SECOND-FUNCTION-NOT: function firstFunction#{{[0-9]}}#{{[0-9]}}()#{{[0-9]}}
+
+// DUMP-SECOND-FUNCTION: *** BEFORE Function pass Auditor
+// DUMP-SECOND-FUNCTION: function _2ndFunction#{{[0-9]}}#{{[0-9]}}()#{{[0-9]}}
+// DUMP-SECOND-FUNCTION-NOT: ***

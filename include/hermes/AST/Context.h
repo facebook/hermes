@@ -30,6 +30,7 @@ class EmitWasmIntrinsicsContext;
 struct CodeGenerationSettings_DumpSettings {
   bool all{false};
   llvh::SmallDenseSet<llvh::StringRef> passes;
+  llvh::SmallDenseSet<llvh::StringRef> functions;
 };
 
 struct CodeGenerationSettings {
@@ -61,6 +62,10 @@ struct CodeGenerationSettings {
   /// Dump IR after each pass (if holds boolean), or the given passes (if holds
   /// DensetSet).
   DumpSettings dumpAfter;
+
+  /// Restricts inter-pass dump to the given functions. If empty, all functions
+  /// are dumped.
+  llvh::SmallDenseSet<llvh::StringRef> functionsToDump;
 };
 
 struct OptimizationSettings {

@@ -31,6 +31,19 @@ bool shouldDump(
   return dumpSettings.all || dumpSettings.passes.count(P.getName()) != 0;
 }
 
+/// Used to controle Module-level dumping. \return true if the \p cgSettings
+/// specify full-module dump.
+bool dumpFullModule(const CodeGenerationSettings &cgSettings) {
+  return cgSettings.functionsToDump.empty();
+}
+
+/// \return true if \p cgSettings allow \p F's IR to be dumped.
+bool shouldDumpFunction(const CodeGenerationSettings &cgSettings, Function *F) {
+  return cgSettings.functionsToDump.empty() ||
+      cgSettings.functionsToDump.count(F->getOriginalOrInferredName().str()) !=
+      0;
+}
+
 /// Wraps a ModulePass MP, and dumps the IR before/after MP runs. This pass is
 /// created with the same name as MP so dumping is "invisible".
 class DumpModule : public ModulePass {
@@ -45,17 +58,9 @@ class DumpModule : public ModulePass {
         pass_(std::move(p)) {}
 
   bool runOnModule(Module *M) override {
-    if (shouldDump(cgSettings_.dumpBefore, *pass_)) {
-      outs_ << "\n*** BEFORE Module pass " << pass_->getName() << "\n\n";
-      M->dump(outs_);
-    }
-
+    dumpIfEnabled(M, cgSettings_.dumpBefore, "*** BEFORE Module pass");
     bool result = pass_->runOnModule(M);
-
-    if (shouldDump(cgSettings_.dumpAfter, *pass_)) {
-      outs_ << "\n*** AFTER Module pass " << pass_->getName() << "\n\n";
-      M->dump(outs_);
-    }
+    dumpIfEnabled(M, cgSettings_.dumpAfter, "*** AFTER Module pass");
 
     return result;
   }
@@ -64,6 +69,28 @@ class DumpModule : public ModulePass {
   const CodeGenerationSettings &cgSettings_;
   llvh::raw_ostream &outs_;
   std::unique_ptr<ModulePass> pass_;
+
+  void dumpIfEnabled(
+      Module *M,
+      const CodeGenerationSettings::DumpSettings &settings,
+      llvh::StringRef prefix) const {
+    if (shouldDump(settings, *pass_)) {
+      // Module-level dumping may be disabled via the command-line flag
+      // -Xfunctions-to-dump. If that option is not specified in the command
+      // line, then the entire module will be dumped. Otherwise, only the
+      // functions in M that were specified in the option will be output.
+      outs_ << "\n" << prefix << " " << pass_->getName() << "\n\n";
+      if (dumpFullModule(cgSettings_)) {
+        M->dump(outs_);
+      } else {
+        for (Function &F : *M) {
+          if (shouldDumpFunction(cgSettings_, &F)) {
+            F.dump(outs_);
+          }
+        }
+      }
+    }
+  }
 };
 
 /// Wraps a FunctionPass FP, and dumps the IR before/after FP runs. This pass is
@@ -80,17 +107,9 @@ class DumpFunction : public FunctionPass {
         pass_(std::move(p)) {}
 
   bool runOnFunction(Function *F) override {
-    if (shouldDump(cgSettings_.dumpBefore, *pass_)) {
-      outs_ << "\n*** BEFORE Function pass " << pass_->getName() << "\n\n";
-      F->dump(outs_);
-    }
-
+    dumpIfEnabled(F, cgSettings_.dumpBefore, "*** BEFORE Function pass");
     bool result = pass_->runOnFunction(F);
-
-    if (shouldDump(cgSettings_.dumpAfter, *pass_)) {
-      outs_ << "\n*** AFTER Function pass " << pass_->getName() << "\n\n";
-      F->dump(outs_);
-    }
+    dumpIfEnabled(F, cgSettings_.dumpAfter, "*** AFTER Function pass");
 
     return result;
   }
@@ -99,6 +118,18 @@ class DumpFunction : public FunctionPass {
   const CodeGenerationSettings &cgSettings_;
   llvh::raw_ostream &outs_;
   std::unique_ptr<FunctionPass> pass_;
+
+  void dumpIfEnabled(
+      Function *F,
+      const CodeGenerationSettings::DumpSettings &dumpSettings,
+      llvh::StringRef prefix) const {
+    if (shouldDump(dumpSettings, *pass_)) {
+      if (shouldDumpFunction(cgSettings_, F)) {
+        outs_ << "\n" << prefix << " " << pass_->getName() << "\n\n";
+        F->dump(outs_);
+      }
+    }
+  }
 };
 } // namespace
 

@@ -442,6 +442,12 @@ static list<std::string> DumpAfter(
     desc("Dump the IR after each given pass"),
     cat(CompilerCategory));
 
+static list<std::string> FunctionsToDump(
+    "Xfunctions-to-dump",
+    Hidden,
+    desc("Only dump the IR for the given functions"),
+    cat(CompilerCategory));
+
 #ifndef NDEBUG
 
 static opt<bool> LexerOnly(
@@ -1081,6 +1087,7 @@ std::shared_ptr<Context> createContext(
   initializeDumpOptions(
       codeGenOpts.dumpBefore, cl::DumpBeforeAll, cl::DumpBefore);
   initializeDumpOptions(codeGenOpts.dumpAfter, cl::DumpAfterAll, cl::DumpAfter);
+  codeGenOpts.functionsToDump = stringListOptToDenseSet(cl::FunctionsToDump);
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;
   }
