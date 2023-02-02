@@ -192,7 +192,11 @@ double toDouble(ImmutableBigIntRef src) {
   const uint32_t numBits = src.numDigits * BigIntDigitSizeInBits;
   llvh::APInt tmp(numBits, llvh::makeArrayRef(src.digits, src.numDigits));
   constexpr bool kSigned = true;
-  return tmp.roundToDouble(kSigned);
+  double val = tmp.roundToDouble(kSigned);
+  // TODO(T142034196): APInt::roundToDouble doesn't implement proper conversion
+  // when the number has more than 2 digits; we need to implement this
+  // conversion.
+  return std::isnan(val) ? std::numeric_limits<double>::quiet_NaN() : val;
 }
 
 namespace {
