@@ -2309,6 +2309,8 @@ vm::RuntimeConfig hardenedHermesRuntimeConfig() {
   config.withEnableEval(false);
   config.withArrayBuffer(false);
   config.withES6Proxy(false);
+  config.withEnableHermesInternal(false);
+  config.withEnableHermesInternalTestMethods(false);
 
   // Enabled hardening options.
   config.withRandomizeMemoryLayout(true);
