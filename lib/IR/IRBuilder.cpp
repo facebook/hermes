@@ -25,7 +25,6 @@ NormalFunction *IRBuilder::createFunction(
     bool strictMode,
     SourceVisibility sourceVisibility,
     SMRange sourceRange,
-    bool isGlobal,
     Function *insertBefore) {
   // Function must have a name. If the source doesn't provide the function name,
   // Hermes will try to infer the name from the name of a variable or property
@@ -39,7 +38,6 @@ NormalFunction *IRBuilder::createFunction(
       definitionKind,
       strictMode,
       sourceVisibility,
-      isGlobal,
       sourceRange,
       insertBefore);
 }
@@ -62,7 +60,6 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
       definitionKind,
       strictMode,
       sourceVisibility,
-      /* isGlobal */ false,
       sourceRange,
       insertBefore);
 }
@@ -79,13 +76,7 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
     OriginalName = createIdentifier("");
   }
   return new GeneratorInnerFunction(
-      M,
-      OriginalName,
-      definitionKind,
-      strictMode,
-      /* isGlobal */ false,
-      sourceRange,
-      insertBefore);
+      M, OriginalName, definitionKind, strictMode, sourceRange, insertBefore);
 }
 
 ExternalScope *IRBuilder::createExternalScope(
@@ -105,8 +96,7 @@ Function *IRBuilder::createTopLevelFunction(
       Function::DefinitionKind::ES5Function,
       strictMode,
       sourceVisibility,
-      sourceRange,
-      true);
+      sourceRange);
   M->setTopLevelFunction(F);
   return F;
 }
@@ -117,7 +107,6 @@ NormalFunction *IRBuilder::createFunction(
     bool strictMode,
     SourceVisibility sourceVisibility,
     SMRange sourceRange,
-    bool isGlobal,
     Function *insertBefore) {
   Identifier OrigIden =
       OriginalName.empty() ? Identifier{} : createIdentifier(OriginalName);
@@ -127,7 +116,6 @@ NormalFunction *IRBuilder::createFunction(
       strictMode,
       sourceVisibility,
       sourceRange,
-      isGlobal,
       insertBefore);
 }
 
@@ -149,7 +137,6 @@ AsyncFunction *IRBuilder::createAsyncFunction(
       definitionKind,
       strictMode,
       sourceVisibility,
-      /* isGlobal */ false,
       sourceRange,
       insertBefore);
 }

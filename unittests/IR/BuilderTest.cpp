@@ -27,6 +27,7 @@ TEST(BuilderTest, SimpleSmokeTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
+  Builder.createTopLevelFunction(true);
   auto F = Builder.createFunction(
       "main", Function::DefinitionKind::ES5Function, true);
   auto BB = Builder.createBasicBlock(F);

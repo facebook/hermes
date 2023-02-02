@@ -1433,9 +1433,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// The Module owning this function.
   Module *parent_;
 
-  /// Indicates whether this is the global scope.
-  bool isGlobal_;
-
   /// List of external scopes owned by this function. Deleted upon destruction.
   llvh::SmallVector<VariableScope *, 4> externalScopes_;
 
@@ -1488,7 +1485,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
       DefinitionKind definitionKind,
       bool strictMode,
       SourceVisibility sourceVisibility,
-      bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore = nullptr);
 
@@ -1500,9 +1496,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   /// \returns whether this is the top level function (i.e. global scope).
-  bool isGlobalScope() const {
-    return isGlobal_;
-  }
+  bool isGlobalScope() const;
 
   /// \return whether this is a anonymous function.
   bool isAnonymous() const {
@@ -1709,7 +1703,6 @@ class NormalFunction final : public Function {
       DefinitionKind definitionKind,
       bool strictMode,
       SourceVisibility sourceVisibility,
-      bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore = nullptr)
       : Function(
@@ -1719,7 +1712,6 @@ class NormalFunction final : public Function {
             definitionKind,
             strictMode,
             sourceVisibility,
-            isGlobal,
             sourceRange,
             insertBefore) {}
 
@@ -1739,7 +1731,6 @@ class GeneratorFunction final : public Function {
       DefinitionKind definitionKind,
       bool strictMode,
       SourceVisibility sourceVisibility,
-      bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
@@ -1749,7 +1740,6 @@ class GeneratorFunction final : public Function {
             definitionKind,
             strictMode,
             sourceVisibility,
-            isGlobal,
             sourceRange,
             insertBefore) {}
 
@@ -1767,7 +1757,6 @@ class GeneratorInnerFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
@@ -1779,7 +1768,6 @@ class GeneratorInnerFunction final : public Function {
             // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
             //  is used in the err stack trace instead of the inner gen fn name.
             SourceVisibility::HideSource,
-            isGlobal,
             sourceRange,
             insertBefore) {
     setType(Type::createAnyType());
@@ -1799,7 +1787,6 @@ class AsyncFunction final : public Function {
       DefinitionKind definitionKind,
       bool strictMode,
       SourceVisibility sourceVisibility,
-      bool isGlobal,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
@@ -1809,7 +1796,6 @@ class AsyncFunction final : public Function {
             definitionKind,
             strictMode,
             sourceVisibility,
-            isGlobal,
             sourceRange,
             insertBefore) {}
 

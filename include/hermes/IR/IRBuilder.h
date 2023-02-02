@@ -68,7 +68,6 @@ class IRBuilder {
       bool strictMode,
       SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{},
-      bool isGlobal = false,
       Function *insertBefore = nullptr);
 
   /// Create a new Function and add it to the Module.
@@ -78,7 +77,6 @@ class IRBuilder {
       bool strictMode,
       SourceVisibility sourceVisibility = SourceVisibility::Default,
       SMRange sourceRange = SMRange{},
-      bool isGlobal = false,
       Function *insertBefore = nullptr);
 
   /// Create a new AsyncFunction and add it to the Module.

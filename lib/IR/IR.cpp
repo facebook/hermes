@@ -159,12 +159,10 @@ Function::Function(
     DefinitionKind definitionKind,
     bool strictMode,
     SourceVisibility sourceVisibility,
-    bool isGlobal,
     SMRange sourceRange,
     Function *insertBefore)
     : Value(kind),
       parent_(parent),
-      isGlobal_(isGlobal),
       externalScopes_(),
       functionScope_(this),
       originalOrInferredName_(originalName),
@@ -196,6 +194,10 @@ Function::~Function() {
   // Free all external scopes.
   for (auto *ES : externalScopes_)
     Value::destroy(ES);
+}
+
+bool Function::isGlobalScope() const {
+  return parent_->getTopLevelFunction() == this;
 }
 
 std::string Function::getDefinitionKindStr(bool isDescriptive) const {

@@ -187,7 +187,6 @@ Function *ESTreeIRGen::genES5Function(
             ESTree::isStrict(functionNode->strictness),
             functionNode->getSemInfo()->sourceVisibility,
             functionNode->getSourceRange(),
-            /* isGlobal */ false,
             /* insertBefore */ nullptr));
 
   auto compileFunc =
@@ -699,8 +698,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       Function::DefinitionKind::ES5Function,
       true,
       SourceVisibility::Sensitive,
-      sourceRange,
-      false);
+      sourceRange);
 
   function->addJSThisParam();
   BasicBlock *firstBlock = builder.createBasicBlock(function);
