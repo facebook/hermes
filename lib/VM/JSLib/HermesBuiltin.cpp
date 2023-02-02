@@ -327,8 +327,6 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
           nextKeyHandle,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           propValueHandle);
-      if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
-        return ExecutionStatus::EXCEPTION;
       assert(
           crb != ExecutionStatus::EXCEPTION && *crb &&
           "CreateDataProperty failed");
