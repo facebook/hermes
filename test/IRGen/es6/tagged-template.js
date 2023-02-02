@@ -61,34 +61,45 @@ function helloWorld() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [dummy, emptyString, oneString, oneSub, dup, notDup, memberExpr, callExpr, dup2, dup3, helloWorld]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %dummy()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "dummy" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %emptyString()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "emptyString" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %oneString()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "oneString" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %oneSub()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "oneSub" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %dup()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "dup" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %notDup()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "notDup" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %memberExpr()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "memberExpr" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %callExpr()
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "callExpr" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %dup2()
-// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "dup2" : string
-// CHECK-NEXT:  %18 = CreateFunctionInst %dup3()
-// CHECK-NEXT:  %19 = StorePropertyLooseInst %18 : closure, globalObject : object, "dup3" : string
-// CHECK-NEXT:  %20 = CreateFunctionInst %helloWorld()
-// CHECK-NEXT:  %21 = StorePropertyLooseInst %20 : closure, globalObject : object, "helloWorld" : string
-// CHECK-NEXT:  %22 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %23 = StoreStackInst undefined : undefined, %22
-// CHECK-NEXT:  %24 = LoadStackInst %22
-// CHECK-NEXT:  %25 = ReturnInst %24
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "dummy" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "emptyString" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "oneString" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "oneSub" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "dup" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "notDup" : string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "memberExpr" : string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "callExpr" : string
+// CHECK-NEXT:  %8 = DeclareGlobalVarInst "dup2" : string
+// CHECK-NEXT:  %9 = DeclareGlobalVarInst "dup3" : string
+// CHECK-NEXT:  %10 = DeclareGlobalVarInst "helloWorld" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %dummy()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "dummy" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %emptyString()
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "emptyString" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %oneString()
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15 : closure, globalObject : object, "oneString" : string
+// CHECK-NEXT:  %17 = CreateFunctionInst %oneSub()
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17 : closure, globalObject : object, "oneSub" : string
+// CHECK-NEXT:  %19 = CreateFunctionInst %dup()
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19 : closure, globalObject : object, "dup" : string
+// CHECK-NEXT:  %21 = CreateFunctionInst %notDup()
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21 : closure, globalObject : object, "notDup" : string
+// CHECK-NEXT:  %23 = CreateFunctionInst %memberExpr()
+// CHECK-NEXT:  %24 = StorePropertyLooseInst %23 : closure, globalObject : object, "memberExpr" : string
+// CHECK-NEXT:  %25 = CreateFunctionInst %callExpr()
+// CHECK-NEXT:  %26 = StorePropertyLooseInst %25 : closure, globalObject : object, "callExpr" : string
+// CHECK-NEXT:  %27 = CreateFunctionInst %dup2()
+// CHECK-NEXT:  %28 = StorePropertyLooseInst %27 : closure, globalObject : object, "dup2" : string
+// CHECK-NEXT:  %29 = CreateFunctionInst %dup3()
+// CHECK-NEXT:  %30 = StorePropertyLooseInst %29 : closure, globalObject : object, "dup3" : string
+// CHECK-NEXT:  %31 = CreateFunctionInst %helloWorld()
+// CHECK-NEXT:  %32 = StorePropertyLooseInst %31 : closure, globalObject : object, "helloWorld" : string
+// CHECK-NEXT:  %33 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %34 = StoreStackInst undefined : undefined, %33
+// CHECK-NEXT:  %35 = LoadStackInst %33
+// CHECK-NEXT:  %36 = ReturnInst %35
 // CHECK-NEXT:function_end
 
 // CHECK:function dummy()
@@ -186,23 +197,6 @@ function helloWorld() {
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function func()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %""()
-// CHECK-NEXT:  %1 = ReturnInst %0 : closure
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function ""()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
 // CHECK:function dup2()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
@@ -235,4 +229,21 @@ function helloWorld() {
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function func()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %""()
+// CHECK-NEXT:  %1 = ReturnInst %0 : closure
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function ""()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

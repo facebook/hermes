@@ -27,33 +27,51 @@ function outer2() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [outer1, outer2]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %outer1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "outer1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %outer2()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "outer2" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadStackInst %4
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "outer2" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %outer1()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "outer1" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %outer2()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "outer2" : string
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
+// CHECK-NEXT:  %8 = LoadStackInst %6
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1()
-// CHECK-NEXT:frame = [innerArrow1, innerArrow2, ?anon_0_this, ?anon_1_new.target]
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, innerArrow1, innerArrow2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %this
 // CHECK-NEXT:  %1 = CoerceThisNSInst %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [innerArrow1]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [innerArrow2]
-// CHECK-NEXT:  %4 = StoreFrameInst %1 : object, [?anon_0_this]
-// CHECK-NEXT:  %5 = GetNewTargetInst
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [?anon_1_new.target]
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
+// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [innerArrow1]
+// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [innerArrow2]
 // CHECK-NEXT:  %7 = CreateFunctionInst %innerArrow1()
 // CHECK-NEXT:  %8 = StoreFrameInst %7 : closure, [innerArrow1]
 // CHECK-NEXT:  %9 = CreateFunctionInst %innerArrow2()
 // CHECK-NEXT:  %10 = StoreFrameInst %9 : closure, [innerArrow2]
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function outer2()
+// CHECK-NEXT:frame = [?anon_0_this, ?anon_1_new.target, inner3, innerArrow4]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst %this
+// CHECK-NEXT:  %1 = CoerceThisNSInst %0
+// CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
+// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [innerArrow4]
+// CHECK-NEXT:  %6 = CreateFunctionInst %inner3()
+// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [inner3]
+// CHECK-NEXT:  %8 = CreateFunctionInst %innerArrow4()
+// CHECK-NEXT:  %9 = StoreFrameInst %8 : closure, [innerArrow4]
+// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1()
@@ -74,22 +92,6 @@ function outer2() {
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function outer2()
-// CHECK-NEXT:frame = [innerArrow4, inner3, ?anon_0_this, ?anon_1_new.target]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this
-// CHECK-NEXT:  %1 = CoerceThisNSInst %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [innerArrow4]
-// CHECK-NEXT:  %3 = StoreFrameInst %1 : object, [?anon_0_this]
-// CHECK-NEXT:  %4 = GetNewTargetInst
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [?anon_1_new.target]
-// CHECK-NEXT:  %6 = CreateFunctionInst %inner3()
-// CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [inner3]
-// CHECK-NEXT:  %8 = CreateFunctionInst %innerArrow4()
-// CHECK-NEXT:  %9 = StoreFrameInst %8 : closure, [innerArrow4]
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner3()

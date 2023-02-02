@@ -18,26 +18,27 @@ try {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [?anon_1_e], globals = [result]
+// CHECK-NEXT:frame = [e]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "result" : string
+// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
+// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = CatchInst
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_e]
-// CHECK-NEXT:  %5 = StorePropertyLooseInst false : boolean, globalObject : object, "result" : string
-// CHECK-NEXT:  %6 = StoreStackInst false : boolean, %0
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %4 = CatchInst
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [e]
+// CHECK-NEXT:  %6 = StorePropertyLooseInst false : boolean, globalObject : object, "result" : string
+// CHECK-NEXT:  %7 = StoreStackInst false : boolean, %1
+// CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = LoadStackInst %0
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %9 = LoadStackInst %1
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
-// CHECK-NEXT:  %12 = StoreStackInst %11, %0
-// CHECK-NEXT:  %13 = BranchInst %BB4
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined
+// CHECK-NEXT:  %13 = StoreStackInst %12, %1
+// CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = TryEndInst
-// CHECK-NEXT:  %15 = BranchInst %BB3
+// CHECK-NEXT:  %15 = TryEndInst
+// CHECK-NEXT:  %16 = BranchInst %BB3
 // CHECK-NEXT:function_end

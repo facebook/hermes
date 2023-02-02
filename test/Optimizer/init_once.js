@@ -25,15 +25,16 @@ function main(p) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %main() : closure
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %main() : closure
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p) : closure
-// CHECK-NEXT:frame = [k, p]
+// CHECK-NEXT:frame = [p, k]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %p
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [p]

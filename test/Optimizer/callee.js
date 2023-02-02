@@ -49,17 +49,21 @@ function load_store_multiple_test() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : string
-// CHECK-NEXT:frame = [], globals = [fuzz, ctor_test, load_store_test, load_store_multiple_test]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %fuzz() : number
-// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "fuzz" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %ctor_test() : object
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_test" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %load_store_test() : number
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "load_store_test" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %load_store_multiple_test() : number
-// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "load_store_multiple_test" : string
-// CHECK-NEXT:  %8 = ReturnInst "use strict" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "fuzz" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "ctor_test" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "load_store_test" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "load_store_multiple_test" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %fuzz() : number
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "fuzz" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %ctor_test() : object
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "ctor_test" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %load_store_test() : number
+// CHECK-NEXT:  %9 = StorePropertyStrictInst %8 : closure, globalObject : object, "load_store_test" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %load_store_multiple_test() : number
+// CHECK-NEXT:  %11 = StorePropertyStrictInst %10 : closure, globalObject : object, "load_store_multiple_test" : string
+// CHECK-NEXT:  %12 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
 
 // CHECK:function fuzz() : number
@@ -68,12 +72,6 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
 // CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 12 : number
 // CHECK-NEXT:  %2 = ReturnInst 12 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function foo(k : number) : number
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_test() : object
@@ -87,12 +85,6 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"(k : number) : number
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 12 : number
-// CHECK-NEXT:function_end
-
 // CHECK:function load_store_test() : number
 // CHECK-NEXT:frame = [k : closure]
 // CHECK-NEXT:%BB0:
@@ -101,6 +93,28 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [k] : closure
 // CHECK-NEXT:  %3 = CallInst %0 : closure, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst 123 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function load_store_multiple_test() : number
+// CHECK-NEXT:frame = [foo : closure]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : number
+// CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo] : closure
+// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : number
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst %3 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function foo(k : number) : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst 12 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function "foo 1#"(k : number) : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function ping() : number
@@ -115,16 +129,6 @@ function load_store_multiple_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 123 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function load_store_multiple_test() : number
-// CHECK-NEXT:frame = [foo : closure]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : number
-// CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo] : closure
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : number
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"(cond : boolean, val : number) : number

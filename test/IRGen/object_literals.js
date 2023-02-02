@@ -66,34 +66,45 @@ function accessorObjectLiteral2(func) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [simpleObjectLiteral, emitAllocObjectLiteral, nestedAllocObjectLiteral, duplicatedObjectLiteral, emptyObjectLiteral, protoObjectLiteral1, protoObjectLiteral2, computedObjectLiteral, spreadObjectLiteral, accessorObjectLiteral1, accessorObjectLiteral2]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %simpleObjectLiteral()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simpleObjectLiteral" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %emitAllocObjectLiteral()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "emitAllocObjectLiteral" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %nestedAllocObjectLiteral()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "nestedAllocObjectLiteral" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %duplicatedObjectLiteral()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "duplicatedObjectLiteral" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %emptyObjectLiteral()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "emptyObjectLiteral" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %protoObjectLiteral1()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "protoObjectLiteral1" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %protoObjectLiteral2()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "protoObjectLiteral2" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %computedObjectLiteral()
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "computedObjectLiteral" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %spreadObjectLiteral()
-// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "spreadObjectLiteral" : string
-// CHECK-NEXT:  %18 = CreateFunctionInst %accessorObjectLiteral1()
-// CHECK-NEXT:  %19 = StorePropertyLooseInst %18 : closure, globalObject : object, "accessorObjectLiteral1" : string
-// CHECK-NEXT:  %20 = CreateFunctionInst %accessorObjectLiteral2()
-// CHECK-NEXT:  %21 = StorePropertyLooseInst %20 : closure, globalObject : object, "accessorObjectLiteral2" : string
-// CHECK-NEXT:  %22 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %23 = StoreStackInst undefined : undefined, %22
-// CHECK-NEXT:  %24 = LoadStackInst %22
-// CHECK-NEXT:  %25 = ReturnInst %24
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simpleObjectLiteral" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "emitAllocObjectLiteral" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "nestedAllocObjectLiteral" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "duplicatedObjectLiteral" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "emptyObjectLiteral" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "protoObjectLiteral1" : string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "protoObjectLiteral2" : string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "computedObjectLiteral" : string
+// CHECK-NEXT:  %8 = DeclareGlobalVarInst "spreadObjectLiteral" : string
+// CHECK-NEXT:  %9 = DeclareGlobalVarInst "accessorObjectLiteral1" : string
+// CHECK-NEXT:  %10 = DeclareGlobalVarInst "accessorObjectLiteral2" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %simpleObjectLiteral()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "simpleObjectLiteral" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %emitAllocObjectLiteral()
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "emitAllocObjectLiteral" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %nestedAllocObjectLiteral()
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15 : closure, globalObject : object, "nestedAllocObjectLiteral" : string
+// CHECK-NEXT:  %17 = CreateFunctionInst %duplicatedObjectLiteral()
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17 : closure, globalObject : object, "duplicatedObjectLiteral" : string
+// CHECK-NEXT:  %19 = CreateFunctionInst %emptyObjectLiteral()
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19 : closure, globalObject : object, "emptyObjectLiteral" : string
+// CHECK-NEXT:  %21 = CreateFunctionInst %protoObjectLiteral1()
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21 : closure, globalObject : object, "protoObjectLiteral1" : string
+// CHECK-NEXT:  %23 = CreateFunctionInst %protoObjectLiteral2()
+// CHECK-NEXT:  %24 = StorePropertyLooseInst %23 : closure, globalObject : object, "protoObjectLiteral2" : string
+// CHECK-NEXT:  %25 = CreateFunctionInst %computedObjectLiteral()
+// CHECK-NEXT:  %26 = StorePropertyLooseInst %25 : closure, globalObject : object, "computedObjectLiteral" : string
+// CHECK-NEXT:  %27 = CreateFunctionInst %spreadObjectLiteral()
+// CHECK-NEXT:  %28 = StorePropertyLooseInst %27 : closure, globalObject : object, "spreadObjectLiteral" : string
+// CHECK-NEXT:  %29 = CreateFunctionInst %accessorObjectLiteral1()
+// CHECK-NEXT:  %30 = StorePropertyLooseInst %29 : closure, globalObject : object, "accessorObjectLiteral1" : string
+// CHECK-NEXT:  %31 = CreateFunctionInst %accessorObjectLiteral2()
+// CHECK-NEXT:  %32 = StorePropertyLooseInst %31 : closure, globalObject : object, "accessorObjectLiteral2" : string
+// CHECK-NEXT:  %33 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %34 = StoreStackInst undefined : undefined, %33
+// CHECK-NEXT:  %35 = LoadStackInst %33
+// CHECK-NEXT:  %36 = ReturnInst %35
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleObjectLiteral(func)
@@ -203,11 +214,11 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function spreadObjectLiteral(func)
-// CHECK-NEXT:frame = [obj, func]
+// CHECK-NEXT:frame = [func, obj]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
-// CHECK-NEXT:  %1 = LoadParamInst %func
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [func]
+// CHECK-NEXT:  %0 = LoadParamInst %func
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [func]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [obj]
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst "a" : string, 10 : number, "b" : string, 20 : number
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : object, [obj]
 // CHECK-NEXT:  %5 = AllocObjectInst 1 : number, empty

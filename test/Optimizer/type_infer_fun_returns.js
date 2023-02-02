@@ -18,11 +18,12 @@ function g14(z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [g14]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %g14() : undefined|object
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "g14" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "g14" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %g14() : undefined|object
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "g14" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g14(z) : undefined|object

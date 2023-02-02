@@ -45,15 +45,18 @@ function outer() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [bar, main, outer]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %main() : closure
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %outer() : object
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "outer" : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "bar" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "main" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "outer" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %bar() : undefined
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %main() : closure
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %outer() : object
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "outer" : string
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar() : undefined
@@ -78,17 +81,6 @@ function outer() {
 // CHECK-NEXT:  %10 = ReturnInst %9 : closure
 // CHECK-NEXT:function_end
 
-// CHECK:function ""() : string|number|bigint
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [k1@main]
-// CHECK-NEXT:  %1 = LoadFrameInst [k2@main]
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, %1
-// CHECK-NEXT:  %3 = LoadFrameInst [k3@main]
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2 : string|number|bigint, %3
-// CHECK-NEXT:  %5 = ReturnInst %4 : string|number|bigint
-// CHECK-NEXT:function_end
-
 // CHECK:function outer() : object
 // CHECK-NEXT:frame = [envVar]
 // CHECK-NEXT:%BB0:
@@ -103,6 +95,17 @@ function outer() {
 // CHECK-NEXT:  %8 = LoadFrameInst [envVar]
 // CHECK-NEXT:  %9 = StoreOwnPropertyInst %8, %4 : object, 3 : number, true : boolean
 // CHECK-NEXT:  %10 = ReturnInst %4 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function ""() : string|number|bigint
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadFrameInst [k1@main]
+// CHECK-NEXT:  %1 = LoadFrameInst [k2@main]
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %0, %1
+// CHECK-NEXT:  %3 = LoadFrameInst [k3@main]
+// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2 : string|number|bigint, %3
+// CHECK-NEXT:  %5 = ReturnInst %4 : string|number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function setValue(v) : undefined

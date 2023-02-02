@@ -76,20 +76,24 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [foo, assignment_test, member_test, binary_ops]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %assignment_test()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "assignment_test" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %member_test()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "member_test" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %binary_ops()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "binary_ops" : string
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
-// CHECK-NEXT:  %10 = LoadStackInst %8
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "assignment_test" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "member_test" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "binary_ops" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %assignment_test()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "assignment_test" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %member_test()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "member_test" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %binary_ops()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "binary_ops" : string
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = LoadStackInst %12
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x, y)

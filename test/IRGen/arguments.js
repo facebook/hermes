@@ -31,20 +31,24 @@ function shadow(arguments) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [cheap, expensive, cond, shadow]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %cheap()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "cheap" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %expensive()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "expensive" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %cond()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "cond" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %shadow()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "shadow" : string
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
-// CHECK-NEXT:  %10 = LoadStackInst %8
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "cheap" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "expensive" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "cond" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "shadow" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %cheap()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "cheap" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %expensive()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "expensive" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %cond()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "cond" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %shadow()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "shadow" : string
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = LoadStackInst %12
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function cheap()

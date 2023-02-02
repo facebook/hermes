@@ -11,17 +11,15 @@ var x = typeof foo;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}typeof_undefined.js:10:16: warning: the variable "foo" was not declared in function "global"
-// CHECK-NEXT:var x = typeof foo;
-// CHECK-NEXT:               ^~~
-// CHECK-NEXT:function global()
-// CHECK-NEXT:frame = [], globals = [x]
+// CHECK:function global()
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = UnaryOperatorInst 'typeof', %2
-// CHECK-NEXT:  %4 = StorePropertyStrictInst %3, globalObject : object, "x" : string
-// CHECK-NEXT:  %5 = LoadStackInst %0
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x" : string
+// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
+// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %4 = UnaryOperatorInst 'typeof', %3
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4, globalObject : object, "x" : string
+// CHECK-NEXT:  %6 = LoadStackInst %1
+// CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:function_end

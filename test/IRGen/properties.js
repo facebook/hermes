@@ -21,22 +21,24 @@ function sink(x, y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [y, sink]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = StorePropertyLooseInst 2 : number, globalObject : object, "y" : string
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %6 = StorePropertyLooseInst 3 : number, %5, "bar" : string
-// CHECK-NEXT:  %7 = StoreStackInst 3 : number, %2
-// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %10 = CallInst %8, undefined : undefined, %9
-// CHECK-NEXT:  %11 = StoreStackInst %10, %2
-// CHECK-NEXT:  %12 = LoadStackInst %2
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "y" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %sink()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
+// CHECK-NEXT:  %6 = StorePropertyLooseInst 2 : number, globalObject : object, "y" : string
+// CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "y" : string
+// CHECK-NEXT:  %8 = StorePropertyLooseInst 3 : number, %7, "bar" : string
+// CHECK-NEXT:  %9 = StoreStackInst 3 : number, %4
+// CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "sink" : string
+// CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "y" : string
+// CHECK-NEXT:  %12 = CallInst %10, undefined : undefined, %11
+// CHECK-NEXT:  %13 = StoreStackInst %12, %4
+// CHECK-NEXT:  %14 = LoadStackInst %4
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(x, y)

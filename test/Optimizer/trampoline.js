@@ -39,17 +39,21 @@ function test_merge_blocks(x, y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [test_one, test_catch_region, test_cond_branch, test_merge_blocks]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %test_one()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %test_catch_region() : undefined
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_catch_region" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_cond_branch()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_cond_branch" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %test_merge_blocks() : undefined
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test_merge_blocks" : string
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_one" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_catch_region" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_cond_branch" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_merge_blocks" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %test_one()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_one" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %test_catch_region() : undefined
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test_catch_region" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %test_cond_branch()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "test_cond_branch" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %test_merge_blocks() : undefined
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "test_merge_blocks" : string
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x, y, z)

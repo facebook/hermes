@@ -15,11 +15,12 @@ function test0() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [test0]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %test0() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test0" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test0" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %test0() : undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "test0" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test0() : undefined

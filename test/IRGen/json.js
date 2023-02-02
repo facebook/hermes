@@ -36,18 +36,19 @@ var json = {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [json]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = AllocArrayInst 2 : number, "GML" : string, "XML" : string
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst "para" : string, "A meta-markup language, used to create markup languages such as DocBook." : string, "GlossSeeAlso" : string, %2 : object
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst "ID" : string, "SGML" : string, "SortAs" : string, "SGML" : string, "GlossTerm" : string, "Standard Generalized Markup Language" : string, "Acronym" : string, "SGML" : string, "Abbrev" : string, "ISO 8879:1986" : string, "GlossDef" : string, %3 : object, "GlossSee" : string, "markup" : string
-// CHECK-NEXT:  %5 = AllocObjectLiteralInst "GlossEntry" : string, %4 : object
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst "title" : string, "S" : string, "GlossList" : string, %5 : object
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst "title" : string, "example glossary" : string, "GlossDiv" : string, %6 : object
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst "glossary" : string, %7 : object
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : object, globalObject : object, "json" : string
-// CHECK-NEXT:  %10 = LoadStackInst %0
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "json" : string
+// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
+// CHECK-NEXT:  %3 = AllocArrayInst 2 : number, "GML" : string, "XML" : string
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst "para" : string, "A meta-markup language, used to create markup languages such as DocBook." : string, "GlossSeeAlso" : string, %3 : object
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst "ID" : string, "SGML" : string, "SortAs" : string, "SGML" : string, "GlossTerm" : string, "Standard Generalized Markup Language" : string, "Acronym" : string, "SGML" : string, "Abbrev" : string, "ISO 8879:1986" : string, "GlossDef" : string, %4 : object, "GlossSee" : string, "markup" : string
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst "GlossEntry" : string, %5 : object
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst "title" : string, "S" : string, "GlossList" : string, %6 : object
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst "title" : string, "example glossary" : string, "GlossDiv" : string, %7 : object
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst "glossary" : string, %8 : object
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : object, globalObject : object, "json" : string
+// CHECK-NEXT:  %11 = LoadStackInst %1
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end

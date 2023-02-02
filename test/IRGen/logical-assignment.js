@@ -26,20 +26,24 @@ function testComplex(x, y, z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [testAnd, testOr, testNullish, testComplex]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %testAnd()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "testAnd" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %testOr()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "testOr" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %testNullish()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "testNullish" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %testComplex()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "testComplex" : string
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
-// CHECK-NEXT:  %10 = LoadStackInst %8
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "testAnd" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "testOr" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "testNullish" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "testComplex" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %testAnd()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "testAnd" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %testOr()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "testOr" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %testNullish()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "testNullish" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %testComplex()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "testComplex" : string
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = LoadStackInst %12
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function testAnd(x, y)

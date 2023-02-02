@@ -12,12 +12,13 @@ var x = y;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [x]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2, globalObject : object, "x" : string
-// CHECK-NEXT:  %4 = LoadStackInst %0
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x" : string
+// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "y" : string
+// CHECK-NEXT:  %4 = StorePropertyStrictInst %3, globalObject : object, "x" : string
+// CHECK-NEXT:  %5 = LoadStackInst %1
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end

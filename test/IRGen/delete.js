@@ -30,22 +30,28 @@ function delete_expr() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [x, sink, delete_parameter, delete_literal, delete_variable, delete_expr]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %delete_parameter()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "delete_parameter" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %delete_literal()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "delete_literal" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %delete_variable()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "delete_variable" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %delete_expr()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "delete_expr" : string
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
-// CHECK-NEXT:  %12 = LoadStackInst %10
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "x" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "delete_parameter" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "delete_literal" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "delete_variable" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "delete_expr" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %sink()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %delete_parameter()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "delete_parameter" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %delete_literal()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "delete_literal" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %delete_variable()
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "delete_variable" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %delete_expr()
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "delete_expr" : string
+// CHECK-NEXT:  %16 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %17 = StoreStackInst undefined : undefined, %16
+// CHECK-NEXT:  %18 = LoadStackInst %16
+// CHECK-NEXT:  %19 = ReturnInst %18
 // CHECK-NEXT:function_end
 
 // CHECK:function sink()

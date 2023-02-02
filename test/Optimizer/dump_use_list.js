@@ -15,24 +15,25 @@ function foo(a, b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo() // users: %1
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret // users: %3 %4
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2 // users: %5
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo() // users: %2
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret // users: %4 %5
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3 // users: %6
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a, b)
-// CHECK-NEXT:frame = [c, a, b]
+// CHECK-NEXT:frame = [a, b, c]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [c]
-// CHECK-NEXT:  %1 = LoadParamInst %a // users: %2
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [a]
-// CHECK-NEXT:  %3 = LoadParamInst %b // users: %4
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [b]
+// CHECK-NEXT:  %0 = LoadParamInst %a // users: %1
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %2 = LoadParamInst %b // users: %3
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [c]
 // CHECK-NEXT:  %5 = LoadFrameInst [a] // users: %7
 // CHECK-NEXT:  %6 = LoadFrameInst [b] // users: %7
 // CHECK-NEXT:  %7 = BinaryOperatorInst '+', %5, %6 // users: %8

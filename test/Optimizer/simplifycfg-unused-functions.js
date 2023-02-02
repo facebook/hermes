@@ -29,11 +29,12 @@ function outer() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [outer]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %outer() : closure
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "outer" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %outer() : closure
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "outer" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer() : closure

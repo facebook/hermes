@@ -29,11 +29,12 @@ function backwards_branch() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [backwards_branch]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %backwards_branch() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "backwards_branch" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "backwards_branch" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %backwards_branch() : undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "backwards_branch" : string
+// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function backwards_branch() : undefined

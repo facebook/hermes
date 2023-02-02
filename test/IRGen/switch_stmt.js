@@ -79,24 +79,30 @@ function fallthrough(b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [days_of_the_week, simple_xor, simple_xor2, simple_test0, simple_test1, fallthrough]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %days_of_the_week()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "days_of_the_week" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %simple_xor()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_xor" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %simple_xor2()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_xor2" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %simple_test0()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simple_test0" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %simple_test1()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple_test1" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %fallthrough()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "fallthrough" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "days_of_the_week" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simple_xor" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "simple_xor2" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "simple_test0" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "simple_test1" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "fallthrough" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %days_of_the_week()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "days_of_the_week" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %simple_xor()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple_xor" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %simple_xor2()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "simple_xor2" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %simple_test0()
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "simple_test0" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %simple_test1()
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "simple_test1" : string
+// CHECK-NEXT:  %16 = CreateFunctionInst %fallthrough()
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "fallthrough" : string
+// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
+// CHECK-NEXT:  %20 = LoadStackInst %18
+// CHECK-NEXT:  %21 = ReturnInst %20
 // CHECK-NEXT:function_end
 
 // CHECK:function days_of_the_week(day, x)

@@ -31,17 +31,19 @@ bar();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [foo, bar]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar() : undefined
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %foo() : undefined
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %bar() : undefined
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "bar" : string
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "bar" : string
+// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:function_end
 
 // CHECK:function foo() : undefined

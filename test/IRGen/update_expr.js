@@ -27,28 +27,36 @@ function update_variable_test3(x) { return --x; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [update_field_test0, update_field_test1, update_field_test2, update_field_test3, update_variable_test0, update_variable_test1, update_variable_test2, update_variable_test3]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %update_field_test0()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "update_field_test0" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %update_field_test1()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "update_field_test1" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %update_field_test2()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "update_field_test2" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %update_field_test3()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "update_field_test3" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %update_variable_test0()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "update_variable_test0" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %update_variable_test1()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "update_variable_test1" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %update_variable_test2()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "update_variable_test2" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %update_variable_test3()
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "update_variable_test3" : string
-// CHECK-NEXT:  %16 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %17 = StoreStackInst undefined : undefined, %16
-// CHECK-NEXT:  %18 = LoadStackInst %16
-// CHECK-NEXT:  %19 = ReturnInst %18
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "update_field_test0" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "update_field_test1" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "update_field_test2" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "update_field_test3" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "update_variable_test0" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "update_variable_test1" : string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "update_variable_test2" : string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "update_variable_test3" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %update_field_test0()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "update_field_test0" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %update_field_test1()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "update_field_test1" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %update_field_test2()
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "update_field_test2" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %update_field_test3()
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "update_field_test3" : string
+// CHECK-NEXT:  %16 = CreateFunctionInst %update_variable_test0()
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "update_variable_test0" : string
+// CHECK-NEXT:  %18 = CreateFunctionInst %update_variable_test1()
+// CHECK-NEXT:  %19 = StorePropertyLooseInst %18 : closure, globalObject : object, "update_variable_test1" : string
+// CHECK-NEXT:  %20 = CreateFunctionInst %update_variable_test2()
+// CHECK-NEXT:  %21 = StorePropertyLooseInst %20 : closure, globalObject : object, "update_variable_test2" : string
+// CHECK-NEXT:  %22 = CreateFunctionInst %update_variable_test3()
+// CHECK-NEXT:  %23 = StorePropertyLooseInst %22 : closure, globalObject : object, "update_variable_test3" : string
+// CHECK-NEXT:  %24 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %25 = StoreStackInst undefined : undefined, %24
+// CHECK-NEXT:  %26 = LoadStackInst %24
+// CHECK-NEXT:  %27 = ReturnInst %26
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test0(o)

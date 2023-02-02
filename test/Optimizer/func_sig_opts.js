@@ -59,21 +59,27 @@ function test_async() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : string
-// CHECK-NEXT:frame = [], globals = [main, return_types, test_unused_and_duplicate_params, test_rest_arguments, test_generator, test_async]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %main() : string|number
-// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %return_types() : number
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "return_types" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_unused_and_duplicate_params() : object
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "test_unused_and_duplicate_params" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %test_rest_arguments()
-// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "test_rest_arguments" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %test_generator() : object
-// CHECK-NEXT:  %9 = StorePropertyStrictInst %8 : closure, globalObject : object, "test_generator" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %test_async()
-// CHECK-NEXT:  %11 = StorePropertyStrictInst %10 : closure, globalObject : object, "test_async" : string
-// CHECK-NEXT:  %12 = ReturnInst "use strict" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "return_types" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_unused_and_duplicate_params" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_rest_arguments" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test_generator" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "test_async" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %main() : string|number
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %6 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %return_types() : number
+// CHECK-NEXT:  %9 = StorePropertyStrictInst %8 : closure, globalObject : object, "return_types" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %test_unused_and_duplicate_params() : object
+// CHECK-NEXT:  %11 = StorePropertyStrictInst %10 : closure, globalObject : object, "test_unused_and_duplicate_params" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %test_rest_arguments()
+// CHECK-NEXT:  %13 = StorePropertyStrictInst %12 : closure, globalObject : object, "test_rest_arguments" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %test_generator() : object
+// CHECK-NEXT:  %15 = StorePropertyStrictInst %14 : closure, globalObject : object, "test_generator" : string
+// CHECK-NEXT:  %16 = CreateFunctionInst %test_async()
+// CHECK-NEXT:  %17 = StorePropertyStrictInst %16 : closure, globalObject : object, "test_async" : string
+// CHECK-NEXT:  %18 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p) : string|number
@@ -87,6 +93,53 @@ function test_async() {
 // CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : string|number|bigint
 // CHECK-NEXT:  %7 = ReturnInst %6 : string|number
+// CHECK-NEXT:function_end
+
+// CHECK:function return_types(p) : number
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %builder() : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
+// CHECK-NEXT:  %4 = ReturnInst %3 : number
+// CHECK-NEXT:function_end
+
+// CHECK:function test_unused_and_duplicate_params() : object
+// CHECK-NEXT:frame = [foo2 : closure]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %foo2() : string|number
+// CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo2] : closure
+// CHECK-NEXT:  %2 = CreateFunctionInst %bar1() : undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst %bar2() : undefined
+// CHECK-NEXT:  %4 = AllocArrayInst 2 : number
+// CHECK-NEXT:  %5 = StoreOwnPropertyInst %2 : closure, %4 : object, 0 : number, true : boolean
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %3 : closure, %4 : object, 1 : number, true : boolean
+// CHECK-NEXT:  %7 = ReturnInst %4 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function test_rest_arguments()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %baz()
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 100 : number
+// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:function_end
+
+// CHECK:function test_generator() : object
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %gen() : object
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = ReturnInst %1 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function test_async()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateFunctionInst %asyncFn()
+// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x : number, y : number) : number
@@ -105,35 +158,12 @@ function test_async() {
 // CHECK-NEXT:  %3 = ReturnInst %2 : string|number|bigint
 // CHECK-NEXT:function_end
 
-// CHECK:function return_types(p) : number
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %builder() : number
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
-// CHECK-NEXT:  %2 = CallInst %0 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
-// CHECK-NEXT:function_end
-
 // CHECK:function builder() : number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "k" : string
 // CHECK-NEXT:  %1 = BinaryOperatorInst '*', %0, 1 : number
 // CHECK-NEXT:  %2 = ReturnInst %1 : number
-// CHECK-NEXT:function_end
-
-// CHECK:function test_unused_and_duplicate_params() : object
-// CHECK-NEXT:frame = [foo2 : closure]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo2() : string|number
-// CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo2] : closure
-// CHECK-NEXT:  %2 = CreateFunctionInst %bar1() : undefined
-// CHECK-NEXT:  %3 = CreateFunctionInst %bar2() : undefined
-// CHECK-NEXT:  %4 = AllocArrayInst 2 : number
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst %2 : closure, %4 : object, 0 : number, true : boolean
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %3 : closure, %4 : object, 1 : number, true : boolean
-// CHECK-NEXT:  %7 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo2(a, b : number, c : number, d : undefined) : string|number
@@ -164,14 +194,6 @@ function test_async() {
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_rest_arguments()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %baz()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 100 : number
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:function_end
-
 // CHECK:function baz()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
@@ -179,19 +201,22 @@ function test_async() {
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:function_end
 
-// CHECK:function test_generator() : object
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %gen() : object
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
-// CHECK-NEXT:function_end
-
 // CHECK:function gen() : object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_gen()
 // CHECK-NEXT:  %1 = ReturnInst %0 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function asyncFn()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = CreateArgumentsInst
+// CHECK-NEXT:  %1 = LoadParamInst %this : undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn() : object
+// CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %1 : undefined, %0 : object
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_gen(x)
@@ -207,25 +232,6 @@ function test_async() {
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst %2
-// CHECK-NEXT:function_end
-
-// CHECK:function test_async()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %asyncFn()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:function_end
-
-// CHECK:function asyncFn()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this : undefined
-// CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn() : object
-// CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %1 : undefined, %0 : object
-// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_asyncFn() : object
