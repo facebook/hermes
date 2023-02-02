@@ -47,7 +47,7 @@ class Environment final
   }
 
   /// Create a new Environment.
-  static CallResult<HermesValue> create(
+  static HermesValue create(
       Runtime &runtime,
       Handle<Environment> parentEnvironment,
       uint32_t size) {

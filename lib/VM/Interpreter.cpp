@@ -2047,20 +2047,18 @@ tailCall:
         tmpHandle = HermesValue::encodeObjectValueUnsafe(
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
 
-        CAPTURE_IP(
-            res = Environment::create(
+        CAPTURE_IP_ASSIGN(
+            HermesValue envHV,
+            Environment::create(
                 runtime,
                 Handle<Environment>::vmcast_or_null(tmpHandle),
                 curCodeBlock->getEnvironmentSize()));
-        if (res == ExecutionStatus::EXCEPTION) {
-          goto exception;
-        }
-        O1REG(CreateEnvironment) = *res;
+
+        O1REG(CreateEnvironment) = envHV;
 #ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = *res;
+        FRAME.getDebugEnvironmentRef() = envHV;
 #endif
         tmpHandle = HermesValue::encodeUndefinedValue();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateEnvironment);
         DISPATCH;
       }
