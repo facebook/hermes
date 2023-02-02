@@ -136,8 +136,8 @@ bool DCE::runOnModule(Module *M) {
   return changed | localChanged;
 }
 
-Pass *hermes::createDCE() {
-  return new DCE();
+std::unique_ptr<Pass> hermes::createDCE() {
+  return std::make_unique<DCE>();
 }
 
 #undef DEBUG_TYPE

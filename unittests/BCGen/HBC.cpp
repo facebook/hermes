@@ -440,10 +440,10 @@ TEST(SpillRegisterTest, SpillsParameters) {
   RA.allocate(order);
 
   PassManager PM;
-  PM.addPass(new LowerCalls(RA));
+  PM.addPass<LowerCalls>(RA);
   // Due to Mov elimination, many LoadConstInsts will be reallocated
-  PM.addPass(new MovElimination(RA));
-  PM.addPass(new SpillRegisters(RA));
+  PM.addPass<MovElimination>(RA);
+  PM.addPass<SpillRegisters>(RA);
   PM.run(F);
 
   // Ensure that spilling takes care of that
@@ -483,7 +483,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   // Ensure that spilling doesn't insert any additional instructions
   unsigned sizeBefore = BB->size();
   PassManager PM;
-  PM.addPass(new SpillRegisters(RA));
+  PM.addPass<SpillRegisters>(RA);
   PM.run(F);
   EXPECT_EQ(sizeBefore, BB->size());
 }

@@ -817,8 +817,8 @@ bool TypeInference::runOnModule(Module *M) {
   return impl.runOnModule(M);
 }
 
-Pass *hermes::createTypeInference() {
-  return new TypeInference();
+std::unique_ptr<Pass> hermes::createTypeInference() {
+  return std::make_unique<TypeInference>();
 }
 
 #undef DEBUG_TYPE

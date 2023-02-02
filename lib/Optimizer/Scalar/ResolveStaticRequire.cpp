@@ -382,8 +382,8 @@ bool ResolveStaticRequire::runOnModule(Module *M) {
   return impl.run();
 }
 
-Pass *createResolveStaticRequire() {
-  return new ResolveStaticRequire();
+std::unique_ptr<Pass> createResolveStaticRequire() {
+  return std::make_unique<ResolveStaticRequire>();
 }
 
 } // namespace hermes

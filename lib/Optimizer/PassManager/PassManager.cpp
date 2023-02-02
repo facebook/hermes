@@ -17,8 +17,8 @@
 namespace hermes {
 PassManager::~PassManager() = default;
 
-void PassManager::addPass(Pass *P) {
-  pipeline_.emplace_back(P);
+void PassManager::addPass(std::unique_ptr<Pass> P) {
+  pipeline_.emplace_back(std::move(P));
 }
 
 void PassManager::run(Function *F) {

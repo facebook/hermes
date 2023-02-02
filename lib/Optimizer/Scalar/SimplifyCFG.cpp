@@ -394,8 +394,8 @@ bool SimplifyCFG::runOnFunction(hermes::Function *F) {
   return changed;
 }
 
-Pass *hermes::createSimplifyCFG() {
-  return new SimplifyCFG();
+std::unique_ptr<Pass> hermes::createSimplifyCFG() {
+  return std::make_unique<SimplifyCFG>();
 }
 
 #undef DEBUG_TYPE

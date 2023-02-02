@@ -13,6 +13,7 @@
 #include "llvh/ADT/StringRef.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace hermes {
@@ -28,9 +29,9 @@ class PassManager {
   ~PassManager();
 
 /// Add a pass by appending its name.
-#define PASS(ID, NAME, DESCRIPTION) \
-  void add##ID() {                  \
-    addPass(hermes::create##ID());  \
+#define PASS(ID, NAME, DESCRIPTION)                       \
+  void add##ID() {                                        \
+    addPass(std::unique_ptr<Pass>(hermes::create##ID())); \
   }
 #include "Passes.def"
 
@@ -52,8 +53,13 @@ class PassManager {
         ;
   }
 
+  template <typename Pass, typename... Args>
+  void addPass(Args &&...args) {
+    addPass(std::make_unique<Pass>(std::forward<Args>(args)...));
+  }
+
   /// Add a pass by reference.
-  void addPass(Pass *P);
+  void addPass(std::unique_ptr<Pass> P);
 
   void run(Function *F);
 

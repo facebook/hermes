@@ -34,8 +34,8 @@ bool HoistStartGenerator::runOnFunction(Function *F) {
   return false;
 }
 
-Pass *hermes::createHoistStartGenerator() {
-  return new HoistStartGenerator();
+std::unique_ptr<Pass> hermes::createHoistStartGenerator() {
+  return std::make_unique<HoistStartGenerator>();
 }
 
 #undef DEBUG_TYPE

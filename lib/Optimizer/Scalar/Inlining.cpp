@@ -392,8 +392,8 @@ bool Inlining::runOnModule(Module *M) {
   return changed;
 }
 
-Pass *createInlining() {
-  return new Inlining();
+std::unique_ptr<Pass> createInlining() {
+  return std::make_unique<Inlining>();
 }
 
 } // namespace hermes

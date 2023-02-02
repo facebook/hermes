@@ -52,38 +52,38 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     return;
 
   PassManager PM;
-  PM.addPass(new LowerLoadStoreFrameInst());
+  PM.addPass<LowerLoadStoreFrameInst>();
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass(new OptEnvironmentInit());
+    PM.addPass<OptEnvironmentInit>();
   }
   // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
   // it introduces calls to HermesInternal.
-  PM.addPass(new LowerExponentiationOperator());
+  PM.addPass<LowerExponentiationOperator>();
   // LowerBuiltinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass<LowerBuiltinCalls>();
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
-  PM.addPass(new LowerNumericProperties());
+  PM.addPass<LowerNumericProperties>();
   // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
   // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
-  PM.addPass(new LowerAllocObjectLiteral());
-  PM.addPass(new LowerConstruction());
-  PM.addPass(new LowerArgumentsArray());
-  PM.addPass(new LimitAllocArray(UINT16_MAX));
-  PM.addPass(new DedupReifyArguments());
-  PM.addPass(new LowerSwitchIntoJumpTables());
-  PM.addPass(new SwitchLowering());
-  PM.addPass(new LoadConstants(options.optimizationEnabled));
-  PM.addPass(new LoadParameters());
+  PM.addPass<LowerAllocObjectLiteral>();
+  PM.addPass<LowerConstruction>();
+  PM.addPass<LowerArgumentsArray>();
+  PM.addPass<LimitAllocArray>(UINT16_MAX);
+  PM.addPass<DedupReifyArguments>();
+  PM.addPass<LowerSwitchIntoJumpTables>();
+  PM.addPass<SwitchLowering>();
+  PM.addPass<LoadConstants>(options.optimizationEnabled);
+  PM.addPass<LoadParameters>();
   if (options.optimizationEnabled) {
     // Lowers AllocObjects and its sequential literal properties into a single
     // HBCAllocObjectFromBufferInst
-    PM.addPass(new LowerAllocObject());
+    PM.addPass<LowerAllocObject>();
     // Reduce comparison and conditional jump to single comparison jump
-    PM.addPass(new LowerCondBranch());
+    PM.addPass<LowerCondBranch>();
     // Turn Calls into CallNs.
-    PM.addPass(new FuncCallNOpts());
+    PM.addPass<FuncCallNOpts>();
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
@@ -528,18 +528,18 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       }
 
       PassManager PM;
-      PM.addPass(new LowerStoreInstrs(RA));
-      PM.addPass(new LowerCalls(RA));
+      PM.addPass<LowerStoreInstrs>(RA);
+      PM.addPass<LowerCalls>(RA);
       if (options.optimizationEnabled) {
-        PM.addPass(new MovElimination(RA));
-        PM.addPass(new RecreateCheapValues(RA));
-        PM.addPass(new LoadConstantValueNumbering(RA));
+        PM.addPass<MovElimination>(RA);
+        PM.addPass<RecreateCheapValues>(RA);
+        PM.addPass<LoadConstantValueNumbering>(RA);
       }
-      PM.addPass(new SpillRegisters(RA));
+      PM.addPass<SpillRegisters>(RA);
       if (options.basicBlockProfiling) {
         // Insert after all other passes so that it sees final basic block
         // list.
-        PM.addPass(new InsertProfilePoint());
+        PM.addPass<InsertProfilePoint>();
       }
       PM.run(&F);
 
