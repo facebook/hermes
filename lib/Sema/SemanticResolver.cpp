@@ -892,11 +892,12 @@ void SemanticResolver::visitFunctionLike(
 
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;
+  bool hasParameterExpressions = false;
   // All parameter identifiers.
   llvh::SmallVector<IdentifierNode *, 4> paramIds{};
   for (auto &param : params) {
     simpleParameterList &= !llvh::isa<PatternNode>(param);
-    extractDeclaredIdentsFromID(&param, paramIds);
+    hasParameterExpressions |= extractDeclaredIdentsFromID(&param, paramIds);
   }
   curFunctionInfo()->simpleParameterList = simpleParameterList;
 
@@ -910,8 +911,14 @@ void SemanticResolver::visitFunctionLike(
   bool const uniqueParams = !simpleParameterList || curFunctionInfo()->strict ||
       llvh::isa<ArrowFunctionExpressionNode>(node);
 
+  // Do we have a parameter named "arguments".
+  bool hasParameterNamedArguments = false;
+
   // Declare the parameters
   for (IdentifierNode *paramId : paramIds) {
+    if (LLVM_UNLIKELY(paramId->_name == kw_.identArguments))
+      hasParameterNamedArguments = true;
+
     validateDeclarationName(Decl::Kind::Parameter, paramId);
 
     Decl *paramDecl = semCtx_.newDeclInScope(
@@ -936,6 +943,22 @@ void SemanticResolver::visitFunctionLike(
     }
   }
 
+  /// Declare a pseudo-variable "arguments".
+  auto declareArguments = [this]() {
+    Decl *argsDecl =
+        semCtx_.funcArgumentsDecl(curFunctionInfo(), kw_.identArguments);
+    bindingTable_.insert(kw_.identArguments, Binding{argsDecl, nullptr});
+  };
+
+  // Determine whether we need to declare "arguments" temporarily, while
+  // processing the parameter init expressions, in case they refer to it.
+  bool declaredArgumentsTemporarily = false;
+  if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      !hasParameterNamedArguments && hasParameterExpressions) {
+    declareArguments();
+    declaredArgumentsTemporarily = true;
+  }
+
   // Do not visit the identifier node, because that would try to resolve it
   // in an incorrect scope!
   // visitESTreeNode(*this, getIdentifier(node), node);
@@ -948,6 +971,11 @@ void SemanticResolver::visitFunctionLike(
       visitESTreeNode(*this, &param, node);
   }
 
+  // If we declared the arguments object temporarily, unbind it, so it doesn't
+  // clash with potential declarations in the function body.
+  if (declaredArgumentsTemporarily)
+    bindingTable_.eraseFromCurrentScope(kw_.identArguments);
+
   // Promote hoisted functions.
   if (blockBody) {
     if (!curFunctionInfo()->strict) {
@@ -955,6 +983,20 @@ void SemanticResolver::visitFunctionLike(
     }
   }
   processCollectedDeclarations(node);
+
+  // Do we need to declare the "arguments" object? Only if we are not an arrow,
+  // and don't have a parameter or a variable with that name.
+  //
+  // IMPORTANT: this is not spec compliant!
+  // The spec allows aliasing of "arguments" with "var arguments", but we treat
+  // the latter as a new declaration, because of IRGen limitations preventing
+  // assignment to "arguments".
+  if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      !hasParameterNamedArguments) {
+    Binding *prevArguments = bindingTable_.find(kw_.identArguments);
+    if (!prevArguments || prevArguments->decl->scope != curScope_)
+      declareArguments();
+  }
 
   // Finally visit the body.
   visitESTreeNode(*this, body, node);
@@ -992,23 +1034,9 @@ void SemanticResolver::resolveIdentifier(
     bool inTypeof) {
   Decl *decl = checkIdentifierResolved(identifier);
 
-  // Is this "arguments" in a function?
-  if (identifier->_name == kw_.identArguments &&
-      !functionContext()->isGlobalScope()) {
-    if (!decl || decl->scope->parentFunction != curFunctionInfo()) {
-      hermes::OptValue<Decl *> argumentsDeclOpt =
-          semCtx_.funcArgumentsDecl(curFunctionInfo(), identifier->_name);
-      if (argumentsDeclOpt) {
-        decl = argumentsDeclOpt.getValue();
-        semCtx_.setExpressionDecl(identifier, decl);
-
-        // Record that the function uses arguments.
-        if (decl->special == Decl::Special::Arguments)
-          curFunctionInfo()->usesArguments = true;
-      }
-    }
-    return;
-  }
+  // Is this the "arguments" object?
+  if (decl && decl->special == Decl::Special::Arguments)
+    curFunctionInfo()->usesArguments = true;
 
   // Resolved the identifier to a declaration, done.
   if (decl) {
@@ -1146,29 +1174,32 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
   return Decl::Kind::Var;
 }
 
-void SemanticResolver::extractDeclaredIdentsFromID(
+bool SemanticResolver::extractDeclaredIdentsFromID(
     ESTree::Node *node,
     llvh::SmallVectorImpl<ESTree::IdentifierNode *> &idents) {
   // The identifier is sometimes optional, in which case it is valid.
   if (!node)
-    return;
+    return false;
 
   if (auto *idNode = llvh::dyn_cast<IdentifierNode>(node)) {
     idents.push_back(idNode);
-    return;
+    return false;
   }
 
   if (llvh::isa<EmptyNode>(node))
-    return;
+    return false;
 
-  if (auto *assign = llvh::dyn_cast<AssignmentPatternNode>(node))
-    return extractDeclaredIdentsFromID(assign->_left, idents);
+  if (auto *assign = llvh::dyn_cast<AssignmentPatternNode>(node)) {
+    extractDeclaredIdentsFromID(assign->_left, idents);
+    return true;
+  }
+
+  bool containsExpr = false;
 
   if (auto *array = llvh::dyn_cast<ArrayPatternNode>(node)) {
-    for (auto &elem : array->_elements) {
-      extractDeclaredIdentsFromID(&elem, idents);
-    }
-    return;
+    for (auto &elem : array->_elements)
+      containsExpr |= extractDeclaredIdentsFromID(&elem, idents);
+    return containsExpr;
   }
 
   if (auto *restElem = llvh::dyn_cast<RestElementNode>(node)) {
@@ -1178,16 +1209,17 @@ void SemanticResolver::extractDeclaredIdentsFromID(
   if (auto *obj = llvh::dyn_cast<ObjectPatternNode>(node)) {
     for (auto &propNode : obj->_properties) {
       if (auto *prop = llvh::dyn_cast<PropertyNode>(&propNode)) {
-        extractDeclaredIdentsFromID(prop->_value, idents);
+        containsExpr |= extractDeclaredIdentsFromID(prop->_value, idents);
       } else {
         auto *rest = cast<RestElementNode>(&propNode);
-        extractDeclaredIdentsFromID(rest->_argument, idents);
+        containsExpr |= extractDeclaredIdentsFromID(rest->_argument, idents);
       }
     }
-    return;
+    return containsExpr;
   }
 
   sm_.error(node->getSourceRange(), "invalid destructuring target");
+  return false;
 }
 
 void SemanticResolver::validateAndDeclareIdentifier(
@@ -1198,13 +1230,22 @@ void SemanticResolver::validateAndDeclareIdentifier(
 
   Binding prevName = bindingTable_.lookup(ident->_name);
 
-  // Redeclaration of `arguments` in non-strict mode is allowed at the function
-  // level, so we don't need to declare a new variable. We do need to check that
-  // this isn't the global function, because `arguments` is a valid variable
-  // name in the global function in non-strict mode.
-  if (!curFunctionInfo()->strict && ident->_name == kw_.identArguments &&
-      Decl::isKindVarLike(kind) && !functionContext()->isGlobalScope()) {
-    return;
+  // IMPORTANT: this is not spec compliant!
+  // For now, treat "var" declarations of "arguments" simply as a new variable.
+  // instead of as an alias for the Arguments object.
+  // It is simpler and makes a difference only in the following obscure case:
+  // - non-strict mode
+  // - "var arguments" without an initializer.
+  // I am willing to live with this sacrifice.
+  // Aliasing of "arguments" becomes especially iffy when type annotations are
+  // added.
+  if (false) {
+    // Redeclaration of `arguments` in non-strict mode is allowed at the
+    // function level, so we don't need to declare a new variable.
+    if (!curFunctionInfo()->strict && ident->_name == kw_.identArguments &&
+        kind == Decl::Kind::Var) {
+      return;
+    }
   }
 
   // Ignore declarations in enclosing functions.
@@ -1308,10 +1349,8 @@ bool SemanticResolver::validateDeclarationName(
     const ESTree::IdentifierNode *idNode) const {
   if (curFunctionInfo()->strict) {
     // - 'arguments' cannot be redeclared in strict mode.
-    // - 'eval' cannot be redeclared in strict mode. If it is disabled we
-    // we don't report an error because it will be reported separately.
-    if (idNode->_name == kw_.identArguments ||
-        (idNode->_name == kw_.identEval && astContext_.getEnableEval())) {
+    // - 'eval' cannot be redeclared in strict mode.
+    if (idNode->_name == kw_.identArguments || idNode->_name == kw_.identEval) {
       sm_.error(
           idNode->getSourceRange(),
           "cannot declare '" + cast<IdentifierNode>(idNode)->_name->str() +
@@ -1343,7 +1382,7 @@ bool SemanticResolver::validateDeclarationName(
   return true;
 }
 
-void SemanticResolver::validateAssignmentTarget(const Node *node) {
+void SemanticResolver::validateAssignmentTarget(Node *node) {
   if (llvh::isa<EmptyNode>(node))
     return;
 
@@ -1377,19 +1416,35 @@ void SemanticResolver::validateAssignmentTarget(const Node *node) {
     sm_.error(node->getSourceRange(), "invalid assignment left-hand side");
 }
 
-bool SemanticResolver::isLValue(const ESTree::Node *node) {
+bool SemanticResolver::isLValue(ESTree::Node *node) {
   if (llvh::isa<MemberExpressionNode>(node))
     return true;
 
   if (auto *id = llvh::dyn_cast<IdentifierNode>(node)) {
-    if (LLVM_UNLIKELY(id->_name == kw_.identArguments)) {
-      // "arguments" is only valid assignment in loose mode.
-      return !curFunctionInfo()->strict;
+    // In strict mode, assigning to the identifier "eval" or "arguments"
+    // is invalid, regardless of what they are bound to in surrounding scopes.
+    // This is invalid:
+    //     let eval;
+    //     function foo() {
+    //       "use strict";
+    //       eval = 0; // ERROR!
+    //     }
+    if (curFunctionInfo()->strict) {
+      if (LLVM_UNLIKELY(
+              id->_name == kw_.identArguments || id->_name == kw_.identEval)) {
+        return false;
+      }
+    } else {
+      // IMPORTANT: this is not spec compliant!
+      // In loose mode it should be possible to assign to "arguments".
+      // But that is a corner case that is difficult to handle, so for now
+      // we are prohibiting it.
+      Decl *decl = semCtx_.getExpressionDecl(id);
+      assert(decl && "Identifier must be resolved");
+      if (decl->special == Decl::Special::Arguments)
+        return false;
     }
-    if (LLVM_UNLIKELY(id->_name == kw_.identEval)) {
-      // "eval" is only valid assignment in loose mode.
-      return !curFunctionInfo()->strict;
-    }
+
     return true;
   }
 

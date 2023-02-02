@@ -150,7 +150,8 @@ class SemanticResolver {
   /// Extract the declared identifiers from a declaration AST node's "id" field.
   /// Normally that is just a single identifier, but it can be more in case of
   /// destructuring.
-  void extractDeclaredIdentsFromID(
+  /// \return true if there were expressions encountered in the tree.
+  bool extractDeclaredIdentsFromID(
       ESTree::Node *node,
       llvh::SmallVectorImpl<ESTree::IdentifierNode *> &idents);
 
@@ -354,11 +355,11 @@ class SemanticResolver {
   /// other words it is an l-value, a Pattern (checked recursively) or an Empty
   /// (used by elision).
   /// Report errors if any are found.
-  void validateAssignmentTarget(const ESTree::Node *node);
+  void validateAssignmentTarget(ESTree::Node *node);
 
   /// \return true if the `node` is an LValue: a member expression or an
   /// identifier which is a valid LValue.
-  bool isLValue(const ESTree::Node *node);
+  bool isLValue(ESTree::Node *node);
 
   /// Information about directives encountered in the beginning of a program
   /// or function.

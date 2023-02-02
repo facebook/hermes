@@ -23,6 +23,7 @@ class Cls {
 // CHECK-NEXT:        Decl %d.1 'Cls' Class
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
+// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
