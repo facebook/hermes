@@ -62,7 +62,10 @@ struct LazyCompilationData {
 } // namespace hbc
 
 /// Lowers an ESTree program into Hermes IR in \p M.
-void generateIRFromESTree(ESTree::NodePtr node, Module *M);
+void generateIRFromESTree(
+    Module *M,
+    sema::SemContext &semCtx,
+    ESTree::NodePtr node);
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.

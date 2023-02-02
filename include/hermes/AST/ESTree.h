@@ -24,7 +24,6 @@ namespace hermes {
 using llvh::ArrayRef;
 
 namespace sema {
-class Decl;
 class LexicalScope;
 class FunctionInfo;
 } // namespace sema
@@ -410,30 +409,50 @@ class IdentifierDecoration {
   /// Unable to resolve due to presence of `eval` or `with`.
   bool unresolvable_{false};
 
+ public:
+  /// This decoration stores a pointer to the "resolved" identifier. However,
+  /// in some very rare cases, the identifier in an initializing declaration
+  /// maps to one identifier being declared, and a different identifier being
+  /// initialized. So, we would need two pointers, which would be very wasteful
+  /// since this is an exceptionally rare case. In all "normal" cases, the two
+  /// pointers would either be equal, or only one would be set.
+  ///
+  /// We rely on the last observation to save memory. We keep only one pointer,
+  /// and three additional "state" bits to tell us what the pointer is. The
+  /// common cases are that we have either a "declaration decl", an
+  /// "expression decl", or both a "declaration decl" and an "expression decl",
+  /// having the same value and ths sharing the pointer. The exceptional case is
+  /// when we have a "declaration decl" and an "exression decl" with different
+  /// values. That is indicated by the third bit, in which case the "declaration
+  /// decl" is stored in a side table.
+  ///
+  /// There are only five valid states:
+  /// - 0
+  /// - HaveExpr
+  /// - HaveDecl
+  /// - HaveExpr + HaveDecl
+  /// - HaveExpr + SideDecl
+  enum {
+    /// There is an "expression decl" stored in \c decl_.
+    BitHaveExpr = 1,
+    /// There is a "declaration decl" stored in \c decl_.
+    BitHaveDecl = 2,
+    /// There is a "declaration decl" stored in a side table.
+    BitSideDecl = 4,
+  };
+
+  /// The interpretation of the value stored in \c decl_.
+  uint8_t declState_ = 0;
+
   /// Declaration to which this is resolved, `nullptr` if no resolution
   /// has been recorded yet.
-  sema::Decl *decl_{nullptr};
+  void *decl_{nullptr};
 
- public:
   bool isUnresolvable() const {
     return unresolvable_;
   }
   void setUnresolvable() {
     unresolvable_ = true;
-  }
-  /// \pre the identifier hasn't been marked "unresolvable".
-  /// \return the declaration to which the identifier has been resolved,
-  /// `nullptr` if no resolution has been recorded.
-  sema::Decl *getDecl() const {
-    assert(
-        !unresolvable_ && "Attempt to read decl for unresolvable identifier");
-    return decl_;
-  }
-  /// Record a resolution to \p decl.
-  /// \pre the identifier hasn't been marked "unresolvable".
-  void setDecl(sema::Decl *decl) {
-    assert(!unresolvable_ && "Attempt to set decl for unresolvable identifier");
-    decl_ = decl;
   }
 };
 

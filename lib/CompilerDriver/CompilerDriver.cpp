@@ -1563,7 +1563,7 @@ bool generateIRForSourcesAsCJSModules(
   if (generateIR) {
     // If we aren't planning to do anything with the IR,
     // don't attempt to generate it.
-    generateIRFromESTree(globalAST, &M);
+    generateIRFromESTree(&M, semCtx, globalAST);
   }
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
@@ -1893,7 +1893,7 @@ CompileResult processSourceFiles(
     if (cl::DumpTarget < DumpIR) {
       return Success;
     }
-    generateIRFromESTree(ast, &M);
+    generateIRFromESTree(&M, semCtx, ast);
   }
 
   // Bail out if there were any errors. We can't ensure that the module is in

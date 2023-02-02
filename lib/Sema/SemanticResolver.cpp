@@ -95,6 +95,11 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
 
 void SemanticResolver::visit(ESTree::FunctionDeclarationNode *funcDecl) {
   curScope_->hoistedFunctions.push_back(funcDecl);
+  // Set the expression decl of the id.
+  if (funcDecl->_id) {
+    auto *id = llvh::cast<IdentifierNode>(funcDecl->_id);
+    semCtx_.setExpressionDecl(id, semCtx_.getDeclarationDecl(id));
+  }
   visitFunctionLike(funcDecl, funcDecl->_body, funcDecl->_params);
 }
 void SemanticResolver::visit(ESTree::FunctionExpressionNode *funcExpr) {
@@ -471,7 +476,7 @@ void SemanticResolver::visit(ESTree::WithStatementNode *node) {
   // `with`.
   // Pass `depth + 1` because variables declared in this scope also cannot be
   // trusted.
-  Unresolver::run(depth + 1, node->_body);
+  Unresolver::run(semCtx_, depth + 1, node->_body);
 }
 
 void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
@@ -533,6 +538,8 @@ void SemanticResolver::visit(ESTree::CatchClauseNode *node) {
     }
   }
 
+  // Visit the catch param, in case there is destructuring.
+  visitESTreeNode(*this, node->_param, node);
   // Process body's declarations, skip visiting it, visit its children.
   processCollectedDeclarations(node->_body);
   visitESTreeChildren(*this, node->_body);
@@ -617,7 +624,7 @@ void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
     if (validateDeclarationName(Decl::Kind::ClassExprName, ident)) {
       Decl *decl = semCtx_.newDeclInScope(
           ident->_name, Decl::Kind::ClassExprName, curScope_);
-      ident->setDecl(decl);
+      semCtx_.setDeclarationDecl(ident, decl);
       bindingTable_.insert(ident->_name, Binding{decl, ident});
     }
     visitESTreeChildren(*this, node);
@@ -887,7 +894,7 @@ void SemanticResolver::visitFunctionLike(
 
     Decl *paramDecl = semCtx_.newDeclInScope(
         paramId->_name, Decl::Kind::Parameter, curScope_);
-    paramId->setDecl(paramDecl);
+    semCtx_.setBothDecl(paramId, paramDecl);
     Binding *prevName = bindingTable_.find(paramId->_name);
     if (prevName && prevName->decl->scope == curScope_) {
       // Check for parameter re-declaration.
@@ -935,7 +942,7 @@ void SemanticResolver::visitFunctionLike(
   LexicalScope *lexScope = curFunctionInfo()->getFunctionScope();
   if (false && lexScope->localEval && !curFunctionInfo()->strict) {
     uint32_t depth = lexScope->depth;
-    Unresolver::run(depth, node);
+    Unresolver::run(semCtx_, depth, node);
   }
 }
 
@@ -950,7 +957,7 @@ void SemanticResolver::visitFunctionExpression(
     if (validateDeclarationName(Decl::Kind::FunctionExprName, ident)) {
       Decl *decl = semCtx_.newDeclInScope(
           ident->_name, Decl::Kind::FunctionExprName, curScope_);
-      ident->setDecl(decl);
+      semCtx_.setBothDecl(ident, decl);
       bindingTable_.insert(ident->_name, Binding{decl, ident});
     }
     visitFunctionLike(node, body, params);
@@ -973,7 +980,7 @@ void SemanticResolver::resolveIdentifier(
           semCtx_.funcArgumentsDecl(curFunctionInfo(), identifier->_name);
       if (argumentsDeclOpt) {
         decl = argumentsDeclOpt.getValue();
-        identifier->setDecl(decl);
+        semCtx_.setExpressionDecl(identifier, decl);
 
         // Record that the function uses arguments.
         if (decl->special == Decl::Special::Arguments)
@@ -1012,7 +1019,7 @@ void SemanticResolver::resolveIdentifier(
   // Declare an ambient global property.
   decl = semCtx_.newGlobal(
       identifier->_name, Decl::Kind::UndeclaredGlobalProperty);
-  identifier->setDecl(decl);
+  semCtx_.setExpressionDecl(identifier, decl);
 
   bindingTable_.insertIntoScope(
       globalScope_, identifier->_name, Binding{decl, identifier});
@@ -1024,12 +1031,12 @@ Decl *SemanticResolver::checkIdentifierResolved(
   // pick the resolved declaration.
   if (LLVM_UNLIKELY(identifier->isUnresolvable()))
     return nullptr;
-  if (identifier->getDecl())
-    return identifier->getDecl();
+  if (sema::Decl *decl = semCtx_.getExpressionDecl(identifier))
+    return decl;
 
   // If we find the binding, assign the associated declaration and return it.
   if (Binding *binding = bindingTable_.find(identifier->_name)) {
-    identifier->setDecl(binding->decl);
+    semCtx_.setExpressionDecl(identifier, binding->decl);
     return binding->decl;
   }
 
@@ -1273,7 +1280,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
     bindingTable_.insert(ident->_name, Binding{decl, ident});
   }
 
-  ident->setDecl(decl);
+  semCtx_.setDeclarationDecl(ident, decl);
 }
 
 bool SemanticResolver::validateDeclarationName(
@@ -1564,8 +1571,9 @@ UniqueString *FunctionContext::getFunctionName() const {
 //===----------------------------------------------------------------------===//
 // Unresolver
 
-/* static */ void Unresolver::run(uint32_t depth, ESTree::Node *root) {
-  Unresolver unresolver{depth};
+/* static */ void
+Unresolver::run(SemContext &semCtx, uint32_t depth, ESTree::Node *root) {
+  Unresolver unresolver{semCtx, depth};
   visitESTreeNode(unresolver, root);
 }
 
@@ -1574,13 +1582,14 @@ void Unresolver::visit(ESTree::IdentifierNode *node) {
     return;
   }
 
-  if (Decl *decl = node->getDecl()) {
+  if (Decl *decl = semCtx_.getExpressionDecl(node)) {
     LexicalScope *scope = decl->scope;
 
     // The depth of this identifier's declaration is less than the `eval`/`with`
     // declaration that could shadow it, so we must declare this identifier as
     // unresolvable.
     if (scope->depth < depth_) {
+      semCtx_.setExpressionDecl(node, nullptr);
       node->setUnresolvable();
     }
   }

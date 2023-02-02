@@ -279,6 +279,35 @@ class SemContext {
   /// \return the special arguments declaration in the specified function.
   Decl *funcArgumentsDecl(FunctionInfo *func, UniqueString *argumentsName);
 
+  /// \return the declaration in which this identifier participates.
+  /// `nullptr` if no resolution has been recorded.
+  Decl *getDeclarationDecl(ESTree::IdentifierNode *node);
+
+  /// \pre the identifier hasn't been marked "unresolvable".
+  /// \return the declaration to which the identifier has been resolved,
+  /// `nullptr` if no resolution has been recorded.
+  Decl *getExpressionDecl(ESTree::IdentifierNode *node) {
+    using ID = ESTree::IdentifierDecoration;
+    assert(
+        !node->isUnresolvable() &&
+        "Attempt to read decl for unresolvable identifier");
+    return (node->declState_ & ID::BitHaveExpr) ? (Decl *)node->decl_ : nullptr;
+  }
+
+  /// Set the "expression decl" of the specified identifier node.
+  /// \pre the identifier hasn't been marked "unresolvable".
+  void setExpressionDecl(ESTree::IdentifierNode *node, Decl *decl);
+
+  /// Set the "declaration decl" of the specified identifier node.
+  void setDeclarationDecl(ESTree::IdentifierNode *node, Decl *decl);
+
+  /// Set the "declaration decl" and the "expression decl" of the identifier
+  /// node to the same value.
+  void setBothDecl(ESTree::IdentifierNode *node, Decl *decl) {
+    setExpressionDecl(node, decl);
+    setDeclarationDecl(node, decl);
+  }
+
  private:
   /// Storage for all functions.
   std::deque<FunctionInfo> functions_{};
@@ -288,6 +317,12 @@ class SemContext {
 
   /// Storage for all variable declarations.
   std::deque<Decl> decls_{};
+
+  /// This side table is used to associate a "declaration decl" with an
+  /// ESTree::IdentifierNode, when the "declaration decl" and the
+  /// "expression decl" are both set and are not the same value.
+  llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
+      sideIdentifierDeclarationDecl_{};
 };
 
 class SemContextDumper {
@@ -314,7 +349,8 @@ class SemContextDumper {
 
   void printDecl(llvh::raw_ostream &os, const Decl *d);
 
-  void printDeclRef(llvh::raw_ostream &os, const Decl *d);
+  void
+  printDeclRef(llvh::raw_ostream &os, const Decl *d, bool printName = true);
 
  private:
   /// Optional callback printing a Decl annotation.

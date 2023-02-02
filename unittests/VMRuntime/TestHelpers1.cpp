@@ -50,7 +50,7 @@ std::vector<uint8_t> hermes::bytecodeForSource(
 
   /* Generate IR */
   Module M(context);
-  hermes::generateIRFromESTree(ast, &M);
+  hermes::generateIRFromESTree(&M, semCtx, ast);
 
   /* Generate and serialize bytecode module */
   auto bytecodeGenOpts = BytecodeGenerationOptions::defaults();

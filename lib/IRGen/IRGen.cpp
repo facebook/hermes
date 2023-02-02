@@ -17,9 +17,12 @@ namespace hermes {
 using namespace hermes::irgen;
 using llvh::dbgs;
 
-void generateIRFromESTree(ESTree::NodePtr node, Module *M) {
+void generateIRFromESTree(
+    Module *M,
+    sema::SemContext &semCtx,
+    ESTree::NodePtr node) {
   // Generate IR into the module M.
-  ESTreeIRGen generator(node, M);
+  ESTreeIRGen generator(M, semCtx, node);
   generator.doIt();
   LLVM_DEBUG(dbgs() << "Finished IRGen.\n");
 }
@@ -32,7 +35,7 @@ void generateIRForCJSModule(
     llvh::StringRef filename,
     Module *M) {
   // Generate IR into the module M.
-  ESTreeIRGen generator(node, M);
+  ESTreeIRGen generator(M, semContext, node);
   return generator.doCJSModule(semContext, segmentID, id, filename);
 }
 
