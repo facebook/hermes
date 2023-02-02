@@ -616,11 +616,6 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
-  Mod->getContext().getSourceErrorManager().warning(
-      Warning::DirectEval,
-      call->getSourceRange(),
-      "Direct call to eval(), but lexical scope is not supported.");
-
   Value *callee = genExpression(call->_callee);
 
   llvh::SmallVector<Value *, 1> args;
