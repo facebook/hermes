@@ -19,39 +19,39 @@ namespace sem {
 class Keywords {
  public:
   /// Identifier for "arguments".
-  const UniqueString *const identArguments;
+  UniqueString *const identArguments;
   /// Identifier for "eval".
-  const UniqueString *const identEval;
+  UniqueString *const identEval;
   /// Identifier for "delete".
-  const UniqueString *const identDelete;
+  UniqueString *const identDelete;
   /// Identifier for "this".
-  const UniqueString *const identThis;
+  UniqueString *const identThis;
   /// Identifier for "use strict".
-  const UniqueString *const identUseStrict;
+  UniqueString *const identUseStrict;
   /// Identifier for "show source ".
-  const UniqueString *const identShowSource;
+  UniqueString *const identShowSource;
   /// Identifier for "hide source ".
-  const UniqueString *const identHideSource;
+  UniqueString *const identHideSource;
   /// Identifier for "sensitive".
-  const UniqueString *const identSensitive;
+  UniqueString *const identSensitive;
   /// Identifier for "var".
-  const UniqueString *const identVar;
+  UniqueString *const identVar;
   /// Identifier for "let".
-  const UniqueString *const identLet;
+  UniqueString *const identLet;
   /// Identifier for "const".
-  const UniqueString *const identConst;
+  UniqueString *const identConst;
   /// "+".
-  const UniqueString *const identPlus;
+  UniqueString *const identPlus;
   /// "-".
-  const UniqueString *const identMinus;
+  UniqueString *const identMinus;
   /// "=".
-  const UniqueString *const identAssign;
+  UniqueString *const identAssign;
   /// "new"
-  const UniqueString *const identNew;
+  UniqueString *const identNew;
   /// "target"
-  const UniqueString *const identTarget;
+  UniqueString *const identTarget;
   /// "typeof".
-  const UniqueString *const identTypeof;
+  UniqueString *const identTypeof;
 
   Keywords(Context &astContext);
 };
