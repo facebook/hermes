@@ -87,6 +87,10 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
     llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
         globalScope_, &programScope.getBindingScope());
 
+    // Promote hoisted functions.
+    if (!curFunctionInfo()->strict) {
+      promoteScopedFuncDecls(*this, node);
+    }
     processCollectedDeclarations(node);
     processAmbientDecls();
     visitESTreeChildren(*this, node);
@@ -1143,7 +1147,24 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
 
   if (auto *funcDecl = llvh::dyn_cast<FunctionDeclarationNode>(node)) {
     extractDeclaredIdentsFromID(funcDecl->_id, idents);
-    if (functionContext()->isGlobalScope()) {
+    if (functionContext()->isGlobalScope() &&
+        curScope_ == curFunctionInfo()->getFunctionScope()) {
+      // It is possible to still have ScopedFunctions in the global function,
+      // for example if we have
+      // ```
+      // let foo;
+      // {
+      //   function foo() {}
+      // }
+      // ```
+      // then `foo` won't be promoted to functionScope of the global function.
+      //
+      // However, if `funcDecl` has been promoted to the functionScope of the
+      // global function, it should be declared as a GlobalProperty, just like
+      // `var` would be.
+      //
+      // See ScopedFunctionPromoter for rules on when function declarations are
+      // promoted out of the child scoped in which they are declared.
       return Decl::Kind::GlobalProperty;
     } else {
       return Decl::Kind::ScopedFunction;

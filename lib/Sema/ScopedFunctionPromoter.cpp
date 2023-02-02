@@ -101,6 +101,7 @@ class ScopedFunctionPromoter {
 };
 
 void ScopedFunctionPromoter::run(FunctionLikeNode *funcNode) {
+  BindingTableScopeTy bindingScope{bindingTable_};
   llvh::ArrayRef<Node *> decls =
       resolver_.functionContext()->decls->getScopedFuncDecls();
 
@@ -111,7 +112,12 @@ void ScopedFunctionPromoter::run(FunctionLikeNode *funcNode) {
     funcDecls_.insert(funcDecl);
   }
 
-  visitESTreeChildren(*this, funcNode);
+  processDeclarations(funcNode);
+  if (auto *programNode = llvh::dyn_cast<ProgramNode>(funcNode)) {
+    visitESTreeChildren(*this, programNode);
+  } else {
+    visitESTreeChildren(*this, getBlockStatement(funcNode));
+  }
 }
 
 void ScopedFunctionPromoter::visitScope(Node *node) {
