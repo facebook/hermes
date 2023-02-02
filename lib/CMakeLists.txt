@@ -7,6 +7,7 @@ set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 add_hermes_library(hermesOptimizer
   STATIC
+  Optimizer/PassManager/PassManager.cpp
   Optimizer/PassManager/Pipeline.cpp
   Optimizer/Scalar/SimplifyCFG.cpp
   Optimizer/Scalar/CSE.cpp
