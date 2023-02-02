@@ -176,16 +176,15 @@ class SemanticResolver {
 
   void visit(ESTree::SwitchStatementNode *node);
 
-  void visit(ESTree::ForInStatementNode *node) {
-    visitForInOf(node, node, node->_left);
-  }
-  void visit(ESTree::ForOfStatementNode *node) {
-    visitForInOf(node, node, node->_left);
-  }
+  void visit(ESTree::ForInStatementNode *node);
+  void visit(ESTree::ForOfStatementNode *node);
+
   void visitForInOf(
       ESTree::LoopStatementNode *node,
       ESTree::ScopeDecorationBase *scopeDeco,
-      ESTree::Node *left);
+      ESTree::Node *left,
+      ESTree::Node *right,
+      ESTree::Node *body);
 
   void visit(ESTree::ForStatementNode *node);
 
