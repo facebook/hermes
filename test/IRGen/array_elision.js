@@ -15,14 +15,15 @@ function func() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [func]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %func()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "func" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "func" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %func()
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "func" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function func()

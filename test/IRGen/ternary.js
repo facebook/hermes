@@ -28,18 +28,21 @@ function test_three(x, one, two) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [test_one, test_two, test_three]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %test_one()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %test_two()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_two" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_three()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_three" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_one" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_two" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_three" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %test_one()
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "test_one" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %test_two()
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "test_two" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %test_three()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_three" : string
+// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
+// CHECK-NEXT:  %11 = LoadStackInst %9
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x, y, z)

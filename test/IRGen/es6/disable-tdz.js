@@ -17,14 +17,15 @@ function check1() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [check1]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %check1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "check1" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %check1()
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "check1" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function check1()
@@ -45,14 +46,15 @@ function check1() {
 // CHECK-NEXT:function_end
 
 // CHKDIS:function global()
-// CHKDIS-NEXT:frame = [], globals = [check1]
+// CHKDIS-NEXT:frame = []
 // CHKDIS-NEXT:%BB0:
-// CHKDIS-NEXT:  %0 = CreateFunctionInst %check1()
-// CHKDIS-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
-// CHKDIS-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHKDIS-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHKDIS-NEXT:  %4 = LoadStackInst %2
-// CHKDIS-NEXT:  %5 = ReturnInst %4
+// CHKDIS-NEXT:  %0 = DeclareGlobalVarInst "check1" : string
+// CHKDIS-NEXT:  %1 = CreateFunctionInst %check1()
+// CHKDIS-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "check1" : string
+// CHKDIS-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHKDIS-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHKDIS-NEXT:  %5 = LoadStackInst %3
+// CHKDIS-NEXT:  %6 = ReturnInst %5
 // CHKDIS-NEXT:function_end
 
 // CHKDIS:function check1()

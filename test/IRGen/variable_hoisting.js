@@ -20,21 +20,22 @@ function main() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %main()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "main" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = StoreStackInst %5, %2
-// CHECK-NEXT:  %7 = LoadStackInst %2
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %main()
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "main" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "main" : string
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %7 = StoreStackInst %6, %3
+// CHECK-NEXT:  %8 = LoadStackInst %3
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
 // CHECK:function main()
-// CHECK-NEXT:frame = [capture_me, foo]
+// CHECK-NEXT:frame = [foo, capture_me]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [capture_me]
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo()

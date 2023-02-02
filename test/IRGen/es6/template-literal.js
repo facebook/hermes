@@ -30,19 +30,24 @@ function f5(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHKIR:function global() : undefined
-// CHKIR-NEXT:frame = [], globals = [f1, f2, f3, f4, f5]
+// CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateFunctionInst %f1()
-// CHKIR-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
-// CHKIR-NEXT:  %2 = CreateFunctionInst %f2() : string
-// CHKIR-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
-// CHKIR-NEXT:  %4 = CreateFunctionInst %f3() : string
-// CHKIR-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
-// CHKIR-NEXT:  %6 = CreateFunctionInst %f4()
-// CHKIR-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
-// CHKIR-NEXT:  %8 = CreateFunctionInst %f5()
-// CHKIR-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "f5" : string
-// CHKIR-NEXT:  %10 = ReturnInst undefined : undefined
+// CHKIR-NEXT:  %0 = DeclareGlobalVarInst "f1" : string
+// CHKIR-NEXT:  %1 = DeclareGlobalVarInst "f2" : string
+// CHKIR-NEXT:  %2 = DeclareGlobalVarInst "f3" : string
+// CHKIR-NEXT:  %3 = DeclareGlobalVarInst "f4" : string
+// CHKIR-NEXT:  %4 = DeclareGlobalVarInst "f5" : string
+// CHKIR-NEXT:  %5 = CreateFunctionInst %f1()
+// CHKIR-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "f1" : string
+// CHKIR-NEXT:  %7 = CreateFunctionInst %f2() : string
+// CHKIR-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "f2" : string
+// CHKIR-NEXT:  %9 = CreateFunctionInst %f3() : string
+// CHKIR-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "f3" : string
+// CHKIR-NEXT:  %11 = CreateFunctionInst %f4()
+// CHKIR-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "f4" : string
+// CHKIR-NEXT:  %13 = CreateFunctionInst %f5()
+// CHKIR-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "f5" : string
+// CHKIR-NEXT:  %15 = ReturnInst undefined : undefined
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f1()

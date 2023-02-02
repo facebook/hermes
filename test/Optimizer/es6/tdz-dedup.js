@@ -29,24 +29,26 @@ function check_after_check() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [check_after_store, check_after_check]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %check_after_store()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check_after_store" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %check_after_check()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check_after_check" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadStackInst %4
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "check_after_store" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "check_after_check" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %check_after_store()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check_after_store" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %check_after_check()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check_after_check" : string
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
+// CHECK-NEXT:  %8 = LoadStackInst %6
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_store(p)
-// CHECK-NEXT:frame = [x, p]
+// CHECK-NEXT:frame = [p, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHECK-NEXT:  %1 = LoadParamInst %p
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [p]
+// CHECK-NEXT:  %0 = LoadParamInst %p
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [p]
+// CHECK-NEXT:  %2 = StoreFrameInst empty : empty, [x]
 // CHECK-NEXT:  %3 = StoreFrameInst 10 : number, [x]
 // CHECK-NEXT:  %4 = LoadFrameInst [p]
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
@@ -65,7 +67,7 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check()
-// CHECK-NEXT:frame = [x, inner]
+// CHECK-NEXT:frame = [inner, x]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
 // CHECK-NEXT:  %1 = CreateFunctionInst %inner()
@@ -109,24 +111,26 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHKOPT:function global() : undefined
-// CHKOPT-NEXT:frame = [], globals = [check_after_store, check_after_check]
+// CHKOPT-NEXT:frame = []
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = CreateFunctionInst %check_after_store() : empty|undefined|number
-// CHKOPT-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check_after_store" : string
-// CHKOPT-NEXT:  %2 = CreateFunctionInst %check_after_check() : undefined|closure
-// CHKOPT-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check_after_check" : string
-// CHKOPT-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHKOPT-NEXT:  %5 = StoreStackInst undefined : undefined, %4 : undefined
-// CHKOPT-NEXT:  %6 = LoadStackInst %4 : undefined
-// CHKOPT-NEXT:  %7 = ReturnInst %6 : undefined
+// CHKOPT-NEXT:  %0 = DeclareGlobalVarInst "check_after_store" : string
+// CHKOPT-NEXT:  %1 = DeclareGlobalVarInst "check_after_check" : string
+// CHKOPT-NEXT:  %2 = CreateFunctionInst %check_after_store() : empty|undefined|number
+// CHKOPT-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check_after_store" : string
+// CHKOPT-NEXT:  %4 = CreateFunctionInst %check_after_check() : undefined|closure
+// CHKOPT-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check_after_check" : string
+// CHKOPT-NEXT:  %6 = AllocStackInst $?anon_0_ret
+// CHKOPT-NEXT:  %7 = StoreStackInst undefined : undefined, %6 : undefined
+// CHKOPT-NEXT:  %8 = LoadStackInst %6 : undefined
+// CHKOPT-NEXT:  %9 = ReturnInst %8 : undefined
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_store(p) : empty|undefined|number
-// CHKOPT-NEXT:frame = [x : empty|number, p]
+// CHKOPT-NEXT:frame = [p, x : empty|number]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = StoreFrameInst empty : empty, [x] : empty|number
-// CHKOPT-NEXT:  %1 = LoadParamInst %p
-// CHKOPT-NEXT:  %2 = StoreFrameInst %1, [p]
+// CHKOPT-NEXT:  %0 = LoadParamInst %p
+// CHKOPT-NEXT:  %1 = StoreFrameInst %0, [p]
+// CHKOPT-NEXT:  %2 = StoreFrameInst empty : empty, [x] : empty|number
 // CHKOPT-NEXT:  %3 = StoreFrameInst 10 : number, [x] : empty|number
 // CHKOPT-NEXT:  %4 = LoadFrameInst [p]
 // CHKOPT-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
@@ -144,7 +148,7 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check() : undefined|closure
-// CHKOPT-NEXT:frame = [x, inner : closure]
+// CHKOPT-NEXT:frame = [inner : closure, x]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = StoreFrameInst empty : empty, [x]
 // CHKOPT-NEXT:  %1 = CreateFunctionInst %inner()

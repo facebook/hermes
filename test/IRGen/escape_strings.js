@@ -31,22 +31,27 @@ function test_hex_printable() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [test_newline, test_quote, test_slash, test_hex, test_hex_printable]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %test_newline()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "test_newline" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %test_quote()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_quote" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_slash()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_slash" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %test_hex()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test_hex" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %test_hex_printable()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "test_hex_printable" : string
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
-// CHECK-NEXT:  %12 = LoadStackInst %10
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_newline" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_quote" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_slash" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_hex" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test_hex_printable" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %test_newline()
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "test_newline" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %test_quote()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_quote" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %test_slash()
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "test_slash" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %test_hex()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "test_hex" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %test_hex_printable()
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "test_hex_printable" : string
+// CHECK-NEXT:  %15 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %16 = StoreStackInst undefined : undefined, %15
+// CHECK-NEXT:  %17 = LoadStackInst %15
+// CHECK-NEXT:  %18 = ReturnInst %17
 // CHECK-NEXT:function_end
 
 // CHECK:function test_newline()

@@ -16,18 +16,21 @@ function three() { return z; return z;}
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [one, two, three]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %one()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "one" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %two()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "two" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %three()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "three" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "one" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "two" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "three" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %one()
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "one" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %two()
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "two" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %three()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "three" : string
+// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
+// CHECK-NEXT:  %11 = LoadStackInst %9
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end
 
 // CHECK:function one()

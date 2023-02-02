@@ -27,28 +27,24 @@ import 'bar.js';
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports, require, module)
-// CHECK-NEXT:frame = [Foo, defaultFoo, x, z, exports, require, module]
+// CHECK-NEXT:frame = [exports, require, module, Foo, defaultFoo, x, z]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [Foo]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [defaultFoo]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %4 = LoadParamInst %exports
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [exports]
-// CHECK-NEXT:  %6 = LoadParamInst %require
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [require]
-// CHECK-NEXT:  %8 = LoadParamInst %module
-// CHECK-NEXT:  %9 = StoreFrameInst %8, [module]
-// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [Foo]
-// CHECK-NEXT:  %12 = CallInst %6, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:  %13 = LoadPropertyInst %12, "?default" : string
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [defaultFoo]
-// CHECK-NEXT:  %15 = CallInst %6, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:  %16 = LoadPropertyInst %15, "x" : string
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = LoadPropertyInst %15, "y" : string
-// CHECK-NEXT:  %19 = StoreFrameInst %18, [z]
-// CHECK-NEXT:  %20 = CallInst %6, undefined : undefined, "bar.js" : string
-// CHECK-NEXT:  %21 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst %exports
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [exports]
+// CHECK-NEXT:  %2 = LoadParamInst %require
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
+// CHECK-NEXT:  %4 = LoadParamInst %module
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
+// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [Foo]
+// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %9 = LoadPropertyInst %8, "?default" : string
+// CHECK-NEXT:  %10 = StoreFrameInst %9, [defaultFoo]
+// CHECK-NEXT:  %11 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %12 = LoadPropertyInst %11, "x" : string
+// CHECK-NEXT:  %13 = StoreFrameInst %12, [x]
+// CHECK-NEXT:  %14 = LoadPropertyInst %11, "y" : string
+// CHECK-NEXT:  %15 = StoreFrameInst %14, [z]
+// CHECK-NEXT:  %16 = CallInst %2, undefined : undefined, "bar.js" : string
+// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

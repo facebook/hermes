@@ -94,27 +94,36 @@ function code_sinking_in_loop(x, y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [hoist_branch, hoist_branch_window, no_hoist_inc_dec, hoist_loop, hoist_loop_expression, hoist_from_multiblock_loop, hoist_with_dependencies_in_loop, code_sinking, code_sinking_in_loop]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %hoist_branch()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "hoist_branch" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %hoist_branch_window()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "hoist_branch_window" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %no_hoist_inc_dec() : number|bigint
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "no_hoist_inc_dec" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %hoist_loop() : undefined
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "hoist_loop" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %hoist_loop_expression()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "hoist_loop_expression" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %hoist_from_multiblock_loop()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "hoist_from_multiblock_loop" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %hoist_with_dependencies_in_loop()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "hoist_with_dependencies_in_loop" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %code_sinking() : number
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "code_sinking" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %code_sinking_in_loop() : undefined
-// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "code_sinking_in_loop" : string
-// CHECK-NEXT:  %18 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "hoist_branch" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "hoist_branch_window" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "no_hoist_inc_dec" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "hoist_loop" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "hoist_loop_expression" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "hoist_from_multiblock_loop" : string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "hoist_with_dependencies_in_loop" : string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "code_sinking" : string
+// CHECK-NEXT:  %8 = DeclareGlobalVarInst "code_sinking_in_loop" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %hoist_branch()
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "hoist_branch" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %hoist_branch_window()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "hoist_branch_window" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %no_hoist_inc_dec() : number|bigint
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "no_hoist_inc_dec" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %hoist_loop() : undefined
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15 : closure, globalObject : object, "hoist_loop" : string
+// CHECK-NEXT:  %17 = CreateFunctionInst %hoist_loop_expression()
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17 : closure, globalObject : object, "hoist_loop_expression" : string
+// CHECK-NEXT:  %19 = CreateFunctionInst %hoist_from_multiblock_loop()
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19 : closure, globalObject : object, "hoist_from_multiblock_loop" : string
+// CHECK-NEXT:  %21 = CreateFunctionInst %hoist_with_dependencies_in_loop()
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21 : closure, globalObject : object, "hoist_with_dependencies_in_loop" : string
+// CHECK-NEXT:  %23 = CreateFunctionInst %code_sinking() : number
+// CHECK-NEXT:  %24 = StorePropertyLooseInst %23 : closure, globalObject : object, "code_sinking" : string
+// CHECK-NEXT:  %25 = CreateFunctionInst %code_sinking_in_loop() : undefined
+// CHECK-NEXT:  %26 = StorePropertyLooseInst %25 : closure, globalObject : object, "code_sinking_in_loop" : string
+// CHECK-NEXT:  %27 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_branch(x, y)

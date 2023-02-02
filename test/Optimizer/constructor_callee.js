@@ -33,13 +33,15 @@ function ctor_load_store_test() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : string
-// CHECK-NEXT:frame = [], globals = [ctor_this_test, ctor_load_store_test]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %ctor_this_test() : object
-// CHECK-NEXT:  %1 = StorePropertyStrictInst %0 : closure, globalObject : object, "ctor_this_test" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %ctor_load_store_test() : object
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_load_store_test" : string
-// CHECK-NEXT:  %4 = ReturnInst "use strict" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "ctor_load_store_test" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %ctor_this_test() : object
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_this_test" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %ctor_load_store_test() : object
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "ctor_load_store_test" : string
+// CHECK-NEXT:  %6 = ReturnInst "use strict" : string
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_this_test() : object
@@ -53,14 +55,6 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k : number) : object
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this : object
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
-// CHECK-NEXT:  %2 = ReturnInst %0 : object
-// CHECK-NEXT:function_end
-
 // CHECK:function ctor_load_store_test() : object
 // CHECK-NEXT:frame = [use_this : closure]
 // CHECK-NEXT:%BB0:
@@ -69,6 +63,14 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %2 = CreateFunctionInst %construct_use_this() : object
 // CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst %3 : object
+// CHECK-NEXT:function_end
+
+// CHECK:function use_this(k : number) : object
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst %this : object
+// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
+// CHECK-NEXT:  %2 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 
 // CHECK:function "use_this 1#"(k : number) : undefined

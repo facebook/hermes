@@ -49,15 +49,18 @@ function test_unary(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [sink, test_one, test_unary]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %test_one() : undefined
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %test_unary() : undefined
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "test_unary" : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_one" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_unary" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %sink() : undefined
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %test_one() : undefined
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "test_one" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %test_unary() : undefined
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_unary" : string
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink() : undefined

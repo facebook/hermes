@@ -35,30 +35,35 @@ function f5(o) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4, f5]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %f5()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "f5" : string
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
-// CHECK-NEXT:  %12 = LoadStackInst %10
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "f3" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "f4" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "f5" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %f1()
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %f2()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %f3()
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %f4()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %f5()
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "f5" : string
+// CHECK-NEXT:  %15 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %16 = StoreStackInst undefined : undefined, %15
+// CHECK-NEXT:  %17 = LoadStackInst %15
+// CHECK-NEXT:  %18 = ReturnInst %17
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(t)
-// CHECK-NEXT:frame = [a, t]
+// CHECK-NEXT:frame = [t, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = LoadParamInst %t
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %3 = LoadFrameInst [t]
 // CHECK-NEXT:  %4 = BinaryOperatorInst '==', %3, null : null
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
@@ -76,13 +81,13 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t)
-// CHECK-NEXT:frame = [a, b, rest, t]
+// CHECK-NEXT:frame = [t, a, b, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %3 = LoadParamInst %t
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [b]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %5 = LoadFrameInst [t]
 // CHECK-NEXT:  %6 = LoadPropertyInst %5, "a" : string
 // CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
@@ -99,12 +104,12 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t)
-// CHECK-NEXT:frame = [a, rest, t]
+// CHECK-NEXT:frame = [t, a, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = LoadParamInst %t
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %4 = LoadFrameInst [t]
 // CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [a]
@@ -116,13 +121,13 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(o, t)
-// CHECK-NEXT:frame = [a, o, t]
+// CHECK-NEXT:frame = [o, t, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = LoadParamInst %o
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [o]
-// CHECK-NEXT:  %3 = LoadParamInst %t
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = LoadParamInst %t
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [t]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %5 = LoadFrameInst [t]
 // CHECK-NEXT:  %6 = LoadPropertyInst %5, "a" : string
 // CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
@@ -135,12 +140,12 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(o)
-// CHECK-NEXT:frame = [a, rest, o]
+// CHECK-NEXT:frame = [o, a, rest]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
-// CHECK-NEXT:  %2 = LoadParamInst %o
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [o]
+// CHECK-NEXT:  %0 = LoadParamInst %o
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [rest]
 // CHECK-NEXT:  %4 = LoadFrameInst [o]
 // CHECK-NEXT:  %5 = LoadPropertyInst %4, "a" : string
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [a]

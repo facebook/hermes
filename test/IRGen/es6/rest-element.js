@@ -27,28 +27,32 @@ function f4(t) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "f2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f4" : string
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
-// CHECK-NEXT:  %10 = LoadStackInst %8
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "f3" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "f4" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %f1()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "f1" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %f2()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "f2" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %f3()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "f3" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %f4()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "f4" : string
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = LoadStackInst %12
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(t)
-// CHECK-NEXT:frame = [a, t]
+// CHECK-NEXT:frame = [t, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = LoadParamInst %t
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
 // CHECK-NEXT:  %3 = LoadFrameInst [t]
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_sourceOrNext
@@ -102,12 +106,12 @@ function f4(t) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t)
-// CHECK-NEXT:frame = [b, c, t]
+// CHECK-NEXT:frame = [t, b, c]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [c]
-// CHECK-NEXT:  %2 = LoadParamInst %t
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [b]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [c]
 // CHECK-NEXT:  %4 = LoadFrameInst [t]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_sourceOrNext
@@ -225,11 +229,11 @@ function f4(t) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t)
-// CHECK-NEXT:frame = [d, t]
+// CHECK-NEXT:frame = [t, d]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [d]
-// CHECK-NEXT:  %1 = LoadParamInst %t
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [d]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx
@@ -296,12 +300,12 @@ function f4(t) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(t)
-// CHECK-NEXT:frame = [a, b, t]
+// CHECK-NEXT:frame = [t, a, b]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %2 = LoadParamInst %t
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [t]
+// CHECK-NEXT:  %0 = LoadParamInst %t
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [t]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [a]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [b]
 // CHECK-NEXT:  %4 = LoadFrameInst [t]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_sourceOrNext

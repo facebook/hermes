@@ -30,13 +30,15 @@ function recursive_phi(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [sink, recursive_phi]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %recursive_phi() : string|number
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "recursive_phi" : string
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "recursive_phi" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %sink() : undefined
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %recursive_phi() : string|number
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "recursive_phi" : string
+// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink() : undefined

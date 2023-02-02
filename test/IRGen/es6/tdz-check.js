@@ -36,20 +36,24 @@ function check4() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [check1, check2, check3, check4]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %check1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "check1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %check2()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "check2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %check3()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %check4()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "check4" : string
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %9 = StoreStackInst undefined : undefined, %8
-// CHECK-NEXT:  %10 = LoadStackInst %8
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "check1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "check2" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "check3" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "check4" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %check1()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check1" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %check2()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "check2" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %check3()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "check3" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %check4()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "check4" : string
+// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
+// CHECK-NEXT:  %14 = LoadStackInst %12
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function check1()
@@ -70,12 +74,12 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check2(p)
-// CHECK-NEXT:frame = [b, a, p]
+// CHECK-NEXT:frame = [p, b, a]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [a]
-// CHECK-NEXT:  %2 = LoadParamInst %p
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [p]
+// CHECK-NEXT:  %0 = LoadParamInst %p
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [p]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [b]
+// CHECK-NEXT:  %3 = StoreFrameInst empty : empty, [a]
 // CHECK-NEXT:  %4 = LoadFrameInst [a]
 // CHECK-NEXT:  %5 = ThrowIfEmptyInst %4
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [b]
@@ -105,17 +109,6 @@ function check4() {
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function check3_inner()
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [x@check3]
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst %0
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %1, 1 : number
-// CHECK-NEXT:  %3 = ReturnInst %2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
 // CHECK:function check4()
 // CHECK-NEXT:frame = [x]
 // CHECK-NEXT:%BB0:
@@ -129,4 +122,15 @@ function check4() {
 // CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function check3_inner()
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadFrameInst [x@check3]
+// CHECK-NEXT:  %1 = ThrowIfEmptyInst %0
+// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %1, 1 : number
+// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

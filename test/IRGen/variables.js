@@ -29,48 +29,30 @@ function level0(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [same_func_name, sink, level0]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %same_func_name()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "same_func_name" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %level0()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "level0" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "same_func_name" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "level0" : string
+// CHECK-NEXT:  %3 = CreateFunctionInst %same_func_name()
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "same_func_name" : string
+// CHECK-NEXT:  %5 = CreateFunctionInst %sink()
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %level0()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "level0" : string
+// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
+// CHECK-NEXT:  %11 = LoadStackInst %9
+// CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end
 
 // CHECK:function same_func_name(same_param_name)
-// CHECK-NEXT:frame = [same_func_name, same_param_name]
+// CHECK-NEXT:frame = [same_param_name, same_func_name]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %same_param_name
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [same_param_name]
 // CHECK-NEXT:  %2 = CreateFunctionInst %"same_func_name 1#"()
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [same_func_name]
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function "same_func_name 1#"(same_param_name)
-// CHECK-NEXT:frame = [same_func_name, same_param_name]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %same_param_name
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [same_param_name]
-// CHECK-NEXT:  %2 = CreateFunctionInst %"same_func_name 2#"()
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [same_func_name]
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:function_end
-
-// CHECK:function "same_func_name 2#"(same_param_name)
-// CHECK-NEXT:frame = [same_param_name]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %same_param_name
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [same_param_name]
-// CHECK-NEXT:  %2 = LoadFrameInst [same_param_name]
-// CHECK-NEXT:  %3 = ReturnInst %2
-// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -87,7 +69,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function level0(x)
-// CHECK-NEXT:frame = [level1, x]
+// CHECK-NEXT:frame = [x, level1]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %x
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
@@ -96,13 +78,34 @@ function level0(x) {
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
+// CHECK:function "same_func_name 1#"(same_param_name)
+// CHECK-NEXT:frame = [same_param_name, same_func_name]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst %same_param_name
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [same_param_name]
+// CHECK-NEXT:  %2 = CreateFunctionInst %"same_func_name 2#"()
+// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [same_func_name]
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
 // CHECK:function level1(y)
-// CHECK-NEXT:frame = [level2, y]
+// CHECK-NEXT:frame = [y, level2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %y
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [y]
 // CHECK-NEXT:  %2 = CreateFunctionInst %level2()
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [level2]
+// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function "same_func_name 2#"(same_param_name)
+// CHECK-NEXT:frame = [same_param_name]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst %same_param_name
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [same_param_name]
+// CHECK-NEXT:  %2 = LoadFrameInst [same_param_name]
+// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

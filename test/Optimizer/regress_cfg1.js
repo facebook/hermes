@@ -20,13 +20,14 @@ f();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [f]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %f() : undefined
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "f" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "f" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %f() : undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "f" : string
+// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "f" : string
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function f() : undefined

@@ -154,40 +154,47 @@ function finally_with_break_continue_test() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [simple_try_catch_test, simple_try_catch_finally_test, simple_try_finally_test, try_catch_finally_with_return_test, nested_try_test, nested_catch_test, finally_with_break_continue_test]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %simple_try_catch_test()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_try_catch_test" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %simple_try_catch_finally_test()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_try_catch_finally_test" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %simple_try_finally_test()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_try_finally_test" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %try_catch_finally_with_return_test()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "try_catch_finally_with_return_test" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %nested_try_test()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "nested_try_test" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %nested_catch_test()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "nested_catch_test" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %finally_with_break_continue_test()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "finally_with_break_continue_test" : string
-// CHECK-NEXT:  %14 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
-// CHECK-NEXT:  %16 = LoadStackInst %14
-// CHECK-NEXT:  %17 = ReturnInst %16
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_try_catch_test" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simple_try_catch_finally_test" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "simple_try_finally_test" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "try_catch_finally_with_return_test" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "nested_try_test" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "nested_catch_test" : string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "finally_with_break_continue_test" : string
+// CHECK-NEXT:  %7 = CreateFunctionInst %simple_try_catch_test()
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "simple_try_catch_test" : string
+// CHECK-NEXT:  %9 = CreateFunctionInst %simple_try_catch_finally_test()
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "simple_try_catch_finally_test" : string
+// CHECK-NEXT:  %11 = CreateFunctionInst %simple_try_finally_test()
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "simple_try_finally_test" : string
+// CHECK-NEXT:  %13 = CreateFunctionInst %try_catch_finally_with_return_test()
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "try_catch_finally_with_return_test" : string
+// CHECK-NEXT:  %15 = CreateFunctionInst %nested_try_test()
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15 : closure, globalObject : object, "nested_try_test" : string
+// CHECK-NEXT:  %17 = CreateFunctionInst %nested_catch_test()
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17 : closure, globalObject : object, "nested_catch_test" : string
+// CHECK-NEXT:  %19 = CreateFunctionInst %finally_with_break_continue_test()
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19 : closure, globalObject : object, "finally_with_break_continue_test" : string
+// CHECK-NEXT:  %21 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %22 = StoreStackInst undefined : undefined, %21
+// CHECK-NEXT:  %23 = LoadStackInst %21
+// CHECK-NEXT:  %24 = ReturnInst %23
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e]
+// CHECK-NEXT:frame = [i, e]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = CatchInst
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_0_e]
-// CHECK-NEXT:  %4 = LoadFrameInst [?anon_0_e]
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [e]
+// CHECK-NEXT:  %4 = LoadFrameInst [e]
 // CHECK-NEXT:  %5 = AsNumericInst %4
 // CHECK-NEXT:  %6 = UnaryOperatorInst '++', %5 : number|bigint
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [?anon_0_e]
+// CHECK-NEXT:  %7 = StoreFrameInst %6, [e]
 // CHECK-NEXT:  %8 = LoadFrameInst [i]
 // CHECK-NEXT:  %9 = BinaryOperatorInst '-', %8, 3 : number
 // CHECK-NEXT:  %10 = StoreFrameInst %9, [i]
@@ -197,44 +204,42 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %13 = ReturnInst %12
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %14 = StoreFrameInst 0 : number, [i]
-// CHECK-NEXT:  %15 = BranchInst %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %16 = LoadFrameInst [i]
-// CHECK-NEXT:  %17 = BinaryOperatorInst '+', %16, 2 : number
-// CHECK-NEXT:  %18 = StoreFrameInst %17, [i]
-// CHECK-NEXT:  %19 = BranchInst %BB6
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %20 = LoadFrameInst [i]
-// CHECK-NEXT:  %21 = ThrowInst %20
+// CHECK-NEXT:  %15 = LoadFrameInst [i]
+// CHECK-NEXT:  %16 = BinaryOperatorInst '<', %15, 10 : number
+// CHECK-NEXT:  %17 = CondBranchInst %16, %BB4, %BB5
 // CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %18 = LoadFrameInst [i]
+// CHECK-NEXT:  %19 = BinaryOperatorInst '+', %18, 2 : number
+// CHECK-NEXT:  %20 = StoreFrameInst %19, [i]
+// CHECK-NEXT:  %21 = BranchInst %BB6
+// CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %22 = LoadFrameInst [i]
-// CHECK-NEXT:  %23 = BinaryOperatorInst '<', %22, 10 : number
-// CHECK-NEXT:  %24 = CondBranchInst %23, %BB5, %BB7
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %25 = LoadFrameInst [i]
-// CHECK-NEXT:  %26 = BinaryOperatorInst '<', %25, 10 : number
-// CHECK-NEXT:  %27 = CondBranchInst %26, %BB5, %BB7
+// CHECK-NEXT:  %23 = ThrowInst %22
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %24 = LoadFrameInst [i]
+// CHECK-NEXT:  %25 = BinaryOperatorInst '<', %24, 10 : number
+// CHECK-NEXT:  %26 = CondBranchInst %25, %BB4, %BB5
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %28 = LoadFrameInst [i]
-// CHECK-NEXT:  %29 = AsNumericInst %28
-// CHECK-NEXT:  %30 = UnaryOperatorInst '++', %29 : number|bigint
-// CHECK-NEXT:  %31 = StoreFrameInst %30, [i]
-// CHECK-NEXT:  %32 = BranchInst %BB8
+// CHECK-NEXT:  %27 = LoadFrameInst [i]
+// CHECK-NEXT:  %28 = AsNumericInst %27
+// CHECK-NEXT:  %29 = UnaryOperatorInst '++', %28 : number|bigint
+// CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
+// CHECK-NEXT:  %31 = BranchInst %BB7
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %32 = LoadFrameInst [i]
+// CHECK-NEXT:  %33 = AsNumericInst %32
+// CHECK-NEXT:  %34 = UnaryOperatorInst '--', %33 : number|bigint
+// CHECK-NEXT:  %35 = StoreFrameInst %34, [i]
+// CHECK-NEXT:  %36 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %33 = LoadFrameInst [i]
-// CHECK-NEXT:  %34 = AsNumericInst %33
-// CHECK-NEXT:  %35 = UnaryOperatorInst '--', %34 : number|bigint
-// CHECK-NEXT:  %36 = StoreFrameInst %35, [i]
-// CHECK-NEXT:  %37 = BranchInst %BB10
+// CHECK-NEXT:  %37 = TryEndInst
+// CHECK-NEXT:  %38 = BranchInst %BB3
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %38 = TryEndInst
-// CHECK-NEXT:  %39 = BranchInst %BB3
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %40 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %39 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_try_catch_finally_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e]
+// CHECK-NEXT:frame = [i, e]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
@@ -254,7 +259,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = CatchInst
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+// CHECK-NEXT:  %14 = StoreFrameInst %13, [e]
 // CHECK-NEXT:  %15 = LoadFrameInst [i]
 // CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
 // CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
@@ -310,7 +315,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function try_catch_finally_with_return_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e]
+// CHECK-NEXT:frame = [i, e]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
@@ -330,7 +335,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = CatchInst
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+// CHECK-NEXT:  %14 = StoreFrameInst %13, [e]
 // CHECK-NEXT:  %15 = LoadFrameInst [i]
 // CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
 // CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
@@ -384,7 +389,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_try_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e, ?anon_1_e, ?anon_2_e]
+// CHECK-NEXT:frame = [i, e, e#1, e#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
@@ -404,7 +409,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = CatchInst
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_2_e]
+// CHECK-NEXT:  %14 = StoreFrameInst %13, [e#2]
 // CHECK-NEXT:  %15 = LoadFrameInst [i]
 // CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
 // CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
@@ -429,7 +434,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %31 = TryStartInst %BB12, %BB13
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %32 = CatchInst
-// CHECK-NEXT:  %33 = StoreFrameInst %32, [?anon_1_e]
+// CHECK-NEXT:  %33 = StoreFrameInst %32, [e#1]
 // CHECK-NEXT:  %34 = LoadFrameInst [i]
 // CHECK-NEXT:  %35 = BinaryOperatorInst '+', %34, 6 : number
 // CHECK-NEXT:  %36 = StoreFrameInst %35, [i]
@@ -453,7 +458,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %49 = TryStartInst %BB20, %BB21
 // CHECK-NEXT:%BB20:
 // CHECK-NEXT:  %50 = CatchInst
-// CHECK-NEXT:  %51 = StoreFrameInst %50, [?anon_0_e]
+// CHECK-NEXT:  %51 = StoreFrameInst %50, [e]
 // CHECK-NEXT:  %52 = LoadFrameInst [i]
 // CHECK-NEXT:  %53 = BinaryOperatorInst '+', %52, 9 : number
 // CHECK-NEXT:  %54 = StoreFrameInst %53, [i]
@@ -524,7 +529,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_catch_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e, ?anon_1_e, ?anon_2_e, ?anon_3_e]
+// CHECK-NEXT:frame = [i, e, e#1, e#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
@@ -544,7 +549,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = CatchInst
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+// CHECK-NEXT:  %14 = StoreFrameInst %13, [e]
 // CHECK-NEXT:  %15 = LoadFrameInst [i]
 // CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 9 : number
 // CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
@@ -572,7 +577,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %33 = TryStartInst %BB14, %BB15
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:  %34 = CatchInst
-// CHECK-NEXT:  %35 = StoreFrameInst %34, [?anon_1_e]
+// CHECK-NEXT:  %35 = StoreFrameInst %34, [e#1]
 // CHECK-NEXT:  %36 = LoadFrameInst [i]
 // CHECK-NEXT:  %37 = BinaryOperatorInst '+', %36, 3 : number
 // CHECK-NEXT:  %38 = StoreFrameInst %37, [i]
@@ -605,7 +610,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %58 = TryStartInst %BB22, %BB23
 // CHECK-NEXT:%BB22:
 // CHECK-NEXT:  %59 = CatchInst
-// CHECK-NEXT:  %60 = StoreFrameInst %59, [?anon_2_e]
+// CHECK-NEXT:  %60 = StoreFrameInst %59, [e#2]
 // CHECK-NEXT:  %61 = LoadFrameInst [i]
 // CHECK-NEXT:  %62 = BinaryOperatorInst '+', %61, 6 : number
 // CHECK-NEXT:  %63 = StoreFrameInst %62, [i]
@@ -638,7 +643,7 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:  %83 = TryStartInst %BB28, %BB29
 // CHECK-NEXT:%BB28:
 // CHECK-NEXT:  %84 = CatchInst
-// CHECK-NEXT:  %85 = StoreFrameInst %84, [?anon_3_e]
+// CHECK-NEXT:  %85 = StoreFrameInst %84, [e#2]
 // CHECK-NEXT:  %86 = LoadFrameInst [i]
 // CHECK-NEXT:  %87 = BinaryOperatorInst '+', %86, 6 : number
 // CHECK-NEXT:  %88 = StoreFrameInst %87, [i]
@@ -668,99 +673,97 @@ function finally_with_break_continue_test() {
 // CHECK-NEXT:function_end
 
 // CHECK:function finally_with_break_continue_test()
-// CHECK-NEXT:frame = [i, ?anon_0_e]
+// CHECK-NEXT:frame = [i, e]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
 // CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
-// CHECK-NEXT:  %2 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = TryStartInst %BB3, %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %4 = LoadFrameInst [i]
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 4 : number
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %2 = LoadFrameInst [i]
+// CHECK-NEXT:  %3 = BinaryOperatorInst '<', %2, 10 : number
+// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst [i]
-// CHECK-NEXT:  %9 = BinaryOperatorInst '<', %8, 10 : number
-// CHECK-NEXT:  %10 = CondBranchInst %9, %BB2, %BB5
+// CHECK-NEXT:  %5 = TryStartInst %BB3, %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %6 = LoadFrameInst [i]
+// CHECK-NEXT:  %7 = BinaryOperatorInst '+', %6, 4 : number
+// CHECK-NEXT:  %8 = StoreFrameInst %7, [i]
+// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %10 = LoadFrameInst [i]
+// CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10, 10 : number
+// CHECK-NEXT:  %12 = CondBranchInst %11, %BB1, %BB2
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %11 = LoadFrameInst [i]
-// CHECK-NEXT:  %12 = BinaryOperatorInst '<', %11, 10 : number
-// CHECK-NEXT:  %13 = CondBranchInst %12, %BB2, %BB5
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %14 = LoadFrameInst [i]
-// CHECK-NEXT:  %15 = AsNumericInst %14
-// CHECK-NEXT:  %16 = UnaryOperatorInst '++', %15 : number|bigint
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
-// CHECK-NEXT:  %18 = BranchInst %BB6
+// CHECK-NEXT:  %13 = LoadFrameInst [i]
+// CHECK-NEXT:  %14 = AsNumericInst %13
+// CHECK-NEXT:  %15 = UnaryOperatorInst '++', %14 : number|bigint
+// CHECK-NEXT:  %16 = StoreFrameInst %15, [i]
+// CHECK-NEXT:  %17 = BranchInst %BB5
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %19 = CatchInst
-// CHECK-NEXT:  %20 = LoadFrameInst [i]
-// CHECK-NEXT:  %21 = BinaryOperatorInst '+', %20, 3 : number
-// CHECK-NEXT:  %22 = StoreFrameInst %21, [i]
-// CHECK-NEXT:  %23 = ThrowInst %19
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %24 = BranchInst %BB7
+// CHECK-NEXT:  %18 = CatchInst
+// CHECK-NEXT:  %19 = LoadFrameInst [i]
+// CHECK-NEXT:  %20 = BinaryOperatorInst '+', %19, 3 : number
+// CHECK-NEXT:  %21 = StoreFrameInst %20, [i]
+// CHECK-NEXT:  %22 = ThrowInst %18
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %23 = BranchInst %BB6
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %25 = TryStartInst %BB9, %BB10
+// CHECK-NEXT:  %24 = TryStartInst %BB8, %BB9
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %25 = CatchInst
+// CHECK-NEXT:  %26 = StoreFrameInst %25, [e]
+// CHECK-NEXT:  %27 = LoadFrameInst [i]
+// CHECK-NEXT:  %28 = BinaryOperatorInst '+', %27, 2 : number
+// CHECK-NEXT:  %29 = StoreFrameInst %28, [i]
+// CHECK-NEXT:  %30 = LoadFrameInst [i]
+// CHECK-NEXT:  %31 = BinaryOperatorInst '==', %30, 3 : number
+// CHECK-NEXT:  %32 = CondBranchInst %31, %BB10, %BB11
+// CHECK-NEXT:%BB12:
+// CHECK-NEXT:  %33 = BranchInst %BB13
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %26 = CatchInst
-// CHECK-NEXT:  %27 = StoreFrameInst %26, [?anon_0_e]
-// CHECK-NEXT:  %28 = LoadFrameInst [i]
-// CHECK-NEXT:  %29 = BinaryOperatorInst '+', %28, 2 : number
-// CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
-// CHECK-NEXT:  %31 = LoadFrameInst [i]
-// CHECK-NEXT:  %32 = BinaryOperatorInst '==', %31, 3 : number
-// CHECK-NEXT:  %33 = CondBranchInst %32, %BB11, %BB12
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %34 = BranchInst %BB14
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %35 = LoadFrameInst [i]
-// CHECK-NEXT:  %36 = AsNumericInst %35
-// CHECK-NEXT:  %37 = UnaryOperatorInst '++', %36 : number|bigint
-// CHECK-NEXT:  %38 = StoreFrameInst %37, [i]
-// CHECK-NEXT:  %39 = BranchInst %BB15
+// CHECK-NEXT:  %34 = LoadFrameInst [i]
+// CHECK-NEXT:  %35 = AsNumericInst %34
+// CHECK-NEXT:  %36 = UnaryOperatorInst '++', %35 : number|bigint
+// CHECK-NEXT:  %37 = StoreFrameInst %36, [i]
+// CHECK-NEXT:  %38 = BranchInst %BB14
+// CHECK-NEXT:%BB14:
+// CHECK-NEXT:  %39 = TryEndInst
+// CHECK-NEXT:  %40 = BranchInst %BB15
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %40 = TryEndInst
-// CHECK-NEXT:  %41 = BranchInst %BB16
+// CHECK-NEXT:  %41 = TryEndInst
+// CHECK-NEXT:  %42 = LoadFrameInst [i]
+// CHECK-NEXT:  %43 = BinaryOperatorInst '+', %42, 3 : number
+// CHECK-NEXT:  %44 = StoreFrameInst %43, [i]
+// CHECK-NEXT:  %45 = BranchInst %BB2
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %42 = TryEndInst
-// CHECK-NEXT:  %43 = LoadFrameInst [i]
-// CHECK-NEXT:  %44 = BinaryOperatorInst '+', %43, 3 : number
-// CHECK-NEXT:  %45 = StoreFrameInst %44, [i]
-// CHECK-NEXT:  %46 = BranchInst %BB5
+// CHECK-NEXT:  %46 = BranchInst %BB17
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %47 = BranchInst %BB18
-// CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %48 = TryEndInst
-// CHECK-NEXT:  %49 = BranchInst %BB13
+// CHECK-NEXT:  %47 = TryEndInst
+// CHECK-NEXT:  %48 = BranchInst %BB12
+// CHECK-NEXT:%BB10:
+// CHECK-NEXT:  %49 = BranchInst %BB18
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %50 = BranchInst %BB19
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %51 = BranchInst %BB20
-// CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %52 = BranchInst %BB21
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %53 = TryEndInst
-// CHECK-NEXT:  %54 = LoadFrameInst [i]
-// CHECK-NEXT:  %55 = BinaryOperatorInst '+', %54, 3 : number
-// CHECK-NEXT:  %56 = StoreFrameInst %55, [i]
-// CHECK-NEXT:  %57 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %58 = BranchInst %BB20
+// CHECK-NEXT:  %51 = BranchInst %BB20
+// CHECK-NEXT:%BB18:
+// CHECK-NEXT:  %52 = TryEndInst
+// CHECK-NEXT:  %53 = LoadFrameInst [i]
+// CHECK-NEXT:  %54 = BinaryOperatorInst '+', %53, 3 : number
+// CHECK-NEXT:  %55 = StoreFrameInst %54, [i]
+// CHECK-NEXT:  %56 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %59 = TryEndInst
-// CHECK-NEXT:  %60 = LoadFrameInst [i]
-// CHECK-NEXT:  %61 = BinaryOperatorInst '+', %60, 3 : number
-// CHECK-NEXT:  %62 = StoreFrameInst %61, [i]
-// CHECK-NEXT:  %63 = BranchInst %BB7
-// CHECK-NEXT:%BB23:
-// CHECK-NEXT:  %64 = BranchInst %BB13
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %65 = TryEndInst
-// CHECK-NEXT:  %66 = LoadFrameInst [i]
-// CHECK-NEXT:  %67 = BinaryOperatorInst '+', %66, 3 : number
-// CHECK-NEXT:  %68 = StoreFrameInst %67, [i]
-// CHECK-NEXT:  %69 = BranchInst %BB8
+// CHECK-NEXT:  %57 = BranchInst %BB19
+// CHECK-NEXT:%BB20:
+// CHECK-NEXT:  %58 = TryEndInst
+// CHECK-NEXT:  %59 = LoadFrameInst [i]
+// CHECK-NEXT:  %60 = BinaryOperatorInst '+', %59, 3 : number
+// CHECK-NEXT:  %61 = StoreFrameInst %60, [i]
+// CHECK-NEXT:  %62 = BranchInst %BB6
+// CHECK-NEXT:%BB22:
+// CHECK-NEXT:  %63 = BranchInst %BB12
+// CHECK-NEXT:%BB13:
+// CHECK-NEXT:  %64 = TryEndInst
+// CHECK-NEXT:  %65 = LoadFrameInst [i]
+// CHECK-NEXT:  %66 = BinaryOperatorInst '+', %65, 3 : number
+// CHECK-NEXT:  %67 = StoreFrameInst %66, [i]
+// CHECK-NEXT:  %68 = BranchInst %BB7
 // CHECK-NEXT:function_end

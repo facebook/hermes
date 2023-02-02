@@ -26,16 +26,18 @@ function foo2(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [foo1, foo2]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo1()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %foo2()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo2" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadStackInst %4
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %foo1()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo1" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %foo2()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "foo2" : string
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
+// CHECK-NEXT:  %8 = LoadStackInst %6
+// CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:function_end
 
 // CHECK:function foo1(x)

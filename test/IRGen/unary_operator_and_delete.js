@@ -28,22 +28,24 @@ delete_test()
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [unary_operator_test, delete_test]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %unary_operator_test()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "unary_operator_test" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %delete_test()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "delete_test" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "unary_operator_test" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = StoreStackInst %7, %4
-// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "delete_test" : string
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
-// CHECK-NEXT:  %11 = StoreStackInst %10, %4
-// CHECK-NEXT:  %12 = LoadStackInst %4
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "unary_operator_test" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "delete_test" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %unary_operator_test()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "unary_operator_test" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %delete_test()
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "delete_test" : string
+// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
+// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "unary_operator_test" : string
+// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
+// CHECK-NEXT:  %10 = StoreStackInst %9, %6
+// CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "delete_test" : string
+// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined
+// CHECK-NEXT:  %13 = StoreStackInst %12, %6
+// CHECK-NEXT:  %14 = LoadStackInst %6
+// CHECK-NEXT:  %15 = ReturnInst %14
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_operator_test(x)

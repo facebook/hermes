@@ -41,24 +41,30 @@ function loop_member_expr_lhs() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [sink, simple_for_in_loop, for_in_loop_with_break_continue, for_in_loop_with_named_break, check_var_decl_for_in_loop, loop_member_expr_lhs]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %simple_for_in_loop()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_for_in_loop" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %for_in_loop_with_break_continue()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "for_in_loop_with_break_continue" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %for_in_loop_with_named_break()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "for_in_loop_with_named_break" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %check_var_decl_for_in_loop()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "check_var_decl_for_in_loop" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %loop_member_expr_lhs()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "loop_member_expr_lhs" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simple_for_in_loop" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "for_in_loop_with_break_continue" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "for_in_loop_with_named_break" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "check_var_decl_for_in_loop" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "loop_member_expr_lhs" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %sink()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "sink" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %simple_for_in_loop()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "simple_for_in_loop" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %for_in_loop_with_break_continue()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "for_in_loop_with_break_continue" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %for_in_loop_with_named_break()
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "for_in_loop_with_named_break" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %check_var_decl_for_in_loop()
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "check_var_decl_for_in_loop" : string
+// CHECK-NEXT:  %16 = CreateFunctionInst %loop_member_expr_lhs()
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "loop_member_expr_lhs" : string
+// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
+// CHECK-NEXT:  %20 = LoadStackInst %18
+// CHECK-NEXT:  %21 = ReturnInst %20
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(a)
@@ -70,11 +76,11 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_in_loop(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = LoadParamInst %obj
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
@@ -98,11 +104,11 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_break_continue(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = LoadParamInst %obj
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
@@ -130,11 +136,11 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_in_loop_with_named_break(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = LoadParamInst %obj
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop]
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
@@ -162,11 +168,11 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_var_decl_for_in_loop(obj)
-// CHECK-NEXT:frame = [prop, obj]
+// CHECK-NEXT:frame = [obj, prop]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [prop]
-// CHECK-NEXT:  %1 = LoadParamInst %obj
-// CHECK-NEXT:  %2 = StoreFrameInst %1, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop]
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx

@@ -18,11 +18,12 @@ function foo(p1, p2, p3) {
 // Auto-generated content below. Please do not modify manually.
 
 // OPT-CHECK:function global() : undefined
-// OPT-CHECK-NEXT:frame = [], globals = [foo]
+// OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = CreateFunctionInst %foo() : undefined
-// OPT-CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// OPT-CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// OPT-CHECK-NEXT:  %1 = CreateFunctionInst %foo() : undefined
+// OPT-CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
+// OPT-CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function foo(p1, p2, p3) : undefined
@@ -37,28 +38,29 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:function_end
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %1 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1, p2, p3)
-// CHECK-NEXT:frame = [t, z, k, p1, p2, p3]
+// CHECK-NEXT:frame = [p1, p2, p3, t, z, k]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [t]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [z]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [k]
-// CHECK-NEXT:  %3 = LoadParamInst %p1
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [p1]
-// CHECK-NEXT:  %5 = LoadParamInst %p2
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [p2]
-// CHECK-NEXT:  %7 = LoadParamInst %p3
-// CHECK-NEXT:  %8 = StoreFrameInst %7, [p3]
+// CHECK-NEXT:  %0 = LoadParamInst %p1
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [p1]
+// CHECK-NEXT:  %2 = LoadParamInst %p2
+// CHECK-NEXT:  %3 = StoreFrameInst %2, [p2]
+// CHECK-NEXT:  %4 = LoadParamInst %p3
+// CHECK-NEXT:  %5 = StoreFrameInst %4, [p3]
+// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [t]
+// CHECK-NEXT:  %7 = StoreFrameInst undefined : undefined, [z]
+// CHECK-NEXT:  %8 = StoreFrameInst undefined : undefined, [k]
 // CHECK-NEXT:  %9 = LoadFrameInst [p1]
 // CHECK-NEXT:  %10 = LoadFrameInst [p2]
 // CHECK-NEXT:  %11 = BinaryOperatorInst '+', %9, %10

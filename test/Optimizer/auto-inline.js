@@ -42,17 +42,21 @@ function foo4(a) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global() : undefined
-// CHECK-NEXT:frame = [], globals = [foo1, foo2, foo3, foo4]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo1() : number
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %foo2() : string|number
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %foo3()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "foo3" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %foo4()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "foo4" : string
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo1" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "foo3" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "foo4" : string
+// CHECK-NEXT:  %4 = CreateFunctionInst %foo1() : number
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "foo1" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %foo2() : string|number
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "foo2" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %foo3()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "foo3" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %foo4()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "foo4" : string
+// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo1(a) : number

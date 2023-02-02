@@ -24,17 +24,19 @@ foo(); // This is still a valid call.
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [a, foo]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %3 = StoreStackInst undefined : undefined, %2
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = StoreStackInst %5, %2
-// CHECK-NEXT:  %7 = LoadStackInst %2
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "a" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %2 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
+// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// CHECK-NEXT:  %8 = StoreStackInst %7, %4
+// CHECK-NEXT:  %9 = LoadStackInst %4
+// CHECK-NEXT:  %10 = ReturnInst %9
 // CHECK-NEXT:function_end
 
 // CHECK:function foo()

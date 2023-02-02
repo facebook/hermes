@@ -63,33 +63,39 @@ function expression_prop(obj) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global()
-// CHECK-NEXT:frame = [], globals = [simple_loop, different_prop, different_obj, modify_prop, modify_value, expression_prop]
+// CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %simple_loop()
-// CHECK-NEXT:  %1 = StorePropertyLooseInst %0 : closure, globalObject : object, "simple_loop" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %different_prop()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "different_prop" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %different_obj()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "different_obj" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %modify_prop()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "modify_prop" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %modify_value()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "modify_value" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %expression_prop()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "expression_prop" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_loop" : string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "different_prop" : string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "different_obj" : string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "modify_prop" : string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "modify_value" : string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "expression_prop" : string
+// CHECK-NEXT:  %6 = CreateFunctionInst %simple_loop()
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simple_loop" : string
+// CHECK-NEXT:  %8 = CreateFunctionInst %different_prop()
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "different_prop" : string
+// CHECK-NEXT:  %10 = CreateFunctionInst %different_obj()
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "different_obj" : string
+// CHECK-NEXT:  %12 = CreateFunctionInst %modify_prop()
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "modify_prop" : string
+// CHECK-NEXT:  %14 = CreateFunctionInst %modify_value()
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "modify_value" : string
+// CHECK-NEXT:  %16 = CreateFunctionInst %expression_prop()
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "expression_prop" : string
+// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
+// CHECK-NEXT:  %20 = LoadStackInst %18
+// CHECK-NEXT:  %21 = ReturnInst %20
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_loop(obj)
-// CHECK-NEXT:frame = [ret, x, obj]
+// CHECK-NEXT:frame = [obj, ret, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %obj
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
@@ -119,13 +125,13 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function different_prop(obj)
-// CHECK-NEXT:frame = [ret, x, y, obj]
+// CHECK-NEXT:frame = [obj, ret, x, y]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %3 = LoadParamInst %obj
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [y]
 // CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %7 = AllocStackInst $?anon_1_base
@@ -157,13 +163,13 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function different_obj(obj)
-// CHECK-NEXT:frame = [ret, obj1, x, obj]
+// CHECK-NEXT:frame = [obj, ret, obj1, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj1]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %3 = LoadParamInst %obj
-// CHECK-NEXT:  %4 = StoreFrameInst %3, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [obj1]
+// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %6 = LoadFrameInst [obj]
 // CHECK-NEXT:  %7 = StoreFrameInst %6, [obj1]
@@ -195,12 +201,12 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_prop(obj)
-// CHECK-NEXT:frame = [ret, x, obj]
+// CHECK-NEXT:frame = [obj, ret, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %obj
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
@@ -231,12 +237,12 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_value(obj)
-// CHECK-NEXT:frame = [ret, x, obj]
+// CHECK-NEXT:frame = [obj, ret, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %obj
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
@@ -272,12 +278,12 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop(obj)
-// CHECK-NEXT:frame = [ret, x, obj]
+// CHECK-NEXT:frame = [obj, ret, x]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %obj
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [obj]
+// CHECK-NEXT:  %0 = LoadParamInst %obj
+// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
+// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
+// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
 // CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
