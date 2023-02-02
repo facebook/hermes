@@ -1715,12 +1715,26 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
         new (context_)
             ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
   } else {
-    // Productions valid here:
-    //   for [await] ( Expression_opt
-    //   for [await] ( LeftHandSideExpression
-
     if (!check(TokenKind::semi)) {
-      auto optExpr1 = parseExpression(Param{});
+      llvh::Optional<ESTree::Node *> optExpr1;
+      if (await) {
+        //   for await ( LeftHandSideExpression
+        //               ^
+        optExpr1 = parseLeftHandSideExpression();
+      } else {
+        // ForStatement:
+        //   for ( Expression_opt
+        //         ^
+        // ForInOfStatement:
+        //   for ( LeftHandSideExpression
+        //         ^
+        // Lookahead for LeftHandSideExpression cannot be 'let' or 'async of'.
+        // We've handled `let` above.
+        // To distinguish between the two productions here, we let the resolver
+        // check that the LHS of the `of` or `in` is valid (the resolver will
+        // throw the error instead of the parser).
+        optExpr1 = parseExpression(Param{});
+      }
       if (!optExpr1)
         return None;
       expr1 = optExpr1.getValue();
