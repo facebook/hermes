@@ -416,11 +416,30 @@ static opt<bool> IncludeRawASTProp(
     Hidden,
     cat(CompilerCategory));
 
-static opt<bool> DumpBetweenPasses(
-    "Xdump-between-passes",
+static opt<bool> DumpBeforeAll(
+    "Xdump-before-all",
     init(false),
     Hidden,
-    desc("Print IR after every optimization pass"),
+    desc("Dump the IR before every optimization pass"),
+    cat(CompilerCategory));
+
+static list<std::string> DumpBefore(
+    "Xdump-before",
+    Hidden,
+    desc("Dump the IR before each given pass"),
+    cat(CompilerCategory));
+
+static opt<bool> DumpAfterAll(
+    "Xdump-after-all",
+    init(false),
+    Hidden,
+    desc("Dump the IR after every optimization pass"),
+    cat(CompilerCategory));
+
+static list<std::string> DumpAfter(
+    "Xdump-after",
+    Hidden,
+    desc("Dump the IR after each given pass"),
     cat(CompilerCategory));
 
 #ifndef NDEBUG
@@ -1029,6 +1048,23 @@ static void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
   }
 }
 
+static llvh::SmallDenseSet<llvh::StringRef> stringListOptToDenseSet(
+    const llvh::cl::list<std::string> &list) {
+  llvh::SmallDenseSet<llvh::StringRef> ret;
+  for (llvh::StringRef s : list) {
+    ret.insert(s);
+  }
+  return ret;
+}
+
+void initializeDumpOptions(
+    CodeGenerationSettings::DumpSettings &dumpSettings,
+    const llvh::cl::opt<bool> &dumpAll,
+    const llvh::cl::list<std::string> &passes) {
+  dumpSettings.all = dumpAll;
+  dumpSettings.passes = stringListOptToDenseSet(passes);
+}
+
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
@@ -1042,7 +1078,9 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
-  codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
+  initializeDumpOptions(
+      codeGenOpts.dumpBefore, cl::DumpBeforeAll, cl::DumpBefore);
+  initializeDumpOptions(codeGenOpts.dumpAfter, cl::DumpAfterAll, cl::DumpAfter);
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;
   }

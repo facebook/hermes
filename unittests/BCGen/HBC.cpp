@@ -439,7 +439,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
 
-  PassManager PM;
+  PassManager PM{Ctx->getCodeGenerationSettings()};
   PM.addPass<LowerCalls>(RA);
   // Due to Mov elimination, many LoadConstInsts will be reallocated
   PM.addPass<MovElimination>(RA);
@@ -482,7 +482,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
 
   // Ensure that spilling doesn't insert any additional instructions
   unsigned sizeBefore = BB->size();
-  PassManager PM;
+  PassManager PM{Ctx->getCodeGenerationSettings()};
   PM.addPass<SpillRegisters>(RA);
   PM.run(F);
   EXPECT_EQ(sizeBefore, BB->size());

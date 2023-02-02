@@ -51,7 +51,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   if (M->isLowered())
     return;
 
-  PassManager PM;
+  PassManager PM{M->getContext().getCodeGenerationSettings()};
   PM.addPass<LowerLoadStoreFrameInst>();
   if (options.optimizationEnabled) {
     // OptEnvironmentInit needs to run before LowerConstants.
@@ -527,7 +527,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
         RA.dump();
       }
 
-      PassManager PM;
+      PassManager PM{M->getContext().getCodeGenerationSettings()};
       PM.addPass<LowerStoreInstrs>(RA);
       PM.addPass<LowerCalls>(RA);
       if (options.optimizationEnabled) {

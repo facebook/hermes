@@ -10,6 +10,7 @@
 
 #include "hermes/Optimizer/PassManager/Pass.h"
 
+#include "hermes/AST/Context.h"
 #include "llvh/ADT/StringRef.h"
 
 #include <memory>
@@ -23,9 +24,12 @@ namespace hermes {
 /// the order of the passes, the order of the functions to be processed and the
 /// invalidation of analysis.
 class PassManager {
+  const CodeGenerationSettings &cgSettings_;
   std::vector<std::unique_ptr<Pass>> pipeline_;
 
  public:
+  explicit PassManager(const CodeGenerationSettings &settings);
+
   ~PassManager();
 
 /// Add a pass by appending its name.
@@ -36,6 +40,7 @@ class PassManager {
 #include "Passes.def"
 
   /// Add a pass by name.
+  /// Note: Only works for passes that are part of Passes.def.
   bool addPassForName(llvh::StringRef name) {
 #define PASS(ID, NAME, DESCRIPTION) \
   if (name == NAME) {               \
@@ -46,24 +51,31 @@ class PassManager {
     return false;
   }
 
-  static std::string getCustomPassText() {
+  /// Lists and describes the passes in Passes.def.
+  static llvh::StringRef getCustomPassText() {
     return
 #define PASS(ID, NAME, DESCRIPTION) NAME ": " DESCRIPTION "\n"
 #include "Passes.def"
         ;
   }
 
+  /// Adds the pass \p Pass with the provided \p args to this pass manager.
   template <typename Pass, typename... Args>
   void addPass(Args &&...args) {
     addPass(std::make_unique<Pass>(std::forward<Args>(args)...));
   }
 
-  /// Add a pass by reference.
-  void addPass(std::unique_ptr<Pass> P);
-
+  /// Runs this pass manager on the given Function \p F.
+  /// \pre Only FunctionPasses are registered with this PassManager.
   void run(Function *F);
 
+  /// Runs this pass manager on the given Module \p M.
   void run(Module *M);
+
+ private:
+  void addPass(std::unique_ptr<Pass> P);
+
+  std::unique_ptr<Pass> makeDumpPass(std::unique_ptr<Pass> pass);
 };
 } // namespace hermes
 #undef DEBUG_TYPE
