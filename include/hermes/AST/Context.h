@@ -54,6 +54,8 @@ struct CodeGenerationSettings {
   bool dumpUseList{false};
   /// Instrument IR for dynamic checking (if support is compiled in).
   bool instrumentIR{false};
+  /// Instructs IR Generation to use synthetic names for unnamed functions.
+  bool generateNameForUnnamedFunctions{false};
 
   /// Dump IR before each pass (if holds boolean), or the given passes (if holds
   /// DensetSet).

@@ -1055,6 +1055,23 @@ class ESTreeIRGen {
     return currentIRScopeDesc_->createInnerScope();
   }
 
+  /// Generate a synthetic name if \p name is invalid and the code generation
+  /// settings specify unnamed functions must have a name.
+  Identifier genAnonymousFunctionNameIfNeeded(Identifier name) {
+    if (LLVM_LIKELY(
+            name.isValid() ||
+            !Mod->getContext()
+                 .getCodeGenerationSettings()
+                 .generateNameForUnnamedFunctions)) {
+      return name;
+    }
+
+    // Use the current function's name to generate a globally-unique name.
+    return genAnonymousLabelName(
+        std::string("anonFunc@") +
+        curFunction()->function->getOriginalOrInferredName().c_str());
+  }
+
   /// Emit an instruction to load a value from a specified location.
   /// \param from location to load from, either a Variable or
   ///     GlobalObjectProperty.

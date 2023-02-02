@@ -73,6 +73,7 @@ using llvh::cl::list;
 using llvh::cl::opt;
 using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
+using llvh::cl::ReallyHidden;
 using llvh::cl::value_desc;
 using llvh::cl::values;
 using llvh::cl::ValuesClass;
@@ -446,6 +447,14 @@ static list<std::string> FunctionsToDump(
     "Xfunctions-to-dump",
     Hidden,
     desc("Only dump the IR for the given functions"),
+    cat(CompilerCategory));
+
+static opt<bool> GenerateNamesForAnonymousFunctions(
+    "Xgen-names-anon-functions",
+    init(false),
+    ReallyHidden,
+    desc("Instructs the compiler to create a synthetic label for anonymous "
+         "functions"),
     cat(CompilerCategory));
 
 #ifndef NDEBUG
@@ -1088,6 +1097,8 @@ std::shared_ptr<Context> createContext(
       codeGenOpts.dumpBefore, cl::DumpBeforeAll, cl::DumpBefore);
   initializeDumpOptions(codeGenOpts.dumpAfter, cl::DumpAfterAll, cl::DumpAfter);
   codeGenOpts.functionsToDump = stringListOptToDenseSet(cl::FunctionsToDump);
+  codeGenOpts.generateNameForUnnamedFunctions =
+      cl::GenerateNamesForAnonymousFunctions;
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;
   }
