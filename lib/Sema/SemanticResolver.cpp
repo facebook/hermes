@@ -676,24 +676,33 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   // Check for a direct call to local `eval()`.
   if (auto *identifier = llvh::dyn_cast<IdentifierNode>(node->_callee)) {
     if (identifier->_name == kw_.identEval) {
-      if (astContext_.getEnableEval()) {
-        // Register the local eval, but only if eval is enabled.
-        registerLocalEval(curScope_);
+      // Check to see whether it looks like attempting to call the actual
+      // global eval and generate a warning.
+      bool isEval;
+      if (Binding *binding = bindingTable_.find(identifier->_name)) {
+        Decl *decl = binding->decl;
+        isEval = decl->scope == semCtx_.getGlobalScope() &&
+            (decl->kind == Decl::Kind::UndeclaredGlobalProperty ||
+             decl->kind == Decl::Kind::GlobalProperty);
       } else {
-        // Otherwise check to see whether it looks like attempting to call the
-        // actual global eval and generate a warning.
-        bool isEval;
-        if (Binding *binding = bindingTable_.find(identifier->_name)) {
-          Decl *decl = binding->decl;
-          isEval = decl->scope == semCtx_.getGlobalScope() &&
-              (decl->kind == Decl::Kind::UndeclaredGlobalProperty ||
-               decl->kind == Decl::Kind::GlobalProperty);
-        } else {
-          isEval = true;
-        }
+        isEval = true;
+      }
+
+      // Register the local eval, but only if eval is enabled.
+      if (astContext_.getEnableEval()) {
         if (isEval) {
           sm_.warning(
-              node->_callee->getSourceRange(), "eval() is disabled at runtime");
+              Warning::DirectEval,
+              node->_callee->getSourceRange(),
+              "Direct call to eval(), but lexical scope is not supported.");
+        }
+        registerLocalEval(curScope_);
+      } else {
+        if (isEval) {
+          sm_.warning(
+              Warning::EvalDisabled,
+              node->_callee->getSourceRange(),
+              "eval() is disabled at runtime");
         }
       }
     }
