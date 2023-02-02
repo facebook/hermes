@@ -2953,6 +2953,42 @@ class DirectEvalInst : public Instruction {
   }
 };
 
+class DeclareGlobalVarInst : public SingleOperandInst {
+  DeclareGlobalVarInst(const DeclareGlobalVarInst &) = delete;
+  void operator=(const DeclareGlobalVarInst &) = delete;
+
+ public:
+  enum { NameIdx = 0 };
+
+  explicit DeclareGlobalVarInst(LiteralString *value)
+      : SingleOperandInst(ValueKind::DeclareGlobalVarInstKind, value) {}
+  explicit DeclareGlobalVarInst(
+      const DeclareGlobalVarInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  LiteralString *getName() const {
+    return llvh::cast<LiteralString>(getSingleOperand());
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::DeclareGlobalVarInstKind;
+  }
+};
+
 class HBCCreateEnvironmentInst : public Instruction {
   HBCCreateEnvironmentInst(const HBCCreateEnvironmentInst &) = delete;
   void operator=(const HBCCreateEnvironmentInst &) = delete;

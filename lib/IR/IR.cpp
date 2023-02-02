@@ -478,12 +478,8 @@ WordBitSet<> Instruction::getChangedOperands() {
   }
 }
 
-Variable::Variable(
-    ValueKind k,
-    VariableScope *scope,
-    DeclKind declKind,
-    Identifier txt)
-    : Value(k), declKind(declKind), text(txt), parent(scope) {
+Variable::Variable(VariableScope *scope, Identifier txt)
+    : Value(ValueKind::VariableKind), text(txt), parent(scope) {
   scope->addVariable(this);
 }
 

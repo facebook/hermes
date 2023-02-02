@@ -15,8 +15,9 @@
  * HermesCompiler.js is a module exposing the compiler interface to JS.
  */
 
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/SimpleDiagHandler.h"
