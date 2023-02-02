@@ -299,6 +299,7 @@ class SemanticResolver {
 
   void visitFunctionLike(
       ESTree::FunctionLikeNode *node,
+      ESTree::IdentifierNode *id,
       ESTree::Node *body,
       ESTree::NodeList &params);
   void visitFunctionExpression(

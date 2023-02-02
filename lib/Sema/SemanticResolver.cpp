@@ -95,12 +95,11 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
 
 void SemanticResolver::visit(ESTree::FunctionDeclarationNode *funcDecl) {
   curScope_->hoistedFunctions.push_back(funcDecl);
-  // Set the expression decl of the id.
-  if (funcDecl->_id) {
-    auto *id = llvh::cast<IdentifierNode>(funcDecl->_id);
-    semCtx_.setExpressionDecl(id, semCtx_.getDeclarationDecl(id));
-  }
-  visitFunctionLike(funcDecl, funcDecl->_body, funcDecl->_params);
+  visitFunctionLike(
+      funcDecl,
+      llvh::cast_or_null<ESTree::IdentifierNode>(funcDecl->_id),
+      funcDecl->_body,
+      funcDecl->_params);
 }
 void SemanticResolver::visit(ESTree::FunctionExpressionNode *funcExpr) {
   visitFunctionExpression(funcExpr, funcExpr->_body, funcExpr->_params);
@@ -120,7 +119,7 @@ void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
     arrowFunc->_body = blockStmt;
     arrowFunc->_expression = false;
   }
-  visitFunctionLike(arrowFunc, arrowFunc->_body, arrowFunc->_params);
+  visitFunctionLike(arrowFunc, nullptr, arrowFunc->_body, arrowFunc->_params);
 
   curFunctionInfo()->containsArrowFunctions = true;
   curFunctionInfo()->containsArrowFunctionsUsingArguments =
@@ -838,6 +837,7 @@ void SemanticResolver::visit(TypeAliasNode *node) {
 
 void SemanticResolver::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
+    ESTree::IdentifierNode *id,
     ESTree::Node *body,
     ESTree::NodeList &params) {
   FunctionContext newFuncCtx{
@@ -862,6 +862,12 @@ void SemanticResolver::visitFunctionLike(
   node->strictness = makeStrictness(curFunctionInfo()->strict);
   if (directives.sourceVisibility > curFunctionInfo()->sourceVisibility)
     curFunctionInfo()->sourceVisibility = directives.sourceVisibility;
+
+  if (id) {
+    // Set the expression decl of the id.
+    semCtx_.setExpressionDecl(id, semCtx_.getDeclarationDecl(id));
+    validateDeclarationName(Decl::Kind::FunctionExprName, id);
+  }
 
   // Create the function scope.
   // Note that we are not associating the new scope with an AST node. It should
@@ -954,16 +960,14 @@ void SemanticResolver::visitFunctionExpression(
           llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
     // If there is a name, declare it.
     ScopeRAII scope{*this, node};
-    if (validateDeclarationName(Decl::Kind::FunctionExprName, ident)) {
-      Decl *decl = semCtx_.newDeclInScope(
-          ident->_name, Decl::Kind::FunctionExprName, curScope_);
-      semCtx_.setBothDecl(ident, decl);
-      bindingTable_.insert(ident->_name, Binding{decl, ident});
-    }
-    visitFunctionLike(node, body, params);
+    Decl *decl = semCtx_.newDeclInScope(
+        ident->_name, Decl::Kind::FunctionExprName, curScope_);
+    semCtx_.setDeclarationDecl(ident, decl);
+    bindingTable_.insert(ident->_name, Binding{decl, ident});
+    visitFunctionLike(node, ident, body, params);
   } else {
     // Otherwise, no extra scope needed, just move on.
-    visitFunctionLike(node, body, params);
+    visitFunctionLike(node, nullptr, body, params);
   }
 }
 
