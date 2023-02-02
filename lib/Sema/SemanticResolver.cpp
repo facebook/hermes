@@ -268,6 +268,8 @@ void SemanticResolver::visit(ESTree::ForInStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::ForOfStatementNode *node) {
+  if (compile_ && node->_await)
+    sm_.error(node->getStartLoc(), "for await is not supported");
   visitForInOf(node, node, node->_left, node->_right, node->_body);
 }
 
