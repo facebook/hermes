@@ -4,14 +4,19 @@
 # LICENSE file in the root directory of this source tree.
 
 set(SHERMES_CC_INCLUDE_PATH
-  "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
+  "${CMAKE_BINARY_DIR}/lib/$<${IS_MULTI_CONFIG}:$<CONFIG>/>config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
-set(SHERMES_CC_LIB_PATH "${CMAKE_BINARY_DIR}/lib" CACHE STRING
+set(SHERMES_CC_LIB_PATH "${CMAKE_BINARY_DIR}/lib$<${IS_MULTI_CONFIG}:/$<CONFIG>>" CACHE STRING
   "Library path when invoking CC")
 
-configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+file(GENERATE
+        OUTPUT $<CONFIG>/config.h
+        CONTENT "\
+#define SHERMES_CC_INCLUDE_PATH       R\"(${SHERMES_CC_INCLUDE_PATH})\"
+#define SHERMES_CC_LIB_PATH           R\"(${SHERMES_CC_LIB_PATH})\""
+        )
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
 
 add_hermes_tool(shermes
   shermes.cpp

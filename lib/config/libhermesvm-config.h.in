@@ -18,9 +18,9 @@
 #ifndef HERMESVM_CONTIGUOUS_HEAP
 #cmakedefine HERMESVM_CONTIGUOUS_HEAP
 #endif
-#ifndef HERMESVM_SIZEOF_VOID_P
 /// The value of `sizeof(void *)` as an integer for used by the preprocessor.
 #define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
-#endif
+#define HERMESVM_DEBUG_MODE $<CONFIG:Debug,RelWithDebInfo>
+#define HERMESVM_MODEL @HERMESVM_MODEL@_$<IF:$<CONFIG:Debug>,dbg,rel>
 
 #endif

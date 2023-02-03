@@ -1614,6 +1614,11 @@ void generateFunction(
   for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
     OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
 
+  // In the global function, ensure that we are linking to the correct
+  // library.
+  if (F.isGlobalScope())
+    OS << "  _SH_MODEL();\n";
+
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
   for (auto &B : order) {
