@@ -134,6 +134,16 @@ bool hermes::getCallSites(
     return false;
 
   for (auto *CU : F->getUsers()) {
+    // Target field must be ignored here because we'll find this call
+    // via the BaseCreateCallableInst in another iteration of the loop.
+    // We have to ignore it because the function is only going to return `true`
+    // if _all_ callsites are found and it'll bail on unknown insts.
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(CU)) {
+      if (call->getTarget() == F) {
+        continue;
+      }
+    }
+
     auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(CU);
     if (!CFI) {
       // Used in an instruction that returns a non-callable. Bail.
