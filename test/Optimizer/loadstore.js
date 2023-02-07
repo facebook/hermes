@@ -42,7 +42,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %4 = CreateFunctionInst %test2() : undefined
 // OPT-CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "test2" : string
 // OPT-CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
-// OPT-CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// OPT-CHECK-NEXT:  %7 = CallInst %6, empty, empty, undefined : undefined
 // OPT-CHECK-NEXT:  %8 = ReturnInst %7
 // OPT-CHECK-NEXT:function_end
 
@@ -66,7 +66,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %7 = BinaryOperatorInst '+', %2 : string|number|bigint, 4 : number
 // OPT-CHECK-NEXT:  %8 = BinaryOperatorInst '+', %2 : string|number|bigint, 5 : number
 // OPT-CHECK-NEXT:  %9 = BinaryOperatorInst '+', %2 : string|number|bigint, 6 : number
-// OPT-CHECK-NEXT:  %10 = CallInst %3, undefined : undefined, %4 : string|number, %5 : string|number, %6 : string|number, %7 : string|number, %8 : string|number, %9 : string|number
+// OPT-CHECK-NEXT:  %10 = CallInst %3, empty, empty, undefined : undefined, %4 : string|number, %5 : string|number, %6 : string|number, %7 : string|number, %8 : string|number, %9 : string|number
 // OPT-CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // OPT-CHECK-NEXT:function_end
 
@@ -82,7 +82,7 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
 // CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
+// CHECK-NEXT:  %9 = CallInst %8, empty, empty, undefined : undefined
 // CHECK-NEXT:  %10 = StoreStackInst %9, %6
 // CHECK-NEXT:  %11 = LoadStackInst %6
 // CHECK-NEXT:  %12 = ReturnInst %11
@@ -136,6 +136,6 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %19 = BinaryOperatorInst '+', %18, 5 : number
 // CHECK-NEXT:  %20 = LoadFrameInst [x]
 // CHECK-NEXT:  %21 = BinaryOperatorInst '+', %20, 6 : number
-// CHECK-NEXT:  %22 = CallInst %9, undefined : undefined, %11, %13, %15, %17, %19, %21
+// CHECK-NEXT:  %22 = CallInst %9, empty, empty, undefined : undefined, %11, %13, %15, %17, %19, %21
 // CHECK-NEXT:  %23 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

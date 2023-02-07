@@ -49,7 +49,7 @@ function baz() {
 // CHECK-NEXT:  %3 = DirectEvalInst "1 + 1" : string, false : boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, "1 + 1" : string
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, "1 + 1" : string
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2
@@ -64,14 +64,14 @@ function baz() {
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [globalThis.eval] : number
 // CHECK-NEXT:  %5 = CompareBranchInst '===', %0, %4 : closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = DirectEvalInst "2 + 2" : string, false : boolean
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, "2 + 2" : string, %1, %3
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, "2 + 2" : string, %1, %3
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = PhiInst %6, %BB1, %8, %BB2
@@ -90,7 +90,7 @@ function baz() {
 // CHECK-NEXT:  %3 = DirectEvalInst undefined : undefined, false : boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2

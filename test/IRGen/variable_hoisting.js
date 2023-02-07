@@ -28,7 +28,7 @@ function main() {
 // CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "main" : string
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, empty, empty, undefined : undefined
 // CHECK-NEXT:  %7 = StoreStackInst %6, %3
 // CHECK-NEXT:  %8 = LoadStackInst %3
 // CHECK-NEXT:  %9 = ReturnInst %8

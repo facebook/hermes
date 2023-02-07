@@ -57,6 +57,6 @@ function foo(x) {
 // CHECK-NEXT:  $Reg6           	%6 = HBCStoreToEnvironmentInst %0, %5, [x]
 // CHECK-NEXT:  $Reg6           	%7 = HBCLoadFromEnvironmentInst %0, [x]
 // CHECK-NEXT:  $Reg7           	%8 = LoadPropertyInst %7, "sink" : string
-// CHECK-NEXT:  $Reg8           	%9 = CallInst %8, %7, %1 : number, %2 : number, %3 : number
+// CHECK-NEXT:  $Reg8           	%9 = CallInst %8, empty, empty, %7, %1 : number, %2 : number, %3 : number
 // CHECK-NEXT:  $Reg8           	%10 = ReturnInst %4 : undefined
 // CHECK-NEXT:function_end

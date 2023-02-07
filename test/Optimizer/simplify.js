@@ -535,24 +535,24 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 133 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 1.5 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, -7.5 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, 2 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, 2 : number
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, Infinity : number
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, -0 : number
-// CHECK-NEXT:  %14 = CallInst %0, undefined : undefined, -Infinity : number
-// CHECK-NEXT:  %15 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %16 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %17 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %18 = CallInst %0, undefined : undefined, NaN : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 133 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 1.5 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -7.5 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 2 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 2 : number
+// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, Infinity : number
+// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, -0 : number
+// CHECK-NEXT:  %14 = CallInst %0, empty, empty, undefined : undefined, -Infinity : number
+// CHECK-NEXT:  %15 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %16 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %17 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %18 = CallInst %0, empty, empty, undefined : undefined, NaN : number
 // CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -560,19 +560,19 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 2 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, -2 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 2 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, 0.5 : number
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, 0.5 : number
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, NaN : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 2 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, -2 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 2 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0.5 : number
+// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, 0.5 : number
+// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, NaN : number
 // CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -580,22 +580,22 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 23 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 20 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, -727379959 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 99 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, -2 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, 9 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, 17 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, 23 : number
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, 17 : number
-// CHECK-NEXT:  %13 = CallInst %0, undefined : undefined, 23 : number
-// CHECK-NEXT:  %14 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %15 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %16 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 23 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 20 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -727379959 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 99 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, -2 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 9 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 17 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 23 : number
+// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, 17 : number
+// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, 23 : number
+// CHECK-NEXT:  %14 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %15 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %16 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -603,9 +603,9 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "hello world" : string
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, "hello NaN" : string
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, "NaNworld" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "hello world" : string
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, "hello NaN" : string
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "NaNworld" : string
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -615,10 +615,10 @@ function objectCond() {
 // CHECK-NEXT:  %0 = LoadParamInst %x
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %2 = AddEmptyStringInst %0
-// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, %2 : string
+// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, %2 : string
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %5 = AddEmptyStringInst %0
-// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, %5 : string
+// CHECK-NEXT:  %6 = CallInst %4, empty, empty, undefined : undefined, %5 : string
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -634,11 +634,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, "nullhello" : string
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, "hellonull" : string
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "nullhello" : string
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "hellonull" : string
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -646,11 +646,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, -0 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, -0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, -0 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -658,13 +658,13 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 8 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 10 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 32 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, -2 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 8 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 10 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 32 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -2 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -672,11 +672,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -684,11 +684,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -696,16 +696,16 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, -4 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -4 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -713,11 +713,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -725,11 +725,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -737,14 +737,14 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -752,10 +752,10 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 1 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -763,7 +763,7 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 1 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -771,16 +771,16 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 3 : number
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, 134217727 : number
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, 31 : number
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, 536870908 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, 4294967295 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 3 : number
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 134217727 : number
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 31 : number
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 536870908 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 4294967295 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -788,11 +788,11 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, "undefinedasdf" : string
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, "asdfundefined" : string
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, NaN : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "undefinedasdf" : string
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "asdfundefined" : string
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, NaN : number
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -801,23 +801,23 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %y
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %4 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %5 = CallInst %1, empty, empty, undefined : undefined, false : boolean
 // CHECK-NEXT:  %6 = AddEmptyStringInst %0
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %10 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %7 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %8 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %9 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %10 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %11 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %12 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %13 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %14 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %15 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %16 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %17 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %18 = CallInst %1, empty, empty, undefined : undefined, false : boolean
 // CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -826,23 +826,23 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %y
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %6 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %8 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %4 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %5 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %6 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %7 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %8 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %9 = CallInst %1, empty, empty, undefined : undefined, false : boolean
 // CHECK-NEXT:  %10 = AsInt32Inst %0
-// CHECK-NEXT:  %11 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %14 = CallInst %1, undefined : undefined, false : boolean
-// CHECK-NEXT:  %15 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %16 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %17 = CallInst %1, undefined : undefined, true : boolean
-// CHECK-NEXT:  %18 = CallInst %1, undefined : undefined, false : boolean
+// CHECK-NEXT:  %11 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %12 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %13 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %14 = CallInst %1, empty, empty, undefined : undefined, false : boolean
+// CHECK-NEXT:  %15 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %16 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %17 = CallInst %1, empty, empty, undefined : undefined, true : boolean
+// CHECK-NEXT:  %18 = CallInst %1, empty, empty, undefined : undefined, false : boolean
 // CHECK-NEXT:  %19 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -850,9 +850,9 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 8 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 64 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 8 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 64 : number
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -861,8 +861,8 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %1 = BinaryOperatorInst '>=', undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, %1 : boolean
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, true : boolean
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, %1 : boolean
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, true : boolean
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -911,18 +911,18 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "number" : string
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, "object" : string
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, "string" : string
-// CHECK-NEXT:  %4 = CallInst %0, undefined : undefined, "boolean" : string
-// CHECK-NEXT:  %5 = CallInst %0, undefined : undefined, "object" : string
-// CHECK-NEXT:  %6 = CallInst %0, undefined : undefined, "function" : string
-// CHECK-NEXT:  %7 = CallInst %0, undefined : undefined, -9 : number
-// CHECK-NEXT:  %8 = CallInst %0, undefined : undefined, -1 : number
-// CHECK-NEXT:  %9 = CallInst %0, undefined : undefined, -0 : number
-// CHECK-NEXT:  %10 = CallInst %0, undefined : undefined, -0 : number
-// CHECK-NEXT:  %11 = CallInst %0, undefined : undefined, NaN : number
-// CHECK-NEXT:  %12 = CallInst %0, undefined : undefined, true : boolean
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "number" : string
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, "object" : string
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "string" : string
+// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "boolean" : string
+// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, "object" : string
+// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, "function" : string
+// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -9 : number
+// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, -1 : number
+// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -0 : number
+// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, -0 : number
+// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, NaN : number
+// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, true : boolean
 // CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -943,9 +943,9 @@ function objectCond() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 7 : number
-// CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 2 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 7 : number
+// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 2 : number
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

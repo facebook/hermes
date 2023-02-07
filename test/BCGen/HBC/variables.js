@@ -76,7 +76,7 @@ function daa(a) {
 // CHECK-NEXT:  %5 = HBCStoreToEnvironmentInst %0, %4, [a]
 // CHECK-NEXT:  %6 = LoadPropertyInst %2 : object, "bar" : string
 // CHECK-NEXT:  %7 = HBCLoadFromEnvironmentInst %0, [a]
-// CHECK-NEXT:  %8 = CallInst %6, %1 : undefined, %7
+// CHECK-NEXT:  %8 = CallInst %6, empty, empty, %1 : undefined, %7
 // CHECK-NEXT:  %9 = HBCStoreToEnvironmentInst %0, %8, [b]
 // CHECK-NEXT:  %10 = HBCLoadFromEnvironmentInst %0, [b]
 // CHECK-NEXT:  %11 = ReturnInst %10
@@ -147,7 +147,7 @@ function daa(a) {
 // CHKOPT-NEXT:  %1 = LoadPropertyInst %0 : object, "bar" : string
 // CHKOPT-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 // CHKOPT-NEXT:  %3 = LoadParamInst %a
-// CHKOPT-NEXT:  %4 = HBCCallNInst %1, %2 : undefined, %3
+// CHKOPT-NEXT:  %4 = HBCCallNInst %1, empty, empty, %2 : undefined, %3
 // CHKOPT-NEXT:  %5 = ReturnInst %4
 // CHKOPT-NEXT:function_end
 

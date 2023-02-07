@@ -67,7 +67,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "Car" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst %1, "prototype" : string
 // CHECK-NEXT:  %3 = CreateThisInst %2, %1
-// CHECK-NEXT:  %4 = ConstructInst %1, %3, "Eagle" : string, 1993 : number
+// CHECK-NEXT:  %4 = ConstructInst %1, empty, empty, %3, "Eagle" : string, 1993 : number
 // CHECK-NEXT:  %5 = GetConstructedObjectInst %3, %4
 // CHECK-NEXT:  %6 = StoreFrameInst %5, [ctor]
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
@@ -78,7 +78,7 @@ function test_simple_call() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [call]
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %3 = StoreFrameInst %2, [call]
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

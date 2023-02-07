@@ -33,7 +33,7 @@ function main()  {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : string
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 2 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 2 : number
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

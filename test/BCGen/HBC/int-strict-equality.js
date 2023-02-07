@@ -122,9 +122,9 @@ function test_could_be_int(func) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %func
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined
 // CHECK-NEXT:  %2 = BinaryOperatorInst '*', %1, 100 : number
-// CHECK-NEXT:  %3 = CallInst %0, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = AsInt32Inst %2 : number

@@ -54,7 +54,7 @@ function foo(obj) {
 // CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
 // CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %18 = LoadFrameInst [x]
-// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, %18
+// CHECK-NEXT:  %19 = CallInst %17, empty, empty, undefined : undefined, %18
 // CHECK-NEXT:  %20 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %21 = ReturnInst undefined : undefined

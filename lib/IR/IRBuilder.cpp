@@ -351,18 +351,22 @@ StoreStackInst *IRBuilder::createStoreStackInst(
 
 CallInst *IRBuilder::createCallInst(
     Value *callee,
+    Value *target,
+    Value *env,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(callee, thisValue, args);
+  auto CI = new CallInst(callee, target, env, thisValue, args);
   insert(CI);
   return CI;
 }
 
 HBCCallNInst *IRBuilder::createHBCCallNInst(
     Value *callee,
+    Value *target,
+    Value *env,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new HBCCallNInst(callee, thisValue, args);
+  auto CI = new HBCCallNInst(callee, target, env, thisValue, args);
   insert(CI);
   return CI;
 }
@@ -880,9 +884,11 @@ CreateThisInst *IRBuilder::createCreateThisInst(
 }
 ConstructInst *IRBuilder::createConstructInst(
     Value *closure,
+    Value *target,
+    Value *env,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto inst = new ConstructInst(closure, thisValue, arguments);
+  auto inst = new ConstructInst(closure, target, env, thisValue, arguments);
   insert(inst);
   return inst;
 }
@@ -904,7 +910,11 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
   auto *inst = new CallBuiltinInst(
-      getLiteralNumber(builtinIndex), getLiteralUndefined(), arguments);
+      getLiteralNumber(builtinIndex),
+      getEmptySentinel(),
+      getEmptySentinel(),
+      getLiteralUndefined(),
+      arguments);
   insert(inst);
   return inst;
 }
@@ -931,7 +941,8 @@ HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
     Function *callee,
     Value *thisValue,
     ArrayRef<Value *> arguments) {
-  auto *inst = new HBCCallDirectInst(callee, thisValue, arguments);
+  auto *inst =
+      new HBCCallDirectInst(callee, getEmptySentinel(), thisValue, arguments);
   insert(inst);
   return inst;
 }

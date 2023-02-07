@@ -66,7 +66,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %7 = LoadFrameInst [x]
 // CHECK-NEXT:  %8 = LoadFrameInst [y]
 // CHECK-NEXT:  %9 = LoadFrameInst [z]
-// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, %7, %8, %9
+// CHECK-NEXT:  %10 = CallInst %6, empty, empty, undefined : undefined, %7, %8, %9
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -80,6 +80,6 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %4 = LoadFrameInst [obj]
 // CHECK-NEXT:  %5 = LoadPropertyInst %4, "foo" : string
 // CHECK-NEXT:  %6 = LoadFrameInst [param]
-// CHECK-NEXT:  %7 = CallInst %5, %4, %6
+// CHECK-NEXT:  %7 = CallInst %5, empty, empty, %4, %6
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

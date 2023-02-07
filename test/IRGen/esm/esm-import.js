@@ -35,16 +35,16 @@ import 'bar.js';
 // CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
 // CHECK-NEXT:  %4 = LoadParamInst %module
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
-// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %6 = CallInst %2, empty, empty, undefined : undefined, "foo.js" : string
 // CHECK-NEXT:  %7 = StoreFrameInst %6, [Foo]
-// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %8 = CallInst %2, empty, empty, undefined : undefined, "foo.js" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst %8, "?default" : string
 // CHECK-NEXT:  %10 = StoreFrameInst %9, [defaultFoo]
-// CHECK-NEXT:  %11 = CallInst %2, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %11 = CallInst %2, empty, empty, undefined : undefined, "foo.js" : string
 // CHECK-NEXT:  %12 = LoadPropertyInst %11, "x" : string
 // CHECK-NEXT:  %13 = StoreFrameInst %12, [x]
 // CHECK-NEXT:  %14 = LoadPropertyInst %11, "y" : string
 // CHECK-NEXT:  %15 = StoreFrameInst %14, [z]
-// CHECK-NEXT:  %16 = CallInst %2, undefined : undefined, "bar.js" : string
+// CHECK-NEXT:  %16 = CallInst %2, empty, empty, undefined : undefined, "bar.js" : string
 // CHECK-NEXT:  %17 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

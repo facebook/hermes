@@ -58,7 +58,7 @@ function test_hex_printable() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "A string with a newline\\n" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\n" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -66,7 +66,7 @@ function test_hex_printable() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "A string with a newline\\\"" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\\"" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -74,7 +74,7 @@ function test_hex_printable() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "A string with a newline\\\\" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\\\" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -82,7 +82,7 @@ function test_hex_printable() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "A string with a hex: \\x03" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a hex: \\x03" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -90,6 +90,6 @@ function test_hex_printable() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, "A string with a hex printable: a" : string
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a hex printable: a" : string
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

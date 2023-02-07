@@ -26,7 +26,7 @@ f();
 // CHECK-NEXT:  %1 = CreateFunctionInst %f() : undefined
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "f" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "f" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 

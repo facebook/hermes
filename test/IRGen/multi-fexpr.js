@@ -95,7 +95,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %fexpr()
 // CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [fexpr]
-// CHECK-NEXT:  %2 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %0 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB3
@@ -104,7 +104,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = CreateFunctionInst %fexpr()
 // CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [fexpr]
-// CHECK-NEXT:  %8 = CallInst %6 : closure, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %6 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %9 = CondBranchInst %8, %BB1, %BB2
 // CHECK-NEXT:function_end
 
@@ -116,19 +116,19 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %1 = CatchInst
 // CHECK-NEXT:  %2 = CreateFunctionInst %"fexpr 1#"()
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [fexpr]
-// CHECK-NEXT:  %4 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %2 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %5 = ThrowInst %1
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, empty, empty, undefined : undefined
 // CHECK-NEXT:  %9 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = TryEndInst
 // CHECK-NEXT:  %11 = CreateFunctionInst %"fexpr 1#"()
 // CHECK-NEXT:  %12 = StoreFrameInst %11 : closure, [fexpr]
-// CHECK-NEXT:  %13 = CallInst %11 : closure, undefined : undefined
+// CHECK-NEXT:  %13 = CallInst %11 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %14 = BranchInst %BB3
 // CHECK-NEXT:function_end
 

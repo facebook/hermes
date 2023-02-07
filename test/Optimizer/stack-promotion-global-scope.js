@@ -17,6 +17,6 @@ print(x);
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 10 : number
+// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 10 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end

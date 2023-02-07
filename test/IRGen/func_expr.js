@@ -58,7 +58,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %""()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -68,7 +68,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadParamInst %x
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 1#"()
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -78,7 +78,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = LoadParamInst %x
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 2#"()
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -87,7 +87,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %some_local_name()
 // CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [some_local_name]
-// CHECK-NEXT:  %2 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %0 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -112,7 +112,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %" 3#"()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

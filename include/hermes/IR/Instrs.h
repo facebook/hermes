@@ -731,10 +731,14 @@ class BaseCallInst : public Instruction {
   explicit BaseCallInst(
       ValueKind kind,
       Value *callee,
+      Value *target,
+      Value *env,
       Value *thisValue,
       ArrayRef<Value *> args)
       : Instruction(kind) {
     pushOperand(callee);
+    pushOperand(target);
+    pushOperand(env);
     pushOperand(thisValue);
     for (const auto &arg : args) {
       pushOperand(arg);
@@ -750,12 +754,30 @@ class BaseCallInst : public Instruction {
   using Instruction::getOperand;
 
  public:
-  enum { CalleeIdx, ThisIdx };
+  enum { CalleeIdx, TargetIdx, EnvIdx, ThisIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
   Value *getCallee() const {
     return getOperand(CalleeIdx);
+  }
+  /// \return the IR Function that the instruction is calling,
+  ///   or EmptySentinel if it's not known at this time.
+  Value *getTarget() const {
+    return getOperand(TargetIdx);
+  }
+  /// Set the target to \p func.
+  void setTarget(Function *func) {
+    setOperand(func, TargetIdx);
+  }
+  /// \return the Environment that the target is being called with,
+  ///   or EmptySentinel if it's not known at this time.
+  Value *getEnvironment() const {
+    return getOperand(EnvIdx);
+  }
+  /// Set the environment to \p env.
+  void setEnvironment(Value *env) {
+    setOperand(env, EnvIdx);
   }
   /// Get argument 0, the value for 'this'.
   Value *getThis() const {
@@ -796,8 +818,19 @@ class CallInst : public BaseCallInst {
   void operator=(const CallInst &) = delete;
 
  public:
-  explicit CallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
-      : BaseCallInst(ValueKind::CallInstKind, callee, thisValue, args) {}
+  explicit CallInst(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : BaseCallInst(
+            ValueKind::CallInstKind,
+            callee,
+            target,
+            env,
+            thisValue,
+            args) {}
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
       : BaseCallInst(src, operands) {}
 
@@ -815,9 +848,17 @@ class CallBuiltinInst : public BaseCallInst {
  public:
   explicit CallBuiltinInst(
       LiteralNumber *callee,
+      EmptySentinel *target,
+      EmptySentinel *env,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
-      : BaseCallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
+      : BaseCallInst(
+            ValueKind::CallBuiltinInstKind,
+            callee,
+            target,
+            env,
+            thisValue,
+            args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
         callee->getValue() < (double)BuiltinMethod::_count &&
@@ -955,8 +996,19 @@ class HBCCallNInst : public BaseCallInst {
   /// including 'this'.
   static constexpr uint32_t kMaxArgs = 4;
 
-  explicit HBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
-      : BaseCallInst(ValueKind::HBCCallNInstKind, callee, thisValue, args) {
+  explicit HBCCallNInst(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : BaseCallInst(
+            ValueKind::HBCCallNInstKind,
+            callee,
+            target,
+            env,
+            thisValue,
+            args) {
     // +1 for 'this'.
     assert(
         kMinArgs <= args.size() + 1 && args.size() + 1 <= kMaxArgs &&
@@ -3417,9 +3469,17 @@ class ConstructInst : public BaseCallInst {
  public:
   explicit ConstructInst(
       Value *callee,
+      Value *target,
+      Value *env,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : BaseCallInst(ValueKind::ConstructInstKind, callee, thisValue, args) {}
+      : BaseCallInst(
+            ValueKind::ConstructInstKind,
+            callee,
+            target,
+            env,
+            thisValue,
+            args) {}
   explicit ConstructInst(
       const ConstructInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3487,11 +3547,14 @@ class HBCCallDirectInst : public BaseCallInst {
 
   explicit HBCCallDirectInst(
       Function *callee,
+      Value *env,
       Value *thisValue,
       ArrayRef<Value *> args)
       : BaseCallInst(
             ValueKind::HBCCallDirectInstKind,
-            callee,
+            /* callee closure */ callee,
+            /* function target */ callee,
+            env,
             thisValue,
             args) {
     assert(

@@ -191,7 +191,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = PhiInst 0 : number, %BB0, %6 : number, %BB1
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, %3 : number
+// CHECK-NEXT:  %5 = CallInst %4, empty, empty, undefined : undefined, %3 : number
 // CHECK-NEXT:  %6 = UnaryOperatorInst '++', %3 : number
 // CHECK-NEXT:  %7 = BinaryOperatorInst '<', %6 : number, %0
 // CHECK-NEXT:  %8 = CondBranchInst %7 : boolean, %BB1, %BB2
@@ -212,7 +212,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %6 = UnaryOperatorInst '-', %3 : number
 // CHECK-NEXT:  %7 = BinaryOperatorInst '+', %4 : number, 7 : number
 // CHECK-NEXT:  %8 = BinaryOperatorInst '*', %6 : number, %7 : number
-// CHECK-NEXT:  %9 = CallInst %2, undefined : undefined, %8 : number
+// CHECK-NEXT:  %9 = CallInst %2, empty, empty, undefined : undefined, %8 : number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -226,12 +226,12 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %4 = BinaryOperatorInst '*', 3 : number, %1 : number
 // CHECK-NEXT:  %5 = BinaryOperatorInst '*', %4 : number, %1 : number
-// CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, %5 : number
+// CHECK-NEXT:  %6 = CallInst %3, empty, empty, undefined : undefined, %5 : number
 // CHECK-NEXT:  %7 = BinaryOperatorInst '-', %1 : number, 1 : number
 // CHECK-NEXT:  %8 = CondBranchInst %7 : number, %BB2, %BB1
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, %5 : number
+// CHECK-NEXT:  %10 = CallInst %9, empty, empty, undefined : undefined, %5 : number
 // CHECK-NEXT:  %11 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -250,7 +250,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %8 = BinaryOperatorInst '-', %4 : number, 3 : number
-// CHECK-NEXT:  %9 = CallInst %7, undefined : undefined, %8 : number
+// CHECK-NEXT:  %9 = CallInst %7, empty, empty, undefined : undefined, %8 : number
 // CHECK-NEXT:  %10 = BranchInst %BB1
 // CHECK-NEXT:function_end
 

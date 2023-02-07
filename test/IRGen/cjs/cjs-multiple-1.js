@@ -30,7 +30,7 @@ print('done 1');
 // CHECK-NEXT:  %4 = LoadParamInst %module
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, "done 1" : string
+// CHECK-NEXT:  %7 = CallInst %6, empty, empty, undefined : undefined, "done 1" : string
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -44,6 +44,6 @@ print('done 1');
 // CHECK-NEXT:  %4 = LoadParamInst %module
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, "done 2" : string
+// CHECK-NEXT:  %7 = CallInst %6, empty, empty, undefined : undefined, "done 2" : string
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

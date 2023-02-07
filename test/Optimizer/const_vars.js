@@ -29,8 +29,8 @@ foo()()
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo() : closure
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %4, empty, empty, undefined : undefined
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 

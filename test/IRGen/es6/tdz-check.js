@@ -100,7 +100,7 @@ function check4() {
 // CHECK-NEXT:  %1 = CreateFunctionInst %check3_inner()
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [check3_inner]
 // CHECK-NEXT:  %3 = LoadFrameInst [check3_inner]
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
 // CHECK-NEXT:  %6 = LoadFrameInst [x]
 // CHECK-NEXT:  %7 = ThrowIfEmptyInst %6

@@ -43,7 +43,7 @@ function foo(o) {
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [flag1]
 // CHECK-NEXT:  %2 = LoadParamInst %o
 // CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [cnt] : number|bigint
-// CHECK-NEXT:  %4 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %2, empty, empty, undefined : undefined
 // CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [flag2]
 // CHECK-NEXT:  %6 = CreateFunctionInst %""() : number|bigint
 // CHECK-NEXT:  %7 = ReturnInst %6 : closure
@@ -98,7 +98,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0, %1 : number, [cnt] : number|bigint
 // CHKLIR-NEXT:  %3 = LoadParamInst %o
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst undefined : undefined
-// CHKLIR-NEXT:  %5 = HBCCallNInst %3, %4 : undefined
+// CHKLIR-NEXT:  %5 = HBCCallNInst %3, empty, empty, %4 : undefined
 // CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0, %4 : undefined, [flag2]
 // CHKLIR-NEXT:  %7 = HBCCreateFunctionInst %""() : number|bigint, %0
 // CHKLIR-NEXT:  %8 = ReturnInst %7 : closure

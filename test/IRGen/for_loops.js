@@ -104,7 +104,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %6 = LoadFrameInst [i]
-// CHECK-NEXT:  %7 = CallInst %5, undefined : undefined, %6
+// CHECK-NEXT:  %7 = CallInst %5, empty, empty, undefined : undefined, %6
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
@@ -239,27 +239,27 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %10 = LoadParamInst %f
 // CHECK-NEXT:  %11 = StoreFrameInst %10, [f]
 // CHECK-NEXT:  %12 = LoadFrameInst [a]
-// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined
+// CHECK-NEXT:  %13 = CallInst %12, empty, empty, undefined : undefined
 // CHECK-NEXT:  %14 = LoadFrameInst [b]
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %14, empty, empty, undefined : undefined
 // CHECK-NEXT:  %16 = CondBranchInst %15, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %17 = LoadFrameInst [d]
-// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined
+// CHECK-NEXT:  %18 = CallInst %17, empty, empty, undefined : undefined
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %20 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %21 = LoadFrameInst [b]
-// CHECK-NEXT:  %22 = CallInst %21, undefined : undefined
+// CHECK-NEXT:  %22 = CallInst %21, empty, empty, undefined : undefined
 // CHECK-NEXT:  %23 = CondBranchInst %22, %BB1, %BB2
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %24 = LoadFrameInst [c]
-// CHECK-NEXT:  %25 = CallInst %24, undefined : undefined
+// CHECK-NEXT:  %25 = CallInst %24, empty, empty, undefined : undefined
 // CHECK-NEXT:  %26 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %27 = LoadFrameInst [e]
-// CHECK-NEXT:  %28 = CallInst %27, undefined : undefined
+// CHECK-NEXT:  %28 = CallInst %27, empty, empty, undefined : undefined
 // CHECK-NEXT:  %29 = BranchInst %BB4
 // CHECK-NEXT:function_end
 

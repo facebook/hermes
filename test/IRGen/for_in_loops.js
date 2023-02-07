@@ -99,7 +99,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14, [prop]
 // CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %17 = LoadFrameInst [prop]
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %18 = CallInst %16, empty, empty, undefined : undefined, %17
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -127,7 +127,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %15 = StoreFrameInst %14, [prop]
 // CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %17 = LoadFrameInst [prop]
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, %17
+// CHECK-NEXT:  %18 = CallInst %16, empty, empty, undefined : undefined, %17
 // CHECK-NEXT:  %19 = BranchInst %BB1
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = BranchInst %BB2
@@ -161,7 +161,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %16 = StoreFrameInst %15, [prop]
 // CHECK-NEXT:  %17 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %18 = LoadFrameInst [prop]
-// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, %18
+// CHECK-NEXT:  %19 = CallInst %17, empty, empty, undefined : undefined, %18
 // CHECK-NEXT:  %20 = BranchInst %BB1
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %21 = BranchInst %BB2
@@ -190,7 +190,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %14 = StoreFrameInst %13, [prop]
 // CHECK-NEXT:  %15 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %16 = LoadFrameInst [prop]
-// CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, %16
+// CHECK-NEXT:  %17 = CallInst %15, empty, empty, undefined : undefined, %16
 // CHECK-NEXT:  %18 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
@@ -212,7 +212,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %12 = LoadFrameInst [x]
 // CHECK-NEXT:  %13 = LoadPropertyInst %12, "y" : string
-// CHECK-NEXT:  %14 = CallInst %11, undefined : undefined, %13
+// CHECK-NEXT:  %14 = CallInst %11, empty, empty, undefined : undefined, %13
 // CHECK-NEXT:  %15 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %16 = GetNextPNameInst %9, %4, %5, %6, %3, %BB1, %BB3
@@ -223,6 +223,6 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %20 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %21 = LoadFrameInst [x]
 // CHECK-NEXT:  %22 = LoadPropertyInst %21, "y" : string
-// CHECK-NEXT:  %23 = CallInst %20, undefined : undefined, %22
+// CHECK-NEXT:  %23 = CallInst %20, empty, empty, undefined : undefined, %22
 // CHECK-NEXT:  %24 = BranchInst %BB2
 // CHECK-NEXT:function_end

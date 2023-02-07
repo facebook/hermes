@@ -93,7 +93,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %21 = StoreFrameInst %12, [i]
 // CHECK-NEXT:  %22 = LoadFrameInst [cb]
 // CHECK-NEXT:  %23 = LoadFrameInst [i]
-// CHECK-NEXT:  %24 = CallInst %22, undefined : undefined, %23
+// CHECK-NEXT:  %24 = CallInst %22, empty, empty, undefined : undefined, %23
 // CHECK-NEXT:  %25 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %26 = TryEndInst

@@ -35,7 +35,7 @@ function sink(x, y) {
 // CHECK-NEXT:  %9 = StoreStackInst 3 : number, %4
 // CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %12 = CallInst %10, undefined : undefined, %11
+// CHECK-NEXT:  %12 = CallInst %10, empty, empty, undefined : undefined, %11
 // CHECK-NEXT:  %13 = StoreStackInst %12, %4
 // CHECK-NEXT:  %14 = LoadStackInst %4
 // CHECK-NEXT:  %15 = ReturnInst %14

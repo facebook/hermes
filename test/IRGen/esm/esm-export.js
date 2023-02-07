@@ -66,8 +66,8 @@ export * from 'foo.js';
 // CHECK-NEXT:  %27 = StorePropertyLooseInst %26, %0, "a" : string
 // CHECK-NEXT:  %28 = LoadFrameInst [longVariableName]
 // CHECK-NEXT:  %29 = StorePropertyLooseInst %28, %0, "b" : string
-// CHECK-NEXT:  %30 = CallInst %2, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:  %31 = CallBuiltinInst [HermesBuiltin.exportAll] : number, undefined : undefined, %0, %30
+// CHECK-NEXT:  %30 = CallInst %2, empty, empty, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %31 = CallBuiltinInst [HermesBuiltin.exportAll] : number, empty, empty, undefined : undefined, %0, %30
 // CHECK-NEXT:  %32 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

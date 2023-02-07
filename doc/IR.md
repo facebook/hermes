@@ -334,8 +334,8 @@ Effects | Unknown
 CallInst | _
 --- | --- |
 Description | Calls another function with some arguments.
-Example | %0 = CallInst %callee, %this,  %arg0, %arg1, %arg2, ...
-Arguments | %callee is the function to execute. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
+Example | %0 = CallInst %callee, %target, %env, %this,  %arg0, %arg1, %arg2, ...
+Arguments | %callee is the closure to execute. %target is either the Function or EmptySentinel. %env is the environment for the function or EmptySentinel. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
 Semantics | The instruction passes the control to the callee, that must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
@@ -344,8 +344,8 @@ Effects | May read and write memory.
 ConstructInst | _
 --- | --- |
 Description | Construct a new object with a constructor
-Example | %0 = ConstructInst %constructor, #undefined, %arg0, %arg1, %arg2, ...
-Arguments | %constructor is the constructor function to execute. #undefined is not used. %arg0 ... %argN are the arguments passed to the constructor function.
+Example | %0 = ConstructInst %constructor, %target, %env, #undefined, %arg0, %arg1, %arg2, ...
+Arguments | %constructor is the constructor function to execute. %target is either the Function or EmptySentinel. %env is the environment for the function or EmptySentinel. #undefined is not used. %arg0 ... %argN are the arguments passed to the constructor function.
 Semantics | The instruction performs the steps defined in ES5.1 sec-11.2.2 and sec-13.2.2. It allocates the object and calls the constructor function with the new object and the supplied arguments.
 Effects | May read and write memory.
 

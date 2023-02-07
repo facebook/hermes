@@ -51,7 +51,7 @@ function simple_test1() {
 // CHECK-NEXT:  %6 = LoadFrameInst [str]
 // CHECK-NEXT:  %7 = LoadPropertyInst %6, "replace" : string
 // CHECK-NEXT:  %8 = LoadFrameInst [re]
-// CHECK-NEXT:  %9 = CallInst %7, %6, %8, "$2, $1" : string
+// CHECK-NEXT:  %9 = CallInst %7, empty, empty, %6, %8, "$2, $1" : string
 // CHECK-NEXT:  %10 = StoreFrameInst %9, [newstr]
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

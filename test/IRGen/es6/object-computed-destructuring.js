@@ -33,11 +33,11 @@ var {} = x;
 // CHECK-NEXT:  %10 = StorePropertyLooseInst %9, globalObject : object, "b" : string
 // CHECK-NEXT:  %11 = AllocObjectLiteralInst "a" : string, 0 : number
 // CHECK-NEXT:  %12 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %13 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %12 : object, %8, %11 : object
+// CHECK-NEXT:  %13 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, empty, empty, undefined : undefined, %12 : object, %8, %11 : object
 // CHECK-NEXT:  %14 = StorePropertyLooseInst %13, globalObject : object, "rest" : string
 // CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %17 = CallInst %16, undefined : undefined
+// CHECK-NEXT:  %17 = CallInst %16, empty, empty, undefined : undefined
 // CHECK-NEXT:  %18 = LoadPropertyInst %15, %17
 // CHECK-NEXT:  %19 = StorePropertyLooseInst %18, globalObject : object, "b" : string
 // CHECK-NEXT:  %20 = LoadPropertyInst %15, "c" : string
@@ -45,13 +45,13 @@ var {} = x;
 // CHECK-NEXT:  %22 = AllocObjectLiteralInst "c" : string, 0 : number
 // CHECK-NEXT:  %23 = StorePropertyLooseInst 0 : number, %22 : object, %17
 // CHECK-NEXT:  %24 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %25 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %24 : object, %15, %22 : object
+// CHECK-NEXT:  %25 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, empty, empty, undefined : undefined, %24 : object, %15, %22 : object
 // CHECK-NEXT:  %26 = StorePropertyLooseInst %25, globalObject : object, "rest" : string
 // CHECK-NEXT:  %27 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 // CHECK-NEXT:  %28 = BinaryOperatorInst '==', %27, null : null
 // CHECK-NEXT:  %29 = CondBranchInst %28, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %30 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, %27, "Cannot destructure 'undefined' or 'null'." : string
+// CHECK-NEXT:  %30 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, empty, empty, undefined : undefined, %27, "Cannot destructure 'undefined' or 'null'." : string
 // CHECK-NEXT:  %31 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %32 = LoadStackInst %3

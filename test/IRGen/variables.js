@@ -118,6 +118,6 @@ function level0(x) {
 // CHECK-NEXT:  %3 = LoadFrameInst [x@level0]
 // CHECK-NEXT:  %4 = LoadFrameInst [y@level1]
 // CHECK-NEXT:  %5 = LoadFrameInst [z]
-// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, %3, %4, %5
+// CHECK-NEXT:  %6 = CallInst %2, empty, empty, undefined : undefined, %3, %4, %5
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

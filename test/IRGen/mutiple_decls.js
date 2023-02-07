@@ -33,7 +33,7 @@ foo(); // This is still a valid call.
 // CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
 // CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
 // CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// CHECK-NEXT:  %7 = CallInst %6, empty, empty, undefined : undefined
 // CHECK-NEXT:  %8 = StoreStackInst %7, %4
 // CHECK-NEXT:  %9 = LoadStackInst %4
 // CHECK-NEXT:  %10 = ReturnInst %9

@@ -64,7 +64,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %0 = LoadParamInst %func
 // CHECK-NEXT:  %1 = StoreFrameInst %0, [func]
 // CHECK-NEXT:  %2 = LoadFrameInst [func]
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 2 : number, %3
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2 : number, %4 : object, "a" : string, true : boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3 : number, %4 : object, "b" : string, true : boolean
@@ -112,12 +112,12 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %3 = StoreFrameInst %2, [getParent]
 // CHECK-NEXT:  %4 = AllocObjectInst 2 : number, empty
 // CHECK-NEXT:  %5 = LoadFrameInst [func]
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, empty, empty, undefined : undefined
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6, %4 : object, "a" : string, true : boolean
 // CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 10 : number, %4 : object, "b" : string, true : boolean
 // CHECK-NEXT:  %9 = LoadFrameInst [getParent]
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
-// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %4 : object, %10
+// CHECK-NEXT:  %10 = CallInst %9, empty, empty, undefined : undefined
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, empty, empty, undefined : undefined, %4 : object, %10
 // CHECK-NEXT:  %12 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = ReturnInst undefined : undefined

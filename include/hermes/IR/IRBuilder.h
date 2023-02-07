@@ -284,11 +284,24 @@ class IRBuilder {
 
   StoreFrameInst *createStoreFrameInst(Value *storedValue, Variable *ptr);
 
+  CallInst *createCallInst(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *thisValue,
+      ArrayRef<Value *> args);
   CallInst *
-  createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
+  createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args) {
+    return createCallInst(
+        callee, getEmptySentinel(), getEmptySentinel(), thisValue, args);
+  }
 
-  HBCCallNInst *
-  createHBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
+  HBCCallNInst *createHBCCallNInst(
+      Value *callee,
+      Value *target,
+      Value *env,
+      Value *thisValue,
+      ArrayRef<Value *> args);
 
   CatchInst *createCatchInst();
 
@@ -514,8 +527,17 @@ class IRBuilder {
 
   ConstructInst *createConstructInst(
       Value *closure,
+      Value *target,
+      Value *env,
       Value *thisValue,
       ArrayRef<Value *> arguments);
+  ConstructInst *createConstructInst(
+      Value *constructor,
+      Value *thisValue,
+      ArrayRef<Value *> args) {
+    return createConstructInst(
+        constructor, getEmptySentinel(), getEmptySentinel(), thisValue, args);
+  }
   GetConstructedObjectInst *createGetConstructedObjectInst(
       CreateThisInst *thisValue,
       ConstructInst *constructorReturnValue);

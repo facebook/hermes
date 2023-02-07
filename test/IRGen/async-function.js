@@ -62,7 +62,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst %1
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleReturn()
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %2 : object, %0 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
@@ -74,7 +74,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst %1
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAwait()
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %2 : object, %0 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
@@ -86,7 +86,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst %1
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_nonSimpleArrayDestructuring()
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %2 : object, %0 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
@@ -98,7 +98,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst %1
 // CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAsyncFE()
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, undefined : undefined, %3 : closure, %2 : object, %0 : object
+// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
 // CHECK-NEXT:  %6 = ReturnInst %5
 // CHECK-NEXT:function_end
 
@@ -121,7 +121,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_nonSimpleArrayDestructuring()
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
-// CHECK-NEXT:  %2 = CallInst %1, %0 : object
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, %0 : object
 // CHECK-NEXT:  %3 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 

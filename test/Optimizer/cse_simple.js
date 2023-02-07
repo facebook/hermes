@@ -114,7 +114,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %0 = LoadParamInst %this
 // CHECK-NEXT:  %1 = CoerceThisNSInst %0
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object, %1 : object, %1 : object, %1 : object
+// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined, %1 : object, %1 : object, %1 : object, %1 : object
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

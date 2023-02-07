@@ -43,7 +43,7 @@ function fibonacci(n) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "fibonacci" : string
 // CHECK-NEXT:  %7 = LoadFrameInst [n]
-// CHECK-NEXT:  %8 = CallInst %6, undefined : undefined, %7
+// CHECK-NEXT:  %8 = CallInst %6, empty, empty, undefined : undefined, %7
 // CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined

@@ -83,7 +83,7 @@ function func4() {
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %8 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %9 = BinaryOperatorInst '!==', %8, undefined : undefined
-// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, %9
+// CHECK-NEXT:  %10 = CallInst %7, empty, empty, undefined : undefined, %9
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = BranchInst %BB3
@@ -103,7 +103,7 @@ function func4() {
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %9 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %10 = BinaryOperatorInst '!==', %9, undefined : undefined
-// CHECK-NEXT:  %11 = CallInst %8, undefined : undefined, %10
+// CHECK-NEXT:  %11 = CallInst %8, empty, empty, undefined : undefined, %10
 // CHECK-NEXT:  %12 = CreateFunctionInst %innerArrow1()
 // CHECK-NEXT:  %13 = StoreFrameInst %12 : closure, [innerArrow1]
 // CHECK-NEXT:  %14 = LoadFrameInst [innerFunction]
@@ -142,11 +142,11 @@ function func4() {
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %2 = LoadFrameInst [?anon_1_new.target@func3]
 // CHECK-NEXT:  %3 = BinaryOperatorInst '!==', %2, undefined : undefined
-// CHECK-NEXT:  %4 = CallInst %1, undefined : undefined, %3
+// CHECK-NEXT:  %4 = CallInst %1, empty, empty, undefined : undefined, %3
 // CHECK-NEXT:  %5 = CreateFunctionInst %innerArrow2()
 // CHECK-NEXT:  %6 = StoreFrameInst %5 : closure, [innerArrow2]
 // CHECK-NEXT:  %7 = LoadFrameInst [innerArrow2]
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, empty, empty, undefined : undefined
 // CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined

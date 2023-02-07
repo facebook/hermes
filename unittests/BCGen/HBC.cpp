@@ -362,6 +362,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   auto *BB = builder.createBasicBlock(F);
   builder.setInsertionBlock(BB);
   auto *undef = builder.getLiteralUndefined();
+  auto *emptySen = builder.getEmptySentinel();
 
   // Create a 200 LoadConstInsts, requiring 200 registers
   std::vector<Value *> values;
@@ -369,7 +370,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
     values.push_back(builder.createHBCLoadConstInst(undef));
   }
   // Use them in a call to require 200 parameter registers.
-  builder.createCallInst(undef, undef, values);
+  builder.createCallInst(undef, emptySen, emptySen, undef, values);
   builder.createReturnInst(undef);
 
   HVMRegisterAllocator RA(F);

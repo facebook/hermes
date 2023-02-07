@@ -30,7 +30,7 @@ function f1(a, ...b) {}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
 // CHECK-NEXT:  %2 = LoadParamInst %a
 // CHECK-NEXT:  %3 = StoreFrameInst %2, [a]
-// CHECK-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 1 : number
+// CHECK-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, empty, empty, undefined : undefined, 1 : number
 // CHECK-NEXT:  %5 = StoreFrameInst %4, [b]
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

@@ -30,13 +30,13 @@ function outer1() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %dontInline()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 1 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
 // CHECK:function dontInline()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
+// CHECK-NEXT:  %0 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:function_end

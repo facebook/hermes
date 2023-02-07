@@ -32,15 +32,15 @@ function g14(z) {
 // CHECK-NEXT:  %0 = LoadParamInst %z
 // CHECK-NEXT:  %1 = CreateFunctionInst %w() : number
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [w] : closure
-// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %4 = BinaryOperatorInst '>', %0, %3 : number
 // CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %7 = LoadFrameInst [w] : closure
-// CHECK-NEXT:  %8 = CallInst %7 : closure, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7 : closure, empty, empty, undefined : undefined
 // CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8 : boolean|number, 1 : number
-// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, %9 : number
+// CHECK-NEXT:  %10 = CallInst %6, empty, empty, undefined : undefined, %9 : number
 // CHECK-NEXT:  %11 = CreateFunctionInst %m() : undefined
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst "m" : string, %11 : closure
 // CHECK-NEXT:  %13 = ReturnInst %12 : object

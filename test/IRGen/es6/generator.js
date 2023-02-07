@@ -111,7 +111,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_destr()
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
-// CHECK-NEXT:  %2 = CallInst %1, %0 : object
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, %0 : object
 // CHECK-NEXT:  %3 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 
@@ -120,7 +120,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_initializer()
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
-// CHECK-NEXT:  %2 = CallInst %1, %0 : object
+// CHECK-NEXT:  %2 = CallInst %1, empty, empty, %0 : object
 // CHECK-NEXT:  %3 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 
@@ -244,12 +244,12 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, empty, empty, undefined : undefined
 // CHECK-NEXT:  %7 = GetBuiltinClosureInst [globalThis.Symbol] : number
 // CHECK-NEXT:  %8 = LoadPropertyInst %7 : closure, "iterator" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst %6, %8
-// CHECK-NEXT:  %10 = CallInst %9, %6
-// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %10, "iterator is not an object" : string
+// CHECK-NEXT:  %10 = CallInst %9, empty, empty, %6
+// CHECK-NEXT:  %11 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, empty, empty, undefined : undefined, %10, "iterator is not an object" : string
 // CHECK-NEXT:  %12 = LoadPropertyInst %10, "next" : string
 // CHECK-NEXT:  %13 = AllocStackInst $?anon_1_received
 // CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
@@ -260,8 +260,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %18 = ReturnInst %2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %19 = LoadStackInst %13
-// CHECK-NEXT:  %20 = CallInst %12, %10, %19
-// CHECK-NEXT:  %21 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %20, "iterator.next() did not return an object" : string
+// CHECK-NEXT:  %20 = CallInst %12, empty, empty, %10, %19
+// CHECK-NEXT:  %21 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, empty, empty, undefined : undefined, %20, "iterator.next() did not return an object" : string
 // CHECK-NEXT:  %22 = StoreStackInst %20, %16
 // CHECK-NEXT:  %23 = LoadPropertyInst %20, "done" : string
 // CHECK-NEXT:  %24 = CondBranchInst %23, %BB4, %BB5
@@ -278,22 +278,22 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %32 = CondBranchInst %31, %BB9, %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %33 = CatchInst
-// CHECK-NEXT:  %34 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "throw" : string
+// CHECK-NEXT:  %34 = CallBuiltinInst [HermesBuiltin.getMethod] : number, empty, empty, undefined : undefined, %10, "throw" : string
 // CHECK-NEXT:  %35 = CompareBranchInst '===', %34, undefined : undefined, %BB10, %BB11
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %36 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %36 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, empty, empty, undefined : undefined
 // CHECK-NEXT:  %37 = SaveAndYieldInst %20, %BB8
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %38 = StoreStackInst %29, %13
 // CHECK-NEXT:  %39 = BranchInst %BB12
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %40 = TryEndInst
-// CHECK-NEXT:  %41 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
+// CHECK-NEXT:  %41 = CallBuiltinInst [HermesBuiltin.getMethod] : number, empty, empty, undefined : undefined, %10, "return" : string
 // CHECK-NEXT:  %42 = CompareBranchInst '===', %41, undefined : undefined, %BB13, %BB14
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:  %43 = LoadStackInst %13
-// CHECK-NEXT:  %44 = CallInst %41, %10, %43
-// CHECK-NEXT:  %45 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %44, "iterator.return() did not return an object" : string
+// CHECK-NEXT:  %44 = CallInst %41, empty, empty, %10, %43
+// CHECK-NEXT:  %45 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, empty, empty, undefined : undefined, %44, "iterator.return() did not return an object" : string
 // CHECK-NEXT:  %46 = LoadPropertyInst %44, "done" : string
 // CHECK-NEXT:  %47 = CondBranchInst %46, %BB15, %BB16
 // CHECK-NEXT:%BB13:
@@ -302,7 +302,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %49 = LoadPropertyInst %44, "value" : string
 // CHECK-NEXT:  %50 = ReturnInst %49
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %51 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %51 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, empty, empty, undefined : undefined
 // CHECK-NEXT:  %52 = SaveAndYieldInst %44, %BB8
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:  %53 = BranchInst %BB18
@@ -310,25 +310,25 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %54 = TryEndInst
 // CHECK-NEXT:  %55 = BranchInst %BB3
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %56 = CallInst %34, %10, %33
-// CHECK-NEXT:  %57 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %56, "iterator.throw() did not return an object" : string
+// CHECK-NEXT:  %56 = CallInst %34, empty, empty, %10, %33
+// CHECK-NEXT:  %57 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, empty, empty, undefined : undefined, %56, "iterator.throw() did not return an object" : string
 // CHECK-NEXT:  %58 = LoadPropertyInst %56, "done" : string
 // CHECK-NEXT:  %59 = CondBranchInst %58, %BB19, %BB20
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %60 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %10, "return" : string
+// CHECK-NEXT:  %60 = CallBuiltinInst [HermesBuiltin.getMethod] : number, empty, empty, undefined : undefined, %10, "return" : string
 // CHECK-NEXT:  %61 = CompareBranchInst '===', %60, undefined : undefined, %BB21, %BB22
 // CHECK-NEXT:%BB19:
 // CHECK-NEXT:  %62 = StoreStackInst %56, %16
 // CHECK-NEXT:  %63 = BranchInst %BB4
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %64 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %64 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, empty, empty, undefined : undefined
 // CHECK-NEXT:  %65 = SaveAndYieldInst %56, %BB8
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %66 = CallInst %60, %10
-// CHECK-NEXT:  %67 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %66, "iterator.return() did not return an object" : string
+// CHECK-NEXT:  %66 = CallInst %60, empty, empty, %10
+// CHECK-NEXT:  %67 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, empty, empty, undefined : undefined, %66, "iterator.return() did not return an object" : string
 // CHECK-NEXT:  %68 = BranchInst %BB21
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %69 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, "yield* delegate must have a .throw() method" : string
+// CHECK-NEXT:  %69 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, empty, empty, undefined : undefined, "yield* delegate must have a .throw() method" : string
 // CHECK-NEXT:  %70 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -417,7 +417,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %13 = CondBranchInst %12, %BB6, %BB7
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %14, empty, empty, undefined : undefined
 // CHECK-NEXT:  %16 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = PhiInst %7, %BB2, %15, %BB4

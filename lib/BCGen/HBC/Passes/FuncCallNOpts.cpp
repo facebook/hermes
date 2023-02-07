@@ -47,6 +47,8 @@ bool FuncCallNOpts::runOnFunction(Function *F) {
           builder.setInsertionPoint(call);
           HBCCallNInst *newCall = builder.createHBCCallNInst(
               call->getCallee(),
+              call->getTarget(),
+              call->getEnvironment(),
               call->getThis(),
               getArgumentsWithoutThis(call));
           call->replaceAllUsesWith(newCall);
