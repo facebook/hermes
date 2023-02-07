@@ -220,3 +220,5 @@ void PassManager::run(Module *M) {
   }
 }
 } // namespace hermes
+
+#undef DEBUG_TYPE
