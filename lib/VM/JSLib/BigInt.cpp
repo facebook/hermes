@@ -156,7 +156,7 @@ bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
   // 5. If radixMV = 10, return ! ToString(x).
   // 6. Return the String representation of x.
-  return xHandle->toString(runtime, radixMV);
+  return BigIntPrimitive::toString(runtime, xHandle, radixMV);
 }
 
 CallResult<HermesValue>

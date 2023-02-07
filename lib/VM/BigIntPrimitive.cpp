@@ -64,8 +64,9 @@ CallResult<HermesValue> BigIntPrimitive::fromDouble(
 
 CallResult<HermesValue> BigIntPrimitive::toString(
     Runtime &runtime,
-    uint8_t radix) const {
-  std::string result = bigint::toString(this->getImmutableRef(runtime), radix);
+    PseudoHandle<BigIntPrimitive> self,
+    uint8_t radix) {
+  std::string result = bigint::toString(self->getImmutableRef(runtime), radix);
   return StringPrimitive::createEfficient(
       runtime, createASCIIRef(result.c_str()));
 }
