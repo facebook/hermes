@@ -896,10 +896,6 @@ class TypeInferenceImpl {
   Type inferConstructInst(ConstructInst *inst) {
     return inferBaseCallInst(cgp_, inst);
   }
-  Type inferHBCCallDirectInst(HBCCallDirectInst *inst) {
-    // unimplemented
-    return Type::createAnyType();
-  }
   Type inferHBCCallNInst(HBCCallNInst *inst) {
     // unimplemented
     return Type::createAnyType();

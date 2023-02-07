@@ -730,7 +730,6 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::CallInstKind:
     case ValueKind::CallBuiltinInstKind:
     case ValueKind::ConstructInstKind:
-    case ValueKind::HBCCallDirectInstKind:
       return op == CallInst::CalleeIdx;
     default:
       return true;

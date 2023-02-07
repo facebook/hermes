@@ -3538,43 +3538,6 @@ class GetConstructedObjectInst : public Instruction {
   }
 };
 
-class HBCCallDirectInst : public BaseCallInst {
-  HBCCallDirectInst(const HBCCallDirectInst &) = delete;
-  void operator=(const HBCCallDirectInst &) = delete;
-
- public:
-  static constexpr unsigned MAX_ARGUMENTS = 255;
-
-  explicit HBCCallDirectInst(
-      Function *callee,
-      Value *env,
-      Value *thisValue,
-      ArrayRef<Value *> args)
-      : BaseCallInst(
-            ValueKind::HBCCallDirectInstKind,
-            /* callee closure */ callee,
-            /* function target */ callee,
-            env,
-            thisValue,
-            args) {
-    assert(
-        getNumArguments() <= MAX_ARGUMENTS &&
-        "Too many arguments to HBCCallDirect");
-  }
-  explicit HBCCallDirectInst(
-      const HBCCallDirectInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseCallInst(src, operands) {}
-
-  Function *getFunctionCode() const {
-    return cast<Function>(getCallee());
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::HBCCallDirectInstKind;
-  }
-};
-
 /// Creating a closure in HBC requires an explicit environment.
 class HBCCreateFunctionInst : public BaseCreateCallableInst {
   HBCCreateFunctionInst(const HBCCreateFunctionInst &) = delete;

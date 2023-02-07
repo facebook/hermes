@@ -1432,9 +1432,6 @@ class InstrGen {
     os_ << " = _sh_ljs_construct(shr, frame, " << inst.getNumArguments() - 1
         << ");\n";
   }
-  void generateHBCCallDirectInst(HBCCallDirectInst &inst) {
-    unimplemented(inst);
-  }
   void generateHBCCallNInst(HBCCallNInst &inst) {
     unimplemented(inst);
   }

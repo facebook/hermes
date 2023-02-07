@@ -557,11 +557,6 @@ class IRBuilder {
       ArrayRef<Value *> arguments);
 #endif
 
-  HBCCallDirectInst *createHBCCallDirectInst(
-      Function *callee,
-      Value *thisValue,
-      ArrayRef<Value *> arguments);
-
   HBCCreateFunctionInst *createHBCCreateFunctionInst(
       Function *function,
       Value *env);

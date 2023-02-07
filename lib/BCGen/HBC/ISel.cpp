@@ -1338,25 +1338,6 @@ void HBCISel::generateCallIntrinsicInst(
 }
 #endif
 
-void HBCISel::generateHBCCallDirectInst(
-    HBCCallDirectInst *Inst,
-    BasicBlock *next) {
-  auto output = encodeValue(Inst);
-  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
-
-  verifyCall(Inst);
-
-  assert(
-      Inst->getNumArguments() <= HBCCallDirectInst::MAX_ARGUMENTS &&
-      "too many arguments to CallDirect");
-
-  if (LLVM_LIKELY(code <= UINT16_MAX)) {
-    // Most of the cases, function index will be less than 2^16.
-    BCFGen_->emitCallDirect(output, Inst->getNumArguments(), code);
-  } else {
-    BCFGen_->emitCallDirectLongIndex(output, Inst->getNumArguments(), code);
-  }
-}
 void HBCISel::generateHBCResolveEnvironment(
     HBCResolveEnvironment *Inst,
     BasicBlock *next) {

@@ -475,15 +475,6 @@ void Verifier::visitCallIntrinsicInst(CallIntrinsicInst const &Inst) {
 }
 #endif
 
-void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
-  Assert(
-      llvh::isa<Function>(Inst.getCallee()),
-      "HBCCallDirect callee must be a Function");
-  Assert(
-      Inst.getNumArguments() <= HBCCallDirectInst::MAX_ARGUMENTS,
-      "CallBuiltin too many arguments");
-}
-
 void Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {}
 void Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {}

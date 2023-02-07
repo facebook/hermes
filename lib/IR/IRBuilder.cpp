@@ -937,16 +937,6 @@ CallIntrinsicInst *IRBuilder::createCallIntrinsicInst(
 }
 #endif
 
-HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
-    Function *callee,
-    Value *thisValue,
-    ArrayRef<Value *> arguments) {
-  auto *inst =
-      new HBCCallDirectInst(callee, getEmptySentinel(), thisValue, arguments);
-  insert(inst);
-  return inst;
-}
-
 HBCCreateFunctionInst *IRBuilder::createHBCCreateFunctionInst(
     Function *function,
     Value *env) {
