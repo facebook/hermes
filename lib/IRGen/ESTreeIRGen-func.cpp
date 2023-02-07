@@ -394,9 +394,14 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   emitStore(Builder, curFunction()->jsParams[0], th, true);
 
   // "new.target".
-  auto *nt = Builder.createVariable(scope, genAnonymousLabelName("new.target"));
-  curFunction()->capturedNewTarget = nt;
-  emitStore(Builder, Builder.createGetNewTargetInst(), nt, true);
+  curFunction()->capturedNewTarget =
+      Builder.createVariable(scope, genAnonymousLabelName("new.target"));
+  emitStore(
+      Builder,
+      Builder.createGetNewTargetInst(
+          curFunction()->function->getNewTargetParam()),
+      curFunction()->capturedNewTarget,
+      true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {

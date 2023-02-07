@@ -80,7 +80,7 @@ function bar() {
 // CHECK-NEXT:  %0 = CreateArgumentsInst
 // CHECK-NEXT:  %1 = LoadParamInst %this
 // CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %3 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
 // CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
 // CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [arrow1]
@@ -130,7 +130,7 @@ function bar() {
 // CHECK-NEXT:  %0 = CreateArgumentsInst
 // CHECK-NEXT:  %1 = LoadParamInst %this
 // CHECK-NEXT:  %2 = StoreFrameInst %1, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %3 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
 // CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
 // CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [arrow3]

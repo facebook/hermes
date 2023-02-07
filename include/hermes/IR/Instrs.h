@@ -2587,7 +2587,12 @@ class GetNewTargetInst : public Instruction {
   void operator=(const GetNewTargetInst &) = delete;
 
  public:
-  explicit GetNewTargetInst() : Instruction(ValueKind::GetNewTargetInstKind) {}
+  enum { GetNewTargetParamIdx };
+
+  explicit GetNewTargetInst(Value *param)
+      : Instruction(ValueKind::GetNewTargetInstKind) {
+    pushOperand(param);
+  }
   explicit GetNewTargetInst(
       const GetNewTargetInst *src,
       llvh::ArrayRef<Value *> operands)

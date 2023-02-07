@@ -61,7 +61,7 @@ function func4() {
 // CHECK:function func1()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst
+// CHECK-NEXT:  %0 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined
@@ -75,13 +75,13 @@ function func4() {
 // CHECK-NEXT:  %2 = LoadFrameInst [a]
 // CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = GetNewTargetInst
+// CHECK-NEXT:  %4 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %8 = GetNewTargetInst
+// CHECK-NEXT:  %8 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %9 = BinaryOperatorInst '!==', %8, undefined : undefined
 // CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, %9
 // CHECK-NEXT:  %11 = ReturnInst undefined : undefined
@@ -95,13 +95,13 @@ function func4() {
 // CHECK-NEXT:  %0 = LoadParamInst %this
 // CHECK-NEXT:  %1 = CoerceThisNSInst %0
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %3 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
 // CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [innerArrow1]
 // CHECK-NEXT:  %6 = CreateFunctionInst %innerFunction()
 // CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [innerFunction]
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %9 = GetNewTargetInst
+// CHECK-NEXT:  %9 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %10 = BinaryOperatorInst '!==', %9, undefined : undefined
 // CHECK-NEXT:  %11 = CallInst %8, undefined : undefined, %10
 // CHECK-NEXT:  %12 = CreateFunctionInst %innerArrow1()
@@ -119,7 +119,7 @@ function func4() {
 // CHECK:function func4()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst
+// CHECK-NEXT:  %0 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %1 = LoadPropertyInst %0, "prototype" : string
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:%BB1:
@@ -129,7 +129,7 @@ function func4() {
 // CHECK:function innerFunction()
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst
+// CHECK-NEXT:  %0 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined : undefined

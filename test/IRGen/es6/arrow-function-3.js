@@ -31,7 +31,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %0 = LoadParamInst %this
 // CHECK-NEXT:  %1 = CoerceThisNSInst %0
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : object, [?anon_0_this]
-// CHECK-NEXT:  %3 = GetNewTargetInst
+// CHECK-NEXT:  %3 = GetNewTargetInst %new.target
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
 // CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [x]
 // CHECK-NEXT:  %6 = LoadParamInst %x

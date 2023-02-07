@@ -623,8 +623,8 @@ Effects | Does not read or write to memory.
 GetNewTargetInst | _
 --- | --- |
 Description | Obtains the value of `new.target` in the current function or constructor.
-Example |  %0 = GetNewTargetInst
-Arguments | None
+Example |  %0 = GetNewTargetInst, %param
+Arguments | %param is a dummy JSDynamicParam used to quickly find usages of `new.target`.
 Semantics | It must only be called from a ES6 class constructor or ES5 function. If the callee was invoked from `new`, it returns the function object of the direct constructor, otherwise `undefined`.
 Effects | Does not read or write memory
 

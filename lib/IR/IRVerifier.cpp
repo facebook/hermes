@@ -144,6 +144,12 @@ void Verifier::visitModule(const Module &M) {
 void Verifier::visitFunction(const Function &F) {
   Assert(&F.getContext() == Ctx, "Function has wrong context");
 
+  for (Value *newTargetUser : F.getNewTargetParam()->getUsers()) {
+    Assert(
+        llvh::isa<GetNewTargetInst>(newTargetUser),
+        "Only GetNewTargetInst may use the newTargetParam");
+  }
+
   FunctionState newFunctionState(this, F);
 
   // Verify all basic blocks are valid
@@ -855,6 +861,10 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
       definitionKind == Function::DefinitionKind::ES5Function ||
           definitionKind == Function::DefinitionKind::ES6Constructor,
       "GetNewTargetInst can only be used in ES6 constructors and ES5 functions");
+  Assert(
+      Inst.getParent()->getParent()->getNewTargetParam() ==
+          Inst.getOperand(GetNewTargetInst::GetNewTargetParamIdx),
+      "GetNewTargetInst must use correct getNewTargetParam");
 }
 
 void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}

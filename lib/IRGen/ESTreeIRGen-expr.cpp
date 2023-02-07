@@ -1741,7 +1741,8 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
               Function::DefinitionKind::ES6Method) {
         value = curFunction()->capturedNewTarget;
       } else {
-        value = Builder.createGetNewTargetInst();
+        value = Builder.createGetNewTargetInst(
+            curFunction()->function->getNewTargetParam());
       }
 
       // If it is a variable, we must issue a load.

@@ -604,8 +604,8 @@ CreateArgumentsInst *IRBuilder::createCreateArgumentsInst() {
   return CAI;
 }
 
-GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
-  auto *inst = new GetNewTargetInst();
+GetNewTargetInst *IRBuilder::createGetNewTargetInst(Value *newTargetParam) {
+  auto *inst = new GetNewTargetInst(newTargetParam);
   insert(inst);
   return inst;
 }

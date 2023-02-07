@@ -403,7 +403,7 @@ class IRBuilder {
 
   CreateArgumentsInst *createCreateArgumentsInst();
 
-  GetNewTargetInst *createGetNewTargetInst();
+  GetNewTargetInst *createGetNewTargetInst(Value *newTargetParam);
 
   ThrowIfEmptyInst *createThrowIfEmptyInst(Value *checkedValue);
 

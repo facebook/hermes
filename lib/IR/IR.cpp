@@ -165,6 +165,7 @@ Function::Function(
       parent_(parent),
       externalScopes_(),
       functionScope_(this),
+      newTargetParam_(this, parent_->getContext().getIdentifier("new.target")),
       originalOrInferredName_(originalName),
       definitionKind_(definitionKind),
       strictMode_(strictMode),

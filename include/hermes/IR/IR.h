@@ -1446,6 +1446,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// Flag indicating whether the JS "this" dynamic param has been added to
   /// params.
   bool jsThisAdded_ = false;
+  /// Parameter used as an operand in GetNewTarget to easily find all users.
+  JSDynamicParam newTargetParam_;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
   /// If there was no inference, an empty string.
@@ -1558,6 +1560,15 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// \return true if JS "this" parameter was added.
   bool jsThisAdded() const {
     return jsThisAdded_;
+  }
+
+  /// \return the new.target parameter.
+  JSDynamicParam *getNewTargetParam() {
+    return &newTargetParam_;
+  }
+  /// \return the new.target parameter.
+  const JSDynamicParam *getNewTargetParam() const {
+    return &newTargetParam_;
   }
 
   const BasicBlockListType &getBasicBlockList() const {
