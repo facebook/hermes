@@ -39,7 +39,7 @@ Function *getCallee(Value *callee);
 
 /// \returns True if the value \p C is the caller's callee and is not captured
 ///   by any of the arguments.
-bool isDirectCallee(Value *C, BaseCallInst *CI);
+bool isDirectCallee(Instruction *C, BaseCallInst *CI);
 
 /// \return True if \p V is an instruction that may be used in a constructor
 /// invocation of the \p closure. In the absence of other instructions that

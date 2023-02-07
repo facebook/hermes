@@ -93,7 +93,7 @@ Function *hermes::getCallee(Value *callee) {
   return nullptr;
 }
 
-bool hermes::isDirectCallee(Value *C, BaseCallInst *CI) {
+bool hermes::isDirectCallee(Instruction *C, BaseCallInst *CI) {
   if (CI->getCallee() != C)
     return false;
 
