@@ -423,17 +423,6 @@ DEFINE_RET_TARGET(Construct)
 DEFINE_OPCODE_3(Call1, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(Call1)
 
-/// Call a function directly without a closure.
-/// Arg1 is the destination of the return value.
-/// Arg2 is the number of arguments, assumed to be found in reverse order
-///      from the end of the current frame. The first argument 'this'
-///      is assumed to be created with CreateThis.
-/// Arg3 is index in the function table.
-/// Note that we expect the variable-sized argument to be last.
-DEFINE_OPCODE_3(CallDirect, Reg8, UInt8, UInt16)
-OPERAND_FUNCTION_ID(CallDirect, 3)
-DEFINE_RET_TARGET(CallDirect)
-
 /// Call a function with two args.
 /// Arg1 is the destination of the return value.
 /// Arg2 is the closure to invoke.
@@ -469,22 +458,16 @@ DEFINE_RET_TARGET(CallLong)
 DEFINE_OPCODE_3(ConstructLong, Reg8, Reg8, UInt32)
 DEFINE_RET_TARGET(ConstructLong)
 
-/// Identical to CallDirect, but the function index is 32-bit.
-DEFINE_OPCODE_3(CallDirectLongIndex, Reg8, UInt8, UInt32)
-DEFINE_RET_TARGET(CallDirectLongIndex)
-
 // Enforce the order.
 ASSERT_MONOTONE_INCREASING(
     Call,
     Construct,
     Call1,
-    CallDirect,
     Call2,
     Call3,
     Call4,
     CallLong,
-    ConstructLong,
-    CallDirectLongIndex)
+    ConstructLong)
 
 /// Call a builtin function.
 /// Note this is NOT marked as a Ret target, because the callee is native

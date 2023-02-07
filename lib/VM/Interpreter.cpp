@@ -718,7 +718,7 @@ static void printDebugInfo(
   dbgs() << "\n";
 }
 
-/// \return whether \p opcode is a call opcode (Call, CallDirect, Construct,
+/// \return whether \p opcode is a call opcode (Call, Construct,
 /// CallLongIndex, etc). Note CallBuiltin is not really a Call.
 LLVM_ATTRIBUTE_UNUSED
 static bool isCallType(OpCode opcode) {
@@ -1613,49 +1613,6 @@ tailCall:
       ip = nextIP;
       DISPATCH;
     }
-
-      CASE(CallDirect)
-      CASE(CallDirectLongIndex) {
-#ifdef HERMES_ENABLE_DEBUGGER
-        // Check for an async debugger request.
-        if (uint8_t asyncFlags =
-                runtime.testAndClearDebuggerAsyncBreakRequest()) {
-          RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
-          gcScope.flushToSmallCount(KEEP_HANDLES);
-          DISPATCH;
-        }
-#endif
-
-        CAPTURE_IP_ASSIGN(
-            CodeBlock * calleeBlock,
-            ip->opCode == OpCode::CallDirect
-                ? curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
-                      ip->iCallDirect.op3)
-                : curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
-                      ip->iCallDirectLongIndex.op3));
-
-        auto newFrame = StackFramePtr::initFrame(
-            runtime.stackPointer_,
-            FRAME,
-            ip,
-            curCodeBlock,
-            (uint32_t)ip->iCallDirect.op2 - 1,
-            HermesValue::encodeNativePointer(calleeBlock),
-            HermesValue::encodeUndefinedValue());
-        (void)newFrame;
-
-        LLVM_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
-
-        assert(!SingleStep && "can't single-step a call");
-
-        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        curCodeBlock = calleeBlock;
-        CAPTURE_IP_SET();
-        goto tailCall;
-      }
 
       CASE(GetBuiltinClosure) {
         uint8_t methodIndex = ip->iCallBuiltin.op2;
