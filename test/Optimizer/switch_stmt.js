@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen %s
 
 function backwards_branch() {
   for (var i = 0; i < 4; i++) {

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 ({
   ['x']: 3,

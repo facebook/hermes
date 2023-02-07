@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s
+// RUN: %hermesc -dump-ir %s
 // Make sure we generate code that successfully verifies
 
 function foo(n, r) {

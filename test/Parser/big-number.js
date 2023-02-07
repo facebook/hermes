@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -dump-ast %s | %FileCheck %s --check-prefix=CHKAST
-// RUN: %hermes -O0 -dump-ir %s | %FileCheck %s --check-prefix=CHKIR
+// RUN: %hermesc -O0 -dump-ast %s | %FileCheck %s --check-prefix=CHKAST
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheck %s --check-prefix=CHKIR
 
 // This test ensures that a very large numeric literal can be parsed as
 // Infinity.

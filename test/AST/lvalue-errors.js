@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (%hermes -hermes-parser %s 2>&1 || true) | %FileCheck %s --match-full-lines
+// RUN: (%hermesc -dump-transformed-ast -hermes-parser %s 2>&1 || true) | %FileCheck %s --match-full-lines
 
 var x;
 x + 1 = 10;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function forof_normal(seq, cb) {
     for(var i of seq)

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
 
 function foo() {
   var k = 4;

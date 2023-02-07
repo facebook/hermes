@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -lazy %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -lazy %s | %FileCheck %s --match-full-lines
 // REQUIRES: interpreter
 
 // Make sure we can correctly resolve scopes through lazily compiled

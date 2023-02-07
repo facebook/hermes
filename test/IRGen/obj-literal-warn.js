@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -strict -dump-ir %s 2>&1 | %FileCheck %s --match-full-lines
+// RUN: %hermesc -strict -dump-ir %s 2>&1 | %FileCheck %s --match-full-lines
 
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
 //CHECK-NEXT:var x = { color: 10, color: 20, color: 30 };

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s -dump-ast 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc %s -dump-ast 2>&1 ) | %FileCheck %s
 
 export { a as+ }
 

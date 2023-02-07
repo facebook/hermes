@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s
+// RUN: %hermesc -hermes-parser -dump-ir %s
 
 // Make sure that we can parse the whole ESTree tree.
 // This JS file is from: http://www.w3schools.com/js/js_examples.asp

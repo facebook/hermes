@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -target=HBC -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo1(a) {
     var add = function() {

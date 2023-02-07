@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 function foo(aa = 1, bbb, [{c, aa}, bbb]) {}
 //CHECK: {{.*}}non-simple-params.js:10:32: error: cannot declare two parameters with the same name 'aa'

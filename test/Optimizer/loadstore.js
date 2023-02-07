@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -strict -dump-ir %s     -O  | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
-// RUN: %hermes -hermes-parser -strict -dump-ir %s     -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -strict -dump-ir %s     -O  | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
+// RUN: %hermesc -hermes-parser -strict -dump-ir %s     -O0 | %FileCheckOrRegen %s --match-full-lines
 
 // Unoptimized:
 

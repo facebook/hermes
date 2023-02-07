@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s -dump-ast 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc %s -dump-ast 2>&1 ) | %FileCheck %s
 
 // ES6 11.8.5.1: "It is a Syntax Error if IdentifierPart contains a Unicode escape sequence"
 /abc/\u1234;

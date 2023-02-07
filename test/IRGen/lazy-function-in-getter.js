@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -lazy %s
+// RUN: %hermesc -lazy %s
 // REQUIRES: interpreter
 // Just make sure this function doesn't crash
 

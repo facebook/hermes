@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
 
 //CHECK: {
 //CHECK-NEXT:    "type": "Program",

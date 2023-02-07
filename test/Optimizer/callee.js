@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s -O -fno-inline | %FileCheckOrRegen %s
+// RUN: %hermesc -dump-ir %s -O -fno-inline | %FileCheckOrRegen %s
 
 "use strict";
 

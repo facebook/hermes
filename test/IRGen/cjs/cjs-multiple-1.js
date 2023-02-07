@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -commonjs -dump-ir %S/cjs-multiple-1.js %S/cjs-multiple-2.js | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O0 -commonjs -dump-ir %S/cjs-multiple-1.js %S/cjs-multiple-2.js | %FileCheckOrRegen --match-full-lines %s
 
 print('done 1');
 

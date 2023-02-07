@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-jsx -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -parse-jsx -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",

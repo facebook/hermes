@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -max-diagnostic-width 80 -hermes-parser -dump-ir %s) 2>&1 | %FileCheck %s --match-full-lines --strict-whitespace
+// RUN: (! %hermesc -max-diagnostic-width 80 -hermes-parser -dump-ir %s) 2>&1 | %FileCheck %s --match-full-lines --strict-whitespace
 
 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 42invalid;
 //CHECK:{{.*}}max_diagnostic_width.js:10:89: error: invalid numeric literal

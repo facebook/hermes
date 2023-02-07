@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -strict -dump-ir %s 2>&1 | %FileCheck %s --match-full-lines
+// RUN: %hermesc -strict -dump-ir %s 2>&1 | %FileCheck %s --match-full-lines
 
 function one() { return s; return s; }
 //CHECK: {{.*}}diagnode_errors.js:10:25: warning: the variable "s" was not declared in function "one"

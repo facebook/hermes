@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -dump-ir -O -fno-inline -non-strict %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -target=HBC -dump-ir -O -fno-inline -non-strict %s | %FileCheckOrRegen --match-full-lines %s
 //
 // Ensure that Hermes-specific optimizations (parameter type inference) are performed in non-strict
 // mode. We need to disable inlining because it inlines foo() completely and we can't see the

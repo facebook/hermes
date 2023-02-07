@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s 2>&1) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-transformed-ast %s 2>&1) | %FileCheck --match-full-lines %s
 
 for([a, 0] of x);
 //CHECK: {{.*}}for-of-in-destr.js:10:9: error: invalid assignment left-hand side

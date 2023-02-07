@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -strict -dump-ir -O0 -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
-// RUN: %hermes -hermes-parser -non-strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-NONSTRICT
+// RUN: %hermesc -hermes-parser -strict -dump-ir -O0 -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
+// RUN: %hermesc -hermes-parser -non-strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-NONSTRICT
 
 // Ensure that global properties are not promoted.
 var a = 10;

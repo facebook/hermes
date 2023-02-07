@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -parse-ts -dump-ast -pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
+// RUN: (! %hermesc -parse-ts -dump-ast -pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
 
 class A {
   private #foo = 1;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -commonjs %s 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc -dump-transformed-ast -commonjs %s 2>&1 ) | %FileCheck %s
 
 var = 3;
 

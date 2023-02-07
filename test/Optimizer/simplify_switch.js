@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
 
 switch (x) { case 2:
      case 44:while (cond);

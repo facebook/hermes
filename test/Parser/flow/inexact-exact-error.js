@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -parse-flow -dump-ast -pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
+// RUN: (! %hermesc -parse-flow -dump-ast -pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
 
 type T = {| x: number, ... |};
 // CHECK: {{.*}}:10:10: error: Explicit inexact syntax cannot appear inside an explicit exact object type

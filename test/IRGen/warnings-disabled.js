@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (echo "START" && %hermes -dump-ir -w %s 2>&1 >/dev/null && echo "END" ) | %FileCheck %s --match-full-lines
+// RUN: (echo "START" && %hermesc -dump-ir -w %s 2>&1 >/dev/null && echo "END" ) | %FileCheck %s --match-full-lines
 
 // CHECK: START
 "use strict";

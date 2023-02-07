@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O %s | %FileCheck --match-full-lines %s
 // REQUIRES: interpreter
 
 function trycode(code) {
