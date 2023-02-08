@@ -8,9 +8,15 @@
 import Fuzzilli
 
 let hermesProfile = Profile(
-    processArguments: ["--replr"],
+    getProcessArguments:  { (randomizingArguments: Bool) -> [String] in
+      return ["--reprl"]
+    },
 
     processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
+
+    maxExecsBeforeRespawn: 1000,
+
+    timeout: 2000,
 
     codePrefix: """
                 function main(){
@@ -24,7 +30,7 @@ let hermesProfile = Profile(
 
     crashTests: ["fuzzilli('FUZZILLI_CRASH', 0)", "fuzzilli('FUZZILLI_CRASH', 1)", "fuzzilli('FUZZILLI_CRASH', 2)"],
 
-    additionalCodeGenerators: WeightedList<CodeGenerator>([]),
+    additionalCodeGenerators: [],
 
     additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
