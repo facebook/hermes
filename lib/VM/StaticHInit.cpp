@@ -72,8 +72,6 @@ static llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> s_runtimes{};
 
 static RuntimeConfig buildRuntimeConfig();
 
-extern "C" void _SH_MODEL(void) {}
-
 extern "C" SHRuntime *_sh_init(int argc, char **argv) {
   if (argc)
     llvh::cl::ParseCommandLineOptions(argc, argv);

@@ -20,6 +20,8 @@
 using namespace hermes;
 using namespace hermes::vm;
 
+extern "C" void _SH_MODEL(void) {}
+
 /// Convert the given \p cr to a \c CallResult<HermesValue>.
 template <typename T>
 static inline CallResult<HermesValue> toCallResultHermesValue(
