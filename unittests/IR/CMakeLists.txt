@@ -6,6 +6,7 @@
 set(IRSources
   BasicBlockTest.cpp
   BuilderTest.cpp
+  FunctionTest.cpp
   InstrTest.cpp
   IRUtilsTest.cpp
   IRVerifierTest.cpp

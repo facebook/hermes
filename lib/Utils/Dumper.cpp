@@ -215,6 +215,7 @@ void IRPrinter::printFunctionHeader(Function *F) {
   }
   os << ")";
   printTypeLabel(F->getType());
+  os << " " << F->getAttributes().getDescriptionStr();
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
