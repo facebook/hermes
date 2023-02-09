@@ -35,13 +35,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW)
 endif()
 
-# Allow reading the LOCATION property of a target to determine the eventual
-# location of build targets. This is needed when building the debugging symbols
-# bundles for Apple platforms.
-if (POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)
-endif()
-
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
