@@ -6,7 +6,9 @@
  */
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/Operations.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #include <cstdarg>
@@ -252,6 +254,111 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
       acceptor.acceptWeak(entry.second);
     }
   }
+}
+
+extern "C" SHLegacyValue _sh_get_template_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t templateObjID,
+    bool dup,
+    uint32_t argCount,
+    ...) {
+  Runtime &runtime = getRuntime(shr);
+
+  va_list args;
+  va_start(args, argCount);
+
+  CallResult<HermesValue> result = [&]() -> CallResult<HermesValue> {
+    GCScope gcScope{runtime};
+
+    // Try finding the template object in the template object cache.
+    // _sh_find_cached_template_object returns nullptr if cache entry hasn't
+    // been populated yet, so we use cast_or_null.
+    JSObject *cachedTemplateObj = llvh::cast_or_null<JSObject>(
+        (GCCell *)_sh_find_cached_template_object(unit, templateObjID));
+    if (cachedTemplateObj) {
+      return HermesValue::encodeObjectValue(cachedTemplateObj);
+    }
+
+    if (argCount % 2 == 1) {
+      assert(dup && "There must be the same number of raw and cooked strings.");
+    }
+    uint32_t count = dup ? argCount : argCount / 2;
+
+    // Create template object and raw object.
+    auto arrRes = JSArray::create(runtime, count, 0);
+    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto rawObj = Handle<JSObject>::vmcast(*arrRes);
+    auto arrRes2 = JSArray::create(runtime, count, 0);
+    if (LLVM_UNLIKELY(arrRes2 == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto templateObj = Handle<JSObject>::vmcast(*arrRes2);
+
+    // Set cooked and raw strings as elements in template object and raw object,
+    // respectively.
+    DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+    dpf.writable = 0;
+    dpf.configurable = 0;
+    MutableHandle<> idx{runtime};
+    auto marker = gcScope.createMarker();
+    for (uint32_t i = 0; i < count; ++i) {
+      gcScope.flushToMarker(marker);
+      idx = HermesValue::encodeNumberValue(i);
+
+      const SHLegacyValue *rawLegacyValue = va_arg(args, const SHLegacyValue *);
+      Handle<> value{toPHV(rawLegacyValue)};
+
+      auto putRes = JSObject::defineOwnComputedPrimitive(
+          rawObj, runtime, idx, dpf, value);
+      assert(
+          putRes != ExecutionStatus::EXCEPTION && *putRes &&
+          "Failed to set raw value to raw object.");
+
+      if (dup) {
+        // Cooked value is the same as the raw value.
+        putRes = JSObject::defineOwnComputedPrimitive(
+            templateObj, runtime, idx, dpf, value);
+        assert(
+            putRes != ExecutionStatus::EXCEPTION && *putRes &&
+            "Failed to set cooked value to template object.");
+      }
+    }
+    if (!dup) {
+      for (uint32_t i = 0; i < count; ++i) {
+        gcScope.flushToMarker(marker);
+        idx = HermesValue::encodeNumberValue(i);
+
+        const SHLegacyValue *cookedLegacyValue =
+            va_arg(args, const SHLegacyValue *);
+        Handle<> value{toPHV(cookedLegacyValue)};
+        auto putRes = JSObject::defineOwnComputedPrimitive(
+            templateObj, runtime, idx, dpf, value);
+        assert(
+            putRes != ExecutionStatus::EXCEPTION && *putRes &&
+            "Failed to set cooked value to template object.");
+      }
+    }
+
+    if (LLVM_UNLIKELY(
+            setTemplateObjectProps(runtime, templateObj, rawObj) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    // Cache the template object.
+    _sh_cache_template_object(
+        unit, templateObjID, templateObj.getHermesValue());
+
+    return templateObj.getHermesValue();
+  }();
+
+  va_end(args);
+
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *result;
 }
 
 extern "C" void *_sh_find_cached_template_object(

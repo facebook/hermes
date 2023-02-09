@@ -2272,6 +2272,67 @@ CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
   return runtime.raiseTypeError("value is not a bigint");
 }
 
+ExecutionStatus setTemplateObjectProps(
+    Runtime &runtime,
+    Handle<JSObject> templateObj,
+    Handle<JSObject> rawObj) {
+  // Make 'length' property on the raw object read-only.
+  DefinePropertyFlags readOnlyDPF{};
+  readOnlyDPF.setWritable = 1;
+  readOnlyDPF.setConfigurable = 1;
+  readOnlyDPF.writable = 0;
+  readOnlyDPF.configurable = 0;
+  auto readOnlyRes = JSObject::defineOwnProperty(
+      rawObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      Runtime::getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime.raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(rawObj.get());
+
+  // Set raw object as a read-only non-enumerable property of the template
+  // object.
+  PropertyFlags constantPF{};
+  constantPF.writable = 0;
+  constantPF.configurable = 0;
+  constantPF.enumerable = 0;
+  auto putNewRes = JSObject::defineNewOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::raw),
+      constantPF,
+      rawObj);
+  if (LLVM_UNLIKELY(putNewRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Make 'length' property on the template object read-only.
+  readOnlyRes = JSObject::defineOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      Runtime::getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime.raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(templateObj.get());
+
+  return ExecutionStatus::RETURNED;
+}
+
 } // namespace vm
 } // namespace hermes
 

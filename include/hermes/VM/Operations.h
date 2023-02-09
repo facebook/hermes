@@ -461,6 +461,15 @@ CallResult<HermesValue> stringToBigInt(Runtime &runtime, Handle<> value);
 // ES2022 21.2.3 Properties of the BigInt Prototype Object - thisBigIntValue
 CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value);
 
+/// Set the read-only length and raw properties on \p templateObj and \p rawObj.
+/// Seal both objects.
+/// Intended to be called from GetTemplateObject methods after both objects
+/// have already been populated.
+ExecutionStatus setTemplateObjectProps(
+    Runtime &runtime,
+    Handle<JSObject> templateObj,
+    Handle<JSObject> rawObj);
+
 } // namespace vm
 } // namespace hermes
 

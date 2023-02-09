@@ -1054,7 +1054,29 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateGetTemplateObjectInst(GetTemplateObjectInst &inst) {
-    hermes_fatal("GetTemplateObjectInst unimplemented");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    // If not dup, argCount also includes cooked strings.
+    uint32_t numStrings = inst.getNumStrings();
+    uint32_t argCount = inst.isDup() ? numStrings : numStrings * 2;
+    // Can't lower to calling the HermesBuiltin because that depends on
+    // RuntimeModule, so we have a _sh_get_template_object function instead,
+    // which can read from the SHUnit templateMap.
+    os_ << "_sh_get_template_object(shr, &THIS_UNIT, "
+        << inst.getTemplateObjID() << ", " << boolStr(inst.isDup()) << ", "
+        << argCount;
+    for (unsigned i = 0; i < numStrings; ++i) {
+      os_ << ", ";
+      generateRegisterPtr(*inst.getRawString(i));
+    }
+    if (!inst.isDup()) {
+      for (unsigned i = 0; i < numStrings; ++i) {
+        os_ << ", ";
+        generateRegisterPtr(*inst.getCookedString(i));
+      }
+    }
+    os_ << ");\n";
   }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
     // This instruction should not have reached this far.
