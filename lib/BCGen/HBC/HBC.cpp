@@ -62,6 +62,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
   // it introduces calls to HermesInternal.
   PM.addPass(new LowerExponentiationOperator());
+  PM.addPass(new LowerGetTemplateObject());
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   // It is important to run LowerNumericProperties before LoadConstants

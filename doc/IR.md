@@ -487,6 +487,16 @@ Arguments | sizeHint tells the size of the array that the VM should allocate. It
 Semantics | The instruction creates a new JavaScript array on the heap with a hinted size and initial list of elements.
 Effects | Does not read or write to memory.
 
+### GetTemplateObjectInst
+
+GetTemplateObjectInst | _
+--- | --- |
+Description | Gets the object to pass to the tagged template function.
+Example |  %0 = GetTemplateObjectInst %templateObjID, %dup, %string1, ...
+Arguments | %templateObjID is the cache key for the template. %dup indicates whether the raw strings are duplicates of the cooked strings. If %dup is true, then all %string operands are raw. Otherwise, some number of raw %string operands are followed by the _same_ number of cooked %string operands.
+Semantics | If cached, retrieves from the template cache. Otherwise, updates the cache with a new template object with the cooked strings, which also contains an object containing the raw strings. Returns the resultant object.
+Effects | Does not read or write to program memory. Updates template cache.
+
 ### CreateArgumentsInst
 
 CreateArgumentsInst | _

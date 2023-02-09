@@ -1799,6 +1799,96 @@ class AllocObjectLiteralInst : public Instruction {
   }
 };
 
+class GetTemplateObjectInst : public Instruction {
+  GetTemplateObjectInst(const GetTemplateObjectInst &) = delete;
+  void operator=(const GetTemplateObjectInst &) = delete;
+
+ public:
+  enum { TemplateObjIDIdx, DupIdx, RawStartIdx };
+
+  // Note: Operands are set up using the same layout as
+  // HermesBuiltin_getTemplateObject.
+  /// \param cookedStrings can contain either LiteralString or Undefined.
+  explicit GetTemplateObjectInst(
+      LiteralNumber *templateObjID,
+      LiteralBool *dup,
+      llvh::ArrayRef<LiteralString *> rawStrings,
+      llvh::ArrayRef<Value *> cookedStrings)
+      : Instruction(ValueKind::GetTemplateObjectInstKind) {
+    if (dup->getValue()) {
+      assert(
+          cookedStrings.empty() &&
+          "no cooked strings allowed if they are the same as raw");
+    } else {
+      assert(
+          rawStrings.size() == cookedStrings.size() &&
+          "same number of raw and cooked strings required");
+    }
+    pushOperand(templateObjID);
+    pushOperand(dup);
+    for (Value *v : rawStrings)
+      pushOperand(v);
+    for (Value *v : cookedStrings)
+      pushOperand(v);
+  }
+  explicit GetTemplateObjectInst(
+      const GetTemplateObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static OptValue<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  SideEffectKind getSideEffect() {
+    // Reads/writes the template cache, but only allocates new objects.
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  /// \return the ID for the template object in cache.
+  uint32_t getTemplateObjID() const {
+    return cast<LiteralNumber>(getOperand(TemplateObjIDIdx))->asUInt32();
+  }
+
+  /// \return whether the cooked strings are the same as the raw strings.
+  bool isDup() const {
+    return cast<LiteralBool>(getOperand(DupIdx))->getValue();
+  }
+
+  /// \return how many raw strings are being stored (same as the number of
+  /// cooked strings if they are not duped).
+  uint32_t getNumStrings() const {
+    return isDup() ? getNumOperands() - RawStartIdx
+                   : (getNumOperands() - RawStartIdx) / 2;
+  }
+
+  /// \return the \p idx raw string.
+  Value *getRawString(uint32_t idx) const {
+    return getOperand(RawStartIdx + idx);
+  }
+
+  /// For template objects that aren't reusing raw strings as cooked strings,
+  /// read the \p idx cooked string.
+  Value *getCookedString(uint32_t idx) const {
+    assert(!isDup() && "cooked strings are the same as raw strings");
+    auto cookedStrIdx = RawStartIdx + getNumStrings();
+    return getOperand(cookedStrIdx + idx);
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GetTemplateObjectInstKind;
+  }
+};
+
 class AllocArrayInst : public Instruction {
   AllocArrayInst(const AllocArrayInst &) = delete;
   void operator=(const AllocArrayInst &) = delete;

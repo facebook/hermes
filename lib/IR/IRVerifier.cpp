@@ -539,6 +539,11 @@ void Verifier::visitAllocArrayInst(const hermes::AllocArrayInst &Inst) {
       "Array elements must be literal when registers are limited");
 }
 
+void Verifier::visitGetTemplateObjectInst(
+    const hermes::GetTemplateObjectInst &Inst) {
+  // Nothing to verify at this point.
+}
+
 void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
   Assert(functionState, "functionState cannot be null");
   Assert(

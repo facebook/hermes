@@ -414,6 +414,12 @@ class IRBuilder {
       AllocArrayInst::ArrayValueList val_list,
       unsigned sizeHint);
 
+  GetTemplateObjectInst *createGetTemplateObjectInst(
+      uint32_t templateObjID,
+      bool dup,
+      llvh::ArrayRef<LiteralString *> rawStrings,
+      llvh::ArrayRef<Value *> cookedStrings);
+
   CreateArgumentsInst *createCreateArgumentsInst();
 
   GetNewTargetInst *createGetNewTargetInst(Value *newTargetParam);

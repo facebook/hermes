@@ -850,6 +850,11 @@ void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
     }
   }
 }
+void HBCISel::generateGetTemplateObjectInst(
+    GetTemplateObjectInst *inst,
+    BasicBlock *next) {
+  hermes_fatal("GetTemplateObjectInst unsupported in HBC");
+}
 void HBCISel::generateCreateArgumentsInst(
     CreateArgumentsInst *Inst,
     BasicBlock *next) {

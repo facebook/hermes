@@ -602,6 +602,20 @@ AllocArrayInst *IRBuilder::createAllocArrayInst(
   return createAllocArrayInst(this->getLiteralNumber(sizeHint), val_list);
 }
 
+GetTemplateObjectInst *IRBuilder::createGetTemplateObjectInst(
+    uint32_t templateObjID,
+    bool dup,
+    llvh::ArrayRef<LiteralString *> rawStrings,
+    llvh::ArrayRef<Value *> cookedStrings) {
+  auto *inst = new GetTemplateObjectInst(
+      getLiteralNumber(templateObjID),
+      getLiteralBool(dup),
+      rawStrings,
+      cookedStrings);
+  insert(inst);
+  return inst;
+}
+
 CreateArgumentsInst *IRBuilder::createCreateArgumentsInst() {
   auto CAI = new CreateArgumentsInst();
   insert(CAI);

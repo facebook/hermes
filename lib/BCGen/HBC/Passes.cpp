@@ -214,6 +214,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<GetTemplateObjectInst>(Inst) &&
+      (opIndex == GetTemplateObjectInst::TemplateObjIDIdx ||
+       opIndex == GetTemplateObjectInst::DupIdx))
+    return true;
+
   return false;
 }
 
@@ -906,6 +911,34 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
   switchInst->replaceAllUsesWith(switchImmInst);
   switchInst->eraseFromParent();
   return true;
+}
+
+bool LowerGetTemplateObject::runOnFunction(Function *F) {
+  bool changed = false;
+  IRBuilder builder(F);
+  IRBuilder::InstructionDestroyer destroyer;
+  for (BasicBlock &BB : *F) {
+    for (auto &it : BB) {
+      if (auto *gto = llvh::dyn_cast<GetTemplateObjectInst>(&it)) {
+        CallInst::ArgumentList argList;
+
+        // Copy over all operands because they are deliberately set up using
+        // the same layout as HermesBuiltin_getTemplateObject.
+        for (uint32_t i = 0, e = gto->getNumOperands(); i < e; ++i) {
+          argList.push_back(gto->getOperand(i));
+        }
+
+        builder.setInsertionPoint(gto);
+        auto *call = builder.createCallBuiltinInst(
+            BuiltinMethod::HermesBuiltin_getTemplateObject, argList);
+        gto->replaceAllUsesWith(call);
+        destroyer.add(gto);
+
+        changed = true;
+      }
+    }
+  }
+  return changed;
 }
 
 } // namespace hbc
