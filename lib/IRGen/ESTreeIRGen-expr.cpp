@@ -1938,49 +1938,42 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
   // Step 1: get the template object.
   auto *templateLit = cast<ESTree::TemplateLiteralNode>(Expr->_quasi);
 
-  // Construct an argument list for calling HermesInternal.getTemplateObject():
-  // [template object ID, dup, raw strings, (optional) cooked strings].
-  CallInst::ArgumentList argList;
-  // Retrieve template object ID.
-  Module::RawStringList rawStrings;
-  for (auto &n : templateLit->_quasis) {
-    auto element = cast<ESTree::TemplateElementNode>(&n);
-    rawStrings.push_back(Builder.getLiteralString(element->_raw->str()));
-  }
-  uint32_t templateObjID = Mod->getTemplateObjectID(std::move(rawStrings));
-  argList.push_back(Builder.getLiteralNumber(templateObjID));
+  // Empty if same as rawStringArgs.
+  llvh::SmallVector<Value *, 2> cookedStrings{};
 
+  Module::RawStringList rawStringsForMap;
   // dup is true if the cooked strings and raw strings are duplicated.
   bool dup = true;
-  // Add the argument dup first as a placeholder which we overwrite with
-  // the correct value later.
-  argList.push_back(Builder.getLiteralBool(dup));
-  for (auto &node : templateLit->_quasis) {
-    auto *templateElt = cast<ESTree::TemplateElementNode>(&node);
-    if (templateElt->_cooked != templateElt->_raw) {
+  for (auto &n : templateLit->_quasis) {
+    auto element = cast<ESTree::TemplateElementNode>(&n);
+    if (element->_cooked != element->_raw) {
       dup = false;
     }
-    argList.push_back(Builder.getLiteralString(templateElt->_raw->str()));
+    rawStringsForMap.push_back(Builder.getLiteralString(element->_raw->str()));
   }
-  argList[1] = Builder.getLiteralBool(dup);
+
+  // Retrieve template object ID.
+  // rawStringsForMap is moved, rawStrings is a reference to the same array now
+  // that it lives in the map.
+  auto [rawStrings, templateObjID] =
+      Mod->emplaceTemplateObject(std::move(rawStringsForMap));
+
   // If the cooked strings are not the same as raw strings, append them to
   // argument list.
   if (!dup) {
     for (auto &node : templateLit->_quasis) {
       auto *templateElt = cast<ESTree::TemplateElementNode>(&node);
       if (templateElt->_cooked) {
-        argList.push_back(
+        cookedStrings.push_back(
             Builder.getLiteralString(templateElt->_cooked->str()));
       } else {
-        argList.push_back(Builder.getLiteralUndefined());
+        cookedStrings.push_back(Builder.getLiteralUndefined());
       }
     }
   }
 
-  // Generate a function call to HermesInternal.getTemplateObject() with these
-  // arguments.
-  auto *templateObj =
-      genBuiltinCall(BuiltinMethod::HermesBuiltin_getTemplateObject, argList);
+  auto *templateObj = Builder.createGetTemplateObjectInst(
+      templateObjID, dup, rawStrings, cookedStrings);
 
   // Step 2: call the tag function, passing the template object followed by a
   // list of substitutions as arguments.

@@ -1825,11 +1825,7 @@ SKIP_LIST = [
     "test262/test/built-ins/Object/seal/seal-generatorfunction.js",
     "test262/test/language/expressions/in/rhs-yield-present.js",
     "test262/test/built-ins/AsyncFunction/",
-    # TODO(T140837786): Properly support template literals.
-    "test262/test/built-ins/String/raw/",
     "test262/test/language/expressions/async-function/",
-    "test262/test/language/expressions/tagged-template/",
-    "test262/test/language/expressions/template-literal/",
     "test262/test/language/statements/debugger/statement.js",
     "test262/test/language/statements/async-function/",
     # Static Hermes disables HBC/eval/Function
