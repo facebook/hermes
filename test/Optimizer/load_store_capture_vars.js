@@ -108,7 +108,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 1#"() : undefined
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %"foo 1#"() : undefined, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
@@ -116,7 +116,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : undefined
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %"foo 2#"() : undefined, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
@@ -124,7 +124,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 3#"() : undefined
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %"foo 3#"() : undefined, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
@@ -133,7 +133,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst 4 : number, [x] : number
 // CHECK-NEXT:  %1 = CreateFunctionInst %"foo 4#"() : undefined
-// CHECK-NEXT:  %2 = CallInst %1 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, %"foo 4#"() : undefined, empty, undefined : undefined
 // CHECK-NEXT:  %3 = LoadFrameInst [x] : number
 // CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end
@@ -142,7 +142,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 5#"() : undefined
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %"foo 5#"() : undefined, empty, undefined : undefined
 // CHECK-NEXT:  %2 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 

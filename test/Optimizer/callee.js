@@ -48,7 +48,7 @@ function load_store_multiple_test() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : string
+// CHECK:function global() : string [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "fuzz" : string
@@ -70,7 +70,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %foo() : number
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 12 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %foo() : number, empty, undefined : undefined, 12 : number
 // CHECK-NEXT:  %2 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
@@ -80,7 +80,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 1#"() : number
 // CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
 // CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
-// CHECK-NEXT:  %3 = ConstructInst %0 : closure, empty, empty, undefined : undefined, 12 : number
+// CHECK-NEXT:  %3 = ConstructInst %0 : closure, %"foo 1#"() : number, empty, undefined : undefined, 12 : number
 // CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : number
 // CHECK-NEXT:  %5 = ReturnInst %4 : object
 // CHECK-NEXT:function_end
@@ -91,7 +91,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst %ping() : number
 // CHECK-NEXT:  %1 = CreateFunctionInst %k() : number
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [k] : closure
-// CHECK-NEXT:  %3 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %0 : closure, %ping() : number, empty, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
@@ -101,49 +101,49 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = CreateFunctionInst %"foo 2#"() : number
 // CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [foo] : closure
 // CHECK-NEXT:  %2 = CreateFunctionInst %bar() : number
-// CHECK-NEXT:  %3 = CallInst %2 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, %bar() : number, empty, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(k : number) : number
+// CHECK:function foo(k : number) : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"(k : number) : number
+// CHECK:function "foo 1#"(k : number) : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function ping() : number
+// CHECK:function ping() : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst [k@load_store_test] : closure
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 123 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %k() : number, empty, undefined : undefined, 123 : number
 // CHECK-NEXT:  %2 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function k(k : number) : number
+// CHECK:function k(k : number) : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 2#"(cond : boolean, val : number) : number
+// CHECK:function "foo 2#"(cond : boolean, val : number) : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %val : number
 // CHECK-NEXT:  %1 = ReturnInst %0 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function bar() : number
+// CHECK:function bar() : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst [foo@load_store_multiple_test] : closure
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, true : boolean, 7 : number
-// CHECK-NEXT:  %2 = CallInst %0 : closure, empty, empty, undefined : undefined, true : boolean, 8 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %"foo 2#"() : number, empty, undefined : undefined, true : boolean, 7 : number
+// CHECK-NEXT:  %2 = CallInst %0 : closure, %"foo 2#"() : number, empty, undefined : undefined, true : boolean, 8 : number
 // CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
 // CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end

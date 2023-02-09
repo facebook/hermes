@@ -34,7 +34,7 @@ process = null;
 // CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:function_end
 
-// OPT-CHECK:function global() : null
+// OPT-CHECK:function global() : null [allCallsitesKnown]
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "a" : string

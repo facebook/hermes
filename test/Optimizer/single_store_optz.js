@@ -31,11 +31,11 @@ function g12(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %z
 // CHECK-NEXT:  %1 = CreateFunctionInst %w() : number
-// CHECK-NEXT:  %2 = CallInst %1 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, %w() : number, empty, undefined : undefined
 // CHECK-NEXT:  %3 = BinaryOperatorInst '>', %0, 0 : number
 // CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst %1 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1 : closure, %w() : number, empty, undefined : undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined

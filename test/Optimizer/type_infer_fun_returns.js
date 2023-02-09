@@ -32,7 +32,7 @@ function g14(z) {
 // CHECK-NEXT:  %0 = LoadParamInst %z
 // CHECK-NEXT:  %1 = CreateFunctionInst %w() : number
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [w] : closure
-// CHECK-NEXT:  %3 = CallInst %1 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, %w() : number, empty, undefined : undefined
 // CHECK-NEXT:  %4 = BinaryOperatorInst '>', %0, %3 : number
 // CHECK-NEXT:  %5 = CondBranchInst %4 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:

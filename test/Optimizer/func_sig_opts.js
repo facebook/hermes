@@ -58,7 +58,7 @@ function test_async() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : string
+// CHECK:function global() : string [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
@@ -89,8 +89,8 @@ function test_async() {
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo() : number
 // CHECK-NEXT:  %2 = CreateFunctionInst %bar() : string|number|bigint
 // CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, %0, "p" : string
-// CHECK-NEXT:  %4 = CallInst %1 : closure, empty, empty, undefined : undefined, 1 : number, 2 : number
-// CHECK-NEXT:  %5 = CallInst %2 : closure, empty, empty, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %4 = CallInst %1 : closure, %foo() : number, empty, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %5 = CallInst %2 : closure, %bar() : string|number|bigint, empty, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : string|number|bigint
 // CHECK-NEXT:  %7 = ReturnInst %6 : string|number
 // CHECK-NEXT:function_end
@@ -99,8 +99,8 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %builder() : number
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined
-// CHECK-NEXT:  %2 = CallInst %0 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %builder() : number, empty, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %0 : closure, %builder() : number, empty, undefined : undefined
 // CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : number, %2 : number
 // CHECK-NEXT:  %4 = ReturnInst %3 : number
 // CHECK-NEXT:function_end
@@ -122,7 +122,7 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %baz()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 100 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %baz(), empty, undefined : undefined, 100 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
@@ -130,7 +130,7 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %gen() : object
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %gen() : object, empty, undefined : undefined, 1 : number
 // CHECK-NEXT:  %2 = ReturnInst %1 : object
 // CHECK-NEXT:function_end
 
@@ -138,11 +138,11 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst %asyncFn()
-// CHECK-NEXT:  %1 = CallInst %0 : closure, empty, empty, undefined : undefined, 1 : number
+// CHECK-NEXT:  %1 = CallInst %0 : closure, %asyncFn(), empty, undefined : undefined, 1 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x : number, y : number) : number
+// CHECK:function foo(x : number, y : number) : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryOperatorInst '+', 1 : number, 2 : number
@@ -158,7 +158,7 @@ function test_async() {
 // CHECK-NEXT:  %3 = ReturnInst %2 : string|number|bigint
 // CHECK-NEXT:function_end
 
-// CHECK:function builder() : number
+// CHECK:function builder() : number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "k" : string
@@ -166,7 +166,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = ReturnInst %1 : number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2(a, b : number, c : number, d : undefined) : string|number
+// CHECK:function foo2(a, b : number, c : number, d : undefined) : string|number [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %a
@@ -181,7 +181,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %e
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
-// CHECK-NEXT:  %2 = CallInst %1 : closure, empty, empty, undefined : undefined, %0, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, %foo2() : string|number, empty, undefined : undefined, %0, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -190,25 +190,25 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst %e
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2@test_unused_and_duplicate_params] : closure
-// CHECK-NEXT:  %2 = CallInst %1 : closure, empty, empty, undefined : undefined, %0, 2 : number, 3 : number, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, %foo2() : string|number, empty, undefined : undefined, %0, 2 : number, 3 : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function baz()
+// CHECK:function baz() [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, empty, empty, undefined : undefined, 0 : number
 // CHECK-NEXT:  %1 = ReturnInst %0
 // CHECK-NEXT:function_end
 
-// CHECK:function gen() : object
+// CHECK:function gen() : object [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_gen()
 // CHECK-NEXT:  %1 = ReturnInst %0 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function asyncFn()
+// CHECK:function asyncFn() [allCallsitesKnown]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst
