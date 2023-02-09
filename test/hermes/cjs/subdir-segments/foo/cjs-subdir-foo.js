@@ -6,6 +6,7 @@
  */
 
 // RUN: true
+'use strict';
 
 print('foo: init');
 

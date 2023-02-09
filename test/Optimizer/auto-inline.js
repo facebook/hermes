@@ -8,6 +8,7 @@
 // RUN: %hermesc -target=HBC -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo1(a) {
+    'use strict';
     var add = function() {
         return 100;
     }
@@ -15,6 +16,7 @@ function foo1(a) {
 }
 
 function foo2(a) {
+    'use strict';
     var add = function(a, b) {
         return a + b;
     }
@@ -22,6 +24,7 @@ function foo2(a) {
 }
 
 function foo3(a) {
+    'use strict';
     var add = function(a, b) {
         return a ? a : b;
     }
@@ -29,6 +32,7 @@ function foo3(a) {
 }
 
 function foo4(a) {
+    'use strict';
     var add = function(a, b) {
         if (a < 0)
             return -1;

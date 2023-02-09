@@ -13,6 +13,9 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
+#include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/SetVector.h"
+#include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/Debug.h"
 
 STATISTIC(NumInlinedCalls, "Number of inlined calls");
@@ -42,18 +45,160 @@ static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
   return order;
 }
 
+/// \return a list of known callsites of \p F based on its users.
+/// It is possible that \p F has additional unknown callsites,
+/// read the `allCallsitesKnown` attribute to check that.
+static llvh::SmallVector<BaseCallInst *, 2> getKnownCallsites(Function *F) {
+  llvh::SmallVector<BaseCallInst *, 2> result{};
+  for (Instruction *user : F->getUsers()) {
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
+      assert(
+          call->getTarget() == F &&
+          "invalid usage of Function as operand of BaseCallInst");
+      result.push_back(call);
+    }
+  }
+  return result;
+}
+
+/// Iterates all instructions and extracts all populated \c target operands
+/// from call instructions.
+/// The callees of a function are not stored explicitly outside the insts
+/// themselves.
+/// \return a list of known callees of \p F.
+static llvh::SmallVector<Function *, 2> getKnownCallees(Function *F) {
+  // Use a SetVector to avoid duplicate entries.
+  // Return the vector to ensure deterministic iteration.
+  llvh::SetVector<Function *, llvh::SmallVector<Function *, 2>> result{};
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *call = llvh::dyn_cast<BaseCallInst>(&I)) {
+        if (auto *callee = llvh::dyn_cast<Function>(call->getTarget())) {
+          result.insert(callee);
+        }
+      }
+    }
+  }
+  return result.takeVector();
+}
+
+/// Make an order by which to visit functions for inlining.
+/// Because the call graph isn't acyclic or connected, we can't necessarily
+/// perfectly perform a topological sort, but we start at functions that
+/// have calls from no other known functions to ensure they're not going to
+/// be inlined anywhere, and once we've processed those,
+/// visit all the other functions.
+/// \return a list of Functions in a roughly leaf-to-root sorted manner.
+static std::vector<Function *> orderFunctions(Module *M) {
+  // Resultant ordering of functions.
+  std::vector<Function *> order{};
+
+  /// State to push onto the stack.
+  class State {
+   public:
+    Function *func;
+    /// All known callees of \c func.
+    /// When empty, iteration is complete.
+    llvh::SmallVector<Function *, 2> calledFunctions;
+
+    explicit State(Function *func, llvh::SmallVector<Function *, 2> &&called)
+        : func(func), calledFunctions(std::move(called)) {}
+
+    State(const State &) = delete;
+    State &operator=(const State &) = delete;
+
+    State(State &&) = default;
+  };
+
+  llvh::SmallDenseSet<Function *> visited{};
+
+  // Store the stack as a list of states to track whether the callees
+  // of each function have already been emplaced onto the stack.
+  // Store it outside `visitPostOrder` to avoid reallocating every call.
+  llvh::SmallVector<State, 4> stack{};
+
+  /// Run a post-order traversal of the function call graph starting at
+  /// \p cur, where the edges are from functions to the functions that they
+  /// are known to call.
+  /// If \p cur has already been visited, do nothing.
+  const auto visitPostOrder =
+      [&visited, &order, &stack](Function *cur) -> void {
+    if (!visited.insert(cur).second) {
+      // Visited this function on a previous invocation of visitPostOrder.
+      return;
+    }
+
+    assert(
+        stack.empty() &&
+        "stack must be empty by the end of every visitPostOrder call");
+
+    // Begin with the callees of the current function.
+    stack.emplace_back(cur, getKnownCallees(cur));
+
+    do {
+      while (!stack.back().calledFunctions.empty()) {
+        Function *next = stack.back().calledFunctions.pop_back_val();
+        if (visited.insert(next).second) {
+          // Haven't visited `next` before, add its callees to the stack.
+          stack.emplace_back(next, getKnownCallees(next));
+        }
+      }
+
+      order.push_back(stack.back().func);
+      stack.pop_back();
+    } while (!stack.empty());
+  };
+
+  // Functions that shouldn't be initial starting points in the BFS.
+  std::vector<Function *> functionsWithCallsites{};
+
+  // Run the visitor from each starting point to account for a disconnected
+  // graph, deferring functions with callsites until after functions without.
+  for (Function &F : *M) {
+    if (getKnownCallsites(&F).empty()) {
+      visitPostOrder(&F);
+    } else {
+      functionsWithCallsites.push_back(&F);
+    }
+  }
+  for (Function *F : functionsWithCallsites) {
+    visitPostOrder(F);
+  }
+
+  assert(
+      order.size() == M->getFunctionList().size() &&
+      "Didn't order all functions");
+
+  return order;
+}
+
 /// \return true if the function \p F satisfies the conditions for being
 ///   inlined.
 static bool canBeInlined(Function *F, Function *intoFunction) {
+  // If it's a recursive call, it can't be inlined.
+  if (F == intoFunction) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
+                     << "' into itself\n");
+    return false;
+  }
+
   // If it has captured variables, it can't be inlined.
   if (!F->getFunctionScope()->getVariables().empty()) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
+                     << "': has captured variables\n");
     return false;
   }
 
   // If the functions have different strictness, we can't inline them, since
   // we don't have strict/non-strict version of instructions (TODO).
-  if (F->isStrictMode() != intoFunction->isStrictMode())
+  if (F->isStrictMode() != intoFunction->isStrictMode()) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Cannot inline function '" << F->getInternalNameStr()
+                     << "': strict mode mismatch\n");
     return false;
+  }
 
   for (BasicBlock *oldBB : orderDFS(F)) {
     for (auto &I : *oldBB) {
@@ -64,10 +209,19 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
         case ValueKind::CreateFunctionInstKind:
         case ValueKind::CreateGeneratorInstKind:
           // Fail.
+          LLVM_DEBUG(
+              llvh::dbgs() << "Cannot inline function '"
+                           << F->getInternalNameStr()
+                           << "': invalid instruction " << I.getKindStr()
+                           << '\n');
           return false;
         case ValueKind::CallBuiltinInstKind:
           if (cast<CallBuiltinInst>(&I)->getBuiltinIndex() ==
               BuiltinMethod::HermesBuiltin_copyRestArgs) {
+            LLVM_DEBUG(
+                llvh::dbgs()
+                << "Cannot inline function '" << F->getInternalNameStr()
+                << "': copies rest args\n");
             return false;
           }
           break;
@@ -253,64 +407,77 @@ bool Inlining::runOnModule(Module *M) {
 
   bool changed = false;
 
-  for (Function &F : *M) {
-    for (Instruction *I : F.getUsers()) {
-      auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(I);
-      if (!CFI)
-        continue;
+  std::vector<Function *> functionOrder = orderFunctions(M);
 
-      // Check if the function is used only once directly by a CallInst.
-      // We can't use getCallSites() (yet) because it also considers constructor
-      // calls as well usages through environment variables.
+  for (Function *FC : functionOrder) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
+                     << "'\n");
 
-      if (!CFI->hasOneUser() ||
-          CFI->getUsers()[0]->getKind() != ValueKind::CallInstKind) {
-        continue;
-      }
-      auto *CI = cast<CallInst>(CFI->getUsers()[0]);
-      if (!isDirectCallee(CFI, CI))
-        continue;
-
-      Function *intoFunction = CI->getParent()->getParent();
-
-      auto *FC = CFI->getFunctionCode();
-      if (!canBeInlined(FC, intoFunction))
-        continue;
-
-      LLVM_DEBUG(llvh::dbgs() << "Inlining function '"
-                              << FC->getInternalNameStr() << "' ";
-                 FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvh::dbgs(), FC->getSourceRange().Start);
-                 llvh::dbgs() << " into function '"
-                              << intoFunction->getInternalNameStr() << "' ";
-                 FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvh::dbgs(), intoFunction->getSourceRange().Start);
-                 llvh::dbgs() << "\n";);
-
-      IRBuilder builder(M);
-
-      // Split the block in two and move all instructions following the call
-      // to the new block.
-      BasicBlock *nextBlock = builder.createBasicBlock(intoFunction);
-      builder.setInsertionBlock(nextBlock);
-
-      // Move the rest of the instructions.
-      auto it = CI->getIterator();
-      ++it; // Skip over the call.
-      auto e = CI->getParent()->end();
-      while (it != e)
-        builder.transferInstructionToCurrentBlock(&*it++);
-
-      // Perform the inlining.
-      builder.setInsertionPointAfter(CI);
-
-      auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);
-      CI->replaceAllUsesWith(returnValue);
-      CI->eraseFromParent();
-
-      ++NumInlinedCalls;
-      changed = true;
+    if (!FC->getAttributes().allCallsitesKnown) {
+      LLVM_DEBUG(
+          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
+                       << "': has unknown callsites\n");
+      continue;
     }
+
+    llvh::SmallVector<BaseCallInst *, 2> callsites = getKnownCallsites(FC);
+
+    if (callsites.size() != 1) {
+      LLVM_DEBUG(
+          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
+                       << llvh::format(
+                              "': has %u callsites (requires 1)\n",
+                              callsites.size()));
+      continue;
+    }
+
+    auto *CI = llvh::dyn_cast<CallInst>(*callsites.begin());
+    if (!CI) {
+      LLVM_DEBUG(
+          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
+                       << "': callsite is not a CallInst\n");
+      continue;
+    }
+
+    Function *intoFunction = CI->getParent()->getParent();
+
+    if (!canBeInlined(FC, intoFunction))
+      continue;
+
+    LLVM_DEBUG(llvh::dbgs()
+                   << "Inlining function '" << FC->getInternalNameStr() << "' ";
+               FC->getContext().getSourceErrorManager().dumpCoords(
+                   llvh::dbgs(), FC->getSourceRange().Start);
+               llvh::dbgs() << " into function '"
+                            << intoFunction->getInternalNameStr() << "' ";
+               FC->getContext().getSourceErrorManager().dumpCoords(
+                   llvh::dbgs(), intoFunction->getSourceRange().Start);
+               llvh::dbgs() << "\n";);
+
+    IRBuilder builder(M);
+
+    // Split the block in two and move all instructions following the call
+    // to the new block.
+    BasicBlock *nextBlock = builder.createBasicBlock(intoFunction);
+    builder.setInsertionBlock(nextBlock);
+
+    // Move the rest of the instructions.
+    auto it = CI->getIterator();
+    ++it; // Skip over the call.
+    auto e = CI->getParent()->end();
+    while (it != e)
+      builder.transferInstructionToCurrentBlock(&*it++);
+
+    // Perform the inlining.
+    builder.setInsertionPointAfter(CI);
+
+    auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);
+    CI->replaceAllUsesWith(returnValue);
+    CI->eraseFromParent();
+
+    ++NumInlinedCalls;
+    changed = true;
   }
 
   return changed;

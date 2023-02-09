@@ -9,6 +9,7 @@
 // Perform stack promotion after inlining
 
 function f1(num) {
+    'use strict';
     function bar() {
         return num;
     }

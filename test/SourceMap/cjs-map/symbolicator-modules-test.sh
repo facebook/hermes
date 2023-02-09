@@ -15,7 +15,8 @@ HBC_FILE="$TMPDIR/out.hbc"
 RAW_TRACE="$TMPDIR/raw_trace.txt"
 SYM_TRACE="$TMPDIR/symbolicated_trace.txt"
 
-"$HERMES" -gc-sanitize-handles=0 -commonjs -output-source-map \
+# Disable inlining to make sure the stack trace is stable.
+"$HERMES" -gc-sanitize-handles=0 -commonjs -output-source-map -fno-inline \
   -emit-binary -out "$HBC_FILE" \
   "$SRCDIR"
 
