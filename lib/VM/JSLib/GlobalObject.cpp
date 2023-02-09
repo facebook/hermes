@@ -778,8 +778,10 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           Runtime::makeNullHandle<JSObject>())
           .getHermesValue();
 
-  // Define the 'gc' function.
-  defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+  if (jsLibFlags.enableHermesInternal) {
+    // Define the 'gc' function.
+    defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+  }
 
 #ifdef HERMES_ENABLE_IR_INSTRUMENTATION
   // Define the global __instrument object
