@@ -119,16 +119,16 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
   PATTERN "synthtest" EXCLUDE)
 
 # Create debug symbols (dSYM) bundle for Apple platform dylibs/frameworks
-# Largely inspired by https://github.com/llvm/llvm-project/blob/9a708855daeb6f70bbde7c2bc63e061ebaf072df/llvm/cmake/modules/AddLLVM.cmake#L2218-L2242
+# Largely inspired by https://github.com/llvm/llvm-project/blob/6701993027f8af172d7ba697884459261b00e3c6/llvm/cmake/modules/AddLLVM.cmake#L1934-L1986
 if(HERMES_BUILD_APPLE_DSYM)
   if(CMAKE_CXX_FLAGS MATCHES "-flto")
     set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libhermes-lto.o)
     set_property(TARGET libhermes APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
   endif()
 
-  set(DSYM_PATH $<TARGET_FILE:libhermes>)
+  get_target_property(DSYM_PATH libhermes LOCATION)
   if(HERMES_BUILD_APPLE_FRAMEWORK)
-    set(DSYM_PATH $<TARGET_FILE_DIR:libhermes>)
+    get_filename_component(DSYM_PATH ${DSYM_PATH} DIRECTORY)
   endif()
   set(DSYM_PATH "${DSYM_PATH}.dSYM")
 
@@ -137,6 +137,7 @@ if(HERMES_BUILD_APPLE_DSYM)
   endif()
   add_custom_command(TARGET libhermes POST_BUILD
     COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:libhermes> --out ${DSYM_PATH}
+    BYPRODUCTS ${DSYM_PATH}
   )
 
   if(HERMES_BUILD_APPLE_FRAMEWORK)
