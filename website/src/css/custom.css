@@ -22,6 +22,7 @@
   --ifm-color-primary-light: #46bf85;
   --ifm-color-primary-lighter: #60c896;
   --ifm-color-primary-lightest: #7ad1a8;
+  --prism-background-color: rgb(36, 37, 38);
 }
 
 .footer--dark {
