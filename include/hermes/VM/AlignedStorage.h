@@ -20,7 +20,7 @@ namespace vm {
 
 class StorageProvider;
 
-#ifndef HERMESVM_HEAP_SEGMENT_SIZE_KB
+#ifndef HERMESVM_LOG_HEAP_SEGMENT_SIZE
 #error Heap segment size must be defined.
 #endif
 
@@ -28,12 +28,8 @@ class StorageProvider;
 /// be \c AlignedStorage::size().
 struct AlignedStorage {
   /// The size and the alignment of the storage, in bytes.
-  static constexpr unsigned kLogSize{
-      llvh::detail::ConstantLog2<HERMESVM_HEAP_SEGMENT_SIZE_KB * 1024>::value};
+  static constexpr unsigned kLogSize = HERMESVM_LOG_HEAP_SEGMENT_SIZE;
   static constexpr size_t kSize{1 << kLogSize};
-  static_assert(
-      kSize == HERMESVM_HEAP_SEGMENT_SIZE_KB * 1024,
-      "Heap segment size must be a power of 2.");
 
   /// Returns the pointer to the beginning of the storage containing \p ptr
   /// (inclusive). Assuming such a storage exists. Note that

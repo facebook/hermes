@@ -149,9 +149,9 @@ set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
 
 # Note that smaller heap segments will lower the maximum number of properties
 # that can be stored in an object.
-set(HERMESVM_HEAP_SEGMENT_SIZE_KB 4096
+set(HERMESVM_LOG_HEAP_SEGMENT_SIZE 22
         CACHE STRING
-        "Size of segments in the GC managed heap in KB. Must be a power of 2.")
+        "Base 2 log of the size of segments in the GC managed heap in bytes.")
 
 set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
         "Enable concurrency in the GC for 64-bit builds.")
@@ -407,7 +407,7 @@ endif()
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()
-add_definitions(-DHERMESVM_HEAP_SEGMENT_SIZE_KB=${HERMESVM_HEAP_SEGMENT_SIZE_KB})
+add_definitions(-DHERMESVM_LOG_HEAP_SEGMENT_SIZE=${HERMESVM_LOG_HEAP_SEGMENT_SIZE})
 if(HERMESVM_ALLOW_CONCURRENT_GC)
     add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
 endif()
