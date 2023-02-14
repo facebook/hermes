@@ -21,6 +21,9 @@
 #ifndef HERMESVM_LOG_HEAP_SEGMENT_SIZE
 #define HERMESVM_LOG_HEAP_SEGMENT_SIZE @HERMESVM_LOG_HEAP_SEGMENT_SIZE@
 #endif
+#ifndef HERMES_IS_MOBILE_BUILD
+#cmakedefine HERMES_IS_MOBILE_BUILD
+#endif
 /// The value of `sizeof(void *)` as an integer for used by the preprocessor.
 #define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
 #define HERMESVM_DEBUG_MODE $<CONFIG:Debug,RelWithDebInfo>
