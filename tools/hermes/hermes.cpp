@@ -7,9 +7,9 @@
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
+#include "hermes/VM/RuntimeFlags.h"
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/ADT/SmallVector.h"
@@ -26,106 +26,92 @@
 
 using namespace hermes;
 
-namespace cl {
-using llvh::cl::opt;
+namespace {
+struct Flags : public cli::VMOnlyRuntimeFlags {
+  llvh::cl::opt<unsigned> Repeat{
+      "Xrepeat",
+      llvh::cl::desc("Repeat execution N number of times"),
+      llvh::cl::init(1),
+      llvh::cl::Hidden};
 
-static opt<unsigned> Repeat(
-    "Xrepeat",
-    llvh::cl::desc("Repeat execution N number of times"),
-    llvh::cl::init(1),
-    llvh::cl::Hidden);
+  llvh::cl::opt<bool> GCBeforeStats{
+      "gc-before-stats",
+      llvh::cl::desc(
+          "Perform a full GC just before printing statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
 
-static opt<bool> RandomizeMemoryLayout(
-    "Xrandomize-memory-layout",
-    llvh::cl::desc("Randomize stack placement etc."),
-    llvh::cl::init(false),
-    llvh::cl::Hidden);
+  llvh::cl::opt<bool> GCPrintStats{
+      "gc-print-stats",
+      llvh::cl::desc("Output summary garbage collection statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
 
-static opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    desc("Determines whether to (initially) allocate in the young generation"),
-    cat(GCCategory),
-    init(true));
+  llvh::cl::opt<unsigned> ExecutionTimeLimit{
+      "time-limit",
+      llvh::cl::desc(
+          "Number of milliseconds after which to abort JS execution"),
+      llvh::cl::init(0)};
+};
 
-static opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    desc("Determines whether to revert to young generation, if necessary, at "
-         "TTI notification"),
-    cat(GCCategory),
-    init(false));
+Flags flags;
 
-static opt<bool> GCBeforeStats(
-    "gc-before-stats",
-    desc("Perform a full GC just before printing statistics at exit"),
-    cat(GCCategory),
-    init(false));
-
-static opt<bool> GCPrintStats(
-    "gc-print-stats",
-    desc("Output summary garbage collection statistics at exit"),
-    cat(GCCategory),
-    init(false));
-
-static opt<unsigned> ExecutionTimeLimit(
-    "time-limit",
-    llvh::cl::desc("Number of milliseconds after which to abort JS exeuction"),
-    llvh::cl::init(0));
-} // namespace cl
+} // namespace
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
 /// \return an exit status.
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
-  auto recStats =
-      (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
+  auto recStats = (flags.GCPrintStats || flags.GCBeforeStats) &&
+      !flags.StableInstructionCount;
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
           .withGCConfig(vm::GCConfig::Builder()
-                            .withMinHeapSize(cl::MinHeapSize.bytes)
-                            .withInitHeapSize(cl::InitHeapSize.bytes)
-                            .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                            .withOccupancyTarget(cl::OccupancyTarget)
+                            .withMinHeapSize(flags.MinHeapSize.bytes)
+                            .withInitHeapSize(flags.InitHeapSize.bytes)
+                            .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                            .withOccupancyTarget(flags.OccupancyTarget)
                             .withSanitizeConfig(
                                 vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(cl::GCSanitizeRate)
-                                    .withRandomSeed(cl::GCSanitizeRandomSeed)
+                                    .withSanitizeRate(flags.GCSanitizeRate)
+                                    .withRandomSeed(flags.GCSanitizeRandomSeed)
                                     .build())
                             .withShouldRecordStats(recStats)
                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withAllocInYoung(cl::GCAllocYoung)
-                            .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
+                            .withAllocInYoung(flags.GCAllocYoung)
+                            .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
                             .build())
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
           .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
-          .withVMExperimentFlags(cl::VMExperimentFlags)
-          .withES6Promise(cl::ES6Promise)
-          .withES6Proxy(cl::ES6Proxy)
-          .withIntl(cl::Intl)
-          .withMicrotaskQueue(cl::MicrotaskQueue)
-          .withEnableSampleProfiling(cl::SampleProfiling)
-          .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
-          .withTrackIO(cl::TrackBytecodeIO)
-          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withVMExperimentFlags(flags.VMExperimentFlags)
+          .withES6Promise(flags.ES6Promise)
+          .withES6Proxy(flags.ES6Proxy)
+          .withIntl(flags.Intl)
+          .withMicrotaskQueue(flags.MicrotaskQueue)
+          .withEnableSampleProfiling(flags.SampleProfiling)
+          .withRandomizeMemoryLayout(flags.RandomizeMemoryLayout)
+          .withTrackIO(flags.TrackBytecodeIO)
+          .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
-              cl::EnableHermesInternalTestMethods)
+              flags.EnableHermesInternalTestMethods)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
 
   options.stopAfterInit = false;
-  options.timeLimit = cl::ExecutionTimeLimit;
-  options.stopAfterInit = cl::StopAfterInit;
-  options.forceGCBeforeStats = cl::GCBeforeStats;
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
-  options.sampleProfiling = cl::SampleProfiling;
-  options.heapTimeline = cl::HeapTimeline;
+  options.timeLimit = flags.ExecutionTimeLimit;
+  options.stopAfterInit = flags.StopAfterInit;
+  options.forceGCBeforeStats = flags.GCBeforeStats;
+  options.stabilizeInstructionCount = flags.StableInstructionCount;
+  options.sampleProfiling = flags.SampleProfiling;
+  options.heapTimeline = flags.HeapTimeline;
 
   bool success;
-  if (cl::Repeat <= 1) {
+  if (flags.Repeat <= 1) {
     success = executeHBCBytecode(std::move(bytecode), options, &info.filename);
   } else {
     // The runtime is supposed to own the bytecode exclusively, but we
@@ -134,7 +120,7 @@ static int executeHBCBytecodeFromCL(
     std::shared_ptr<hbc::BCProvider> sharedBytecode = std::move(bytecode);
 
     success = true;
-    for (unsigned i = 0; i < cl::Repeat; ++i) {
+    for (unsigned i = 0; i < flags.Repeat; ++i) {
       success &= executeHBCBytecode(
           std::shared_ptr<hbc::BCProvider>{sharedBytecode},
           options,
@@ -146,23 +132,24 @@ static int executeHBCBytecodeFromCL(
 
 static vm::RuntimeConfig getReplRuntimeConfig() {
   return vm::RuntimeConfig::Builder()
-      .withGCConfig(
-          vm::GCConfig::Builder()
-              .withInitHeapSize(cl::InitHeapSize.bytes)
-              .withMaxHeapSize(cl::MaxHeapSize.bytes)
-              .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                      .withSanitizeRate(cl::GCSanitizeRate)
-                                      .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                      .build())
-              .withShouldRecordStats(cl::GCPrintStats)
-              .build())
-      .withVMExperimentFlags(cl::VMExperimentFlags)
-      .withES6Promise(cl::ES6Promise)
-      .withES6Proxy(cl::ES6Proxy)
-      .withIntl(cl::Intl)
-      .withMicrotaskQueue(cl::MicrotaskQueue)
-      .withEnableHermesInternal(cl::EnableHermesInternal)
-      .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
+      .withGCConfig(vm::GCConfig::Builder()
+                        .withInitHeapSize(flags.InitHeapSize.bytes)
+                        .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                        .withSanitizeConfig(
+                            vm::GCSanitizeConfig::Builder()
+                                .withSanitizeRate(flags.GCSanitizeRate)
+                                .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                .build())
+                        .withShouldRecordStats(flags.GCPrintStats)
+                        .build())
+      .withVMExperimentFlags(flags.VMExperimentFlags)
+      .withES6Promise(flags.ES6Promise)
+      .withES6Proxy(flags.ES6Proxy)
+      .withIntl(flags.Intl)
+      .withMicrotaskQueue(flags.MicrotaskQueue)
+      .withEnableHermesInternal(flags.EnableHermesInternal)
+      .withEnableHermesInternalTestMethods(
+          flags.EnableHermesInternalTestMethods)
       .build();
 }
 
@@ -189,7 +176,7 @@ int main(int argc, char **argv) {
   // Tell compiler to emit async break check if time-limit feature is enabled
   // so that user can turn on this feature with single ExecutionTimeLimit
   // option.
-  if (cl::ExecutionTimeLimit > 0) {
+  if (flags.ExecutionTimeLimit > 0) {
     cl::EmitAsyncBreakCheck = true;
   }
 

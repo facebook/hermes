@@ -5,123 +5,112 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/ConsoleHost/RuntimeFlags.h"
+#include "hermes/VM/RuntimeFlags.h"
 #include "hermes/VM/StaticHUtils.h"
+
+#include "llvh/ADT/ScopeExit.h"
+
+#include <mutex>
 
 using namespace hermes;
 using namespace hermes::vm;
 
 namespace {
-namespace cli {
+struct GlobalState {
+  /// Mutex protecting the global state.
+  std::mutex mutex{};
 
-llvh::cl::opt<bool> RandomizeMemoryLayout(
-    "Xrandomize-memory-layout",
-    llvh::cl::desc("Randomize stack placement etc."),
-    llvh::cl::init(false),
-    llvh::cl::Hidden);
+  /// The lifetime of a Runtime is managed by a smart pointer, but the C API
+  /// wants to deal with a regular pointer. Keep all created runtimes here, so
+  /// they can be destroyed from a pointer.
+  llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> runtimes{};
+};
 
-llvh::cl::opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    llvh::cl::desc(
-        "Determines whether to (initially) allocate in the young generation"),
-    llvh::cl::cat(cl::GCCategory),
-    llvh::cl::init(true));
-
-llvh::cl::opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    llvh::cl::desc(
-        "Determines whether to revert to young generation, if necessary, at "
-        "TTI notification"),
-    llvh::cl::cat(cl::GCCategory),
-    llvh::cl::init(false));
-
-llvh::cl::opt<bool> EnableEval(
-    "enable-eval",
-    llvh::cl::init(true),
-    llvh::cl::desc("Enable support for eval()"));
-
-// This is normally a compiler option, but it also applies to strings given
-// to eval or the Function constructor.
-llvh::cl::opt<bool> VerifyIR(
-    "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
-    llvh::cl::init(true),
-#else
-    llvh::cl::init(false),
-    llvh::cl::Hidden,
-#endif
-    llvh::cl::desc("Verify the IR after creating it"));
-
-llvh::cl::opt<bool> EmitAsyncBreakCheck(
-    "emit-async-break-check",
-    llvh::cl::desc("Emit instruction to check async break request"),
-    llvh::cl::init(false));
-
-llvh::cl::opt<bool> OptimizedEval(
-    "optimized-eval",
-    llvh::cl::desc("Turn on compiler optimizations in eval."),
-    llvh::cl::init(false));
-
-} // namespace cli
+GlobalState &getGlobalState() {
+  static GlobalState state{};
+  return state;
+}
 } // namespace
 
-/// The lifetime of a Runtime is managed by a smart pointer, but the C API wants
-/// to deal with a regular pointer. Keep all created runtimes here, so they can
-/// be destroyed from a pointer.
-static llvh::DenseMap<Runtime *, std::shared_ptr<Runtime>> s_runtimes{};
-
-static RuntimeConfig buildRuntimeConfig();
-
-extern "C" SHRuntime *_sh_init(int argc, char **argv) {
-  if (argc)
-    llvh::cl::ParseCommandLineOptions(argc, argv);
-
-  auto config = buildRuntimeConfig();
+SHRuntime *_sh_init(const RuntimeConfig &config) {
   std::shared_ptr<Runtime> runtimePtr = Runtime::create(config);
-  // Get the pointer first, since order of argument evaluation is not defined.
   Runtime *pRuntime = runtimePtr.get();
-  s_runtimes.try_emplace(pRuntime, std::move(runtimePtr));
+  {
+    auto &gs = getGlobalState();
+    std::lock_guard<std::mutex> lock(gs.mutex);
+    gs.runtimes.try_emplace(pRuntime, std::move(runtimePtr));
+  }
   return getSHRuntime(*pRuntime);
 }
 
-static RuntimeConfig buildRuntimeConfig() {
-  return vm::RuntimeConfig::Builder()
-      .withGCConfig(
-          vm::GCConfig::Builder()
-              .withMinHeapSize(cl::MinHeapSize.bytes)
-              .withInitHeapSize(cl::InitHeapSize.bytes)
-              .withMaxHeapSize(cl::MaxHeapSize.bytes)
-              .withOccupancyTarget(cl::OccupancyTarget)
-              .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                      .withSanitizeRate(cl::GCSanitizeRate)
-                                      .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                      .build())
-              .withShouldReleaseUnused(vm::kReleaseUnusedOld)
-              .withAllocInYoung(cli::GCAllocYoung)
-              .withRevertToYGAtTTI(cli::GCRevertToYGAtTTI)
-              .build())
-      .withEnableEval(cli::EnableEval)
-      .withVerifyEvalIR(cli::VerifyIR)
-      .withOptimizedEval(cli::OptimizedEval)
-      .withAsyncBreakCheckInEval(cli::EmitAsyncBreakCheck)
-      .withVMExperimentFlags(cl::VMExperimentFlags)
-      .withES6Promise(cl::ES6Promise)
-      .withES6Proxy(cl::ES6Proxy)
-      .withIntl(cl::Intl)
-      .withMicrotaskQueue(cl::MicrotaskQueue)
-      .withEnableSampleProfiling(cl::SampleProfiling)
-      .withRandomizeMemoryLayout(cli::RandomizeMemoryLayout)
-      .withTrackIO(cl::TrackBytecodeIO)
-      .withEnableHermesInternal(cl::EnableHermesInternal)
-      .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
-      .build();
+extern "C" void _sh_done(SHRuntime *shr) {
+  std::shared_ptr<Runtime> runtimePtr{};
+  // Keep the scope of the lock only around finding the runtime and removing
+  // it from the map.
+  {
+    auto &gs = getGlobalState();
+    std::lock_guard<std::mutex> lock(gs.mutex);
+    // Find the runtime.
+    auto it = gs.runtimes.find(&getRuntime(shr));
+    if (it == gs.runtimes.end()) {
+      llvh::errs() << "SHRuntime not found\n";
+      abort();
+    }
+    // Store the runtime in the shared pointer, so it will be destroyed outside
+    // the lock.
+    runtimePtr.swap(it->second);
+    gs.runtimes.erase(it);
+  }
 }
 
-extern "C" void _sh_done(SHRuntime *shr) {
-  auto it = s_runtimes.find(&getRuntime(shr));
-  if (it == s_runtimes.end()) {
-    llvh::errs() << "SHRuntime not found\n";
-    abort();
+#ifndef HERMES_IS_MOBILE_BUILD
+static SHRuntime *_sh_init(int argc, char **argv, llvh::raw_ostream &errs) {
+  vm::RuntimeConfig runtimeConfig{};
+
+  // Serialize command line parsing, since there is a single global parser.
+  {
+    std::lock_guard<std::mutex> lock(getGlobalState().mutex);
+
+    // Reset the command line parser, in case it was "dirty", and register all
+    // options.
+    llvh::cl::ResetCommandLineParser();
+    hermes::cli::RuntimeFlags runtimeFlags{};
+
+    // Make sure the parser is reset on exit, so it doesn't keep references to
+    // stack locations.
+    const auto resetParser =
+        llvh::make_scope_exit(llvh::cl::ResetCommandLineParser);
+
+    // Parse, if there are any args supplied.
+    if (argc && !llvh::cl::ParseCommandLineOptions(argc, argv, "", &errs))
+      return nullptr;
+
+    runtimeConfig = cli::buildRuntimeConfig(runtimeFlags);
   }
-  s_runtimes.erase(it);
+
+  return _sh_init(runtimeConfig);
 }
+
+extern "C" SHRuntime *_sh_init(int argc, char **argv) {
+  if (SHRuntime *shr = _sh_init(argc, argv, llvh::errs()))
+    return shr;
+
+  ::exit(1);
+}
+
+extern "C" SHRuntime *
+_sh_init_with_error(int argc, char **argv, char **errorMessage) {
+  std::string err{};
+  llvh::raw_string_ostream OS{err};
+  if (SHRuntime *shr = _sh_init(argc, argv, OS)) {
+    if (errorMessage)
+      *errorMessage = nullptr;
+    return shr;
+  }
+
+  if (errorMessage)
+    *errorMessage = ::strdup(OS.str().c_str());
+  return nullptr;
+}
+
+#endif // HERMES_IS_MOBILE_BUILD

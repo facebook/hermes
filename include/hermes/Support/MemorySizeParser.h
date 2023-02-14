@@ -17,27 +17,24 @@
 /// independent of the Hermes compiler.  Such flags must be defined in the
 /// hermes and hvm binaries, so this file is included in all of those.
 
-namespace cl {
-
-using llvh::cl::Option;
-using llvh::cl::parser;
+namespace hermes::cli {
 
 struct MemorySize {
   unsigned bytes;
 };
 
 // Define a custom parser for memory size specifications.
-struct MemorySizeParser : public parser<MemorySize> {
-  MemorySizeParser(Option &O) : parser<MemorySize>(O) {}
+struct MemorySizeParser : public llvh::cl::parser<MemorySize> {
+  MemorySizeParser(llvh::cl::Option &O) : parser<MemorySize>(O) {}
 
   // parse - Return true on error.
   bool parse(
-      cl::Option &O,
+      llvh::cl::Option &O,
       llvh::StringRef ArgName,
       const std::string &ArgValue,
       MemorySize &Val);
 };
 
-} // namespace cl
+} // namespace hermes::cli
 
 #endif // HERMES_SUPPORT_MEMORYSIZEPARSER_H

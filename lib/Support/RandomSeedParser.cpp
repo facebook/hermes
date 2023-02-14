@@ -7,10 +7,10 @@
 
 #include "hermes/Support/RandomSeedParser.h"
 
-namespace cl {
+namespace hermes::cli {
 
 bool RandomSeedParser::parse(
-    cl::Option &O,
+    llvh::cl::Option &O,
     llvh::StringRef ArgName,
     const std::string &Arg,
     int64_t &Val) {
@@ -26,4 +26,4 @@ bool RandomSeedParser::parse(
   return false;
 }
 
-} // namespace cl
+} // namespace hermes::cli

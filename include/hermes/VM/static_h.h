@@ -112,8 +112,33 @@ typedef struct SHJmpBuf {
 /// A dummy export to ensure correct library is linked.
 SHERMES_EXPORT void _SH_MODEL(void);
 
-/// Create a runtime instance.
+#ifndef HERMES_IS_MOBILE_BUILD
+/// Parse the command line flags, if provided. If not provided, the VM command
+/// line options receive their default values specified in cli::RuntimeFlags.
+/// Returns a new runtime on success, terminate the process on error. Errors
+/// are printed to stderr.
+///
+/// \param argc number of command line arguments. If 0, no parsing is performed.
+/// \param argv the command line arguments, where argv[0] is the application
+///     path. Ignored if \c argc is 0.
+/// \return the created runtime.
 SHERMES_EXPORT SHRuntime *_sh_init(int argc, char **argv);
+
+/// Parse the command line flags, if provided. If not provided, the VM command
+/// line options receive their default values specified in cli::RuntimeFlags.
+/// Returns a new runtime on success, or nullptr on error.
+///
+/// \param argc number of command line arguments. If 0, no parsing is performed.
+/// \param argv the command line arguments, where argv[0] is the application
+///     path. Ignored if \c argc is 0.
+/// \param errorMessage if non-null, it will be cleared on success, or
+///     initialized with a heap-allocated error message string, which needs to
+///     be freed with \c free().
+/// \return the created runtime or nullptr
+SHERMES_EXPORT SHRuntime *
+_sh_init_with_error(int argc, char **argv, char **errorMessage);
+#endif // HERMES_IS_MOBILE_BUILD
+
 /// Destroy a runtime instance created by \c _sh_init();
 SHERMES_EXPORT void _sh_done(SHRuntime *shr);
 
@@ -674,5 +699,15 @@ static inline int32_t _sh_to_int32_double(double d) {
 #ifdef __cplusplus
 }
 #endif
+
+/// A C++ SH init.
+#ifdef __cplusplus
+namespace hermes::vm {
+class RuntimeConfig;
+}
+
+/// Create a runtime instance using the supplied configuration.
+SHERMES_EXPORT SHRuntime *_sh_init(const hermes::vm::RuntimeConfig &config);
+#endif // __cplusplus
 
 #endif // HERMES_STATIC_H_H

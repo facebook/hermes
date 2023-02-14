@@ -21,17 +21,19 @@
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PageAccessTracker.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/RuntimeFlags.h"
 
 #define DEBUG_TYPE "hvm"
 
 using namespace hermes;
+
+namespace {
 
 static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::desc("input file"),
@@ -56,11 +58,17 @@ static llvh::cl::opt<unsigned> Repeat(
     llvh::cl::init(1),
     llvh::cl::Hidden);
 
-static llvh::cl::opt<bool> GCPrintStats(
-    "gc-print-stats",
-    llvh::cl::desc("Output summary garbage collection statistics at exit"),
-    llvh::cl::cat(cl::GCCategory),
-    llvh::cl::init(false));
+struct Flags : public cli::RuntimeFlags {
+  llvh::cl::opt<bool> GCPrintStats{
+      "gc-print-stats",
+      llvh::cl::desc("Output summary garbage collection statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+};
+
+Flags flags{};
+
+} // anonymous namespace
 
 // This is the vm driver.
 int main(int argc, char **argv) {
@@ -105,31 +113,32 @@ int main(int argc, char **argv) {
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withInitHeapSize(cl::InitHeapSize.bytes)
-                            .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(cl::GCSanitizeRate)
-                                    .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(
-                                GCPrintStats && !cl::StableInstructionCount)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withName("hvm")
-                            .build())
-          .withES6Promise(cl::ES6Promise)
-          .withES6Proxy(cl::ES6Proxy)
-          .withIntl(cl::Intl)
-          .withMicrotaskQueue(cl::MicrotaskQueue)
-          .withTrackIO(cl::TrackBytecodeIO)
-          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withGCConfig(
+              vm::GCConfig::Builder()
+                  .withInitHeapSize(flags.InitHeapSize.bytes)
+                  .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                  .withSanitizeConfig(
+                      vm::GCSanitizeConfig::Builder()
+                          .withSanitizeRate(flags.GCSanitizeRate)
+                          .withRandomSeed(flags.GCSanitizeRandomSeed)
+                          .build())
+                  .withShouldRecordStats(
+                      flags.GCPrintStats && !flags.StableInstructionCount)
+                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                  .withName("hvm")
+                  .build())
+          .withES6Promise(flags.ES6Promise)
+          .withES6Proxy(flags.ES6Proxy)
+          .withIntl(flags.Intl)
+          .withMicrotaskQueue(flags.MicrotaskQueue)
+          .withTrackIO(flags.TrackBytecodeIO)
+          .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
-              cl::EnableHermesInternalTestMethods)
+              flags.EnableHermesInternalTestMethods)
           .build();
 
-  options.stabilizeInstructionCount = cl::StableInstructionCount;
-  options.stopAfterInit = cl::StopAfterInit;
+  options.stabilizeInstructionCount = flags.StableInstructionCount;
+  options.stopAfterInit = flags.StopAfterInit;
 
   bool success;
   if (Repeat <= 1) {

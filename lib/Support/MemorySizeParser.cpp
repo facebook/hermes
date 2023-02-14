@@ -7,10 +7,10 @@
 
 #include "hermes/Support/MemorySizeParser.h"
 
-namespace cl {
+namespace hermes::cli {
 
 bool MemorySizeParser::parse(
-    cl::Option &O,
+    llvh::cl::Option &O,
     llvh::StringRef ArgName,
     const std::string &Arg,
     MemorySize &Val) {
@@ -97,4 +97,4 @@ bool MemorySizeParser::parse(
   }
 }
 
-} // namespace cl
+} // namespace hermes::cli

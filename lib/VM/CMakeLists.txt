@@ -50,6 +50,7 @@ set(source_files
   PrimitiveBox.cpp
   PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
+  RuntimeFlags.cpp
   RuntimeModule.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/CodeCoverageProfiler.cpp

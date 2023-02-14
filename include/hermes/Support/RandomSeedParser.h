@@ -13,24 +13,21 @@
 
 #include <string>
 
-namespace cl {
-
-using llvh::cl::Option;
-using llvh::cl::parser;
+namespace hermes::cli {
 
 // Define a custom parser for large integers. LLVM does not support parsing
 // large ints.
-struct RandomSeedParser : public parser<int64_t> {
-  RandomSeedParser(Option &O) : parser<int64_t>(O) {}
+struct RandomSeedParser : public llvh::cl::parser<int64_t> {
+  RandomSeedParser(llvh::cl::Option &O) : parser<int64_t>(O) {}
 
   // parse - Return true on error.
   bool parse(
-      cl::Option &O,
+      llvh::cl::Option &O,
       llvh::StringRef ArgName,
       const std::string &ArgValue,
       int64_t &Val);
 };
 
-} // namespace cl
+} // namespace hermes::cli
 
 #endif // HERMES_SUPPORT_RANDOMSEEDPARSER_H

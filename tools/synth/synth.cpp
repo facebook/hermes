@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <hermes/ConsoleHost/RuntimeFlags.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
+#include <hermes/VM/RuntimeFlags.h>
 #include <hermes/hermes.h>
 
 #include "llvh/ADT/Statistic.h"
@@ -19,11 +19,15 @@
 #include <iostream>
 #include <tuple>
 
+using namespace hermes;
+using namespace hermes::vm;
+
 using MarkerAction =
     facebook::hermes::tracing::TraceInterpreter::ExecuteOptions::MarkerAction;
 
 namespace cl {
 
+using llvh::cl::cat;
 using llvh::cl::desc;
 using llvh::cl::init;
 using llvh::cl::list;
@@ -116,52 +120,44 @@ static opt<bool> DisableSourceHashCheck(
 /// @name Common flags from Hermes VM
 /// @{
 
-static opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    desc("Determines whether to (initially) allocate in the young generation"),
-    cat(GCCategory),
-    init(false));
+struct Flags : public cli::RuntimeFlags {
+  opt<bool> GCBeforeStats{
+      "gc-before-stats",
+      desc("Perform a full GC just before printing statistics at exit"),
+      cat(GCCategory),
+      init(false)};
 
-static opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    desc("Determines whether to revert to young generation, if necessary, at "
-         "TTI notification"),
-    cat(GCCategory),
-    init(true));
+  opt<bool> GCPrintStats{
+      "gc-print-stats",
+      desc("Output summary garbage collection statistics at exit"),
+      cat(GCCategory),
+      init(true)};
 
-static opt<bool> GCBeforeStats(
-    "gc-before-stats",
-    desc("Perform a full GC just before printing statistics at exit"),
-    cat(GCCategory),
-    init(false));
+  opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused{
+      "release-unused",
+      desc("How aggressively to return unused memory to the OS."),
+      cat(GCCategory),
+      init(GCConfig::getDefaultShouldReleaseUnused()),
+      llvh::cl::values(
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedNone,
+              "none",
+              "Don't try to release unused memory."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedOld,
+              "old",
+              "Only old gen, on full collections."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedYoungOnFull,
+              "young-on-full",
+              "Also young gen, but only on full collections."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedYoungAlways,
+              "young-always",
+              "Also young gen, also on young gen collections"))};
+};
 
-static opt<bool> GCPrintStats(
-    "gc-print-stats",
-    desc("Output summary garbage collection statistics at exit"),
-    cat(GCCategory),
-    init(true));
-
-static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
-    "release-unused",
-    desc("How aggressively to return unused memory to the OS."),
-    init(GCConfig::getDefaultShouldReleaseUnused()),
-    llvh::cl::values(
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedNone,
-            "none",
-            "Don't try to release unused memory."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedOld,
-            "old",
-            "Only old gen, on full collections."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedYoungOnFull,
-            "young-on-full",
-            "Also young gen, but only on full collections."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedYoungAlways,
-            "young-always",
-            "Also young gen, also on young gen collections")));
+Flags flags{};
 
 /// @}
 
@@ -179,7 +175,7 @@ static llvh::Optional<T> execOption(const cl::opt<T> &clOpt) {
 
 // Must do this special case explicitly, because of the MemorySizeParser.
 static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
-    const cl::opt<cl::MemorySize, false, cl::MemorySizeParser> &clOpt) {
+    const cl::opt<cli::MemorySize, false, cli::MemorySizeParser> &clOpt) {
   if (clOpt.getNumOccurrences() > 0) {
     return clOpt.bytes;
   } else {
@@ -227,8 +223,8 @@ int main(int argc, char **argv) {
           options.marker, fileExtensionForAction(options.action), tmpfile);
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
-    options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.stabilizeInstructionCount = cl::StableInstructionCount;
+    options.forceGCBeforeStats = cl::flags.GCBeforeStats;
+    options.stabilizeInstructionCount = cl::flags.StableInstructionCount;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     // These are the config parameters.
@@ -238,30 +234,34 @@ int main(int argc, char **argv) {
     // -gc-before-stats is also false, or if we're trying to get
     // a stable instruction count.
     bool shouldPrintGCStats = true;
-    if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
-          !cl::StableInstructionCount;
+    if (cl::flags.GCPrintStats.getNumOccurrences() > 0) {
+      shouldPrintGCStats =
+          (cl::flags.GCPrintStats || cl::flags.GCBeforeStats) &&
+          !cl::flags.StableInstructionCount;
     }
-    shouldPrintGCStats = shouldPrintGCStats && !cl::StableInstructionCount;
+    shouldPrintGCStats =
+        shouldPrintGCStats && !cl::flags.StableInstructionCount;
 
     llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
-        execOption(cl::MinHeapSize);
+        execOption(cl::flags.MinHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> initHeapSize =
-        execOption(cl::InitHeapSize);
+        execOption(cl::flags.InitHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> maxHeapSize =
-        execOption(cl::MaxHeapSize);
-    llvh::Optional<double> occupancyTarget = execOption(cl::OccupancyTarget);
+        execOption(cl::flags.MaxHeapSize);
+    llvh::Optional<double> occupancyTarget =
+        execOption(cl::flags.OccupancyTarget);
     llvh::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused =
-        execOption(cl::ShouldReleaseUnused);
-    llvh::Optional<bool> allocInYoung = execOption(cl::GCAllocYoung);
-    llvh::Optional<bool> revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
-    options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
+        execOption(cl::flags.ShouldReleaseUnused);
+    llvh::Optional<bool> allocInYoung = execOption(cl::flags.GCAllocYoung);
+    llvh::Optional<bool> revertToYGAtTTI =
+        execOption(cl::flags.GCRevertToYGAtTTI);
+    options.shouldTrackIO = execOption(cl::flags.TrackBytecodeIO);
     options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
-    llvh::Optional<double> sanitizeRate = execOption(cl::GCSanitizeRate);
+    llvh::Optional<double> sanitizeRate = execOption(cl::flags.GCSanitizeRate);
     // The type of this case is complicated, so just do it explicitly.
     llvh::Optional<int64_t> sanitizeRandomSeed;
-    if (cl::GCSanitizeRandomSeed) {
-      sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+    if (cl::flags.GCSanitizeRandomSeed) {
+      sanitizeRandomSeed = cl::flags.GCSanitizeRandomSeed;
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
