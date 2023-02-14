@@ -21,7 +21,7 @@ exports.bar = bar;
 // Auto-generated content below. Please do not modify manually.
 
 // CHKOPT:Bytecode File Information:
-// CHKOPT-NEXT:  Bytecode version number: 91
+// CHKOPT-NEXT:  Bytecode version number: 92
 // CHKOPT-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKOPT-NEXT:  Function count: 7
 // CHKOPT-NEXT:  String count: 7
@@ -55,7 +55,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 10 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    LoadConstUInt8    r2, 1
 // CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 // CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
@@ -68,7 +68,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<bar>(1 params, 10 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0010, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0018, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    LoadConstUInt8    r2, 2
 // CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 // CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "baz"
@@ -77,7 +77,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 2 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x001d, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0037, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
@@ -86,7 +86,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<>(1 params, 11 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0024, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0040, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    GetGlobalObject   r0
 // CHKOPT-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKOPT-NEXT:    LoadConstUndefined r1
@@ -96,7 +96,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<cjs_module>(4 params, 2 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x002e, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x0056, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    CreateEnvironment r0
 // CHKOPT-NEXT:    CreateClosure     r1, r0, Function<>
 // CHKOPT-NEXT:    LoadParam         r0, 1
@@ -105,7 +105,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:    Ret               r0
 
 // CHKOPT:Function<>(1 params, 11 registers, 0 symbols):
-// CHKOPT-NEXT:Offset in debug table: source 0x0035, lexical 0x0000, textified callees 0x0000
+// CHKOPT-NEXT:Offset in debug table: source 0x005f, scope 0x0000, textified callees 0x0000
 // CHKOPT-NEXT:    GetGlobalObject   r0
 // CHKOPT-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKOPT-NEXT:    LoadConstUndefined r1
@@ -121,34 +121,34 @@ exports.bar = bar;
 
 // CHKOPT:Debug file table:
 // CHKOPT-NEXT:  source table offset 0x0000: filename id 0
-// CHKOPT-NEXT:  source table offset 0x001d: filename id 1
-// CHKOPT-NEXT:  source table offset 0x002e: filename id 2
+// CHKOPT-NEXT:  source table offset 0x0037: filename id 1
+// CHKOPT-NEXT:  source table offset 0x0056: filename id 2
 
 // CHKOPT:Debug source table:
 // CHKOPT-NEXT:  0x0000  function idx 1, starts at line 11 col 1
-// CHKOPT-NEXT:    bc 3: line 11 col 17
-// CHKOPT-NEXT:    bc 7: line 12 col 7
-// CHKOPT-NEXT:    bc 12: line 12 col 7
-// CHKOPT-NEXT:    bc 26: line 19 col 13
-// CHKOPT-NEXT:  0x0010  function idx 2, starts at line 14 col 1
-// CHKOPT-NEXT:    bc 3: line 15 col 21
-// CHKOPT-NEXT:    bc 7: line 16 col 11
-// CHKOPT-NEXT:    bc 12: line 16 col 11
-// CHKOPT-NEXT:  0x001d  function idx 3, starts at line 10 col 1
-// CHKOPT-NEXT:    bc 10: line 10 col 13
-// CHKOPT-NEXT:  0x0024  function idx 4, starts at line 10 col 15
-// CHKOPT-NEXT:    bc 2: line 11 col 3
-// CHKOPT-NEXT:    bc 14: line 11 col 8
-// CHKOPT-NEXT:  0x002e  function idx 5, starts at line 10 col 1
-// CHKOPT-NEXT:    bc 10: line 10 col 13
-// CHKOPT-NEXT:  0x0035  function idx 6, starts at line 10 col 15
-// CHKOPT-NEXT:    bc 2: line 11 col 3
-// CHKOPT-NEXT:    bc 14: line 11 col 8
-// CHKOPT-NEXT:  0x003f  end of debug source table
+// CHKOPT-NEXT:    bc 3: line 11 col 17 scope offset 0x0000 env r1
+// CHKOPT-NEXT:    bc 7: line 12 col 7 scope offset 0x0000 env r0
+// CHKOPT-NEXT:    bc 12: line 12 col 7 scope offset 0x0000 env r0
+// CHKOPT-NEXT:    bc 26: line 19 col 13 scope offset 0x0000 env r0
+// CHKOPT-NEXT:  0x0018  function idx 2, starts at line 14 col 1
+// CHKOPT-NEXT:    bc 3: line 15 col 21 scope offset 0x0000 env none
+// CHKOPT-NEXT:    bc 7: line 16 col 11 scope offset 0x0000 env none
+// CHKOPT-NEXT:    bc 12: line 16 col 11 scope offset 0x0000 env none
+// CHKOPT-NEXT:  0x0037  function idx 3, starts at line 10 col 1
+// CHKOPT-NEXT:    bc 10: line 10 col 13 scope offset 0x0000 env r0
+// CHKOPT-NEXT:  0x0040  function idx 4, starts at line 10 col 15
+// CHKOPT-NEXT:    bc 2: line 11 col 3 scope offset 0x0000 env none
+// CHKOPT-NEXT:    bc 14: line 11 col 8 scope offset 0x0000 env none
+// CHKOPT-NEXT:  0x0056  function idx 5, starts at line 10 col 1
+// CHKOPT-NEXT:    bc 10: line 10 col 13 scope offset 0x0000 env r0
+// CHKOPT-NEXT:  0x005f  function idx 6, starts at line 10 col 15
+// CHKOPT-NEXT:    bc 2: line 11 col 3 scope offset 0x0000 env none
+// CHKOPT-NEXT:    bc 14: line 11 col 8 scope offset 0x0000 env none
+// CHKOPT-NEXT:  0x0075  end of debug source table
 
-// CHKOPT:Debug lexical table:
-// CHKOPT-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHKOPT-NEXT:  0x0002  end of debug lexical table
+// CHKOPT:Debug scope descriptor table:
+// CHKOPT-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKOPT-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKOPT:Textified callees table:
 // CHKOPT-NEXT:  0x0000  entries: 0
@@ -158,7 +158,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:  0x0000  end of debug string table
 
 // CHKDBG:Bytecode File Information:
-// CHKDBG-NEXT:  Bytecode version number: 91
+// CHKDBG-NEXT:  Bytecode version number: 92
 // CHKDBG-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKDBG-NEXT:  Function count: 7
 // CHKDBG-NEXT:  String count: 7
@@ -195,7 +195,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r2
 
 // CHKDBG:Function<cjs_module>(4 params, 21 registers, 5 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -222,7 +222,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<bar>(1 params, 16 registers, 1 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0010, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0028, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
 // CHKDBG-NEXT:    LoadConstUInt8    r2, 2
@@ -239,7 +239,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r1
 
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x001d, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0047, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -254,7 +254,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0024, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0054, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    GetGlobalObject   r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
@@ -267,7 +267,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r3
 
 // CHKDBG:Function<cjs_module>(4 params, 8 registers, 3 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x002e, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x006a, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    LoadParam         r1, 1
 // CHKDBG-NEXT:    LoadParam         r2, 2
@@ -282,7 +282,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:    Ret               r4
 
 // CHKDBG:Function<>(1 params, 14 registers, 0 symbols):
-// CHKDBG-NEXT:Offset in debug table: source 0x0035, lexical 0x0000, textified callees 0x0000
+// CHKDBG-NEXT:Offset in debug table: source 0x0077, scope 0x0000, textified callees 0x0000
 // CHKDBG-NEXT:    CreateEnvironment r0
 // CHKDBG-NEXT:    GetGlobalObject   r0
 // CHKDBG-NEXT:    LoadConstUndefined r1
@@ -301,34 +301,34 @@ exports.bar = bar;
 
 // CHKDBG:Debug file table:
 // CHKDBG-NEXT:  source table offset 0x0000: filename id 0
-// CHKDBG-NEXT:  source table offset 0x001d: filename id 1
-// CHKDBG-NEXT:  source table offset 0x002e: filename id 2
+// CHKDBG-NEXT:  source table offset 0x0047: filename id 1
+// CHKDBG-NEXT:  source table offset 0x006a: filename id 2
 
 // CHKDBG:Debug source table:
 // CHKDBG-NEXT:  0x0000  function idx 1, starts at line 11 col 1
-// CHKDBG-NEXT:    bc 48: line 11 col 17
-// CHKDBG-NEXT:    bc 60: line 12 col 7
-// CHKDBG-NEXT:    bc 68: line 12 col 7
-// CHKDBG-NEXT:    bc 80: line 19 col 13
-// CHKDBG-NEXT:  0x0010  function idx 2, starts at line 14 col 1
-// CHKDBG-NEXT:    bc 21: line 15 col 21
-// CHKDBG-NEXT:    bc 33: line 16 col 11
-// CHKDBG-NEXT:    bc 41: line 16 col 11
-// CHKDBG-NEXT:  0x001d  function idx 3, starts at line 10 col 1
-// CHKDBG-NEXT:    bc 34: line 10 col 13
-// CHKDBG-NEXT:  0x0024  function idx 4, starts at line 10 col 15
-// CHKDBG-NEXT:    bc 13: line 11 col 3
-// CHKDBG-NEXT:    bc 25: line 11 col 8
-// CHKDBG-NEXT:  0x002e  function idx 5, starts at line 10 col 1
-// CHKDBG-NEXT:    bc 34: line 10 col 13
-// CHKDBG-NEXT:  0x0035  function idx 6, starts at line 10 col 15
-// CHKDBG-NEXT:    bc 13: line 11 col 3
-// CHKDBG-NEXT:    bc 25: line 11 col 8
-// CHKDBG-NEXT:  0x003f  end of debug source table
+// CHKDBG-NEXT:    bc 48: line 11 col 17 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 60: line 12 col 7 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 68: line 12 col 7 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 80: line 19 col 13 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x0028  function idx 2, starts at line 14 col 1
+// CHKDBG-NEXT:    bc 21: line 15 col 21 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 33: line 16 col 11 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 41: line 16 col 11 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x0047  function idx 3, starts at line 10 col 1
+// CHKDBG-NEXT:    bc 34: line 10 col 13 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x0054  function idx 4, starts at line 10 col 15
+// CHKDBG-NEXT:    bc 13: line 11 col 3 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 25: line 11 col 8 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x006a  function idx 5, starts at line 10 col 1
+// CHKDBG-NEXT:    bc 34: line 10 col 13 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x0077  function idx 6, starts at line 10 col 15
+// CHKDBG-NEXT:    bc 13: line 11 col 3 scope offset 0x0000 env none
+// CHKDBG-NEXT:    bc 25: line 11 col 8 scope offset 0x0000 env none
+// CHKDBG-NEXT:  0x008d  end of debug source table
 
-// CHKDBG:Debug lexical table:
-// CHKDBG-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHKDBG-NEXT:  0x0002  end of debug lexical table
+// CHKDBG:Debug scope descriptor table:
+// CHKDBG-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKDBG-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKDBG:Textified callees table:
 // CHKDBG-NEXT:  0x0000  entries: 0

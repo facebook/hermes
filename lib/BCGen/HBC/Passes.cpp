@@ -204,6 +204,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<ThrowIfHasRestrictedGlobalPropertyInst>(Inst) &&
+      opIndex == ThrowIfHasRestrictedGlobalPropertyInst::PropertyIdx) {
+    return true;
+  }
+
   return false;
 }
 

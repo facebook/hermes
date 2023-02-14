@@ -36,7 +36,7 @@ function foo() {
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 91
+// CHKBC-NEXT:  Bytecode version number: 92
 // CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHKBC-NEXT:  Function count: 2
 // CHKBC-NEXT:  String count: 3
@@ -57,7 +57,7 @@ function foo() {
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
 // CHKBC:Function<global>(1 params, 2 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    CreateEnvironment r0
@@ -68,7 +68,7 @@ function foo() {
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0007, lexical 0x0000, textified callees 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0009, scope 0x0000, textified callees 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
 // CHKBC-NEXT:    Ret               r0
@@ -81,14 +81,14 @@ function foo() {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// CHKBC-NEXT:    bc 19: line 11 col 1
-// CHKBC-NEXT:  0x0007  function idx 1, starts at line 13 col 1
-// CHKBC-NEXT:    bc 2: line 14 col 10
-// CHKBC-NEXT:  0x000e  end of debug source table
+// CHKBC-NEXT:    bc 19: line 11 col 1 scope offset 0x0000 env r0
+// CHKBC-NEXT:  0x0009  function idx 1, starts at line 13 col 1
+// CHKBC-NEXT:    bc 2: line 14 col 10 scope offset 0x0000 env none
+// CHKBC-NEXT:  0x0016  end of debug source table
 
-// CHKBC:Debug lexical table:
-// CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHKBC-NEXT:  0x0002  end of debug lexical table
+// CHKBC:Debug scope descriptor table:
+// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKBC-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKBC:Textified callees table:
 // CHKBC-NEXT:  0x0000  entries: 0

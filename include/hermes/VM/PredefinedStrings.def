@@ -150,7 +150,7 @@ STR(stacktraceTooLong, "Stacktrace too long")
 STR(captureStackTrace, "captureStackTrace")
 STR(prepareStackTrace, "prepareStackTrace")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 STR(CallSite, "CallSite")
 STR(getColumnNumber, "getColumnNumber")
@@ -444,6 +444,7 @@ STR(exportAll, "exportAll")
 STR(exponentiationOperator, "exponentiationOperator")
 STR(initRegexNamedGroups, "initRegexNamedGroups")
 STR(getFunctionLocation, "getFunctionLocation")
+STR(getOriginalNativeErrorConstructor, "getOriginalNativeErrorConstructor")
 STR(isNative, "isNative")
 STR(lineNumber, "lineNumber")
 STR(columnNumber, "columnNumber")

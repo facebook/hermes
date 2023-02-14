@@ -37,7 +37,7 @@ foo();
 // CHECK-NEXT:     Ret               r0
 
 //CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
-//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
+//CHECK-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 //CHECK-NEXT:    CreateEnvironment r3
 //CHECK-NEXT:    CreateClosure     r1, r3, Function<foo>
 //CHECK-NEXT:    GetGlobalObject   r0

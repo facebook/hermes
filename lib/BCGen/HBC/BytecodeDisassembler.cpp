@@ -1271,12 +1271,12 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
       } else {
         OS << llvh::format_hex(debugSourceOffset, 6);
       }
-      OS << ", lexical ";
-      uint32_t debugLexicalOffset = funcDebugOffsets->lexicalData;
-      if (debugLexicalOffset == DebugOffsets::NO_OFFSET) {
+      OS << ", scope ";
+      uint32_t debugScopeDescOffset = funcDebugOffsets->scopeDescData;
+      if (debugScopeDescOffset == DebugOffsets::NO_OFFSET) {
         OS << "none";
       } else {
-        OS << llvh::format_hex(debugLexicalOffset, 6);
+        OS << llvh::format_hex(debugScopeDescOffset, 6);
       }
       OS << ", textified callees ";
       uint32_t textifiedCalleeOffset = funcDebugOffsets->textifiedCallees;

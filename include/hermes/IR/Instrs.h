@@ -29,6 +29,42 @@ namespace hermes {
 /// binary operations.
 bool isSideEffectFree(Type T);
 
+class ThrowIfHasRestrictedGlobalPropertyInst : public Instruction {
+  ThrowIfHasRestrictedGlobalPropertyInst(
+      const ThrowIfHasRestrictedGlobalPropertyInst &) = delete;
+  void operator=(const ThrowIfHasRestrictedGlobalPropertyInst &) = delete;
+
+ public:
+  enum { PropertyIdx };
+  ThrowIfHasRestrictedGlobalPropertyInst(LiteralString *name)
+      : Instruction(ValueKind::ThrowIfHasRestrictedGlobalPropertyInstKind) {
+    setType(Type::createNoType());
+    pushOperand(name);
+  }
+
+  explicit ThrowIfHasRestrictedGlobalPropertyInst(
+      const ThrowIfHasRestrictedGlobalPropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  LiteralString *getProperty() const {
+    return llvh::cast<LiteralString>(getOperand(PropertyIdx));
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(
+        V->getKind(), ValueKind::ThrowIfHasRestrictedGlobalPropertyInstKind);
+  }
+};
+
 /// Base class for instructions that are used for scope creation (e.g.,
 /// HBCCreateEnvironment, CreateScopeInst, etc). All these operands have the
 /// descriptor for the scope they are creating as the last operand.

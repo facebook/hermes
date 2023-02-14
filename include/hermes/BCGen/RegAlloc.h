@@ -471,7 +471,6 @@ class ScopeRegisterAnalysis {
       ScopeCreationInst *SCI);
 
   RegisterAllocator &RA_;
-
   llvh::DenseMap<ScopeDesc *, ScopeCreationInst *> scopeCreationInsts_;
 };
 

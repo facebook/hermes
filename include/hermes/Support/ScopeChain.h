@@ -21,8 +21,8 @@ struct ScopeChainItem {
 /// A ScopeChain is a sequence of nested ScopeChainItems, from innermost to
 /// outermost scopes.
 struct ScopeChain {
-  /// Functions on the stack. Innermost (direct parent) is 0.
-  std::vector<ScopeChainItem> functions;
+  /// Scopes on the stack. Innermost (direct parent) is 0.
+  std::vector<ScopeChainItem> scopes;
 };
 
 } // namespace hermes

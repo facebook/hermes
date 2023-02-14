@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "llvh/ADT/SmallString.h"
 
 namespace hermes {
@@ -684,8 +685,10 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
 
   builder.createThrowInst(builder.createCallInst(
       CallInst::kNoTextifiedCallee,
-      loadGlobalObjectProperty(
-          builder, builder.createGlobalObjectProperty("SyntaxError", false)),
+      builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_getOriginalNativeErrorConstructor,
+          builder.getLiteralNumber(
+              static_cast<unsigned>(NativeErrorTypes::SyntaxError))),
       builder.getLiteralUndefined(),
       builder.getLiteralString(error)));
 

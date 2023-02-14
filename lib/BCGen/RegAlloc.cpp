@@ -949,6 +949,12 @@ bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
   return LHS.getIndex() == RHS.getIndex();
 }
 
+namespace {
+static bool preallocateScopeRegisters(const Context &c) {
+  return c.getDebugInfoSetting() == DebugInfoSetting::ALL;
+}
+} // namespace
+
 ScopeRegisterAnalysis::ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA)
     : RA_(RA) {
   // Initialize the ScopeDesc -> ScopeCreationInst map; if emitting full debug
@@ -959,7 +965,7 @@ ScopeRegisterAnalysis::ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA)
     for (Instruction &I : BB) {
       if (auto *SCI = llvh::dyn_cast<ScopeCreationInst>(&I)) {
         scopeCreationInsts_[SCI->getCreatedScopeDesc()] = SCI;
-        if (F->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) {
+        if (preallocateScopeRegisters(F->getContext())) {
           scopeCreationInsts.push_back(SCI);
         }
       }
@@ -999,7 +1005,17 @@ ScopeRegisterAnalysis::registerAndScopeForInstruction(Instruction *Inst) {
     auto sciIt = scopeCreationInsts_.find(originalScope);
     if (sciIt != scopeCreationInsts_.end()) {
       ScopeCreationInst *originalScopeCreation = sciIt->second;
-      return registerAndScopeAt(Inst, originalScopeCreation);
+      if (!preallocateScopeRegisters(Inst->getContext())) {
+        return registerAndScopeAt(Inst, originalScopeCreation);
+      }
+      // Use the pre-allocated registers. This is needed because RA_ could have
+      // decided to use fast allocation, in which case instructions won't be
+      // numbered (and intervals won't be computed), meaning registerAndScopeAt
+      // above will not find the scope register.
+      assert(RA_.isAllocated(originalScopeCreation) && "should be allocated");
+      Register sciReg = RA_.getRegister(originalScopeCreation);
+      assert(sciReg.isValid() && "scope register should be valid.");
+      return std::make_pair(sciReg, originalScope);
     }
   }
 
