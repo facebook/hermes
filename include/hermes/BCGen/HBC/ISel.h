@@ -87,6 +87,11 @@ class HBCISel {
   /// and scope depth of each function.
   FunctionScopeAnalysis &scopeAnalysis_;
 
+  /// The scope register analysis, used to determine which register contains the
+  /// Environment that's equivalent to the source-level scope where this
+  /// instruction was emitted.
+  ScopeRegisterAnalysis &SRA_;
+
   /// For each Basic Block, we map to its beginning instruction location
   /// and the next basic block. We need this information to resolve jump
   /// targets and exception handler table.
@@ -185,11 +190,13 @@ class HBCISel {
       BytecodeFunctionGenerator *BCFGen,
       HVMRegisterAllocator &RA,
       FunctionScopeAnalysis &scopeAnalysis,
+      ScopeRegisterAnalysis &SRA,
       const BytecodeGenerationOptions &options)
       : F_(F),
         BCFGen_(BCFGen),
         RA_(RA),
         scopeAnalysis_(scopeAnalysis),
+        SRA_(SRA),
         bytecodeGenerationOptions_(options) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
   }

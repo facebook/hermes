@@ -44,7 +44,8 @@
 // CHK-BCG3-NEXT:i17[UTF-16, 302..425] #3CFBC16D: \xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xEA\x00\xEA\x00\xEA\x00\xEA\x00
 // CHK-BCG3-NEXT:i18[UTF-16, 426..635] #71F2758E: \xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE0\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xE8\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xEC\x00\xF2\x00\xF2\x00\xFC\x00\x54\x00\x68\x00\x69\x00\x73\x00\x53\x00\x68\x00\x6F\x00\x75\x00\x6C\x00\x64\x00\x4E\x00\x6F\x00\x74\x00\x53\x00\x68\x00\x6F\x00\x77\x00\x55\x00\x70\x00\x41\x00\x74\x00\x49\x00\x6E\x00\x54\x00\x68\x00\xE8\x00\x54\x00\x65\x00\x78\x00\x74\x00\x69\x00\x66\x00\x69\x00\x65\x00\x64\x00\x43\x00\x61\x00\x6C\x00\x6C\x00\x65\x00\x65\x00\xFC\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF2\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xF9\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xE2\x00\xEA\x00\xEA\x00\xEA\x00\xEA\x00
 
-// CHK-BCG3:Function<global>(1 params, 13 registers, 0 symbols):
+// CHK-BCG3:Array Buffer:
+// CHK-BCG3-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
 // CHK-BCG3-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0001
 // CHK-BCG3-NEXT:    DeclareGlobalVar  "a"
 // CHK-BCG3-NEXT:    DeclareGlobalVar  "test"
@@ -53,57 +54,57 @@
 // CHK-BCG3-NEXT:    GetGlobalObject   r1
 // CHK-BCG3-NEXT:    PutById           r1, r2, 1, "test"
 // CHK-BCG3-NEXT:    TryGetById        r4, r1, 1, "print"
-// CHK-BCG3-NEXT:    LoadConstUndefined r2
-// CHK-BCG3-NEXT:    LoadConstString   r3, "errors"
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
-// CHK-BCG3-NEXT:    NewObject         r3
+// CHK-BCG3-NEXT:    LoadConstUndefined r3
+// CHK-BCG3-NEXT:    LoadConstString   r2, "errors"
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
+// CHK-BCG3-NEXT:    NewObject         r2
 // CHK-BCG3-NEXT:    CreateClosure     r4, r0, NCFunction<b>
-// CHK-BCG3-NEXT:    PutNewOwnByIdShort r3, r4, "b"
-// CHK-BCG3-NEXT:    PutById           r1, r3, 2, "a"
+// CHK-BCG3-NEXT:    PutNewOwnByIdShort r2, r4, "b"
+// CHK-BCG3-NEXT:    PutById           r1, r2, 2, "a"
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
 // CHK-BCG3-NEXT:    GetByIdShort      r4, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r3, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r3, r4, r2, r3
-// CHK-BCG3-NEXT:    GetByIdShort      r1, r1, 2, "test"
-// CHK-BCG3-NEXT:    CreateClosure     r0, r0, NCFunction<>
-// CHK-BCG3-NEXT:    Call2             r0, r1, r2, r0
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r2, r4, r3, r2
+// CHK-BCG3-NEXT:    GetByIdShort      r2, r1, 2, "test"
+// CHK-BCG3-NEXT:    CreateClosure     r1, r0, NCFunction<>
+// CHK-BCG3-NEXT:    Call2             r1, r2, r3, r1
 // CHK-BCG3-NEXT:    AsyncBreakCheck
-// CHK-BCG3-NEXT:    Ret               r0
+// CHK-BCG3-NEXT:    Ret               r1
 
 // CHK-BCG3:Function<test>(2 params, 15 registers, 0 symbols):
 // CHK-BCG3-NEXT:Offset in debug table: source 0x00ae, lexical 0x0002, textified callees 0x002e
@@ -134,14 +135,14 @@
 // CHK-BCG3:Exception Handlers:
 // CHK-BCG3-NEXT:0: start = L4, end = L5, target = L1
 
-// CHK-BCG3:NCFunction<b>(1 params, 2 registers, 0 symbols):
+// CHK-BCG3:NCFunction<b>(1 params, 3 registers, 0 symbols):
 // CHK-BCG3-NEXT:Offset in debug table: source 0x00dc, lexical 0x0004, textified callees 0x0000
-// CHK-BCG3-NEXT:    NewArray          r0, 1
-// CHK-BCG3-NEXT:    CreateEnvironment r1
-// CHK-BCG3-NEXT:    CreateClosure     r1, r1, NCFunction<>
-// CHK-BCG3-NEXT:    PutOwnByIndex     r0, r1, 0
+// CHK-BCG3-NEXT:    NewArray          r1, 1
+// CHK-BCG3-NEXT:    CreateEnvironment r0
+// CHK-BCG3-NEXT:    CreateClosure     r2, r0, NCFunction<>
+// CHK-BCG3-NEXT:    PutOwnByIndex     r1, r2, 0
 // CHK-BCG3-NEXT:    AsyncBreakCheck
-// CHK-BCG3-NEXT:    Ret               r0
+// CHK-BCG3-NEXT:    Ret               r1
 
 // CHK-BCG3:NCFunction<>(1 params, 1 registers, 0 symbols):
 // CHK-BCG3-NEXT:Offset in debug table: source 0x00ed, lexical 0x0006, textified callees 0x0000

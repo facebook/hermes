@@ -16,6 +16,7 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <queue>
 
 #define DEBUG_TYPE "regalloc"
@@ -378,6 +379,28 @@ void RegisterAllocator::calculateGlobalLiveness(ArrayRef<BasicBlock *> order) {
 Interval &RegisterAllocator::getInstructionInterval(Instruction *I) {
   auto idx = getInstructionNumber(I);
   return instructionInterval_[idx];
+}
+
+Register RegisterAllocator::getRegisterForInstructionAt(
+    Instruction *Value,
+    Instruction *At) {
+  if (hasInstructionNumber(Value) && hasInstructionNumber(At)) {
+    Register valueReg = getRegister(Value);
+    unsigned loc = getInstructionNumber(At);
+    if (valueReg.isValid()) {
+      // Check all of valueReg's intervals, and see if any of those contain loc.
+      const Interval &i = getInstructionInterval(Value);
+      auto itBegin = i.segments_.begin(), itEnd = i.segments_.end();
+      if (std::find_if(itBegin, itEnd, [loc](const Segment &s) {
+            return s.contains(loc);
+          })) {
+        return valueReg;
+      }
+    }
+  }
+
+  // Value is not available at At; return an invalid register.
+  return Register{};
 }
 
 bool RegisterAllocator::isManuallyAllocatedInterval(Instruction *I) {
@@ -924,6 +947,63 @@ unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
 
 bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
   return LHS.getIndex() == RHS.getIndex();
+}
+
+ScopeRegisterAnalysis::ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA)
+    : RA_(RA) {
+  // Initialize the ScopeDesc -> ScopeCreationInst map; if emitting full debug
+  // info, scopeCreationInsts will be used to reserve/pre-allocate the
+  // environment registers.
+  llvh::SmallVector<Value *, 4> scopeCreationInsts;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *SCI = llvh::dyn_cast<ScopeCreationInst>(&I)) {
+        scopeCreationInsts_[SCI->getCreatedScopeDesc()] = SCI;
+        if (F->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) {
+          scopeCreationInsts.push_back(SCI);
+        }
+      }
+    }
+  }
+
+  if (!scopeCreationInsts.empty()) {
+    RA_.reserve(scopeCreationInsts);
+  }
+}
+
+std::pair<Register, ScopeDesc *> ScopeRegisterAnalysis::registerAndScopeAt(
+    Instruction *Value,
+    ScopeCreationInst *SCI) {
+  // If SCI's value is available in a register, ensure that the register is
+  // holding SCI's result at loc.
+  Register sciReg = RA_.getRegisterForInstructionAt(Value, SCI);
+  if (sciReg.isValid()) {
+    return std::make_pair(sciReg, SCI->getCreatedScopeDesc());
+  }
+
+  // sciReg is not alive at Value, so try to see if SCI's parent scope is.
+  auto parentIt =
+      scopeCreationInsts_.find(SCI->getCreatedScopeDesc()->getParent());
+  if (parentIt == scopeCreationInsts_.end()) {
+    // SCI's Parent scope is not available in any register.
+    return std::make_pair(Register{}, nullptr);
+  }
+
+  // Try again, this time on SCI's parent Environment.
+  return registerAndScopeAt(Value, parentIt->second);
+}
+
+std::pair<Register, ScopeDesc *>
+ScopeRegisterAnalysis::registerAndScopeForInstruction(Instruction *Inst) {
+  if (ScopeDesc *originalScope = Inst->getSourceLevelScope()) {
+    auto sciIt = scopeCreationInsts_.find(originalScope);
+    if (sciIt != scopeCreationInsts_.end()) {
+      ScopeCreationInst *originalScopeCreation = sciIt->second;
+      return registerAndScopeAt(Inst, originalScopeCreation);
+    }
+  }
+
+  return std::make_pair(Register{}, nullptr);
 }
 
 #undef DEBUG_TYPE
