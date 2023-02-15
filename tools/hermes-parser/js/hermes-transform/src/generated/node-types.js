@@ -807,6 +807,7 @@ export type PropertyDefinitionProps = {
   +typeAnnotation?: ?MaybeDetachedNode<
     PropertyDefinitionType['typeAnnotation'],
   >,
+  +tsModifiers?: ?MaybeDetachedNode<PropertyDefinitionType['tsModifiers']>,
 };
 
 export type QualifiedTypeIdentifierProps = {
@@ -2395,6 +2396,7 @@ export function PropertyDefinition(props: {
     optional: props.optional,
     variance: asDetachedNode(props.variance),
     typeAnnotation: asDetachedNode(props.typeAnnotation),
+    tsModifiers: asDetachedNode(props.tsModifiers),
   });
   setParentPointersInDirectChildren(node);
   return node;

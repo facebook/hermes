@@ -331,6 +331,47 @@ static void initClasses() {
   ARG(ARG6TY, ARG6NM, ARG6OPT); \
   ARG(ARG7TY, ARG7NM, ARG7OPT);
 
+#define ESTREE_NODE_9_ARGS(     \
+    NAME,                       \
+    BASE,                       \
+    ARG0TY,                     \
+    ARG0NM,                     \
+    ARG0OPT,                    \
+    ARG1TY,                     \
+    ARG1NM,                     \
+    ARG1OPT,                    \
+    ARG2TY,                     \
+    ARG2NM,                     \
+    ARG2OPT,                    \
+    ARG3TY,                     \
+    ARG3NM,                     \
+    ARG3OPT,                    \
+    ARG4TY,                     \
+    ARG4NM,                     \
+    ARG4OPT,                    \
+    ARG5TY,                     \
+    ARG5NM,                     \
+    ARG5OPT,                    \
+    ARG6TY,                     \
+    ARG6NM,                     \
+    ARG6OPT,                    \
+    ARG7TY,                     \
+    ARG7NM,                     \
+    ARG7OPT,                    \
+    ARG8TY,                     \
+    ARG8NM,                     \
+    ARG8OPT)                    \
+  STRUCT(NAME, BASE);           \
+  ARG(ARG0TY, ARG0NM, ARG0OPT); \
+  ARG(ARG1TY, ARG1NM, ARG1OPT); \
+  ARG(ARG2TY, ARG2NM, ARG2OPT); \
+  ARG(ARG3TY, ARG3NM, ARG3OPT); \
+  ARG(ARG4TY, ARG4NM, ARG4OPT); \
+  ARG(ARG5TY, ARG5NM, ARG5OPT); \
+  ARG(ARG6TY, ARG6NM, ARG6OPT); \
+  ARG(ARG7TY, ARG7NM, ARG7OPT); \
+  ARG(ARG8TY, ARG8NM, ARG8OPT);
+
 #include "hermes/AST/ESTree.def"
 }
 

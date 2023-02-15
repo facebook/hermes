@@ -457,6 +457,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     value: 'Node',
     variance: 'Node',
     typeAnnotation: 'Node',
+    tsModifiers: 'Node',
   },
   QualifiedTypeIdentifier: {
     qualification: 'Node',

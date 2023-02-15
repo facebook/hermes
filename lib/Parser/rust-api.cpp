@@ -329,6 +329,73 @@ struct ReturnType<NodeList> {
     return ReturnType<ARG7TY>::get(node->_##ARG7NM);                \
   }
 
+#define ESTREE_NODE_9_ARGS(                                         \
+    NAME,                                                           \
+    BASE,                                                           \
+    ARG0TY,                                                         \
+    ARG0NM,                                                         \
+    ARG0OPT,                                                        \
+    ARG1TY,                                                         \
+    ARG1NM,                                                         \
+    ARG1OPT,                                                        \
+    ARG2TY,                                                         \
+    ARG2NM,                                                         \
+    ARG2OPT,                                                        \
+    ARG3TY,                                                         \
+    ARG3NM,                                                         \
+    ARG3OPT,                                                        \
+    ARG4TY,                                                         \
+    ARG4NM,                                                         \
+    ARG4OPT,                                                        \
+    ARG5TY,                                                         \
+    ARG5NM,                                                         \
+    ARG5OPT,                                                        \
+    ARG6TY,                                                         \
+    ARG6NM,                                                         \
+    ARG6OPT,                                                        \
+    ARG7TY,                                                         \
+    ARG7NM,                                                         \
+    ARG7OPT,                                                        \
+    ARG8TY,                                                         \
+    ARG8NM,                                                         \
+    ARG8OPT)                                                        \
+  extern "C" ReturnType<ARG0TY>::Type hermes_get_##NAME##_##ARG0NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG0TY>::get(node->_##ARG0NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG1TY>::Type hermes_get_##NAME##_##ARG1NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG1TY>::get(node->_##ARG1NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG2TY>::Type hermes_get_##NAME##_##ARG2NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG2TY>::get(node->_##ARG2NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG3TY>::Type hermes_get_##NAME##_##ARG3NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG3TY>::get(node->_##ARG3NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG4TY>::Type hermes_get_##NAME##_##ARG4NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG4TY>::get(node->_##ARG4NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG5TY>::Type hermes_get_##NAME##_##ARG5NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG5TY>::get(node->_##ARG5NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG6TY>::Type hermes_get_##NAME##_##ARG6NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG6TY>::get(node->_##ARG6NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG7TY>::Type hermes_get_##NAME##_##ARG7NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG7TY>::get(node->_##ARG7NM);                \
+  }                                                                 \
+  extern "C" ReturnType<ARG8TY>::Type hermes_get_##NAME##_##ARG8NM( \
+      const NAME##Node *node) {                                     \
+    return ReturnType<ARG8TY>::get(node->_##ARG8NM);                \
+  }
+
 #include "hermes/AST/ESTree.def"
 
 namespace {

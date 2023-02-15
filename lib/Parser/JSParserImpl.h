@@ -905,7 +905,8 @@ class JSParserImpl {
       bool isStatic,
       SMRange startRange,
       bool declare,
-      bool isPrivate,
+      bool readonly,
+      ESTree::NodeLabel accessibility,
       bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the
@@ -1280,6 +1281,30 @@ class JSParserImpl {
 
   ESTree::Node *reparseIdentifierAsTSTypeAnnotation(
       ESTree::IdentifierNode *ident);
+
+  /// Check if the given token kind may come right after a modifier.
+  /// It is often called with a lookahead token to decide whether the current
+  /// token is a modifier or not based on the context.
+  ///
+  /// \param optTokenKind an optional TokenKind value.
+  /// \return true if the given token kind is one of the modifier or identifier
+  /// kinds. false otherwise.
+  static bool canFollowModifierTS(OptValue<TokenKind> optTokenKind) {
+    if (!optTokenKind.hasValue()) {
+      return false;
+    }
+    switch (*optTokenKind) {
+      case TokenKind::identifier:
+      case TokenKind::private_identifier:
+      case TokenKind::rw_private:
+      case TokenKind::rw_protected:
+      case TokenKind::rw_public:
+      case TokenKind::rw_static:
+        return true;
+      default:
+        return false;
+    }
+  }
 #endif
 
   /// RAII to save and restore the current setting of "strict mode" and
