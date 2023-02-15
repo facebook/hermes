@@ -4893,6 +4893,12 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             startRange,
             "An accessibility modifier cannot be used with a private identifier");
       }
+      ESTree::Node *modifiers = nullptr;
+#if HERMES_PARSE_TS
+      if (context_.getParseTS()) {
+        modifiers = new (context_) ESTree::TSModifiersNode(nullptr, readonly);
+      }
+#endif
       return setLocation(
           prop,
           getPrevTokenEndLoc(),
@@ -4904,10 +4910,15 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
               optional,
               variance,
               typeAnnotation,
-              context_.getParseTS()
-                  ? new (context_) ESTree::TSModifiersNode(nullptr, readonly)
-                  : nullptr));
+              modifiers));
     }
+    ESTree::Node *modifiers = nullptr;
+#if HERMES_PARSE_TS
+    if (context_.getParseTS()) {
+      modifiers =
+          new (context_) ESTree::TSModifiersNode(accessibility, readonly);
+    }
+#endif
     return setLocation(
         startRange,
         getPrevTokenEndLoc(),
@@ -4920,9 +4931,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             optional,
             variance,
             typeAnnotation,
-            context_.getParseTS() ? new (context_) ESTree::TSModifiersNode(
-                                        accessibility, readonly)
-                                  : nullptr));
+            modifiers));
   }
 
   if (declare) {
