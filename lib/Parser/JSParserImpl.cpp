@@ -4666,6 +4666,28 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   // function names instead of as getter/setter specifiers.
   bool doParsePropertyName = true;
 
+  /// \return true when the current token indicates that `static` was actually
+  /// the property name and not a modifier.
+  /// e.g. `static() {}` returns true when the current tok is '(',
+  /// but `static x;` returns false when the current tok is 'x'.
+  /// When this returns `true`, we're done parsing the property name,
+  /// and we might have to use `static` as the property name if it was given in.
+  const auto staticIsPropertyName = [this]() -> bool {
+    if (checkN(
+            TokenKind::l_paren,
+            TokenKind::equal,
+            TokenKind::r_brace,
+            TokenKind::semi)) {
+      return true;
+    }
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if (context_.getParseTypes() && check(TokenKind::less, TokenKind::colon)) {
+      return true;
+    }
+#endif
+    return false;
+  };
+
   ESTree::Node *prop = nullptr;
   if (check(getIdent_)) {
     SMRange range = advance();
@@ -4727,10 +4749,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
-  } else if (check(TokenKind::l_paren, TokenKind::less) && isStatic) {
-    // We've already parsed 'static', but there is nothing between 'static'
-    // and the '(', so it must be used as the PropertyName and not as an
-    // indicator for a static function.
+  } else if (isStatic && staticIsPropertyName()) {
+    // This is the name of the property/method.
+    // We've already parsed 'static', but it must be used as the
+    // PropertyName and not as an indicator for a static function.
     prop = setLocation(
         startRange,
         startRange,
