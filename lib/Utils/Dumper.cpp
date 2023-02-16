@@ -113,11 +113,11 @@ llvh::raw_ostream &operator<<(
   return os;
 }
 
-void IRPrinter::printTypeLabel(Type T) {
-  // We don't print type annotations for unknown types.
-  if (T.isAnyType())
+void IRPrinter::printTypeLabel(Value *v) {
+  // Don't print the type of basic blocks.
+  if (llvh::isa<BasicBlock>(v))
     return;
-  os << " : " << T;
+  os << ": " << v->getType();
 }
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
@@ -191,7 +191,7 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     llvm_unreachable("Invalid value");
   }
 
-  printTypeLabel(V->getType());
+  printTypeLabel(V);
 }
 
 void IRPrinter::printFunctionHeader(Function *F) {
@@ -211,10 +211,10 @@ void IRPrinter::printFunctionHeader(Function *F) {
       os << ", ";
     }
     os << P->getName().str();
-    printTypeLabel(P->getType());
+    printTypeLabel(P);
   }
   os << ")";
-  printTypeLabel(F->getType());
+  printTypeLabel(F);
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
@@ -225,7 +225,7 @@ void IRPrinter::printFunctionVariables(Function *F) {
       os << ", ";
     }
     os << varNamer_.getName(V);
-    printTypeLabel(V->getType());
+    printTypeLabel(V);
     first = false;
   }
   os << "]";
@@ -240,18 +240,12 @@ void IRPrinter::printInstruction(Instruction *I) {
   os << " = ";
   os << I->getName();
 
-  bool first = true;
-
-  if (auto *binop = dyn_cast<BinaryOperatorInst>(I)) {
-    os << " '" << binop->getOperatorStr() << "'";
-    first = false;
-  } else if (auto *cmpbr = dyn_cast<CompareBranchInst>(I)) {
-    os << " '" << cmpbr->getOperatorStr() << "'";
-    first = false;
-  } else if (auto *unop = dyn_cast<UnaryOperatorInst>(I)) {
-    os << " '" << unop->getOperatorStr() << "'";
-    first = false;
+  // Don't print the type of instructions without output.
+  if (I->hasOutput()) {
+    os << " (:" << I->getType() << ")";
   }
+
+  bool first = true;
 
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
     os << (first ? " " : ", ");

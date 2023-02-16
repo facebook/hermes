@@ -417,7 +417,7 @@ llvh::StringRef Instruction::getName() {
     return #XX;
 #define DEF_TAG(XX, PARENT) \
   case ValueKind::XX##Kind: \
-    return #PARENT;
+    return #XX;
 #include "hermes/IR/Instrs.def"
   }
 }
@@ -830,6 +830,10 @@ void Type::print(llvh::raw_ostream &OS) const {
   bool first = true;
   if (isNoType()) {
     OS << "notype";
+    return;
+  }
+  if (isAnyType()) {
+    OS << "any";
     return;
   }
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {
