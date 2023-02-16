@@ -37,155 +37,155 @@ function test5() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test0" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test1" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test2" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test3" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test4" : string
-// CHECK-NEXT:  %5 = DeclareGlobalVarInst "test5" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %test0()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "test0" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %test1()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "test1" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %test2()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "test2" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %test3()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "test3" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %test4()
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "test4" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %test5()
-// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "test5" : string
-// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
-// CHECK-NEXT:  %20 = LoadStackInst %18
-// CHECK-NEXT:  %21 = ReturnInst %20
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test0": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test1": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test2": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test3": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test4": string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "test5": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %test0(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "test0": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %test1(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "test1": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %test2(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "test2": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %test3(): any
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12: closure, globalObject: object, "test3": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:closure) %test4(): any
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14: closure, globalObject: object, "test4": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:closure) %test5(): any
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16: closure, globalObject: object, "test5": string
+// CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
+// CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
+// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test0(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test0(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [y]
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst [y]
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test1(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test1(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadFrameInst [y]
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function test2(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test2(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function test3(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test3(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = CondBranchInst %6, %BB2, %BB3
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst [x]
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:function_end
 
-// CHECK:function test4(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test4(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = CondBranchInst %6, %BB2, %BB3
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = LoadFrameInst [x]
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:function_end
 
-// CHECK:function test5()
+// CHECK:function test5(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

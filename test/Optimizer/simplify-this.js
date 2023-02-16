@@ -16,17 +16,17 @@ function thisUndefined () {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "thisUndefined" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %thisUndefined() : object
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "thisUndefined" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "thisUndefined": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %thisUndefined(): object
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "thisUndefined": string
+// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function thisUndefined() : object
+// CHECK:function thisUndefined(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst globalObject : object
+// CHECK-NEXT:  %0 = ReturnInst (:object) globalObject: object
 // CHECK-NEXT:function_end

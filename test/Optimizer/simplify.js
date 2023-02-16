@@ -426,531 +426,531 @@ function objectCond() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "add_sub_num" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "modulo_num" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "logic_ops_test" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "add_str" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "add_empty_str" : string
-// CHECK-NEXT:  %5 = DeclareGlobalVarInst "add_empty_str_simplify" : string
-// CHECK-NEXT:  %6 = DeclareGlobalVarInst "add_null" : string
-// CHECK-NEXT:  %7 = DeclareGlobalVarInst "mul_null" : string
-// CHECK-NEXT:  %8 = DeclareGlobalVarInst "left_shift_num" : string
-// CHECK-NEXT:  %9 = DeclareGlobalVarInst "left_shift_null" : string
-// CHECK-NEXT:  %10 = DeclareGlobalVarInst "left_shift_undefined" : string
-// CHECK-NEXT:  %11 = DeclareGlobalVarInst "right_shift_num" : string
-// CHECK-NEXT:  %12 = DeclareGlobalVarInst "right_shift_null" : string
-// CHECK-NEXT:  %13 = DeclareGlobalVarInst "right_shift_undefined" : string
-// CHECK-NEXT:  %14 = DeclareGlobalVarInst "right_shift_bool" : string
-// CHECK-NEXT:  %15 = DeclareGlobalVarInst "unsigned_right_shift_bool" : string
-// CHECK-NEXT:  %16 = DeclareGlobalVarInst "unsigned_right_shift_compound_assgmt" : string
-// CHECK-NEXT:  %17 = DeclareGlobalVarInst "unsigned_right_shift_num" : string
-// CHECK-NEXT:  %18 = DeclareGlobalVarInst "add_undef" : string
-// CHECK-NEXT:  %19 = DeclareGlobalVarInst "comp_num" : string
-// CHECK-NEXT:  %20 = DeclareGlobalVarInst "equality" : string
-// CHECK-NEXT:  %21 = DeclareGlobalVarInst "arith" : string
-// CHECK-NEXT:  %22 = DeclareGlobalVarInst "undef_test" : string
-// CHECK-NEXT:  %23 = DeclareGlobalVarInst "foo" : string
-// CHECK-NEXT:  %24 = DeclareGlobalVarInst "strip_bang" : string
-// CHECK-NEXT:  %25 = DeclareGlobalVarInst "turn_unary_plus_into_as_number" : string
-// CHECK-NEXT:  %26 = DeclareGlobalVarInst "turn_unary_plus_on_literal_into_result" : string
-// CHECK-NEXT:  %27 = DeclareGlobalVarInst "turn_bitor_into_as_int32" : string
-// CHECK-NEXT:  %28 = DeclareGlobalVarInst "unary_ops" : string
-// CHECK-NEXT:  %29 = DeclareGlobalVarInst "test_phi" : string
-// CHECK-NEXT:  %30 = DeclareGlobalVarInst "if_inline" : string
-// CHECK-NEXT:  %31 = DeclareGlobalVarInst "simplify_switch" : string
-// CHECK-NEXT:  %32 = DeclareGlobalVarInst "objectCond" : string
-// CHECK-NEXT:  %33 = CreateFunctionInst %add_sub_num() : undefined
-// CHECK-NEXT:  %34 = StorePropertyLooseInst %33 : closure, globalObject : object, "add_sub_num" : string
-// CHECK-NEXT:  %35 = CreateFunctionInst %modulo_num() : undefined
-// CHECK-NEXT:  %36 = StorePropertyLooseInst %35 : closure, globalObject : object, "modulo_num" : string
-// CHECK-NEXT:  %37 = CreateFunctionInst %logic_ops_test() : undefined
-// CHECK-NEXT:  %38 = StorePropertyLooseInst %37 : closure, globalObject : object, "logic_ops_test" : string
-// CHECK-NEXT:  %39 = CreateFunctionInst %add_str() : undefined
-// CHECK-NEXT:  %40 = StorePropertyLooseInst %39 : closure, globalObject : object, "add_str" : string
-// CHECK-NEXT:  %41 = CreateFunctionInst %add_empty_str() : undefined
-// CHECK-NEXT:  %42 = StorePropertyLooseInst %41 : closure, globalObject : object, "add_empty_str" : string
-// CHECK-NEXT:  %43 = CreateFunctionInst %add_empty_str_simplify() : string
-// CHECK-NEXT:  %44 = StorePropertyLooseInst %43 : closure, globalObject : object, "add_empty_str_simplify" : string
-// CHECK-NEXT:  %45 = CreateFunctionInst %add_null() : undefined
-// CHECK-NEXT:  %46 = StorePropertyLooseInst %45 : closure, globalObject : object, "add_null" : string
-// CHECK-NEXT:  %47 = CreateFunctionInst %mul_null() : undefined
-// CHECK-NEXT:  %48 = StorePropertyLooseInst %47 : closure, globalObject : object, "mul_null" : string
-// CHECK-NEXT:  %49 = CreateFunctionInst %left_shift_num() : undefined
-// CHECK-NEXT:  %50 = StorePropertyLooseInst %49 : closure, globalObject : object, "left_shift_num" : string
-// CHECK-NEXT:  %51 = CreateFunctionInst %left_shift_null() : undefined
-// CHECK-NEXT:  %52 = StorePropertyLooseInst %51 : closure, globalObject : object, "left_shift_null" : string
-// CHECK-NEXT:  %53 = CreateFunctionInst %left_shift_undefined() : undefined
-// CHECK-NEXT:  %54 = StorePropertyLooseInst %53 : closure, globalObject : object, "left_shift_undefined" : string
-// CHECK-NEXT:  %55 = CreateFunctionInst %right_shift_num() : undefined
-// CHECK-NEXT:  %56 = StorePropertyLooseInst %55 : closure, globalObject : object, "right_shift_num" : string
-// CHECK-NEXT:  %57 = CreateFunctionInst %right_shift_null() : undefined
-// CHECK-NEXT:  %58 = StorePropertyLooseInst %57 : closure, globalObject : object, "right_shift_null" : string
-// CHECK-NEXT:  %59 = CreateFunctionInst %right_shift_undefined() : undefined
-// CHECK-NEXT:  %60 = StorePropertyLooseInst %59 : closure, globalObject : object, "right_shift_undefined" : string
-// CHECK-NEXT:  %61 = CreateFunctionInst %right_shift_bool() : undefined
-// CHECK-NEXT:  %62 = StorePropertyLooseInst %61 : closure, globalObject : object, "right_shift_bool" : string
-// CHECK-NEXT:  %63 = CreateFunctionInst %unsigned_right_shift_bool() : undefined
-// CHECK-NEXT:  %64 = StorePropertyLooseInst %63 : closure, globalObject : object, "unsigned_right_shift_bool" : string
-// CHECK-NEXT:  %65 = CreateFunctionInst %unsigned_right_shift_compound_assgmt() : undefined
-// CHECK-NEXT:  %66 = StorePropertyLooseInst %65 : closure, globalObject : object, "unsigned_right_shift_compound_assgmt" : string
-// CHECK-NEXT:  %67 = CreateFunctionInst %unsigned_right_shift_num() : undefined
-// CHECK-NEXT:  %68 = StorePropertyLooseInst %67 : closure, globalObject : object, "unsigned_right_shift_num" : string
-// CHECK-NEXT:  %69 = CreateFunctionInst %add_undef() : undefined
-// CHECK-NEXT:  %70 = StorePropertyLooseInst %69 : closure, globalObject : object, "add_undef" : string
-// CHECK-NEXT:  %71 = CreateFunctionInst %comp_num() : undefined
-// CHECK-NEXT:  %72 = StorePropertyLooseInst %71 : closure, globalObject : object, "comp_num" : string
-// CHECK-NEXT:  %73 = CreateFunctionInst %equality() : undefined
-// CHECK-NEXT:  %74 = StorePropertyLooseInst %73 : closure, globalObject : object, "equality" : string
-// CHECK-NEXT:  %75 = CreateFunctionInst %arith() : undefined
-// CHECK-NEXT:  %76 = StorePropertyLooseInst %75 : closure, globalObject : object, "arith" : string
-// CHECK-NEXT:  %77 = CreateFunctionInst %undef_test() : undefined
-// CHECK-NEXT:  %78 = StorePropertyLooseInst %77 : closure, globalObject : object, "undef_test" : string
-// CHECK-NEXT:  %79 = CreateFunctionInst %foo() : number
-// CHECK-NEXT:  %80 = StorePropertyLooseInst %79 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %81 = CreateFunctionInst %strip_bang() : number
-// CHECK-NEXT:  %82 = StorePropertyLooseInst %81 : closure, globalObject : object, "strip_bang" : string
-// CHECK-NEXT:  %83 = CreateFunctionInst %turn_unary_plus_into_as_number() : number
-// CHECK-NEXT:  %84 = StorePropertyLooseInst %83 : closure, globalObject : object, "turn_unary_plus_into_as_number" : string
-// CHECK-NEXT:  %85 = CreateFunctionInst %turn_unary_plus_on_literal_into_result() : number
-// CHECK-NEXT:  %86 = StorePropertyLooseInst %85 : closure, globalObject : object, "turn_unary_plus_on_literal_into_result" : string
-// CHECK-NEXT:  %87 = CreateFunctionInst %turn_bitor_into_as_int32() : number
-// CHECK-NEXT:  %88 = StorePropertyLooseInst %87 : closure, globalObject : object, "turn_bitor_into_as_int32" : string
-// CHECK-NEXT:  %89 = CreateFunctionInst %unary_ops() : undefined
-// CHECK-NEXT:  %90 = StorePropertyLooseInst %89 : closure, globalObject : object, "unary_ops" : string
-// CHECK-NEXT:  %91 = CreateFunctionInst %test_phi() : number
-// CHECK-NEXT:  %92 = StorePropertyLooseInst %91 : closure, globalObject : object, "test_phi" : string
-// CHECK-NEXT:  %93 = CreateFunctionInst %if_inline() : number
-// CHECK-NEXT:  %94 = StorePropertyLooseInst %93 : closure, globalObject : object, "if_inline" : string
-// CHECK-NEXT:  %95 = CreateFunctionInst %simplify_switch() : undefined
-// CHECK-NEXT:  %96 = StorePropertyLooseInst %95 : closure, globalObject : object, "simplify_switch" : string
-// CHECK-NEXT:  %97 = CreateFunctionInst %objectCond() : number
-// CHECK-NEXT:  %98 = StorePropertyLooseInst %97 : closure, globalObject : object, "objectCond" : string
-// CHECK-NEXT:  %99 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "add_sub_num": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "modulo_num": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "logic_ops_test": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "add_str": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "add_empty_str": string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "add_empty_str_simplify": string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "add_null": string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "mul_null": string
+// CHECK-NEXT:  %8 = DeclareGlobalVarInst "left_shift_num": string
+// CHECK-NEXT:  %9 = DeclareGlobalVarInst "left_shift_null": string
+// CHECK-NEXT:  %10 = DeclareGlobalVarInst "left_shift_undefined": string
+// CHECK-NEXT:  %11 = DeclareGlobalVarInst "right_shift_num": string
+// CHECK-NEXT:  %12 = DeclareGlobalVarInst "right_shift_null": string
+// CHECK-NEXT:  %13 = DeclareGlobalVarInst "right_shift_undefined": string
+// CHECK-NEXT:  %14 = DeclareGlobalVarInst "right_shift_bool": string
+// CHECK-NEXT:  %15 = DeclareGlobalVarInst "unsigned_right_shift_bool": string
+// CHECK-NEXT:  %16 = DeclareGlobalVarInst "unsigned_right_shift_compound_assgmt": string
+// CHECK-NEXT:  %17 = DeclareGlobalVarInst "unsigned_right_shift_num": string
+// CHECK-NEXT:  %18 = DeclareGlobalVarInst "add_undef": string
+// CHECK-NEXT:  %19 = DeclareGlobalVarInst "comp_num": string
+// CHECK-NEXT:  %20 = DeclareGlobalVarInst "equality": string
+// CHECK-NEXT:  %21 = DeclareGlobalVarInst "arith": string
+// CHECK-NEXT:  %22 = DeclareGlobalVarInst "undef_test": string
+// CHECK-NEXT:  %23 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %24 = DeclareGlobalVarInst "strip_bang": string
+// CHECK-NEXT:  %25 = DeclareGlobalVarInst "turn_unary_plus_into_as_number": string
+// CHECK-NEXT:  %26 = DeclareGlobalVarInst "turn_unary_plus_on_literal_into_result": string
+// CHECK-NEXT:  %27 = DeclareGlobalVarInst "turn_bitor_into_as_int32": string
+// CHECK-NEXT:  %28 = DeclareGlobalVarInst "unary_ops": string
+// CHECK-NEXT:  %29 = DeclareGlobalVarInst "test_phi": string
+// CHECK-NEXT:  %30 = DeclareGlobalVarInst "if_inline": string
+// CHECK-NEXT:  %31 = DeclareGlobalVarInst "simplify_switch": string
+// CHECK-NEXT:  %32 = DeclareGlobalVarInst "objectCond": string
+// CHECK-NEXT:  %33 = CreateFunctionInst (:closure) %add_sub_num(): undefined
+// CHECK-NEXT:  %34 = StorePropertyLooseInst %33: closure, globalObject: object, "add_sub_num": string
+// CHECK-NEXT:  %35 = CreateFunctionInst (:closure) %modulo_num(): undefined
+// CHECK-NEXT:  %36 = StorePropertyLooseInst %35: closure, globalObject: object, "modulo_num": string
+// CHECK-NEXT:  %37 = CreateFunctionInst (:closure) %logic_ops_test(): undefined
+// CHECK-NEXT:  %38 = StorePropertyLooseInst %37: closure, globalObject: object, "logic_ops_test": string
+// CHECK-NEXT:  %39 = CreateFunctionInst (:closure) %add_str(): undefined
+// CHECK-NEXT:  %40 = StorePropertyLooseInst %39: closure, globalObject: object, "add_str": string
+// CHECK-NEXT:  %41 = CreateFunctionInst (:closure) %add_empty_str(): undefined
+// CHECK-NEXT:  %42 = StorePropertyLooseInst %41: closure, globalObject: object, "add_empty_str": string
+// CHECK-NEXT:  %43 = CreateFunctionInst (:closure) %add_empty_str_simplify(): string
+// CHECK-NEXT:  %44 = StorePropertyLooseInst %43: closure, globalObject: object, "add_empty_str_simplify": string
+// CHECK-NEXT:  %45 = CreateFunctionInst (:closure) %add_null(): undefined
+// CHECK-NEXT:  %46 = StorePropertyLooseInst %45: closure, globalObject: object, "add_null": string
+// CHECK-NEXT:  %47 = CreateFunctionInst (:closure) %mul_null(): undefined
+// CHECK-NEXT:  %48 = StorePropertyLooseInst %47: closure, globalObject: object, "mul_null": string
+// CHECK-NEXT:  %49 = CreateFunctionInst (:closure) %left_shift_num(): undefined
+// CHECK-NEXT:  %50 = StorePropertyLooseInst %49: closure, globalObject: object, "left_shift_num": string
+// CHECK-NEXT:  %51 = CreateFunctionInst (:closure) %left_shift_null(): undefined
+// CHECK-NEXT:  %52 = StorePropertyLooseInst %51: closure, globalObject: object, "left_shift_null": string
+// CHECK-NEXT:  %53 = CreateFunctionInst (:closure) %left_shift_undefined(): undefined
+// CHECK-NEXT:  %54 = StorePropertyLooseInst %53: closure, globalObject: object, "left_shift_undefined": string
+// CHECK-NEXT:  %55 = CreateFunctionInst (:closure) %right_shift_num(): undefined
+// CHECK-NEXT:  %56 = StorePropertyLooseInst %55: closure, globalObject: object, "right_shift_num": string
+// CHECK-NEXT:  %57 = CreateFunctionInst (:closure) %right_shift_null(): undefined
+// CHECK-NEXT:  %58 = StorePropertyLooseInst %57: closure, globalObject: object, "right_shift_null": string
+// CHECK-NEXT:  %59 = CreateFunctionInst (:closure) %right_shift_undefined(): undefined
+// CHECK-NEXT:  %60 = StorePropertyLooseInst %59: closure, globalObject: object, "right_shift_undefined": string
+// CHECK-NEXT:  %61 = CreateFunctionInst (:closure) %right_shift_bool(): undefined
+// CHECK-NEXT:  %62 = StorePropertyLooseInst %61: closure, globalObject: object, "right_shift_bool": string
+// CHECK-NEXT:  %63 = CreateFunctionInst (:closure) %unsigned_right_shift_bool(): undefined
+// CHECK-NEXT:  %64 = StorePropertyLooseInst %63: closure, globalObject: object, "unsigned_right_shift_bool": string
+// CHECK-NEXT:  %65 = CreateFunctionInst (:closure) %unsigned_right_shift_compound_assgmt(): undefined
+// CHECK-NEXT:  %66 = StorePropertyLooseInst %65: closure, globalObject: object, "unsigned_right_shift_compound_assgmt": string
+// CHECK-NEXT:  %67 = CreateFunctionInst (:closure) %unsigned_right_shift_num(): undefined
+// CHECK-NEXT:  %68 = StorePropertyLooseInst %67: closure, globalObject: object, "unsigned_right_shift_num": string
+// CHECK-NEXT:  %69 = CreateFunctionInst (:closure) %add_undef(): undefined
+// CHECK-NEXT:  %70 = StorePropertyLooseInst %69: closure, globalObject: object, "add_undef": string
+// CHECK-NEXT:  %71 = CreateFunctionInst (:closure) %comp_num(): undefined
+// CHECK-NEXT:  %72 = StorePropertyLooseInst %71: closure, globalObject: object, "comp_num": string
+// CHECK-NEXT:  %73 = CreateFunctionInst (:closure) %equality(): undefined
+// CHECK-NEXT:  %74 = StorePropertyLooseInst %73: closure, globalObject: object, "equality": string
+// CHECK-NEXT:  %75 = CreateFunctionInst (:closure) %arith(): undefined
+// CHECK-NEXT:  %76 = StorePropertyLooseInst %75: closure, globalObject: object, "arith": string
+// CHECK-NEXT:  %77 = CreateFunctionInst (:closure) %undef_test(): undefined
+// CHECK-NEXT:  %78 = StorePropertyLooseInst %77: closure, globalObject: object, "undef_test": string
+// CHECK-NEXT:  %79 = CreateFunctionInst (:closure) %foo(): number
+// CHECK-NEXT:  %80 = StorePropertyLooseInst %79: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %81 = CreateFunctionInst (:closure) %strip_bang(): number
+// CHECK-NEXT:  %82 = StorePropertyLooseInst %81: closure, globalObject: object, "strip_bang": string
+// CHECK-NEXT:  %83 = CreateFunctionInst (:closure) %turn_unary_plus_into_as_number(): number
+// CHECK-NEXT:  %84 = StorePropertyLooseInst %83: closure, globalObject: object, "turn_unary_plus_into_as_number": string
+// CHECK-NEXT:  %85 = CreateFunctionInst (:closure) %turn_unary_plus_on_literal_into_result(): number
+// CHECK-NEXT:  %86 = StorePropertyLooseInst %85: closure, globalObject: object, "turn_unary_plus_on_literal_into_result": string
+// CHECK-NEXT:  %87 = CreateFunctionInst (:closure) %turn_bitor_into_as_int32(): number
+// CHECK-NEXT:  %88 = StorePropertyLooseInst %87: closure, globalObject: object, "turn_bitor_into_as_int32": string
+// CHECK-NEXT:  %89 = CreateFunctionInst (:closure) %unary_ops(): undefined
+// CHECK-NEXT:  %90 = StorePropertyLooseInst %89: closure, globalObject: object, "unary_ops": string
+// CHECK-NEXT:  %91 = CreateFunctionInst (:closure) %test_phi(): number
+// CHECK-NEXT:  %92 = StorePropertyLooseInst %91: closure, globalObject: object, "test_phi": string
+// CHECK-NEXT:  %93 = CreateFunctionInst (:closure) %if_inline(): number
+// CHECK-NEXT:  %94 = StorePropertyLooseInst %93: closure, globalObject: object, "if_inline": string
+// CHECK-NEXT:  %95 = CreateFunctionInst (:closure) %simplify_switch(): undefined
+// CHECK-NEXT:  %96 = StorePropertyLooseInst %95: closure, globalObject: object, "simplify_switch": string
+// CHECK-NEXT:  %97 = CreateFunctionInst (:closure) %objectCond(): number
+// CHECK-NEXT:  %98 = StorePropertyLooseInst %97: closure, globalObject: object, "objectCond": string
+// CHECK-NEXT:  %99 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function add_sub_num(x, y) : undefined
+// CHECK:function add_sub_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 133 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 1.5 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -7.5 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 2 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 2 : number
-// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, Infinity : number
-// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, -0 : number
-// CHECK-NEXT:  %14 = CallInst %0, empty, empty, undefined : undefined, -Infinity : number
-// CHECK-NEXT:  %15 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %16 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %17 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %18 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 133: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1.5: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -7.5: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, Infinity: number
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
+// CHECK-NEXT:  %14 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -Infinity: number
+// CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %16 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %17 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %18 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function modulo_num(x, y) : undefined
+// CHECK:function modulo_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 2 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, -2 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 2 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0.5 : number
-// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, 0.5 : number
-// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -2: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0.5: number
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0.5: number
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %14 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function logic_ops_test(x, y) : undefined
+// CHECK:function logic_ops_test(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 23 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 20 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -727379959 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 99 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, -2 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 9 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 17 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 23 : number
-// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, 17 : number
-// CHECK-NEXT:  %13 = CallInst %0, empty, empty, undefined : undefined, 23 : number
-// CHECK-NEXT:  %14 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %15 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %16 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 23: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 20: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -727379959: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 99: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -2: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 9: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 17: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 23: number
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 17: number
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 23: number
+// CHECK-NEXT:  %14 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %16 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %17 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function add_str(x, y) : undefined
+// CHECK:function add_str(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "hello world" : string
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, "hello NaN" : string
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "NaNworld" : string
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hello world": string
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hello NaN": string
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "NaNworld": string
+// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function add_empty_str(x) : undefined
+// CHECK:function add_empty_str(x: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = AddEmptyStringInst %0
-// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, %2 : string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %5 = AddEmptyStringInst %0
-// CHECK-NEXT:  %6 = CallInst %4, empty, empty, undefined : undefined, %5 : string
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %2 = AddEmptyStringInst (:string) %0: any
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %2: string
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %5 = AddEmptyStringInst (:string) %0: any
+// CHECK-NEXT:  %6 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %5: string
+// CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function add_empty_str_simplify(x) : string
+// CHECK:function add_empty_str_simplify(x: any): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = AddEmptyStringInst %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : string
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = AddEmptyStringInst (:string) %0: any
+// CHECK-NEXT:  %2 = ReturnInst (:string) %1: string
 // CHECK-NEXT:function_end
 
-// CHECK:function add_null(x, y) : undefined
+// CHECK:function add_null(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "nullhello" : string
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "hellonull" : string
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "nullhello": string
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hellonull": string
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function mul_null(x, y) : undefined
+// CHECK:function mul_null(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, -0 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function left_shift_num(x, y) : undefined
+// CHECK:function left_shift_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 8 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 10 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 32 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, -2 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 8: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 10: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 32: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -2: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %8 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function left_shift_null(x, y) : undefined
+// CHECK:function left_shift_null(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 5: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function left_shift_undefined(x, y) : undefined
+// CHECK:function left_shift_undefined(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 5: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function right_shift_num(x, y) : undefined
+// CHECK:function right_shift_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -4 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -4: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %11 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function right_shift_null(x, y) : undefined
+// CHECK:function right_shift_null(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 5: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function right_shift_undefined(x, y) : undefined
+// CHECK:function right_shift_undefined(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 5 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 5: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function right_shift_bool(x, y) : undefined
+// CHECK:function right_shift_bool(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %9 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function unsigned_right_shift_bool(x, y) : undefined
+// CHECK:function unsigned_right_shift_bool(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function unsigned_right_shift_compound_assgmt(x, y) : undefined
+// CHECK:function unsigned_right_shift_compound_assgmt(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function unsigned_right_shift_num(x, y) : undefined
+// CHECK:function unsigned_right_shift_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 3 : number
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, 134217727 : number
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, 31 : number
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, 536870908 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, 4294967295 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 134217727: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 31: number
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 536870908: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4294967295: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %11 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function add_undef(x, y) : undefined
+// CHECK:function add_undef(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "undefinedasdf" : string
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "asdfundefined" : string
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "undefinedasdf": string
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "asdfundefined": string
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function comp_num(x, y) : undefined
+// CHECK:function comp_num(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %y
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %4 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %5 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %6 = AddEmptyStringInst %0
-// CHECK-NEXT:  %7 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %8 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %9 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %10 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %11 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %14 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %15 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %16 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %17 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %18 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %6 = AddEmptyStringInst (:string) %0: any
+// CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %8 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %10 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %11 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %12 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %14 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %15 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %16 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %17 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %18 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function equality(x, y) : undefined
+// CHECK:function equality(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %y
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %3 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %4 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %5 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %6 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %7 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %8 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %9 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %10 = AsInt32Inst %0
-// CHECK-NEXT:  %11 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %14 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %15 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %16 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %17 = CallInst %1, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %18 = CallInst %1, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %6 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %8 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %10 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %11 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %12 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %14 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %15 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %16 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %17 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %18 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function arith() : undefined
+// CHECK:function arith(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 4 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 8 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 64 : number
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 8: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 64: number
+// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function undef_test(x, y) : undefined
+// CHECK:function undef_test(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = BinaryOperatorInst '>=', undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, %1 : boolean
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = BinaryGreaterThanOrEqualInst (:boolean) undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: boolean
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(y) : number
+// CHECK:function foo(y: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = ReturnInst 8 : number
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = ReturnInst (:number) 8: number
 // CHECK-NEXT:function_end
 
-// CHECK:function strip_bang(y) : number
+// CHECK:function strip_bang(y: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %y
-// CHECK-NEXT:  %1 = AsInt32Inst %0
-// CHECK-NEXT:  %2 = CondBranchInst %1 : number, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %2 = CondBranchInst %1: number, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = ReturnInst 1 : number
+// CHECK-NEXT:  %3 = ReturnInst (:number) 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst 2 : number
+// CHECK-NEXT:  %4 = ReturnInst (:number) 2: number
 // CHECK-NEXT:function_end
 
-// CHECK:function turn_unary_plus_into_as_number(y) : number
+// CHECK:function turn_unary_plus_into_as_number(y: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %y
-// CHECK-NEXT:  %1 = AsNumberInst %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %1 = AsNumberInst (:number) %0: any
+// CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function turn_unary_plus_on_literal_into_result() : number
+// CHECK:function turn_unary_plus_on_literal_into_result(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 5 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 5: number
 // CHECK-NEXT:function_end
 
-// CHECK:function turn_bitor_into_as_int32(y) : number
+// CHECK:function turn_bitor_into_as_int32(y: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %y
-// CHECK-NEXT:  %1 = AsInt32Inst %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function unary_ops(x, y) : undefined
+// CHECK:function unary_ops(x: any, y: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "number" : string
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, "object" : string
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, "string" : string
-// CHECK-NEXT:  %4 = CallInst %0, empty, empty, undefined : undefined, "boolean" : string
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, "object" : string
-// CHECK-NEXT:  %6 = CallInst %0, empty, empty, undefined : undefined, "function" : string
-// CHECK-NEXT:  %7 = CallInst %0, empty, empty, undefined : undefined, -9 : number
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, -1 : number
-// CHECK-NEXT:  %9 = CallInst %0, empty, empty, undefined : undefined, -0 : number
-// CHECK-NEXT:  %10 = CallInst %0, empty, empty, undefined : undefined, -0 : number
-// CHECK-NEXT:  %11 = CallInst %0, empty, empty, undefined : undefined, NaN : number
-// CHECK-NEXT:  %12 = CallInst %0, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "number": string
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "object": string
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "string": string
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "boolean": string
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "object": string
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "function": string
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -9: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
+// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %13 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_phi(a) : number
+// CHECK:function test_phi(a: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 4 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 4: number
 // CHECK-NEXT:function_end
 
-// CHECK:function if_inline(d) : number
+// CHECK:function if_inline(d: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = ReturnInst 10 : number
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = ReturnInst (:number) 10: number
 // CHECK-NEXT:function_end
 
-// CHECK:function simplify_switch() : undefined
+// CHECK:function simplify_switch(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, 7 : number
-// CHECK-NEXT:  %2 = CallInst %0, empty, empty, undefined : undefined, 0 : number
-// CHECK-NEXT:  %3 = CallInst %0, empty, empty, undefined : undefined, 2 : number
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 7: number
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function objectCond() : number
+// CHECK:function objectCond(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 1 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 1: number
 // CHECK-NEXT:function_end

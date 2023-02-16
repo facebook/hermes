@@ -13,33 +13,33 @@ export default function() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = LoadStackInst %0
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:function_end
 
-// CHECK:function cjs_module(exports, require, module)
-// CHECK-NEXT:frame = [exports, require, module]
+// CHECK:function cjs_module(exports: any, require: any, module: any): any
+// CHECK-NEXT:frame = [exports: any, require: any, module: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %exports
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [exports]
-// CHECK-NEXT:  %2 = LoadParamInst %require
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [require]
-// CHECK-NEXT:  %4 = LoadParamInst %module
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [module]
-// CHECK-NEXT:  %6 = CreateFunctionInst %""()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, %0, "?default" : string
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %exports: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [exports]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [require]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %""(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, %0: any, "?default": string
+// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ""()
+// CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 400 : number
+// CHECK-NEXT:  %0 = ReturnInst (:any) 400: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

@@ -17,32 +17,32 @@ function g12(z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "g12" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %g12() : undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "g12" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "g12": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %g12(): undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "g12": string
+// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function g12(z) : undefined
+// CHECK:function g12(z: any): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %z
-// CHECK-NEXT:  %1 = CreateFunctionInst %w() : number
-// CHECK-NEXT:  %2 = CallInst %1 : closure, empty, empty, undefined : undefined
-// CHECK-NEXT:  %3 = BinaryOperatorInst '>', %0, 0 : number
-// CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %w(): number
+// CHECK-NEXT:  %2 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = BinaryGreaterThanInst (:boolean) %0: any, 0: number
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst %1 : closure, empty, empty, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function w() : number
+// CHECK:function w(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 1 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 1: number
 // CHECK-NEXT:function_end

@@ -48,82 +48,82 @@ function cse_unary(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo_with_cf" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "check_operator_kind" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "cse_this_instr" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "cse_unary" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %foo() : number
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %foo_with_cf() : number
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "foo_with_cf" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %check_operator_kind() : number
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "check_operator_kind" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %cse_this_instr() : undefined
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "cse_this_instr" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %cse_unary() : number|bigint
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "cse_unary" : string
-// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo_with_cf": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "check_operator_kind": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "cse_this_instr": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "cse_unary": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %foo(): number
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %foo_with_cf(): number
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "foo_with_cf": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %check_operator_kind(): number
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: closure, globalObject: object, "check_operator_kind": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %cse_this_instr(): undefined
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "cse_this_instr": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %cse_unary(): number|bigint
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "cse_unary": string
+// CHECK-NEXT:  %15 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(dim) : number
+// CHECK:function foo(dim: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %dim
-// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %0, %0
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %0, %0
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : boolean, %2 : boolean
-// CHECK-NEXT:  %4 = BinaryOperatorInst '*', %3 : number, %3 : number
-// CHECK-NEXT:  %5 = ReturnInst %4 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %dim: any
+// CHECK-NEXT:  %1 = BinaryEqualInst (:boolean) %0: any, %0: any
+// CHECK-NEXT:  %2 = BinaryEqualInst (:boolean) %0: any, %0: any
+// CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: boolean, %2: boolean
+// CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %3: number, %3: number
+// CHECK-NEXT:  %5 = ReturnInst (:number) %4: number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo_with_cf(dim) : number
+// CHECK:function foo_with_cf(dim: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %dim
-// CHECK-NEXT:  %1 = BinaryOperatorInst '==', %0, %0
-// CHECK-NEXT:  %2 = BinaryOperatorInst '==', %0, %0
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1 : boolean, %2 : boolean
-// CHECK-NEXT:  %4 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %dim: any
+// CHECK-NEXT:  %1 = BinaryEqualInst (:boolean) %0: any, %0: any
+// CHECK-NEXT:  %2 = BinaryEqualInst (:boolean) %0: any, %0: any
+// CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: boolean, %2: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = PhiInst %3 : number, %BB1, 0 : number, %BB0
-// CHECK-NEXT:  %7 = BinaryOperatorInst '*', %3 : number, %6 : number
-// CHECK-NEXT:  %8 = ReturnInst %7 : number
+// CHECK-NEXT:  %6 = PhiInst (:number) %3: number, %BB1, 0: number, %BB0
+// CHECK-NEXT:  %7 = BinaryMultiplyInst (:number) %3: number, %6: number
+// CHECK-NEXT:  %8 = ReturnInst (:number) %7: number
 // CHECK-NEXT:function_end
 
-// CHECK:function check_operator_kind(i) : number
+// CHECK:function check_operator_kind(i: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %i
-// CHECK-NEXT:  %1 = AsInt32Inst %0
-// CHECK-NEXT:  %2 = AsInt32Inst %0
-// CHECK-NEXT:  %3 = BinaryOperatorInst '-', %1 : number, %2 : number
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %1 : number, %2 : number
-// CHECK-NEXT:  %5 = BinaryOperatorInst '*', %3 : number, %4 : number
-// CHECK-NEXT:  %6 = ReturnInst %5 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %i: any
+// CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %2 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %3 = BinarySubtractInst (:number) %1: number, %2: number
+// CHECK-NEXT:  %4 = BinaryAddInst (:number) %1: number, %2: number
+// CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %3: number, %4: number
+// CHECK-NEXT:  %6 = ReturnInst (:number) %5: number
 // CHECK-NEXT:function_end
 
-// CHECK:function cse_this_instr() : undefined
+// CHECK:function cse_this_instr(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this
-// CHECK-NEXT:  %1 = CoerceThisNSInst %0
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined, %1 : object, %1 : object, %1 : object, %1 : object
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %1: object, %1: object, %1: object, %1: object
+// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function cse_unary(a) : number|bigint
+// CHECK:function cse_unary(a: any): number|bigint
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = UnaryOperatorInst '++', %0
-// CHECK-NEXT:  %2 = UnaryOperatorInst '-', %1 : number|bigint
-// CHECK-NEXT:  %3 = BinaryOperatorInst '*', %2 : number|bigint, %2 : number|bigint
-// CHECK-NEXT:  %4 = ReturnInst %3 : number|bigint
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = UnaryIncInst (:number|bigint) %0: any
+// CHECK-NEXT:  %2 = UnaryMinusInst (:number|bigint) %1: number|bigint
+// CHECK-NEXT:  %3 = BinaryMultiplyInst (:number|bigint) %2: number|bigint, %2: number|bigint
+// CHECK-NEXT:  %4 = ReturnInst (:number|bigint) %3: number|bigint
 // CHECK-NEXT:function_end

@@ -19,19 +19,19 @@ f();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %f() : undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "f" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "f" : string
-// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %f(): undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "f": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "f": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function f() : undefined
+// CHECK:function f(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end

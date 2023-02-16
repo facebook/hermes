@@ -30,79 +30,79 @@ function shadow(arguments) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "cheap" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "expensive" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "cond" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "shadow" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %cheap()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "cheap" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %expensive()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "expensive" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %cond()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "cond" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %shadow()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "shadow" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "cheap": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "expensive": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "cond": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "shadow": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %cheap(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "cheap": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %expensive(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "expensive": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %cond(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "cond": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %shadow(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "shadow": string
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function cheap()
+// CHECK:function cheap(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "length" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst %0 : object, 0 : number
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %1, %2
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %0: object, 0: number
+// CHECK-NEXT:  %3 = BinaryAddInst (:any) %1: any, %2: any
+// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function expensive()
+// CHECK:function expensive(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "length" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "cheap" : string
-// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined, %0 : object
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %1, %3
-// CHECK-NEXT:  %5 = LoadPropertyInst %0 : object, 0 : number
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4, %5
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "cheap": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %4 = BinaryAddInst (:any) %1: any, %3: any
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 0: number
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function cond()
+// CHECK:function cond(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "length" : string
-// CHECK-NEXT:  %2 = CondBranchInst %1, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:  %2 = CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = LoadPropertyInst %0 : object, 1 : number
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 1: number
+// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function shadow(arguments)
-// CHECK-NEXT:frame = [arguments]
+// CHECK:function shadow(arguments: any): any
+// CHECK-NEXT:frame = [arguments: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %arguments
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [arguments]
-// CHECK-NEXT:  %2 = LoadFrameInst [arguments]
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "length" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %arguments: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [arguments]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [arguments]: any
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "length": string
+// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

@@ -30,66 +30,66 @@ function test_hex_printable() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_newline" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_quote" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_slash" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_hex" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test_hex_printable" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %test_newline()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "test_newline" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %test_quote()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_quote" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %test_slash()
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "test_slash" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %test_hex()
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "test_hex" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %test_hex_printable()
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "test_hex_printable" : string
-// CHECK-NEXT:  %15 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %16 = StoreStackInst undefined : undefined, %15
-// CHECK-NEXT:  %17 = LoadStackInst %15
-// CHECK-NEXT:  %18 = ReturnInst %17
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_newline": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_quote": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_slash": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_hex": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "test_hex_printable": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %test_newline(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "test_newline": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %test_quote(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "test_quote": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %test_slash(): any
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: closure, globalObject: object, "test_slash": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %test_hex(): any
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "test_hex": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %test_hex_printable(): any
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "test_hex_printable": string
+// CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %16 = StoreStackInst undefined: undefined, %15: any
+// CHECK-NEXT:  %17 = LoadStackInst (:any) %15: any
+// CHECK-NEXT:  %18 = ReturnInst (:any) %17: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test_newline()
+// CHECK:function test_newline(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\n" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "A string with a newline\\n": string
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_quote()
+// CHECK:function test_quote(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\\"" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "A string with a newline\\\"": string
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_slash()
+// CHECK:function test_slash(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a newline\\\\" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "A string with a newline\\\\": string
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_hex()
+// CHECK:function test_hex(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a hex: \\x03" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "A string with a hex: \\x03": string
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_hex_printable()
+// CHECK:function test_hex_printable(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, "A string with a hex printable: a" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "A string with a hex printable: a": string
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

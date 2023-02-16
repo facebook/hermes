@@ -18,29 +18,29 @@ function bug2() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "bug1" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bug2" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %bug1()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "bug1" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %bug2()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "bug2" : string
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "bug1": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bug2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %bug1(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "bug1": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %bug2(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "bug2": string
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bug1()
+// CHECK:function bug1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = PhiInst undefined : undefined, %BB0, %2 : number, %BB1
-// CHECK-NEXT:  %2 = UnaryOperatorInst '++', %1 : undefined|number
+// CHECK-NEXT:  %1 = PhiInst (:undefined|number) undefined: undefined, %BB0, %2: number, %BB1
+// CHECK-NEXT:  %2 = UnaryIncInst (:number) %1: undefined|number
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function bug2()
+// CHECK:function bug2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1

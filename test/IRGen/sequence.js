@@ -21,71 +21,71 @@ function test2(x,y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink0" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink1" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test1" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test2" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %sink0()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "sink0" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %sink1()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "sink1" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %test1()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "test1" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %test2()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "test2" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink0": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink1": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test1": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "test2": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %sink0(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "sink0": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %sink1(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "sink1": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %test1(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "test1": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %test2(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "test2": string
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink0(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function sink0(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function sink1(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function sink1(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test1(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test1(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = ReturnInst 3 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = ReturnInst (:any) 3: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test2(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function test2(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "sink0" : string
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = LoadFrameInst [y]
-// CHECK-NEXT:  %7 = CallInst %4, empty, empty, undefined : undefined, %5, %6
-// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "sink1" : string
-// CHECK-NEXT:  %9 = LoadFrameInst [x]
-// CHECK-NEXT:  %10 = LoadFrameInst [y]
-// CHECK-NEXT:  %11 = CallInst %8, empty, empty, undefined : undefined, %9, %10
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "sink0": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %7 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %5: any, %6: any
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "sink1": string
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %9: any, %10: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

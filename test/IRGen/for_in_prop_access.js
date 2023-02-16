@@ -62,251 +62,251 @@ function expression_prop(obj) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_loop" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "different_prop" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "different_obj" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "modify_prop" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "modify_value" : string
-// CHECK-NEXT:  %5 = DeclareGlobalVarInst "expression_prop" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %simple_loop()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simple_loop" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %different_prop()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "different_prop" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %different_obj()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "different_obj" : string
-// CHECK-NEXT:  %12 = CreateFunctionInst %modify_prop()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "modify_prop" : string
-// CHECK-NEXT:  %14 = CreateFunctionInst %modify_value()
-// CHECK-NEXT:  %15 = StorePropertyLooseInst %14 : closure, globalObject : object, "modify_value" : string
-// CHECK-NEXT:  %16 = CreateFunctionInst %expression_prop()
-// CHECK-NEXT:  %17 = StorePropertyLooseInst %16 : closure, globalObject : object, "expression_prop" : string
-// CHECK-NEXT:  %18 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %19 = StoreStackInst undefined : undefined, %18
-// CHECK-NEXT:  %20 = LoadStackInst %18
-// CHECK-NEXT:  %21 = ReturnInst %20
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_loop": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "different_prop": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "different_obj": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "modify_prop": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "modify_value": string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "expression_prop": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %simple_loop(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "simple_loop": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %different_prop(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "different_prop": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %different_obj(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "different_obj": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %modify_prop(): any
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12: closure, globalObject: object, "modify_prop": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:closure) %modify_value(): any
+// CHECK-NEXT:  %15 = StorePropertyLooseInst %14: closure, globalObject: object, "modify_value": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:closure) %expression_prop(): any
+// CHECK-NEXT:  %17 = StorePropertyLooseInst %16: closure, globalObject: object, "expression_prop": string
+// CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
+// CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
+// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_loop(obj)
-// CHECK-NEXT:frame = [obj, ret, x]
+// CHECK:function simple_loop(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %9 = LoadFrameInst [obj]
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = LoadFrameInst [ret]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = LoadStackInst %11
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = LoadFrameInst [ret]
-// CHECK-NEXT:  %19 = LoadFrameInst [obj]
-// CHECK-NEXT:  %20 = LoadFrameInst [x]
-// CHECK-NEXT:  %21 = LoadPropertyInst %19, %20
-// CHECK-NEXT:  %22 = BinaryOperatorInst '+', %18, %21
-// CHECK-NEXT:  %23 = StoreFrameInst %22, [ret]
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %21 = LoadPropertyInst (:any) %19: any, %20: any
+// CHECK-NEXT:  %22 = BinaryAddInst (:any) %18: any, %21: any
+// CHECK-NEXT:  %23 = StoreFrameInst %22: any, [ret]: any
 // CHECK-NEXT:  %24 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %25 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %25 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function different_prop(obj)
-// CHECK-NEXT:frame = [obj, ret, x, y]
+// CHECK:function different_prop(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %10 = LoadFrameInst [obj]
-// CHECK-NEXT:  %11 = StoreStackInst %10, %7
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %13 = GetPNamesInst %6, %7, %8, %9, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [y]: any
+// CHECK-NEXT:  %5 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %11 = StoreStackInst %10: any, %7: any
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %13 = GetPNamesInst %6: any, %7: any, %8: any, %9: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = LoadFrameInst [ret]
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %16 = GetNextPNameInst %12, %7, %8, %9, %6, %BB1, %BB3
+// CHECK-NEXT:  %16 = GetNextPNameInst %12: any, %7: any, %8: any, %9: any, %6: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %17 = LoadStackInst %12
-// CHECK-NEXT:  %18 = StoreFrameInst %17, [x]
-// CHECK-NEXT:  %19 = LoadFrameInst [x]
-// CHECK-NEXT:  %20 = StoreFrameInst %19, [y]
-// CHECK-NEXT:  %21 = LoadFrameInst [ret]
-// CHECK-NEXT:  %22 = LoadFrameInst [obj]
-// CHECK-NEXT:  %23 = LoadFrameInst [y]
-// CHECK-NEXT:  %24 = LoadPropertyInst %22, %23
-// CHECK-NEXT:  %25 = BinaryOperatorInst '+', %21, %24
-// CHECK-NEXT:  %26 = StoreFrameInst %25, [ret]
+// CHECK-NEXT:  %17 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:  %18 = StoreFrameInst %17: any, [x]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %20 = StoreFrameInst %19: any, [y]: any
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %22 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %24 = LoadPropertyInst (:any) %22: any, %23: any
+// CHECK-NEXT:  %25 = BinaryAddInst (:any) %21: any, %24: any
+// CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %28 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function different_obj(obj)
-// CHECK-NEXT:frame = [obj, ret, obj1, x]
+// CHECK:function different_obj(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, obj1: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [obj1]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %5 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %6 = LoadFrameInst [obj]
-// CHECK-NEXT:  %7 = StoreFrameInst %6, [obj1]
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %12 = LoadFrameInst [obj]
-// CHECK-NEXT:  %13 = StoreStackInst %12, %9
-// CHECK-NEXT:  %14 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %15 = GetPNamesInst %8, %9, %10, %11, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [obj1]: any
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %5 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %7 = StoreFrameInst %6: any, [obj1]: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %13 = StoreStackInst %12: any, %9: any
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %15 = GetPNamesInst %8: any, %9: any, %10: any, %11: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = LoadFrameInst [ret]
-// CHECK-NEXT:  %17 = ReturnInst %16
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %17 = ReturnInst (:any) %16: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %18 = GetNextPNameInst %14, %9, %10, %11, %8, %BB1, %BB3
+// CHECK-NEXT:  %18 = GetNextPNameInst %14: any, %9: any, %10: any, %11: any, %8: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %19 = LoadStackInst %14
-// CHECK-NEXT:  %20 = StoreFrameInst %19, [x]
-// CHECK-NEXT:  %21 = LoadFrameInst [ret]
-// CHECK-NEXT:  %22 = LoadFrameInst [obj1]
-// CHECK-NEXT:  %23 = LoadFrameInst [x]
-// CHECK-NEXT:  %24 = LoadPropertyInst %22, %23
-// CHECK-NEXT:  %25 = BinaryOperatorInst '+', %21, %24
-// CHECK-NEXT:  %26 = StoreFrameInst %25, [ret]
+// CHECK-NEXT:  %19 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:  %20 = StoreFrameInst %19: any, [x]: any
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %22 = LoadFrameInst (:any) [obj1]: any
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %24 = LoadPropertyInst (:any) %22: any, %23: any
+// CHECK-NEXT:  %25 = BinaryAddInst (:any) %21: any, %24: any
+// CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %28 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function modify_prop(obj)
-// CHECK-NEXT:frame = [obj, ret, x]
+// CHECK:function modify_prop(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %9 = LoadFrameInst [obj]
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = LoadFrameInst [ret]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = LoadStackInst %11
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = StoreFrameInst "a" : string, [x]
-// CHECK-NEXT:  %19 = LoadFrameInst [ret]
-// CHECK-NEXT:  %20 = LoadFrameInst [obj]
-// CHECK-NEXT:  %21 = LoadFrameInst [x]
-// CHECK-NEXT:  %22 = LoadPropertyInst %20, %21
-// CHECK-NEXT:  %23 = BinaryOperatorInst '+', %19, %22
-// CHECK-NEXT:  %24 = StoreFrameInst %23, [ret]
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
+// CHECK-NEXT:  %18 = StoreFrameInst "a": string, [x]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %22 = LoadPropertyInst (:any) %20: any, %21: any
+// CHECK-NEXT:  %23 = BinaryAddInst (:any) %19: any, %22: any
+// CHECK-NEXT:  %24 = StoreFrameInst %23: any, [ret]: any
 // CHECK-NEXT:  %25 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %26 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %26 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function modify_value(obj)
-// CHECK-NEXT:frame = [obj, ret, x]
+// CHECK:function modify_value(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %9 = LoadFrameInst [obj]
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = LoadFrameInst [ret]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = LoadStackInst %11
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = LoadFrameInst [obj]
-// CHECK-NEXT:  %19 = LoadFrameInst [x]
-// CHECK-NEXT:  %20 = LoadPropertyInst %18, %19
-// CHECK-NEXT:  %21 = AsNumericInst %20
-// CHECK-NEXT:  %22 = UnaryOperatorInst '++', %21 : number|bigint
-// CHECK-NEXT:  %23 = StorePropertyLooseInst %22, %18, %19
-// CHECK-NEXT:  %24 = LoadFrameInst [ret]
-// CHECK-NEXT:  %25 = LoadFrameInst [obj]
-// CHECK-NEXT:  %26 = LoadFrameInst [x]
-// CHECK-NEXT:  %27 = LoadPropertyInst %25, %26
-// CHECK-NEXT:  %28 = BinaryOperatorInst '+', %24, %27
-// CHECK-NEXT:  %29 = StoreFrameInst %28, [ret]
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %20 = LoadPropertyInst (:any) %18: any, %19: any
+// CHECK-NEXT:  %21 = AsNumericInst (:number|bigint) %20: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:any) %21: number|bigint
+// CHECK-NEXT:  %23 = StorePropertyLooseInst %22: any, %18: any, %19: any
+// CHECK-NEXT:  %24 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %25 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %26 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %27 = LoadPropertyInst (:any) %25: any, %26: any
+// CHECK-NEXT:  %28 = BinaryAddInst (:any) %24: any, %27: any
+// CHECK-NEXT:  %29 = StoreFrameInst %28: any, [ret]: any
 // CHECK-NEXT:  %30 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %31 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %31 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function expression_prop(obj)
-// CHECK-NEXT:frame = [obj, ret, x]
+// CHECK:function expression_prop(obj: any): any
+// CHECK-NEXT:frame = [obj: any, ret: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [ret]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst 0 : number, [ret]
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %9 = LoadFrameInst [obj]
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %12 = GetPNamesInst %5, %6, %7, %8, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [ret]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = LoadFrameInst [ret]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11, %6, %7, %8, %5, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = LoadStackInst %11
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x]
-// CHECK-NEXT:  %18 = LoadFrameInst [ret]
-// CHECK-NEXT:  %19 = LoadFrameInst [obj]
-// CHECK-NEXT:  %20 = LoadPropertyInst %19, "a" : string
-// CHECK-NEXT:  %21 = BinaryOperatorInst '+', %18, %20
-// CHECK-NEXT:  %22 = StoreFrameInst %21, [ret]
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) [ret]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: any, "a": string
+// CHECK-NEXT:  %21 = BinaryAddInst (:any) %18: any, %20: any
+// CHECK-NEXT:  %22 = StoreFrameInst %21: any, [ret]: any
 // CHECK-NEXT:  %23 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

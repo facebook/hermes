@@ -33,240 +33,240 @@ var simpleAsyncFE = async function () {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simpleReturn" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simpleAwait" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "nonSimpleArrayDestructuring" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "simpleAsyncFE" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %simpleReturn()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simpleReturn" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %simpleAwait()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "simpleAwait" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %nonSimpleArrayDestructuring()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "nonSimpleArrayDestructuring" : string
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %11 = StoreStackInst undefined : undefined, %10
-// CHECK-NEXT:  %12 = CreateFunctionInst %simpleAsyncFE()
-// CHECK-NEXT:  %13 = StorePropertyLooseInst %12 : closure, globalObject : object, "simpleAsyncFE" : string
-// CHECK-NEXT:  %14 = LoadStackInst %10
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simpleReturn": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simpleAwait": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "nonSimpleArrayDestructuring": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "simpleAsyncFE": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %simpleReturn(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "simpleReturn": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %simpleAwait(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "simpleAwait": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "nonSimpleArrayDestructuring": string
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %11 = StoreStackInst undefined: undefined, %10: any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %simpleAsyncFE(): any
+// CHECK-NEXT:  %13 = StorePropertyLooseInst %12: closure, globalObject: object, "simpleAsyncFE": string
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simpleReturn()
+// CHECK:function simpleReturn(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this
-// CHECK-NEXT:  %2 = CoerceThisNSInst %1
-// CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleReturn()
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %?anon_0_simpleReturn(): any
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [HermesBuiltin.spawnAsync]: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: closure, empty: any, empty: any, undefined: undefined, %3: closure, %2: object, %0: object
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simpleAwait()
+// CHECK:function simpleAwait(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this
-// CHECK-NEXT:  %2 = CoerceThisNSInst %1
-// CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAwait()
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %?anon_0_simpleAwait(): any
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [HermesBuiltin.spawnAsync]: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: closure, empty: any, empty: any, undefined: undefined, %3: closure, %2: object, %0: object
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function nonSimpleArrayDestructuring()
+// CHECK:function nonSimpleArrayDestructuring(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this
-// CHECK-NEXT:  %2 = CoerceThisNSInst %1
-// CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_nonSimpleArrayDestructuring()
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %?anon_0_nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [HermesBuiltin.spawnAsync]: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: closure, empty: any, empty: any, undefined: undefined, %3: closure, %2: object, %0: object
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simpleAsyncFE()
+// CHECK:function simpleAsyncFE(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateArgumentsInst
-// CHECK-NEXT:  %1 = LoadParamInst %this
-// CHECK-NEXT:  %2 = CoerceThisNSInst %1
-// CHECK-NEXT:  %3 = CreateFunctionInst %?anon_0_simpleAsyncFE()
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %5 = CallInst %4 : closure, empty, empty, undefined : undefined, %3 : closure, %2 : object, %0 : object
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %?anon_0_simpleAsyncFE(): any
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [HermesBuiltin.spawnAsync]: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: closure, empty: any, empty: any, undefined: undefined, %3: closure, %2: object, %0: object
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_simpleReturn()
+// CHECK:function ?anon_0_simpleReturn(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_simpleReturn()
-// CHECK-NEXT:  %1 = ReturnInst %0 : object
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleReturn(): any
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_simpleAwait()
+// CHECK:function ?anon_0_simpleAwait(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_simpleAwait()
-// CHECK-NEXT:  %1 = ReturnInst %0 : object
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAwait(): any
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_nonSimpleArrayDestructuring()
+// CHECK:function ?anon_0_nonSimpleArrayDestructuring(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_nonSimpleArrayDestructuring()
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
-// CHECK-NEXT:  %2 = CallInst %1, empty, empty, %0 : object
-// CHECK-NEXT:  %3 = ReturnInst %0 : object
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_nonSimpleArrayDestructuring(): any
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "next": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, %0: object
+// CHECK-NEXT:  %3 = ReturnInst (:any) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_simpleAsyncFE()
+// CHECK:function ?anon_0_simpleAsyncFE(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_0_?anon_0_simpleAsyncFE()
-// CHECK-NEXT:  %1 = ReturnInst %0 : object
+// CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_?anon_0_simpleAsyncFE(): any
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_?anon_0_simpleReturn()
+// CHECK:function ?anon_0_?anon_0_simpleReturn(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %2 = ResumeGeneratorInst %1
-// CHECK-NEXT:  %3 = LoadStackInst %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
+// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst 1 : number
+// CHECK-NEXT:  %5 = ReturnInst (:any) 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst %2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_?anon_0_simpleAwait()
-// CHECK-NEXT:frame = [x]
+// CHECK:function ?anon_0_?anon_0_simpleAwait(): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %2 = ResumeGeneratorInst %1
-// CHECK-NEXT:  %3 = LoadStackInst %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
+// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %7 = SaveAndYieldInst 2 : number, %BB3
+// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %7 = SaveAndYieldInst 2: number, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst %2
+// CHECK-NEXT:  %8 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %10 = LoadStackInst %6
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB4, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = StoreFrameInst %9, [x]
-// CHECK-NEXT:  %13 = LoadFrameInst [x]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %12 = StoreFrameInst %9: any, [x]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %15 = ReturnInst %9
+// CHECK-NEXT:  %15 = ReturnInst (:any) %9: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param)
-// CHECK-NEXT:frame = [x]
+// CHECK:function ?anon_0_?anon_0_nonSimpleArrayDestructuring(?anon_2_param: any): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %2 = ResumeGeneratorInst %1
-// CHECK-NEXT:  %3 = LoadStackInst %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
+// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %7 = LoadParamInst %?anon_2_param
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_3_iter
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_4_sourceOrNext
-// CHECK-NEXT:  %10 = StoreStackInst %7, %9
-// CHECK-NEXT:  %11 = IteratorBeginInst %9
-// CHECK-NEXT:  %12 = StoreStackInst %11, %8
-// CHECK-NEXT:  %13 = AllocStackInst $?anon_5_iterDone
-// CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
-// CHECK-NEXT:  %15 = AllocStackInst $?anon_6_iterValue
-// CHECK-NEXT:  %16 = StoreStackInst undefined : undefined, %15
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %7 = LoadParamInst (:any) %?anon_2_param: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_iter: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_4_sourceOrNext: any
+// CHECK-NEXT:  %10 = StoreStackInst %7: any, %9: any
+// CHECK-NEXT:  %11 = IteratorBeginInst (:any) %9: any
+// CHECK-NEXT:  %12 = StoreStackInst %11: any, %8: any
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_5_iterDone: any
+// CHECK-NEXT:  %14 = StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_6_iterValue: any
+// CHECK-NEXT:  %16 = StoreStackInst undefined: undefined, %15: any
 // CHECK-NEXT:  %17 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %18 = ReturnInst %2
+// CHECK-NEXT:  %18 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %19 = ResumeGeneratorInst %5
-// CHECK-NEXT:  %20 = LoadStackInst %5
-// CHECK-NEXT:  %21 = CondBranchInst %20, %BB5, %BB6
+// CHECK-NEXT:  %19 = ResumeGeneratorInst (:any) %5: any
+// CHECK-NEXT:  %20 = LoadStackInst (:any) %5: any
+// CHECK-NEXT:  %21 = CondBranchInst %20: any, %BB5, %BB6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %22 = IteratorNextInst %8, %9
-// CHECK-NEXT:  %23 = LoadStackInst %8
-// CHECK-NEXT:  %24 = BinaryOperatorInst '===', %23, undefined : undefined
-// CHECK-NEXT:  %25 = StoreStackInst %24, %13
-// CHECK-NEXT:  %26 = CondBranchInst %24, %BB7, %BB8
+// CHECK-NEXT:  %22 = IteratorNextInst (:any) %8: any, %9: any
+// CHECK-NEXT:  %23 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:  %24 = BinaryStrictlyEqualInst (:any) %23: any, undefined: undefined
+// CHECK-NEXT:  %25 = StoreStackInst %24: any, %13: any
+// CHECK-NEXT:  %26 = CondBranchInst %24: any, %BB7, %BB8
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %27 = StoreStackInst %22, %15
+// CHECK-NEXT:  %27 = StoreStackInst %22: any, %15: any
 // CHECK-NEXT:  %28 = BranchInst %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %29 = LoadStackInst %15
-// CHECK-NEXT:  %30 = StoreFrameInst %29, [x]
-// CHECK-NEXT:  %31 = LoadStackInst %13
-// CHECK-NEXT:  %32 = CondBranchInst %31, %BB9, %BB10
+// CHECK-NEXT:  %29 = LoadStackInst (:any) %15: any
+// CHECK-NEXT:  %30 = StoreFrameInst %29: any, [x]: any
+// CHECK-NEXT:  %31 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:  %32 = CondBranchInst %31: any, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %33 = IteratorCloseInst %8, false : boolean
+// CHECK-NEXT:  %33 = IteratorCloseInst (:any) %8: any, false: boolean
 // CHECK-NEXT:  %34 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %35 = SaveAndYieldInst undefined : undefined, %BB4
+// CHECK-NEXT:  %35 = SaveAndYieldInst undefined: undefined, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %36 = LoadFrameInst [x]
-// CHECK-NEXT:  %37 = AllocStackInst $?anon_8_isReturn
-// CHECK-NEXT:  %38 = SaveAndYieldInst %36, %BB11
+// CHECK-NEXT:  %36 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %37 = AllocStackInst (:any) $?anon_8_isReturn: any
+// CHECK-NEXT:  %38 = SaveAndYieldInst %36: any, %BB11
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %39 = ReturnInst %19
+// CHECK-NEXT:  %39 = ReturnInst (:any) %19: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %40 = ResumeGeneratorInst %37
-// CHECK-NEXT:  %41 = LoadStackInst %37
-// CHECK-NEXT:  %42 = CondBranchInst %41, %BB12, %BB13
+// CHECK-NEXT:  %40 = ResumeGeneratorInst (:any) %37: any
+// CHECK-NEXT:  %41 = LoadStackInst (:any) %37: any
+// CHECK-NEXT:  %42 = CondBranchInst %41: any, %BB12, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %43 = StoreFrameInst %40, [x]
-// CHECK-NEXT:  %44 = LoadFrameInst [x]
-// CHECK-NEXT:  %45 = ReturnInst %44
+// CHECK-NEXT:  %43 = StoreFrameInst %40: any, [x]: any
+// CHECK-NEXT:  %44 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %45 = ReturnInst (:any) %44: any
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %46 = ReturnInst %40
+// CHECK-NEXT:  %46 = ReturnInst (:any) %40: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %47 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %47 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_?anon_0_simpleAsyncFE()
-// CHECK-NEXT:frame = [x]
+// CHECK:function ?anon_0_?anon_0_simpleAsyncFE(): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %2 = ResumeGeneratorInst %1
-// CHECK-NEXT:  %3 = LoadStackInst %1
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
+// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %7 = SaveAndYieldInst 2 : number, %BB3
+// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %7 = SaveAndYieldInst 2: number, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst %2
+// CHECK-NEXT:  %8 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %10 = LoadStackInst %6
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: any
+// CHECK-NEXT:  %10 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB4, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = StoreFrameInst %9, [x]
-// CHECK-NEXT:  %13 = LoadFrameInst [x]
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %12 = StoreFrameInst %9: any, [x]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %15 = ReturnInst %9
+// CHECK-NEXT:  %15 = ReturnInst (:any) %9: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

@@ -20,35 +20,35 @@ function onlyDefault () {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "empty" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "onlyDefault" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %empty()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "empty" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %onlyDefault()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "onlyDefault" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "empty": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "onlyDefault": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %empty(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "empty": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %onlyDefault(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "onlyDefault": string
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
+// CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function empty()
+// CHECK:function empty(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function onlyDefault()
+// CHECK:function onlyDefault(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = BranchInst %BB2
 // CHECK-NEXT:%BB3:

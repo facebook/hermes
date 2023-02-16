@@ -7,19 +7,19 @@
 
 // RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheck %s
 
-//CHECK-LABEL:function global() : undefined
+//CHECK-LABEL:function global(): undefined
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
-//CHECK-NEXT:  %1 = CreateFunctionInst %main() : undefined
-//CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "main" : string
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+//CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
+//CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
+//CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 //CHECK-NEXT:function_end
 //CHECK-EMPTY:
-//CHECK-NEXT:function main() : undefined
+//CHECK-NEXT:function main(): undefined
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
 //CHECK-NEXT:function_end
 
 // No more functions in this module.

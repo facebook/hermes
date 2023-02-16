@@ -32,62 +32,62 @@ function ctor_load_store_test() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : string
+// CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "ctor_load_store_test" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %ctor_this_test() : object
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2 : closure, globalObject : object, "ctor_this_test" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %ctor_load_store_test() : object
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4 : closure, globalObject : object, "ctor_load_store_test" : string
-// CHECK-NEXT:  %6 = ReturnInst "use strict" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "ctor_load_store_test": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %ctor_this_test(): object
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: closure, globalObject: object, "ctor_this_test": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %ctor_load_store_test(): object
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: closure, globalObject: object, "ctor_load_store_test": string
+// CHECK-NEXT:  %6 = ReturnInst (:string) "use strict": string
 // CHECK-NEXT:function_end
 
-// CHECK:function ctor_this_test() : object
+// CHECK:function ctor_this_test(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %use_this() : object
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
-// CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
-// CHECK-NEXT:  %3 = ConstructInst %0 : closure, empty, empty, %2 : object, 12 : number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : object
-// CHECK-NEXT:  %5 = ReturnInst %4 : object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %use_this(): object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
+// CHECK-NEXT:  %3 = ConstructInst (:object) %0: closure, empty: any, empty: any, %2: object, 12: number
+// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: object, %3: object
+// CHECK-NEXT:  %5 = ReturnInst (:object) %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ctor_load_store_test() : object
-// CHECK-NEXT:frame = [use_this : closure]
+// CHECK:function ctor_load_store_test(): object
+// CHECK-NEXT:frame = [use_this: closure]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %"use_this 1#"() : undefined
-// CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [use_this] : closure
-// CHECK-NEXT:  %2 = CreateFunctionInst %construct_use_this() : object
-// CHECK-NEXT:  %3 = CallInst %2 : closure, empty, empty, undefined : undefined
-// CHECK-NEXT:  %4 = ReturnInst %3 : object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"use_this 1#"(): undefined
+// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [use_this]: closure
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %construct_use_this(): object
+// CHECK-NEXT:  %3 = CallInst (:object) %2: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst (:object) %3: object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k : number) : object
+// CHECK:function use_this(k: number): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this : object
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
-// CHECK-NEXT:  %2 = ReturnInst %0 : object
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
+// CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
+// CHECK-NEXT:  %2 = ReturnInst (:object) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function "use_this 1#"(k : number) : undefined
+// CHECK:function "use_this 1#"(k: number): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this : object
-// CHECK-NEXT:  %1 = StorePropertyStrictInst 12 : number, %0 : object, "k" : string
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
+// CHECK-NEXT:  %1 = StorePropertyStrictInst 12: number, %0: object, "k": string
+// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function construct_use_this() : object
+// CHECK:function construct_use_this(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [use_this@ctor_load_store_test] : closure
-// CHECK-NEXT:  %1 = LoadPropertyInst %0 : closure, "prototype" : string
-// CHECK-NEXT:  %2 = CreateThisInst %1, %0 : closure
-// CHECK-NEXT:  %3 = ConstructInst %0 : closure, empty, empty, %2 : object, 12 : number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst %2 : object, %3 : undefined
-// CHECK-NEXT:  %5 = ReturnInst %4 : object
+// CHECK-NEXT:  %0 = LoadFrameInst (:closure) [use_this@ctor_load_store_test]: closure
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
+// CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: closure, empty: any, empty: any, %2: object, 12: number
+// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: object, %3: undefined
+// CHECK-NEXT:  %5 = ReturnInst (:object) %4: object
 // CHECK-NEXT:function_end

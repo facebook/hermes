@@ -15,25 +15,25 @@ function test_assignment_expr() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_assignment_expr" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %test_assignment_expr()
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "test_assignment_expr" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_assignment_expr": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %test_assignment_expr(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "test_assignment_expr": string
+// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test_assignment_expr()
-// CHECK-NEXT:frame = [y, x]
+// CHECK:function test_assignment_expr(): any
+// CHECK-NEXT:frame = [y: any, x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [y]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [y]
-// CHECK-NEXT:  %3 = StoreFrameInst 4 : number, [y]
-// CHECK-NEXT:  %4 = StoreFrameInst 4 : number, [x]
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [y]: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %2 = StoreFrameInst 0: number, [y]: any
+// CHECK-NEXT:  %3 = StoreFrameInst 4: number, [y]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 4: number, [x]: any
+// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

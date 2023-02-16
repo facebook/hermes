@@ -22,27 +22,27 @@ foo()()
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo() : closure
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
-// CHECK-NEXT:  %5 = CallInst %4, empty, empty, undefined : undefined
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): closure
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(p1) : closure
+// CHECK:function foo(p1: any): closure
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst %bar() : number
-// CHECK-NEXT:  %1 = ReturnInst %0 : closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %bar(): number
+// CHECK-NEXT:  %1 = ReturnInst (:closure) %0: closure
 // CHECK-NEXT:function_end
 
-// CHECK:function bar() : number
+// CHECK:function bar(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 123 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 123: number
 // CHECK-NEXT:function_end

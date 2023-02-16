@@ -20,46 +20,46 @@ function sink(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "y" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %sink()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = StoreStackInst undefined : undefined, %4
-// CHECK-NEXT:  %6 = StorePropertyLooseInst 2 : number, globalObject : object, "y" : string
-// CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %8 = StorePropertyLooseInst 3 : number, %7, "bar" : string
-// CHECK-NEXT:  %9 = StoreStackInst 3 : number, %4
-// CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %12 = CallInst %10, empty, empty, undefined : undefined, %11
-// CHECK-NEXT:  %13 = StoreStackInst %12, %4
-// CHECK-NEXT:  %14 = LoadStackInst %4
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "y": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %sink(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "sink": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %5 = StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst 2: number, globalObject: object, "y": string
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:  %8 = StorePropertyLooseInst 3: number, %7: any, "bar": string
+// CHECK-NEXT:  %9 = StoreStackInst 3: number, %4: any
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:  %12 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, %11: any
+// CHECK-NEXT:  %13 = StoreStackInst %12: any, %4: any
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink(x, y)
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function sink(x: any, y: any): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadFrameInst [x]
-// CHECK-NEXT:  %5 = LoadPropertyInst %4, "bar" : string
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "bar": string
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [x]
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "bar" : string
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "bar": string
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst [x]
-// CHECK-NEXT:  %11 = LoadFrameInst [y]
-// CHECK-NEXT:  %12 = LoadPropertyInst %10, %11
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %12 = LoadPropertyInst (:any) %10: any, %11: any
+// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

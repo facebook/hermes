@@ -15,56 +15,56 @@ function three() { return z; return z;}
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "one" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "two" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "three" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %one()
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "one" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %two()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "two" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %three()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "three" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "one": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "two": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "three": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %one(): any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "one": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %two(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "two": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %three(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "three": string
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
+// CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:function_end
 
-// CHECK:function one()
+// CHECK:function one(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function two()
+// CHECK:function two(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "t" : string
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "t": string
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function three()
+// CHECK:function three(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "z" : string
-// CHECK-NEXT:  %1 = ReturnInst %0
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
+// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "z" : string
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

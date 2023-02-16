@@ -35,102 +35,102 @@ function check4() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "check1" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "check2" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "check3" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "check4" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %check1()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "check1" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %check2()
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "check2" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %check3()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "check3" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %check4()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "check4" : string
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = LoadStackInst %12
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "check1": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "check2": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "check3": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "check4": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %check1(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "check1": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %check2(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "check2": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %check3(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "check3": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %check4(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "check4": string
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function check1()
-// CHECK-NEXT:frame = [x, y]
+// CHECK:function check1(): any
+// CHECK-NEXT:frame = [x: any, y: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [y]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = ThrowIfEmptyInst %2
-// CHECK-NEXT:  %4 = LoadFrameInst [y]
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst %4
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %3, %5
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
+// CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: any, %5: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = StoreFrameInst 10 : number, [x]
-// CHECK-NEXT:  %9 = StoreFrameInst 1 : number, [y]
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = StoreFrameInst 10: number, [x]: any
+// CHECK-NEXT:  %9 = StoreFrameInst 1: number, [y]: any
+// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function check2(p)
-// CHECK-NEXT:frame = [p, b, a]
+// CHECK:function check2(p: any): any
+// CHECK-NEXT:frame = [p: any, b: any, a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %p
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [p]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %3 = StoreFrameInst empty : empty, [a]
-// CHECK-NEXT:  %4 = LoadFrameInst [a]
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst %4
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [b]
-// CHECK-NEXT:  %7 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %8 = LoadFrameInst [a]
-// CHECK-NEXT:  %9 = ThrowIfEmptyInst %8
-// CHECK-NEXT:  %10 = LoadFrameInst [b]
-// CHECK-NEXT:  %11 = BinaryOperatorInst '+', %9, %10
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [b]: any
+// CHECK-NEXT:  %3 = StoreFrameInst empty: empty, [a]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any
+// CHECK-NEXT:  %6 = StoreFrameInst %5: any, [b]: any
+// CHECK-NEXT:  %7 = StoreFrameInst undefined: undefined, [a]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %9 = ThrowIfEmptyInst (:any) %8: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
+// CHECK-NEXT:  %11 = BinaryAddInst (:any) %9: any, %10: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function check3()
-// CHECK-NEXT:frame = [x, check3_inner]
+// CHECK:function check3(): any
+// CHECK-NEXT:frame = [x: any, check3_inner: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHECK-NEXT:  %1 = CreateFunctionInst %check3_inner()
-// CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [check3_inner]
-// CHECK-NEXT:  %3 = LoadFrameInst [check3_inner]
-// CHECK-NEXT:  %4 = CallInst %3, empty, empty, undefined : undefined
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [x]
-// CHECK-NEXT:  %6 = LoadFrameInst [x]
-// CHECK-NEXT:  %7 = ThrowIfEmptyInst %6
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %check3_inner(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [check3_inner]: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) [check3_inner]: any
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any
+// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function check4()
-// CHECK-NEXT:frame = [x]
+// CHECK:function check4(): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty : empty, [x]
-// CHECK-NEXT:  %1 = LoadFrameInst [x]
-// CHECK-NEXT:  %2 = ThrowIfEmptyInst %1
-// CHECK-NEXT:  %3 = StoreFrameInst 10 : number, [x]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [x]
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = ThrowIfEmptyInst %5
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
+// CHECK-NEXT:  %1 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %2 = ThrowIfEmptyInst (:any) %1: any
+// CHECK-NEXT:  %3 = StoreFrameInst 10: number, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) %5: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function check3_inner()
+// CHECK:function check3_inner(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [x@check3]
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst %0
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %1, 1 : number
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = LoadFrameInst (:any) [x@check3]: any
+// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any
+// CHECK-NEXT:  %2 = BinaryAddInst (:any) %1: any, 1: number
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

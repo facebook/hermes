@@ -18,35 +18,35 @@ function fibonacci(n) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "fibonacci" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %fibonacci()
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "fibonacci" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "fibonacci": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %fibonacci(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "fibonacci": string
+// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function fibonacci(n)
-// CHECK-NEXT:frame = [n]
+// CHECK:function fibonacci(n: any): any
+// CHECK-NEXT:frame = [n: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %n
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [n]
-// CHECK-NEXT:  %2 = LoadFrameInst [n]
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %n: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [n]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [n]: any
+// CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = LoadFrameInst [n]
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [n]: any
+// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "fibonacci" : string
-// CHECK-NEXT:  %7 = LoadFrameInst [n]
-// CHECK-NEXT:  %8 = CallInst %6, empty, empty, undefined : undefined, %7
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "fibonacci": string
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [n]: any
+// CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB5:

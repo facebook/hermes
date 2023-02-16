@@ -28,20 +28,20 @@ function backwards_branch() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "backwards_branch" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %backwards_branch() : undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "backwards_branch" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "backwards_branch": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %backwards_branch(): undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "backwards_branch": string
+// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function backwards_branch() : undefined
+// CHECK:function backwards_branch(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = PhiInst 0 : number, %BB0, 3 : number, %BB1
-// CHECK-NEXT:  %2 = SwitchInst %1 : number, %BB1, 0 : number, %BB1, 1 : number, %BB1, 2 : number, %BB1, 3 : number, %BB1, 4 : number, %BB1, 5 : number, %BB1, 6 : number, %BB1, 7 : number, %BB1, 8 : number, %BB1, 9 : number, %BB1
+// CHECK-NEXT:  %1 = PhiInst (:number) 0: number, %BB0, 3: number, %BB1
+// CHECK-NEXT:  %2 = SwitchInst %1: number, %BB1, 0: number, %BB1, 1: number, %BB1, 2: number, %BB1, 3: number, %BB1, 4: number, %BB1, 5: number, %BB1, 6: number, %BB1, 7: number, %BB1, 8: number, %BB1, 9: number, %BB1
 // CHECK-NEXT:function_end

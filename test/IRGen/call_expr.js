@@ -23,63 +23,63 @@ function test_member_access(obj, param) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_member_access" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %test_member_access()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_member_access" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_member_access": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %bar(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "bar": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %test_member_access(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "test_member_access": string
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
+// CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a, b, c)
-// CHECK-NEXT:frame = [a, b, c]
+// CHECK:function foo(a: any, b: any, c: any): any
+// CHECK-NEXT:frame = [a: any, b: any, c: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadParamInst %b
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
-// CHECK-NEXT:  %4 = LoadParamInst %c
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [c]
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %b: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [c]: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(x, y, z)
-// CHECK-NEXT:frame = [x, y, z]
+// CHECK:function bar(x: any, y: any, z: any): any
+// CHECK-NEXT:frame = [x: any, y: any, z: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadParamInst %y
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [y]
-// CHECK-NEXT:  %4 = LoadParamInst %z
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [z]
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %7 = LoadFrameInst [x]
-// CHECK-NEXT:  %8 = LoadFrameInst [y]
-// CHECK-NEXT:  %9 = LoadFrameInst [z]
-// CHECK-NEXT:  %10 = CallInst %6, empty, empty, undefined : undefined, %7, %8, %9
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [z]: any
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [z]: any
+// CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: any, %8: any, %9: any
+// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_member_access(obj, param)
-// CHECK-NEXT:frame = [obj, param]
+// CHECK:function test_member_access(obj: any, param: any): any
+// CHECK-NEXT:frame = [obj: any, param: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %obj
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [obj]
-// CHECK-NEXT:  %2 = LoadParamInst %param
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [param]
-// CHECK-NEXT:  %4 = LoadFrameInst [obj]
-// CHECK-NEXT:  %5 = LoadPropertyInst %4, "foo" : string
-// CHECK-NEXT:  %6 = LoadFrameInst [param]
-// CHECK-NEXT:  %7 = CallInst %5, empty, empty, %4, %6
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [obj]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %param: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [param]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [obj]: any
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "foo": string
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [param]: any
+// CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, %4: any, %6: any
+// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

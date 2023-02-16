@@ -27,63 +27,63 @@ delete_test()
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "unary_operator_test" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "delete_test" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %unary_operator_test()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "unary_operator_test" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %delete_test()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "delete_test" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadPropertyInst globalObject : object, "unary_operator_test" : string
-// CHECK-NEXT:  %9 = CallInst %8, empty, empty, undefined : undefined
-// CHECK-NEXT:  %10 = StoreStackInst %9, %6
-// CHECK-NEXT:  %11 = LoadPropertyInst globalObject : object, "delete_test" : string
-// CHECK-NEXT:  %12 = CallInst %11, empty, empty, undefined : undefined
-// CHECK-NEXT:  %13 = StoreStackInst %12, %6
-// CHECK-NEXT:  %14 = LoadStackInst %6
-// CHECK-NEXT:  %15 = ReturnInst %14
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "unary_operator_test": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "delete_test": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %unary_operator_test(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "unary_operator_test": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %delete_test(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "delete_test": string
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "unary_operator_test": string
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "delete_test": string
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %13 = StoreStackInst %12: any, %6: any
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function unary_operator_test(x)
-// CHECK-NEXT:frame = [x]
+// CHECK:function unary_operator_test(x: any): any
+// CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %x
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [x]
-// CHECK-NEXT:  %2 = LoadFrameInst [x]
-// CHECK-NEXT:  %3 = AsNumberInst %2
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %3 = AsNumberInst (:number) %2: any
+// CHECK-NEXT:  %4 = ReturnInst (:any) %3: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = LoadFrameInst [x]
-// CHECK-NEXT:  %6 = UnaryOperatorInst '-', %5
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %6 = UnaryMinusInst (:any) %5: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadFrameInst [x]
-// CHECK-NEXT:  %9 = UnaryOperatorInst '~', %8
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %9 = UnaryTildeInst (:any) %8: any
+// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = LoadFrameInst [x]
-// CHECK-NEXT:  %12 = UnaryOperatorInst '!', %11
-// CHECK-NEXT:  %13 = ReturnInst %12
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %12 = UnaryBangInst (:any) %11: any
+// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = LoadFrameInst [x]
-// CHECK-NEXT:  %15 = UnaryOperatorInst 'typeof', %14
-// CHECK-NEXT:  %16 = ReturnInst %15
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %15 = UnaryTypeofInst (:any) %14: any
+// CHECK-NEXT:  %16 = ReturnInst (:any) %15: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %17 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function delete_test(o)
-// CHECK-NEXT:frame = [o]
+// CHECK:function delete_test(o: any): any
+// CHECK-NEXT:frame = [o: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %o
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [o]
-// CHECK-NEXT:  %2 = LoadFrameInst [o]
-// CHECK-NEXT:  %3 = DeletePropertyLooseInst %2, "f" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [o]
-// CHECK-NEXT:  %5 = DeletePropertyLooseInst %4, 3 : number
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %o: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [o]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [o]: any
+// CHECK-NEXT:  %3 = DeletePropertyLooseInst (:any) %2: any, "f": string
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [o]: any
+// CHECK-NEXT:  %5 = DeletePropertyLooseInst (:any) %4: any, 3: number
+// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

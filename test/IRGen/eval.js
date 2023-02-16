@@ -21,80 +21,80 @@ function baz() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "baz" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %bar()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "bar" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %baz()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "baz" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "baz": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %bar(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "bar": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %baz(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "baz": string
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
+// CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo()
+// CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
-// CHECK-NEXT:  %1 = GetBuiltinClosureInst [globalThis.eval] : number
-// CHECK-NEXT:  %2 = CompareBranchInst '===', %0, %1 : closure, %BB1, %BB2
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
+// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = DirectEvalInst "1 + 1" : string, false : boolean
+// CHECK-NEXT:  %3 = DirectEvalInst (:any) "1 + 1": string, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined, "1 + 1" : string
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "1 + 1": string
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
+// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function bar()
+// CHECK:function bar(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst [globalThis.eval] : number
-// CHECK-NEXT:  %5 = CompareBranchInst '===', %0, %4 : closure, %BB1, %BB2
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
+// CHECK-NEXT:  %5 = CmpBrStrictlyEqualInst %0: any, %4: closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = DirectEvalInst "2 + 2" : string, false : boolean
+// CHECK-NEXT:  %6 = DirectEvalInst (:any) "2 + 2": string, false: boolean
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %0, empty, empty, undefined : undefined, "2 + 2" : string, %1, %3
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "2 + 2": string, %1: any, %3: any
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = PhiInst %6, %BB1, %8, %BB2
-// CHECK-NEXT:  %11 = ReturnInst %10
+// CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
+// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function baz()
+// CHECK:function baz(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "eval" : string
-// CHECK-NEXT:  %1 = GetBuiltinClosureInst [globalThis.eval] : number
-// CHECK-NEXT:  %2 = CompareBranchInst '===', %0, %1 : closure, %BB1, %BB2
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
+// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: closure, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = DirectEvalInst undefined : undefined, false : boolean
+// CHECK-NEXT:  %3 = DirectEvalInst (:any) undefined: undefined, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = CallInst %0, empty, empty, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = PhiInst %3, %BB1, %5, %BB2
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
+// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

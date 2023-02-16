@@ -11,16 +11,16 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-// CHECK-NEXT:  %2 = AllocObjectInst 2 : number, empty
-// CHECK-NEXT:  %3 = StoreNewOwnPropertyInst null : null, %2 : object, "10" : string, true : boolean
-// CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %2 : object, "11" : string, true : boolean
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst 3 : number, %2 : object, "10" : string, true : boolean
-// CHECK-NEXT:  %6 = StoreStackInst %2 : object, %0
-// CHECK-NEXT:  %7 = LoadStackInst %0
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
+// CHECK-NEXT:  %2 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %3 = StoreNewOwnPropertyInst null: null, %2: object, "10": string, true: boolean
+// CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2: number, %2: object, "11": string, true: boolean
+// CHECK-NEXT:  %5 = StoreOwnPropertyInst 3: number, %2: object, "10": string, true: boolean
+// CHECK-NEXT:  %6 = StoreStackInst %2: object, %0: any
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
+// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
 // CHECK-NEXT:function_end

@@ -41,62 +41,62 @@ function foo4(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo1" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "foo3" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "foo4" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %foo1() : number
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "foo1" : string
-// CHECK-NEXT:  %6 = CreateFunctionInst %foo2() : string|number
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6 : closure, globalObject : object, "foo2" : string
-// CHECK-NEXT:  %8 = CreateFunctionInst %foo3()
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8 : closure, globalObject : object, "foo3" : string
-// CHECK-NEXT:  %10 = CreateFunctionInst %foo4()
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10 : closure, globalObject : object, "foo4" : string
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo1": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "foo3": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "foo4": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %foo1(): number
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "foo1": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %foo2(): string|number
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "foo2": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %foo3(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "foo3": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %foo4(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "foo4": string
+// CHECK-NEXT:  %12 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo1(a) : number
+// CHECK:function foo1(a: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst 100 : number
+// CHECK-NEXT:  %0 = ReturnInst (:number) 100: number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2(a) : string|number
+// CHECK:function foo2(a: any): string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %0, 10 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : string|number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 10: number
+// CHECK-NEXT:  %2 = ReturnInst (:string|number) %1: string|number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo3(a)
+// CHECK:function foo3(a: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = CondBranchInst %0, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = PhiInst %0, %BB1, 10 : number, %BB0
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %2 = PhiInst (:any) %0: any, %BB1, 10: number, %BB0
+// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function foo4(a)
+// CHECK:function foo4(a: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = BinaryOperatorInst '<', %0, 0 : number
-// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) %0: any, 0: number
+// CHECK-NEXT:  %2 = CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst 10 : number, %BB3, %0, %BB2, -1 : number, %BB0
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %3 = PhiInst (:any) 10: number, %BB3, %0: any, %BB2, -1: number, %BB0
+// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %0, 0 : number
-// CHECK-NEXT:  %6 = CondBranchInst %5 : boolean, %BB3, %BB1
+// CHECK-NEXT:  %5 = BinaryEqualInst (:boolean) %0: any, 0: number
+// CHECK-NEXT:  %6 = CondBranchInst %5: boolean, %BB3, %BB1
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = BranchInst %BB1
 // CHECK-NEXT:function_end

@@ -11,26 +11,26 @@ function f1(a, ...b) {}
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %f1(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "f1": string
+// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(a)
-// CHECK-NEXT:frame = [a, b]
+// CHECK:function f1(a: any): any
+// CHECK-NEXT:frame = [a: any, b: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b]
-// CHECK-NEXT:  %2 = LoadParamInst %a
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [a]
-// CHECK-NEXT:  %4 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, empty, empty, undefined : undefined, 1 : number
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [b]
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [a]: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [b]: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [a]: any
+// CHECK-NEXT:  %4 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [b]: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

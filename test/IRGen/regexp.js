@@ -24,55 +24,55 @@ function simple_test1() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_test0" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simple_test1" : string
-// CHECK-NEXT:  %2 = CreateFunctionInst %simple_test0()
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2 : closure, globalObject : object, "simple_test0" : string
-// CHECK-NEXT:  %4 = CreateFunctionInst %simple_test1()
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4 : closure, globalObject : object, "simple_test1" : string
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %7 = StoreStackInst undefined : undefined, %6
-// CHECK-NEXT:  %8 = LoadStackInst %6
-// CHECK-NEXT:  %9 = ReturnInst %8
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "simple_test0": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "simple_test1": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %simple_test0(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "simple_test0": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %simple_test1(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "simple_test1": string
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
+// CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test0()
-// CHECK-NEXT:frame = [re, str, newstr]
+// CHECK:function simple_test0(): any
+// CHECK-NEXT:frame = [re: any, str: any, newstr: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [re]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [str]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [newstr]
-// CHECK-NEXT:  %3 = CreateRegExpInst "(\\\\w+)\\\\s(\\\\w+)" : string, "" : string
-// CHECK-NEXT:  %4 = StoreFrameInst %3 : regexp, [re]
-// CHECK-NEXT:  %5 = StoreFrameInst "John Smith" : string, [str]
-// CHECK-NEXT:  %6 = LoadFrameInst [str]
-// CHECK-NEXT:  %7 = LoadPropertyInst %6, "replace" : string
-// CHECK-NEXT:  %8 = LoadFrameInst [re]
-// CHECK-NEXT:  %9 = CallInst %7, empty, empty, %6, %8, "$2, $1" : string
-// CHECK-NEXT:  %10 = StoreFrameInst %9, [newstr]
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [re]: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [str]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [newstr]: any
+// CHECK-NEXT:  %3 = CreateRegExpInst (:regexp) "(\\\\w+)\\\\s(\\\\w+)": string, "": string
+// CHECK-NEXT:  %4 = StoreFrameInst %3: regexp, [re]: any
+// CHECK-NEXT:  %5 = StoreFrameInst "John Smith": string, [str]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [str]: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "replace": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [re]: any
+// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, %6: any, %8: any, "$2, $1": string
+// CHECK-NEXT:  %10 = StoreFrameInst %9: any, [newstr]: any
+// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test1()
-// CHECK-NEXT:frame = [re0, re1, re2, re3, re4]
+// CHECK:function simple_test1(): any
+// CHECK-NEXT:frame = [re0: any, re1: any, re2: any, re3: any, re4: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [re0]
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [re1]
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [re2]
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [re3]
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [re4]
-// CHECK-NEXT:  %5 = CreateRegExpInst "\\\\w+\\\\s" : string, "g" : string
-// CHECK-NEXT:  %6 = StoreFrameInst %5 : regexp, [re0]
-// CHECK-NEXT:  %7 = CreateRegExpInst "\\\\w+\\\\s" : string, "g" : string
-// CHECK-NEXT:  %8 = StoreFrameInst %7 : regexp, [re1]
-// CHECK-NEXT:  %9 = CreateRegExpInst "\\\\w+" : string, "" : string
-// CHECK-NEXT:  %10 = StoreFrameInst %9 : regexp, [re2]
-// CHECK-NEXT:  %11 = CreateRegExpInst "\\\\w+" : string, "g" : string
-// CHECK-NEXT:  %12 = StoreFrameInst %11 : regexp, [re3]
-// CHECK-NEXT:  %13 = CreateRegExpInst " " : string, "" : string
-// CHECK-NEXT:  %14 = StoreFrameInst %13 : regexp, [re4]
-// CHECK-NEXT:  %15 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [re0]: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [re1]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [re2]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [re3]: any
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [re4]: any
+// CHECK-NEXT:  %5 = CreateRegExpInst (:regexp) "\\\\w+\\\\s": string, "g": string
+// CHECK-NEXT:  %6 = StoreFrameInst %5: regexp, [re0]: any
+// CHECK-NEXT:  %7 = CreateRegExpInst (:regexp) "\\\\w+\\\\s": string, "g": string
+// CHECK-NEXT:  %8 = StoreFrameInst %7: regexp, [re1]: any
+// CHECK-NEXT:  %9 = CreateRegExpInst (:regexp) "\\\\w+": string, "": string
+// CHECK-NEXT:  %10 = StoreFrameInst %9: regexp, [re2]: any
+// CHECK-NEXT:  %11 = CreateRegExpInst (:regexp) "\\\\w+": string, "g": string
+// CHECK-NEXT:  %12 = StoreFrameInst %11: regexp, [re3]: any
+// CHECK-NEXT:  %13 = CreateRegExpInst (:regexp) " ": string, "": string
+// CHECK-NEXT:  %14 = StoreFrameInst %13: regexp, [re4]: any
+// CHECK-NEXT:  %15 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

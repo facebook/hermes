@@ -24,61 +24,61 @@ function test_simple_call() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "Car" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_simple_new" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_simple_call" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %Car()
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3 : closure, globalObject : object, "Car" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %test_simple_new()
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5 : closure, globalObject : object, "test_simple_new" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %test_simple_call()
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7 : closure, globalObject : object, "test_simple_call" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "Car": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_simple_new": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_simple_call": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %Car(): any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "Car": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %test_simple_new(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "test_simple_new": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %test_simple_call(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "test_simple_call": string
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
+// CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
 // CHECK-NEXT:function_end
 
-// CHECK:function Car(model, year)
-// CHECK-NEXT:frame = [model, year]
+// CHECK:function Car(model: any, year: any): any
+// CHECK-NEXT:frame = [model: any, year: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %this
-// CHECK-NEXT:  %1 = CoerceThisNSInst %0
-// CHECK-NEXT:  %2 = LoadParamInst %model
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [model]
-// CHECK-NEXT:  %4 = LoadParamInst %year
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [year]
-// CHECK-NEXT:  %6 = LoadFrameInst [model]
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6, %1 : object, "model" : string
-// CHECK-NEXT:  %8 = LoadFrameInst [year]
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8, %1 : object, "year" : string
-// CHECK-NEXT:  %10 = ReturnInst "wat" : string
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %model: any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [model]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %year: any
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [year]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) [model]: any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: any, %1: object, "model": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [year]: any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: any, %1: object, "year": string
+// CHECK-NEXT:  %10 = ReturnInst (:any) "wat": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_simple_new()
-// CHECK-NEXT:frame = [ctor]
+// CHECK:function test_simple_new(): any
+// CHECK-NEXT:frame = [ctor: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [ctor]
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst %1, "prototype" : string
-// CHECK-NEXT:  %3 = CreateThisInst %2, %1
-// CHECK-NEXT:  %4 = ConstructInst %1, empty, empty, %3, "Eagle" : string, 1993 : number
-// CHECK-NEXT:  %5 = GetConstructedObjectInst %3, %4
-// CHECK-NEXT:  %6 = StoreFrameInst %5, [ctor]
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [ctor]: any
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "Car": string
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: any, "prototype": string
+// CHECK-NEXT:  %3 = CreateThisInst (:any) %2: any, %1: any
+// CHECK-NEXT:  %4 = ConstructInst (:any) %1: any, empty: any, empty: any, %3: any, "Eagle": string, 1993: number
+// CHECK-NEXT:  %5 = GetConstructedObjectInst (:any) %3: any, %4: any
+// CHECK-NEXT:  %6 = StoreFrameInst %5: any, [ctor]: any
+// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_simple_call()
-// CHECK-NEXT:frame = [call]
+// CHECK:function test_simple_call(): any
+// CHECK-NEXT:frame = [call: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [call]
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %2 = CallInst %1, empty, empty, undefined : undefined, 1 : number, 2 : number
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [call]
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [call]: any
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "Car": string
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [call]: any
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

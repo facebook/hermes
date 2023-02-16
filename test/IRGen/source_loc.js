@@ -19,81 +19,81 @@ function foo(a,b) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:18:2)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo" : string
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo()
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "foo" : string
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
+// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
+// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %5 = LoadStackInst %3
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
 // CHECK-NEXT:; <stdin>:18:1
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(a, b)
-// CHECK-NEXT:frame = [a, b]
+// CHECK:function foo(a: any, b: any): any
+// CHECK-NEXT:frame = [a: any, b: any]
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:18:2)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %0 = LoadParamInst %a
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %2 = LoadParamInst %b
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %b: any
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %3 = StoreFrameInst %2, [b]
+// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:; <stdin>:11:9
-// CHECK-NEXT:  %4 = LoadFrameInst [a]
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:; <stdin>:11:13
-// CHECK-NEXT:  %5 = LoadFrameInst [b]
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:; <stdin>:11:9
-// CHECK-NEXT:  %6 = BinaryOperatorInst '>', %4, %5
+// CHECK-NEXT:  %6 = BinaryGreaterThanInst (:any) %4: any, %5: any
 // CHECK-NEXT:; <stdin>:11:5
-// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
+// CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:; <stdin>:12:9
-// CHECK-NEXT:  %8 = LoadFrameInst [a]
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:; <stdin>:12:14
-// CHECK-NEXT:  %9 = LoadFrameInst [b]
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:; <stdin>:12:11
-// CHECK-NEXT:  %10 = BinaryOperatorInst '-', %8, %9
+// CHECK-NEXT:  %10 = BinarySubtractInst (:any) %8: any, %9: any
 // CHECK-NEXT:; <stdin>:12:11
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [a]
+// CHECK-NEXT:  %11 = StoreFrameInst %10: any, [a]: any
 // CHECK-NEXT:; <stdin>:13:9
-// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:; <stdin>:13:15
-// CHECK-NEXT:  %13 = LoadFrameInst [a]
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:; <stdin>:13:14
-// CHECK-NEXT:  %14 = CallInst %12, empty, empty, undefined : undefined, %13
+// CHECK-NEXT:  %14 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, %13: any
 // CHECK-NEXT:; <stdin>:11:5
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:; <stdin>:15:9
-// CHECK-NEXT:  %16 = LoadFrameInst [b]
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:; <stdin>:15:14
-// CHECK-NEXT:  %17 = LoadFrameInst [a]
+// CHECK-NEXT:  %17 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:; <stdin>:15:11
-// CHECK-NEXT:  %18 = BinaryOperatorInst '-', %16, %17
+// CHECK-NEXT:  %18 = BinarySubtractInst (:any) %16: any, %17: any
 // CHECK-NEXT:; <stdin>:15:11
-// CHECK-NEXT:  %19 = StoreFrameInst %18, [b]
+// CHECK-NEXT:  %19 = StoreFrameInst %18: any, [b]: any
 // CHECK-NEXT:; <stdin>:16:9
-// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
+// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:; <stdin>:16:15
-// CHECK-NEXT:  %21 = LoadFrameInst [b]
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:; <stdin>:16:14
-// CHECK-NEXT:  %22 = CallInst %20, empty, empty, undefined : undefined, %21
+// CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, %21: any
 // CHECK-NEXT:; <stdin>:11:5
 // CHECK-NEXT:  %23 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:; <stdin>:18:1
-// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

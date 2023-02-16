@@ -45,237 +45,237 @@ function f9(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1" : string
-// CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2" : string
-// CHECK-NEXT:  %2 = DeclareGlobalVarInst "f3" : string
-// CHECK-NEXT:  %3 = DeclareGlobalVarInst "f4" : string
-// CHECK-NEXT:  %4 = DeclareGlobalVarInst "f5" : string
-// CHECK-NEXT:  %5 = DeclareGlobalVarInst "f6" : string
-// CHECK-NEXT:  %6 = DeclareGlobalVarInst "f7" : string
-// CHECK-NEXT:  %7 = DeclareGlobalVarInst "f8" : string
-// CHECK-NEXT:  %8 = DeclareGlobalVarInst "f9" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %f1()
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %f2()
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11 : closure, globalObject : object, "f2" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %f3()
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13 : closure, globalObject : object, "f3" : string
-// CHECK-NEXT:  %15 = CreateFunctionInst %f4()
-// CHECK-NEXT:  %16 = StorePropertyLooseInst %15 : closure, globalObject : object, "f4" : string
-// CHECK-NEXT:  %17 = CreateFunctionInst %f5()
-// CHECK-NEXT:  %18 = StorePropertyLooseInst %17 : closure, globalObject : object, "f5" : string
-// CHECK-NEXT:  %19 = CreateFunctionInst %f6()
-// CHECK-NEXT:  %20 = StorePropertyLooseInst %19 : closure, globalObject : object, "f6" : string
-// CHECK-NEXT:  %21 = CreateFunctionInst %f7()
-// CHECK-NEXT:  %22 = StorePropertyLooseInst %21 : closure, globalObject : object, "f7" : string
-// CHECK-NEXT:  %23 = CreateFunctionInst %f8()
-// CHECK-NEXT:  %24 = StorePropertyLooseInst %23 : closure, globalObject : object, "f8" : string
-// CHECK-NEXT:  %25 = CreateFunctionInst %f9()
-// CHECK-NEXT:  %26 = StorePropertyLooseInst %25 : closure, globalObject : object, "f9" : string
-// CHECK-NEXT:  %27 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %28 = StoreStackInst undefined : undefined, %27
-// CHECK-NEXT:  %29 = LoadStackInst %27
-// CHECK-NEXT:  %30 = ReturnInst %29
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2": string
+// CHECK-NEXT:  %2 = DeclareGlobalVarInst "f3": string
+// CHECK-NEXT:  %3 = DeclareGlobalVarInst "f4": string
+// CHECK-NEXT:  %4 = DeclareGlobalVarInst "f5": string
+// CHECK-NEXT:  %5 = DeclareGlobalVarInst "f6": string
+// CHECK-NEXT:  %6 = DeclareGlobalVarInst "f7": string
+// CHECK-NEXT:  %7 = DeclareGlobalVarInst "f8": string
+// CHECK-NEXT:  %8 = DeclareGlobalVarInst "f9": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %f1(): any
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: closure, globalObject: object, "f1": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %f2(): any
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "f2": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %f3(): any
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "f3": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:closure) %f4(): any
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15: closure, globalObject: object, "f4": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:closure) %f5(): any
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17: closure, globalObject: object, "f5": string
+// CHECK-NEXT:  %19 = CreateFunctionInst (:closure) %f6(): any
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: closure, globalObject: object, "f6": string
+// CHECK-NEXT:  %21 = CreateFunctionInst (:closure) %f7(): any
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: closure, globalObject: object, "f7": string
+// CHECK-NEXT:  %23 = CreateFunctionInst (:closure) %f8(): any
+// CHECK-NEXT:  %24 = StorePropertyLooseInst %23: closure, globalObject: object, "f8": string
+// CHECK-NEXT:  %25 = CreateFunctionInst (:closure) %f9(): any
+// CHECK-NEXT:  %26 = StorePropertyLooseInst %25: closure, globalObject: object, "f9": string
+// CHECK-NEXT:  %27 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %28 = StoreStackInst undefined: undefined, %27: any
+// CHECK-NEXT:  %29 = LoadStackInst (:any) %27: any
+// CHECK-NEXT:  %30 = ReturnInst (:any) %29: any
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f1(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f2(f)
-// CHECK-NEXT:frame = [f]
+// CHECK:function f2(f: any): any
+// CHECK-NEXT:frame = [f: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %f
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [f]
-// CHECK-NEXT:  %2 = LoadFrameInst [f]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [f]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [f]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %2, empty, empty, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f3(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f3(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %9, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %9: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %9 = LoadPropertyInst %8, "c" : string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "c": string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f4(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f4(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %10, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %10: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %9 = CallInst %8, empty, empty, %2
-// CHECK-NEXT:  %10 = LoadPropertyInst %9, "c" : string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, %2: any
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f5(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f5(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %9, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %9: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %2, empty, empty, undefined : undefined
-// CHECK-NEXT:  %9 = LoadPropertyInst %8, "b" : string
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "b": string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f6(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f6(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %10, %BB2
-// CHECK-NEXT:  %6 = LoadPropertyInst %5, "d" : string
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %10: any, %BB2
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "d": string
+// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %10 = LoadPropertyInst %9, "c" : string
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %2: any, "b": string
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f7(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f7(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %12, %BB4
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %12: any, %BB4
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %9 = BinaryOperatorInst '==', %8, null : null
-// CHECK-NEXT:  %10 = CondBranchInst %9, %BB1, %BB4
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
+// CHECK-NEXT:  %9 = BinaryEqualInst (:any) %8: any, null: null
+// CHECK-NEXT:  %10 = CondBranchInst %9: any, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = CallInst %8, empty, empty, %2
-// CHECK-NEXT:  %12 = LoadPropertyInst %11, "c" : string
+// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, %2: any
+// CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "c": string
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f8(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f8(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %14, %BB4
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %14: any, %BB4
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %9 = BinaryOperatorInst '==', %8, null : null
-// CHECK-NEXT:  %10 = CondBranchInst %9, %BB1, %BB5
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
+// CHECK-NEXT:  %9 = BinaryEqualInst (:any) %8: any, null: null
+// CHECK-NEXT:  %10 = CondBranchInst %9: any, %BB1, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = LoadPropertyInst %8, "c" : string
-// CHECK-NEXT:  %12 = BinaryOperatorInst '==', %11, null : null
-// CHECK-NEXT:  %13 = CondBranchInst %12, %BB1, %BB4
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) %8: any, "c": string
+// CHECK-NEXT:  %12 = BinaryEqualInst (:any) %11: any, null: null
+// CHECK-NEXT:  %13 = CondBranchInst %12: any, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = CallInst %11, empty, empty, %8
+// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, %8: any
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f9(a)
-// CHECK-NEXT:frame = [a]
+// CHECK:function f9(a: any): any
+// CHECK-NEXT:frame = [a: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %a
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [a]
-// CHECK-NEXT:  %2 = LoadFrameInst [a]
-// CHECK-NEXT:  %3 = BinaryOperatorInst '==', %2, null : null
-// CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
+// CHECK-NEXT:  %3 = BinaryEqualInst (:any) %2: any, null: null
+// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = PhiInst undefined : undefined, %BB1, %8, %BB2
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = DeletePropertyLooseInst %2, "b" : string
+// CHECK-NEXT:  %8 = DeletePropertyLooseInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end

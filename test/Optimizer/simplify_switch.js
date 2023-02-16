@@ -16,17 +16,17 @@ switch (8) { case 2: 6
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global() : undefined
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
-// CHECK-NEXT:  %1 = SwitchInst %0, %BB1, 2 : number, %BB2, 44 : number, %BB2
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:  %1 = SwitchInst %0: any, %BB1, 2: number, %BB2, 44: number, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "cond" : string
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB3, %BB1
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
+// CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB3, %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "cond" : string
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB3, %BB1
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
+// CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB3, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end

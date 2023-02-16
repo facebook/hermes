@@ -33,36 +33,36 @@ print(!false);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %1 = CallInst %0, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %3 = CallInst %2, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %5 = CallInst %4, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "NaN" : string
-// CHECK-NEXT:  %8 = UnaryOperatorInst '!', %7
-// CHECK-NEXT:  %9 = CallInst %6, empty, empty, undefined : undefined, %8 : boolean
-// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %11 = CallInst %10, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %13 = CallInst %12, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %15 = CallInst %14, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %17 = CallInst %16, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %19 = CallInst %18, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %22 = UnaryOperatorInst '!', %21
-// CHECK-NEXT:  %23 = CallInst %20, empty, empty, undefined : undefined, %22 : boolean
-// CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %25 = CallInst %24, empty, empty, undefined : undefined, false : boolean
-// CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %27 = CallInst %26, empty, empty, undefined : undefined, true : boolean
-// CHECK-NEXT:  %28 = ReturnInst %27
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "NaN": string
+// CHECK-NEXT:  %8 = UnaryBangInst (:boolean) %7: any
+// CHECK-NEXT:  %9 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %8: boolean
+// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %17 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %19 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %22 = UnaryBangInst (:boolean) %21: any
+// CHECK-NEXT:  %23 = CallInst (:any) %20: any, empty: any, empty: any, undefined: undefined, %22: boolean
+// CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined, false: boolean
+// CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, true: boolean
+// CHECK-NEXT:  %28 = ReturnInst (:any) %27: any
 // CHECK-NEXT:function_end

@@ -12,14 +12,14 @@ var x = CustomGlobalProperty;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x" : string
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "CustomGlobalProperty" : string
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3, globalObject : object, "x" : string
-// CHECK-NEXT:  %5 = LoadStackInst %1
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "x": string
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %2 = StoreStackInst undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "CustomGlobalProperty": string
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: any, globalObject: object, "x": string
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end

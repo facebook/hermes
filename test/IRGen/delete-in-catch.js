@@ -17,26 +17,26 @@ try {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
-// CHECK-NEXT:frame = [e]
+// CHECK:function global(): any
+// CHECK-NEXT:frame = [e: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "result" : string
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "result": string
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %2 = StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CatchInst
-// CHECK-NEXT:  %5 = StoreFrameInst %4, [e]
-// CHECK-NEXT:  %6 = StorePropertyLooseInst false : boolean, globalObject : object, "result" : string
-// CHECK-NEXT:  %7 = StoreStackInst false : boolean, %1
+// CHECK-NEXT:  %4 = CatchInst (:any)
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [e]: any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst false: boolean, globalObject: object, "result": string
+// CHECK-NEXT:  %7 = StoreStackInst false: boolean, %1: any
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = LoadStackInst %1
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %12 = CallInst %11, empty, empty, undefined : undefined
-// CHECK-NEXT:  %13 = StoreStackInst %12, %1
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %13 = StoreStackInst %12: any, %1: any
 // CHECK-NEXT:  %14 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %15 = TryEndInst

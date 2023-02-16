@@ -16,37 +16,37 @@ function main(boop) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global()
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main" : string
-// CHECK-NEXT:  %1 = CreateFunctionInst %main()
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
+// CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
+// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function main(boop)
-// CHECK-NEXT:frame = [boop, foo]
+// CHECK:function main(boop: any): any
+// CHECK-NEXT:frame = [boop: any, foo: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst %boop
-// CHECK-NEXT:  %1 = StoreFrameInst %0, [boop]
-// CHECK-NEXT:  %2 = CreateFunctionInst %foo()
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [foo]
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %boop: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [boop]: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [foo]: any
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo()
+// CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst [boop@main]
-// CHECK-NEXT:  %1 = CondBranchInst %0, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadFrameInst (:any) [boop@main]: any
+// CHECK-NEXT:  %1 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %3 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
