@@ -235,8 +235,10 @@ static inline bool _sh_ljs_is_object(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Object;
 }
 static inline bool _sh_ljs_is_double(SHLegacyValue v) {
-  // C enums are int, so to compare we have to use unsigned.
-  return (unsigned int)_sh_ljs_get_tag(v) < (unsigned int)HVTag_First;
+  return v.raw < ((uint64_t)HVTag_First << kHV_NumDataBits);
+}
+static inline bool _sh_ljs_is_pointer(SHLegacyValue v) {
+  return v.raw >= ((uint64_t)HVTag_FirstPointer << kHV_NumDataBits);
 }
 static inline bool _sh_ljs_is_string(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Str;
@@ -248,6 +250,10 @@ static inline bool _sh_ljs_get_bool(SHLegacyValue v) {
 }
 static inline double _sh_ljs_get_double(SHLegacyValue v) {
   return v.f64;
+}
+static inline void *_sh_ljs_get_pointer(SHLegacyValue v) {
+  // Mask out the tag.
+  return (void *)(v.raw & kHV_DataMask);
 }
 
 #ifdef __cplusplus
