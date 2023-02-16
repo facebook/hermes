@@ -106,8 +106,13 @@ cl::opt<OptLevel> OptimizationLevel(
 
 cl::opt<bool> EnableAsserts(
     "enable-asserts",
-    cl::desc("Whether assertions in compiled code are enabled"),
+#ifdef NDEBUG
+    cl::desc("(default false) Whether assertions in compiled code are enabled"),
     cl::init(false),
+#else
+    cl::desc("(default true) Whether assertions in compiled code are enabled"),
+    cl::init(true),
+#endif
     cl::cat(CompilerCategory));
 
 cl::opt<bool> Lean(

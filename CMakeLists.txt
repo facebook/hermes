@@ -662,7 +662,7 @@ include_directories(
 
 get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 include_directories(BEFORE
-  ${CMAKE_CURRENT_BINARY_DIR}/lib/$<${IS_MULTI_CONFIG}:$<CONFIG>/>config
+  ${CMAKE_CURRENT_BINARY_DIR}/lib/config
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/include

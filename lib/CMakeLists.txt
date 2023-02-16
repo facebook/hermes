@@ -203,8 +203,4 @@ string(APPEND HERMESVM_MODEL "_s" ${HERMESVM_LOG_HEAP_SEGMENT_SIZE})
 # The pointer size is not strictly necessary, but include it for completeness.
 string(APPEND HERMESVM_MODEL "_p" ${CMAKE_SIZEOF_VOID_P})
 
-configure_file(config/libhermesvm-config.h.in config/libhermesvm-config.out)
-
-file(GENERATE
-        OUTPUT $<${IS_MULTI_CONFIG}:$<CONFIG>/>config/libhermesvm-config.h
-        INPUT ${CMAKE_CURRENT_BINARY_DIR}/config/libhermesvm-config.out)
+configure_file(config/libhermesvm-config.h.in config/libhermesvm-config.h)

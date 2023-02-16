@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set(SHERMES_CC_INCLUDE_PATH
-  "${CMAKE_BINARY_DIR}/lib/$<${IS_MULTI_CONFIG}:$<CONFIG>/>config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
+  "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
 set(SHERMES_CC_LIB_PATH "${CMAKE_BINARY_DIR}/lib$<${IS_MULTI_CONFIG}:/$<CONFIG>>" CACHE STRING
   "Library path when invoking CC")

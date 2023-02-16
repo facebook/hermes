@@ -26,7 +26,15 @@
 #endif
 /// The value of `sizeof(void *)` as an integer for used by the preprocessor.
 #define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
-#define HERMESVM_DEBUG_MODE $<CONFIG:Debug,RelWithDebInfo>
-#define HERMESVM_MODEL @HERMESVM_MODEL@_$<IF:$<CONFIG:Debug>,dbg,rel>
+
+// The model changes depending on whether we are compiling with or without
+// asserts. If the library is compiled with asserts, its model will have a _dbg
+// suffix, while if the client code, which includes this same config file, is
+// compiled without, its model will have a _rel suffix.
+#ifdef NDEBUG
+#define HERMESVM_MODEL @HERMESVM_MODEL@_rel
+#else
+#define HERMESVM_MODEL @HERMESVM_MODEL@_dbg
+#endif
 
 #endif
