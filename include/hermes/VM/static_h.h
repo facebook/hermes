@@ -696,6 +696,79 @@ static inline int32_t _sh_to_int32_double(double d) {
   return _sh_to_int32_double_slow_path(d);
 }
 
+/// Load a property from direct storage.
+SHERMES_EXPORT SHLegacyValue
+_sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
+
+/// Load a property from indirect storage. Note that propIndex is relative to
+/// the indirect storage.
+SHERMES_EXPORT SHLegacyValue
+_sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
+
+/// Store a property into direct storage.
+SHERMES_EXPORT void _sh_prstore_direct(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+
+/// Store a property into direct storage when it is known that neither the
+/// previous value, nor the new value are pointers (so this doesn't require
+/// a GC write barrier.
+SHERMES_EXPORT void _sh_prstore_direct_np(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+
+/// Store a property into indirect storage. Note that propIndex is relative to
+/// the indirect storage.
+SHERMES_EXPORT void _sh_prstore_indirect(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+
+static inline SHLegacyValue
+_sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
+  return propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS
+      ? _sh_prload_direct(shr, source, propIndex)
+      : _sh_prload_indirect(
+            shr, source, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS);
+}
+
+/// Store a property into direct or indirect storage depending on its index.
+static inline void _sh_prstore(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+    _sh_prstore_direct(shr, target, propIndex, value);
+  } else {
+    _sh_prstore_indirect(
+        shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
+  }
+}
+
+/// Store a non-pointer property into direct or indirect storage depending on
+/// its index.
+static inline void _sh_prstore_np(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(
+      !_sh_ljs_is_pointer(*value) &&
+      "_sh_prstore_np() invoked with a pointer value");
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+    _sh_prstore_direct_np(shr, target, propIndex, value);
+  } else {
+    _sh_prstore_indirect(
+        shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
+  }
+}
+
 #ifdef __cplusplus
 }
 #endif

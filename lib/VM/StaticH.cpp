@@ -1671,3 +1671,60 @@ extern "C" SHLegacyValue _sh_ljs_direct_eval(
 extern "C" int32_t _sh_to_int32_double_slow_path(double d) {
   return truncateToInt32SlowPath(d);
 }
+
+extern "C" SHLegacyValue
+_sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
+  Runtime &runtime = getRuntime(shr);
+  NoAllocScope noAlloc(runtime);
+  return JSObject::getNamedSlotValueDirectUnsafe(
+             vmcast<JSObject>(*toPHV(&source)), runtime, propIndex)
+      .unboxToHV(runtime);
+}
+
+extern "C" SHLegacyValue
+_sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
+  Runtime &runtime = getRuntime(shr);
+  NoAllocScope noAlloc(runtime);
+  return JSObject::getNamedSlotValueIndirectUnsafe(
+             vmcast<JSObject>(*toPHV(&source)), runtime, propIndex)
+      .unboxToHV(runtime);
+}
+
+extern "C" void _sh_prstore_direct(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(*toPHV(value), runtime);
+  JSObject::setNamedSlotValueDirectUnsafe(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
+
+extern "C" void _sh_prstore_direct_np(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  assert(
+      !_sh_ljs_is_pointer(*value) &&
+      "_sh_prstore_direct_np() invoked with a pointer value");
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(*toPHV(value), runtime);
+  JSObject::setNamedSlotValueDirectUnsafe<std::false_type>(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
+
+extern "C" void _sh_prstore_indirect(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  Runtime &runtime = getRuntime(shr);
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(*toPHV(value), runtime);
+  JSObject::setNamedSlotValueIndirectUnsafe(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
