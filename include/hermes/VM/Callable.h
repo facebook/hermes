@@ -14,7 +14,10 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Runtime-inline.h"
-#include "hermes/VM/static_h.h"
+
+extern "C" {
+struct SHRuntime;
+}
 
 namespace hermes {
 namespace vm {
