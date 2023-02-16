@@ -49,8 +49,10 @@ bool compileJS(
     bool optimize,
     bool emitAsyncBreakCheck,
     DiagnosticHandler *diagHandler,
-    std::optional<std::string_view> sourceMapBuf) {
+    std::optional<std::string_view> sourceMapBuf,
+    bool debug) {
   hbc::CompileFlags flags{};
+  flags.debug = debug;
   flags.format = EmitBundle;
   flags.emitAsyncBreakCheck = emitAsyncBreakCheck;
 
