@@ -18,6 +18,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/TypesafeFlags.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/sh_config.h"
 
 namespace hermes {
 namespace vm {
@@ -369,7 +370,8 @@ class JSObject : public GCCell {
   static constexpr PropStorage::size_type NAMED_PROPERTY_SLOTS = 0;
 
   /// Number of property slots allocated directly inside the object.
-  static constexpr PropStorage::size_type DIRECT_PROPERTY_SLOTS = 5;
+  static constexpr PropStorage::size_type DIRECT_PROPERTY_SLOTS =
+      HERMESVM_DIRECT_PROPERTY_SLOTS;
 
   static constexpr CellKind getCellKind() {
     return CellKind::JSObjectKind;

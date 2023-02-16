@@ -10,6 +10,9 @@
 
 #include "libhermesvm-config.h"
 
+/// Number of property slots allocated directly inside the object.
+enum { HERMESVM_DIRECT_PROPERTY_SLOTS = 5 };
+
 #ifndef __cplusplus
 // uchar.h is not universally available, so just define our own.
 typedef uint16_t char16_t;
@@ -23,4 +26,4 @@ typedef uint16_t char16_t;
 #endif // _MSC_VER
 #endif // !defined(HERMES_EXPORT)
 
-#endif
+#endif // HERMES_SH_CONFIG_H
