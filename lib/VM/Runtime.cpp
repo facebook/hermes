@@ -152,8 +152,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
-        JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-            *obj, *this, cacheEntry->slot)
+        JSObject::getNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot)
             .unboxToHV(*this));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -182,8 +181,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-    JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-        *obj, *this, cacheEntry->slot, shv);
+    JSObject::setNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);

@@ -2200,10 +2200,9 @@ tailCall:
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumGetByIdCacheHits;
           CAPTURE_IP(
-              O1REG(GetById) =
-                  JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                      obj, runtime, cacheEntry->slot)
-                      .unboxToHV(runtime));
+              O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
+                                   obj, runtime, cacheEntry->slot)
+                                   .unboxToHV(runtime));
           ip = nextIP;
           DISPATCH;
         }
@@ -2420,9 +2419,8 @@ tailCall:
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumPutByIdCacheHits;
-          CAPTURE_IP(
-              JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                  obj, runtime, cacheEntry->slot, shv));
+          CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->slot, shv));
           ip = nextIP;
           DISPATCH;
         }

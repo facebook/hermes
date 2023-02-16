@@ -634,8 +634,7 @@ static inline void putById_RJS(
     // return the property.
     if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
       //++NumPutByIdCacheHits;
-      JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-          obj, runtime, cacheEntry->slot, shv);
+      JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
       return;
     }
     NamedPropertyDescriptor desc;
@@ -842,8 +841,7 @@ static inline HermesValue getById_RJS(
     // return the property.
     if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
       //++NumGetByIdCacheHits;
-      return JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                 obj, runtime, cacheEntry->slot)
+      return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
           .unboxToHV(runtime);
     }
     NamedPropertyDescriptor desc;

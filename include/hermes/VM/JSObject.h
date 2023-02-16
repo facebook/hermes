@@ -514,7 +514,7 @@ class JSObject : public GCCell {
             base,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(self, base, index);
+    return getNamedSlotValueUnsafe(self, base, index);
   }
 
   static void setInternalProperty(
@@ -528,8 +528,7 @@ class JSObject : public GCCell {
             runtime,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
-    return setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-        self, runtime, index, value);
+    return setNamedSlotValueUnsafe(self, runtime, index, value);
   }
 
   /// This is the proxy-aware version of getParent.  It has to
@@ -595,10 +594,18 @@ class JSObject : public GCCell {
   setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc);
 
   /// Load a value from the "named value" storage space by \p index.
-  /// \pre inl == PropStorage::Inline::Yes -> index <
-  /// PropStorage::kValueToSegmentThreshold.
-  template <PropStorage::Inline inl = PropStorage::Inline::No>
   inline static SmallHermesValue getNamedSlotValueUnsafe(
+      JSObject *self,
+      PointerBase &runtime,
+      SlotIndex index);
+  /// Load a value from the direct storage space by \p index.
+  inline static SmallHermesValue getNamedSlotValueDirectUnsafe(
+      JSObject *self,
+      PointerBase &runtime,
+      SlotIndex index);
+  /// Load a value from the indirect storage space by \p index. The index
+  /// is relative to the indirect storage.
+  inline static SmallHermesValue getNamedSlotValueIndirectUnsafe(
       JSObject *self,
       PointerBase &runtime,
       SlotIndex index);
@@ -645,10 +652,21 @@ class JSObject : public GCCell {
       PseudoHandle<> value);
 
   /// Store a value to the "named value" storage space by \p index.
-  /// \pre inl == PropStorage::Inline::Yes -> index <
-  /// PropStorage::kValueToSegmentThreshold.
-  template <PropStorage::Inline inl = PropStorage::Inline::No>
   static void setNamedSlotValueUnsafe(
+      JSObject *self,
+      Runtime &runtime,
+      SlotIndex index,
+      SmallHermesValue value);
+  /// Store a value to into a direct property by \p index.
+  template <typename NeedsBarriers = std::true_type>
+  static void setNamedSlotValueDirectUnsafe(
+      JSObject *self,
+      Runtime &runtime,
+      SlotIndex index,
+      SmallHermesValue value);
+  /// Store a value to into an indirect property by \p index. The index is
+  /// relative to the indirect storage.
+  static void setNamedSlotValueIndirectUnsafe(
       JSObject *self,
       Runtime &runtime,
       SlotIndex index,
@@ -1694,18 +1712,33 @@ JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc) {
   self->directProps()[index].set(value, gc);
 }
 
-template <PropStorage::Inline inl>
 inline SmallHermesValue JSObject::getNamedSlotValueUnsafe(
     JSObject *self,
     PointerBase &runtime,
     SlotIndex index) {
-  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
-
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index];
+    return getNamedSlotValueDirectUnsafe(self, runtime, index);
 
-  return self->propStorage_.getNonNull(runtime)->at<inl>(
-      index - DIRECT_PROPERTY_SLOTS);
+  return getNamedSlotValueIndirectUnsafe(
+      self, runtime, index - DIRECT_PROPERTY_SLOTS);
+}
+/// Load a value from the direct storage space by \p index.
+inline SmallHermesValue JSObject::getNamedSlotValueDirectUnsafe(
+    JSObject *self,
+    PointerBase &runtime,
+    SlotIndex index) {
+  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
+  assert(index < DIRECT_PROPERTY_SLOTS);
+  return self->directProps()[index];
+}
+/// Load a value from the indirect storage space by \p index. The index
+/// is relative to the indirect storage.
+inline SmallHermesValue JSObject::getNamedSlotValueIndirectUnsafe(
+    JSObject *self,
+    PointerBase &runtime,
+    SlotIndex index) {
+  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
+  return self->propStorage_.getNonNull(runtime)->at(index);
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getNamedSlotValue(
@@ -1756,20 +1789,38 @@ inline CallResult<bool> JSObject::setNamedSlotValue(
   return true;
 }
 
-template <PropStorage::Inline inl>
 inline void JSObject::setNamedSlotValueUnsafe(
     JSObject *self,
     Runtime &runtime,
     SlotIndex index,
     SmallHermesValue value) {
+  if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
+    return setNamedSlotValueDirectUnsafe(self, runtime, index, value);
+
+  setNamedSlotValueIndirectUnsafe(
+      self, runtime, index - DIRECT_PROPERTY_SLOTS, value);
+}
+
+template <typename NeedsBarriers>
+inline void JSObject::setNamedSlotValueDirectUnsafe(
+    JSObject *self,
+    Runtime &runtime,
+    SlotIndex index,
+    SmallHermesValue value) {
+  assert(index < DIRECT_PROPERTY_SLOTS);
   // NOTE: even though it is tempting to implement this in terms of assignment
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
-  if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps()[index].set(value, runtime.getHeap());
+  return self->directProps()[index].set<NeedsBarriers>(
+      value, runtime.getHeap());
+}
 
-  self->propStorage_.getNonNull(runtime)->set<inl>(
-      index - DIRECT_PROPERTY_SLOTS, value, runtime.getHeap());
+inline void JSObject::setNamedSlotValueIndirectUnsafe(
+    JSObject *self,
+    Runtime &runtime,
+    SlotIndex index,
+    SmallHermesValue value) {
+  self->propStorage_.getNonNull(runtime)->set(index, value, runtime.getHeap());
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
