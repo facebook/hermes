@@ -11,6 +11,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 
 #include "JSONLexer.h"
 
@@ -179,8 +180,9 @@ CallResult<HermesValue> runtimeFastJSONParse(
     Runtime &rt,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
-  ondemand::parser parser;
   simdjson::error_code error;
+
+  auto commonStorage = rt.getCommonStorage();
 
   // TODO: Error handling
   // TODO: Support UTF-16
@@ -203,7 +205,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   auto json = padded_string(out);
 
   ondemand::document doc;
-  SIMDJSON_CALL(parser.iterate(json).get(doc));
+  SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
   return parseValue(rt, doc);
 }
