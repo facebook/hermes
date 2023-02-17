@@ -7,6 +7,7 @@
 
 #include "hermes/Sema/SemResolve.h"
 
+#include "FlowChecker.h"
 #include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
 #include "hermes/AST/ESTree.h"
@@ -142,9 +143,20 @@ bool resolveAST(
   // Resolve the entire AST.
   DeclCollectorMapTy declCollectorMap{};
   SemanticResolver resolver{
-      astContext, semCtx, ambientDecls, &declCollectorMap, true};
+      astContext,
+      semCtx,
+      ambientDecls,
+      flowContext ? &declCollectorMap : nullptr,
+      true};
   if (!resolver.run(root))
     return false;
+
+  if (flowContext) {
+    flow::FlowChecker checker(
+        astContext, semCtx, *flowContext, declCollectorMap, true);
+    if (!checker.run(llvh::cast<ESTree::ProgramNode>(root)))
+      return false;
+  }
 
   return true;
 }
@@ -156,8 +168,20 @@ bool resolveCommonJSAST(
     ESTree::FunctionExpressionNode *root) {
   PerfSection validation("Resolving JavaScript CommonJS Module AST");
   DeclCollectorMapTy declCollectorMap{};
-  SemanticResolver resolver{astContext, semCtx, {}, &declCollectorMap, true};
-  return resolver.runCommonJSModule(root);
+  SemanticResolver resolver{
+      astContext, semCtx, {}, flowContext ? &declCollectorMap : nullptr, true};
+  if (!resolver.runCommonJSModule(root))
+    return false;
+
+  if (flowContext) {
+    // TODO: Implement type checking for CommonJS modules.
+    astContext.getSourceErrorManager().error(
+        root->getStartLoc(),
+        "type checking of CommonJS modules not implemented");
+    return false;
+  }
+
+  return true;
 }
 
 void semDump(
