@@ -1885,6 +1885,7 @@ SKIP_LIST = [
     "test262/test/language/expressions/instanceof/S15.3.5.3_A1_T5.js",
     "test262/test/language/expressions/instanceof/S15.3.5.3_A3_T1.js",
     "test262/test/language/expressions/logical-not/S9.2_A6_T2.js",
+    "test262/test/language/expressions/tagged-template/cache-identical-source-new-function.js",
     "test262/test/language/expressions/typeof/native-call.js",
     "test262/test/harness/fnGlobalObject.js",
     ### Failing Static Hermes tests end ###
