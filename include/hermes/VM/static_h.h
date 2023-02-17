@@ -773,7 +773,10 @@ static inline void _sh_prstore_np(
     ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
         ->directProps[propIndex] = *value;
 #else
-    _sh_prstore_direct_np(shr, target, propIndex, value);
+    // When boxed doubles are enabled, numbers can also be pointers, so treat
+    // everything as a pointer. This is a temporary measure, until we encode
+    // finer grain type information.
+    _sh_prstore_direct(shr, target, propIndex, value);
 #endif
   } else {
     _sh_prstore_indirect(
