@@ -24,15 +24,51 @@ using namespace simdjson;
 namespace hermes {
 namespace vm {
 
-CallResult<HermesValue> parseValue(Runtime &rt, ondemand::document &doc) {
+template<typename T>
+CallResult<HermesValue> parseValue(Runtime &rt, T &value);
+
+CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   simdjson::error_code error;
 
-  auto &value = doc;
+  auto jsArrayRes = JSArray::create(rt, 4, 0);
+  if (LLVM_UNLIKELY(jsArrayRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto jsArray = *jsArrayRes;
+
+  uint32_t index = 0;
+  MutableHandle<> indexValue{rt};
+  for (auto valueRes : array) {
+    ondemand::value value;
+    error = valueRes.get(value);
+    auto jsValue = parseValue(rt, value);
+
+    indexValue = HermesValue::encodeDoubleValue(index);
+    (void)JSObject::defineOwnComputedPrimitive(
+          jsArray,
+          rt,
+          indexValue,
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          rt.makeHandle(*jsValue));
+
+    index++;
+  }
+
+  return jsArray.getHermesValue();
+}
+
+template<typename T>
+CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
+  simdjson::error_code error;
 
   ondemand::json_type type;
   error = value.type().get(type);
   switch (type) {
-  //   case ondemand::json_type::array:
+    case ondemand::json_type::array: {
+      ondemand::array arrayValue;
+      error = value.get(arrayValue);
+      return parseArray(rt, arrayValue);
+    }
   //   case ondemand::json_type::object:
     case ondemand::json_type::number:
       double doubleValue;
@@ -61,13 +97,14 @@ CallResult<HermesValue> runtimeFastJSONParse(
     Handle<Callable> reviver) {
   ondemand::parser parser;
   simdjson::error_code error;
-  ondemand::document doc;
 
   // TODO: Error handling
   // TODO: GC safety?
   // TODO: Support UTF-16
   auto asciiRef = jsonString->getStringRef<char>();
   auto json = padded_string(asciiRef.data(), asciiRef.size());
+
+  ondemand::document doc;
   error = parser.iterate(json).get(doc);
 
   return parseValue(runtime, doc);
