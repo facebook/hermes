@@ -690,10 +690,10 @@ PhiInst *IRBuilder::createPhiInst(
 }
 
 GetPNamesInst *IRBuilder::createGetPNamesInst(
-    Value *iteratorAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
+    AllocStackInst *iteratorAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
     BasicBlock *onEmpty,
     BasicBlock *onSome) {
   auto GP = new GetPNamesInst(
@@ -709,11 +709,11 @@ GetPNamesInst *IRBuilder::createGetPNamesInst(
 }
 
 GetNextPNameInst *IRBuilder::createGetNextPNameInst(
-    Value *propertyAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
-    Value *iteratorAddr,
+    AllocStackInst *propertyAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
+    AllocStackInst *iteratorAddr,
     BasicBlock *onLast,
     BasicBlock *onSome) {
   auto GNP = new GetNextPNameInst(

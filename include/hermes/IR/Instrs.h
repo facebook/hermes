@@ -2299,10 +2299,10 @@ class GetPNamesInst : public TerminatorInst {
 
   explicit GetPNamesInst(
       BasicBlock *parent,
-      Value *iteratorAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
+      AllocStackInst *iteratorAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
       BasicBlock *onEmpty,
       BasicBlock *onSome);
   explicit GetPNamesInst(
@@ -2386,11 +2386,11 @@ class GetNextPNameInst : public TerminatorInst {
 
   explicit GetNextPNameInst(
       BasicBlock *parent,
-      Value *propertyAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
-      Value *iteratorAddr,
+      AllocStackInst *propertyAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
+      AllocStackInst *iteratorAddr,
       BasicBlock *onLast,
       BasicBlock *onSome);
   explicit GetNextPNameInst(

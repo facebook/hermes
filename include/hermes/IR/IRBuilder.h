@@ -452,19 +452,19 @@ class IRBuilder {
   createBinaryOperatorInst(Value *left, Value *right, ValueKind kind);
 
   GetPNamesInst *createGetPNamesInst(
-      Value *iteratorAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
+      AllocStackInst *iteratorAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
       BasicBlock *onEmpty,
       BasicBlock *onSome);
 
   GetNextPNameInst *createGetNextPNameInst(
-      Value *propertyAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
-      Value *iteratorAddr,
+      AllocStackInst *propertyAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
+      AllocStackInst *iteratorAddr,
       BasicBlock *onLast,
       BasicBlock *onSome);
 
