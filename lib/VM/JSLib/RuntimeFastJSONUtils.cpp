@@ -38,8 +38,12 @@ CallResult<HermesValue> parseValue(Runtime &rt, ondemand::document &doc) {
       double doubleValue;
       error = value.get(doubleValue);
       return HermesValue::encodeDoubleValue(doubleValue);
-  //   case ondemand::json_type::string:
-  //     std::string_view stringView = value;
+    case ondemand::json_type::string: {
+      std::string_view stringView;
+      error = value.get(stringView);
+      UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
+      return StringPrimitive::createEfficient(rt, hermesStr);
+    }
     case ondemand::json_type::boolean:
       bool boolValue;
       error = value.get(boolValue);
@@ -59,6 +63,8 @@ CallResult<HermesValue> runtimeFastJSONParse(
   simdjson::error_code error;
   ondemand::document doc;
 
+  // TODO: Error handling
+  // TODO: GC safety?
   // TODO: Support UTF-16
   auto asciiRef = jsonString->getStringRef<char>();
   auto json = padded_string(asciiRef.data(), asciiRef.size());
