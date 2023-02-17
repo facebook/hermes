@@ -774,7 +774,8 @@ StartGeneratorInst *IRBuilder::createStartGeneratorInst() {
   return I;
 }
 
-ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(Value *isReturn) {
+ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(
+    AllocStackInst *isReturn) {
   auto *I = new ResumeGeneratorInst(isReturn);
   insert(I);
   return I;

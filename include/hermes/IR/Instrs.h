@@ -3889,7 +3889,7 @@ class ResumeGeneratorInst : public Instruction {
  public:
   enum { IsReturnIdx };
 
-  explicit ResumeGeneratorInst(Value *isReturn)
+  explicit ResumeGeneratorInst(AllocStackInst *isReturn)
       : Instruction(ValueKind::ResumeGeneratorInstKind) {
     pushOperand(isReturn);
   }
@@ -3907,11 +3907,11 @@ class ResumeGeneratorInst : public Instruction {
   }
 
   WordBitSet<> getChangedOperandsImpl() {
-    return {};
+    return WordBitSet<>{}.set(IsReturnIdx);
   }
 
-  Value *getIsReturn() {
-    return getOperand(IsReturnIdx);
+  AllocStackInst *getIsReturn() {
+    return llvh::cast<AllocStackInst>(getOperand(IsReturnIdx));
   }
 
   static bool classof(const Value *V) {

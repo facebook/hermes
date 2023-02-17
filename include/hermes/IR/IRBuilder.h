@@ -485,7 +485,7 @@ class IRBuilder {
 
   StartGeneratorInst *createStartGeneratorInst();
 
-  ResumeGeneratorInst *createResumeGeneratorInst(Value *isReturn);
+  ResumeGeneratorInst *createResumeGeneratorInst(AllocStackInst *isReturn);
 
   //--------------------------------------------------------------------------//
   //                  Target specific insertions                              //

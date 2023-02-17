@@ -266,6 +266,7 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
           llvh::isa<LoadStackInst>(Inst) || llvh::isa<StoreStackInst>(Inst) ||
               llvh::isa<GetPNamesInst>(Inst) ||
               llvh::isa<GetNextPNameInst>(Inst) ||
+              llvh::isa<ResumeGeneratorInst>(Inst) ||
               llvh::isa<IteratorBeginInst>(Inst) ||
               llvh::isa<IteratorNextInst>(Inst) ||
               llvh::isa<HBCGetArgumentsPropByValInst>(Inst) ||
