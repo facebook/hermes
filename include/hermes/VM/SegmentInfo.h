@@ -9,6 +9,7 @@
 #define HERMES_VM_SEGMENTINFO_H
 
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/sh_runtime.h"
 
 namespace hermes {
 namespace vm {
@@ -16,7 +17,7 @@ namespace vm {
 /// The very beginning of a segment must contain this small structure, which can
 /// contain segment-specific information. See AlignedHeapSegment for details on
 /// how it is stored.
-struct SegmentInfo {
+struct SegmentInfo : private SHSegmentInfo {
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -50,8 +51,6 @@ struct SegmentInfo {
     assert(lowLim == AlignedStorage::start(lowLim) && "Precondition.");
     return reinterpret_cast<const SegmentInfo *>(lowLim);
   }
-
-  unsigned index;
 };
 
 } // namespace vm
