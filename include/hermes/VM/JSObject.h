@@ -1546,6 +1546,12 @@ class JSObjectAndDirectProps : public JSObject {
   GCSmallHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
 };
 
+static_assert(
+    sizeof(JSObjectAndDirectProps) == sizeof(SHJSObjectAndDirectProps));
+static_assert(
+    offsetof(JSObjectAndDirectProps, directProps_) ==
+    offsetof(SHJSObjectAndDirectProps, directProps));
+
 GCSmallHermesValue *JSObject::directProps() {
   return static_cast<JSObjectAndDirectProps *>(this)->directProps_;
 }

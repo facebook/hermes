@@ -8,25 +8,25 @@
 #ifndef HERMES_SH_MIRROR_H
 #define HERMES_SH_MIRROR_H
 
-#include <stdint.h>
+#include "hermes/VM/sh_legacy_value.h"
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
-#define SH_COMPRESSED_POINTER_RAW_TYPE uint32_t
+typedef uint32_t SHCompressedPointerRawType;
 #else
-#define SH_COMPRESSED_POINTER_RAW_TYPE uintptr_t
+typedef uintptr_t SHCompressedPointerRawType;
 #endif
 
 /// Struct mirroring the layout of PropertyCacheEntry. This allows us to expose
 /// the offsets of certain fields without needing to make the actual C++ version
 /// available here.
 typedef struct SHPropertyCacheEntry {
-  SH_COMPRESSED_POINTER_RAW_TYPE clazz;
+  SHCompressedPointerRawType clazz;
   uint32_t slot;
 } SHPropertyCacheEntry;
 
 /// Struct mirroring the layout of GCCell.
 typedef struct SHGCCell {
-  SH_COMPRESSED_POINTER_RAW_TYPE kindAndSize;
+  SHCompressedPointerRawType kindAndSize;
 #ifndef NDEBUG
   uint16_t magic;
   uint32_t debugAllocationId;
@@ -37,9 +37,20 @@ typedef struct SHGCCell {
 typedef struct SHJSObject {
   SHGCCell base;
   uint32_t flags;
-  SH_COMPRESSED_POINTER_RAW_TYPE parent;
-  SH_COMPRESSED_POINTER_RAW_TYPE clazz;
-  SH_COMPRESSED_POINTER_RAW_TYPE propStorage;
+  SHCompressedPointerRawType parent;
+  SHCompressedPointerRawType clazz;
+  SHCompressedPointerRawType propStorage;
 } SHJSObject;
+
+#ifdef HERMESVM_BOXED_DOUBLES
+typedef SHCompressedPointerRawType SHGCSmallHermesValue;
+#else
+typedef SHLegacyValue SHGCSmallHermesValue;
+#endif
+
+typedef struct SHJSObjectAndDirectProps {
+  SHJSObject base;
+  SHGCSmallHermesValue directProps[HERMESVM_DIRECT_PROPERTY_SLOTS];
+} SHJSObjectAndDirectProps;
 
 #endif
