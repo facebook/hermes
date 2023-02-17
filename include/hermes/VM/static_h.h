@@ -10,6 +10,7 @@
 
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_mirror.h"
+#include "hermes/VM/sh_runtime.h"
 
 #include <math.h>
 #include <setjmp.h>
@@ -19,7 +20,6 @@
 extern "C" {
 #endif
 
-typedef struct SHRuntime SHRuntime;
 typedef struct SHUnitExt SHUnitExt;
 typedef uint32_t SHSymbolID;
 
