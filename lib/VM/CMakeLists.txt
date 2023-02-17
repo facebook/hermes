@@ -171,6 +171,7 @@ set(link_libs
   hermesInternalBytecode
   hermesPublic
   dtoa
+  simdjson
 )
 
 if(HERMES_ENABLE_INTL)

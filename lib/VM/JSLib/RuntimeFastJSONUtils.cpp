@@ -17,6 +17,8 @@
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/SaveAndRestore.h"
 
+#include "simdjson/src/simdjson.h"
+
 namespace hermes {
 namespace vm {
 
