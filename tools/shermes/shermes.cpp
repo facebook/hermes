@@ -679,7 +679,7 @@ bool compileFromCommandLineOptions() {
       cli::OutputLevel < OutputLevelKind::CFG) {
     return true;
   }
-  generateIRFromESTree(&M, semCtx, ast);
+  generateIRFromESTree(&M, semCtx, flowContext, ast);
   // Bail out if there were any errors. We can't ensure that the module is in
   // a valid state.
   if (auto N = context->getSourceErrorManager().getErrorCount()) {

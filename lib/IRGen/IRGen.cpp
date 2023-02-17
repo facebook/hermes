@@ -20,11 +20,20 @@ using llvh::dbgs;
 void generateIRFromESTree(
     Module *M,
     sema::SemContext &semCtx,
+    flow::FlowContext &flowContext,
     ESTree::NodePtr node) {
   // Generate IR into the module M.
-  ESTreeIRGen generator(M, semCtx, node);
+  ESTreeIRGen generator(M, semCtx, flowContext, node);
   generator.doIt();
   LLVM_DEBUG(dbgs() << "Finished IRGen.\n");
+}
+
+void generateIRFromESTree(
+    Module *M,
+    sema::SemContext &semCtx,
+    ESTree::NodePtr node) {
+  flow::FlowContext flowContext{};
+  generateIRFromESTree(M, semCtx, flowContext, node);
 }
 
 void generateIRForCJSModule(
@@ -35,7 +44,8 @@ void generateIRForCJSModule(
     llvh::StringRef filename,
     Module *M) {
   // Generate IR into the module M.
-  ESTreeIRGen generator(M, semContext, node);
+  flow::FlowContext flowContext{};
+  ESTreeIRGen generator(M, semContext, flowContext, node);
   return generator.doCJSModule(semContext, segmentID, id, filename);
 }
 

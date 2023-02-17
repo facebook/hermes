@@ -83,7 +83,10 @@ Value *LReference::emitLoad() {
       assert(false && "empty cannot be loaded");
       return builder.getLiteralUndefined();
     case Kind::Member:
-      return builder.createLoadPropertyInst(base_, property_);
+      return irgen_
+          ->emitMemberLoad(
+              llvh::cast<ESTree::MemberExpressionNode>(ast_), base_, property_)
+          .result;
     case Kind::VarOrGlobal:
       return irgen::emitLoad(builder, base_);
     case Kind::Destructuring:
@@ -103,8 +106,11 @@ void LReference::emitStore(Value *value) {
     case Kind::Empty:
       return;
     case Kind::Member:
-      builder.createStorePropertyInst(value, base_, property_);
-      return;
+      return irgen_->emitMemberStore(
+          llvh::cast<ESTree::MemberExpressionNode>(ast_),
+          value,
+          base_,
+          property_);
     case Kind::VarOrGlobal:
       irgen::emitStore(builder, value, base_, declInit_);
       return;
@@ -138,9 +144,12 @@ GlobalObjectProperty *LReference::castAsGlobalObjectProperty() const {
 ESTreeIRGen::ESTreeIRGen(
     Module *M,
     sema::SemContext &semCtx,
+    flow::FlowContext &flowContext,
     ESTree::Node *root)
     : Mod(M),
+      kw_(M->getContext()),
       semCtx_(semCtx),
+      flowContext_(flowContext),
       Root(root),
       Builder(Mod),
       instrumentIR_(M, Builder),
@@ -277,7 +286,13 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   if (llvh::isa<ESTree::EmptyNode>(node)) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for EmptyNode.\n");
     return LReference(
-        LReference::Kind::Empty, this, false, nullptr, nullptr, sourceLoc);
+        LReference::Kind::Empty,
+        this,
+        false,
+        nullptr,
+        nullptr,
+        nullptr,
+        sourceLoc);
   }
 
   /// Create lref for member expression (ex: o.f).
@@ -286,7 +301,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
     Value *obj = genExpression(ME->_object);
     Value *prop = genMemberExpressionProperty(ME);
     return LReference(
-        LReference::Kind::Member, this, false, obj, prop, sourceLoc);
+        LReference::Kind::Member, this, false, ME, obj, prop, sourceLoc);
   }
 
   /// Create lref for identifiers  (ex: a).
@@ -296,7 +311,13 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
                      << getNameFieldFromID(iden) << "\"\n");
     auto *var = resolveIdentifier(iden);
     return LReference(
-        LReference::Kind::VarOrGlobal, this, declInit, var, nullptr, sourceLoc);
+        LReference::Kind::VarOrGlobal,
+        this,
+        declInit,
+        nullptr,
+        var,
+        nullptr,
+        sourceLoc);
   }
 
   /// Create lref for variable decls (ex: var a).
@@ -319,7 +340,13 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
       node->getSourceRange(), "unsupported assignment target");
 
   return LReference(
-      LReference::Kind::Error, this, false, nullptr, nullptr, sourceLoc);
+      LReference::Kind::Error,
+      this,
+      false,
+      nullptr,
+      nullptr,
+      nullptr,
+      sourceLoc);
 }
 
 Value *ESTreeIRGen::genHermesInternalCall(

@@ -23,6 +23,10 @@ namespace sema {
 class SemContext;
 }
 
+namespace flow {
+class FlowContext;
+}
+
 namespace hbc {
 
 struct LazyCompilationData {
@@ -60,6 +64,13 @@ struct LazyCompilationData {
   bool paramAwait;
 };
 } // namespace hbc
+
+/// Lowers an ESTree program into Hermes IR in \p M.
+void generateIRFromESTree(
+    Module *M,
+    sema::SemContext &semCtx,
+    flow::FlowContext &flowContext,
+    ESTree::NodePtr node);
 
 /// Lowers an ESTree program into Hermes IR in \p M.
 void generateIRFromESTree(
