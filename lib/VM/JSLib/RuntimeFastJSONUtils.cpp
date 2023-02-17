@@ -57,6 +57,35 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   return jsArray.getHermesValue();
 }
 
+CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
+  simdjson::error_code error;
+
+  auto jsObject = rt.makeHandle(JSObject::create(rt));
+
+  MutableHandle<StringPrimitive> jsKeyHandle{rt};
+  for (auto field : object) {
+    std::string_view key;
+    error = field.unescaped_key().get(key);
+
+    UTF8Ref hermesStr{(const uint8_t*)key.data(), key.size()};
+    auto jsKey = StringPrimitive::createEfficient(rt, hermesStr);
+
+    ondemand::value value;
+    error = field.value().get(value);
+
+    auto jsValue = parseValue(rt, value);
+
+    (void)JSObject::defineOwnComputedPrimitive(
+          jsObject,
+          rt,
+          rt.makeHandle(*jsKey),
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          rt.makeHandle(*jsValue));
+  }
+
+  return jsObject.getHermesValue();
+}
+
 template<typename T>
 CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
   simdjson::error_code error;
@@ -69,7 +98,11 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       error = value.get(arrayValue);
       return parseArray(rt, arrayValue);
     }
-  //   case ondemand::json_type::object:
+    case ondemand::json_type::object: {
+      ondemand::object objectValue;
+      error = value.get(objectValue);
+      return parseObject(rt, objectValue);
+    }
     case ondemand::json_type::number:
       double doubleValue;
       error = value.get(doubleValue);
