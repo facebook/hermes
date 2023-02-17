@@ -21,6 +21,12 @@
 
 using namespace simdjson;
 
+#define SIMDJSON_CALL(operation)       \
+  error = operation;                   \
+  if (LLVM_UNLIKELY(error)) {          \
+    return ExecutionStatus::EXCEPTION; \
+  }
+
 namespace hermes {
 namespace vm {
 
@@ -46,7 +52,8 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
     gcScope.flushToMarker(marker);
 
     ondemand::value value;
-    error = valueRes.get(value);
+    SIMDJSON_CALL(valueRes.get(value));
+
     auto jsValue = parseValue(rt, value);
 
     indexValue = HermesValue::encodeDoubleValue(index);
@@ -77,13 +84,13 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     gcScope.flushToMarker(marker);
 
     std::string_view key;
-    error = field.unescaped_key().get(key);
+    SIMDJSON_CALL(field.unescaped_key().get(key));
 
     UTF8Ref hermesStr{(const uint8_t*)key.data(), key.size()};
     auto jsKey = StringPrimitive::createEfficient(rt, hermesStr);
 
     ondemand::value value;
-    error = field.value().get(value);
+    SIMDJSON_CALL(field.value().get(value));
 
     auto jsValue = parseValue(rt, value);
 
@@ -107,27 +114,27 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
   switch (type) {
     case ondemand::json_type::array: {
       ondemand::array arrayValue;
-      error = value.get(arrayValue);
+      SIMDJSON_CALL(value.get(arrayValue));
       return parseArray(rt, arrayValue);
     }
     case ondemand::json_type::object: {
       ondemand::object objectValue;
-      error = value.get(objectValue);
+      SIMDJSON_CALL(value.get(objectValue));
       return parseObject(rt, objectValue);
     }
     case ondemand::json_type::number:
       double doubleValue;
-      error = value.get(doubleValue);
+      SIMDJSON_CALL(value.get(doubleValue));
       return HermesValue::encodeDoubleValue(doubleValue);
     case ondemand::json_type::string: {
       std::string_view stringView;
-      error = value.get(stringView);
+      SIMDJSON_CALL(value.get(stringView));
       UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
       return StringPrimitive::createEfficient(rt, hermesStr);
     }
     case ondemand::json_type::boolean:
       bool boolValue;
-      error = value.get(boolValue);
+      SIMDJSON_CALL(value.get(boolValue));
       return HermesValue::encodeBoolValue(boolValue);
     case ondemand::json_type::null:
       return HermesValue::encodeNullValue();
@@ -164,7 +171,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   auto json = padded_string(out);
 
   ondemand::document doc;
-  error = parser.iterate(json).get(doc);
+  SIMDJSON_CALL(parser.iterate(json).get(doc));
 
   return parseValue(runtime, doc);
 }
