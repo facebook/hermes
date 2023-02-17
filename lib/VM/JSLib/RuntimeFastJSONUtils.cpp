@@ -21,10 +21,13 @@
 
 using namespace simdjson;
 
-#define SIMDJSON_CALL(operation)       \
-  error = operation;                   \
-  if (LLVM_UNLIKELY(error)) {          \
-    return ExecutionStatus::EXCEPTION; \
+#define SIMDJSON_CALL(operation)            \
+  error = operation;                        \
+  if (LLVM_UNLIKELY(error)) {               \
+    /* TODO: Actual error messsage */       \
+    return rt.raiseSyntaxError(             \
+      TwineChar16("JSON fastParse error")   \
+    );                                      \
   }
 
 namespace hermes {
@@ -55,6 +58,9 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
     SIMDJSON_CALL(valueRes.get(value));
 
     auto jsValue = parseValue(rt, value);
+    if (LLVM_UNLIKELY(jsValue == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     indexValue = HermesValue::encodeDoubleValue(index);
     (void)JSObject::defineOwnComputedPrimitive(
@@ -93,6 +99,9 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     SIMDJSON_CALL(field.value().get(value));
 
     auto jsValue = parseValue(rt, value);
+    if (LLVM_UNLIKELY(jsValue == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     (void)JSObject::defineOwnComputedPrimitive(
           jsObject,
@@ -110,7 +119,7 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
   simdjson::error_code error;
 
   ondemand::json_type type;
-  error = value.type().get(type);
+  SIMDJSON_CALL(value.type().get(type));
   switch (type) {
     case ondemand::json_type::array: {
       ondemand::array arrayValue;
@@ -144,7 +153,7 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
 }
 
 CallResult<HermesValue> runtimeFastJSONParse(
-    Runtime &runtime,
+    Runtime &rt,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
   ondemand::parser parser;
@@ -162,7 +171,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   if (LLVM_UNLIKELY(jsonString->isExternal() && !jsonString->isASCII())) {
     ref = jsonString->getStringRef<char16_t>();
   } else {
-    StringPrimitive::createStringView(runtime, jsonString)
+    StringPrimitive::createStringView(rt, jsonString)
         .appendUTF16String(storage);
     ref = storage;
   }
@@ -173,7 +182,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   ondemand::document doc;
   SIMDJSON_CALL(parser.iterate(json).get(doc));
 
-  return parseValue(runtime, doc);
+  return parseValue(rt, doc);
 }
 
 } // namespace vm
