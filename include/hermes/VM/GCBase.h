@@ -313,6 +313,12 @@ class GCBase {
     /// the current VM stack-trace. It's "slow" because it's virtual.
     virtual const inst::Inst *getCurrentIPSlow() const = 0;
 
+    /// Register a new heap segment with the VM. This will populate the
+    /// SegmentInfo, as well as any information needed for compressed pointers.
+    /// \param idx represents the index to use for this segment.
+    /// \param lowLim represents the start of the newly added segment.
+    virtual void registerHeapSegment(unsigned idx, void *lowLim) = 0;
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     /// Return a \c StackTracesTreeNode representing the current VM stack-trace
     /// at this point.
@@ -390,6 +396,9 @@ class GCBase {
     }
     const inst::Inst *getCurrentIPSlow() const override {
       return runtime_.getCurrentIPSlow();
+    }
+    void registerHeapSegment(unsigned idx, void *lowLim) override {
+      runtime_.registerHeapSegment(idx, lowLim);
     }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

@@ -357,6 +357,10 @@ class DummyRuntime final : public HandleRootOwner, public PointerBase {
     return nullptr;
   }
 
+  void registerHeapSegment(unsigned idx, void *lowLim) {
+    setSegment(idx, lowLim);
+  }
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   StackTracesTreeNode *getCurrentStackTracesTreeNode(const inst::Inst *ip) {
     return nullptr;

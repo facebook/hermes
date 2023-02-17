@@ -999,6 +999,9 @@ class Runtime : public PointerBase, public HandleRootOwner {
   /// markedSymbols.
   void freeSymbols(const llvh::BitVector &markedSymbols);
 
+  /// See documentation on \c GCBase::GCCallbacks.
+  void registerHeapSegment(unsigned idx, void *lowLim);
+
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
   /// table.

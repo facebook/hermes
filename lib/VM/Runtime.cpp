@@ -864,6 +864,10 @@ void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }
 
+void Runtime::registerHeapSegment(unsigned idx, void *lowLim) {
+  setSegment(idx, lowLim);
+}
+
 #ifdef HERMES_SLOW_DEBUG
 bool Runtime::isSymbolLive(SymbolID id) {
   return identifierTable_.isSymbolLive(id);
