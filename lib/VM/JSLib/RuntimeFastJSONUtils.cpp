@@ -19,18 +19,14 @@
 
 #include "simdjson/src/simdjson.h"
 
+using namespace simdjson;
+
 namespace hermes {
 namespace vm {
 
-CallResult<HermesValue> parseValue(Runtime &rt) {
-  using namespace simdjson;
-  ondemand::parser parser;
+CallResult<HermesValue> parseValue(Runtime &rt, ondemand::document &doc) {
   simdjson::error_code error;
 
-  // auto json = "\"Hello from JSON\""_padded;
-  auto json = "2137"_padded;
-  ondemand::document doc;
-  error = parser.iterate(json).get(doc);
   auto &value = doc;
 
   ondemand::json_type type;
@@ -59,14 +55,16 @@ CallResult<HermesValue> runtimeFastJSONParse(
     Runtime &runtime,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
-  // MutableHandle<> returnValue{runtime};
+  ondemand::parser parser;
+  simdjson::error_code error;
+  ondemand::document doc;
 
-  // auto string = StringPrimitive::create(runtime, createASCIIRef("Hello world!"));
-  // returnValue = HermesValue::encodeStringValue(string->getString());
+  // TODO: Support UTF-16
+  auto asciiRef = jsonString->getStringRef<char>();
+  auto json = padded_string(asciiRef.data(), asciiRef.size());
+  error = parser.iterate(json).get(doc);
 
-  return parseValue(runtime);
-
-  // return returnValue.getHermesValue();
+  return parseValue(runtime, doc);
 }
 
 } // namespace vm
