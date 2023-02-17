@@ -278,12 +278,12 @@ OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   }
 }
 
-OptValue<uint32_t> CodeBlock::getScopeDescDataOffset() const {
+OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
   if (!debugOffsets)
     return llvh::None;
-  uint32_t ret = debugOffsets->scopeDescData;
+  uint32_t ret = debugOffsets->lexicalData;
   if (ret == hbc::DebugOffsets::NO_OFFSET)
     return llvh::None;
   return ret;

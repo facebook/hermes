@@ -132,6 +132,9 @@ class LoopAnalysis {
 /// have depth bigger than 0.
 class FunctionScopeAnalysis {
   struct ScopeData {
+    /// The parent of the function for which scope data was computed.
+    Function *parent;
+
     /// The depth in the scope chain. The global scope has depth 0, each
     /// function nesting level increases this by 1. Placeholder functions (which
     /// represent the lexical environment in local eval) have negative depths.
@@ -142,12 +145,15 @@ class FunctionScopeAnalysis {
     /// to create it.
     bool orphaned;
 
-    ScopeData(int32_t depth = 0, bool orphaned = false)
-        : depth(depth), orphaned(orphaned) {}
+    ScopeData(
+        Function *parent = nullptr,
+        int32_t depth = 0,
+        bool orphaned = false)
+        : parent(parent), depth(depth), orphaned(orphaned) {}
 
     /// Convenience function. \return an orphaned ScopeData.
     static ScopeData orphan() {
-      return ScopeData(0, true);
+      return ScopeData(nullptr, 0, true);
     }
   };
 
@@ -177,6 +183,9 @@ class FunctionScopeAnalysis {
 
   /// Lazily get the scope depth of \p S.
   llvh::Optional<int32_t> getScopeDepth(ScopeDesc *S);
+
+  /// Lazily get the lexical parent of \p F, or nullptr if none.
+  Function *getLexicalParent(Function *F);
 };
 
 /// A namespace encapsulating utilities for implementing optimization passes

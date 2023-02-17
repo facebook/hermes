@@ -290,9 +290,6 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
-  ThrowIfHasRestrictedGlobalPropertyInst *
-  createThrowIfHasRestrictedGlobalPropertyInst(llvh::StringRef property);
-
   CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
 
   CreateFunctionInst *createCreateFunctionInst(

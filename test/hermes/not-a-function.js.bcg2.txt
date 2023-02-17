@@ -8,7 +8,7 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHK-BCG2:Bytecode File Information:
-// CHK-BCG2-NEXT:  Bytecode version number: 92
+// CHK-BCG2-NEXT:  Bytecode version number: 93
 // CHK-BCG2-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHK-BCG2-NEXT:  Function count: 18
 // CHK-BCG2-NEXT:  String count: 19
@@ -46,7 +46,7 @@
 
 // CHK-BCG2:Array Buffer:
 // CHK-BCG2-NEXT:Function<global>(1 params, 13 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0001
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0001
 // CHK-BCG2-NEXT:    DeclareGlobalVar  "a"
 // CHK-BCG2-NEXT:    DeclareGlobalVar  "test"
 // CHK-BCG2-NEXT:    CreateEnvironment r0
@@ -106,7 +106,7 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:Function<test>(2 params, 15 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0114, scope 0x0000, textified callees 0x002e
+// CHK-BCG2-NEXT:Offset in debug table: source 0x00ae, lexical 0x0000, textified callees 0x002e
 // CHK-BCG2-NEXT:L4:
 // CHK-BCG2-NEXT:    LoadParam         r1, 1
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
@@ -134,7 +134,7 @@
 // CHK-BCG2-NEXT:0: start = L4, end = L5, target = L1
 
 // CHK-BCG2:NCFunction<b>(1 params, 2 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0190, scope 0x0000, textified callees 0x0000
+// CHK-BCG2-NEXT:Offset in debug table: source 0x00dc, lexical 0x0000, textified callees 0x0000
 // CHK-BCG2-NEXT:    NewArray          r0, 1
 // CHK-BCG2-NEXT:    CreateEnvironment r1
 // CHK-BCG2-NEXT:    CreateClosure     r1, r1, NCFunction<>
@@ -142,12 +142,12 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 1 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x01a9, scope 0x0000, textified callees 0x0000
+// CHK-BCG2-NEXT:Offset in debug table: source 0x00ed, lexical 0x0000, textified callees 0x0000
 // CHK-BCG2-NEXT:    LoadConstFalse    r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x01b7, scope 0x0000, textified callees 0x0033
+// CHK-BCG2-NEXT:Offset in debug table: source 0x00f5, lexical 0x0000, textified callees 0x0033
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
@@ -155,7 +155,7 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x01d7, scope 0x0000, textified callees 0x0036
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0103, lexical 0x0000, textified callees 0x0036
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "z"
@@ -163,49 +163,49 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0201, scope 0x0000, textified callees 0x0039
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0115, lexical 0x0000, textified callees 0x0039
 // CHK-BCG2-NEXT:    LoadConstNull     r1
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0219, scope 0x0000, textified callees 0x003c
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0121, lexical 0x0000, textified callees 0x003c
 // CHK-BCG2-NEXT:    LoadConstTrue     r1
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0231, scope 0x0000, textified callees 0x003f
+// CHK-BCG2-NEXT:Offset in debug table: source 0x012d, lexical 0x0000, textified callees 0x003f
 // CHK-BCG2-NEXT:    LoadConstFalse    r1
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0249, scope 0x0000, textified callees 0x0042
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0139, lexical 0x0000, textified callees 0x0042
 // CHK-BCG2-NEXT:    LoadConstString   r1, "str"
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0261, scope 0x0000, textified callees 0x0045
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0145, lexical 0x0000, textified callees 0x0045
 // CHK-BCG2-NEXT:    LoadConstUInt8    r1, 1
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0279, scope 0x0000, textified callees 0x0048
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0151, lexical 0x0000, textified callees 0x0048
 // CHK-BCG2-NEXT:    LoadConstDouble   r1, 3.14
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0291, scope 0x0000, textified callees 0x004b
+// CHK-BCG2-NEXT:Offset in debug table: source 0x015d, lexical 0x0000, textified callees 0x004b
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "b"
@@ -218,7 +218,7 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x02d6, scope 0x0000, textified callees 0x0052
+// CHK-BCG2-NEXT:Offset in debug table: source 0x0178, lexical 0x0000, textified callees 0x0052
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
@@ -226,7 +226,7 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0301, scope 0x0000, textified callees 0x0056
+// CHK-BCG2-NEXT:Offset in debug table: source 0x018b, lexical 0x0000, textified callees 0x0056
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "a0000000111111111"...
@@ -234,14 +234,14 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x032c, scope 0x0000, textified callees 0x005a
+// CHK-BCG2-NEXT:Offset in debug table: source 0x019e, lexical 0x0000, textified callees 0x005a
 // CHK-BCG2-NEXT:    LoadConstString   r1, "\x0a\x0ac\u00e0ll"...
 // CHK-BCG2-NEXT:    LoadConstUndefined r0
 // CHK-BCG2-NEXT:    Call1             r0, r1, r0
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x0344, scope 0x0000, textified callees 0x005e
+// CHK-BCG2-NEXT:Offset in debug table: source 0x01aa, lexical 0x0000, textified callees 0x005e
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
@@ -249,7 +249,7 @@
 // CHK-BCG2-NEXT:    Ret               r0
 
 // CHK-BCG2:NCFunction<>(1 params, 9 registers, 0 symbols):
-// CHK-BCG2-NEXT:Offset in debug table: source 0x036f, scope 0x0000, textified callees 0x0062
+// CHK-BCG2-NEXT:Offset in debug table: source 0x01bd, lexical 0x0000, textified callees 0x0062
 // CHK-BCG2-NEXT:    GetGlobalObject   r0
 // CHK-BCG2-NEXT:    GetByIdShort      r1, r0, 1, "a"
 // CHK-BCG2-NEXT:    GetByIdShort      r0, r1, 2, "\u00e0\u00e0\u00e0"...
@@ -264,141 +264,141 @@
 
 // CHK-BCG2:Debug source table:
 // CHK-BCG2-NEXT:  0x0000  function idx 0, starts at line 42 col 1
-// CHK-BCG2-NEXT:    bc 12: line 42 col 1 scope offset 0x0000 env r2
-// CHK-BCG2-NEXT:    bc 19: line 42 col 1 scope offset 0x0000 env r2
-// CHK-BCG2-NEXT:    bc 25: line 44 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 37: line 44 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 42: line 47 col 9 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 44: line 48 col 9 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 49: line 47 col 9 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 53: line 47 col 7 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 59: line 60 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 64: line 60 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 69: line 60 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 74: line 64 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 79: line 64 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 84: line 64 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 89: line 68 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 94: line 68 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 99: line 68 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 104: line 72 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 109: line 72 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 114: line 72 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 119: line 76 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 124: line 76 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 129: line 76 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 134: line 80 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 139: line 80 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 144: line 80 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 149: line 84 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 154: line 84 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 159: line 84 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 164: line 88 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 169: line 88 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 174: line 88 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 179: line 92 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 184: line 92 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 189: line 92 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 194: line 96 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 199: line 96 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 204: line 96 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 209: line 100 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 214: line 100 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 219: line 100 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 224: line 104 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 229: line 104 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 234: line 104 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 239: line 129 col 1 scope offset 0x0000 env r4
-// CHK-BCG2-NEXT:    bc 244: line 129 col 6 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 249: line 129 col 5 scope offset 0x0000 env r3
-// CHK-BCG2-NEXT:    bc 254: line 133 col 1 scope offset 0x0000 env r1
-// CHK-BCG2-NEXT:    bc 259: line 133 col 6 scope offset 0x0000 env r0
-// CHK-BCG2-NEXT:    bc 264: line 133 col 5 scope offset 0x0000 env r0
-// CHK-BCG2-NEXT:    bc 269: line 133 col 187 scope offset 0x0000 env r0
-// CHK-BCG2-NEXT:  0x0114  function idx 1, starts at line 51 col 1
-// CHK-BCG2-NEXT:    bc 0: line 52 col 5 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 5: line 54 col 10 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 9: line 55 col 5 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 11: line 55 col 7 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 15: line 56 col 9 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 21: line 56 col 19 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 26: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 32: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 45: line 56 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 51: line 56 col 30 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 58: line 56 col 14 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 64: line 57 col 5 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 66: line 58 col 1 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0190  function idx 2, starts at line 48 col 9
-// CHK-BCG2-NEXT:    bc 0: line 48 col 15 scope offset 0x0000 env r0
-// CHK-BCG2-NEXT:    bc 6: line 48 col 16 scope offset 0x0000 env r1
-// CHK-BCG2-NEXT:    bc 11: line 48 col 15 scope offset 0x0000 env r1
-// CHK-BCG2-NEXT:    bc 15: line 48 col 15 scope offset 0x0000 env r0
-// CHK-BCG2-NEXT:  0x01a9  function idx 3, starts at line 48 col 16
-// CHK-BCG2-NEXT:    bc 2: line 48 col 22 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x01b7  function idx 4, starts at line 60 col 6
-// CHK-BCG2-NEXT:    bc 2: line 60 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 9: line 60 col 13 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 13: line 60 col 13 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x01d7  function idx 5, starts at line 64 col 6
-// CHK-BCG2-NEXT:    bc 2: line 64 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 64 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 64 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 64 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0201  function idx 6, starts at line 68 col 6
-// CHK-BCG2-NEXT:    bc 4: line 68 col 16 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 8: line 68 col 16 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0219  function idx 7, starts at line 72 col 6
-// CHK-BCG2-NEXT:    bc 4: line 72 col 16 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 8: line 72 col 16 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0231  function idx 8, starts at line 76 col 6
-// CHK-BCG2-NEXT:    bc 4: line 76 col 17 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 8: line 76 col 17 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0249  function idx 9, starts at line 80 col 6
-// CHK-BCG2-NEXT:    bc 6: line 80 col 17 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 10: line 80 col 17 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0261  function idx 10, starts at line 84 col 6
-// CHK-BCG2-NEXT:    bc 5: line 84 col 13 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 9: line 84 col 13 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0279  function idx 11, starts at line 88 col 6
-// CHK-BCG2-NEXT:    bc 12: line 88 col 18 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 88 col 18 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0291  function idx 12, starts at line 92 col 6
-// CHK-BCG2-NEXT:    bc 2: line 92 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 92 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 92 col 15 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 18: line 92 col 20 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 22: line 92 col 20 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 28: line 92 col 22 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 32: line 92 col 22 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x02d6  function idx 13, starts at line 96 col 6
-// CHK-BCG2-NEXT:    bc 2: line 96 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 96 col 76 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 96 col 76 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 96 col 76 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0301  function idx 14, starts at line 100 col 6
-// CHK-BCG2-NEXT:    bc 2: line 100 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 100 col 117 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 100 col 117 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 100 col 117 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x032c  function idx 15, starts at line 104 col 6
-// CHK-BCG2-NEXT:    bc 6: line 111 col 2 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 10: line 111 col 2 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x0344  function idx 16, starts at line 129 col 6
-// CHK-BCG2-NEXT:    bc 2: line 129 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 129 col 138 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 129 col 138 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 129 col 138 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x036f  function idx 17, starts at line 133 col 6
-// CHK-BCG2-NEXT:    bc 2: line 133 col 12 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 7: line 133 col 184 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 12: line 133 col 184 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:    bc 16: line 133 col 184 scope offset 0x0000 env none
-// CHK-BCG2-NEXT:  0x039a  end of debug source table
+// CHK-BCG2-NEXT:    bc 12: line 42 col 1
+// CHK-BCG2-NEXT:    bc 19: line 42 col 1
+// CHK-BCG2-NEXT:    bc 25: line 44 col 1
+// CHK-BCG2-NEXT:    bc 37: line 44 col 6
+// CHK-BCG2-NEXT:    bc 42: line 47 col 9
+// CHK-BCG2-NEXT:    bc 44: line 48 col 9
+// CHK-BCG2-NEXT:    bc 49: line 47 col 9
+// CHK-BCG2-NEXT:    bc 53: line 47 col 7
+// CHK-BCG2-NEXT:    bc 59: line 60 col 1
+// CHK-BCG2-NEXT:    bc 64: line 60 col 6
+// CHK-BCG2-NEXT:    bc 69: line 60 col 5
+// CHK-BCG2-NEXT:    bc 74: line 64 col 1
+// CHK-BCG2-NEXT:    bc 79: line 64 col 6
+// CHK-BCG2-NEXT:    bc 84: line 64 col 5
+// CHK-BCG2-NEXT:    bc 89: line 68 col 1
+// CHK-BCG2-NEXT:    bc 94: line 68 col 6
+// CHK-BCG2-NEXT:    bc 99: line 68 col 5
+// CHK-BCG2-NEXT:    bc 104: line 72 col 1
+// CHK-BCG2-NEXT:    bc 109: line 72 col 6
+// CHK-BCG2-NEXT:    bc 114: line 72 col 5
+// CHK-BCG2-NEXT:    bc 119: line 76 col 1
+// CHK-BCG2-NEXT:    bc 124: line 76 col 6
+// CHK-BCG2-NEXT:    bc 129: line 76 col 5
+// CHK-BCG2-NEXT:    bc 134: line 80 col 1
+// CHK-BCG2-NEXT:    bc 139: line 80 col 6
+// CHK-BCG2-NEXT:    bc 144: line 80 col 5
+// CHK-BCG2-NEXT:    bc 149: line 84 col 1
+// CHK-BCG2-NEXT:    bc 154: line 84 col 6
+// CHK-BCG2-NEXT:    bc 159: line 84 col 5
+// CHK-BCG2-NEXT:    bc 164: line 88 col 1
+// CHK-BCG2-NEXT:    bc 169: line 88 col 6
+// CHK-BCG2-NEXT:    bc 174: line 88 col 5
+// CHK-BCG2-NEXT:    bc 179: line 92 col 1
+// CHK-BCG2-NEXT:    bc 184: line 92 col 6
+// CHK-BCG2-NEXT:    bc 189: line 92 col 5
+// CHK-BCG2-NEXT:    bc 194: line 96 col 1
+// CHK-BCG2-NEXT:    bc 199: line 96 col 6
+// CHK-BCG2-NEXT:    bc 204: line 96 col 5
+// CHK-BCG2-NEXT:    bc 209: line 100 col 1
+// CHK-BCG2-NEXT:    bc 214: line 100 col 6
+// CHK-BCG2-NEXT:    bc 219: line 100 col 5
+// CHK-BCG2-NEXT:    bc 224: line 104 col 1
+// CHK-BCG2-NEXT:    bc 229: line 104 col 6
+// CHK-BCG2-NEXT:    bc 234: line 104 col 5
+// CHK-BCG2-NEXT:    bc 239: line 129 col 1
+// CHK-BCG2-NEXT:    bc 244: line 129 col 6
+// CHK-BCG2-NEXT:    bc 249: line 129 col 5
+// CHK-BCG2-NEXT:    bc 254: line 133 col 1
+// CHK-BCG2-NEXT:    bc 259: line 133 col 6
+// CHK-BCG2-NEXT:    bc 264: line 133 col 5
+// CHK-BCG2-NEXT:    bc 269: line 133 col 187
+// CHK-BCG2-NEXT:  0x00ae  function idx 1, starts at line 51 col 1
+// CHK-BCG2-NEXT:    bc 0: line 52 col 5
+// CHK-BCG2-NEXT:    bc 5: line 54 col 10
+// CHK-BCG2-NEXT:    bc 9: line 55 col 5
+// CHK-BCG2-NEXT:    bc 11: line 55 col 7
+// CHK-BCG2-NEXT:    bc 15: line 56 col 9
+// CHK-BCG2-NEXT:    bc 21: line 56 col 19
+// CHK-BCG2-NEXT:    bc 26: line 56 col 15
+// CHK-BCG2-NEXT:    bc 32: line 56 col 15
+// CHK-BCG2-NEXT:    bc 45: line 56 col 15
+// CHK-BCG2-NEXT:    bc 51: line 56 col 30
+// CHK-BCG2-NEXT:    bc 58: line 56 col 14
+// CHK-BCG2-NEXT:    bc 64: line 57 col 5
+// CHK-BCG2-NEXT:    bc 66: line 58 col 1
+// CHK-BCG2-NEXT:  0x00dc  function idx 2, starts at line 48 col 9
+// CHK-BCG2-NEXT:    bc 0: line 48 col 15
+// CHK-BCG2-NEXT:    bc 6: line 48 col 16
+// CHK-BCG2-NEXT:    bc 11: line 48 col 15
+// CHK-BCG2-NEXT:    bc 15: line 48 col 15
+// CHK-BCG2-NEXT:  0x00ed  function idx 3, starts at line 48 col 16
+// CHK-BCG2-NEXT:    bc 2: line 48 col 22
+// CHK-BCG2-NEXT:  0x00f5  function idx 4, starts at line 60 col 6
+// CHK-BCG2-NEXT:    bc 2: line 60 col 12
+// CHK-BCG2-NEXT:    bc 9: line 60 col 13
+// CHK-BCG2-NEXT:    bc 13: line 60 col 13
+// CHK-BCG2-NEXT:  0x0103  function idx 5, starts at line 64 col 6
+// CHK-BCG2-NEXT:    bc 2: line 64 col 12
+// CHK-BCG2-NEXT:    bc 7: line 64 col 15
+// CHK-BCG2-NEXT:    bc 12: line 64 col 15
+// CHK-BCG2-NEXT:    bc 16: line 64 col 15
+// CHK-BCG2-NEXT:  0x0115  function idx 6, starts at line 68 col 6
+// CHK-BCG2-NEXT:    bc 4: line 68 col 16
+// CHK-BCG2-NEXT:    bc 8: line 68 col 16
+// CHK-BCG2-NEXT:  0x0121  function idx 7, starts at line 72 col 6
+// CHK-BCG2-NEXT:    bc 4: line 72 col 16
+// CHK-BCG2-NEXT:    bc 8: line 72 col 16
+// CHK-BCG2-NEXT:  0x012d  function idx 8, starts at line 76 col 6
+// CHK-BCG2-NEXT:    bc 4: line 76 col 17
+// CHK-BCG2-NEXT:    bc 8: line 76 col 17
+// CHK-BCG2-NEXT:  0x0139  function idx 9, starts at line 80 col 6
+// CHK-BCG2-NEXT:    bc 6: line 80 col 17
+// CHK-BCG2-NEXT:    bc 10: line 80 col 17
+// CHK-BCG2-NEXT:  0x0145  function idx 10, starts at line 84 col 6
+// CHK-BCG2-NEXT:    bc 5: line 84 col 13
+// CHK-BCG2-NEXT:    bc 9: line 84 col 13
+// CHK-BCG2-NEXT:  0x0151  function idx 11, starts at line 88 col 6
+// CHK-BCG2-NEXT:    bc 12: line 88 col 18
+// CHK-BCG2-NEXT:    bc 16: line 88 col 18
+// CHK-BCG2-NEXT:  0x015d  function idx 12, starts at line 92 col 6
+// CHK-BCG2-NEXT:    bc 2: line 92 col 12
+// CHK-BCG2-NEXT:    bc 7: line 92 col 15
+// CHK-BCG2-NEXT:    bc 12: line 92 col 15
+// CHK-BCG2-NEXT:    bc 18: line 92 col 20
+// CHK-BCG2-NEXT:    bc 22: line 92 col 20
+// CHK-BCG2-NEXT:    bc 28: line 92 col 22
+// CHK-BCG2-NEXT:    bc 32: line 92 col 22
+// CHK-BCG2-NEXT:  0x0178  function idx 13, starts at line 96 col 6
+// CHK-BCG2-NEXT:    bc 2: line 96 col 12
+// CHK-BCG2-NEXT:    bc 7: line 96 col 76
+// CHK-BCG2-NEXT:    bc 12: line 96 col 76
+// CHK-BCG2-NEXT:    bc 16: line 96 col 76
+// CHK-BCG2-NEXT:  0x018b  function idx 14, starts at line 100 col 6
+// CHK-BCG2-NEXT:    bc 2: line 100 col 12
+// CHK-BCG2-NEXT:    bc 7: line 100 col 117
+// CHK-BCG2-NEXT:    bc 12: line 100 col 117
+// CHK-BCG2-NEXT:    bc 16: line 100 col 117
+// CHK-BCG2-NEXT:  0x019e  function idx 15, starts at line 104 col 6
+// CHK-BCG2-NEXT:    bc 6: line 111 col 2
+// CHK-BCG2-NEXT:    bc 10: line 111 col 2
+// CHK-BCG2-NEXT:  0x01aa  function idx 16, starts at line 129 col 6
+// CHK-BCG2-NEXT:    bc 2: line 129 col 12
+// CHK-BCG2-NEXT:    bc 7: line 129 col 138
+// CHK-BCG2-NEXT:    bc 12: line 129 col 138
+// CHK-BCG2-NEXT:    bc 16: line 129 col 138
+// CHK-BCG2-NEXT:  0x01bd  function idx 17, starts at line 133 col 6
+// CHK-BCG2-NEXT:    bc 2: line 133 col 12
+// CHK-BCG2-NEXT:    bc 7: line 133 col 184
+// CHK-BCG2-NEXT:    bc 12: line 133 col 184
+// CHK-BCG2-NEXT:    bc 16: line 133 col 184
+// CHK-BCG2-NEXT:  0x01d0  end of debug source table
 
-// CHK-BCG2:Debug scope descriptor table:
-// CHK-BCG2-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
-// CHK-BCG2-NEXT:  0x0003  end of debug scope descriptor table
+// CHK-BCG2:Debug lexical table:
+// CHK-BCG2-NEXT:  0x0000  lexical parent: none, variable count: 0
+// CHK-BCG2-NEXT:  0x0002  end of debug lexical table
 
 // CHK-BCG2:Textified callees table:
 // CHK-BCG2-NEXT:  0x0000  entries: 0

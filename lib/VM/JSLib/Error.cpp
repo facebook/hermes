@@ -96,7 +96,7 @@ Handle<JSObject> createErrorConstructor(Runtime &runtime) {
         NativeConstructor::creatorFunction<JSError>,                        \
         CellKind::JSErrorKind);                                             \
   }
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 
 static CallResult<HermesValue> constructErrorObject(
     Runtime &runtime,
@@ -181,7 +181,7 @@ static CallResult<HermesValue> constructErrorObject(
     return constructErrorObject(                                               \
         runtime, args, runtime.makeHandle<JSObject>(runtime.name##Prototype)); \
   }
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 
 /// ES11.0 19.5.3.4
 CallResult<HermesValue>

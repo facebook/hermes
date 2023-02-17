@@ -1275,7 +1275,8 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     const ScopeChain &chain) {
   SerializedScopePtr current{};
-  for (auto it = chain.scopes.rbegin(), end = chain.scopes.rend(); it < end;
+  for (auto it = chain.functions.rbegin(), end = chain.functions.rend();
+       it < end;
        it++) {
     auto next = std::make_shared<SerializedScope>();
     next->variables.reserve(it->variables.size());

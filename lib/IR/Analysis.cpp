@@ -214,6 +214,16 @@ static llvh::Optional<int> &nextScopeDepth(llvh::Optional<int> &depth) {
   return depth;
 }
 
+Function *FunctionScopeAnalysis::computeParent(
+    ScopeDesc *thisScope,
+    ScopeDesc *parentScope,
+    const ScopeData &sd) {
+  return (parentScope->hasFunction() &&
+          parentScope->getFunction() != thisScope->getFunction())
+      ? parentScope->getFunction()
+      : sd.parent;
+}
+
 FunctionScopeAnalysis::ScopeData
 FunctionScopeAnalysis::calculateFunctionScopeData(
     ScopeDesc *scopeDesc,
@@ -233,7 +243,7 @@ FunctionScopeAnalysis::calculateFunctionScopeData(
     Function *F = scopeDesc->getFunction();
     Module *module = F->getParent();
     if (module->findCJSModule(F)) {
-      return ScopeData{1, false};
+      return ScopeData{module->getTopLevelFunction(), 1, false};
     }
   }
 
@@ -243,10 +253,12 @@ FunctionScopeAnalysis::calculateFunctionScopeData(
         calculateFunctionScopeData(parentScope, nextScopeDepth(depth));
     if (!parentData.orphaned && (parentData.depth >= 0 || depth)) {
       assert(!depth || (depth == parentData.depth));
-      ret = ScopeData(parentData.depth + 1);
+      ret = ScopeData(
+          computeParent(scopeDesc, parentScope, parentData),
+          parentData.depth + 1);
     }
   } else if (depth) {
-    ret = ScopeData(*depth);
+    ret = ScopeData(nullptr, *depth);
   }
 
   LLVM_DEBUG({
@@ -265,6 +277,10 @@ Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(ScopeDesc *S) {
   if (sd.orphaned)
     return llvh::None;
   return sd.depth;
+}
+
+Function *FunctionScopeAnalysis::getLexicalParent(Function *F) {
+  return calculateFunctionScopeData(F->getFunctionScopeDesc()).parent;
 }
 
 #undef DEBUG_TYPE

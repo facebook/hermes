@@ -163,15 +163,6 @@ class Interpreter {
       CodeBlock *curCodeBlock,
       const Inst *ip);
 
-  /// Implements the restricted global property check as per
-  /// ES2023 16.1.7.3.[cd].
-  /// \return ExecutionStatus::EXCEPTION if the global object already has a
-  /// restricted property with the name provided in \p ip.
-  static ExecutionStatus throwIfHasRestrictedGlobalPropertyImpl(
-      Runtime &runtime,
-      CodeBlock *curCodeBlock,
-      const Inst *ip);
-
 #ifdef HERMES_ENABLE_DEBUGGER
   /// Wrapper around runDebugger() that reapplies the interpreter state.
   /// Constructs an interpreter state from the given \p codeBlock and \p ip.

@@ -22,7 +22,7 @@ function *args() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 92
+// CHECK-NEXT:  Bytecode version number: 93
 // CHECK-NEXT:  Source hash: 0000000000000000000000000000000000000000
 // CHECK-NEXT:  Function count: 5
 // CHECK-NEXT:  String count: 8
@@ -52,7 +52,7 @@ function *args() {
 // CHECK-NEXT:  Function ID 4 -> s0
 
 // CHECK:Function<global>(1 params, 8 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
 // CHECK-NEXT:    CreateEnvironment r0
@@ -74,7 +74,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<?anon_0_loop>(2 params, 14 registers, 2 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0016, scope 0x0000, textified callees 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -121,7 +121,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<?anon_0_args>(1 params, 7 registers, 0 symbols):
-// CHECK-NEXT:Offset in debug table: source 0x0050, scope 0x0000, textified callees 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0020, lexical 0x0000, textified callees 0x0000
 // CHECK-NEXT:    StartGenerator
 // CHECK-NEXT:    CreateEnvironment r0
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -154,24 +154,24 @@ function *args() {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 21: line 10 col 1 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 32: line 10 col 1 scope offset 0x0000 env none
-// CHECK-NEXT:  0x0016  function idx 2, starts at line 10 col 1
-// CHECK-NEXT:    bc 37: line 12 col 10 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 54: line 13 col 14 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 64: line 13 col 12 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 68: line 13 col 5 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 72: line 13 col 5 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 81: line 12 col 10 scope offset 0x0000 env none
-// CHECK-NEXT:  0x0050  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 19: line 19 col 18 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 23: line 19 col 3 scope offset 0x0000 env none
-// CHECK-NEXT:    bc 27: line 19 col 3 scope offset 0x0000 env none
-// CHECK-NEXT:  0x006f  end of debug source table
+// CHECK-NEXT:    bc 21: line 10 col 1
+// CHECK-NEXT:    bc 32: line 10 col 1
+// CHECK-NEXT:  0x000a  function idx 2, starts at line 10 col 1
+// CHECK-NEXT:    bc 37: line 12 col 10
+// CHECK-NEXT:    bc 54: line 13 col 14
+// CHECK-NEXT:    bc 64: line 13 col 12
+// CHECK-NEXT:    bc 68: line 13 col 5
+// CHECK-NEXT:    bc 72: line 13 col 5
+// CHECK-NEXT:    bc 81: line 12 col 10
+// CHECK-NEXT:  0x0020  function idx 4, starts at line 18 col 1
+// CHECK-NEXT:    bc 19: line 19 col 18
+// CHECK-NEXT:    bc 23: line 19 col 3
+// CHECK-NEXT:    bc 27: line 19 col 3
+// CHECK-NEXT:  0x002d  end of debug source table
 
-// CHECK:Debug scope descriptor table:
-// CHECK-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
-// CHECK-NEXT:  0x0003  end of debug scope descriptor table
+// CHECK:Debug lexical table:
+// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
+// CHECK-NEXT:  0x0002  end of debug lexical table
 
 // CHECK:Textified callees table:
 // CHECK-NEXT:  0x0000  entries: 0
