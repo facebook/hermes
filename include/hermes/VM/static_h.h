@@ -731,10 +731,17 @@ SHERMES_EXPORT void _sh_prstore_indirect(
 
 static inline SHLegacyValue
 _sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
-  return propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS
-      ? _sh_prload_direct(shr, source, propIndex)
-      : _sh_prload_indirect(
-            shr, source, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS);
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+#ifndef HERMESVM_BOXED_DOUBLES
+    return ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(source))
+        ->directProps[propIndex];
+#else
+    return _sh_prload_direct(shr, source, propIndex);
+#endif
+  } else {
+    return _sh_prload_indirect(
+        shr, source, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS);
+  }
 }
 
 /// Store a property into direct or indirect storage depending on its index.
@@ -762,7 +769,12 @@ static inline void _sh_prstore_np(
       !_sh_ljs_is_pointer(*value) &&
       "_sh_prstore_np() invoked with a pointer value");
   if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+#ifndef HERMESVM_BOXED_DOUBLES
+    ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
+        ->directProps[propIndex] = *value;
+#else
     _sh_prstore_direct_np(shr, target, propIndex, value);
+#endif
   } else {
     _sh_prstore_indirect(
         shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
