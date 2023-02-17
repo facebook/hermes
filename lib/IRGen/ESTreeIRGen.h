@@ -1003,8 +1003,8 @@ class ESTreeIRGen {
   /// Emit the IteratorNextInst for \p iteratorRecord, which may alter the
   /// iteratorRecord to indicate completion.
   Value *emitIteratorNext(IteratorRecord iteratorRecord) {
-    return Builder.createIteratorNextInst(
-        iteratorRecord.iterStorage, iteratorRecord.sourceOrNext);
+    auto *LSI = Builder.createLoadStackInst(iteratorRecord.sourceOrNext);
+    return Builder.createIteratorNextInst(iteratorRecord.iterStorage, LSI);
   }
 
   /// If iteratorRecord.iterStorage is undefined, then iteration is complete
@@ -1023,8 +1023,8 @@ class ESTreeIRGen {
   Value *emitIteratorClose(
       IteratorRecord iteratorRecord,
       bool ignoreInnerException) {
-    return Builder.createIteratorCloseInst(
-        iteratorRecord.iterStorage, ignoreInnerException);
+    auto *LSI = Builder.createLoadStackInst(iteratorRecord.iterStorage);
+    return Builder.createIteratorCloseInst(LSI, ignoreInnerException);
   }
 
   /// Generate code for destructuring assignment to ArrayPattern or

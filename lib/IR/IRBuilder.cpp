@@ -1009,14 +1009,14 @@ IteratorBeginInst *IRBuilder::createIteratorBeginInst(
 
 IteratorNextInst *IRBuilder::createIteratorNextInst(
     AllocStackInst *iterator,
-    AllocStackInst *sourceOrNext) {
+    Value *sourceOrNext) {
   auto *I = new IteratorNextInst(iterator, sourceOrNext);
   insert(I);
   return I;
 }
 
 IteratorCloseInst *IRBuilder::createIteratorCloseInst(
-    AllocStackInst *iterator,
+    Value *iterator,
     bool ignoreInnerException) {
   auto *I =
       new IteratorCloseInst(iterator, getLiteralBool(ignoreInnerException));

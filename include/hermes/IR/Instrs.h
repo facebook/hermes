@@ -3965,9 +3965,7 @@ class IteratorNextInst : public Instruction {
  public:
   enum { IteratorIdx, SourceOrNextIdx };
 
-  explicit IteratorNextInst(
-      AllocStackInst *iterator,
-      AllocStackInst *sourceOrNext)
+  explicit IteratorNextInst(AllocStackInst *iterator, Value *sourceOrNext)
       : Instruction(ValueKind::IteratorNextInstKind) {
     pushOperand(iterator);
     pushOperand(sourceOrNext);
@@ -4011,9 +4009,7 @@ class IteratorCloseInst : public Instruction {
 
   using TargetList = llvh::SmallVector<Value *, 2>;
 
-  explicit IteratorCloseInst(
-      AllocStackInst *iterator,
-      LiteralBool *ignoreInnerException)
+  explicit IteratorCloseInst(Value *iterator, LiteralBool *ignoreInnerException)
       : Instruction(ValueKind::IteratorCloseInstKind) {
     pushOperand(iterator);
     pushOperand(ignoreInnerException);

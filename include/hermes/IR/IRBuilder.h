@@ -587,10 +587,10 @@ class IRBuilder {
 
   IteratorNextInst *createIteratorNextInst(
       AllocStackInst *iterator,
-      AllocStackInst *sourceOrNext);
+      Value *sourceOrNext);
 
   IteratorCloseInst *createIteratorCloseInst(
-      AllocStackInst *iterator,
+      Value *iterator,
       bool ignoreInnerException);
 
   UnreachableInst *createUnreachableInst();

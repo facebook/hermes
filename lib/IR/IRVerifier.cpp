@@ -264,12 +264,10 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
     if (llvh::isa<AllocStackInst>(Operand)) {
       Assert(
           llvh::isa<LoadStackInst>(Inst) || llvh::isa<StoreStackInst>(Inst) ||
-              llvh::isa<CatchInst>(Inst) || llvh::isa<GetPNamesInst>(Inst) ||
+              llvh::isa<GetPNamesInst>(Inst) ||
               llvh::isa<GetNextPNameInst>(Inst) ||
-              llvh::isa<ResumeGeneratorInst>(Inst) ||
               llvh::isa<IteratorBeginInst>(Inst) ||
               llvh::isa<IteratorNextInst>(Inst) ||
-              llvh::isa<IteratorCloseInst>(Inst) ||
               llvh::isa<HBCGetArgumentsPropByValInst>(Inst) ||
               llvh::isa<HBCGetArgumentsLengthInst>(Inst) ||
               llvh::isa<HBCReifyArgumentsInst>(Inst),
@@ -840,9 +838,7 @@ void Verifier::visitIteratorBeginInst(const IteratorBeginInst &Inst) {
       "SourceOrNext must be an AllocStackInst");
 }
 void Verifier::visitIteratorNextInst(const IteratorNextInst &Inst) {
-  Assert(
-      llvh::isa<AllocStackInst>(Inst.getSourceOrNext()),
-      "SourceOrNext must be an AllocStackInst");
+  // Nothing to verify at this point.
 }
 void Verifier::visitIteratorCloseInst(const IteratorCloseInst &Inst) {
   Assert(
