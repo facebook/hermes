@@ -98,6 +98,7 @@ set(source_files
   JSLib/Math.cpp
   JSLib/JSON.cpp
   JSLib/RuntimeJSONUtils.cpp
+  JSLib/RuntimeFastJSONUtils.cpp
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
   JSLib/Proxy.cpp

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSLib/RuntimeFastJSONUtils.h"
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -30,6 +31,13 @@ Handle<JSObject> createJSONObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::parse),
       nullptr,
       jsonParse,
+      2);
+  defineMethod(
+      runtime,
+      json,
+      Predefined::getSymbolID(Predefined::fastParse),
+      nullptr,
+      jsonFastParse,
       2);
   defineMethod(
       runtime,
@@ -58,6 +66,17 @@ CallResult<HermesValue> jsonParse(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return runtimeJSONParse(
+      runtime,
+      runtime.makeHandle(std::move(*res)),
+      Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
+}
+
+CallResult<HermesValue> jsonFastParse(void *, Runtime &runtime, NativeArgs args) {
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return runtimeFastJSONParse(
       runtime,
       runtime.makeHandle(std::move(*res)),
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
