@@ -51,8 +51,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
 // CHECK-NEXT:  %3 = ConstructInst (:object) %0: closure, empty: any, empty: any, %2: object, 12: number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: object, %3: object
-// CHECK-NEXT:  %5 = ReturnInst (:object) %4: object
+// CHECK-NEXT:  %4 = ReturnInst (:object) %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_load_store_test(): object
@@ -88,6 +87,5 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
 // CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: closure, empty: any, empty: any, %2: object, 12: number
-// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: object, %3: undefined
-// CHECK-NEXT:  %5 = ReturnInst (:object) %4: object
+// CHECK-NEXT:  %4 = ReturnInst (:object) %2: object
 // CHECK-NEXT:function_end

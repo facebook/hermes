@@ -426,6 +426,17 @@ Value *simplifyCallInst(CallInst *CI) {
   return nullptr;
 }
 
+Value *simplifyGetConstructedObjectInst(GetConstructedObjectInst *GCOI) {
+  // If we can statically determine whether the return value of the constructor
+  // will be an object, we can eliminate this instruction.
+  auto opTy = GCOI->getConstructorReturnValue()->getType();
+  if (opTy.isObjectType())
+    return GCOI->getConstructorReturnValue();
+  if (!opTy.canBeObject())
+    return GCOI->getThisValue();
+  return nullptr;
+}
+
 Value *simplifySwitchInst(SwitchInst *SI) {
   auto *thisBlock = SI->getParent();
   IRBuilder builder(thisBlock->getParent());
@@ -586,6 +597,9 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifySwitchInst(cast<SwitchInst>(I));
     case ValueKind::CallInstKind:
       return simplifyCallInst(cast<CallInst>(I));
+    case ValueKind::GetConstructedObjectInstKind:
+      return simplifyGetConstructedObjectInst(
+          cast<GetConstructedObjectInst>(I));
     case ValueKind::CoerceThisNSInstKind:
       return simplifyCoerceThisNS(cast<CoerceThisNSInst>(I));
     case ValueKind::ThrowIfEmptyInstKind:
