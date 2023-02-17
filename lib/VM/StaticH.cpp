@@ -1702,18 +1702,54 @@ extern "C" void _sh_prstore_direct(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
-extern "C" void _sh_prstore_direct_np(
+extern "C" void _sh_prstore_direct_bool(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t propIndex,
     SHLegacyValue *value) {
+  assert(_sh_ljs_is_bool(*value));
   Runtime &runtime = getRuntime(shr);
-  assert(
-      !_sh_ljs_is_pointer(*value) &&
-      "_sh_prstore_direct_np() invoked with a pointer value");
-  SmallHermesValue shv =
-      SmallHermesValue::encodeHermesValue(*toPHV(value), runtime);
+  auto shv = SmallHermesValue::encodeBoolValue(_sh_ljs_get_bool(*value));
   JSObject::setNamedSlotValueDirectUnsafe<std::false_type>(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
+
+extern "C" void _sh_prstore_direct_number(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_double(*value));
+  Runtime &runtime = getRuntime(shr);
+  auto shv =
+      SmallHermesValue::encodeNumberValue(_sh_ljs_get_double(*value), runtime);
+  JSObject::setNamedSlotValueDirectUnsafe(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
+
+extern "C" void _sh_prstore_direct_object(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_object(*value));
+  Runtime &runtime = getRuntime(shr);
+  auto shv = SmallHermesValue::encodeObjectValue(
+      vmcast<JSObject>(*toPHV(value)), runtime);
+  JSObject::setNamedSlotValueDirectUnsafe(
+      vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
+}
+
+extern "C" void _sh_prstore_direct_string(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_string(*value));
+  Runtime &runtime = getRuntime(shr);
+  auto shv = SmallHermesValue::encodeStringValue(
+      vmcast<StringPrimitive>(*toPHV(value)), runtime);
+  JSObject::setNamedSlotValueDirectUnsafe(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 

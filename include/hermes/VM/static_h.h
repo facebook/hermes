@@ -712,10 +712,25 @@ SHERMES_EXPORT void _sh_prstore_direct(
     uint32_t propIndex,
     SHLegacyValue *value);
 
-/// Store a property into direct storage when it is known that neither the
-/// previous value, nor the new value are pointers (so this doesn't require
-/// a GC write barrier.
-SHERMES_EXPORT void _sh_prstore_direct_np(
+/// Store a property into direct storage when both the \p value being stored and
+/// the destination field referred to by \p target and \p propIndex are known to
+/// be of a given type.
+SHERMES_EXPORT void _sh_prstore_direct_bool(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+SHERMES_EXPORT void _sh_prstore_direct_number(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+SHERMES_EXPORT void _sh_prstore_direct_object(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value);
+SHERMES_EXPORT void _sh_prstore_direct_string(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t propIndex,
@@ -771,7 +786,7 @@ static inline void _sh_prstore_bool(
     ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
         ->directProps[propIndex] = *value;
 #else
-    _sh_prstore_direct_np(shr, target, propIndex, value);
+    _sh_prstore_direct_bool(shr, target, propIndex, value);
 #endif
   } else {
     _sh_prstore_indirect(
@@ -792,7 +807,7 @@ static inline void _sh_prstore_number(
     ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
         ->directProps[propIndex] = *value;
 #else
-    _sh_prstore_direct(shr, target, propIndex, value);
+    _sh_prstore_direct_number(shr, target, propIndex, value);
 #endif
   } else {
     _sh_prstore_indirect(
@@ -809,7 +824,7 @@ static inline void _sh_prstore_object(
     SHLegacyValue *value) {
   assert(_sh_ljs_is_object(*value));
   if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
-    _sh_prstore_direct(shr, target, propIndex, value);
+    _sh_prstore_direct_object(shr, target, propIndex, value);
   } else {
     _sh_prstore_indirect(
         shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
@@ -825,7 +840,7 @@ static inline void _sh_prstore_string(
     SHLegacyValue *value) {
   assert(_sh_ljs_is_string(*value));
   if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
-    _sh_prstore_direct(shr, target, propIndex, value);
+    _sh_prstore_direct_string(shr, target, propIndex, value);
   } else {
     _sh_prstore_indirect(
         shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
