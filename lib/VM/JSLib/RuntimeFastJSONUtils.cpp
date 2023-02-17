@@ -120,36 +120,58 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
 
   ondemand::json_type type;
   SIMDJSON_CALL(value.type().get(type));
+
+  MutableHandle<> returnValue{rt};
   switch (type) {
-    case ondemand::json_type::array: {
-      ondemand::array arrayValue;
-      SIMDJSON_CALL(value.get(arrayValue));
-      return parseArray(rt, arrayValue);
-    }
-    case ondemand::json_type::object: {
-      ondemand::object objectValue;
-      SIMDJSON_CALL(value.get(objectValue));
-      return parseObject(rt, objectValue);
-    }
-    case ondemand::json_type::number:
-      double doubleValue;
-      SIMDJSON_CALL(value.get(doubleValue));
-      return HermesValue::encodeDoubleValue(doubleValue);
     case ondemand::json_type::string: {
       std::string_view stringView;
       SIMDJSON_CALL(value.get(stringView));
       UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
-      return StringPrimitive::createEfficient(rt, hermesStr);
+      auto jsString = StringPrimitive::createEfficient(rt, hermesStr);
+      if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      returnValue = rt.makeHandle(*jsString);
+      break;
+    }
+    case ondemand::json_type::number:
+      double doubleValue;
+      SIMDJSON_CALL(value.get(doubleValue));
+      returnValue = HermesValue::encodeDoubleValue(doubleValue);
+      break;
+    case ondemand::json_type::object: {
+      ondemand::object objectValue;
+      SIMDJSON_CALL(value.get(objectValue));
+      auto jsObject = parseObject(rt, objectValue);
+      if (LLVM_UNLIKELY(jsObject == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      returnValue = *jsObject;
+      break;
+    }
+    case ondemand::json_type::array: {
+      ondemand::array arrayValue;
+      SIMDJSON_CALL(value.get(arrayValue));
+      auto jsArray = parseArray(rt, arrayValue);
+      if (LLVM_UNLIKELY(jsArray == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      returnValue = *jsArray;
+      break;
     }
     case ondemand::json_type::boolean:
       bool boolValue;
       SIMDJSON_CALL(value.get(boolValue));
-      return HermesValue::encodeBoolValue(boolValue);
+      returnValue = HermesValue::encodeBoolValue(boolValue);
+      break;
     case ondemand::json_type::null:
-      return HermesValue::encodeNullValue();
+      returnValue = HermesValue::encodeNullValue();
+      break;
     default:
       return ExecutionStatus::EXCEPTION;
   }
+
+  return returnValue.getHermesValue();
 }
 
 CallResult<HermesValue> runtimeFastJSONParse(
