@@ -81,7 +81,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 
   auto jsObject = rt.makeHandle(JSObject::create(rt));
 
-  // MutableHandle<StringPrimitive> jsKeyHandle{rt};
+  MutableHandle<> jsKeyHandle{rt};
 
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
@@ -94,6 +94,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 
     UTF8Ref hermesStr{(const uint8_t*)key.data(), key.size()};
     auto jsKey = StringPrimitive::createEfficient(rt, hermesStr);
+    jsKeyHandle = rt.makeHandle(*jsKey);
 
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
@@ -106,7 +107,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     (void)JSObject::defineOwnComputedPrimitive(
           jsObject,
           rt,
-          rt.makeHandle(*jsKey),
+          jsKeyHandle,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           rt.makeHandle(*jsValue));
   }
