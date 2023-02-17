@@ -68,7 +68,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 
   auto jsObject = rt.makeHandle(JSObject::create(rt));
 
-  MutableHandle<StringPrimitive> jsKeyHandle{rt};
+  // MutableHandle<StringPrimitive> jsKeyHandle{rt};
 
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
@@ -145,8 +145,23 @@ CallResult<HermesValue> runtimeFastJSONParse(
 
   // TODO: Error handling
   // TODO: Support UTF-16
-  auto asciiRef = jsonString->getStringRef<char>();
-  auto json = padded_string(asciiRef.data(), asciiRef.size());
+
+  // auto asciiRef = jsonString->getStringRef<char>();
+  // auto json = padded_string(asciiRef.data(), asciiRef.size());
+
+  // TODO: Avoid copying so much?
+  UTF16Ref ref;
+  SmallU16String<32> storage;
+  if (LLVM_UNLIKELY(jsonString->isExternal() && !jsonString->isASCII())) {
+    ref = jsonString->getStringRef<char16_t>();
+  } else {
+    StringPrimitive::createStringView(runtime, jsonString)
+        .appendUTF16String(storage);
+    ref = storage;
+  }
+  std::string out;
+  convertUTF16ToUTF8WithReplacements(out, ref);
+  auto json = padded_string(out);
 
   ondemand::document doc;
   error = parser.iterate(json).get(doc);
