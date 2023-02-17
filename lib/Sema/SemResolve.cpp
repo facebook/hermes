@@ -7,6 +7,7 @@
 
 #include "hermes/Sema/SemResolve.h"
 
+#include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Support/PerfSection.h"
@@ -14,24 +15,53 @@
 namespace hermes {
 namespace sema {
 
+class AnnotateDecl final {
+  const flow::FlowContext &flowContext_;
+  flow::FlowTypesDumper &flowDumper_;
+
+ public:
+  AnnotateDecl(
+      const flow::FlowContext &flowContext,
+      flow::FlowTypesDumper &flowDumper)
+      : flowContext_(flowContext), flowDumper_(flowDumper) {}
+
+  void annotateDecl(llvh::raw_ostream &os, const Decl *decl) {
+    if (flow::Type *type = flowContext_.findDeclType(decl)) {
+      os << " : ";
+      flowDumper_.printTypeRef(os, type);
+    }
+  };
+};
+
 class ASTPrinter {
   llvh::raw_ostream &os_;
   SemContext &semCtx_;
   SemContextDumper &semDumper_;
+  flow::FlowTypesDumper *flowDumper_;
+  const flow::FlowContext *flowContext_;
   unsigned depth_ = 0;
 
  public:
   ASTPrinter(
       llvh::raw_ostream &os,
       SemContext &semCtx,
-      SemContextDumper &semDumper)
-      : os_(os), semCtx_(semCtx), semDumper_(semDumper) {}
+      SemContextDumper &semDumper,
+      flow::FlowTypesDumper *flowDumper = nullptr,
+      const flow::FlowContext *flowContext = nullptr)
+      : os_(os),
+        semCtx_(semCtx),
+        semDumper_(semDumper),
+        flowDumper_(flowDumper),
+        flowContext_(flowContext) {}
 
   void run(ESTree::Node *root) {
     ESTree::ESTreeVisit(*this, root);
     os_ << "\n";
   }
 
+  bool shouldVisit(ESTree::TypeAnnotationNode *V) {
+    return false;
+  }
   bool shouldVisit(ESTree::Node *V) {
     return true;
   }
@@ -88,43 +118,82 @@ class ASTPrinter {
     }
   }
 
-  void printNodeType(ESTree::Node *n) {}
+  void printNodeType(ESTree::Node *n) {
+    if (!flowDumper_)
+      return;
+    if (auto *type = nodeType(n)) {
+      os_ << " : ";
+      flowDumper_->printTypeRef(os_, type);
+    }
+  }
+
+  flow::Type *nodeType(ESTree::Node *n) const {
+    return flowContext_ ? flowContext_->findNodeType(n) : nullptr;
+  }
 };
 
 bool resolveAST(
     Context &astContext,
     SemContext &semCtx,
+    flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, ambientDecls, true};
-  return resolver.run(root);
+  DeclCollectorMapTy declCollectorMap{};
+  SemanticResolver resolver{
+      astContext, semCtx, ambientDecls, &declCollectorMap, true};
+  if (!resolver.run(root))
+    return false;
+
+  return true;
 }
 
 bool resolveCommonJSAST(
     Context &astContext,
     SemContext &semCtx,
+    flow::FlowContext *flowContext,
     ESTree::FunctionExpressionNode *root) {
   PerfSection validation("Resolving JavaScript CommonJS Module AST");
-  // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, {}, true};
+  DeclCollectorMapTy declCollectorMap{};
+  SemanticResolver resolver{astContext, semCtx, {}, &declCollectorMap, true};
   return resolver.runCommonJSModule(root);
 }
 
-void semDump(llvh::raw_ostream &os, SemContext &semCtx, ESTree::Node *root) {
-  SemContextDumper semDumper;
-  semDumper.printSemContext(os, semCtx);
-  os << '\n';
-  ASTPrinter ap(os, semCtx, semDumper);
-  ap.run(root);
+void semDump(
+    llvh::raw_ostream &os,
+    SemContext &semCtx,
+    flow::FlowContext *flowContext,
+    ESTree::Node *root) {
+  if (!flowContext) {
+    SemContextDumper semDumper;
+    semDumper.printSemContext(os, semCtx);
+    os << '\n';
+    ASTPrinter ap(os, semCtx, semDumper);
+    ap.run(root);
+  } else {
+    flow::FlowTypesDumper flowDumper{};
+    flowDumper.printAllTypes(os, *flowContext);
+    os << '\n';
+
+    AnnotateDecl annotateDecl(*flowContext, flowDumper);
+    SemContextDumper semDumper(
+        [&annotateDecl](llvh::raw_ostream &os, const Decl *decl) {
+          annotateDecl.annotateDecl(os, decl);
+        });
+
+    semDumper.printSemContext(os, semCtx);
+    os << '\n';
+    ASTPrinter ap(os, semCtx, semDumper, &flowDumper, flowContext);
+    ap.run(root);
+  }
 }
 
 bool resolveASTForParser(
     Context &astContext,
     SemContext &semCtx,
     ESTree::Node *root) {
-  SemanticResolver resolver{astContext, semCtx, {}, false};
+  SemanticResolver resolver{astContext, semCtx, {}, nullptr, false};
   return resolver.run(llvh::cast<ESTree::ProgramNode>(root));
 }
 

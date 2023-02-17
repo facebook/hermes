@@ -8,6 +8,8 @@
 #ifndef HERMES_SEMA_SEMRESOLVE_H
 #define HERMES_SEMA_SEMRESOLVE_H
 
+#include "hermes/Sema/FlowContext.h"
+
 #include <vector>
 
 namespace llvh {
@@ -32,17 +34,42 @@ class SemContext;
 
 /// Perform semantic resolution of the entire AST, starting from the specified
 /// root, which should be ProgramNode.
+///
+/// \param flowContext if nonnull, perform Flow type checking using that type
+///     container.
 /// \return true on success, false if errors were reported.
 bool resolveAST(
     Context &astContext,
     SemContext &semCtx,
+    flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls = {});
 
+/// Perform semantic resolution of the entire AST, starting from the specified
+/// root, which should be ProgramNode.
+/// \return true on success, false if errors were reported.
+inline bool resolveAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::ProgramNode *root,
+    const DeclarationFileListTy &ambientDecls = {}) {
+  return resolveAST(astContext, semCtx, nullptr, root, ambientDecls);
+}
+
+/// Perform semantic resolution of a CommonJS module.
 bool resolveCommonJSAST(
     Context &astContext,
     SemContext &semCtx,
+    flow::FlowContext *flowContext,
     ESTree::FunctionExpressionNode *root);
+
+/// Perform semantic resolution of a CommonJS module.
+inline bool resolveCommonJSAST(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::FunctionExpressionNode *root) {
+  return resolveCommonJSAST(astContext, semCtx, nullptr, root);
+}
 
 /// Perform semantic resolution of the entire AST, without preparing the AST for
 /// compilation. This will not error on features we can parse but not compile,
@@ -53,8 +80,13 @@ bool resolveASTForParser(
     SemContext &semCtx,
     ESTree::Node *root);
 
-/// Dump the state of SemContext and the annotated AST.
-void semDump(llvh::raw_ostream &os, SemContext &semCtx, ESTree::Node *root);
+/// Dump the state of the SemContext and optionally the Flow context, and print
+/// the annotated AST.
+void semDump(
+    llvh::raw_ostream &os,
+    SemContext &semCtx,
+    flow::FlowContext *flowContext,
+    ESTree::Node *root);
 
 } // namespace sema
 } // namespace hermes
