@@ -18,7 +18,6 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SegmentInfo.h"
 
 #include "llvh/Support/MathExtras.h"

@@ -9,6 +9,7 @@
 #define HERMES_VM_HERMESVALUE_H
 
 #include "hermes/Support/Conversions.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/sh_legacy_value.h"
@@ -35,7 +36,6 @@ template <typename T>
 class PseudoHandle;
 
 // Only used for HV32 API compatibility.
-class PointerBase;
 class GCCell;
 class Runtime;
 

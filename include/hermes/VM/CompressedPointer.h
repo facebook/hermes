@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_COMPRESSEDPOINTER_H
 #define HERMES_VM_COMPRESSEDPOINTER_H
 
-#include "hermes/VM/PointerBase.h"
+#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/sh_runtime.h"
 
 #include "llvh/Support/MathExtras.h"
@@ -17,6 +17,7 @@ namespace hermes {
 namespace vm {
 
 class GCCell;
+using PointerBase = SHRuntime;
 
 class CompressedPointer : private SHCompressedPointer {
  public:

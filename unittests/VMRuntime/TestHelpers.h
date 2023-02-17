@@ -18,7 +18,6 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/Operations.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StorageProvider.h"
@@ -257,7 +256,7 @@ inline HermesValue operator"" _hd(long double d) {
 }
 
 /// A minimal Runtime for GC tests.
-class DummyRuntime final : public HandleRootOwner, public PointerBase {
+class DummyRuntime final : public HandleRootOwner, public RuntimeBase {
  private:
   GCBase::GCCallbacksWrapper<DummyRuntime> gcCallbacksWrapper_;
   GCStorage gcStorage_;
@@ -355,10 +354,6 @@ class DummyRuntime final : public HandleRootOwner, public PointerBase {
 
   const inst::Inst *getCurrentIPSlow() const {
     return nullptr;
-  }
-
-  void registerHeapSegment(unsigned idx, void *lowLim) {
-    setSegment(idx, lowLim);
   }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

@@ -14,7 +14,6 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/LimitedStorageProvider.h"
-#include "hermes/VM/PointerBase.h"
 
 #include <deque>
 

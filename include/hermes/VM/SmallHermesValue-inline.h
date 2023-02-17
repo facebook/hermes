@@ -14,7 +14,6 @@
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/BoxedDouble.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {

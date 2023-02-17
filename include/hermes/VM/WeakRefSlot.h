@@ -12,7 +12,6 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCConcurrency.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/WeakRoot.h"
 
 namespace hermes {

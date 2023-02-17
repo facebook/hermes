@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_ROOTANDSLOTACCEPTORDEFAULT_H
 #define HERMES_VM_ROOTANDSLOTACCEPTORDEFAULT_H
 
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/WeakRef.h"
 #include "hermes/VM/WeakRoot.h"

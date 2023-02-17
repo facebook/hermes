@@ -9,7 +9,6 @@
 #define HERMES_VM_SLOTACCEPTOR_H
 
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/SymbolID.h"
 

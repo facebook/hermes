@@ -205,6 +205,23 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       .getStatus();
 }
 
+RuntimeBase::RuntimeBase() {
+#if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
+  // Initialize the 0 entry in the segment map to be nullptr.
+  segmentMap[0] = nullptr;
+#endif
+}
+
+void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
+#if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
+  char *bias =
+      reinterpret_cast<char *>(lowLim) - (idx << AlignedStorage::kLogSize);
+  segmentMap[idx] = bias;
+#endif
+  assert(lowLim == AlignedStorage::start(lowLim) && "Precondition");
+  SegmentInfo::setSegmentIndexFromStart(lowLim, idx);
+}
+
 Runtime::Runtime(
     std::shared_ptr<StorageProvider> provider,
     const RuntimeConfig &runtimeConfig)
@@ -862,10 +879,6 @@ void Runtime::unmarkSymbols() {
 
 void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
-}
-
-void Runtime::registerHeapSegment(unsigned idx, void *lowLim) {
-  setSegment(idx, lowLim);
 }
 
 #ifdef HERMES_SLOW_DEBUG

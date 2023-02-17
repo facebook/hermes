@@ -12,7 +12,6 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SlotAcceptor.h"
 
 #include "llvh/Support/raw_ostream.h"

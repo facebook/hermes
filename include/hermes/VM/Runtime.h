@@ -26,7 +26,6 @@
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
-#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
@@ -194,9 +193,21 @@ using CrashTrace = CrashTraceImpl;
 using CrashTrace = CrashTraceNoop;
 #endif
 
+/// Wrap SHRuntime in a C++ class, which we can use to implement C++
+/// functionality that should logically live in SHRuntime. For example, this
+/// ensures SHRuntime's fields are initialized before anything else in Runtime.
+class RuntimeBase : public SHRuntime {
+ protected:
+  RuntimeBase();
+
+ public:
+  /// See documentation on \c GCBase::GCCallbacks.
+  void registerHeapSegment(unsigned idx, void *lowLim);
+};
+
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
-class Runtime : public PointerBase, public HandleRootOwner {
+class Runtime : public RuntimeBase, public HandleRootOwner {
  public:
   static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig);
 
@@ -998,9 +1009,6 @@ class Runtime : public PointerBase, public HandleRootOwner {
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols.
   void freeSymbols(const llvh::BitVector &markedSymbols);
-
-  /// See documentation on \c GCBase::GCCallbacks.
-  void registerHeapSegment(unsigned idx, void *lowLim);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

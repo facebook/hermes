@@ -11,7 +11,6 @@
 #include "hermes/VM/GCPointer.h"
 
 #include "hermes/VM/GC.h"
-#include "hermes/VM/PointerBase.h"
 
 namespace hermes {
 namespace vm {
