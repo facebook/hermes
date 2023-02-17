@@ -758,26 +758,74 @@ static inline void _sh_prstore(
   }
 }
 
-/// Store a non-pointer property into direct or indirect storage depending on
-/// its index.
-static inline void _sh_prstore_np(
+/// Store a bool property into direct or indirect storage depending on its
+/// index.
+static inline void _sh_prstore_bool(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t propIndex,
     SHLegacyValue *value) {
-  assert(
-      !_sh_ljs_is_pointer(*value) &&
-      "_sh_prstore_np() invoked with a pointer value");
+  assert(_sh_ljs_is_bool(*value));
   if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
 #ifndef HERMESVM_BOXED_DOUBLES
     ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
         ->directProps[propIndex] = *value;
 #else
-    // When boxed doubles are enabled, numbers can also be pointers, so treat
-    // everything as a pointer. This is a temporary measure, until we encode
-    // finer grain type information.
+    _sh_prstore_direct_np(shr, target, propIndex, value);
+#endif
+  } else {
+    _sh_prstore_indirect(
+        shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
+  }
+}
+
+/// Store a number property into direct or indirect storage depending on its
+/// index.
+static inline void _sh_prstore_number(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_double(*value));
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+#ifndef HERMESVM_BOXED_DOUBLES
+    ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(*target))
+        ->directProps[propIndex] = *value;
+#else
     _sh_prstore_direct(shr, target, propIndex, value);
 #endif
+  } else {
+    _sh_prstore_indirect(
+        shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
+  }
+}
+
+/// Store an object property into direct or indirect storage depending on its
+/// index.
+static inline void _sh_prstore_object(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_object(*value));
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+    _sh_prstore_direct(shr, target, propIndex, value);
+  } else {
+    _sh_prstore_indirect(
+        shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);
+  }
+}
+
+/// Store a string property into direct or indirect storage depending on its
+/// index.
+static inline void _sh_prstore_string(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    uint32_t propIndex,
+    SHLegacyValue *value) {
+  assert(_sh_ljs_is_string(*value));
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+    _sh_prstore_direct(shr, target, propIndex, value);
   } else {
     _sh_prstore_indirect(
         shr, target, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS, value);

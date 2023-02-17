@@ -1569,7 +1569,18 @@ class InstrGen {
   }
   void generatePrStoreInst(PrStoreInst &inst) {
     os_.indent(2);
-    os_ << "_sh_prstore" << (inst.getNonPointer() ? "_np" : "") << "(shr, ";
+    const char *suffix = "";
+    Type propType = inst.getStoredValue()->getType();
+    if (propType.isNumberType()) {
+      suffix = "_number";
+    } else if (propType.isBooleanType()) {
+      suffix = "_boolean";
+    } else if (propType.isObjectType()) {
+      suffix = "_object";
+    } else if (propType.isStringType()) {
+      suffix = "_string";
+    }
+    os_ << "_sh_prstore" << suffix << "(shr, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ", " << inst.getPropIndex() << ", ";
     generateRegisterPtr(*inst.getStoredValue());
