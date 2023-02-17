@@ -71,7 +71,7 @@ The primary binary is the `hermes` tool, which will be found at `build/bin/herme
 
 To run the Hermes test suite:
 
-    ninja check-hermes
+    cmake --build ./build --target check-hermes
 
 To run Hermes against the test262 suite, you need to have a Hermes binary built
 already and a clone of the [test262 repo](https://github.com/tc39/test262/):
