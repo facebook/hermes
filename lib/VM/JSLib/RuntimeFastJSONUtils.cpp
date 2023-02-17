@@ -38,7 +38,13 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
 
   uint32_t index = 0;
   MutableHandle<> indexValue{rt};
+
+  GCScope gcScope{rt};
+  auto marker = gcScope.createMarker();
+
   for (auto valueRes : array) {
+    gcScope.flushToMarker(marker);
+
     ondemand::value value;
     error = valueRes.get(value);
     auto jsValue = parseValue(rt, value);
@@ -63,7 +69,13 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
   auto jsObject = rt.makeHandle(JSObject::create(rt));
 
   MutableHandle<StringPrimitive> jsKeyHandle{rt};
+
+  GCScope gcScope{rt};
+  auto marker = gcScope.createMarker();
+
   for (auto field : object) {
+    gcScope.flushToMarker(marker);
+
     std::string_view key;
     error = field.unescaped_key().get(key);
 
@@ -132,7 +144,6 @@ CallResult<HermesValue> runtimeFastJSONParse(
   simdjson::error_code error;
 
   // TODO: Error handling
-  // TODO: GC safety?
   // TODO: Support UTF-16
   auto asciiRef = jsonString->getStringRef<char>();
   auto json = padded_string(asciiRef.data(), asciiRef.size());
