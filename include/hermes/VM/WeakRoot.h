@@ -29,7 +29,6 @@ class WeakRootBase : protected CompressedPointer {
   inline GCCell *getNonNull(PointerBase &base, GC &gc) const;
 
  public:
-  using CompressedPointer::StorageType;
   using CompressedPointer::operator bool;
   using CompressedPointer::operator!=;
   using CompressedPointer::operator==;

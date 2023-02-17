@@ -9,6 +9,7 @@
 #define HERMES_VM_COMPRESSEDPOINTER_H
 
 #include "hermes/VM/PointerBase.h"
+#include "hermes/VM/sh_runtime.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -17,41 +18,33 @@ namespace vm {
 
 class GCCell;
 
-class CompressedPointer {
+class CompressedPointer : private SHCompressedPointer {
  public:
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  using StorageType = BasedPointer;
-  using RawType = BasedPointer::StorageType;
-#else
-  using StorageType = GCCell *;
-  using RawType = uintptr_t;
-#endif
+  using RawType = decltype(raw);
 
   explicit CompressedPointer() = default;
-  constexpr explicit CompressedPointer(std::nullptr_t) : ptr_() {}
+  constexpr explicit CompressedPointer(std::nullptr_t)
+      : SHCompressedPointer() {}
 
   static CompressedPointer fromRaw(RawType r) {
     return CompressedPointer(r);
   }
 
   static CompressedPointer encode(GCCell *ptr, PointerBase &base) {
-    return CompressedPointer(pointerToStorageType(ptr, base));
+    return {_sh_cp_encode((SHRuntime *)&base, ptr)};
   }
   static CompressedPointer encodeNonNull(GCCell *ptr, PointerBase &base) {
-    return CompressedPointer(pointerToStorageTypeNonNull(ptr, base));
+    assert(ptr && "Pointer must be non-null.");
+    return {_sh_cp_encode_non_null((SHRuntime *)&base, ptr)};
   }
 
   GCCell *get(PointerBase &base) const {
-    return storageTypeToPointer(ptr_, base);
+    return (GCCell *)_sh_cp_decode((SHRuntime *)&base, *this);
   }
 
   GCCell *getNonNull(PointerBase &base) const {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    return reinterpret_cast<GCCell *>(base.basedToPointerNonNull(ptr_));
-#else
-    (void)base;
-    return ptr_;
-#endif
+    assert(*this && "Pointer must be non-null.");
+    return (GCCell *)_sh_cp_decode_non_null((SHRuntime *)&base, *this);
   }
 
   void setInGC(CompressedPointer cp) {
@@ -59,11 +52,11 @@ class CompressedPointer {
   }
 
   explicit operator bool() const {
-    return static_cast<bool>(ptr_);
+    return static_cast<bool>(raw);
   }
 
   bool operator==(const CompressedPointer &other) const {
-    return ptr_ == other.ptr_;
+    return raw == other.raw;
   }
 
   bool operator!=(const CompressedPointer &other) const {
@@ -71,7 +64,7 @@ class CompressedPointer {
   }
 
   RawType getRaw() const {
-    return storageTypeToRaw(ptr_);
+    return raw;
   }
 
   CompressedPointer getSegmentStart() const {
@@ -94,52 +87,12 @@ class CompressedPointer {
 
  protected:
   void setNoBarrier(CompressedPointer cp) {
-    ptr_ = cp.ptr_;
+    raw = cp.raw;
   }
 
  private:
-  explicit CompressedPointer(RawType r) : ptr_(rawToStorageType(r)) {}
-  explicit CompressedPointer(StorageType s) : ptr_(s) {}
-
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  static BasedPointer::StorageType storageTypeToRaw(StorageType st) {
-    return st.getRawValue();
-  }
-  static StorageType rawToStorageType(BasedPointer::StorageType raw) {
-    return BasedPointer{raw};
-  }
-  static StorageType pointerToStorageType(GCCell *ptr, PointerBase &base) {
-    return base.pointerToBased(ptr);
-  }
-  static StorageType pointerToStorageTypeNonNull(
-      GCCell *ptr,
-      PointerBase &base) {
-    return base.pointerToBasedNonNull(ptr);
-  }
-  static GCCell *storageTypeToPointer(StorageType st, PointerBase &base) {
-    return reinterpret_cast<GCCell *>(base.basedToPointer(st));
-  }
-#else
-  static uintptr_t storageTypeToRaw(StorageType st) {
-    return reinterpret_cast<uintptr_t>(st);
-  }
-  static StorageType rawToStorageType(uintptr_t st) {
-    return reinterpret_cast<StorageType>(st);
-  }
-  static StorageType pointerToStorageType(GCCell *ptr, PointerBase &) {
-    return ptr;
-  }
-  static StorageType pointerToStorageTypeNonNull(
-      GCCell *ptr,
-      PointerBase &base) {
-    return ptr;
-  }
-  static GCCell *storageTypeToPointer(StorageType st, PointerBase &) {
-    return st;
-  }
-#endif
-
-  StorageType ptr_;
+  explicit CompressedPointer(RawType r) : SHCompressedPointer{r} {}
+  CompressedPointer(SHCompressedPointer c) : CompressedPointer(c.raw) {}
 };
 
 static_assert(
