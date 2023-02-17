@@ -1559,6 +1559,22 @@ class InstrGen {
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
     unimplemented(inst);
   }
+  void generatePrLoadInst(PrLoadInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    os_ << "_sh_prload(shr, ";
+    generateRegister(*inst.getObject());
+    os_ << ", " << inst.getPropIndex() << ");\n";
+  }
+  void generatePrStoreInst(PrStoreInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_prstore" << (inst.getNonPointer() ? "_np" : "") << "(shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", " << inst.getPropIndex() << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ");\n";
+  }
 };
 
 /// Converts Function \p F into valid C code and outputs it through \p OS.

@@ -813,3 +813,24 @@ Example | %0 = HBCCallNInst %callee, %this, %arg0, %arg1, %arg2
 Arguments | %callee is the function to execute. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
 Semantics | The instruction copies its arguments (starting from this) into the parameter-passing registers at the end of the frame, and passes the control to the callee, which must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
+
+### prload
+
+| prload      | _                                                                                                                                                                     |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Description | Load a typed object property by index                                                                                                                                 |
+| Example     | `%0 = prload (:type) %object, %propIndex, %propName`                                                                                                                  |
+| Arguments   | %object is the object to load from. %propIndex is the property index. %propName is the property name (which isn't actually used). `type` is the type of the property. |
+| Semantics   | Load the property without any checking.                                                                                                                               |
+| Effects     | May read memory.                                                                                                                                                      |
+
+### prstore
+
+| prstore     | _                                                                                                                                                                                                                                                                                                                         |
+|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Description | Store a typed object property by index                                                                                                                                                                                                                                                                                    |
+| Example     | `prstore %value, %object, %propIndex, %propName, %nonPointer`                                                                                                                                                                                                                                                             |
+| Arguments   | `%value` is the value to store. `%object` is the object to store into. `%propIndex` is the property index. `%propName` is the property name (which isn't actually used). `%nonPointer` is a boolean indicating whether the property is a non-pointer type (meaning that both the old and the new value are not pointers). |
+| Semantics   | Store the property without any checking.                                                                                                                                                                                                                                                                                  |
+| Effects     | May read memory.                                                                                                                                                                                                                                                                                                          |
+

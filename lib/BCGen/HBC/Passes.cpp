@@ -216,8 +216,21 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
 
   if (llvh::isa<GetTemplateObjectInst>(Inst) &&
       (opIndex == GetTemplateObjectInst::TemplateObjIDIdx ||
-       opIndex == GetTemplateObjectInst::DupIdx))
+       opIndex == GetTemplateObjectInst::DupIdx)) {
     return true;
+  }
+
+  if (llvh::isa<PrLoadInst>(Inst) &&
+      (opIndex == PrLoadInst::PropIndexIdx ||
+       opIndex == PrLoadInst::PropNameIdx)) {
+    return true;
+  }
+  if (llvh::isa<PrStoreInst>(Inst) &&
+      (opIndex == PrStoreInst::PropIndexIdx ||
+       opIndex == PrStoreInst::PropNameIdx ||
+       opIndex == PrStoreInst::NonPointerIdx)) {
+    return true;
+  }
 
   return false;
 }

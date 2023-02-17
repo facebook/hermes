@@ -229,6 +229,9 @@ DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)
 #endif
 
+DEF_VALUE(PrLoadInst, Instruction)
+DEF_VALUE(PrStoreInst, Instruction)
+
 #undef INCLUDE_HBC_BACKEND
 
 // Don't undef these if this file is being included in ValueKinds.def, since

@@ -1030,6 +1030,33 @@ UnreachableInst *IRBuilder::createUnreachableInst() {
   return I;
 }
 
+PrLoadInst *IRBuilder::createPrLoadInst(
+    Value *object,
+    size_t propIndex,
+    LiteralString *propName,
+    Type checkedType) {
+  auto *I = new PrLoadInst(
+      object, getLiteralNumber((double)propIndex), propName, checkedType);
+  insert(I);
+  return I;
+}
+
+PrStoreInst *IRBuilder::createPrStoreInst(
+    Value *storedValue,
+    Value *object,
+    size_t propIndex,
+    LiteralString *propName,
+    bool nonPointer) {
+  auto *I = new PrStoreInst(
+      storedValue,
+      object,
+      getLiteralNumber((double)propIndex),
+      propName,
+      getLiteralBool(nonPointer));
+  insert(I);
+  return I;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

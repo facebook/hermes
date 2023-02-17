@@ -865,6 +865,9 @@ void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
 
 void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 
+void Verifier::visitPrLoadInst(const PrLoadInst &Inst) {}
+void Verifier::visitPrStoreInst(const PrStoreInst &Inst) {}
+
 } // namespace
 
 #endif

@@ -4079,6 +4079,110 @@ class UnreachableInst : public Instruction {
   }
 };
 
+class PrLoadInst : public Instruction {
+  // TODO: remove checkedType_ when TypeInference starts preserving it.
+  /// Type provided by the type checker.
+  Type const checkedType_;
+
+ public:
+  enum { ObjectIdx, PropIndexIdx, PropNameIdx };
+
+  explicit PrLoadInst(
+      Value *object,
+      LiteralNumber *propIndex,
+      LiteralString *propName,
+      Type checkedType)
+      : Instruction(ValueKind::PrLoadInstKind), checkedType_(checkedType) {
+    setType(checkedType);
+    pushOperand(object);
+    pushOperand(propIndex);
+    pushOperand(propName);
+  }
+  explicit PrLoadInst(const PrLoadInst *src, llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands), checkedType_(src->checkedType_) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::PrLoadInstKind;
+  }
+  static bool hasOutput() {
+    return true;
+  }
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::MayRead;
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Type getCheckedType() const {
+    return checkedType_;
+  }
+
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+  size_t getPropIndex() const {
+    return (size_t)llvh::cast<LiteralNumber>(getOperand(PropIndexIdx))
+        ->getValue();
+  }
+  LiteralString *getPropName() const {
+    return llvh::cast<LiteralString>(getOperand(PropNameIdx));
+  }
+};
+
+class PrStoreInst : public Instruction {
+ public:
+  enum { StoredValueIdx, ObjectIdx, PropIndexIdx, PropNameIdx, NonPointerIdx };
+
+  /// \param nonPointer set to true when we know that both the old and new
+  ///     value are non-pointers.
+  explicit PrStoreInst(
+      Value *storedValue,
+      Value *object,
+      LiteralNumber *propIndex,
+      LiteralString *propName,
+      LiteralBool *nonPointer)
+      : Instruction(ValueKind::PrStoreInstKind) {
+    pushOperand(storedValue);
+    pushOperand(object);
+    pushOperand(propIndex);
+    pushOperand(propName);
+    pushOperand(nonPointer);
+  }
+  explicit PrStoreInst(const PrStoreInst *src, llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::PrStoreInstKind;
+  }
+  static bool hasOutput() {
+    return false;
+  }
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::MayWrite;
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+  size_t getPropIndex() const {
+    return (size_t)llvh::cast<LiteralNumber>(getOperand(PropIndexIdx))
+        ->getValue();
+  }
+  LiteralString *getPropName() const {
+    return llvh::cast<LiteralString>(getOperand(PropNameIdx));
+  }
+  bool getNonPointer() const {
+    return llvh::cast<LiteralBool>(getOperand(NonPointerIdx))->getValue();
+  }
+};
+
 } // end namespace hermes
 
 #endif

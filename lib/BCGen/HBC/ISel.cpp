@@ -1663,6 +1663,15 @@ void HBCISel::generateSwitchImmInst(
   switchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
 }
 
+void HBCISel::generatePrLoadInst(PrLoadInst *inst, BasicBlock *) {
+  F_->getContext().getSourceErrorManager().error(
+      inst->getLocation(), inst->getKindStr() + " not implemented");
+}
+void HBCISel::generatePrStoreInst(PrStoreInst *inst, BasicBlock *) {
+  F_->getContext().getSourceErrorManager().error(
+      inst->getLocation(), inst->getKindStr() + " not implemented");
+}
+
 void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {
   // Register the address of the current basic block.
   auto begin_loc = BCFGen_->getCurrentLocation();
