@@ -203,7 +203,6 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
   ondemand::json_type type;
   SIMDJSON_CALL(value.type().get(type));
 
-  MutableHandle<> returnValue{rt};
   switch (type) {
     case ondemand::json_type::string: {
       std::string_view stringView;
@@ -212,15 +211,13 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       // if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
       //   return ExecutionStatus::EXCEPTION;
       // }
-      // returnValue = rt.makeHandle(*jsString);
-      returnValue = jsString;
-      break;
+      return jsString.getHermesValue();
     }
-    case ondemand::json_type::number:
+    case ondemand::json_type::number: {
       double doubleValue;
       SIMDJSON_CALL(value.get(doubleValue));
-      returnValue = HermesValue::encodeDoubleValue(doubleValue);
-      break;
+      return HermesValue::encodeDoubleValue(doubleValue);
+    }
     case ondemand::json_type::object: {
       ondemand::object objectValue;
       SIMDJSON_CALL(value.get(objectValue));
@@ -228,8 +225,7 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       if (LLVM_UNLIKELY(jsObject == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      returnValue = *jsObject;
-      break;
+      return jsObject;
     }
     case ondemand::json_type::array: {
       ondemand::array arrayValue;
@@ -238,22 +234,18 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       if (LLVM_UNLIKELY(jsArray == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      returnValue = *jsArray;
-      break;
+      return jsArray;
     }
-    case ondemand::json_type::boolean:
+    case ondemand::json_type::boolean: {
       bool boolValue;
       SIMDJSON_CALL(value.get(boolValue));
-      returnValue = HermesValue::encodeBoolValue(boolValue);
-      break;
+      return HermesValue::encodeBoolValue(boolValue);
+    }
     case ondemand::json_type::null:
-      returnValue = HermesValue::encodeNullValue();
-      break;
+      return HermesValue::encodeNullValue();
     default:
       return ExecutionStatus::EXCEPTION;
   }
-
-  return returnValue.getHermesValue();
 }
 
 CallResult<HermesValue> runtimeFastJSONParse(
