@@ -3358,7 +3358,7 @@ class ResumeGeneratorInst : public Instruction {
   }
 
   WordBitSet<> getChangedOperandsImpl() {
-    return {};
+    return WordBitSet<>{}.set(IsReturnIdx);
   }
 
   Value *getIsReturn() {
