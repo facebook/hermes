@@ -250,12 +250,12 @@ CallResult<HermesValue> runtimeFastJSONParse(
   auto commonStorage = rt.getCommonStorage();
 
   // TODO: Error handling
-  // TODO: Support UTF-16
 
   // auto asciiRef = jsonString->getStringRef<char>();
   // auto json = padded_string(asciiRef.data(), asciiRef.size());
 
-  // TODO: Avoid copying so much?
+  // NOTE: We need to copy (I think) because strings can move during GC
+  // but I'm not sure why we seemingly need to copy multiple times...
   UTF16Ref ref;
   SmallU16String<32> storage;
   if (LLVM_UNLIKELY(jsonString->isExternal() && !jsonString->isASCII())) {
@@ -265,10 +265,17 @@ CallResult<HermesValue> runtimeFastJSONParse(
         .appendUTF16String(storage);
     ref = storage;
   }
-  std::string out;
-  convertUTF16ToUTF8WithReplacements(out, ref);
-  auto json = padded_string(out);
 
+  // convert to utf8
+  auto utf8_expected_size = simdutf::utf8_length_from_utf16(ref.data(), ref.size());
+  std::unique_ptr<char[]> utf8_output{new char[utf8_expected_size]};
+  auto utf8_size = simdutf::convert_utf16_to_utf8(ref.data(), ref.size(), utf8_output.get());
+  if (!utf8_size) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // parse json
+  auto json = padded_string(utf8_output.get(), utf8_size);
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
