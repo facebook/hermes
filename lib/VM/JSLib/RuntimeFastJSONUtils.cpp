@@ -17,6 +17,7 @@
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/SaveAndRestore.h"
+#include "llvh/Support/ConvertUTF.h"
 
 #include "simdjson/src/simdjson.h"
 
@@ -37,9 +38,65 @@ namespace vm {
 template<typename T>
 CallResult<HermesValue> parseValue(Runtime &rt, T &value);
 
-CallResult<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
-  UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
-  return StringPrimitive::createEfficient(rt, hermesStr);
+// FIXME: Copy&paste from StringPrimitive
+static ExecutionStatus convertUtf8ToUtf16(
+    Runtime &runtime,
+    UTF8Ref utf8,
+    bool IgnoreInputErrors,
+    std::u16string &out) {
+  out.resize(utf8.size());
+  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8.data();
+  const llvh::UTF8 *sourceEnd = sourceStart + utf8.size();
+  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
+  llvh::UTF16 *targetEnd = targetStart + out.size();
+  llvh::ConversionResult cRes = llvh::ConvertUTF8toUTF16(
+      &sourceStart,
+      sourceEnd,
+      &targetStart,
+      targetEnd,
+      llvh::lenientConversion);
+  switch (cRes) {
+    case llvh::ConversionResult::sourceExhausted:
+      if (IgnoreInputErrors) {
+        break;
+      }
+      return runtime.raiseRangeError(
+          "Malformed UTF8 input: partial character in input");
+    case llvh::ConversionResult::sourceIllegal:
+      if (IgnoreInputErrors) {
+        break;
+      }
+      return runtime.raiseRangeError("Malformed UTF8 input: illegal sequence");
+    case llvh::ConversionResult::conversionOK:
+      break;
+    case llvh::ConversionResult::targetExhausted:
+      return runtime.raiseRangeError(
+          "Cannot allocate memory for UTF8 to UTF16 conversion.");
+  }
+
+  out.resize((char16_t *)targetStart - &out[0]);
+  return ExecutionStatus::RETURNED;
+}
+
+Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
+  UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
+
+  // std::u16string utf16str;
+  // convertUtf8ToUtf16(rt, utf8, true, utf16str);
+  // // TODO: check status
+  // std::u16string_view utf16strView(utf16str);
+  // UTF16Ref utf16{utf16strView.data(), utf16strView.size()};
+
+  // if (auto existing = rt.getIdentifierTable().getExistingStringPrimitiveOrNull(rt, utf16)) {
+  //   return rt.makeHandle(existing);
+  // }
+
+  auto string = StringPrimitive::createEfficient(rt, utf8);
+  // auto string = StringPrimitive::create(rt, utf16);
+  // if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
+  //   return ExecutionStatus::EXCEPTION;
+  // }
+  return rt.makeHandle(*string);
 }
 
 CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
@@ -98,11 +155,11 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
 
-    auto jsKey = parseString(rt, key);
-    if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    jsKeyHandle = rt.makeHandle(*jsKey);
+    jsKeyHandle = parseString(rt, key);
+    // if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
+    //   return ExecutionStatus::EXCEPTION;
+    // }
+    // jsKeyHandle = rt.makeHandle(*jsKey);
 
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
@@ -136,10 +193,11 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       std::string_view stringView;
       SIMDJSON_CALL(value.get(stringView));
       auto jsString = parseString(rt, stringView);
-      if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      returnValue = rt.makeHandle(*jsString);
+      // if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
+      //   return ExecutionStatus::EXCEPTION;
+      // }
+      // returnValue = rt.makeHandle(*jsString);
+      returnValue = jsString;
       break;
     }
     case ondemand::json_type::number:
