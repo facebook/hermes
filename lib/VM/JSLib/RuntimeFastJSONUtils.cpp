@@ -37,6 +37,11 @@ namespace vm {
 template<typename T>
 CallResult<HermesValue> parseValue(Runtime &rt, T &value);
 
+CallResult<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
+  UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
+  return StringPrimitive::createEfficient(rt, hermesStr);
+}
+
 CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   simdjson::error_code error;
 
@@ -93,8 +98,10 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
 
-    UTF8Ref hermesStr{(const uint8_t*)key.data(), key.size()};
-    auto jsKey = StringPrimitive::createEfficient(rt, hermesStr);
+    auto jsKey = parseString(rt, key);
+    if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     jsKeyHandle = rt.makeHandle(*jsKey);
 
     ondemand::value value;
@@ -128,8 +135,7 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
     case ondemand::json_type::string: {
       std::string_view stringView;
       SIMDJSON_CALL(value.get(stringView));
-      UTF8Ref hermesStr{(const uint8_t*)stringView.data(), stringView.size()};
-      auto jsString = StringPrimitive::createEfficient(rt, hermesStr);
+      auto jsString = parseString(rt, stringView);
       if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
