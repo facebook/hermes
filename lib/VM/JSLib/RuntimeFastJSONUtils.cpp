@@ -20,6 +20,7 @@
 #include "llvh/Support/ConvertUTF.h"
 
 #include "simdjson/src/simdjson.h"
+#include "simdutf/src/simdutf.h"
 
 using namespace simdjson;
 

@@ -172,6 +172,7 @@ set(link_libs
   hermesPublic
   dtoa
   simdjson
+  simdutf
 )
 
 if(HERMES_ENABLE_INTL)
