@@ -80,24 +80,39 @@ static ExecutionStatus convertUtf8ToUtf16(
 }
 
 Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
+  {
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
-
-  // std::u16string utf16str;
-  // convertUtf8ToUtf16(rt, utf8, true, utf16str);
-  // // TODO: check status
-  // std::u16string_view utf16strView(utf16str);
-  // UTF16Ref utf16{utf16strView.data(), utf16strView.size()};
-
-  // if (auto existing = rt.getIdentifierTable().getExistingStringPrimitiveOrNull(rt, utf16)) {
-  //   return rt.makeHandle(existing);
-  // }
-
   auto string = StringPrimitive::createEfficient(rt, utf8);
-  // auto string = StringPrimitive::create(rt, utf16);
   // if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
   //   return ExecutionStatus::EXCEPTION;
   // }
   return rt.makeHandle(*string);
+  }
+
+
+  // check if ascii
+  // TODO: Surprisingly, isAllASCII is faster (for small strings) than simdutf::validate_ascii?
+  if (isAllASCII(stringView.data(), stringView.data() + stringView.size())) {
+    ASCIIRef ascii{stringView.data(), stringView.size()};
+    auto string = StringPrimitive::createEfficient(rt, ascii);
+    return rt.makeHandle(*string);
+  }
+
+  // convert to utf16
+  auto utf16_expected_size = simdutf::utf16_length_from_utf8(stringView.data(), stringView.size());
+  std::unique_ptr<char16_t[]> utf16_output{new char16_t[utf16_expected_size]};
+  auto utf16_words = simdutf::convert_utf8_to_utf16(stringView.data(), stringView.size(), utf16_output.get());
+  // if (!utf16_words) {
+  //   return ExecutionStatus::EXCEPTION;
+  // }
+  UTF16Ref utf16{utf16_output.get(), utf16_words};
+  auto string = StringPrimitive::create(rt, utf16);
+  return rt.makeHandle(*string);
+
+
+  // if (auto existing = rt.getIdentifierTable().getExistingStringPrimitiveOrNull(rt, utf16)) {
+  //   return rt.makeHandle(existing);
+  // }
 }
 
 CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
