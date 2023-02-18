@@ -17,7 +17,6 @@
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/SaveAndRestore.h"
-#include "llvh/Support/ConvertUTF.h"
 
 #include "simdjson/src/simdjson.h"
 #include "simdutf/src/simdutf.h"
@@ -38,46 +37,6 @@ namespace vm {
 
 template<typename T>
 CallResult<HermesValue> parseValue(Runtime &rt, T &value);
-
-// FIXME: Copy&paste from StringPrimitive
-static ExecutionStatus convertUtf8ToUtf16(
-    Runtime &runtime,
-    UTF8Ref utf8,
-    bool IgnoreInputErrors,
-    std::u16string &out) {
-  out.resize(utf8.size());
-  const llvh::UTF8 *sourceStart = (const llvh::UTF8 *)utf8.data();
-  const llvh::UTF8 *sourceEnd = sourceStart + utf8.size();
-  llvh::UTF16 *targetStart = (llvh::UTF16 *)&out[0];
-  llvh::UTF16 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult cRes = llvh::ConvertUTF8toUTF16(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  switch (cRes) {
-    case llvh::ConversionResult::sourceExhausted:
-      if (IgnoreInputErrors) {
-        break;
-      }
-      return runtime.raiseRangeError(
-          "Malformed UTF8 input: partial character in input");
-    case llvh::ConversionResult::sourceIllegal:
-      if (IgnoreInputErrors) {
-        break;
-      }
-      return runtime.raiseRangeError("Malformed UTF8 input: illegal sequence");
-    case llvh::ConversionResult::conversionOK:
-      break;
-    case llvh::ConversionResult::targetExhausted:
-      return runtime.raiseRangeError(
-          "Cannot allocate memory for UTF8 to UTF16 conversion.");
-  }
-
-  out.resize((char16_t *)targetStart - &out[0]);
-  return ExecutionStatus::RETURNED;
-}
 
 Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
   {
