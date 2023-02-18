@@ -205,42 +205,44 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %5: any
 // CHECK-NEXT:  %21 = CondBranchInst %20: any, %BB5, %BB6
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %22 = IteratorNextInst (:any) %8: any, %9: any
-// CHECK-NEXT:  %23 = LoadStackInst (:any) %8: any
-// CHECK-NEXT:  %24 = BinaryStrictlyEqualInst (:any) %23: any, undefined: undefined
-// CHECK-NEXT:  %25 = StoreStackInst %24: any, %13: any
-// CHECK-NEXT:  %26 = CondBranchInst %24: any, %BB7, %BB8
+// CHECK-NEXT:  %22 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %23 = IteratorNextInst (:any) %8: any, %22: any
+// CHECK-NEXT:  %24 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:  %25 = BinaryStrictlyEqualInst (:any) %24: any, undefined: undefined
+// CHECK-NEXT:  %26 = StoreStackInst %25: any, %13: any
+// CHECK-NEXT:  %27 = CondBranchInst %25: any, %BB7, %BB8
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %27 = StoreStackInst %22: any, %15: any
-// CHECK-NEXT:  %28 = BranchInst %BB7
+// CHECK-NEXT:  %28 = StoreStackInst %23: any, %15: any
+// CHECK-NEXT:  %29 = BranchInst %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %29 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %30 = StoreFrameInst %29: any, [x]: any
-// CHECK-NEXT:  %31 = LoadStackInst (:any) %13: any
-// CHECK-NEXT:  %32 = CondBranchInst %31: any, %BB9, %BB10
+// CHECK-NEXT:  %30 = LoadStackInst (:any) %15: any
+// CHECK-NEXT:  %31 = StoreFrameInst %30: any, [x]: any
+// CHECK-NEXT:  %32 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:  %33 = CondBranchInst %32: any, %BB9, %BB10
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %33 = IteratorCloseInst (:any) %8: any, false: boolean
-// CHECK-NEXT:  %34 = BranchInst %BB9
+// CHECK-NEXT:  %34 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:  %35 = IteratorCloseInst (:any) %34: any, false: boolean
+// CHECK-NEXT:  %36 = BranchInst %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %35 = SaveAndYieldInst undefined: undefined, %BB4
+// CHECK-NEXT:  %37 = SaveAndYieldInst undefined: undefined, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %36 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %37 = AllocStackInst (:any) $?anon_8_isReturn: any
-// CHECK-NEXT:  %38 = SaveAndYieldInst %36: any, %BB11
+// CHECK-NEXT:  %38 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %39 = AllocStackInst (:any) $?anon_8_isReturn: any
+// CHECK-NEXT:  %40 = SaveAndYieldInst %38: any, %BB11
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %39 = ReturnInst (:any) %19: any
+// CHECK-NEXT:  %41 = ReturnInst (:any) %19: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %40 = ResumeGeneratorInst (:any) %37: any
-// CHECK-NEXT:  %41 = LoadStackInst (:any) %37: any
-// CHECK-NEXT:  %42 = CondBranchInst %41: any, %BB12, %BB13
+// CHECK-NEXT:  %42 = ResumeGeneratorInst (:any) %39: any
+// CHECK-NEXT:  %43 = LoadStackInst (:any) %39: any
+// CHECK-NEXT:  %44 = CondBranchInst %43: any, %BB12, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %43 = StoreFrameInst %40: any, [x]: any
-// CHECK-NEXT:  %44 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %45 = ReturnInst (:any) %44: any
+// CHECK-NEXT:  %45 = StoreFrameInst %42: any, [x]: any
+// CHECK-NEXT:  %46 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %47 = ReturnInst (:any) %46: any
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %46 = ReturnInst (:any) %40: any
+// CHECK-NEXT:  %48 = ReturnInst (:any) %42: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %47 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %49 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_?anon_0_simpleAsyncFE(): any

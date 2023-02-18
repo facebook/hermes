@@ -35,31 +35,34 @@ function foo(x) {
 // CHECK-NEXT:  %3 = StoreStackInst %0: any, %2: any
 // CHECK-NEXT:  %4 = IteratorBeginInst (:any) %2: any
 // CHECK-NEXT:  %5 = StoreStackInst %4: any, %1: any
-// CHECK-NEXT:  %6 = IteratorNextInst (:any) %1: any, %2: any
-// CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %8 = BinaryStrictlyEqualInst (:boolean) %7: any, undefined: undefined
-// CHECK-NEXT:  %9 = CondBranchInst %8: boolean, %BB1, %BB2
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:  %7 = IteratorNextInst (:any) %1: any, %6: any
+// CHECK-NEXT:  %8 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %9 = BinaryStrictlyEqualInst (:boolean) %8: any, undefined: undefined
+// CHECK-NEXT:  %10 = CondBranchInst %9: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = BranchInst %BB1
+// CHECK-NEXT:  %11 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = PhiInst (:any) undefined: undefined, %BB0, %6: any, %BB2
-// CHECK-NEXT:  %12 = CondBranchInst %8: boolean, %BB3, %BB4
+// CHECK-NEXT:  %12 = PhiInst (:any) undefined: undefined, %BB0, %7: any, %BB2
+// CHECK-NEXT:  %13 = CondBranchInst %9: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = IteratorNextInst (:any) %1: any, %2: any
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %15 = BinaryStrictlyEqualInst (:boolean) %14: any, undefined: undefined
-// CHECK-NEXT:  %16 = CondBranchInst %15: boolean, %BB3, %BB5
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:  %15 = IteratorNextInst (:any) %1: any, %14: any
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %17 = BinaryStrictlyEqualInst (:boolean) %16: any, undefined: undefined
+// CHECK-NEXT:  %18 = CondBranchInst %17: boolean, %BB3, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = BranchInst %BB3
+// CHECK-NEXT:  %19 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %18 = PhiInst (:any) undefined: undefined, %BB1, undefined: undefined, %BB4, %13: any, %BB5
-// CHECK-NEXT:  %19 = PhiInst (:boolean) %8: boolean, %BB1, %15: boolean, %BB4, %15: boolean, %BB5
-// CHECK-NEXT:  %20 = CondBranchInst %19: boolean, %BB6, %BB7
+// CHECK-NEXT:  %20 = PhiInst (:any) undefined: undefined, %BB1, undefined: undefined, %BB4, %15: any, %BB5
+// CHECK-NEXT:  %21 = PhiInst (:boolean) %9: boolean, %BB1, %17: boolean, %BB4, %17: boolean, %BB5
+// CHECK-NEXT:  %22 = CondBranchInst %21: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %21 = IteratorCloseInst (:any) %1: any, false: boolean
-// CHECK-NEXT:  %22 = BranchInst %BB6
+// CHECK-NEXT:  %23 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %24 = IteratorCloseInst (:any) %23: any, false: boolean
+// CHECK-NEXT:  %25 = BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %24 = CallInst (:any) %23: any, empty: any, empty: any, undefined: undefined, %11: any, %18: any
-// CHECK-NEXT:  %25 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, %12: any, %20: any
+// CHECK-NEXT:  %28 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
