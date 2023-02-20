@@ -10,10 +10,10 @@
 
 #include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
-#include "hermes/AST/Keywords.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Sema/FlowContext.h"
+#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -365,7 +365,7 @@ class ESTreeIRGen {
   /// The module we are constructing.
   Module *Mod;
   /// Keywords to avoid string content comparisons.
-  sem::Keywords kw_;
+  sema::Keywords kw_;
   /// Semantic resolution tables.
   sema::SemContext &semCtx_;
   /// Flow types context.

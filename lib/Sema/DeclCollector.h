@@ -8,8 +8,8 @@
 #ifndef HERMES_SEMA_DECLCOLLECTOR_H
 #define HERMES_SEMA_DECLCOLLECTOR_H
 
-#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 namespace hermes {
@@ -37,7 +37,7 @@ class DeclCollector {
   /// \return a DeclCollector which has collected all declarations in \p root.
   static std::unique_ptr<DeclCollector> run(
       ESTree::FunctionLikeNode *root,
-      const sem::Keywords &kw,
+      const sema::Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
@@ -127,7 +127,7 @@ class DeclCollector {
  private:
   explicit DeclCollector(
       ESTree::Node *root,
-      const sem::Keywords &kw,
+      const sema::Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded)
       : root_(root),
@@ -160,7 +160,7 @@ class DeclCollector {
   /// Root node for the collection.
   ESTree::Node *root_;
 
-  const sem::Keywords &kw_;
+  const sema::Keywords &kw_;
 
   /// The remaining recursion depth, decremented at every level, until it
   /// reaches 0, when we report an error and stop modifying it.

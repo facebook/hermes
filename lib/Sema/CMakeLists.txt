@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesSema
+    Keywords.cpp
     SemContext.cpp
     SemResolve.cpp
     SemanticResolver.cpp SemanticResolver.h

@@ -12,9 +12,9 @@
 
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/Context.h"
-#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Sema/FlowContext.h"
+#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 namespace hermes {
@@ -41,7 +41,7 @@ class FlowChecker {
   const sema::DeclCollectorMapTy &declCollectorMap_;
 
   /// Keywords we will be checking for.
-  hermes::sem::Keywords kw_;
+  hermes::sema::Keywords kw_;
 
   struct TypeDecl {
     /// nullptr is used to indicate a forward declaration. This is a temporary

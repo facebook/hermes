@@ -10,8 +10,8 @@
 
 #include "hermes/AST/SemValidate.h"
 
-#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Sema/Keywords.h"
 
 namespace hermes {
 namespace sem {

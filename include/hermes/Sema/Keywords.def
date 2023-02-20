@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+#ifndef HERMES_KEYWORD
+#error "HERMES_KEYWORD(name, string) must be defined"
+#endif
+
+HERMES_KEYWORD(Arguments, "arguments")
+HERMES_KEYWORD(Eval, "eval")
+HERMES_KEYWORD(Delete, "delete")
+HERMES_KEYWORD(This, "this")
+HERMES_KEYWORD(UseStrict, "use strict")
+HERMES_KEYWORD(ShowSource, "show source")
+HERMES_KEYWORD(HideSource, "hide source")
+HERMES_KEYWORD(Sensitive, "sensitive")
+HERMES_KEYWORD(Var, "var")
+HERMES_KEYWORD(Let, "let")
+HERMES_KEYWORD(Const, "const")
+HERMES_KEYWORD(Plus, "+")
+HERMES_KEYWORD(Minus, "-")
+HERMES_KEYWORD(Assign, "=")
+HERMES_KEYWORD(New, "new")
+HERMES_KEYWORD(Target, "target")
+HERMES_KEYWORD(Typeof, "typeof")
+HERMES_KEYWORD(Constructor, "constructor")
+HERMES_KEYWORD(Length, "length")
+
+#undef HERMES_KEYWORD

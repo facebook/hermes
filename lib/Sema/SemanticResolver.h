@@ -10,8 +10,8 @@
 
 #include "DeclCollector.h"
 #include "hermes/ADT/ScopedHashTable.h"
-#include "hermes/AST/Keywords.h"
 #include "hermes/AST/RecursiveVisitor.h"
+#include "hermes/Sema/Keywords.h"
 
 namespace hermes {
 
@@ -39,7 +39,7 @@ class SemanticResolver {
   SemContext &semCtx_;
 
   /// Keywords we will be checking for.
-  hermes::sem::Keywords kw_;
+  hermes::sema::Keywords kw_;
 
   /// A list of parsed files containing global ambient declarations that should
   /// be inserted in the global scope.
@@ -134,7 +134,7 @@ class SemanticResolver {
   bool runCommonJSModule(ESTree::FunctionExpressionNode *rootNode);
 
   /// \return a reference to the keywords struct.
-  const sem::Keywords &keywords() const {
+  const sema::Keywords &keywords() const {
     return kw_;
   }
 

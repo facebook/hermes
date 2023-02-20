@@ -14,7 +14,7 @@ namespace sema {
 
 /* static */ std::unique_ptr<DeclCollector> DeclCollector::run(
     ESTree::FunctionLikeNode *root,
-    const sem::Keywords &kw,
+    const sema::Keywords &kw,
     unsigned recursionDepth,
     const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
   std::unique_ptr<DeclCollector> dc(

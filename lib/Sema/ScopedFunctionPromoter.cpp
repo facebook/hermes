@@ -9,7 +9,7 @@
 
 #include "SemanticResolver.h"
 #include "hermes/AST/ESTree.h"
-#include "hermes/AST/Keywords.h"
+#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 using namespace hermes::ESTree;
