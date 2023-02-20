@@ -849,7 +849,7 @@ static CallResult<bool> compareBigIntAndString(
     bool (*comparator)(int)) {
   assert(rightHandle->isString() && "rhs should be string");
 
-  auto bigintRight = stringToBigInt_RJS(runtime, rightHandle);
+  auto bigintRight = stringToBigInt(runtime, rightHandle);
   if (LLVM_UNLIKELY(bigintRight == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1080,7 +1080,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       // 6. If Type(x) is BigInt and Type(y) is String, then
       CASE_M_M(BigInt, Str) {
         // a. Let n be ! StringToBigInt(y).
-        auto n = stringToBigInt_RJS(runtime, y);
+        auto n = stringToBigInt(runtime, y);
         if (LLVM_UNLIKELY(n == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -2227,7 +2227,7 @@ CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value) {
       return *prim;
     case HermesValue::ETag::Str1:
     case HermesValue::ETag::Str2: {
-      auto n = stringToBigInt_RJS(runtime, runtime.makeHandle(*prim));
+      auto n = stringToBigInt(runtime, runtime.makeHandle(*prim));
       if (LLVM_UNLIKELY(n == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2243,7 +2243,7 @@ CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value) {
   return runtime.raiseTypeError("invalid argument to BigInt()");
 }
 
-CallResult<HermesValue> stringToBigInt_RJS(Runtime &runtime, Handle<> value) {
+CallResult<HermesValue> stringToBigInt(Runtime &runtime, Handle<> value) {
   if (value->isString()) {
     auto str = value->getString();
 
