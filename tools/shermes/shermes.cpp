@@ -662,7 +662,7 @@ bool compileFromCommandLineOptions() {
   }
 
   Module M(context);
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(*context);
   flow::FlowContext flowContext{};
 
   // TODO: support input source map.

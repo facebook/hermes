@@ -24,7 +24,7 @@ FlowChecker::FlowChecker(
       semContext_(semContext),
       flowContext_(flowContext),
       declCollectorMap_(declCollectorMap),
-      kw_(astContext),
+      kw_(semContext.kw),
       declTypes_(flowContext.declTypeMap(FlowContext::ForUpdate())),
       compile_(compile) {}
 

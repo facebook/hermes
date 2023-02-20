@@ -20,7 +20,7 @@ namespace {
 /// Left side of assignment must be an LValue.
 TEST(ResolverTest, TestBadAssignmentLValue) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "a + 1 = 10;");
   auto parsed = parser.parse();
@@ -33,7 +33,7 @@ TEST(ResolverTest, TestBadAssignmentLValue) {
 /// For-in control expression must be an LValue.
 TEST(ResolverTest, TestBadForLValue) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "for(a + 1 in x);");
   auto parsed = parser.parse();
@@ -46,7 +46,7 @@ TEST(ResolverTest, TestBadForLValue) {
 /// Test an anonymous break outside of a loop.
 TEST(ResolverTest, UnnamedBreakLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "break; for(;;) break; break;");
   auto parsed = parser.parse();
@@ -59,7 +59,7 @@ TEST(ResolverTest, UnnamedBreakLabelTest) {
 /// Test an anonymous continue outside of a loop.
 TEST(ResolverTest, UnnamedContinueLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "continue;");
   auto parsed = parser.parse();
@@ -72,7 +72,7 @@ TEST(ResolverTest, UnnamedContinueLabelTest) {
 /// Test an anonymous continue outside of a loop.
 TEST(ResolverTest, ContinueInASwitchTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "switch(1) { case 1: continue; }");
   auto parsed = parser.parse();
@@ -85,7 +85,7 @@ TEST(ResolverTest, ContinueInASwitchTest) {
 /// Test a continue with a block label.
 TEST(ResolverTest, ContinueWithBlockLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "label1: { continue label1; }");
   auto parsed = parser.parse();
@@ -98,7 +98,7 @@ TEST(ResolverTest, ContinueWithBlockLabelTest) {
 /// Test that multiple labels are correctly attached to the same statement.
 TEST(ResolverTest, ChainedNamedLabelsTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(
       ctx,
@@ -113,7 +113,7 @@ TEST(ResolverTest, ChainedNamedLabelsTest) {
 /// Duplicated label in the scope of the previous one.
 TEST(ResolverTest, DuplicateNamedLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(
       ctx,
@@ -128,7 +128,7 @@ TEST(ResolverTest, DuplicateNamedLabelTest) {
 
 TEST(ResolverTest, CorrectDuplicateNamedLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(
       ctx, "label1: { break label1; } label1: for(;;) break label1;");
@@ -139,7 +139,7 @@ TEST(ResolverTest, CorrectDuplicateNamedLabelTest) {
 
 TEST(ResolverTest, ScopeNamedLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(ctx, "label1: ; for(;;) break label1;");
   auto parsed = parser.parse();
@@ -151,7 +151,7 @@ TEST(ResolverTest, ScopeNamedLabelTest) {
 
 TEST(ResolverTest, NamedBreakLabelTest) {
   Context ctx;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(ctx);
   DiagContext diag(ctx);
   JSParser parser(
       ctx, "break exitLoop; exitLoop: for(;;) break exitLoop; break exitLoop;");
@@ -197,7 +197,7 @@ void assertSecondNodeAsFunctionLikeWithSourceVisibility(
 
 TEST(ResolverTest, SourceVisibilityTest) {
   Context context;
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(context);
   // Top-level program node.
   {
     JSParser parser(context, "");

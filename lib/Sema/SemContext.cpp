@@ -14,7 +14,7 @@ static llvh::FormattedString ind(unsigned level) {
   return llvh::left_justify("", level * 4);
 }
 
-SemContext::SemContext() = default;
+SemContext::SemContext(Context &astContext) : kw(astContext) {}
 
 SemContext::~SemContext() = default;
 

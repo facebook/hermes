@@ -9,6 +9,7 @@
 #define HERMES_SEMA_SEMCONTEXT_H
 
 #include "hermes/AST/ESTree.h"
+#include "hermes/Sema/Keywords.h"
 
 #include <deque>
 
@@ -225,7 +226,11 @@ class SemContext {
   friend class SemContextDumper;
 
  public:
-  explicit SemContext();
+  /// Convenient storage of "keyword" identifiers used by various part of the
+  /// infrastructure.
+  Keywords kw;
+
+  explicit SemContext(Context &astContext);
   ~SemContext();
 
   /// \param parentFunction may be null.

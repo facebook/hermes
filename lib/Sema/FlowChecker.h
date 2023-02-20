@@ -41,7 +41,7 @@ class FlowChecker {
   const sema::DeclCollectorMapTy &declCollectorMap_;
 
   /// Keywords we will be checking for.
-  hermes::sema::Keywords kw_;
+  sema::Keywords &kw_;
 
   struct TypeDecl {
     /// nullptr is used to indicate a forward declaration. This is a temporary

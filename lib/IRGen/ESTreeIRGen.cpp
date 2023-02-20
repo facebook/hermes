@@ -147,8 +147,8 @@ ESTreeIRGen::ESTreeIRGen(
     flow::FlowContext &flowContext,
     ESTree::Node *root)
     : Mod(M),
-      kw_(M->getContext()),
       semCtx_(semCtx),
+      kw_(semCtx.kw),
       flowContext_(flowContext),
       Root(root),
       Builder(Mod),

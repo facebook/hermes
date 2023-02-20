@@ -364,10 +364,10 @@ class ESTreeIRGen {
 
   /// The module we are constructing.
   Module *Mod;
-  /// Keywords to avoid string content comparisons.
-  sema::Keywords kw_;
   /// Semantic resolution tables.
   sema::SemContext &semCtx_;
+  /// Keywords to avoid string content comparisons.
+  sema::Keywords &kw_;
   /// Flow types context.
   flow::FlowContext &flowContext_;
   /// The root of the ESTree.

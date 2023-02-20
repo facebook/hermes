@@ -1843,7 +1843,7 @@ CompileResult processSourceFiles(
   }
 
   Module M(context);
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(*context);
 
   if (context->getUseCJSModules()) {
     // Allow the IR generation function to populate inputSourceMaps to ensure

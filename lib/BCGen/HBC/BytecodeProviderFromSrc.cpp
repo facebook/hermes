@@ -205,7 +205,7 @@ BCProviderFromSrc::createBCProviderFromSrcImpl(
     parserMode = parser::LazyParse;
   }
 
-  sema::SemContext semCtx{};
+  sema::SemContext semCtx(*context);
   parser::JSParser parser(*context, fileBufId, parserMode);
   auto parsed = parser.parse();
   if (!parsed ||
