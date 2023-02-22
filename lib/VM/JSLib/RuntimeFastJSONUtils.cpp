@@ -102,7 +102,6 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   auto jsArray = *jsArrayRes;
 
   uint32_t index = 0;
-  MutableHandle<> indexValue{rt};
 
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
@@ -123,7 +122,7 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
 
     index++;
   }
-  JSArray::setLengthProperty(jsArray, rt, index, PropOpFlags());
+  (void) JSArray::setLengthProperty(jsArray, rt, index, PropOpFlags());
 
   return jsArray.getHermesValue();
 }
