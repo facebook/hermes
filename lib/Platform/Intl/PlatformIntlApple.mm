@@ -2468,10 +2468,8 @@ void NumberFormatApple::initializeNSFormatters() noexcept {
   // - compactDisplay is not supported.
   // - signDisplay is not supported.
   // - NSNumberFormatter has maximumIntegerDigits, which is 42 by default
-  auto nsLocale =
-      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(dataLocale_)];
+  std::u16string nsLocaleStr = dataLocale_;
   nsNumberFormatter_ = [NSNumberFormatter new];
-  nsNumberFormatter_.locale = nsLocale;
   if (style_ == u"decimal") {
     nsNumberFormatter_.numberStyle = NSNumberFormatterDecimalStyle;
     if (notation_ == u"scientific") {
@@ -2479,7 +2477,7 @@ void NumberFormatApple::initializeNSFormatters() noexcept {
     }
   } else if (style_ == u"currency") {
     nsNumberFormatter_.numberStyle = NSNumberFormatterCurrencyStyle;
-    nsNumberFormatter_.currencyCode = u16StringToNSString(*currency_);
+    nsLocaleStr.append(u"@currency=").append(*currency_);
     if (currencyDisplay_ == u"code") {
       nsNumberFormatter_.numberStyle = NSNumberFormatterCurrencyISOCodeStyle;
     } else if (currencyDisplay_ == u"symbol") {
@@ -2507,6 +2505,9 @@ void NumberFormatApple::initializeNSFormatters() noexcept {
     nsNumberFormatter_.maximumSignificantDigits = significantDigits_->maximum;
   }
   nsNumberFormatter_.usesGroupingSeparator = useGrouping_;
+  auto nsLocale =
+      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(nsLocaleStr)];
+  nsNumberFormatter_.locale = nsLocale;
   if (style_ == u"unit") {
     nsMeasurementFormatter_ = [NSMeasurementFormatter new];
     nsMeasurementFormatter_.numberFormatter = nsNumberFormatter_;
