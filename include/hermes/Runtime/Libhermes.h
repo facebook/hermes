@@ -38,6 +38,7 @@ const char libhermes[] =
 "var undefined;"
 ""
 "function Error() {}"
+"function AggregateError() {}"
 "function EvalError() {}"
 "function RangeError() {}"
 "function ReferenceError() {}"

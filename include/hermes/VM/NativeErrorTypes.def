@@ -5,14 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// If ALL_ERROR_TYPE is defined, it will #define both
+// NATIVE_ERROR_TYPE and AGGREGATE_ERROR_TYPE.
+
 #ifdef ALL_ERROR_TYPE
 #define NATIVE_ERROR_TYPE(name) ALL_ERROR_TYPE(name)
+#define AGGREGATE_ERROR_TYPE(name) ALL_ERROR_TYPE(name)
 #else
 #define ALL_ERROR_TYPE(name)
-#endif
+#endif // ALL_ERROR_TYPE
 
 #ifndef NATIVE_ERROR_TYPE
 #define NATIVE_ERROR_TYPE(name)
+#endif
+
+#ifndef AGGREGATE_ERROR_TYPE
+#define AGGREGATE_ERROR_TYPE(name)
 #endif
 
 // The Error object, and all native error objects defined in ES5.1 15.11.
@@ -20,6 +28,7 @@
 // We need the macros to avoid rewriting the same code for each of them.
 
 ALL_ERROR_TYPE(Error)
+AGGREGATE_ERROR_TYPE(AggregateError)
 NATIVE_ERROR_TYPE(EvalError)
 NATIVE_ERROR_TYPE(RangeError)
 NATIVE_ERROR_TYPE(ReferenceError)
@@ -29,5 +38,6 @@ NATIVE_ERROR_TYPE(URIError)
 NATIVE_ERROR_TYPE(TimeoutError)
 NATIVE_ERROR_TYPE(QuitError)
 
+#undef AGGREGATE_ERROR_TYPE
 #undef NATIVE_ERROR_TYPE
 #undef ALL_ERROR_TYPE

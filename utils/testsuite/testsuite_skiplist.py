@@ -1993,7 +1993,6 @@ HANDLESAN_SKIP_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
-    "AggregateError",
     "Promise.prototype.finally",
     "Symbol.asyncIterator",
     "Symbol.species",

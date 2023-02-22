@@ -341,6 +341,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       JSObject::create(                                               \
           runtime, Handle<JSObject>::vmcast(&runtime.ErrorPrototype)) \
           .getHermesValue();
+#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
 #include "hermes/VM/NativeErrorTypes.def"
 
   // "Forward declaration" of the internal CallSite prototype. Its properties
@@ -574,6 +575,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 #define NATIVE_ERROR_TYPE(name)       \
   create##name##Constructor(runtime); \
   gcScope.clearAllHandles();
+#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
 #include "hermes/VM/NativeErrorTypes.def"
 
   // Populate the internal CallSite prototype.

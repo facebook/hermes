@@ -152,6 +152,7 @@ STR(prepareStackTrace, "prepareStackTrace")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
 #include "hermes/VM/NativeErrorTypes.def"
 
+STR(errors, "errors")
 STR(CallSite, "CallSite")
 STR(getColumnNumber, "getColumnNumber")
 STR(getBytecodeAddress, "getBytecodeAddress")
