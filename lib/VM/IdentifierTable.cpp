@@ -254,7 +254,7 @@ IdentifierTable::allocateDynamicString(
   GCScope gcScope(runtime);
 
   PseudoHandle<StringPrimitive> result;
-  if (StringPrimitive::isExternalLength(length)) {
+  if (LLVM_UNLIKELY(StringPrimitive::isExternalLength(length))) {
     if (LLVM_UNLIKELY(length > StringPrimitive::MAX_STRING_LENGTH)) {
       return runtime.raiseRangeError("String length exceeds limit");
     }
