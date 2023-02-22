@@ -104,6 +104,14 @@ class IdentifierTable {
       Runtime &runtime,
       llvh::ArrayRef<char16_t> str);
 
+  /// Given a UTF16 string \p str and a pre-calculated \p hash, if an equal
+  /// string is already in the table, return it as a StringPrimitive, otherwise
+  /// return nullptr.
+  StringPrimitive *getExistingStringPrimitiveOrNullWithHash(
+      Runtime &runtime,
+      llvh::ArrayRef<char16_t> str,
+      uint32_t hash);
+
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
   /// This function should only be called during initialization of a module.
