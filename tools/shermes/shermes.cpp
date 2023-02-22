@@ -673,6 +673,8 @@ bool compileFromCommandLineOptions() {
       declFileList,
       std::move(fileBuf));
   if (!ast) {
+    auto N = context->getSourceErrorManager().getErrorCount();
+    llvh::errs() << "Emitted " << N << " errors. exiting.\n";
     return false;
   }
   if (cli::OutputLevel.getNumOccurrences() &&
