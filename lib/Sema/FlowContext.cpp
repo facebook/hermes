@@ -78,7 +78,7 @@ void UnionType::init(llvh::ArrayRef<Type *> types) {
     if (a->getKind() > b->getKind())
       return false;
     // Both have the same kind. If they have no ids, they must be equal.
-    if (llvh::isa<TypeWithId>(a)) {
+    if (!llvh::isa<TypeWithId>(a)) {
       assert(
           a == b &&
           "Can't have two different instances of the same kind without id");
