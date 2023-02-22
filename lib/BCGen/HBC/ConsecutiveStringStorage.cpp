@@ -233,7 +233,7 @@ class StringPacker {
         continue;
       }
       const CharT *chars = entry.chars_.data();
-      JenkinsHash hash = 0;
+      JenkinsHash hash = JenkinsHashInit;
       size_t i = charsSize;
       while (i--) {
         hash = updateJenkinsHash(hash, chars[i]);
