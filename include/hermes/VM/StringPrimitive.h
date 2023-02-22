@@ -58,6 +58,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// create a new DynamicUTF16StringPrimitive.
   static CallResult<HermesValue> createDynamic(Runtime &runtime, UTF16Ref str);
 
+  /// Create a new DynamicASCIIStringPrimitive if \param isASCII is true,
+  /// otherwise create a new DynamicUTF16StringPrimitive.
+  static CallResult<HermesValue>
+  createDynamicWithKnownEncoding(Runtime &runtime, UTF16Ref str, bool isASCII);
+
   /// The following private overloads are to prevent creation of a
   /// StringPrimitive from a string literal. Naively allowing this would invoke
   /// ArrayRef's array template constructor, which would include the terminating
@@ -153,6 +158,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Proxy to {Dynamic,External}StringPrimitive<char16_t>::create(runtime,
   /// str).
   static CallResult<HermesValue> create(Runtime &runtime, UTF16Ref str);
+
+  /// Proxy to {Dynamic,External}StringPrimitive<char16_t>::create(runtime,
+  /// str).
+  static CallResult<HermesValue>
+  createWithKnownEncoding(Runtime &runtime, UTF16Ref str, bool isASCII);
 
   /// Create a StringPrimitive as efficiently as the contents of \p str allow.
   /// If it is the empty string or a single character string,
@@ -930,6 +940,21 @@ inline CallResult<HermesValue> StringPrimitive::create(
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return createDynamic(runtime, str);
+  } else {
+    return ExternalStringPrimitive<char16_t>::create(
+        runtime, arrayToString(str));
+  }
+}
+
+inline CallResult<HermesValue> StringPrimitive::createWithKnownEncoding(
+    Runtime &runtime,
+    UTF16Ref str,
+    bool isASCII) {
+  static_assert(
+      EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
+      "External string threshold should be smaller than max string size.");
+  if (LLVM_LIKELY(!isExternalLength(str.size()))) {
+    return createDynamicWithKnownEncoding(runtime, str, isASCII);
   } else {
     return ExternalStringPrimitive<char16_t>::create(
         runtime, arrayToString(str));

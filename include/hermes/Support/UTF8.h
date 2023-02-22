@@ -40,11 +40,22 @@ inline static bool isUTF8ContinuationByte(char ch) {
   return (ch & 0xC0) == 0x80;
 }
 
+/// \return true if this is a valid ASCII character.
+/// As in the range of 0-127.
+template <typename Char>
+bool isASCII(Char c) {
+  // We start with a mask representing all valid set bits of ASCII. Flip the
+  // mask, so it now represents all invalid bits. Test if any bit is set that
+  // would make it an invalid ASCII character.
+  constexpr uint32_t asciiMask = 0x7f;
+  return (c & static_cast<Char>(~asciiMask)) == 0;
+}
+
 /// \return true if this is a pure ASCII char sequence.
 template <typename Iter>
 inline bool isAllASCII(Iter begin, Iter end) {
   while (begin < end) {
-    if (*begin < 0 || *begin > 127)
+    if (!isASCII(*begin))
       return false;
     ++begin;
   }

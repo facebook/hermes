@@ -137,6 +137,7 @@ ExecutionStatus JSONLexer::scanString() {
   // Make sure we don't somehow leave a dangling open capture.
   auto ensureCaptureClosed =
       llvh::make_scope_exit([this] { curCharPtr_.cancelCapture(); });
+  bool allAscii = true;
 
   while (curCharPtr_.hasChar()) {
     if (*curCharPtr_ == '"') {
@@ -151,7 +152,8 @@ ExecutionStatus JSONLexer::scanString() {
         token_.setString(runtime_.makeHandle<StringPrimitive>(existing));
         return ExecutionStatus::RETURNED;
       }
-      auto strRes = StringPrimitive::create(runtime_, strRef);
+      auto strRes =
+          StringPrimitive::createWithKnownEncoding(runtime_, strRef, allAscii);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -172,34 +174,30 @@ ExecutionStatus JSONLexer::scanString() {
         return error("Unexpected end of input");
       }
       switch (*curCharPtr_) {
+#define CONSUME_VAL(v)     \
+  tmpStorage.push_back(v); \
+  ++curCharPtr_;
+
         case u'"':
         case u'/':
         case u'\\':
-          tmpStorage.push_back(*curCharPtr_);
-          ++curCharPtr_;
+          CONSUME_VAL(*curCharPtr_)
           break;
-
         case 'b':
-          ++curCharPtr_;
-          tmpStorage.push_back(8);
+          CONSUME_VAL(8)
           break;
         case 'f':
-          ++curCharPtr_;
-          tmpStorage.push_back(12);
+          CONSUME_VAL(12)
           break;
         case 'n':
-          ++curCharPtr_;
-          tmpStorage.push_back(10);
+          CONSUME_VAL(10)
           break;
         case 'r':
-          ++curCharPtr_;
-          tmpStorage.push_back(13);
+          CONSUME_VAL(13)
           break;
         case 't':
-          ++curCharPtr_;
-          tmpStorage.push_back(9);
+          CONSUME_VAL(9)
           break;
-
         case 'u': {
           ++curCharPtr_;
           CallResult<char16_t> cr = consumeUnicode();
@@ -213,9 +211,11 @@ ExecutionStatus JSONLexer::scanString() {
         default:
           return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
       }
+      allAscii &= isASCII(tmpStorage.back());
     } else {
       if (hasEscape)
         tmpStorage.push_back(*curCharPtr_);
+      allAscii &= isASCII(*curCharPtr_);
       ++curCharPtr_;
     }
   }

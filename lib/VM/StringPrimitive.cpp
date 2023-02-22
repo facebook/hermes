@@ -202,7 +202,15 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
 CallResult<HermesValue> StringPrimitive::createDynamic(
     Runtime &runtime,
     UTF16Ref str) {
-  if (LLVM_LIKELY(isAllASCII(str.begin(), str.end()))) {
+  return createDynamicWithKnownEncoding(
+      runtime, str, isAllASCII(str.begin(), str.end()));
+}
+
+CallResult<HermesValue> StringPrimitive::createDynamicWithKnownEncoding(
+    Runtime &runtime,
+    UTF16Ref str,
+    bool isASCII) {
+  if (LLVM_LIKELY(isASCII)) {
     auto res = DynamicASCIIStringPrimitive::create(runtime, str.size());
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
