@@ -142,6 +142,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
+    auto jsKey = **parseObjectKey(rt, identifierTable, key);
 
     // jsKeyHandle = parseString(rt, key);
     // if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
@@ -165,14 +166,42 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    // NOTE: We know that keys can only be strings, so we can use fast path
-    (void)JSObject::defineOwnPropertyInternal(
+    // NOTE: We know that keys can only be strings, that they rarely are duplicated,
+    // and that the property descriptors are default and don't change between iterations
+    // so we can do this much faster than JSObject::defineOwnComputedPrimitive
+    NamedPropertyDescriptor desc;
+    auto pos = JSObject::findProperty(
+        jsObject,
+        rt,
+        jsKey,
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        desc);
+    if (LLVM_UNLIKELY(pos)) {
+      auto updatePropertyResult = JSObject::updateOwnProperty(
+        jsObject,
+        rt,
+        jsKey,
+        *pos,
+        desc,
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        rt.makeHandle(*jsValue),
+        PropOpFlags());
+
+      if (LLVM_UNLIKELY(updatePropertyResult == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    } else {
+      auto addPropertyResult = JSObject::addOwnPropertyImpl(
           jsObject,
           rt,
-          // jsKeyHandle,
-          **parseObjectKey(rt, identifierTable, key),
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          jsKey,
+          PropertyFlags::defaultNewNamedPropertyFlags(),
           rt.makeHandle(*jsValue));
+
+      if (LLVM_UNLIKELY(addPropertyResult == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
   }
 
   return jsObject.getHermesValue();

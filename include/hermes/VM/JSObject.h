@@ -1362,7 +1362,7 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SlotIndex newSlotIndex,
       Handle<> valueHandle);
-
+public:
   /// Look for a property and return a \c PropertyPos identifying it and store
   /// its descriptor in \p desc.
   /// \param expectedFlags if valid, we are searching for a property which, if
@@ -1409,7 +1409,7 @@ class JSObject : public GCCell {
       DefinePropertyFlags dpFlags,
       Handle<> valueOrAccessor,
       PropOpFlags opFlags);
-
+  private:
   /// The result of \c checkPropertyUpdate.
   enum class PropertyUpdateStatus {
     /// The property cannot be updated.
