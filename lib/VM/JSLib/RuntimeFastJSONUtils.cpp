@@ -36,7 +36,7 @@ namespace hermes {
 namespace vm {
 
 template<typename T>
-CallResult<HermesValue> parseValue(Runtime &rt, T &value);
+CallResult<Handle<>> parseValue(Runtime &rt, T &value);
 
 Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
   {
@@ -118,7 +118,7 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
     }
 
     // fast path
-    JSArray::setElementAt(jsArray, rt, index, rt.makeHandle(*jsValue));
+    JSArray::setElementAt(jsArray, rt, index, *jsValue);
 
     index++;
   }
@@ -185,7 +185,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
         *pos,
         desc,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        rt.makeHandle(*jsValue),
+        *jsValue,
         PropOpFlags());
 
       if (LLVM_UNLIKELY(updatePropertyResult == ExecutionStatus::EXCEPTION)) {
@@ -197,7 +197,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
           rt,
           jsKey,
           PropertyFlags::defaultNewNamedPropertyFlags(),
-          rt.makeHandle(*jsValue));
+          *jsValue);
 
       if (LLVM_UNLIKELY(addPropertyResult == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -209,7 +209,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 }
 
 template<typename T>
-CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
+CallResult<Handle<>> parseValue(Runtime &rt, T &value) {
   simdjson::error_code error;
 
   ondemand::json_type type;
@@ -223,12 +223,12 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       // if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
       //   return ExecutionStatus::EXCEPTION;
       // }
-      return jsString.getHermesValue();
+      return jsString;
     }
     case ondemand::json_type::number: {
       double doubleValue;
       SIMDJSON_CALL(value.get(doubleValue));
-      return HermesValue::encodeDoubleValue(doubleValue);
+      return rt.makeHandle(HermesValue::encodeDoubleValue(doubleValue));
     }
     case ondemand::json_type::object: {
       ondemand::object objectValue;
@@ -237,7 +237,7 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       if (LLVM_UNLIKELY(jsObject == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return jsObject;
+      return rt.makeHandle(*jsObject);
     }
     case ondemand::json_type::array: {
       ondemand::array arrayValue;
@@ -246,15 +246,15 @@ CallResult<HermesValue> parseValue(Runtime &rt, T &value) {
       if (LLVM_UNLIKELY(jsArray == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return jsArray;
+      return rt.makeHandle(*jsArray);
     }
     case ondemand::json_type::boolean: {
       bool boolValue;
       SIMDJSON_CALL(value.get(boolValue));
-      return HermesValue::encodeBoolValue(boolValue);
+      return rt.makeHandle(HermesValue::encodeBoolValue(boolValue));
     }
     case ondemand::json_type::null:
-      return HermesValue::encodeNullValue();
+      return rt.makeHandle(HermesValue::encodeNullValue());
     default:
       return ExecutionStatus::EXCEPTION;
   }
@@ -298,7 +298,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
-  return parseValue(rt, doc);
+  return parseValue(rt, doc)->getHermesValue();
 }
 
 } // namespace vm
