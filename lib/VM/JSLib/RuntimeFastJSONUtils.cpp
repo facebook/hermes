@@ -74,6 +74,18 @@ Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
   // }
 }
 
+CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
+  // We can skip some unnecessary work by skipping StringPrimitive creation
+  // and going straight for SymbolIDs.
+
+  if (isAllASCII(stringView.data(), stringView.data() + stringView.size())) {
+    ASCIIRef ascii{stringView.data(), stringView.size()};
+    return identifierTable.getSymbolHandle(rt, ascii);
+  }
+
+  return ExecutionStatus::EXCEPTION;
+}
+
 CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   simdjson::error_code error;
 
@@ -116,10 +128,11 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
 
 CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
   simdjson::error_code error;
+  auto &identifierTable = rt.getIdentifierTable();
 
   auto jsObject = rt.makeHandle(JSObject::create(rt));
 
-  MutableHandle<> jsKeyHandle{rt};
+  // MutableHandle<> jsKeyHandle{rt};
 
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
@@ -130,14 +143,19 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
 
-    jsKeyHandle = parseString(rt, key);
+    // jsKeyHandle = parseString(rt, key);
     // if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
     //   return ExecutionStatus::EXCEPTION;
-    auto jsKeyPseudoHandle = createPseudoHandle(vmcast<StringPrimitive>(jsKeyHandle.getHermesValue()));
-    auto symbolId = rt.getIdentifierTable().getSymbolHandleFromPrimitive(rt, std::move(jsKeyPseudoHandle));
-    if (LLVM_UNLIKELY(symbolId == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    // auto jsKeyPseudoHandle = createPseudoHandle(vmcast<StringPrimitive>(jsKeyHandle.getHermesValue()));
+    // auto symbolId = rt.getIdentifierTable().getSymbolHandleFromPrimitive(rt, std::move(jsKeyPseudoHandle));
+    // if (LLVM_UNLIKELY(symbolId == ExecutionStatus::EXCEPTION)) {
+    //   return ExecutionStatus::EXCEPTION;
+    // }
+    // auto jsKeyResult = parseObjectKey(rt, key);
+    // if (LLVM_UNLIKELY(jsKeyResult == ExecutionStatus::EXCEPTION)) {
+    //   return ExecutionStatus::EXCEPTION;
+    // }
+    // jsKeyHandle = *jsKeyResult;
 
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
@@ -151,7 +169,8 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
     (void)JSObject::defineOwnPropertyInternal(
           jsObject,
           rt,
-          (SymbolID) **symbolId,
+          // jsKeyHandle,
+          **parseObjectKey(rt, identifierTable, key),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           rt.makeHandle(*jsValue));
   }
