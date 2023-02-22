@@ -74,16 +74,22 @@ Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
   // }
 }
 
-CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
+CallResult<Handle<SymbolID>> parseObjectKeySlowPath(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
+  // slow path
+  UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
+  auto string = StringPrimitive::createEfficient(rt, utf8);
+  return valueToSymbolID(rt, rt.makeHandle(*string));
+}
+
+inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
   // We can skip some unnecessary work by skipping StringPrimitive creation
   // and going straight for SymbolIDs.
-
-  if (isAllASCII(stringView.data(), stringView.data() + stringView.size())) {
+  if (LLVM_LIKELY(isAllASCII(stringView.data(), stringView.data() + stringView.size()))) {
     ASCIIRef ascii{stringView.data(), stringView.size()};
     return identifierTable.getSymbolHandle(rt, ascii);
   }
 
-  return ExecutionStatus::EXCEPTION;
+  return parseObjectKeySlowPath(rt, identifierTable, stringView);
 }
 
 CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
