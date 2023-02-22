@@ -118,16 +118,12 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    indexValue = HermesValue::encodeDoubleValue(index);
-    (void)JSObject::defineOwnComputedPrimitive(
-          jsArray,
-          rt,
-          indexValue,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          rt.makeHandle(*jsValue));
+    // fast path
+    JSArray::setElementAt(jsArray, rt, index, rt.makeHandle(*jsValue));
 
     index++;
   }
+  JSArray::setLengthProperty(jsArray, rt, index, PropOpFlags());
 
   return jsArray.getHermesValue();
 }
