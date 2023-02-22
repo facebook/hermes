@@ -169,6 +169,36 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
+bool isAllASCII_v2(const uint8_t *start, const uint8_t *end) {
+  const uint8_t *cursor = start;
+  size_t len = end - start;
+  // unaligned access on arm64 seems to work fine
+  while (len >= 8) {
+    uint64_t val = *(const uint64_t *)cursor;
+    if (val & 0x8080808080808080u) {
+      return false;
+    }
+    cursor += 8;
+    len -= 8;
+  }
+  if (len >= 4) {
+    uint32_t val = *(const uint32_t *)cursor;
+    if (val & 0x80808080u) {
+      return false;
+    }
+    cursor += 4;
+    len -= 4;
+  }
+  assert(len < 4 && "Length should now be less than 4");
+  uint8_t mask = 0;
+  while (len--) {
+    mask |= *cursor++;
+  }
+  if (mask & 0x80u)
+    return false;
+  return true;
+}
+
 void convertUTF8WithSurrogatesToUTF8WithReplacements(
     std::string &output,
     llvh::StringRef input) {

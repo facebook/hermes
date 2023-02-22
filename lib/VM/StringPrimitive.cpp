@@ -166,7 +166,7 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
     bool IgnoreInputErrors) {
   const uint8_t *utf8 = str.data();
   const size_t length = str.size();
-  if (isAllASCII(utf8, utf8 + length)) {
+  if (isAllASCII_v2(utf8, utf8 + length)) {
     const char *ascii = reinterpret_cast<const char *>(utf8);
     return StringPrimitive::createEfficient(
         runtime, llvh::makeArrayRef(ascii, length));

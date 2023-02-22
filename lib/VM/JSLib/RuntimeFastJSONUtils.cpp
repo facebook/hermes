@@ -51,7 +51,7 @@ Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
 
   // check if ascii
   // TODO: Surprisingly, isAllASCII is faster (for small strings) than simdutf::validate_ascii?
-  if (isAllASCII(stringView.data(), stringView.data() + stringView.size())) {
+  if (isAllASCII_v2(stringView.data(), stringView.data() + stringView.size())) {
     ASCIIRef ascii{stringView.data(), stringView.size()};
     auto string = StringPrimitive::createEfficient(rt, ascii);
     return rt.makeHandle(*string);
@@ -84,7 +84,7 @@ CallResult<Handle<SymbolID>> parseObjectKeySlowPath(Runtime &rt, IdentifierTable
 inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
   // We can skip some unnecessary work by skipping StringPrimitive creation
   // and going straight for SymbolIDs.
-  if (LLVM_LIKELY(isAllASCII(stringView.data(), stringView.data() + stringView.size()))) {
+  if (LLVM_LIKELY(isAllASCII_v2(stringView.data(), stringView.data() + stringView.size()))) {
     ASCIIRef ascii{stringView.data(), stringView.size()};
     return identifierTable.getSymbolHandle(rt, ascii);
   }
