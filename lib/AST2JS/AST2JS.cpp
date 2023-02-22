@@ -640,7 +640,7 @@ class GenJS {
       visitESTreeNode(*this, id, parent);
     }
     if (superClass) {
-      OS_ << ' ';
+      OS_ << " extends ";
       visitESTreeNode(*this, superClass, parent);
     }
     space();
@@ -653,15 +653,94 @@ class GenJS {
       return;
     }
     incIndent();
-    newline();
 
     for (auto &p : node->_body) {
-      visitESTreeNode(*this, &p, node);
       newline();
+      visitESTreeNode(*this, &p, node);
     }
 
-    OS_ << '}';
     decIndent();
+    newline();
+    OS_ << '}';
+  }
+  void visit(MethodDefinitionNode *node) {
+    if (node->_static) {
+      OS_ << "static ";
+    }
+    if (auto *funExprValue =
+            llvh::dyn_cast_or_null<FunctionExpressionNode>(node->_value)) {
+      if (funExprValue->_async) {
+        OS_ << "async ";
+      }
+      if (funExprValue->_generator) {
+        OS_ << '*';
+      }
+      llvh::StringRef kind = node->_kind->str();
+      if (kind == "get") {
+        OS_ << "get ";
+      } else if (kind == "set") {
+        OS_ << "set ";
+      }
+    }
+    if (node->_computed) {
+      OS_ << '[';
+    }
+    visitESTreeNode(*this, node->_key, node);
+    if (node->_computed) {
+      OS_ << ']';
+    }
+    auto *funExprValue = llvh::cast<FunctionExpressionNode>(node->_value);
+    visitFuncParamsAndBody(
+        funExprValue->_params, funExprValue->_body, funExprValue);
+  }
+  void visit(ClassPrivatePropertyNode *node) {
+    constexpr bool isComputed = false;
+    constexpr bool isPrivate = true;
+    visitClassProperty(
+        node->_static, isComputed, isPrivate, node->_key, node->_value, node);
+  }
+  void visit(ClassPropertyNode *node) {
+    // node should not be a private identifier (i.e., a #id member); but if it
+    // is, visitClassProperty will visit it, and visit(PrivateNameNode *) below
+    // will print the '#' appropriately.
+    constexpr bool isPrivate = false;
+    visitClassProperty(
+        node->_static,
+        node->_computed,
+        isPrivate,
+        node->_key,
+        node->_value,
+        node);
+  }
+  void visitClassProperty(
+      bool isStatic,
+      bool isComputed,
+      bool isPrivate,
+      Node *key,
+      Node *value,
+      Node *parent) {
+    if (isStatic) {
+      OS_ << "static ";
+    }
+    if (isComputed) {
+      OS_ << '[';
+    }
+    if (isPrivate) {
+      OS_ << '#';
+    }
+    visitESTreeNode(*this, key, parent);
+    if (isComputed) {
+      OS_ << ']';
+    }
+    if (value) {
+      OS_ << " = ";
+      visitESTreeNode(*this, value, parent);
+    }
+    OS_ << ';';
+  }
+  void visit(PrivateNameNode *node) {
+    OS_ << '#';
+    visitESTreeNode(*this, node->_id, node);
   }
 
   void visit(FunctionExpressionNode *node) {
