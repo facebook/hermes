@@ -35,17 +35,23 @@ using namespace simdjson;
 namespace hermes {
 namespace vm {
 
-class RuntimeFastJSONParser {
+class RuntimeFastJSONParser final {
+private:
+  Runtime &rt;
 public:
+  explicit RuntimeFastJSONParser(
+      Runtime &runtime)
+      : rt(runtime) {}
+
   template<typename T>
-  CallResult<Handle<>> parseValue(Runtime &rt, T &value);
-  Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView);
-  // CallResult<Handle<SymbolID>> parseObjectKeySlowPath(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView);
-  CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array);
-  CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object);
+  CallResult<Handle<>> parseValue(T &value);
+private:
+  Handle<HermesValue> parseString(std::string_view &stringView);
+  CallResult<HermesValue> parseArray(ondemand::array &array);
+  CallResult<HermesValue> parseObject(ondemand::object &object);
 };
 
-Handle<HermesValue> RuntimeFastJSONParser::parseString(Runtime &rt, std::string_view &stringView) {
+Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
   {
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
@@ -99,7 +105,7 @@ inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable 
   return parseObjectKeySlowPath(rt, identifierTable, stringView);
 }
 
-CallResult<HermesValue> RuntimeFastJSONParser::parseArray(Runtime &rt, ondemand::array &array) {
+CallResult<HermesValue> RuntimeFastJSONParser::parseArray(ondemand::array &array) {
   simdjson::error_code error;
 
   auto jsArrayRes = JSArray::create(rt, 4, 0);
@@ -119,7 +125,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseArray(Runtime &rt, ondemand:
     ondemand::value value;
     SIMDJSON_CALL(valueRes.get(value));
 
-    auto jsValue = parseValue(rt, value);
+    auto jsValue = parseValue(value);
     if (LLVM_UNLIKELY(jsValue == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -134,7 +140,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseArray(Runtime &rt, ondemand:
   return jsArray.getHermesValue();
 }
 
-CallResult<HermesValue> RuntimeFastJSONParser::parseObject(Runtime &rt, ondemand::object &object) {
+CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &object) {
   simdjson::error_code error;
   auto &identifierTable = rt.getIdentifierTable();
 
@@ -169,7 +175,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(Runtime &rt, ondemand
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
 
-    auto jsValue = parseValue(rt, value);
+    auto jsValue = parseValue(value);
     if (LLVM_UNLIKELY(jsValue == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -216,7 +222,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(Runtime &rt, ondemand
 }
 
 template<typename T>
-CallResult<Handle<>> RuntimeFastJSONParser::parseValue(Runtime &rt, T &value) {
+CallResult<Handle<>> RuntimeFastJSONParser::parseValue(T &value) {
   simdjson::error_code error;
 
   ondemand::json_type type;
@@ -226,7 +232,7 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(Runtime &rt, T &value) {
     case ondemand::json_type::string: {
       std::string_view stringView;
       SIMDJSON_CALL(value.get(stringView));
-      auto jsString = parseString(rt, stringView);
+      auto jsString = parseString(stringView);
       // if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
       //   return ExecutionStatus::EXCEPTION;
       // }
@@ -240,7 +246,7 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(Runtime &rt, T &value) {
     case ondemand::json_type::object: {
       ondemand::object objectValue;
       SIMDJSON_CALL(value.get(objectValue));
-      auto jsObject = parseObject(rt, objectValue);
+      auto jsObject = parseObject(objectValue);
       if (LLVM_UNLIKELY(jsObject == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -249,7 +255,7 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(Runtime &rt, T &value) {
     case ondemand::json_type::array: {
       ondemand::array arrayValue;
       SIMDJSON_CALL(value.get(arrayValue));
-      auto jsArray = parseArray(rt, arrayValue);
+      auto jsArray = parseArray(arrayValue);
       if (LLVM_UNLIKELY(jsArray == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -305,9 +311,9 @@ CallResult<HermesValue> runtimeFastJSONParse(
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
-  RuntimeFastJSONParser parser;
+  RuntimeFastJSONParser parser{rt};
 
-  return parser.parseValue(rt, doc)->getHermesValue();
+  return parser.parseValue(doc)->getHermesValue();
 }
 
 } // namespace vm
