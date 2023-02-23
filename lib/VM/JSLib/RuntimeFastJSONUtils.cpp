@@ -47,6 +47,8 @@ public:
   CallResult<Handle<>> parseValue(T &value);
 private:
   Handle<HermesValue> parseString(std::string_view &stringView);
+  CallResult<Handle<SymbolID>> parseObjectKeySlowPath(IdentifierTable &identifierTable, std::string_view &stringView);
+  CallResult<Handle<SymbolID>> parseObjectKey(IdentifierTable &identifierTable, std::string_view &stringView);
   CallResult<HermesValue> parseArray(ondemand::array &array);
   CallResult<HermesValue> parseObject(ondemand::object &object);
 };
@@ -87,14 +89,14 @@ inline Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &
   // }
 }
 
-CallResult<Handle<SymbolID>> parseObjectKeySlowPath(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
+CallResult<Handle<SymbolID>> RuntimeFastJSONParser::parseObjectKeySlowPath(IdentifierTable &identifierTable, std::string_view &stringView) {
   // slow path
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
   return valueToSymbolID(rt, rt.makeHandle(*string));
 }
 
-inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView) {
+inline CallResult<Handle<SymbolID>> RuntimeFastJSONParser::parseObjectKey(IdentifierTable &identifierTable, std::string_view &stringView) {
   // We can skip some unnecessary work by skipping StringPrimitive creation
   // and going straight for SymbolIDs.
   if (LLVM_LIKELY(isAllASCII_v2(stringView.data(), stringView.data() + stringView.size()))) {
@@ -102,7 +104,7 @@ inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable 
     return identifierTable.getSymbolHandle(rt, ascii);
   }
 
-  return parseObjectKeySlowPath(rt, identifierTable, stringView);
+  return parseObjectKeySlowPath(identifierTable, stringView);
 }
 
 CallResult<HermesValue> RuntimeFastJSONParser::parseArray(ondemand::array &array) {
@@ -156,7 +158,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
-    auto jsKey = **parseObjectKey(rt, identifierTable, key);
+    auto jsKey = **parseObjectKey(identifierTable, key);
 
     // jsKeyHandle = parseString(rt, key);
     // if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
