@@ -38,10 +38,12 @@ namespace vm {
 class RuntimeFastJSONParser final {
 private:
   Runtime &rt;
+  bool isASCII_;
 public:
   explicit RuntimeFastJSONParser(
-      Runtime &runtime)
-      : rt(runtime) {}
+      Runtime &runtime,
+      bool isASCII)
+      : rt(runtime), isASCII_(isASCII) {}
 
   template<typename T>
   CallResult<Handle<>> parseValue(T &value);
@@ -54,6 +56,11 @@ private:
 };
 
 inline Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
+  if (isASCII_) {
+    ASCIIRef ascii{stringView.data(), stringView.size()};
+    auto string = StringPrimitive::createEfficient(rt, ascii);
+    return rt.makeHandle(*string);
+  }
   {
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
@@ -99,7 +106,7 @@ CallResult<Handle<SymbolID>> RuntimeFastJSONParser::parseObjectKeySlowPath(Ident
 inline CallResult<Handle<SymbolID>> RuntimeFastJSONParser::parseObjectKey(IdentifierTable &identifierTable, std::string_view &stringView) {
   // We can skip some unnecessary work by skipping StringPrimitive creation
   // and going straight for SymbolIDs.
-  if (LLVM_LIKELY(isAllASCII_v2(stringView.data(), stringView.data() + stringView.size()))) {
+  if (LLVM_LIKELY(isASCII_ || isAllASCII_v2(stringView.data(), stringView.data() + stringView.size()))) {
     ASCIIRef ascii{stringView.data(), stringView.size()};
     return identifierTable.getSymbolHandle(rt, ascii);
   }
@@ -313,7 +320,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
-  RuntimeFastJSONParser parser{rt};
+  RuntimeFastJSONParser parser{rt, jsonString->isASCII()};
 
   return parser.parseValue(doc)->getHermesValue();
 }
