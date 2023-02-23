@@ -51,7 +51,7 @@ private:
   CallResult<HermesValue> parseObject(ondemand::object &object);
 };
 
-Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
+inline Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
   {
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
