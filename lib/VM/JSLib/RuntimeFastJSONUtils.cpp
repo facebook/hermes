@@ -35,10 +35,17 @@ using namespace simdjson;
 namespace hermes {
 namespace vm {
 
-template<typename T>
-CallResult<Handle<>> parseValue(Runtime &rt, T &value);
+class RuntimeFastJSONParser {
+public:
+  template<typename T>
+  CallResult<Handle<>> parseValue(Runtime &rt, T &value);
+  Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView);
+  // CallResult<Handle<SymbolID>> parseObjectKeySlowPath(Runtime &rt, IdentifierTable &identifierTable, std::string_view &stringView);
+  CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array);
+  CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object);
+};
 
-Handle<HermesValue> parseString(Runtime &rt, std::string_view &stringView) {
+Handle<HermesValue> RuntimeFastJSONParser::parseString(Runtime &rt, std::string_view &stringView) {
   {
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
@@ -92,7 +99,7 @@ inline CallResult<Handle<SymbolID>> parseObjectKey(Runtime &rt, IdentifierTable 
   return parseObjectKeySlowPath(rt, identifierTable, stringView);
 }
 
-CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
+CallResult<HermesValue> RuntimeFastJSONParser::parseArray(Runtime &rt, ondemand::array &array) {
   simdjson::error_code error;
 
   auto jsArrayRes = JSArray::create(rt, 4, 0);
@@ -127,7 +134,7 @@ CallResult<HermesValue> parseArray(Runtime &rt, ondemand::array &array) {
   return jsArray.getHermesValue();
 }
 
-CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
+CallResult<HermesValue> RuntimeFastJSONParser::parseObject(Runtime &rt, ondemand::object &object) {
   simdjson::error_code error;
   auto &identifierTable = rt.getIdentifierTable();
 
@@ -209,7 +216,7 @@ CallResult<HermesValue> parseObject(Runtime &rt, ondemand::object &object) {
 }
 
 template<typename T>
-CallResult<Handle<>> parseValue(Runtime &rt, T &value) {
+CallResult<Handle<>> RuntimeFastJSONParser::parseValue(Runtime &rt, T &value) {
   simdjson::error_code error;
 
   ondemand::json_type type;
@@ -298,7 +305,9 @@ CallResult<HermesValue> runtimeFastJSONParse(
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
-  return parseValue(rt, doc)->getHermesValue();
+  RuntimeFastJSONParser parser;
+
+  return parser.parseValue(rt, doc)->getHermesValue();
 }
 
 } // namespace vm
