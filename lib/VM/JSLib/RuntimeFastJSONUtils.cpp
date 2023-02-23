@@ -45,9 +45,10 @@ public:
       bool isASCII)
       : rt(runtime), isASCII_(isASCII) {}
 
+  static CallResult<HermesValue> parse(Runtime &rt, padded_string_view &json, bool isASCII);
+private:
   template<typename T>
   CallResult<Handle<>> parseValue(T &value);
-private:
   Handle<HermesValue> parseString(std::string_view &stringView);
   CallResult<Handle<SymbolID>> parseObjectKeySlowPath(IdentifierTable &identifierTable, std::string_view &stringView);
   CallResult<Handle<SymbolID>> parseObjectKey(IdentifierTable &identifierTable, std::string_view &stringView);
@@ -282,49 +283,54 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(T &value) {
   }
 }
 
+CallResult<HermesValue> RuntimeFastJSONParser::parse(Runtime &rt, padded_string_view &json, bool isASCII) {
+  simdjson::error_code error;
+  ondemand::document doc;
+  auto &jsonParser = rt.getCommonStorage()->simdjsonParser;
+  SIMDJSON_CALL(jsonParser.iterate(json).get(doc));
+
+  RuntimeFastJSONParser parser{rt, isASCII};
+
+  auto result = parser.parseValue(doc);
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return result->getHermesValue();
+}
+
 CallResult<HermesValue> runtimeFastJSONParse(
     Runtime &rt,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
-  simdjson::error_code error;
+  // TODO: Proper error handling
 
-  auto commonStorage = rt.getCommonStorage();
+  // NOTE: StringPrimitives can move during JSON parsing (except if external)
+  // so we can't use a pointer to it directly
+  // and besides simdjson needs 64B of padding, so we always need to copy
+  if (jsonString->isASCII()) {
+    SmallXString<uint8_t, 32> storage;
+    auto jsonStringView = StringPrimitive::createStringView(rt, jsonString);
+    const char *ptr = jsonStringView.castToCharPtr();
+    storage.append(ptr, ptr + jsonStringView.length());
+    storage.resize(storage.size() + SIMDJSON_PADDING);
 
-  // return HermesValue::encodeBoolValue(jsonString->isASCII());
-
-  // TODO: Error handling
-
-  // auto asciiRef = jsonString->getStringRef<char>();
-  // auto json = padded_string(asciiRef.data(), asciiRef.size());
-
-  // NOTE: We need to copy (I think) because strings can move during GC
-  // but I'm not sure why we seemingly need to copy multiple times...
-  UTF16Ref ref;
-  SmallU16String<32> storage;
-  if (LLVM_UNLIKELY(jsonString->isExternal() && !jsonString->isASCII())) {
-    ref = jsonString->getStringRef<char16_t>();
+    auto json = padded_string_view(storage.begin(), jsonStringView.length(), storage.size());
+    return RuntimeFastJSONParser::parse(rt, json, true);
   } else {
+    SmallU16String<32> utf16storage;
     StringPrimitive::createStringView(rt, jsonString)
-        .appendUTF16String(storage);
-    ref = storage;
+        .appendUTF16String(utf16storage);
+
+    auto utf8capacity = simdutf::utf8_length_from_utf16(utf16storage.begin(), utf16storage.size()) + SIMDJSON_PADDING;
+    std::unique_ptr<char[]> utf8str{new char[utf8capacity]};
+    auto utf8size = simdutf::convert_utf16_to_utf8(utf16storage.begin(), utf16storage.size(), utf8str.get());
+    if (!utf8size) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto json = padded_string_view(utf8str.get(), utf8size, utf8capacity);
+    return RuntimeFastJSONParser::parse(rt, json, false);
   }
-
-  // convert to utf8
-  auto utf8capacity = simdutf::utf8_length_from_utf16(ref.data(), ref.size()) + SIMDJSON_PADDING;
-  std::unique_ptr<char[]> utf8_output{new char[utf8capacity]};
-  auto utf8_size = simdutf::convert_utf16_to_utf8(ref.data(), ref.size(), utf8_output.get());
-  if (!utf8_size) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // parse json
-  auto json = padded_string_view(utf8_output.get(), utf8_size, utf8capacity);
-  ondemand::document doc;
-  SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
-
-  RuntimeFastJSONParser parser{rt, jsonString->isASCII()};
-
-  return parser.parseValue(doc)->getHermesValue();
 }
 
 } // namespace vm
