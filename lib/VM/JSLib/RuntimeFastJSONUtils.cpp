@@ -290,6 +290,8 @@ CallResult<HermesValue> runtimeFastJSONParse(
 
   auto commonStorage = rt.getCommonStorage();
 
+  // return HermesValue::encodeBoolValue(jsonString->isASCII());
+
   // TODO: Error handling
 
   // auto asciiRef = jsonString->getStringRef<char>();
@@ -308,15 +310,15 @@ CallResult<HermesValue> runtimeFastJSONParse(
   }
 
   // convert to utf8
-  auto utf8_expected_size = simdutf::utf8_length_from_utf16(ref.data(), ref.size());
-  std::unique_ptr<char[]> utf8_output{new char[utf8_expected_size]};
+  auto utf8capacity = simdutf::utf8_length_from_utf16(ref.data(), ref.size()) + SIMDJSON_PADDING;
+  std::unique_ptr<char[]> utf8_output{new char[utf8capacity]};
   auto utf8_size = simdutf::convert_utf16_to_utf8(ref.data(), ref.size(), utf8_output.get());
   if (!utf8_size) {
     return ExecutionStatus::EXCEPTION;
   }
 
   // parse json
-  auto json = padded_string(utf8_output.get(), utf8_size);
+  auto json = padded_string_view(utf8_output.get(), utf8_size, utf8capacity);
   ondemand::document doc;
   SIMDJSON_CALL(commonStorage->simdjsonParser.iterate(json).get(doc));
 
