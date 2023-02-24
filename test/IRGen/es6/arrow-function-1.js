@@ -30,21 +30,21 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %func2(): any
 // CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "func2": string
 // CHECK-NEXT:  %13 = LoadStackInst (:any) %7: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 10: number
+// CHECK-NEXT:  %0 = ReturnInst 10: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow func2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 11: number
+// CHECK-NEXT:  %0 = ReturnInst 11: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

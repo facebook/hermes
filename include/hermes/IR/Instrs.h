@@ -410,7 +410,7 @@ class ReturnInst : public TerminatorInst {
       : TerminatorInst(src, operands) {}
 
   static bool hasOutput() {
-    return true;
+    return false;
   }
 
   SideEffectKind getSideEffect() {

@@ -23,7 +23,7 @@ function foo(x) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any
@@ -54,9 +54,9 @@ function foo(x) {
 // CHECK-NEXT:  %22 = LoadStackInst (:any) %2: any
 // CHECK-NEXT:  %23 = BinaryAddInst (:any) %22: any, 1: number
 // CHECK-NEXT:  %24 = StoreStackInst %23: any, %2: any
-// CHECK-NEXT:  %25 = ReturnInst (:any) %11: object
+// CHECK-NEXT:  %25 = ReturnInst %11: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %26 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %26 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // OPT:function global(): undefined [allCallsitesKnownInStrictMode]
@@ -65,7 +65,7 @@ function foo(x) {
 // OPT-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // OPT-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): object
 // OPT-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
-// OPT-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// OPT-NEXT:  %3 = ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 
 // OPT:function foo(x: any): object
@@ -77,5 +77,5 @@ function foo(x) {
 // OPT-NEXT:  %3 = StoreOwnPropertyInst 3: number, %1: object, %2: any, true: boolean
 // OPT-NEXT:  %4 = BinaryAddInst (:string|number) %2: any, 1: number
 // OPT-NEXT:  %5 = StoreOwnPropertyInst 4: number, %1: object, %4: string|number, true: boolean
-// OPT-NEXT:  %6 = ReturnInst (:object) %1: object
+// OPT-NEXT:  %6 = ReturnInst %1: object
 // OPT-NEXT:function_end

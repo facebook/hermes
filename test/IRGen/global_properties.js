@@ -50,5 +50,5 @@ JSON
 // CHECK-NEXT:  %22 = TryLoadGlobalPropertyInst (:any) globalObject: object, "JSON": string
 // CHECK-NEXT:  %23 = StoreStackInst %22: any, %0: any
 // CHECK-NEXT:  %24 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %25 = ReturnInst (:any) %24: any
+// CHECK-NEXT:  %25 = ReturnInst %24: any
 // CHECK-NEXT:function_end

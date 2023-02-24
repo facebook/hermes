@@ -36,7 +36,7 @@ function foo(a,b) {
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
 // CHECK-NEXT:; <stdin>:18:1
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any
@@ -95,5 +95,5 @@ function foo(a,b) {
 // CHECK-NEXT:  %23 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:; <stdin>:18:1
-// CHECK-NEXT:  %24 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

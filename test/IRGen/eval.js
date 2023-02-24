@@ -36,7 +36,7 @@ function baz() {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -53,9 +53,9 @@ function baz() {
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
@@ -75,9 +75,9 @@ function baz() {
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(): any
@@ -94,7 +94,7 @@ function baz() {
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

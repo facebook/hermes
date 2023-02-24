@@ -38,13 +38,13 @@ function recursive_phi(x) {
 // CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "sink": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %recursive_phi(): string|number
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "recursive_phi": string
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function recursive_phi(x: any): string|number
@@ -60,7 +60,7 @@ function recursive_phi(x) {
 // CHECK-NEXT:  %6 = CondBranchInst %5: boolean, %BB3, %BB2
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %9: string|number, %10: string|number
-// CHECK-NEXT:  %8 = ReturnInst (:string|number) %7: string|number
+// CHECK-NEXT:  %8 = ReturnInst %7: string|number
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = PhiInst (:string|number) %3: string|number, %BB3, %2: string|number, %BB1
 // CHECK-NEXT:  %10 = PhiInst (:string|number) %2: string|number, %BB3, %3: string|number, %BB1

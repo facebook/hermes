@@ -90,7 +90,7 @@ function badThrow() {
 // CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "multi": string
 // CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %badThrow(): number
 // CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "badThrow": string
-// CHECK-NEXT:  %15 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple(x: any, y: any): number
@@ -102,7 +102,7 @@ function badThrow() {
 // CHECK-NEXT:  %2 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %3 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
-// CHECK-NEXT:  %4 = ReturnInst (:number) %3: number
+// CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
 
 // CHECK:function control_flow(x: any, y: any): any
@@ -124,7 +124,7 @@ function badThrow() {
 // CHECK-NEXT:  %9 = CondBranchInst %1: any, %BB6, %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = PhiInst (:any) 15: number, %BB6, %5: number, %BB5, %1: any, %BB1
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %12 = BranchInst %BB4
 // CHECK-NEXT:function_end
@@ -140,11 +140,11 @@ function badThrow() {
 // CHECK-NEXT:  %4 = TryStartInst %BB3, %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadStackInst (:number) %0: number
-// CHECK-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = CatchInst (:any)
 // CHECK-NEXT:  %8 = LoadStackInst (:number) %0: number
-// CHECK-NEXT:  %9 = ReturnInst (:number) %8: number
+// CHECK-NEXT:  %9 = ReturnInst %8: number
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "j": string
 // CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB5, %BB6
@@ -169,7 +169,7 @@ function badThrow() {
 // CHECK-NEXT:  %3 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
 // CHECK-NEXT:  %4 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
 // CHECK-NEXT:  %5 = BinaryAddInst (:number) %3: number, %4: number
-// CHECK-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:function_end
 
 // CHECK:function badThrow(): number
@@ -181,7 +181,7 @@ function badThrow() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = CatchInst (:any)
 // CHECK-NEXT:  %4 = LoadStackInst (:number) %0: number
-// CHECK-NEXT:  %5 = ReturnInst (:number) %4: number
+// CHECK-NEXT:  %5 = ReturnInst %4: number
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = StoreStackInst 100: number, %0: number
 // CHECK-NEXT:  %7 = ThrowInst "hello": string

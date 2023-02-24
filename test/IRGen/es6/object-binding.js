@@ -151,7 +151,7 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %100 = BranchInst %BB27
 // CHECK-NEXT:%BB27:
 // CHECK-NEXT:  %101 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %102 = ReturnInst (:any) %101: any
+// CHECK-NEXT:  %102 = ReturnInst %101: any
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %103 = LoadStackInst (:any) %34: any
 // CHECK-NEXT:  %104 = IteratorCloseInst (:any) %103: any, true: boolean

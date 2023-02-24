@@ -23,7 +23,7 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): undefined
 // OPT-CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// OPT-CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function foo(p1: any, p2: any, p3: any): undefined
@@ -34,7 +34,7 @@ function foo(p1, p2, p3) {
 // OPT-CHECK-NEXT:  %2 = LoadParamInst (:any) %p3: any
 // OPT-CHECK-NEXT:  %3 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
 // OPT-CHECK-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %1: any, %2: any
-// OPT-CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
+// OPT-CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
 // CHECK:function global(): any
@@ -46,7 +46,7 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1: any, p2: any, p3: any): any
@@ -73,7 +73,7 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [t]: any
 // CHECK-NEXT:  %19 = BinaryAddInst (:any) %17: any, %18: any
 // CHECK-NEXT:  %20 = StoreFrameInst %19: any, [k]: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %22 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -38,7 +38,7 @@ function outer2() {
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
@@ -55,7 +55,7 @@ function outer2() {
 // CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [innerArrow1]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %innerArrow2(): any
 // CHECK-NEXT:  %10 = StoreFrameInst %9: closure, [innerArrow2]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): any
@@ -71,7 +71,7 @@ function outer2() {
 // CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [inner3]: any
 // CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %innerArrow4(): any
 // CHECK-NEXT:  %9 = StoreFrameInst %8: closure, [innerArrow4]: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any
@@ -79,9 +79,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "x": string
-// CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
@@ -89,9 +89,9 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer1]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "y": string
-// CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner3(): any
@@ -100,9 +100,9 @@ function outer2() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "a": string
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow4(): any
@@ -113,7 +113,7 @@ function outer2() {
 // CHECK-NEXT:  %2 = StorePropertyLooseInst 10: number, %1: any, "b": string
 // CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %nestedInnerArrow5(): any
 // CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [nestedInnerArrow5]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow nestedInnerArrow5(): any
@@ -121,7 +121,7 @@ function outer2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@outer2]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "b": string
-// CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

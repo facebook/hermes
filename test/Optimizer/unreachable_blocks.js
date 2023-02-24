@@ -43,13 +43,13 @@ bar();
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
@@ -58,10 +58,10 @@ bar();
 // CHECK-NEXT:  %0 = TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = CatchInst (:any)
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %3 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %4 = TryEndInst
-// CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

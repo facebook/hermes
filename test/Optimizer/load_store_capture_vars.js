@@ -101,7 +101,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %21 = StorePropertyLooseInst %20: closure, globalObject: object, "foo": string
 // CHECK-NEXT:  %22 = CreateFunctionInst (:closure) %postponed_store_in_use_block(): undefined
 // CHECK-NEXT:  %23 = StorePropertyLooseInst %22: closure, globalObject: object, "postponed_store_in_use_block": string
-// CHECK-NEXT:  %24 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_not_captured(): number
@@ -109,7 +109,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"foo 1#"(): undefined
 // CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %"foo 1#"(): undefined, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:number) 9: number
+// CHECK-NEXT:  %2 = ReturnInst 9: number
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_is_captured(): number
@@ -117,7 +117,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"foo 2#"(): undefined
 // CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %"foo 2#"(): undefined, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:number) 9: number
+// CHECK-NEXT:  %2 = ReturnInst 9: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_not_captured(): number
@@ -125,7 +125,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"foo 3#"(): undefined
 // CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %"foo 3#"(): undefined, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:number) 4: number
+// CHECK-NEXT:  %2 = ReturnInst 4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_is_captured(): number
@@ -135,7 +135,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %"foo 4#"(): undefined
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: closure, %"foo 4#"(): undefined, empty: any, undefined: undefined
 // CHECK-NEXT:  %3 = LoadFrameInst (:number) [x]: number
-// CHECK-NEXT:  %4 = ReturnInst (:number) %3: number
+// CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_captured_as_load(): number
@@ -143,7 +143,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"foo 5#"(): undefined
 // CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %"foo 5#"(): undefined, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:number) 4: number
+// CHECK-NEXT:  %2 = ReturnInst 4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function abort(): any
@@ -167,7 +167,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
@@ -189,32 +189,32 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %""(): any
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 0: number, %2: closure
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 1#"(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 3#"(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 4#"(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst 12: number, [x@load_x_is_captured]: number
-// CHECK-NEXT:  %1 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 5#"(): undefined [allCallsitesKnownInStrictMode]
@@ -222,12 +222,12 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [x@postponed_store_in_use_block]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end

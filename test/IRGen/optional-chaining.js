@@ -78,7 +78,7 @@ function f9(a) {
 // CHECK-NEXT:  %27 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %28 = StoreStackInst undefined: undefined, %27: any
 // CHECK-NEXT:  %29 = LoadStackInst (:any) %27: any
-// CHECK-NEXT:  %30 = ReturnInst (:any) %29: any
+// CHECK-NEXT:  %30 = ReturnInst %29: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(a: any): any
@@ -91,14 +91,14 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(f: any): any
@@ -111,14 +111,14 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(a: any): any
@@ -131,7 +131,7 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %9: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -139,7 +139,7 @@ function f9(a) {
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "c": string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(a: any): any
@@ -152,7 +152,7 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %10: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -161,7 +161,7 @@ function f9(a) {
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(a: any): any
@@ -174,7 +174,7 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %9: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -182,7 +182,7 @@ function f9(a) {
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "b": string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f6(a: any): any
@@ -196,7 +196,7 @@ function f9(a) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %10: any, %BB2
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "d": string
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -204,7 +204,7 @@ function f9(a) {
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "c": string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f7(a: any): any
@@ -217,7 +217,7 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %12: any, %BB4
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -229,7 +229,7 @@ function f9(a) {
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "c": string
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f8(a: any): any
@@ -242,7 +242,7 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %14: any, %BB4
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -257,7 +257,7 @@ function f9(a) {
 // CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, %8: any
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f9(a: any): any
@@ -270,12 +270,12 @@ function f9(a) {
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = PhiInst (:any) undefined: undefined, %BB1, %8: any, %BB2
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = DeletePropertyLooseInst (:any) %2: any, "b": string
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

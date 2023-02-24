@@ -123,7 +123,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %24 = StorePropertyLooseInst %23: closure, globalObject: object, "code_sinking": string
 // CHECK-NEXT:  %25 = CreateFunctionInst (:closure) %code_sinking_in_loop(): undefined
 // CHECK-NEXT:  %26 = StorePropertyLooseInst %25: closure, globalObject: object, "code_sinking_in_loop": string
-// CHECK-NEXT:  %27 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %27 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_branch(x: any, y: any): any
@@ -136,12 +136,12 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %1: any, "z": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "k": string
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "r": string
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %1: any, "z": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "k": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "t": string
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_branch_window(x: any, y: any): any
@@ -157,12 +157,12 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "k": string
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "r": string
 // CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %7: any, %4: number
-// CHECK-NEXT:  %9 = ReturnInst (:string|number) %8: string|number
+// CHECK-NEXT:  %9 = ReturnInst %8: string|number
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %1: any, "z": string
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) %10: any, "k": string
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: any, "t": string
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:function_end
 
 // CHECK:function no_hoist_inc_dec(x: any, y: any): number|bigint
@@ -179,7 +179,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:number|bigint) %3: number|bigint, %BB1, %5: number|bigint, %BB2
-// CHECK-NEXT:  %8 = ReturnInst (:number|bigint) %7: number|bigint
+// CHECK-NEXT:  %8 = ReturnInst %7: number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_loop(x: any): undefined
@@ -196,7 +196,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %7 = BinaryLessThanInst (:boolean) %6: number, %0: any
 // CHECK-NEXT:  %8 = CondBranchInst %7: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function hoist_loop_expression(a: any, b: any, call: any): any
@@ -246,7 +246,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %2: number, %2: number
 // CHECK-NEXT:  %5 = CondBranchInst %1: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %6 = ReturnInst %1: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %8 = BinarySubtractInst (:number) %4: number, 3: number
@@ -264,9 +264,9 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %4 = BinaryAddInst (:number) %3: number, 9: number
 // CHECK-NEXT:  %5 = CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst (:number) %3: number
+// CHECK-NEXT:  %6 = ReturnInst %3: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = ReturnInst (:number) %4: number
+// CHECK-NEXT:  %7 = ReturnInst %4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function code_sinking_in_loop(x: any, y: any): undefined
@@ -279,7 +279,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %4 = CondBranchInst %1: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = StorePropertyLooseInst %1: any, %3: object, %0: any
 // CHECK-NEXT:  %7 = BranchInst %BB1

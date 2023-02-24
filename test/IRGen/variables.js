@@ -43,7 +43,7 @@ function level0(x) {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function same_func_name(same_param_name: any): any
@@ -53,7 +53,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %"same_func_name 1#"(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [same_func_name]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(a: any, b: any, c: any): any
@@ -65,7 +65,7 @@ function level0(x) {
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [c]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function level0(x: any): any
@@ -75,7 +75,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %level1(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [level1]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "same_func_name 1#"(same_param_name: any): any
@@ -85,7 +85,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %"same_func_name 2#"(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [same_func_name]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function level1(y: any): any
@@ -95,7 +95,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [y]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %level2(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [level2]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "same_func_name 2#"(same_param_name: any): any
@@ -104,9 +104,9 @@ function level0(x) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %same_param_name: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [same_param_name]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [same_param_name]: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function level2(z: any): any
@@ -119,5 +119,5 @@ function level0(x) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [y@level1]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: any, %4: any, %5: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

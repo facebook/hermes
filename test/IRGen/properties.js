@@ -38,7 +38,7 @@ function sink(x, y) {
 // CHECK-NEXT:  %12 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, %11: any
 // CHECK-NEXT:  %13 = StoreStackInst %12: any, %4: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(x: any, y: any): any
@@ -50,16 +50,16 @@ function sink(x, y) {
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "bar": string
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "bar": string
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %10: any, %11: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -29,7 +29,7 @@ function foo(param) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(param: any): any
@@ -50,5 +50,5 @@ function foo(param) {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [foo]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %14 = StorePropertyLooseInst %13: any, %12: any, 5: number
-// CHECK-NEXT:  %15 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

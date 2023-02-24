@@ -27,7 +27,7 @@ function fibonacci(n) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function fibonacci(n: any): any
@@ -39,14 +39,14 @@ function fibonacci(n) {
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [n]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "fibonacci": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [n]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB5:

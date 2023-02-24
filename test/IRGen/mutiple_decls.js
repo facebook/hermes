@@ -36,7 +36,7 @@ foo(); // This is still a valid call.
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %8 = StoreStackInst %7: any, %4: any
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -44,5 +44,5 @@ foo(); // This is still a valid call.
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [b]: any
 // CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [a]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

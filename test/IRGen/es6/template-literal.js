@@ -47,7 +47,7 @@ function f5(x) {
 // CHKIR-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "f4": string
 // CHKIR-NEXT:  %13 = CreateFunctionInst (:closure) %f5(): any
 // CHKIR-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "f5": string
-// CHKIR-NEXT:  %15 = ReturnInst (:undefined) undefined: undefined
+// CHKIR-NEXT:  %15 = ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f1(): any
@@ -56,19 +56,19 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
 // CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, "hello": string, 2: number, "world": string
-// CHKIR-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHKIR-NEXT:  %3 = ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2(): string
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = ReturnInst (:string) "world": string
+// CHKIR-NEXT:  %0 = ReturnInst "world": string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f3(): string
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = ReturnInst (:string) "": string
+// CHKIR-NEXT:  %0 = ReturnInst "": string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f4(): any
@@ -77,7 +77,7 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
 // CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, "": string, 666: number
-// CHKIR-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHKIR-NEXT:  %3 = ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f5(x: any): any
@@ -87,5 +87,5 @@ function f5(x) {
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %2 = LoadPropertyInst (:any) %1: any, "concat": string
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, "": string, %0: any
-// CHKIR-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHKIR-NEXT:  %4 = ReturnInst %3: any
 // CHKIR-NEXT:function_end

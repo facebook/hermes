@@ -56,7 +56,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_do_while_test(cond: any): any
@@ -68,7 +68,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = BranchInst %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %6 = CondBranchInst %5: any, %BB1, %BB3
@@ -83,7 +83,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %6 = CondBranchInst %5: any, %BB1, %BB2
@@ -100,7 +100,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = BranchInst %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %6 = CondBranchInst %5: any, %BB1, %BB3
@@ -122,7 +122,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %8 = CondBranchInst %7: any, %BB3, %BB4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %10: any, 10: number

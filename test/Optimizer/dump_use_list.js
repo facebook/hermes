@@ -23,7 +23,7 @@ function foo(a, b) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any // users: %4 %5
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any // users: %6
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any
@@ -41,7 +41,7 @@ function foo(a, b) {
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [c]: any // users: %11
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [c]: any // users: %11
 // CHECK-NEXT:  %11 = BinaryMultiplyInst (:any) %9: any, %10: any // users: %12
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -82,7 +82,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %27 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %28 = StoreStackInst undefined: undefined, %27: any
 // CHECK-NEXT:  %29 = LoadStackInst (:any) %27: any
-// CHECK-NEXT:  %30 = ReturnInst (:any) %29: any
+// CHECK-NEXT:  %30 = ReturnInst %29: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(a: any): any
@@ -90,7 +90,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop(): any
@@ -107,7 +107,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %10: any, 10: number
@@ -130,7 +130,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %8 = BinaryLessThanInst (:any) %7: any, 10: number
@@ -153,7 +153,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %3 = BinaryLessThanInst (:any) %2: any, 10: number
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
@@ -182,7 +182,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [i]: any
 // CHECK-NEXT:  %8 = BinaryLessThanInst (:any) %7: any, 10: number
@@ -205,7 +205,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %3 = BinaryLessThanInst (:any) %2: any, 10: number
 // CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
@@ -248,7 +248,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %18 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %19 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %20 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %20 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %22 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined
@@ -270,7 +270,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = BranchInst %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %3 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
@@ -312,7 +312,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %21 = BranchInst %BB11
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %22 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %23 = CondBranchInst false: boolean, %BB8, %BB9
 // CHECK-NEXT:%BB11:

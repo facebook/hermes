@@ -20,7 +20,7 @@ function f1(a, ...b) {}
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(a: any): any
@@ -32,5 +32,5 @@ function f1(a, ...b) {}
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [a]: any
 // CHECK-NEXT:  %4 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [b]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

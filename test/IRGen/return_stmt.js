@@ -61,7 +61,7 @@ function test5() {
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
+// CHECK-NEXT:  %21 = ReturnInst %20: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test0(x: any, y: any): any
@@ -75,19 +75,19 @@ function test5() {
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any, y: any): any
@@ -103,9 +103,9 @@ function test5() {
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
@@ -121,11 +121,11 @@ function test5() {
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:function_end
@@ -138,18 +138,18 @@ function test5() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
@@ -164,18 +164,18 @@ function test5() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %13 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
@@ -185,7 +185,7 @@ function test5() {
 // CHECK:function test5(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

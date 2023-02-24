@@ -48,7 +48,7 @@ function shadow(arguments) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cheap(): any
@@ -58,9 +58,9 @@ function shadow(arguments) {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "length": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:any) %1: any, %2: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function expensive(): any
@@ -73,9 +73,9 @@ function shadow(arguments) {
 // CHECK-NEXT:  %4 = BinaryAddInst (:any) %1: any, %3: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %4: any, %5: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function cond(): any
@@ -86,11 +86,11 @@ function shadow(arguments) {
 // CHECK-NEXT:  %2 = CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 1: number
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:function_end
@@ -102,7 +102,7 @@ function shadow(arguments) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [arguments]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [arguments]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "length": string
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

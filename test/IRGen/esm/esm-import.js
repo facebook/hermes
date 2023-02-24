@@ -23,7 +23,7 @@ import 'bar.js';
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -46,5 +46,5 @@ import 'bar.js';
 // CHECK-NEXT:  %14 = LoadPropertyInst (:any) %11: any, "y": string
 // CHECK-NEXT:  %15 = StoreFrameInst %14: any, [z]: any
 // CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "bar.js": string
-// CHECK-NEXT:  %17 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

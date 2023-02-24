@@ -22,7 +22,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any, c: any): any
@@ -41,7 +41,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %6: object, %9: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:  %12 = StoreOwnPropertyInst %11: any, %6: object, "c": string, true: boolean
-// CHECK-NEXT:  %13 = ReturnInst (:any) %6: object
+// CHECK-NEXT:  %13 = ReturnInst %6: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

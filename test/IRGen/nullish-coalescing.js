@@ -33,7 +33,7 @@ function f2(a, b) {
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(a: any, b: any): any
@@ -54,9 +54,9 @@ function f2(a, b) {
 // CHECK-NEXT:  %11 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(a: any, b: any): any
@@ -70,11 +70,11 @@ function f2(a, b) {
 // CHECK-NEXT:  %5 = BinaryEqualInst (:any) %4: any, null: null
 // CHECK-NEXT:  %6 = CondBranchInst %5: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst (:any) 1: number
+// CHECK-NEXT:  %7 = ReturnInst 1: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = ReturnInst (:any) 2: number
+// CHECK-NEXT:  %8 = ReturnInst 2: number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB3, %BB4

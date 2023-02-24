@@ -38,7 +38,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any, c: any): any
@@ -50,7 +50,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [b]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %c: any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [c]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(x: any, y: any, z: any): any
@@ -67,7 +67,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %7: any, %8: any, %9: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_member_access(obj: any, param: any): any
@@ -81,5 +81,5 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "foo": string
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [param]: any
 // CHECK-NEXT:  %7 = CallInst (:any) %5: any, empty: any, empty: any, %4: any, %6: any
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

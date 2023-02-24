@@ -209,7 +209,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:  %145 = BranchInst %BB23
 // CHECK-NEXT:%BB23:
 // CHECK-NEXT:  %146 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %147 = ReturnInst (:any) %146: any
+// CHECK-NEXT:  %147 = ReturnInst %146: any
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %148 = LoadStackInst (:any) %6: any
 // CHECK-NEXT:  %149 = IteratorCloseInst (:any) %148: any, true: boolean

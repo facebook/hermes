@@ -21,5 +21,5 @@ var x = typeof foo;
 // CHECK-NEXT:  %4 = UnaryTypeofInst (:any) %3: any
 // CHECK-NEXT:  %5 = StorePropertyStrictInst %4: any, globalObject: object, "x": string
 // CHECK-NEXT:  %6 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:function_end

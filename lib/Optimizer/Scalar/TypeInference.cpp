@@ -303,7 +303,7 @@ static bool inferFunctionReturnType(Function *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
       if (auto *RI = llvh::dyn_cast<ReturnInst>(I)) {
-        Type T = RI->getType();
+        Type T = RI->getValue()->getType();
         if (first && !T.isNoType()) {
           returnTy = T;
           first = false;
@@ -859,7 +859,7 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferReturnInst(ReturnInst *inst) {
-    return inst->getOperand(0)->getType();
+    return Type::createNoType();
   }
   Type inferThrowInst(ThrowInst *inst) {
     return Type::createNoType();

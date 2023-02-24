@@ -64,5 +64,5 @@ print(!false);
 // CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined, false: boolean
 // CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, true: boolean
-// CHECK-NEXT:  %28 = ReturnInst (:any) %27: any
+// CHECK-NEXT:  %28 = ReturnInst %27: any
 // CHECK-NEXT:function_end

@@ -32,7 +32,7 @@ x = 2;
 // CHECK-NEXT:  %7 = StorePropertyLooseInst 2: number, globalObject: object, "x": string
 // CHECK-NEXT:  %8 = StoreStackInst 2: number, %1: any
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = StorePropertyLooseInst 1: number, globalObject: object, "x": string
 // CHECK-NEXT:  %12 = StoreStackInst 1: number, %1: any

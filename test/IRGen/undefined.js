@@ -34,7 +34,7 @@ undefined;
 // CHECK-NEXT:  %9 = StoreStackInst %8: any, %4: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %4: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -43,7 +43,7 @@ undefined;
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [undefined]: any
 // CHECK-NEXT:  %1 = StoreFrameInst 5: number, [undefined]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [undefined]: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -26,7 +26,7 @@ function outer(a, b) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %outer(): string|number
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "outer": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
@@ -36,12 +36,12 @@ function outer(a, b) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %f2(): any
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:  %4 = ReturnInst (:string|number) %3: string|number
+// CHECK-NEXT:  %4 = ReturnInst %3: string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [a@outer]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end

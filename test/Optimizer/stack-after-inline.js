@@ -24,12 +24,12 @@ function f1(num) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %f1(): any
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "f1": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(num: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %num: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end

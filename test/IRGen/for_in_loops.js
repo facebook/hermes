@@ -64,7 +64,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
+// CHECK-NEXT:  %21 = ReturnInst %20: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(a: any): any
@@ -72,7 +72,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_in_loop(obj: any): any
@@ -91,7 +91,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:  %11 = GetPNamesInst %4: any, %5: any, %6: any, %7: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %13 = GetNextPNameInst %10: any, %5: any, %6: any, %7: any, %4: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -119,7 +119,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:  %11 = GetPNamesInst %4: any, %5: any, %6: any, %7: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %13 = GetNextPNameInst %10: any, %5: any, %6: any, %7: any, %4: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -151,7 +151,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:  %11 = GetPNamesInst %4: any, %5: any, %6: any, %7: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -182,7 +182,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:  %10 = GetPNamesInst %3: any, %4: any, %5: any, %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = GetNextPNameInst %9: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -213,7 +213,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) %12: any, "y": string
 // CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %13: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %16 = GetNextPNameInst %9: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:

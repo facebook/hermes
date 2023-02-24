@@ -63,15 +63,15 @@ fail2:
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
+// CHECK-NEXT:  %21 = ReturnInst %20: any
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 1: number
+// CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_test(cond: any): any
@@ -84,7 +84,7 @@ fail2:
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
@@ -102,7 +102,7 @@ fail2:
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
@@ -118,7 +118,7 @@ fail2:
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
@@ -138,7 +138,7 @@ fail2:
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
@@ -158,7 +158,7 @@ fail2:
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [cond]: any
 // CHECK-NEXT:  %6 = CondBranchInst %5: any, %BB4, %BB5

@@ -30,7 +30,7 @@ function main(p) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): closure
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p: any): closure
@@ -42,7 +42,7 @@ function main(p) {
 // CHECK-NEXT:  %3 = StoreFrameInst %0: any, [k]: any
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [p]: any
-// CHECK-NEXT:  %6 = ReturnInst (:closure) %2: closure
+// CHECK-NEXT:  %6 = ReturnInst %2: closure
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
@@ -61,5 +61,5 @@ function main(p) {
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %1: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [p@main]: any
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %13 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

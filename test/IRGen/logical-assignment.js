@@ -43,7 +43,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function testAnd(x: any, y: any): any
@@ -62,9 +62,9 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %9 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB1
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function testOr(x: any, y: any): any
@@ -83,9 +83,9 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %9 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = PhiInst (:any) %5: any, %BB0, %7: any, %BB2
-// CHECK-NEXT:  %11 = ReturnInst (:any) %10: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function testNullish(x: any, y: any): any
@@ -105,9 +105,9 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %10 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = PhiInst (:any) %5: any, %BB0, %8: any, %BB1
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function testComplex(x: any, y: any, z: any): any
@@ -128,7 +128,7 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %11 = CondBranchInst %9: any, %BB3, %BB4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = PhiInst (:any) %6: any, %BB0, %17: any, %BB3
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [z]: any
 // CHECK-NEXT:  %15 = StoreStackInst %14: any, %8: any
@@ -138,5 +138,5 @@ function testComplex(x, y, z) {
 // CHECK-NEXT:  %18 = StoreFrameInst %17: any, [x]: any
 // CHECK-NEXT:  %19 = BranchInst %BB1
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %20 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

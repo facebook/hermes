@@ -56,7 +56,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthand(func: any): any
@@ -68,9 +68,9 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %3 = StoreFrameInst 42: number, [__proto__]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [__proto__]: any
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) "__proto__": string, %4: any, "a": string, 2: number, "b": string, 3: number
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: object
+// CHECK-NEXT:  %6 = ReturnInst %5: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup(func: any): any
@@ -85,9 +85,9 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst null: null, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [__proto__]: any
 // CHECK-NEXT:  %8 = StoreOwnPropertyInst %7: any, %4: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %9 = ReturnInst (:any) %4: object
+// CHECK-NEXT:  %9 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix1(func: any): any
@@ -102,9 +102,9 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5: any, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %7 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %4: object, %7: object
-// CHECK-NEXT:  %9 = ReturnInst (:any) %4: object
+// CHECK-NEXT:  %9 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix2(func: any): any
@@ -118,7 +118,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %5 = AllocObjectInst (:object) 1: number, %4: object
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [__proto__]: any
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6: any, %5: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %8 = ReturnInst (:any) %5: object
+// CHECK-NEXT:  %8 = ReturnInst %5: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -24,7 +24,7 @@ function test_assignment_expr() {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_assignment_expr(): any
@@ -35,5 +35,5 @@ function test_assignment_expr() {
 // CHECK-NEXT:  %2 = StoreFrameInst 0: number, [y]: any
 // CHECK-NEXT:  %3 = StoreFrameInst 4: number, [y]: any
 // CHECK-NEXT:  %4 = StoreFrameInst 4: number, [x]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

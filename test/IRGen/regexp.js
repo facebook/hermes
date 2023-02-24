@@ -36,7 +36,7 @@ function simple_test1() {
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0(): any
@@ -53,7 +53,7 @@ function simple_test1() {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [re]: any
 // CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, %6: any, %8: any, "$2, $1": string
 // CHECK-NEXT:  %10 = StoreFrameInst %9: any, [newstr]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test1(): any
@@ -74,5 +74,5 @@ function simple_test1() {
 // CHECK-NEXT:  %12 = StoreFrameInst %11: regexp, [re3]: any
 // CHECK-NEXT:  %13 = CreateRegExpInst (:regexp) " ": string, "": string
 // CHECK-NEXT:  %14 = StoreFrameInst %13: regexp, [re4]: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

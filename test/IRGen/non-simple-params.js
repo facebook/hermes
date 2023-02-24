@@ -36,7 +36,7 @@ function baz({a, b}) {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any): any
@@ -58,9 +58,9 @@ function baz({a, b}) {
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(a: any, b: any): any
@@ -88,9 +88,9 @@ function baz({a, b}) {
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %17 = BinaryAddInst (:any) %15: any, %16: any
-// CHECK-NEXT:  %18 = ReturnInst (:any) %17: any
+// CHECK-NEXT:  %18 = ReturnInst %17: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %19 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %19 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(?anon_0_param: any): any
@@ -106,7 +106,7 @@ function baz({a, b}) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: any, %8: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

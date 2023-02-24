@@ -26,7 +26,7 @@ function foo(param = a || b) {}
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %6 = StoreStackInst undefined: undefined, %5: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(param: any): any
@@ -44,7 +44,7 @@ function foo(param = a || b) {}
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = PhiInst (:any) %1: any, %BB0, %14: any, %BB3
 // CHECK-NEXT:  %9 = StoreFrameInst %8: any, [param]: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "b": string
 // CHECK-NEXT:  %12 = StoreStackInst %11: any, %4: any

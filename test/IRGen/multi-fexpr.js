@@ -71,7 +71,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_fexpr_in_while_cond(): any
@@ -83,7 +83,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %f(): any
 // CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [f]: any
@@ -100,7 +100,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %fexpr(): any
 // CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [fexpr]: any
@@ -119,7 +119,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %4 = CallInst (:any) %2: closure, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %5 = ThrowInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined
@@ -146,7 +146,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %7 = StorePropertyLooseInst %5: closure, globalObject: object, "glob": string
 // CHECK-NEXT:  %8 = ThrowInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
@@ -163,7 +163,7 @@ function test_captured_let_in_finally() {
 // CHECK:function f(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function fexpr(): any
@@ -179,9 +179,9 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "something": string
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "fexpr 1#"(): any
@@ -196,12 +196,12 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "fexpr 2#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst 10: number, [x@test_captured_let_in_finally]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

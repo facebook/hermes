@@ -528,7 +528,7 @@ function objectCond() {
 // CHECK-NEXT:  %96 = StorePropertyLooseInst %95: closure, globalObject: object, "simplify_switch": string
 // CHECK-NEXT:  %97 = CreateFunctionInst (:closure) %objectCond(): number
 // CHECK-NEXT:  %98 = StorePropertyLooseInst %97: closure, globalObject: object, "objectCond": string
-// CHECK-NEXT:  %99 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %99 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_sub_num(x: any, y: any): undefined
@@ -553,7 +553,7 @@ function objectCond() {
 // CHECK-NEXT:  %16 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
 // CHECK-NEXT:  %17 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
 // CHECK-NEXT:  %18 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
-// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %19 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function modulo_num(x: any, y: any): undefined
@@ -573,7 +573,7 @@ function objectCond() {
 // CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0.5: number
 // CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
 // CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
-// CHECK-NEXT:  %14 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function logic_ops_test(x: any, y: any): undefined
@@ -596,7 +596,7 @@ function objectCond() {
 // CHECK-NEXT:  %14 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %16 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %17 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_str(x: any, y: any): undefined
@@ -606,7 +606,7 @@ function objectCond() {
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hello world": string
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hello NaN": string
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "NaNworld": string
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str(x: any): undefined
@@ -619,7 +619,7 @@ function objectCond() {
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %5 = AddEmptyStringInst (:string) %0: any
 // CHECK-NEXT:  %6 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %5: string
-// CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_empty_str_simplify(x: any): string
@@ -627,7 +627,7 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %1 = AddEmptyStringInst (:string) %0: any
-// CHECK-NEXT:  %2 = ReturnInst (:string) %1: string
+// CHECK-NEXT:  %2 = ReturnInst %1: string
 // CHECK-NEXT:function_end
 
 // CHECK:function add_null(x: any, y: any): undefined
@@ -639,7 +639,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "nullhello": string
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "hellonull": string
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function mul_null(x: any, y: any): undefined
@@ -651,7 +651,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_num(x: any, y: any): undefined
@@ -665,7 +665,7 @@ function objectCond() {
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 3: number
 // CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %8 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_null(x: any, y: any): undefined
@@ -677,7 +677,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function left_shift_undefined(x: any, y: any): undefined
@@ -689,7 +689,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_num(x: any, y: any): undefined
@@ -706,7 +706,7 @@ function objectCond() {
 // CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -1: number
 // CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %11 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_null(x: any, y: any): undefined
@@ -718,7 +718,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_undefined(x: any, y: any): undefined
@@ -730,7 +730,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function right_shift_bool(x: any, y: any): undefined
@@ -745,7 +745,7 @@ function objectCond() {
 // CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %9 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_bool(x: any, y: any): undefined
@@ -756,7 +756,7 @@ function objectCond() {
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_compound_assgmt(x: any, y: any): undefined
@@ -764,7 +764,7 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 1: number
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function unsigned_right_shift_num(x: any, y: any): undefined
@@ -781,7 +781,7 @@ function objectCond() {
 // CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4294967295: number
 // CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %11 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_undef(x: any, y: any): undefined
@@ -793,7 +793,7 @@ function objectCond() {
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "undefinedasdf": string
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, "asdfundefined": string
 // CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function comp_num(x: any, y: any): undefined
@@ -818,7 +818,7 @@ function objectCond() {
 // CHECK-NEXT:  %16 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
 // CHECK-NEXT:  %17 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
 // CHECK-NEXT:  %18 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
-// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %19 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function equality(x: any, y: any): undefined
@@ -843,7 +843,7 @@ function objectCond() {
 // CHECK-NEXT:  %16 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
 // CHECK-NEXT:  %17 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, true: boolean
 // CHECK-NEXT:  %18 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, false: boolean
-// CHECK-NEXT:  %19 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %19 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function arith(): undefined
@@ -853,7 +853,7 @@ function objectCond() {
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 4: number
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 8: number
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 64: number
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function undef_test(x: any, y: any): undefined
@@ -863,14 +863,14 @@ function objectCond() {
 // CHECK-NEXT:  %1 = BinaryGreaterThanOrEqualInst (:boolean) undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: boolean
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, true: boolean
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(y: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %1 = ReturnInst (:number) 8: number
+// CHECK-NEXT:  %1 = ReturnInst 8: number
 // CHECK-NEXT:function_end
 
 // CHECK:function strip_bang(y: any): number
@@ -880,9 +880,9 @@ function objectCond() {
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
 // CHECK-NEXT:  %2 = CondBranchInst %1: number, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = ReturnInst (:number) 1: number
+// CHECK-NEXT:  %3 = ReturnInst 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:number) 2: number
+// CHECK-NEXT:  %4 = ReturnInst 2: number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_into_as_number(y: any): number
@@ -890,13 +890,13 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsNumberInst (:number) %0: any
-// CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
+// CHECK-NEXT:  %2 = ReturnInst %1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_unary_plus_on_literal_into_result(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 5: number
+// CHECK-NEXT:  %0 = ReturnInst 5: number
 // CHECK-NEXT:function_end
 
 // CHECK:function turn_bitor_into_as_int32(y: any): number
@@ -904,7 +904,7 @@ function objectCond() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %1 = AsInt32Inst (:number) %0: any
-// CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
+// CHECK-NEXT:  %2 = ReturnInst %1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_ops(x: any, y: any): undefined
@@ -923,20 +923,20 @@ function objectCond() {
 // CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, -0: number
 // CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
 // CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, true: boolean
-// CHECK-NEXT:  %13 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_phi(a: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 4: number
+// CHECK-NEXT:  %0 = ReturnInst 4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function if_inline(d: any): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %1 = ReturnInst (:number) 10: number
+// CHECK-NEXT:  %1 = ReturnInst 10: number
 // CHECK-NEXT:function_end
 
 // CHECK:function simplify_switch(): undefined
@@ -946,11 +946,11 @@ function objectCond() {
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 7: number
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 2: number
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function objectCond(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 1: number
+// CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end

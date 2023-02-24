@@ -26,7 +26,7 @@ function foo(obj) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(obj: any): any
@@ -46,7 +46,7 @@ function foo(obj) {
 // CHECK-NEXT:  %11 = GetPNamesInst %3: any, %4: any, %5: any, %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %14 = GetNextPNameInst %10: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -57,5 +57,5 @@ function foo(obj) {
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, empty: any, undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %21 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

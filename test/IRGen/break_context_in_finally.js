@@ -37,7 +37,7 @@ function foo() {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -45,7 +45,7 @@ function foo() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = TryStartInst %BB3, %BB4
 // CHECK-NEXT:%BB5:

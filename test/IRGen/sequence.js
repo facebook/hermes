@@ -39,7 +39,7 @@ function test2(x,y) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink0(a: any): any
@@ -47,7 +47,7 @@ function test2(x,y) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink1(a: any): any
@@ -55,7 +55,7 @@ function test2(x,y) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any, y: any): any
@@ -65,9 +65,9 @@ function test2(x,y) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [y]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) 3: number
+// CHECK-NEXT:  %4 = ReturnInst 3: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x: any, y: any): any
@@ -85,7 +85,7 @@ function test2(x,y) {
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [y]: any
 // CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %9: any, %10: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

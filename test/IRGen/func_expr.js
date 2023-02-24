@@ -51,7 +51,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test0(): any
@@ -59,7 +59,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %""(): any
 // CHECK-NEXT:  %1 = CallInst (:any) %0: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(x: any): any
@@ -69,7 +69,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %" 1#"(): any
 // CHECK-NEXT:  %3 = CallInst (:any) %2: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(x: any): any
@@ -79,7 +79,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [x]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %" 2#"(): any
 // CHECK-NEXT:  %3 = CallInst (:any) %2: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_hoisting_of_func_expr(): any
@@ -88,24 +88,24 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %some_local_name(): any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [some_local_name]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 1: number
+// CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [x@test1]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"(): any
@@ -113,22 +113,22 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %" 3#"(): any
 // CHECK-NEXT:  %1 = CallInst (:any) %0: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function some_local_name(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [some_local_name@test_hoisting_of_func_expr]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 3#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 2: number
+// CHECK-NEXT:  %0 = ReturnInst 2: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

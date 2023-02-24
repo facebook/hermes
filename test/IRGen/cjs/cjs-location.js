@@ -22,7 +22,7 @@ x = 10;
 // CHECK-NEXT:; <global>:1:1
 // CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:; <global>:1:1
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -44,5 +44,5 @@ x = 10;
 // CHECK-NEXT:; <stdin>:10:3
 // CHECK-NEXT:  %6 = StorePropertyLooseInst 10: number, globalObject: object, "x": string
 // CHECK-NEXT:; <stdin>:10:7
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

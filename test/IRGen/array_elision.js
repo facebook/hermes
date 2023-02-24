@@ -23,7 +23,7 @@ function func() {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function func(): any
@@ -33,5 +33,5 @@ function func() {
 // CHECK-NEXT:  %1 = AllocArrayInst (:object) 3: number
 // CHECK-NEXT:  %2 = StoreOwnPropertyInst "a": string, %1: object, 2: number, true: boolean
 // CHECK-NEXT:  %3 = StoreFrameInst %1: object, [foo]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

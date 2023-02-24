@@ -23,7 +23,7 @@ function outer1() {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer1": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %outer1(): any
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "outer1": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
@@ -31,12 +31,12 @@ function outer1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %dontInline(): any
 // CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %dontInline(): any, empty: any, undefined: undefined, 1: number
-// CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:function_end
 
 // CHECK:function dontInline(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end

@@ -27,11 +27,11 @@ f();
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "f": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -22,7 +22,7 @@ function load_only_capture(leak, foreach, n) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "load_only_capture": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %load_only_capture(): number
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "load_only_capture": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_only_capture(leak: any, foreach: any, n: any): number
@@ -43,12 +43,12 @@ function load_only_capture(leak, foreach, n) {
 // CHECK-NEXT:  %11 = CondBranchInst %10: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = PhiInst (:number) 0: number, %BB0, %8: number, %BB1
-// CHECK-NEXT:  %13 = ReturnInst (:number) %12: number
+// CHECK-NEXT:  %13 = ReturnInst %12: number
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:number) [i@load_only_capture]: number
-// CHECK-NEXT:  %1 = ReturnInst (:number) %0: number
+// CHECK-NEXT:  %1 = ReturnInst %0: number
 // CHECK-NEXT:function_end

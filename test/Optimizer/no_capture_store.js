@@ -56,13 +56,13 @@ function outer() {
 // CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "main": string
 // CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %outer(): object
 // CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "outer": string
-// CHECK-NEXT:  %9 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(p: any): closure
@@ -78,7 +78,7 @@ function outer() {
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %8 = StoreFrameInst %7: any, [k3]: any
 // CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %""(): string|number|bigint
-// CHECK-NEXT:  %10 = ReturnInst (:closure) %9: closure
+// CHECK-NEXT:  %10 = ReturnInst %9: closure
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(): object
@@ -94,7 +94,7 @@ function outer() {
 // CHECK-NEXT:  %7 = StoreOwnPropertyInst %3: closure, %4: object, 2: number, true: boolean
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [envVar]: any
 // CHECK-NEXT:  %9 = StoreOwnPropertyInst %8: any, %4: object, 3: number, true: boolean
-// CHECK-NEXT:  %10 = ReturnInst (:object) %4: object
+// CHECK-NEXT:  %10 = ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): string|number|bigint
@@ -105,7 +105,7 @@ function outer() {
 // CHECK-NEXT:  %2 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [k3@main]: any
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %2: string|number|bigint, %3: any
-// CHECK-NEXT:  %5 = ReturnInst (:string|number|bigint) %4: string|number|bigint
+// CHECK-NEXT:  %5 = ReturnInst %4: string|number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function setValue(v: any): undefined
@@ -113,14 +113,14 @@ function outer() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %v: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [envVar@outer]: any
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst 87: number, [envVar@outer]: any
-// CHECK-NEXT:  %1 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test2(o: any): undefined
@@ -130,5 +130,5 @@ function outer() {
 // CHECK-NEXT:  %1 = StoreFrameInst 42: number, [envVar@outer]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %3 = StoreFrameInst 87: number, [envVar@outer]: any
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

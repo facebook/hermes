@@ -44,7 +44,7 @@ function f4(t) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(t: any): any
@@ -83,7 +83,7 @@ function f4(t) {
 // CHECK-NEXT:  %27 = TryStartInst %BB7, %BB8
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %28 = StoreFrameInst %13: object, [a]: any
-// CHECK-NEXT:  %29 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %29 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %30 = CatchInst (:any)
 // CHECK-NEXT:  %31 = StoreStackInst %30: any, %12: any
@@ -174,7 +174,7 @@ function f4(t) {
 // CHECK-NEXT:  %48 = StoreStackInst %47: any, %13: any
 // CHECK-NEXT:  %49 = BranchInst %BB3
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %50 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %50 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %51 = AllocStackInst (:any) $?anon_6_iter: any
 // CHECK-NEXT:  %52 = AllocStackInst (:any) $?anon_7_sourceOrNext: any
@@ -250,7 +250,7 @@ function f4(t) {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_4_prop: any
 // CHECK-NEXT:  %10 = GetPNamesInst %3: any, %4: any, %5: any, %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %12 = GetNextPNameInst %9: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -390,7 +390,7 @@ function f4(t) {
 // CHECK-NEXT:  %60 = StoreStackInst %59: any, %13: any
 // CHECK-NEXT:  %61 = BranchInst %BB2
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %62 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %62 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:  %63 = AllocStackInst (:any) $?anon_6_iter: any
 // CHECK-NEXT:  %64 = AllocStackInst (:any) $?anon_7_sourceOrNext: any

@@ -22,5 +22,5 @@ x;
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %4 = StoreStackInst %3: any, %1: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end

@@ -34,25 +34,25 @@ foo()
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %7 = StoreStackInst %6: any, %3: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) "hi": string
+// CHECK-NEXT:  %0 = ReturnInst "hi": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) 2.312: number
+// CHECK-NEXT:  %1 = ReturnInst 2.312: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = ReturnInst (:any) 12: number
+// CHECK-NEXT:  %2 = ReturnInst 12: number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %3 = ReturnInst (:any) 18: number
+// CHECK-NEXT:  %3 = ReturnInst 18: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %4 = ReturnInst (:any) true: boolean
+// CHECK-NEXT:  %4 = ReturnInst true: boolean
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %6 = ReturnInst (:any) null: null
+// CHECK-NEXT:  %6 = ReturnInst null: null
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

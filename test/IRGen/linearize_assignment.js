@@ -21,5 +21,5 @@ a.x = a = 42;
 // CHECK-NEXT:  %4 = StorePropertyLooseInst 42: number, %2: any, "x": string
 // CHECK-NEXT:  %5 = StoreStackInst 42: number, %0: any
 // CHECK-NEXT:  %6 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:function_end

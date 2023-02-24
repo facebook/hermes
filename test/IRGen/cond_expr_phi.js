@@ -23,7 +23,7 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function condExpr(a: any, b: any, c: any, d: any): any
@@ -49,7 +49,7 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:  %15 = CondBranchInst %13: any, %BB4, %BB5
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = PhiInst (:any) %21: any, %BB4, %10: any, %BB2
-// CHECK-NEXT:  %17 = ReturnInst (:any) %16: any
+// CHECK-NEXT:  %17 = ReturnInst %16: any
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [c]: any
 // CHECK-NEXT:  %19 = StoreStackInst %18: any, %12: any
@@ -58,5 +58,5 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:  %21 = LoadStackInst (:any) %12: any
 // CHECK-NEXT:  %22 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %23 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

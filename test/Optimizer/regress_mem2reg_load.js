@@ -23,7 +23,7 @@ function foo(x) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): undefined
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): undefined
@@ -64,5 +64,5 @@ function foo(x) {
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, %12: any, %20: any
-// CHECK-NEXT:  %28 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %28 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

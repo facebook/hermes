@@ -63,7 +63,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %9 = StorePropertyStrictInst %8: closure, globalObject: object, "load_store_test": string
 // CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %load_store_multiple_test(): number
 // CHECK-NEXT:  %11 = StorePropertyStrictInst %10: closure, globalObject: object, "load_store_multiple_test": string
-// CHECK-NEXT:  %12 = ReturnInst (:string) "use strict": string
+// CHECK-NEXT:  %12 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function fuzz(): number
@@ -71,7 +71,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %foo(): number
 // CHECK-NEXT:  %1 = CallInst (:number) %0: closure, %foo(): number, empty: any, undefined: undefined, 12: number
-// CHECK-NEXT:  %2 = ReturnInst (:number) 12: number
+// CHECK-NEXT:  %2 = ReturnInst 12: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_test(): object
@@ -81,7 +81,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
 // CHECK-NEXT:  %3 = ConstructInst (:number) %0: closure, %"foo 1#"(): number, empty: any, undefined: undefined, 12: number
-// CHECK-NEXT:  %4 = ReturnInst (:object) %2: object
+// CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function load_store_test(): number
@@ -91,7 +91,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %k(): number
 // CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [k]: closure
 // CHECK-NEXT:  %3 = CallInst (:number) %0: closure, %ping(): number, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = ReturnInst (:number) 123: number
+// CHECK-NEXT:  %4 = ReturnInst 123: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_store_multiple_test(): number
@@ -101,19 +101,19 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [foo]: closure
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %bar(): number
 // CHECK-NEXT:  %3 = CallInst (:number) %2: closure, %bar(): number, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = ReturnInst (:number) %3: number
+// CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(k: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 12: number
+// CHECK-NEXT:  %0 = ReturnInst 12: number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 1#"(k: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 12: number
+// CHECK-NEXT:  %0 = ReturnInst 12: number
 // CHECK-NEXT:function_end
 
 // CHECK:function ping(): number [allCallsitesKnownInStrictMode]
@@ -121,20 +121,20 @@ function load_store_multiple_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:closure) [k@load_store_test]: closure
 // CHECK-NEXT:  %1 = CallInst (:number) %0: closure, %k(): number, empty: any, undefined: undefined, 123: number
-// CHECK-NEXT:  %2 = ReturnInst (:number) 123: number
+// CHECK-NEXT:  %2 = ReturnInst 123: number
 // CHECK-NEXT:function_end
 
 // CHECK:function k(k: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 123: number
+// CHECK-NEXT:  %0 = ReturnInst 123: number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"(cond: boolean, val: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:number) %val: number
-// CHECK-NEXT:  %1 = ReturnInst (:number) %0: number
+// CHECK-NEXT:  %1 = ReturnInst %0: number
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): number [allCallsitesKnownInStrictMode]
@@ -144,5 +144,5 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %1 = CallInst (:number) %0: closure, %"foo 2#"(): number, empty: any, undefined: undefined, true: boolean, 7: number
 // CHECK-NEXT:  %2 = CallInst (:number) %0: closure, %"foo 2#"(): number, empty: any, undefined: undefined, true: boolean, 8: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: number, %2: number
-// CHECK-NEXT:  %4 = ReturnInst (:number) %3: number
+// CHECK-NEXT:  %4 = ReturnInst %3: number
 // CHECK-NEXT:function_end

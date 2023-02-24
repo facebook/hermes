@@ -26,7 +26,7 @@ function main() {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: closure, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst (:string) "use strict": string
+// CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
@@ -41,17 +41,17 @@ function main() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = PhiInst (:closure) %3: closure, %BB1, %0: closure, %BB0
 // CHECK-NEXT:  %6 = CallInst (:any) %5: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

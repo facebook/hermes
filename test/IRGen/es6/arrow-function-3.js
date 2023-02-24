@@ -22,7 +22,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any
@@ -45,16 +45,16 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %12 = StoreFrameInst %11: any, [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_0_this@foo]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

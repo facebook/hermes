@@ -22,5 +22,5 @@
 // CHECK-NEXT:  %5 = StoreOwnPropertyInst 3: number, %2: object, "10": string, true: boolean
 // CHECK-NEXT:  %6 = StoreStackInst %2: object, %0: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:function_end

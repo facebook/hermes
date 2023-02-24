@@ -20,5 +20,5 @@ var x = y;
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "y": string
 // CHECK-NEXT:  %4 = StorePropertyStrictInst %3: any, globalObject: object, "x": string
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end

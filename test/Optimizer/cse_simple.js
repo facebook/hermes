@@ -66,7 +66,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "cse_this_instr": string
 // CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %cse_unary(): number|bigint
 // CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "cse_unary": string
-// CHECK-NEXT:  %15 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(dim: any): number
@@ -77,7 +77,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %2 = BinaryEqualInst (:boolean) %0: any, %0: any
 // CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: boolean, %2: boolean
 // CHECK-NEXT:  %4 = BinaryMultiplyInst (:number) %3: number, %3: number
-// CHECK-NEXT:  %5 = ReturnInst (:number) %4: number
+// CHECK-NEXT:  %5 = ReturnInst %4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo_with_cf(dim: any): number
@@ -93,7 +93,7 @@ function cse_unary(a) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = PhiInst (:number) %3: number, %BB1, 0: number, %BB0
 // CHECK-NEXT:  %7 = BinaryMultiplyInst (:number) %3: number, %6: number
-// CHECK-NEXT:  %8 = ReturnInst (:number) %7: number
+// CHECK-NEXT:  %8 = ReturnInst %7: number
 // CHECK-NEXT:function_end
 
 // CHECK:function check_operator_kind(i: any): number
@@ -105,7 +105,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %3 = BinarySubtractInst (:number) %1: number, %2: number
 // CHECK-NEXT:  %4 = BinaryAddInst (:number) %1: number, %2: number
 // CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %3: number, %4: number
-// CHECK-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHECK-NEXT:  %6 = ReturnInst %5: number
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_this_instr(): undefined
@@ -115,7 +115,7 @@ function cse_unary(a) {
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %1: object, %1: object, %1: object, %1: object
-// CHECK-NEXT:  %4 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_unary(a: any): number|bigint
@@ -125,5 +125,5 @@ function cse_unary(a) {
 // CHECK-NEXT:  %1 = UnaryIncInst (:number|bigint) %0: any
 // CHECK-NEXT:  %2 = UnaryMinusInst (:number|bigint) %1: number|bigint
 // CHECK-NEXT:  %3 = BinaryMultiplyInst (:number|bigint) %2: number|bigint, %2: number|bigint
-// CHECK-NEXT:  %4 = ReturnInst (:number|bigint) %3: number|bigint
+// CHECK-NEXT:  %4 = ReturnInst %3: number|bigint
 // CHECK-NEXT:function_end

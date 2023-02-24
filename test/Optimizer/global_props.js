@@ -31,7 +31,7 @@ process = null;
 // CHECK-NEXT:  %9 = TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
 // CHECK-NEXT:  %10 = StoreStackInst null: null, %1: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // OPT-CHECK:function global(): null [allCallsitesKnownInStrictMode]
@@ -44,7 +44,7 @@ process = null;
 // OPT-CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
 // OPT-CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: any, %4: any
 // OPT-CHECK-NEXT:  %6 = TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
-// OPT-CHECK-NEXT:  %7 = ReturnInst (:null) null: null
+// OPT-CHECK-NEXT:  %7 = ReturnInst null: null
 // OPT-CHECK-NEXT:function_end
 
 // OPT-NONSTRICT:function global(): null [allCallsitesKnownInStrictMode]
@@ -57,5 +57,5 @@ process = null;
 // OPT-NONSTRICT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
 // OPT-NONSTRICT-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %3: any, %4: any
 // OPT-NONSTRICT-NEXT:  %6 = StorePropertyLooseInst null: null, globalObject: object, "process": string
-// OPT-NONSTRICT-NEXT:  %7 = ReturnInst (:null) null: null
+// OPT-NONSTRICT-NEXT:  %7 = ReturnInst null: null
 // OPT-NONSTRICT-NEXT:function_end

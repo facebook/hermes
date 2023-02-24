@@ -51,13 +51,13 @@ function delete_expr() {
 // CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %17 = StoreStackInst undefined: undefined, %16: any
 // CHECK-NEXT:  %18 = LoadStackInst (:any) %16: any
-// CHECK-NEXT:  %19 = ReturnInst (:any) %18: any
+// CHECK-NEXT:  %19 = ReturnInst %18: any
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_parameter(p: any): any
@@ -65,26 +65,26 @@ function delete_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) false: boolean
+// CHECK-NEXT:  %2 = ReturnInst false: boolean
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_literal(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) true: boolean
+// CHECK-NEXT:  %0 = ReturnInst true: boolean
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_variable(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeletePropertyLooseInst (:any) globalObject: object, "x": string
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_expr(): any
@@ -92,7 +92,7 @@ function delete_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst (:any) true: boolean
+// CHECK-NEXT:  %2 = ReturnInst true: boolean
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

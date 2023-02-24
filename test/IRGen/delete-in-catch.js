@@ -32,7 +32,7 @@ try {
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %10 = ReturnInst (:any) %9: any
+// CHECK-NEXT:  %10 = ReturnInst %9: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined

@@ -24,7 +24,7 @@ function foo(fn, x) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(fn: any, x: any): any
@@ -52,7 +52,7 @@ function foo(fn, x) {
 // CHECK-NEXT:  %19 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, %17: object, %16: any, %18: any
 // CHECK-NEXT:  %20 = StoreStackInst %19: any, %14: any
 // CHECK-NEXT:  %21 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, %13: any, %17: object
-// CHECK-NEXT:  %22 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %22 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // OPT:function global(): undefined [allCallsitesKnownInStrictMode]
@@ -61,7 +61,7 @@ function foo(fn, x) {
 // OPT-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // OPT-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): undefined
 // OPT-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
-// OPT-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// OPT-NEXT:  %3 = ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 
 // OPT:function foo(fn: any, x: any): undefined
@@ -75,5 +75,5 @@ function foo(fn, x) {
 // OPT-NEXT:  %5 = AllocArrayInst (:object) 0: number
 // OPT-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.arraySpread]: number, empty: any, empty: any, undefined: undefined, %5: object, %1: any, 0: number
 // OPT-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.apply]: number, empty: any, empty: any, undefined: undefined, %0: any, %5: object
-// OPT-NEXT:  %8 = ReturnInst (:undefined) undefined: undefined
+// OPT-NEXT:  %8 = ReturnInst undefined: undefined
 // OPT-NEXT:function_end

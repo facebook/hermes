@@ -30,7 +30,7 @@ export * from 'foo.js';
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -68,13 +68,13 @@ export * from 'foo.js';
 // CHECK-NEXT:  %29 = StorePropertyLooseInst %28: any, %0: any, "b": string
 // CHECK-NEXT:  %30 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "foo.js": string
 // CHECK-NEXT:  %31 = CallBuiltinInst (:any) [HermesBuiltin.exportAll]: number, empty: any, empty: any, undefined: undefined, %0: any, %30: any
-// CHECK-NEXT:  %32 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %32 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function myFun(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 1038: number
+// CHECK-NEXT:  %0 = ReturnInst 1038: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

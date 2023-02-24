@@ -31,18 +31,18 @@ foo()()
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1: any): closure
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %bar(): number
-// CHECK-NEXT:  %1 = ReturnInst (:closure) %0: closure
+// CHECK-NEXT:  %1 = ReturnInst %0: closure
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 123: number
+// CHECK-NEXT:  %0 = ReturnInst 123: number
 // CHECK-NEXT:function_end

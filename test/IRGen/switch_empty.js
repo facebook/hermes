@@ -32,7 +32,7 @@ function onlyDefault () {
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:function_end
 
 // CHECK:function empty(): any
@@ -40,7 +40,7 @@ function onlyDefault () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function onlyDefault(): any
@@ -48,7 +48,7 @@ function onlyDefault () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = BranchInst %BB2
 // CHECK-NEXT:%BB3:

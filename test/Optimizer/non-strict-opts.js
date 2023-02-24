@@ -26,7 +26,7 @@ function main()  {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
@@ -34,12 +34,12 @@ function main()  {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %foo(): string
 // CHECK-NEXT:  %1 = CallInst (:string) %0: closure, %foo(): string, empty: any, undefined: undefined, 2: number
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p1: number): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryAddInst (:string) "value": string, 2: number
-// CHECK-NEXT:  %1 = ReturnInst (:string) %0: string
+// CHECK-NEXT:  %1 = ReturnInst %0: string
 // CHECK-NEXT:function_end

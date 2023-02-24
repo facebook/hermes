@@ -35,15 +35,15 @@
 // CHECK-NEXT:  %9 = StoreOwnPropertyInst %8: closure, %2: object, "z": string, true: boolean
 // CHECK-NEXT:  %10 = StoreStackInst %2: object, %0: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 42: number
+// CHECK-NEXT:  %0 = ReturnInst 42: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"(val: any): any
@@ -51,13 +51,13 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %val: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [val]: any
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 100: number
+// CHECK-NEXT:  %0 = ReturnInst 100: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -86,7 +86,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %18 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %19 = StoreStackInst undefined: undefined, %18: any
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %18: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
+// CHECK-NEXT:  %21 = ReturnInst %20: any
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_loop(obj: any): any
@@ -107,7 +107,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -121,7 +121,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %23 = StoreFrameInst %22: any, [ret]: any
 // CHECK-NEXT:  %24 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %25 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %25 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function different_prop(obj: any): any
@@ -143,7 +143,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %13 = GetPNamesInst %6: any, %7: any, %8: any, %9: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %16 = GetNextPNameInst %12: any, %7: any, %8: any, %9: any, %6: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -159,7 +159,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %28 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function different_obj(obj: any): any
@@ -183,7 +183,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %15 = GetPNamesInst %8: any, %9: any, %10: any, %11: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %17 = ReturnInst (:any) %16: any
+// CHECK-NEXT:  %17 = ReturnInst %16: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %18 = GetNextPNameInst %14: any, %9: any, %10: any, %11: any, %8: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -197,7 +197,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %26 = StoreFrameInst %25: any, [ret]: any
 // CHECK-NEXT:  %27 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %28 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_prop(obj: any): any
@@ -218,7 +218,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -233,7 +233,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %24 = StoreFrameInst %23: any, [ret]: any
 // CHECK-NEXT:  %25 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %26 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %26 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_value(obj: any): any
@@ -254,7 +254,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -274,7 +274,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %29 = StoreFrameInst %28: any, [ret]: any
 // CHECK-NEXT:  %30 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %31 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %31 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop(obj: any): any
@@ -295,7 +295,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
@@ -308,5 +308,5 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %22 = StoreFrameInst %21: any, [ret]: any
 // CHECK-NEXT:  %23 = BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

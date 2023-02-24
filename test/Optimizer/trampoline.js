@@ -53,7 +53,7 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "test_cond_branch": string
 // CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %test_merge_blocks(): undefined
 // CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "test_merge_blocks": string
-// CHECK-NEXT:  %12 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any, z: any): any
@@ -64,10 +64,10 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:  %2 = BinaryLessThanInst (:boolean) %0: any, %1: any
 // CHECK-NEXT:  %3 = CondBranchInst %2: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %4 = ReturnInst %0: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %1: any, 0: number
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_catch_region(x: any, y: any, z: any): undefined
@@ -78,7 +78,7 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:  %1 = CatchInst (:any)
 // CHECK-NEXT:  %2 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %4 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
@@ -90,7 +90,7 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test_merge_blocks(x: any, y: any): undefined
@@ -101,5 +101,5 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:  %2 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
-// CHECK-NEXT:  %5 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

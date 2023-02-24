@@ -56,7 +56,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %24 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %25 = StoreStackInst undefined: undefined, %24: any
 // CHECK-NEXT:  %26 = LoadStackInst (:any) %24: any
-// CHECK-NEXT:  %27 = ReturnInst (:any) %26: any
+// CHECK-NEXT:  %27 = ReturnInst %26: any
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test0(o: any): any
@@ -69,9 +69,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = AsNumericInst (:number|bigint) %3: any
 // CHECK-NEXT:  %5 = UnaryIncInst (:any) %4: number|bigint
 // CHECK-NEXT:  %6 = StorePropertyLooseInst %5: any, %2: any, "f": string
-// CHECK-NEXT:  %7 = ReturnInst (:any) %4: number|bigint
+// CHECK-NEXT:  %7 = ReturnInst %4: number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test1(o: any): any
@@ -84,9 +84,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %4 = AsNumericInst (:number|bigint) %3: any
 // CHECK-NEXT:  %5 = UnaryDecInst (:any) %4: number|bigint
 // CHECK-NEXT:  %6 = StorePropertyLooseInst %5: any, %2: any, "f": string
-// CHECK-NEXT:  %7 = ReturnInst (:any) %4: number|bigint
+// CHECK-NEXT:  %7 = ReturnInst %4: number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test2(o: any): any
@@ -98,9 +98,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "f": string
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: any
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: any, %2: any, "f": string
-// CHECK-NEXT:  %6 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %6 = ReturnInst %4: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test3(o: any): any
@@ -112,9 +112,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "f": string
 // CHECK-NEXT:  %4 = UnaryDecInst (:any) %3: any
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: any, %2: any, "f": string
-// CHECK-NEXT:  %6 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %6 = ReturnInst %4: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test0(x: any): any
@@ -126,9 +126,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = AsNumericInst (:number|bigint) %2: any
 // CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: number|bigint
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %3: number|bigint
+// CHECK-NEXT:  %6 = ReturnInst %3: number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test1(x: any): any
@@ -140,9 +140,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %3 = AsNumericInst (:number|bigint) %2: any
 // CHECK-NEXT:  %4 = UnaryDecInst (:any) %3: number|bigint
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %3: number|bigint
+// CHECK-NEXT:  %6 = ReturnInst %3: number|bigint
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test2(x: any): any
@@ -153,9 +153,9 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %3 = UnaryIncInst (:any) %2: any
 // CHECK-NEXT:  %4 = StoreFrameInst %3: any, [x]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %5 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test3(x: any): any
@@ -166,7 +166,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %3 = UnaryDecInst (:any) %2: any
 // CHECK-NEXT:  %4 = StoreFrameInst %3: any, [x]: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %5 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

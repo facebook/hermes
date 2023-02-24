@@ -55,16 +55,16 @@ function func4() {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function func1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function func2(a: any): any
@@ -76,7 +76,7 @@ function func4() {
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %5 = ReturnInst (:any) %4: any
+// CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
@@ -84,7 +84,7 @@ function func4() {
 // CHECK-NEXT:  %8 = GetNewTargetInst (:any) %new.target: any
 // CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: any, undefined: undefined
 // CHECK-NEXT:  %10 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %9: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:function_end
@@ -111,9 +111,9 @@ function func4() {
 // CHECK-NEXT:  %16 = StoreOwnPropertyInst %14: any, %15: object, 0: number, true: boolean
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) [innerArrow1]: any
 // CHECK-NEXT:  %18 = StoreOwnPropertyInst %17: any, %15: object, 1: number, true: boolean
-// CHECK-NEXT:  %19 = ReturnInst (:any) %15: object
+// CHECK-NEXT:  %19 = ReturnInst %15: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %20 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %20 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function func4(): any
@@ -121,18 +121,18 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "prototype": string
-// CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
+// CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function innerFunction(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any
@@ -147,16 +147,16 @@ function func4() {
 // CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [innerArrow2]: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [innerArrow2]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_1_new.target@func3]: any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

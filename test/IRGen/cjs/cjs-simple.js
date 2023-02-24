@@ -17,7 +17,7 @@ print('done');
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = LoadStackInst (:any) %0: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module(exports: any, require: any, module: any): any
@@ -31,5 +31,5 @@ print('done');
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, "done": string
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -25,7 +25,7 @@ function main(boop) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function main(boop: any): any
@@ -35,7 +35,7 @@ function main(boop) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [boop]: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
 // CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [foo]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -48,5 +48,5 @@ function main(boop) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %3 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

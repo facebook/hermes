@@ -50,5 +50,5 @@ var json = {
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) "glossary": string, %8: object
 // CHECK-NEXT:  %10 = StorePropertyLooseInst %9: object, globalObject: object, "json": string
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end

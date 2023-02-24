@@ -55,7 +55,7 @@ function f5(o) {
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %16 = StoreStackInst undefined: undefined, %15: any
 // CHECK-NEXT:  %17 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %18 = ReturnInst (:any) %17: any
+// CHECK-NEXT:  %18 = ReturnInst %17: any
 // CHECK-NEXT:function_end
 
 // CHECK:function f1(t: any): any
@@ -69,15 +69,15 @@ function f5(o) {
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, %3: any, "Cannot destructure 'undefined' or 'null'.": string
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %8: object, %3: any, undefined: undefined
 // CHECK-NEXT:  %10 = StoreFrameInst %9: any, [a]: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2(t: any): any
@@ -98,9 +98,9 @@ function f5(o) {
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %11: object, %5: any, %10: object
 // CHECK-NEXT:  %13 = StoreFrameInst %12: any, [rest]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [rest]: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %16 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(t: any): any
@@ -117,7 +117,7 @@ function f5(o) {
 // CHECK-NEXT:  %8 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %8: object, %4: any, %7: object
 // CHECK-NEXT:  %10 = StoreFrameInst %9: any, [rest]: any
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f4(o: any, t: any): any
@@ -136,7 +136,7 @@ function f5(o) {
 // CHECK-NEXT:  %10 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %10: object, %5: any, %9: object
 // CHECK-NEXT:  %12 = StorePropertyLooseInst %11: any, %8: any, "rest": string
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f5(o: any): any
@@ -155,5 +155,5 @@ function f5(o) {
 // CHECK-NEXT:  %10 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %10: object, %4: any, %9: object
 // CHECK-NEXT:  %12 = StoreFrameInst %11: any, [rest]: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -39,7 +39,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %11: any
+// CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
 // CHECK:function Car(model: any, year: any): any
@@ -55,9 +55,9 @@ function test_simple_call() {
 // CHECK-NEXT:  %7 = StorePropertyLooseInst %6: any, %1: object, "model": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [year]: any
 // CHECK-NEXT:  %9 = StorePropertyLooseInst %8: any, %1: object, "year": string
-// CHECK-NEXT:  %10 = ReturnInst (:any) "wat": string
+// CHECK-NEXT:  %10 = ReturnInst "wat": string
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_new(): any
@@ -70,7 +70,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %4 = ConstructInst (:any) %1: any, empty: any, empty: any, %3: any, "Eagle": string, 1993: number
 // CHECK-NEXT:  %5 = GetConstructedObjectInst (:any) %3: any, %4: any
 // CHECK-NEXT:  %6 = StoreFrameInst %5: any, [ctor]: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_call(): any
@@ -80,5 +80,5 @@ function test_simple_call() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "Car": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [call]: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -93,7 +93,7 @@ function neg() {
 // CHKIR-NEXT:  %33 = StorePropertyLooseInst %32: closure, globalObject: object, "not": string
 // CHKIR-NEXT:  %34 = CreateFunctionInst (:closure) %neg(): number
 // CHKIR-NEXT:  %35 = StorePropertyLooseInst %34: closure, globalObject: object, "neg": string
-// CHKIR-NEXT:  %36 = ReturnInst (:undefined) undefined: undefined
+// CHKIR-NEXT:  %36 = ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
 // CHKIR:function add(): string|number
@@ -105,7 +105,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHKIR-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:string|number) 1: number, %4: string|number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:string|number) %5: string|number
+// CHKIR-NEXT:  %6 = ReturnInst %5: string|number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function shl(): number
@@ -117,7 +117,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryLeftShiftInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function asr(): number
@@ -129,7 +129,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryRightShiftInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function div(): number
@@ -141,7 +141,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryDivideInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function mul(): number
@@ -153,7 +153,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHKIR-NEXT:  %4 = BinaryMultiplyInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function rem(): number
@@ -165,7 +165,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryModuloInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function sub(): number
@@ -176,7 +176,7 @@ function neg() {
 // CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHKIR-NEXT:  %3 = BinarySubtractInst (:number|bigint) %0: any, %2: any
 // CHKIR-NEXT:  %4 = BinaryAddInst (:number) 1: number, %3: number|bigint
-// CHKIR-NEXT:  %5 = ReturnInst (:number) %4: number
+// CHKIR-NEXT:  %5 = ReturnInst %4: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function and(): number
@@ -188,7 +188,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryAndInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function or(): number
@@ -200,7 +200,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryOrInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function xor(): number
@@ -212,7 +212,7 @@ function neg() {
 // CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryXorInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
-// CHKIR-NEXT:  %6 = ReturnInst (:number) %5: number
+// CHKIR-NEXT:  %6 = ReturnInst %5: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function not(): number
@@ -221,7 +221,7 @@ function neg() {
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = UnaryTildeInst (:number|bigint) %0: any
 // CHKIR-NEXT:  %2 = BinaryAddInst (:number) 1: number, %1: number|bigint
-// CHKIR-NEXT:  %3 = ReturnInst (:number) %2: number
+// CHKIR-NEXT:  %3 = ReturnInst %2: number
 // CHKIR-NEXT:function_end
 
 // CHKIR:function neg(): number
@@ -230,5 +230,5 @@ function neg() {
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = UnaryMinusInst (:number|bigint) %0: any
 // CHKIR-NEXT:  %2 = BinaryAddInst (:number) 1: number, %1: number|bigint
-// CHKIR-NEXT:  %3 = ReturnInst (:number) %2: number
+// CHKIR-NEXT:  %3 = ReturnInst %2: number
 // CHKIR-NEXT:function_end

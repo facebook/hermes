@@ -55,7 +55,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %16 = StoreStackInst undefined: undefined, %15: any
 // CHECK-NEXT:  %17 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %18 = ReturnInst (:any) %17: any
+// CHECK-NEXT:  %18 = ReturnInst %17: any
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsFirst(func: any): any
@@ -68,9 +68,9 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, %3: any
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3: number, %4: object, "b": string, true: boolean
-// CHECK-NEXT:  %7 = ReturnInst (:any) %4: object
+// CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst1(): any
@@ -78,9 +78,9 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 2: number, %0: object, "a": string, true: boolean
-// CHECK-NEXT:  %2 = ReturnInst (:any) %0: object
+// CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst2(): any
@@ -88,9 +88,9 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, 10: number
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 3: number, %0: object, "b": string, true: boolean
-// CHECK-NEXT:  %2 = ReturnInst (:any) %0: object
+// CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst3(): any
@@ -98,9 +98,9 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocObjectInst (:object) 1: number, null: null
 // CHECK-NEXT:  %1 = StoreNewOwnPropertyInst 4: number, %0: object, "c": string, true: boolean
-// CHECK-NEXT:  %2 = ReturnInst (:any) %0: object
+// CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsDynamic(func: any, getParent: any): any
@@ -118,7 +118,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [getParent]: any
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %4: object, %10: any
-// CHECK-NEXT:  %12 = ReturnInst (:any) %4: object
+// CHECK-NEXT:  %12 = ReturnInst %4: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

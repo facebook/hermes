@@ -24,7 +24,7 @@ function main() {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): object
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: closure, globalObject: object, "main": string
-// CHECK-NEXT:  %3 = ReturnInst (:string) "use strict": string
+// CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): object
@@ -34,11 +34,11 @@ function main() {
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
 // CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: closure, %f(): undefined, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = ReturnInst (:object) %2: object
+// CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

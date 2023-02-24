@@ -58,7 +58,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %13 = StoreStackInst undefined: undefined, %12: any
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %12: any
-// CHECK-NEXT:  %15 = ReturnInst (:any) %14: any
+// CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_normal(seq: any, cb: any): any
@@ -85,7 +85,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %18 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %18 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = CatchInst (:any)
 // CHECK-NEXT:  %20 = LoadStackInst (:any) %6: any
@@ -129,7 +129,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %19 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) [ar]: any
-// CHECK-NEXT:  %21 = ReturnInst (:any) %20: any
+// CHECK-NEXT:  %21 = ReturnInst %20: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %22 = CatchInst (:any)
 // CHECK-NEXT:  %23 = LoadStackInst (:any) %8: any
@@ -147,7 +147,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %33 = TryEndInst
 // CHECK-NEXT:  %34 = BranchInst %BB1
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %35 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %35 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_break(seq: any): any
@@ -175,7 +175,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %17 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [sum]: any
-// CHECK-NEXT:  %19 = ReturnInst (:any) %18: any
+// CHECK-NEXT:  %19 = ReturnInst %18: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = CatchInst (:any)
 // CHECK-NEXT:  %21 = LoadStackInst (:any) %6: any
@@ -207,7 +207,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %40 = TryEndInst
 // CHECK-NEXT:  %41 = BranchInst %BB1
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %42 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %42 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_continue(seq: any): any
@@ -235,7 +235,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %17 = TryStartInst %BB4, %BB5
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) [sum]: any
-// CHECK-NEXT:  %19 = ReturnInst (:any) %18: any
+// CHECK-NEXT:  %19 = ReturnInst %18: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %20 = CatchInst (:any)
 // CHECK-NEXT:  %21 = LoadStackInst (:any) %6: any
@@ -265,5 +265,5 @@ function forof_continue(seq) {
 // CHECK-NEXT:  %38 = TryEndInst
 // CHECK-NEXT:  %39 = BranchInst %BB1
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %40 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %40 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

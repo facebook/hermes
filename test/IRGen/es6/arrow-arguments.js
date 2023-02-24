@@ -62,7 +62,7 @@ function bar() {
 // CHECK-NEXT:  %11 = StoreStackInst undefined: undefined, %10: any
 // CHECK-NEXT:  %12 = StoreStackInst "use strict": string, %10: any
 // CHECK-NEXT:  %13 = LoadStackInst (:any) %10: any
-// CHECK-NEXT:  %14 = ReturnInst (:any) %13: any
+// CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:function_end
 
 // CHECK:function normal(): any
@@ -71,7 +71,7 @@ function bar() {
 // CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
@@ -90,9 +90,9 @@ function bar() {
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, 0: number
 // CHECK-NEXT:  %11 = StorePropertyStrictInst %10: any, globalObject: object, "dummy": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow1]: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): any
@@ -104,9 +104,9 @@ function bar() {
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:  %4 = StorePropertyStrictInst %3: any, globalObject: object, "dummy": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [inner]: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow1(): any
@@ -119,9 +119,9 @@ function bar() {
 // CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %arrow2(): any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: closure, [arrow2]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [arrow2]: any
-// CHECK-NEXT:  %7 = ReturnInst (:any) %6: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any
@@ -140,9 +140,9 @@ function bar() {
 // CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %arrow3(): any
 // CHECK-NEXT:  %11 = StoreFrameInst %10: closure, [arrow3]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [arrow3]: any
-// CHECK-NEXT:  %13 = ReturnInst (:any) %12: any
+// CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow2(): any
@@ -151,7 +151,7 @@ function bar() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_2_arguments@foo]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, 2: number
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow3(): any
@@ -160,5 +160,5 @@ function bar() {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_2_arguments@inner]: any
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, 1: number
 // CHECK-NEXT:  %2 = StorePropertyStrictInst %1: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

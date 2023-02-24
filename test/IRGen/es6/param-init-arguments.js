@@ -24,7 +24,7 @@ function foo(a = arguments) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any): any
@@ -41,7 +41,7 @@ function foo(a = arguments) {
 // CHECK-NEXT:  %6 = PhiInst (:any) %2: any, %BB0, %0: object, %BB2
 // CHECK-NEXT:  %7 = StoreFrameInst %6: any, [a]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %9 = ReturnInst (:any) %8: any
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

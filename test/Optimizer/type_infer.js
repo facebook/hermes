@@ -60,13 +60,13 @@ function test_unary(x) {
 // CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "test_one": string
 // CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %test_unary(): undefined
 // CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "test_unary": string
-// CHECK-NEXT:  %9 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function sink(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one(x: any, y: any): undefined
@@ -96,7 +96,7 @@ function test_unary(x) {
 // CHECK-NEXT:  %21 = BinaryAddInst (:string|number) %19: object, %20: object
 // CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %21: string|number
 // CHECK-NEXT:  %23 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
-// CHECK-NEXT:  %24 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %24 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unary(x: any): undefined
@@ -112,5 +112,5 @@ function test_unary(x) {
 // CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %6: number|bigint
 // CHECK-NEXT:  %8 = UnaryTypeofInst (:string) %0: any
 // CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %8: string
-// CHECK-NEXT:  %10 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

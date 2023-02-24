@@ -28,5 +28,5 @@ switch (8) { case 2: 6
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "cond": string
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB3, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

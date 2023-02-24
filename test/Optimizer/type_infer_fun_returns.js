@@ -23,7 +23,7 @@ function g14(z) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "g14": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %g14(): undefined|object
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "g14": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g14(z: any): undefined|object
@@ -43,9 +43,9 @@ function g14(z) {
 // CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %9: number
 // CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %m(): undefined
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "m": string, %11: closure
-// CHECK-NEXT:  %13 = ReturnInst (:object) %12: object
+// CHECK-NEXT:  %13 = ReturnInst %12: object
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function w(): number
@@ -53,7 +53,7 @@ function g14(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
 // CHECK-NEXT:  %1 = BinaryMultiplyInst (:number) %0: any, 1: number
-// CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
+// CHECK-NEXT:  %2 = ReturnInst %1: number
 // CHECK-NEXT:function_end
 
 // CHECK:function m(): undefined
@@ -61,11 +61,11 @@ function g14(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"w 1#"(): boolean
 // CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [w@g14]: closure
-// CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "w 1#"(): boolean
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:boolean) false: boolean
+// CHECK-NEXT:  %0 = ReturnInst false: boolean
 // CHECK-NEXT:function_end

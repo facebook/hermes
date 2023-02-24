@@ -25,7 +25,7 @@ function foo (a, b, c) {
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(a: any, b: any, c: any): any
@@ -40,11 +40,11 @@ function foo (a, b, c) {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = ReturnInst (:any) 1: number
+// CHECK-NEXT:  %8 = ReturnInst 1: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = ReturnInst (:any) 2: number
+// CHECK-NEXT:  %9 = ReturnInst 2: number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) [b]: any
 // CHECK-NEXT:  %12 = CondBranchInst %11: any, %BB6, %BB3

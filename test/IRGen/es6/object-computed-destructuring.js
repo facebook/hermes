@@ -52,8 +52,8 @@ var {} = x;
 // CHECK-NEXT:  %29 = CondBranchInst %28: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %30 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, %27: any, "Cannot destructure 'undefined' or 'null'.": string
-// CHECK-NEXT:  %31 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %31 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %32 = LoadStackInst (:any) %3: any
-// CHECK-NEXT:  %33 = ReturnInst (:any) %32: any
+// CHECK-NEXT:  %33 = ReturnInst %32: any
 // CHECK-NEXT:function_end

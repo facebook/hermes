@@ -20,11 +20,11 @@ function test_two(x,y,z) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_two": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %test_two(): any
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "test_two": string
-// CHECK-NEXT:  %3 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two(x: any, y: any, z: any): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

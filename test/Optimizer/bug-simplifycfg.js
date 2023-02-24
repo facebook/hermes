@@ -27,7 +27,7 @@ function bug2() {
 // CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "bug1": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %bug2(): any
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "bug2": string
-// CHECK-NEXT:  %6 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function bug1(): any

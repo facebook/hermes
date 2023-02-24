@@ -99,15 +99,15 @@ function helloWorld() {
 // CHECK-NEXT:  %33 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %34 = StoreStackInst undefined: undefined, %33: any
 // CHECK-NEXT:  %35 = LoadStackInst (:any) %33: any
-// CHECK-NEXT:  %36 = ReturnInst (:any) %35: any
+// CHECK-NEXT:  %36 = ReturnInst %35: any
 // CHECK-NEXT:function_end
 
 // CHECK:function dummy(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyString(): any
@@ -116,9 +116,9 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 0: number, true: boolean, "": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function oneString(): any
@@ -127,9 +127,9 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 1: number, true: boolean, "hello": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function oneSub(): any
@@ -138,9 +138,9 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 2: number, true: boolean, "": string, "": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 666: number
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function dup(): any
@@ -150,9 +150,9 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function notDup(): any
@@ -162,9 +162,9 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function memberExpr(): any
@@ -178,9 +178,9 @@ function helloWorld() {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "func": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, %5: any, %4: any
-// CHECK-NEXT:  %8 = ReturnInst (:any) %7: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function callExpr(): any
@@ -192,9 +192,9 @@ function helloWorld() {
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %2: any
-// CHECK-NEXT:  %6 = ReturnInst (:any) %5: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function dup2(): any
@@ -204,9 +204,9 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = BinaryAddInst (:any) 1: number, 2: number
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, %0: any, %1: any
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function dup3(): any
@@ -215,9 +215,9 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 7: number
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function helloWorld(): any
@@ -226,24 +226,24 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetTemplateObjectInst (:any) 6: number, true: boolean, "hello": string, " world!!!": string
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %0: any, 0: number
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: any
+// CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function func(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %""(): any
-// CHECK-NEXT:  %1 = ReturnInst (:any) %0: closure
+// CHECK-NEXT:  %1 = ReturnInst %0: closure
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

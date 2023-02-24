@@ -104,7 +104,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %33 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %34 = StoreStackInst undefined: undefined, %33: any
 // CHECK-NEXT:  %35 = LoadStackInst (:any) %33: any
-// CHECK-NEXT:  %36 = ReturnInst (:any) %35: any
+// CHECK-NEXT:  %36 = ReturnInst %35: any
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleObjectLiteral(func: any): any
@@ -114,7 +114,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "prop1": string, 10: number
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) "prop1": string, 10: number
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function emitAllocObjectLiteral(func: any): any
@@ -123,9 +123,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "a": string, 1: number, "b": string, 2: number, "c": string, 3: number, "d": string, 4: number, "5": string, 5: number, "6": string, 6: number
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %3 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function nestedAllocObjectLiteral(func: any): any
@@ -135,9 +135,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "1": string, 100: number, "2": string, 200: number
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) "a": string, 10: number, "b": string, %2: object, "c": string, "hello": string, "d": string, null: null
-// CHECK-NEXT:  %4 = ReturnInst (:any) %3: object
+// CHECK-NEXT:  %4 = ReturnInst %3: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function duplicatedObjectLiteral(func: any): any
@@ -151,9 +151,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:  %7 = StoreOwnPropertyInst 4: number, %2: object, "d": string, true: boolean
-// CHECK-NEXT:  %8 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %8 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyObjectLiteral(func: any): any
@@ -162,9 +162,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [func]: any
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %3 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %3 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral1(func: any): any
@@ -178,9 +178,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %2: object, %6: object
-// CHECK-NEXT:  %8 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %8 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral2(func: any): any
@@ -193,9 +193,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 1: number, %3: object, "a": string, true: boolean
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2: number, %3: object, "b": string, true: boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3: number, %3: object, "c": string, true: boolean
-// CHECK-NEXT:  %7 = ReturnInst (:any) %3: object
+// CHECK-NEXT:  %7 = ReturnInst %3: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function computedObjectLiteral(func: any): any
@@ -208,9 +208,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2: number, %2: object, "b": string, true: boolean
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:  %6 = StoreOwnPropertyInst 4: number, %2: object, "test": string, true: boolean
-// CHECK-NEXT:  %7 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %7 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function spreadObjectLiteral(func: any): any
@@ -225,9 +225,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %7 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, %5: object, %6: any
 // CHECK-NEXT:  %8 = StoreOwnPropertyInst 42: number, %5: object, "c": string, true: boolean
-// CHECK-NEXT:  %9 = ReturnInst (:any) %5: object
+// CHECK-NEXT:  %9 = ReturnInst %5: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral1(func: any): any
@@ -241,9 +241,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst null: null, %2: object, "c": string, true: boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
 // CHECK-NEXT:  %7 = StoreOwnPropertyInst 10086: number, %2: object, "c": string, true: boolean
-// CHECK-NEXT:  %8 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %8 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral2(func: any): any
@@ -257,15 +257,15 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %"get c"(): any
 // CHECK-NEXT:  %6 = StoreGetterSetterInst %5: closure, undefined: undefined, %2: object, "c": string, true: boolean
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst null: null, %2: object, "d": string, true: boolean
-// CHECK-NEXT:  %8 = ReturnInst (:any) %2: object
+// CHECK-NEXT:  %8 = ReturnInst %2: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function "get c"(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:any) 42: number
+// CHECK-NEXT:  %0 = ReturnInst 42: number
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %1 = ReturnInst (:any) undefined: undefined
+// CHECK-NEXT:  %1 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

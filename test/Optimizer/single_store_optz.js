@@ -23,7 +23,7 @@ function g12(z) {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "g12": string
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %g12(): undefined
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "g12": string
-// CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g12(z: any): undefined
@@ -38,11 +38,11 @@ function g12(z) {
 // CHECK-NEXT:  %5 = CallInst (:number) %1: closure, %w(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function w(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:number) 1: number
+// CHECK-NEXT:  %0 = ReturnInst 1: number
 // CHECK-NEXT:function_end
