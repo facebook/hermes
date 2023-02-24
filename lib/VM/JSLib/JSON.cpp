@@ -14,6 +14,7 @@
 #include "hermes/VM/JSLib/RuntimeFastJSONUtils.h"
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/Runtime.h"
 
 namespace hermes {
 namespace vm {
@@ -39,6 +40,13 @@ Handle<JSObject> createJSONObject(Runtime &runtime) {
       nullptr,
       jsonFastParse,
       2);
+  defineMethod(
+      runtime,
+      json,
+      Predefined::getSymbolID(Predefined::debugToAscii),
+      nullptr,
+      jsonDebugToAscii,
+      1);
   defineMethod(
       runtime,
       json,
@@ -80,6 +88,36 @@ CallResult<HermesValue> jsonFastParse(void *, Runtime &runtime, NativeArgs args)
       runtime,
       runtime.makeHandle(std::move(*res)),
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
+}
+
+// This ensures that passed string is encoded in ASCII. This simulates what would realistically
+// happen if string was created via jsi::String::createFromUtf8 / ::createFromAscii (but doesn't happen
+// in the demo because we're just concatenating JS strings)
+CallResult<HermesValue> jsonDebugToAscii(void *, Runtime &runtime, NativeArgs args) {
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto str = runtime.makeHandle(std::move(*res));
+
+  if (str->isASCII()) {
+    return str.getHermesValue();
+  }
+
+  SmallU16String<32> storage;
+  StringPrimitive::createStringView(runtime, str)
+        .appendUTF16String(storage);
+
+  auto utf16 = UTF16Ref{storage.begin(), storage.size()};
+  auto strEfficient = StringPrimitive::createEfficient(runtime, utf16);
+  if (LLVM_UNLIKELY(strEfficient == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!vmcast<StringPrimitive>(*strEfficient)->isASCII())) {
+    return runtime.raiseRangeError("String is not actually ASCII");
+  }
+  return strEfficient;
 }
 
 CallResult<HermesValue>
