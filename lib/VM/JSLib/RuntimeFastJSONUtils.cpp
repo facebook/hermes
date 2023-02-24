@@ -287,8 +287,9 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
         speculationGoodObjects_++;
       }
   } else if (!isGoodObject) {
+    if (speculationGoodObjects_ > 1) {
       speculationGoodObjects_--;
-      if (speculationGoodObjects_ == 0) {
+    } else {
         speculationFail();
       }
     }
