@@ -32,7 +32,7 @@ using namespace simdjson;
     );                                      \
   }
 
-#define ENABLE_SPECULATION
+// #define ENABLE_SPECULATION
 
 namespace hermes {
 namespace vm {
@@ -168,13 +168,17 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
 
+  #ifdef ENABLE_SPECULATION
   bool isExaminingShape = speculationExaminationThreshold_ == 0;
   bool isSpeculating = !isExaminingShape && speculationGoodObjects_ > 0;
+  bool isGoodObject = true;
   if (LLVM_UNLIKELY(isExaminingShape)) {
     // set parser into speculation mode
+    // FIXME: With these conditions, nested objects will speculate instead of doing nothing
     speculationExaminationThreshold_ = kInitialExaminationThreshold;
     speculationGoodObjects_ = kInitialGoodObjects;
   }
+  #endif
 
   uint32_t index = 0;
 
@@ -183,20 +187,48 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
-    auto jsKey = parseObjectKey(identifierTable, key);
-    if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+
+    MutableHandle<SymbolID> symbolId{rt};
+    #ifdef ENABLE_SPECULATION
+    if (isSpeculating) {
+      if (LLVM_LIKELY(index < speculationCache_.size())) {
+        auto speculationEntry = speculationCache_[index];
+
+        if (LLVM_LIKELY(speculationEntry.first == key)) {
+          // key matches!
+          symbolId = speculationEntry.second;
+        } else {
+          // key doesn't match, isn't the speculated shape
+          isGoodObject = false;
+          isSpeculating = false;
+        }
+      } else {
+        // too big, isn't the speculated shape
+        isGoodObject = false;
+        isSpeculating = false;
+      }
+    }
+    #endif
+
+    if (!symbolId) {
+      auto parsedKeyRes = parseObjectKey(identifierTable, key);
+      if (LLVM_UNLIKELY(parsedKeyRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      symbolId = *parsedKeyRes;
     }
 
+    #ifdef ENABLE_SPECULATION
     if (LLVM_UNLIKELY(isExaminingShape)) {
       if (index >= kMaxKeysInSpeculatedShape) {
         // too many keys, abandon examination
         isExaminingShape = false;
         speculationFail();
       } else {
-        speculationCache_.push_back(std::make_pair(key, *jsKey));
+        speculationCache_.push_back(std::make_pair(key, rt.makeHandle(*symbolId)));
       }
     }
+    #endif
 
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
@@ -213,14 +245,14 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
     auto pos = JSObject::findProperty(
         jsObject,
         rt,
-        **jsKey,
+        *symbolId,
         PropertyFlags::defaultNewNamedPropertyFlags(),
         desc);
     if (LLVM_UNLIKELY(pos)) {
       auto updatePropertyResult = JSObject::updateOwnProperty(
         jsObject,
         rt,
-        **jsKey,
+        *symbolId,
         *pos,
         desc,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
@@ -234,7 +266,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
       auto addPropertyResult = JSObject::addOwnPropertyImpl(
           jsObject,
           rt,
-          **jsKey,
+          *symbolId,
           PropertyFlags::defaultNewNamedPropertyFlags(),
           *jsValue);
 
@@ -245,6 +277,21 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     index++;
   }
+
+  #ifdef ENABLE_SPECULATION
+  if (isSpeculating) {
+    if (isGoodObject) {
+      if (speculationGoodObjects_ < kMaxGoodObjects) {
+        speculationGoodObjects_++;
+      }
+    } else {
+      speculationGoodObjects_--;
+      if (speculationGoodObjects_ == 0) {
+        speculationFail();
+      }
+    }
+  }
+  #endif
 
   return jsObject.getHermesValue();
 }
@@ -272,10 +319,12 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(T &value) {
       return rt.makeHandle(HermesValue::encodeDoubleValue(doubleValue));
     }
     case ondemand::json_type::object: {
+      #ifdef ENABLE_SPECULATION
       // If not currently speculating, count down until examination
       if (speculationGoodObjects_ == 0 && speculationExaminationThreshold_ > 0) {
         speculationExaminationThreshold_--;
       }
+      #endif
 
       ondemand::object objectValue;
       SIMDJSON_CALL(value.get(objectValue));
