@@ -34,9 +34,6 @@ Value *isStoreOnceVariable(Variable *V);
 /// whole lifetime of the variable is constant.
 Value *isStoreOnceStackLocation(AllocStackInst *AS);
 
-/// \return the callee Function for \p callee or nullptr, if none was found.
-Function *getCallee(Value *callee);
-
 /// \returns True if the value \p C is the caller's callee and is not captured
 ///   by any of the arguments.
 bool isDirectCallee(Instruction *C, BaseCallInst *CI);

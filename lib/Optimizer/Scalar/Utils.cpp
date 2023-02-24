@@ -70,29 +70,6 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   return res;
 }
 
-Function *hermes::getCallee(Value *callee) {
-  // This is a direct call.
-  if (auto *F = llvh::dyn_cast<Function>(callee)) {
-    return F;
-  }
-
-  // This is a direct use of a closure.
-  if (auto *CFI = llvh::dyn_cast<BaseCreateCallableInst>(callee)) {
-    return CFI->getFunctionCode();
-  }
-
-  // If we load from a frame variable, check if this is a non-global store-only
-  // variable.
-  if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(callee)) {
-    auto *V = LFI->getLoadVariable();
-
-    if (Value *singleValue = isStoreOnceVariable(V))
-      return getCallee(singleValue);
-  }
-
-  return nullptr;
-}
-
 bool hermes::isDirectCallee(Instruction *C, BaseCallInst *CI) {
   if (CI->getCallee() != C)
     return false;

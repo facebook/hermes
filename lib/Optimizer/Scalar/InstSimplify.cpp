@@ -416,7 +416,7 @@ Value *simplifyCallInst(CallInst *CI) {
   if (!CI->hasUsers())
     return nullptr;
 
-  if (Function *F = getCallee(CI->getCallee())) {
+  if (Function *F = llvh::dyn_cast<Function>(CI->getTarget())) {
     if (Value *V = getKnownReturnValue(F, CI)) {
       CI->replaceAllUsesWith(V);
       return CI;
