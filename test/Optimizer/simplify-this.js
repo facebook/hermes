@@ -8,6 +8,7 @@
 // RUN: %hermesc -target=HBC -dump-ir -O %s | %FileCheckOrRegen --match-full-lines %s
 
 function thisUndefined () {
+    'use strict';
     function inner() {
         return this;
     }
@@ -20,13 +21,13 @@ function thisUndefined () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "thisUndefined": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %thisUndefined(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %thisUndefined(): undefined
 // CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "thisUndefined": string
 // CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function thisUndefined(): object
+// CHECK:function thisUndefined(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst (:object) globalObject: object
+// CHECK-NEXT:  %0 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
