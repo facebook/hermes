@@ -282,18 +282,16 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
   }
 
   #ifdef ENABLE_SPECULATION
-  if (isSpeculating) {
-    if (isGoodObject) {
+  if (isSpeculating && isGoodObject) {
       if (speculationGoodObjects_ < kMaxGoodObjects) {
         speculationGoodObjects_++;
       }
-    } else {
+  } else if (!isGoodObject) {
       speculationGoodObjects_--;
       if (speculationGoodObjects_ == 0) {
         speculationFail();
       }
     }
-  }
   #endif
 
   return jsObject.getHermesValue();
