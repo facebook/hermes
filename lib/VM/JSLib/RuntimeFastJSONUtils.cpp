@@ -308,7 +308,7 @@ CallResult<HermesValue> runtimeFastJSONParse(
   // so we can't use a pointer to it directly
   // and besides simdjson needs 64B of padding, so we always need to copy
   if (jsonString->isASCII()) {
-    SmallXString<uint8_t, 32> storage;
+    SmallXString<uint8_t, 8> storage;
     auto jsonStringView = StringPrimitive::createStringView(rt, jsonString);
     const char *ptr = jsonStringView.castToCharPtr();
     storage.append(ptr, ptr + jsonStringView.length());
@@ -317,18 +317,21 @@ CallResult<HermesValue> runtimeFastJSONParse(
     auto json = padded_string_view(storage.begin(), jsonStringView.length(), storage.size());
     return RuntimeFastJSONParser::parse(rt, json, true);
   } else {
-    SmallU16String<32> utf16storage;
-    StringPrimitive::createStringView(rt, jsonString)
-        .appendUTF16String(utf16storage);
+    auto stringRef = jsonString->getStringRef<char16_t>();
+    auto utf8capacity = simdutf::utf8_length_from_utf16(stringRef.begin(), stringRef.size()) + SIMDJSON_PADDING;
+    SmallXString<uint8_t, 8> utf8str;
+    utf8str.resize(utf8capacity);
 
-    auto utf8capacity = simdutf::utf8_length_from_utf16(utf16storage.begin(), utf16storage.size()) + SIMDJSON_PADDING;
-    std::unique_ptr<char[]> utf8str{new char[utf8capacity]};
-    auto utf8size = simdutf::convert_utf16_to_utf8(utf16storage.begin(), utf16storage.size(), utf8str.get());
+    // I'm not entirely sure if stringRef is still valid after the above allocations. Seems to work
+    // (they're not Hermes allocations, could they even trigger GC?), but let's get new pointer
+    // out of abundance of caution
+    stringRef = jsonString->getStringRef<char16_t>();
+    auto utf8size = simdutf::convert_utf16_to_utf8(stringRef.begin(), stringRef.size(), (char *) utf8str.begin());
     if (!utf8size) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    auto json = padded_string_view(utf8str.get(), utf8size, utf8capacity);
+    auto json = padded_string_view(utf8str.begin(), utf8size, utf8capacity);
     return RuntimeFastJSONParser::parse(rt, json, false);
   }
 }
