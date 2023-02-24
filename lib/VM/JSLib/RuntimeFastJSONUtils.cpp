@@ -32,7 +32,7 @@ using namespace simdjson;
     );                                      \
   }
 
-// #define ENABLE_SPECULATION
+#define ENABLE_SPECULATION
 
 namespace hermes {
 namespace vm {
@@ -42,7 +42,7 @@ private:
   Runtime &rt;
   bool isASCII_;
 
-  llvh::SmallVector<std::pair<std::string_view, Handle<SymbolID>>, 20> speculationCache_;
+  llvh::SmallVector<std::pair<std::string_view, SymbolID>, 20> speculationCache_;
   static constexpr unsigned kMaxKeysInSpeculatedShape = 32;
 
   // You need to iterate over this many objects before we start examining object shapes
@@ -190,6 +190,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     MutableHandle<SymbolID> symbolId{rt};
     #ifdef ENABLE_SPECULATION
+    bool speculationSuccess = false;
     if (isSpeculating) {
       if (LLVM_LIKELY(index < speculationCache_.size())) {
         auto speculationEntry = speculationCache_[index];
@@ -197,6 +198,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
         if (LLVM_LIKELY(speculationEntry.first == key)) {
           // key matches!
           symbolId = speculationEntry.second;
+          speculationSuccess = true;
         } else {
           // key doesn't match, isn't the speculated shape
           isGoodObject = false;
@@ -210,7 +212,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
     }
     #endif
 
-    if (!symbolId) {
+    if (!speculationSuccess) {
       auto parsedKeyRes = parseObjectKey(identifierTable, key);
       if (LLVM_UNLIKELY(parsedKeyRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -225,7 +227,8 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
         isExaminingShape = false;
         speculationFail();
       } else {
-        speculationCache_.push_back(std::make_pair(key, rt.makeHandle(*symbolId)));
+        // NOTE: I don't think that's right, SymbolID should be in a Handle
+        speculationCache_.push_back(std::make_pair(key, *symbolId));
       }
     }
     #endif
