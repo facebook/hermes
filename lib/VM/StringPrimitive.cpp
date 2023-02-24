@@ -182,9 +182,8 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
   if (LLVM_UNLIKELY(!utf16words)) {
     return ExecutionStatus::EXCEPTION;
   }
-  std::u16string out{utf16.begin(), utf16words};
-
-  return StringPrimitive::createEfficient(runtime, std::move(out));
+  UTF16Ref out{utf16.begin(), utf16words};
+  return StringPrimitive::create(runtime, out);
 }
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
