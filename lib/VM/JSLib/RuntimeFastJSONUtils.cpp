@@ -33,6 +33,8 @@ using namespace simdjson;
   }
 
 #define ENABLE_SPECULATION
+// #define ENABLE_SPECULATION_DEBUG
+// #define ENABLE_SPECULATION_DEBUG_VERBOSE
 
 namespace hermes {
 namespace vm {
@@ -42,6 +44,7 @@ private:
   Runtime &rt;
   bool isASCII_;
 
+  #ifdef ENABLE_SPECULATION
   llvh::SmallVector<std::pair<std::string_view, SymbolID>, 20> speculationCache_;
   static constexpr unsigned kMaxKeysInSpeculatedShape = 32;
 
@@ -57,14 +60,28 @@ private:
   unsigned speculationGoodObjects_ = 0;
   static constexpr unsigned kMaxGoodObjects = 20;
   static constexpr unsigned kInitialGoodObjects = 2;
+  #endif
+
+  // DEBUG:
+  #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+  unsigned depth_ = 0;
+  #endif
+  #ifdef ENABLE_SPECULATION_DEBUG
+  unsigned goodSpeculations_ = 0;
+  unsigned badSpeculations_ = 0;
+  unsigned unspeculated_ = 0;
+  unsigned examined_ = 0;
+  #endif
 
 public:
   explicit RuntimeFastJSONParser(
       Runtime &runtime,
       bool isASCII)
-      : rt(runtime),
-        isASCII_(isASCII),
-        speculationCache_()
+      : rt(runtime)
+        ,isASCII_(isASCII)
+        #ifdef ENABLE_SPECULATION
+        ,speculationCache_()
+        #endif
         {}
 
   static CallResult<HermesValue> parse(Runtime &rt, padded_string_view &json, bool isASCII);
@@ -154,10 +171,12 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseArray(ondemand::array &array
 }
 
 void RuntimeFastJSONParser::speculationFail() {
+  #ifdef ENABLE_SPECULATION
   // We failed to match the speculated shape (or the shape is too large), so we need to abandon it and start over.
   speculationCache_.clear();
   speculationGoodObjects_ = 0;
   speculationExaminationThreshold_ = kInitialExaminationThreshold;
+  #endif
 }
 
 CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &object) {
@@ -181,6 +200,19 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
   }
   #endif
 
+  #ifdef ENABLE_SPECULATION_DEBUG
+  if (isExaminingShape) {
+    examined_++;
+  }
+  if (!isSpeculating && !isExaminingShape) {
+    unspeculated_++;
+  }
+  #endif
+
+  #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+  llvh::outs() << (isExaminingShape ? "Examining" : "") << (isSpeculating ? "Speculating" : "") << "\t";
+  #endif
+
   uint32_t index = 0;
 
   for (auto field : object) {
@@ -191,7 +223,6 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     MutableHandle<SymbolID> symbolId{rt};
     #ifdef ENABLE_SPECULATION
-    bool speculationSuccess = false;
     if (isSpeculating) {
       if (LLVM_LIKELY(index < speculationCache_.size())) {
         auto speculationEntry = speculationCache_[index];
@@ -199,11 +230,17 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
         if (LLVM_LIKELY(speculationEntry.first == key)) {
           // key matches!
           symbolId = speculationEntry.second;
-          speculationSuccess = true;
+          #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+          llvh::outs() << ".";
+          #endif
         } else {
           // key doesn't match, isn't the speculated shape
           isGoodObject = false;
           isSpeculating = false;
+
+          #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+          llvh::outs() << "x";
+          #endif
         }
       } else {
         // too big, isn't the speculated shape
@@ -213,7 +250,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
     }
     #endif
 
-    if (!speculationSuccess) {
+    if (!symbolId) {
       auto parsedKeyRes = parseObjectKey(identifierTable, key);
       if (LLVM_UNLIKELY(parsedKeyRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -284,16 +321,22 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
   #ifdef ENABLE_SPECULATION
   if (isSpeculating && isGoodObject) {
-      if (speculationGoodObjects_ < kMaxGoodObjects) {
-        speculationGoodObjects_++;
-      }
+    #ifdef ENABLE_SPECULATION_DEBUG
+    goodSpeculations_++;
+    #endif
+    if (speculationGoodObjects_ < kMaxGoodObjects) {
+      speculationGoodObjects_++;
+    }
   } else if (!isGoodObject) {
+    #ifdef ENABLE_SPECULATION_DEBUG
+    badSpeculations_++;
+    #endif
     if (speculationGoodObjects_ > 1) {
       speculationGoodObjects_--;
     } else {
-        speculationFail();
-      }
+      speculationFail();
     }
+  }
   #endif
 
   return jsObject.getHermesValue();
@@ -328,10 +371,23 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(T &value) {
         speculationExaminationThreshold_--;
       }
       #endif
+      #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+      depth_++;
+      llvh::outs() << "\n";
+      for (unsigned i = 0; i < depth_; i++) {
+        llvh::outs() << ".";
+      }
+      llvh::outs() << " object.\tthreshold:" << speculationExaminationThreshold_ << ",\tgood:" << speculationGoodObjects_ << ", ";
+      #endif
 
       ondemand::object objectValue;
       SIMDJSON_CALL(value.get(objectValue));
       auto jsObject = parseObject(objectValue);
+
+      #ifdef ENABLE_SPECULATION_DEBUG_VERBOSE
+      depth_--;
+      #endif
+
       if (LLVM_UNLIKELY(jsObject == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -370,6 +426,15 @@ CallResult<HermesValue> RuntimeFastJSONParser::parse(Runtime &rt, padded_string_
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  #ifdef ENABLE_SPECULATION_DEBUG
+  llvh::outs() << "\n";
+  llvh::outs() << "\n";
+  llvh::outs() << "Stats! Good speculations: " << parser.goodSpeculations_ << ", bad:" << parser.badSpeculations_ << ", examined:" << parser.examined_ << ", unspeculated:" << parser.unspeculated_ << "\n";
+  llvh::outs() << "\n";
+  llvh::outs().flush();
+  #endif
+
   return result->getHermesValue();
 }
 
