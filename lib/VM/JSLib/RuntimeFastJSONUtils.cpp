@@ -49,58 +49,37 @@ public:
 private:
   template<typename T>
   CallResult<Handle<>> parseValue(T &value);
-  Handle<HermesValue> parseString(std::string_view &stringView);
+  CallResult<Handle<HermesValue>> parseString(std::string_view &stringView);
   CallResult<Handle<SymbolID>> parseObjectKeySlowPath(IdentifierTable &identifierTable, std::string_view &stringView);
   CallResult<Handle<SymbolID>> parseObjectKey(IdentifierTable &identifierTable, std::string_view &stringView);
   CallResult<HermesValue> parseArray(ondemand::array &array);
   CallResult<HermesValue> parseObject(ondemand::object &object);
 };
 
-inline Handle<HermesValue> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
+inline CallResult<Handle<HermesValue>> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
   if (isASCII_) {
     ASCIIRef ascii{stringView.data(), stringView.size()};
     auto string = StringPrimitive::createEfficient(rt, ascii);
+    if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     return rt.makeHandle(*string);
   }
-  {
+
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
-  // if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
-  //   return ExecutionStatus::EXCEPTION;
-  // }
-  return rt.makeHandle(*string);
+  if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
-
-
-  // check if ascii
-  // TODO: Surprisingly, isAllASCII is faster (for small strings) than simdutf::validate_ascii?
-  if (isAllASCII_v2(stringView.data(), stringView.data() + stringView.size())) {
-    ASCIIRef ascii{stringView.data(), stringView.size()};
-    auto string = StringPrimitive::createEfficient(rt, ascii);
-    return rt.makeHandle(*string);
-  }
-
-  // convert to utf16
-  auto utf16_expected_size = simdutf::utf16_length_from_utf8(stringView.data(), stringView.size());
-  std::unique_ptr<char16_t[]> utf16_output{new char16_t[utf16_expected_size]};
-  auto utf16_words = simdutf::convert_utf8_to_utf16(stringView.data(), stringView.size(), utf16_output.get());
-  // if (!utf16_words) {
-  //   return ExecutionStatus::EXCEPTION;
-  // }
-  UTF16Ref utf16{utf16_output.get(), utf16_words};
-  auto string = StringPrimitive::create(rt, utf16);
   return rt.makeHandle(*string);
-
-
-  // if (auto existing = rt.getIdentifierTable().getExistingStringPrimitiveOrNull(rt, utf16)) {
-  //   return rt.makeHandle(existing);
-  // }
 }
 
 CallResult<Handle<SymbolID>> RuntimeFastJSONParser::parseObjectKeySlowPath(IdentifierTable &identifierTable, std::string_view &stringView) {
-  // slow path
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
+  if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return valueToSymbolID(rt, rt.makeHandle(*string));
 }
 
@@ -156,8 +135,6 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
   auto jsObject = rt.makeHandle(JSObject::create(rt));
 
-  // MutableHandle<> jsKeyHandle{rt};
-
   GCScope gcScope{rt};
   auto marker = gcScope.createMarker();
 
@@ -166,21 +143,10 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
 
     std::string_view key;
     SIMDJSON_CALL(field.unescaped_key().get(key));
-    auto jsKey = **parseObjectKey(identifierTable, key);
-
-    // jsKeyHandle = parseString(rt, key);
-    // if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
-    //   return ExecutionStatus::EXCEPTION;
-    // auto jsKeyPseudoHandle = createPseudoHandle(vmcast<StringPrimitive>(jsKeyHandle.getHermesValue()));
-    // auto symbolId = rt.getIdentifierTable().getSymbolHandleFromPrimitive(rt, std::move(jsKeyPseudoHandle));
-    // if (LLVM_UNLIKELY(symbolId == ExecutionStatus::EXCEPTION)) {
-    //   return ExecutionStatus::EXCEPTION;
-    // }
-    // auto jsKeyResult = parseObjectKey(rt, key);
-    // if (LLVM_UNLIKELY(jsKeyResult == ExecutionStatus::EXCEPTION)) {
-    //   return ExecutionStatus::EXCEPTION;
-    // }
-    // jsKeyHandle = *jsKeyResult;
+    auto jsKey = parseObjectKey(identifierTable, key);
+    if (LLVM_UNLIKELY(jsKey == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     ondemand::value value;
     SIMDJSON_CALL(field.value().get(value));
@@ -197,14 +163,14 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
     auto pos = JSObject::findProperty(
         jsObject,
         rt,
-        jsKey,
+        **jsKey,
         PropertyFlags::defaultNewNamedPropertyFlags(),
         desc);
     if (LLVM_UNLIKELY(pos)) {
       auto updatePropertyResult = JSObject::updateOwnProperty(
         jsObject,
         rt,
-        jsKey,
+        **jsKey,
         *pos,
         desc,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
@@ -218,7 +184,7 @@ CallResult<HermesValue> RuntimeFastJSONParser::parseObject(ondemand::object &obj
       auto addPropertyResult = JSObject::addOwnPropertyImpl(
           jsObject,
           rt,
-          jsKey,
+          **jsKey,
           PropertyFlags::defaultNewNamedPropertyFlags(),
           *jsValue);
 
@@ -243,10 +209,10 @@ CallResult<Handle<>> RuntimeFastJSONParser::parseValue(T &value) {
       std::string_view stringView;
       SIMDJSON_CALL(value.get(stringView));
       auto jsString = parseString(stringView);
-      // if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
-      //   return ExecutionStatus::EXCEPTION;
-      // }
-      return jsString;
+      if (LLVM_UNLIKELY(jsString == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return *jsString;
     }
     case ondemand::json_type::number: {
       double doubleValue;
@@ -302,8 +268,6 @@ CallResult<HermesValue> runtimeFastJSONParse(
     Runtime &rt,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
-  // TODO: Proper error handling
-
   // NOTE: StringPrimitives can move during JSON parsing (except if external)
   // so we can't use a pointer to it directly
   // and besides simdjson needs 64B of padding, so we always need to copy
@@ -327,8 +291,8 @@ CallResult<HermesValue> runtimeFastJSONParse(
     // out of abundance of caution
     stringRef = jsonString->getStringRef<char16_t>();
     auto utf8size = simdutf::convert_utf16_to_utf8(stringRef.begin(), stringRef.size(), (char *) utf8str.begin());
-    if (!utf8size) {
-      return ExecutionStatus::EXCEPTION;
+    if (LLVM_UNLIKELY(!utf8size)) {
+      return rt.raiseSyntaxError(TwineChar16("JSON fastParse (UTF transcoding) error"));
     }
 
     auto json = padded_string_view(utf8str.begin(), utf8size, utf8capacity);
