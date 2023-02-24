@@ -201,6 +201,31 @@ bool Function::isGlobalScope() const {
   return parent_->getTopLevelFunction() == this;
 }
 
+std::string Function::Attributes::getDescriptionStr() const {
+  if (isEmpty())
+    return "";
+  std::string result{"["};
+
+  bool comma = false;
+
+  /// Add \p name to the result string if \p value is true.
+  const auto addFlag = [&comma, &result](
+                           bool value, llvh::StringRef name) -> void {
+    if (value) {
+      if (comma)
+        result += ',';
+      comma = true;
+      result += name;
+    }
+  };
+
+  addFlag(_allCallsitesKnownInStrictMode, "allCallsitesKnownInStrictMode");
+  addFlag(pure, "pure");
+
+  result += "]";
+  return result;
+}
+
 std::string Function::getDefinitionKindStr(bool isDescriptive) const {
   switch (definitionKind_) {
     case Function::DefinitionKind::ES5Function:

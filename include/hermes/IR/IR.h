@@ -1429,6 +1429,63 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     ES6Method,
   };
 
+  /// A set of attributes to placed on each function.
+  /// They can be populated during optimization passes, like types are.
+  union Attributes {
+    struct {
+      /// False when there might exist any unknown callsites for the Function
+      /// if it's in strict mode.
+      /// It may still be possible for callsites to be unknown if the Function's
+      /// in loose mode, due to Error structured stack trace.
+      /// However, this flag is used to indicate that it's possible to analyze
+      /// the Function in the absence of Error structured stack trace completely
+      /// and all callsites have it set as the target operand.
+      /// NOTE: This flag isn't to be read directly by optimization passes,
+      /// which is why it begins with `_`.
+      /// Passes should use the getters:
+      ///   allCallsitesKnown
+      ///   allCallsitesKnownExceptStructuredStackTrace
+      uint32_t _allCallsitesKnownInStrictMode : 1;
+
+      /// Unused.
+      /// TODO: Mark pure functions so they can be further optimized.
+      uint32_t pure : 1;
+    };
+
+    uint32_t flags_;
+
+    /// No attributes on construction.
+    explicit Attributes() : flags_(0) {}
+
+    /// \return true if there are no attributes on the function.
+    bool isEmpty() const {
+      return flags_ == 0;
+    }
+
+    /// Clear all attributes on the function.
+    void clear() {
+      flags_ = 0;
+    }
+
+    /// \return a string describing the attributes if there are any.
+    /// If there are no attributes, returns "".
+    /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
+    std::string getDescriptionStr() const;
+  };
+
+  /// \return true when every callsite of this Function is absolutely known
+  /// and analyzable, even in the presence of Error structured stack trace.
+  bool allCallsitesKnown() const {
+    return attributes_._allCallsitesKnownInStrictMode && strictMode_;
+  }
+
+  /// \return true when every callsite of this Function is absolutely known
+  /// and analyzable except for perhaps the usage of Error structured stack
+  /// trace in loose mode.
+  bool allCallsitesKnownExceptErrorStructuredStackTrace() const {
+    return attributes_._allCallsitesKnownInStrictMode;
+  }
+
  private:
   /// The Module owning this function.
   Module *parent_;
@@ -1460,6 +1517,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   SMRange SourceRange{};
   /// The source visibility of the function.
   SourceVisibility sourceVisibility_;
+
+  /// Attributes that have been set on this function.
+  Attributes attributes_;
 
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
@@ -1576,6 +1636,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
   BasicBlockListType &getBasicBlockList() {
     return BasicBlockList;
+  }
+
+  Attributes &getAttributes() {
+    return attributes_;
+  }
+  const Attributes &getAttributes() const {
+    return attributes_;
   }
 
   /// Erase all the basic blocks and instructions in this function.
