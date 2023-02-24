@@ -80,14 +80,15 @@ private:
 };
 
 inline CallResult<Handle<HermesValue>> RuntimeFastJSONParser::parseString(std::string_view &stringView) {
-  if (isASCII_) {
-    ASCIIRef ascii{stringView.data(), stringView.size()};
-    auto string = StringPrimitive::createEfficient(rt, ascii);
-    if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return rt.makeHandle(*string);
-  }
+  // FIXME: oh no, this is actually broken - original string may be ASCII but use \uxxx escaped characters
+  // if (isASCII_) {
+  //   ASCIIRef ascii{stringView.data(), stringView.size()};
+  //   auto string = StringPrimitive::createEfficient(rt, ascii);
+  //   if (LLVM_UNLIKELY(string == ExecutionStatus::EXCEPTION)) {
+  //     return ExecutionStatus::EXCEPTION;
+  //   }
+  //   return rt.makeHandle(*string);
+  // }
 
   UTF8Ref utf8{(const uint8_t*)stringView.data(), stringView.size()};
   auto string = StringPrimitive::createEfficient(rt, utf8);
