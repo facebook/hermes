@@ -300,16 +300,14 @@ static bool inferFunctionReturnType(Function *F) {
   }
 
   for (auto &bbit : *F) {
-    for (auto &it : bbit) {
-      Instruction *I = &it;
-      if (auto *RI = llvh::dyn_cast<ReturnInst>(I)) {
-        Type T = RI->getValue()->getType();
-        if (first && !T.isNoType()) {
-          returnTy = T;
-          first = false;
-        } else {
-          returnTy = Type::unionTy(returnTy, T);
-        }
+    if (auto *returnInst =
+            llvh::dyn_cast_or_null<ReturnInst>(bbit.getTerminator())) {
+      Type T = returnInst->getValue()->getType();
+      if (first && !T.isNoType()) {
+        returnTy = T;
+        first = false;
+      } else {
+        returnTy = Type::unionTy(returnTy, T);
       }
     }
   }
