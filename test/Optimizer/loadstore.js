@@ -32,7 +32,7 @@ function test2(p1, p2) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// OPT-CHECK:function global(): any
+// OPT-CHECK:function global(): any [allCallsitesKnownInStrictMode]
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string

@@ -30,7 +30,7 @@ bar();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): any
+// CHECK:function global(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string

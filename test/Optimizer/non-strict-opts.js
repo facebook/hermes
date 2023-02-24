@@ -20,7 +20,7 @@ function main()  {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined
+// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
@@ -33,11 +33,11 @@ function main()  {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %foo(): string
-// CHECK-NEXT:  %1 = CallInst (:string) %0: closure, empty: any, empty: any, undefined: undefined, 2: number
+// CHECK-NEXT:  %1 = CallInst (:string) %0: closure, %foo(): string, empty: any, undefined: undefined, 2: number
 // CHECK-NEXT:  %2 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(p1: number): string
+// CHECK:function foo(p1: number): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryAddInst (:string) "value": string, 2: number

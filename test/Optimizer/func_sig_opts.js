@@ -58,7 +58,7 @@ function test_async() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): string
+// CHECK:function global(): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
@@ -89,8 +89,8 @@ function test_async() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): number
 // CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %bar(): string|number|bigint
 // CHECK-NEXT:  %3 = StorePropertyStrictInst %2: closure, %0: any, "p": string
-// CHECK-NEXT:  %4 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined, 1: number, 2: number
-// CHECK-NEXT:  %5 = CallInst (:string|number|bigint) %2: closure, empty: any, empty: any, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %4 = CallInst (:number) %1: closure, %foo(): number, empty: any, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %5 = CallInst (:string|number|bigint) %2: closure, %bar(): string|number|bigint, empty: any, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %4: number, %5: string|number|bigint
 // CHECK-NEXT:  %7 = ReturnInst (:string|number) %6: string|number
 // CHECK-NEXT:function_end
@@ -99,8 +99,8 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %builder(): number
-// CHECK-NEXT:  %1 = CallInst (:number) %0: closure, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = CallInst (:number) %0: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:number) %0: closure, %builder(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:number) %0: closure, %builder(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %3 = BinaryAddInst (:number) %1: number, %2: number
 // CHECK-NEXT:  %4 = ReturnInst (:number) %3: number
 // CHECK-NEXT:function_end
@@ -122,7 +122,7 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %baz(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, empty: any, empty: any, undefined: undefined, 100: number
+// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %baz(): any, empty: any, undefined: undefined, 100: number
 // CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
 // CHECK-NEXT:function_end
 
@@ -130,7 +130,7 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %gen(): object
-// CHECK-NEXT:  %1 = CallInst (:object) %0: closure, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %1 = CallInst (:object) %0: closure, %gen(): object, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %2 = ReturnInst (:object) %1: object
 // CHECK-NEXT:function_end
 
@@ -138,11 +138,11 @@ function test_async() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %asyncFn(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, empty: any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %asyncFn(): any, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %2 = ReturnInst (:any) %1: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(x: number, y: number): number
+// CHECK:function foo(x: number, y: number): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = BinaryAddInst (:number) 1: number, 2: number
@@ -158,7 +158,7 @@ function test_async() {
 // CHECK-NEXT:  %3 = ReturnInst (:string|number|bigint) %2: string|number|bigint
 // CHECK-NEXT:function_end
 
-// CHECK:function builder(): number
+// CHECK:function builder(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
@@ -166,7 +166,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = ReturnInst (:number) %1: number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2(a: any, b: number, c: number, d: undefined): string|number
+// CHECK:function foo2(a: any, b: number, c: number, d: undefined): string|number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
@@ -181,7 +181,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %e: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:closure) [foo2@test_unused_and_duplicate_params]: closure
-// CHECK-NEXT:  %2 = CallInst (:string|number) %1: closure, empty: any, empty: any, undefined: undefined, %0: any, 2: number, 1: number, undefined: undefined, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:string|number) %1: closure, %foo2(): string|number, empty: any, undefined: undefined, %0: any, 2: number, 1: number, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -190,25 +190,25 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %e: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:closure) [foo2@test_unused_and_duplicate_params]: closure
-// CHECK-NEXT:  %2 = CallInst (:string|number) %1: closure, empty: any, empty: any, undefined: undefined, %0: any, 2: number, 3: number, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:string|number) %1: closure, %foo2(): string|number, empty: any, undefined: undefined, %0: any, 2: number, 3: number, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function baz(): any
+// CHECK:function baz(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %1 = ReturnInst (:any) %0: any
 // CHECK-NEXT:function_end
 
-// CHECK:function gen(): object
+// CHECK:function gen(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateGeneratorInst (:object) %?anon_0_gen(): any
 // CHECK-NEXT:  %1 = ReturnInst (:object) %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function asyncFn(): any
+// CHECK:function asyncFn(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst (:object)

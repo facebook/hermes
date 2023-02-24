@@ -28,7 +28,7 @@ function backwards_branch() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined
+// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "backwards_branch": string

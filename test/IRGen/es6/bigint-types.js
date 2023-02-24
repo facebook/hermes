@@ -54,7 +54,7 @@ function neg() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKIR:function global(): undefined
+// CHKIR:function global(): undefined [allCallsitesKnownInStrictMode]
 // CHKIR-NEXT:frame = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = DeclareGlobalVarInst "add": string

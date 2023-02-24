@@ -17,7 +17,7 @@ function g14(z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined
+// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "g14": string
@@ -32,7 +32,7 @@ function g14(z) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %w(): number
 // CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [w]: closure
-// CHECK-NEXT:  %3 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:number) %1: closure, %w(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %4 = BinaryGreaterThanInst (:boolean) %0: any, %3: number
 // CHECK-NEXT:  %5 = CondBranchInst %4: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:

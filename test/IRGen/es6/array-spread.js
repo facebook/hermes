@@ -59,7 +59,7 @@ function foo(x) {
 // CHECK-NEXT:  %26 = ReturnInst (:any) undefined: undefined
 // CHECK-NEXT:function_end
 
-// OPT:function global(): undefined
+// OPT:function global(): undefined [allCallsitesKnownInStrictMode]
 // OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = DeclareGlobalVarInst "foo": string

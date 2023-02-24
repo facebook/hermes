@@ -21,6 +21,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/SimpleCallGraphProvider.cpp
   Optimizer/Scalar/FuncSigOpts.cpp
   Optimizer/Scalar/Utils.cpp
+  Optimizer/Scalar/FunctionAnalysis.cpp
   Optimizer/Scalar/Inlining.cpp
   Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp

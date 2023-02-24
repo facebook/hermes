@@ -17,7 +17,7 @@ function g12(z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined
+// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "g12": string
@@ -31,17 +31,17 @@ function g12(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %w(): number
-// CHECK-NEXT:  %2 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:number) %1: closure, %w(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %3 = BinaryGreaterThanInst (:boolean) %0: any, 0: number
 // CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst (:number) %1: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:number) %1: closure, %w(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = ReturnInst (:undefined) undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function w(): number
+// CHECK:function w(): number [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst (:number) 1: number
