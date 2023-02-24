@@ -172,21 +172,17 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
         runtime, llvh::makeArrayRef(ascii, length));
   }
 
-  // std::u16string out;
-  // ExecutionStatus cRes =
-  //     convertUtf8ToUtf16(runtime, str, IgnoreInputErrors, out);
-  // if (LLVM_UNLIKELY(cRes == ExecutionStatus::EXCEPTION)) {
-  //   return ExecutionStatus::EXCEPTION;
-  // }
-
   const char *utf8ForSimd = reinterpret_cast<const char *>(utf8);
-  auto utf16_expected_size = simdutf::utf16_length_from_utf8(utf8ForSimd, length);
-  std::unique_ptr<char16_t[]> utf16_output{new char16_t[utf16_expected_size]};
-  auto utf16_words = simdutf::convert_utf8_to_utf16(utf8ForSimd, length, utf16_output.get());
-  // if (!utf16_words) {
-  //   return ExecutionStatus::EXCEPTION;
-  // }
-  std::u16string out{utf16_output.get(), utf16_words};
+  auto utf16capacity = simdutf::utf16_length_from_utf8(utf8ForSimd, length);
+
+  SmallU16String<32> utf16;
+  utf16.resize(utf16capacity);
+
+  auto utf16words = simdutf::convert_utf8_to_utf16(utf8ForSimd, length, utf16.begin());
+  if (LLVM_UNLIKELY(!utf16words)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  std::u16string out{utf16.begin(), utf16words};
 
   return StringPrimitive::createEfficient(runtime, std::move(out));
 }
