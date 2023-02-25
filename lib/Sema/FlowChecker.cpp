@@ -1427,6 +1427,17 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
     return {};
   }
 
+  // Arrays are invariant, so if `a` is an array, `b` must be an array with the
+  // same element type.
+  if (auto *arrayA = llvh::dyn_cast<ArrayType>(a)) {
+    auto *arrayB = llvh::dyn_cast<ArrayType>(b);
+    if (!arrayB)
+      return {};
+    if (arrayA->getElement()->compare(arrayB->getElement()) == 0)
+      return {.canFlow = true};
+    return {};
+  }
+
   return {};
 }
 
