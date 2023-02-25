@@ -23,12 +23,12 @@ namespace flow {
   _HERMES_SEMA_FLOW_DEFKIND(Any)     \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
-#define _HERMES_SEMA_FLOW_COMPLEX_TYPES       \
-  _HERMES_SEMA_FLOW_DEFKIND(Union)            \
-  _HERMES_SEMA_FLOW_DEFKIND(Function)         \
-  _HERMES_SEMA_FLOW_DEFKIND(Class)            \
-  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor) \
-  _HERMES_SEMA_FLOW_DEFKIND(Array)
+#define _HERMES_SEMA_FLOW_COMPLEX_TYPES \
+  _HERMES_SEMA_FLOW_DEFKIND(Union)      \
+  _HERMES_SEMA_FLOW_DEFKIND(Array)      \
+  _HERMES_SEMA_FLOW_DEFKIND(Function)   \
+  _HERMES_SEMA_FLOW_DEFKIND(Class)      \
+  _HERMES_SEMA_FLOW_DEFKIND(ClassConstructor)
 
 enum class TypeKind : uint8_t {
 #define _HERMES_SEMA_FLOW_DEFKIND(name) name,
@@ -39,12 +39,17 @@ enum class TypeKind : uint8_t {
   _LastPrimary = BigInt,
   _FirstSingleton = Void,
   _LastSingleton = Mixed,
-  _FirstId = Function,
-  _LastId = Array,
+  _FirstId = Class,
+  _LastId = ClassConstructor,
 };
 
 class Type {
   TypeKind const kind_;
+  /// Set to true once the type has been calculated.
+  mutable bool hashed_ = false;
+  /// Valid only if \c hashed_ is set to true, this is the calculated hash value
+  /// of this type.
+  mutable unsigned hashValue_;
 
  public:
   explicit Type(TypeKind kind) : kind_(kind) {}
@@ -61,12 +66,58 @@ class Type {
     return kind_;
   }
 
+  /// Return the TypeKind as a string.
   llvh::StringRef getKindName() const;
+
+  /// Compare this type and other type lexicographically and return -1, 0, 1
+  /// correspondingly.
+  /// The less than and greater than comparisons are, in some sense, arbitrary,
+  /// they only need to be consistent, so we can sort types, but don't have an
+  /// inherent "meaning".
+  /// Equality however is well-defined: it compares structural types "deeply"
+  /// and nominal types (subclasses of \c TypeWithId) "shallowly".
+  int compare(const Type *other) const;
+
+  /// Wrapper around \c compare() == 0.
+  bool equals(const Type *other) const {
+    return compare(other) == 0;
+  }
+
+  /// Calculate a hash of this type for hash tables, etc. Types that compare
+  /// equal using \c compare() must have the same hash.
+  /// Calculating the hash of a structural type needs the hashes of all of its
+  /// elements, which in term may be structural types, so this could be an
+  /// expensive operation. However, the hash of each type is cached after it is
+  /// calculated the first time, so the amortized cost should be O(1).
+  unsigned hash() const;
 };
 
-class PrimaryType : public Type {
+class SingletonType : public Type {
  public:
-  explicit PrimaryType(TypeKind kind) : Type(kind) {
+  explicit SingletonType(TypeKind kind) : Type(kind) {
+    assert(classof(this) && "Invalid SingletonType kind");
+  }
+  static bool classof(const Type *t) {
+    return t->getKind() >= TypeKind::_FirstSingleton &&
+        t->getKind() <= TypeKind::_LastSingleton;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const SingletonType *other) const {
+    assert(
+        this->getKind() == other->getKind() &&
+        "only the same TypeKind can be compared");
+    return true;
+  }
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const {
+    return (unsigned)getKind();
+  }
+};
+
+class PrimaryType : public SingletonType {
+ public:
+  explicit PrimaryType(TypeKind kind) : SingletonType(kind) {
     assert(classof(this) && "Invalid PrimaryType kind");
   }
 
@@ -92,8 +143,8 @@ using StringType = SingleType<TypeKind::String, PrimaryType>;
 using NumberType = SingleType<TypeKind::Number, PrimaryType>;
 using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
 
-using AnyType = SingleType<TypeKind::Any, Type>;
-using MixedType = SingleType<TypeKind::Mixed, Type>;
+using AnyType = SingleType<TypeKind::Any, SingletonType>;
+using MixedType = SingleType<TypeKind::Mixed, SingletonType>;
 
 class UnionType : public SingleType<TypeKind::Union, Type> {
   llvh::SmallVector<Type *, 4> types_{};
@@ -119,14 +170,96 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
   bool hasVoid() const {
     return llvh::isa<VoidType>(types_[0]);
   }
-  /// \return true if the union contains exactly the specified type.
-  bool hasType(Type *t) const;
 
-  /// \return true if the two unions are structurally equal.
-  bool isUnionEqual(const UnionType *o) const;
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const UnionType *other) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+};
 
-  /// Hash the contents of the union. This is O(size-of-union).
-  size_t calcUnionHash() const;
+class ArrayType : public SingleType<TypeKind::Array, Type> {
+  Type *element_ = nullptr;
+
+ public:
+  /// Initialize a new instance.
+  void init(Type *element) {
+    assert(!isInitialized() && "ArrayType already initilized");
+    element_ = element;
+  }
+
+  Type *getElement() const {
+    assert(isInitialized());
+    return element_;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const ArrayType *other) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+ private:
+  bool isInitialized() const {
+    return element_ != nullptr;
+  }
+};
+
+class FunctionType : public SingleType<TypeKind::Function, Type> {
+ public:
+  using Param = std::pair<Identifier, Type *>;
+
+ private:
+  /// Result type.
+  Type *return_ = nullptr;
+  /// Optional "this" parameter type.
+  Type *thisParam_ = nullptr;
+  /// Parameter types.
+  llvh::SmallVector<Param, 2> params_{};
+  bool isAsync_ = false;
+  bool isGenerator_ = false;
+  /// Type has been initialized flag.
+  bool initialized_ = false;
+
+ public:
+  /// Initialize a new instance.
+  void init(
+      Type *returnType,
+      Type *thisParam,
+      llvh::ArrayRef<Param> params,
+      bool isAsync,
+      bool isGenerator);
+
+  Type *getReturnType() const {
+    assert(isInitialized());
+    return return_;
+  }
+  Type *getThisParam() const {
+    assert(isInitialized());
+    return thisParam_;
+  }
+  const llvh::ArrayRef<Param> getParams() const {
+    assert(isInitialized());
+    return params_;
+  }
+  bool isAsync() const {
+    return isAsync_;
+  }
+  bool isGenerator() const {
+    return isGenerator_;
+  }
+
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const FunctionType *other) const;
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
+
+ private:
+  bool isInitialized() const {
+    return initialized_;
+  }
+  /// Mark the type as initialized.
+  void markAsInitialized() {
+    initialized_ = true;
+  }
 };
 
 /// A complex type annotated with a unique id (for that specific kind) to allow
@@ -156,62 +289,17 @@ class TypeWithId : public Type {
     return initialized_;
   }
 
-  /// Calculate a hash of the type kind combined with the id.
-  size_t calcTypeWithIdHash() const;
+  /// Compare two instances of the same TypeKind.
+  int _compareImpl(const TypeWithId *other) const {
+    return id_ < other->id_ ? -1 : id_ == other->id_ ? 0 : 1;
+  }
+  /// Calculate the type-specific hash.
+  unsigned _hashImpl() const;
 
  protected:
   /// Mark the type as initialized.
   void markAsInitialized() {
     initialized_ = true;
-  }
-};
-
-class FunctionType : public TypeWithId {
- public:
-  using Param = std::pair<Identifier, Type *>;
-
- private:
-  /// Result type.
-  Type *return_ = nullptr;
-  /// Optional "this" parameter type.
-  Type *thisParam_ = nullptr;
-  /// Parameter types.
-  llvh::SmallVector<Param, 2> params_{};
-  bool isAsync_ = false;
-  bool isGenerator_ = false;
-
- public:
-  explicit FunctionType(size_t id) : TypeWithId(TypeKind::Function, id) {}
-
-  /// Initialize a new instance.
-  void init(
-      Type *returnType,
-      Type *thisParam,
-      llvh::ArrayRef<Param> params,
-      bool isAsync,
-      bool isGenerator);
-
-  static bool classof(const Type *t) {
-    return t->getKind() == TypeKind::Function;
-  }
-
-  Type *getReturnType() const {
-    assert(isInitialized());
-    return return_;
-  }
-  Type *getThisParam() const {
-    assert(isInitialized());
-    return thisParam_;
-  }
-  const llvh::ArrayRef<Param> getParams() const {
-    assert(isInitialized());
-    return params_;
-  }
-  bool isAsync() const {
-    return isAsync_;
-  }
-  bool isGenerator() const {
-    return isGenerator_;
   }
 };
 
@@ -293,29 +381,6 @@ class ClassConstructorType : public TypeWithId {
   }
 };
 
-class ArrayType : public TypeWithId {
-  Type *element_ = nullptr;
-
- public:
-  explicit ArrayType(size_t id) : TypeWithId(TypeKind::Array, id) {}
-
-  /// Initialize a new instance.
-  void init(Type *element) {
-    assert(!isInitialized() && "ArrayType already initilized");
-    element_ = element;
-    markAsInitialized();
-  }
-
-  static bool classof(const Type *t) {
-    return t->getKind() == TypeKind::Array;
-  }
-
-  Type *getElement() const {
-    assert(isInitialized());
-    return element_;
-  }
-};
-
 class FlowContext {
   friend class FlowTypesDumper;
 
@@ -378,8 +443,11 @@ class FlowContext {
   UnionType *createUnion() {
     return &allocUnion_.emplace_back();
   }
+  ArrayType *createArray() {
+    return &allocArray_.emplace_back();
+  }
   FunctionType *createFunction() {
-    return &allocFunction_.emplace_back(allocFunction_.size());
+    return &allocFunction_.emplace_back();
   }
   ClassType *createClass(Identifier name) {
     return &allocClass_.emplace_back(allocClass_.size(), name);
@@ -387,9 +455,6 @@ class FlowContext {
   ClassConstructorType *createClassConstructor(ClassType *classType) {
     return &allocClassConstructor_.emplace_back(
         allocClassConstructor_.size(), classType);
-  }
-  ArrayType *createArray() {
-    return &allocArray_.emplace_back(allocArray_.size());
   }
 
  private:

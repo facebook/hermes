@@ -18,12 +18,7 @@ class FlowTypesDumper {
     // static inline T getEmptyKey();
     // static inline T getTombstoneKey();
     static unsigned getHashValue(const Type *val) {
-      if (auto *unionType = llvh::dyn_cast<UnionType>(val))
-        return (unsigned)unionType->calcUnionHash();
-      else if (auto tid = llvh::dyn_cast<TypeWithId>(val))
-        return (unsigned)tid->calcTypeWithIdHash();
-      else
-        return (unsigned)val->getKind();
+      return val->hash();
     }
     static bool isEqual(const Type *LHS, const Type *RHS) {
       if (LHS == RHS)
@@ -33,14 +28,7 @@ class FlowTypesDumper {
       if (LHS == EMPTY || LHS == TOMB || RHS == EMPTY || RHS == TOMB)
         return false;
 
-      if (LHS->getKind() != RHS->getKind())
-        return false;
-      // Union types are compared structurally.
-      if (llvh::isa<UnionType>(LHS)) {
-        return llvh::cast<UnionType>(LHS)->isUnionEqual(
-            llvh::cast<UnionType>(RHS));
-      }
-      return false;
+      return LHS->equals(RHS);
     }
   };
 

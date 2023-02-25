@@ -124,8 +124,16 @@ void FlowTypesDumper::printAllNumberedTypes(llvh::raw_ostream &os) {
 void FlowTypesDumper::printAllTypes(
     llvh::raw_ostream &os,
     const FlowContext &flowTypes) {
-  auto printAll = [&os, this](const auto &all) {
+  // The last type number printed.
+  size_t lastNumber = 0;
+  auto printAll = [&os, this, &lastNumber](const auto &all) {
     for (const auto &t : all) {
+      // Don't print duplicate types.
+      size_t number = getNumber(&t);
+      if (number <= lastNumber)
+        continue;
+      lastNumber = number;
+
       printTypeRef(os, &t);
       os << " = ";
       printTypeDescription(os, &t);
