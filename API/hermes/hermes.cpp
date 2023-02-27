@@ -138,13 +138,7 @@ void hermesFatalErrorHandler(
 namespace {
 
 // Max size of the runtime's register stack.
-// The runtime register stack needs to be small enough to be allocated on the
-// native thread stack in Android (1MiB) and on MacOS's thread stack (512 KiB)
-// Calculated by: (thread stack size - size of runtime -
-// 8 memory pages for other stuff in the thread)
-static constexpr unsigned kMaxNumRegisters =
-    (512 * 1024 - sizeof(::hermes::vm::Runtime) - 4096 * 8) /
-    sizeof(::hermes::vm::PinnedHermesValue);
+static constexpr unsigned kMaxNumRegisters = 128 * 1024;
 
 void raw_ostream_append(llvh::raw_ostream &os) {}
 
