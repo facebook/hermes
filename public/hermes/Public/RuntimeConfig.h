@@ -35,7 +35,7 @@ class PinnedHermesValue;
   F(constexpr, PinnedHermesValue *, RegisterStack, nullptr)            \
                                                                        \
   /* Register Stack Size */                                            \
-  F(constexpr, unsigned, MaxNumRegisters, 64 * 1024)                   \
+  F(constexpr, unsigned, MaxNumRegisters, 128 * 1024)                  \
                                                                        \
   /* Whether to allow eval and Function ctor */                        \
   F(constexpr, bool, EnableEval, true)                                 \
