@@ -1515,6 +1515,13 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
     return canAFlowIntoB(classA, classB);
   }
 
+  if (FunctionType *funcA = llvh::dyn_cast<FunctionType>(a)) {
+    FunctionType *funcB = llvh::dyn_cast<FunctionType>(b);
+    if (!funcB)
+      return {};
+    return canAFlowIntoB(funcA, funcB);
+  }
+
   return {};
 }
 
@@ -1530,6 +1537,58 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     cur = cur->getSuperClass();
   }
   return {};
+}
+
+FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
+    FunctionType *a,
+    FunctionType *b) {
+  // Function a can flow into b when:
+  // * they're the same kind of function (async, generator, etc)
+  // * all parameters of b can flow into parameters of a
+  // * return type of a can flow into return type of b
+  // * no checked casts are needed (can't flow into an 'any' parameter)
+
+  if (a->isAsync() != b->isAsync())
+    return {};
+  if (a->isGenerator() != b->isGenerator())
+    return {};
+
+  {
+    CanFlowResult flowRes = canAFlowIntoB(b->getThisParam(), a->getThisParam());
+    if (!flowRes.canFlow || flowRes.needCheckedCast)
+      return {};
+  }
+
+  {
+    // TODO: Handle default arguments, which will allow for a changing number of
+    // parameters. Example:
+    //   let funcB : (a: number) => number;
+    //   function funcA(a: number, b: number = 10) : number {
+    //     return 0;
+    //   }
+    //   funcB = funcA;
+    // funcA flows into funcA here because the default argument allows the
+    // caller to change the number of parameters.
+    if (a->getParams().size() != b->getParams().size())
+      return {};
+
+    for (size_t i = 0, e = a->getParams().size(); i < e; ++i) {
+      Type *paramA = a->getParams()[i].second;
+      Type *paramB = b->getParams()[i].second;
+      CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
+      if (!flowRes.canFlow || flowRes.needCheckedCast)
+        return {};
+    }
+  }
+
+  {
+    CanFlowResult flowRes =
+        canAFlowIntoB(a->getReturnType(), b->getReturnType());
+    if (!flowRes.canFlow || flowRes.needCheckedCast)
+      return {};
+  }
+
+  return {.canFlow = true};
 }
 
 ESTree::Node *FlowChecker::implicitCheckedCast(
