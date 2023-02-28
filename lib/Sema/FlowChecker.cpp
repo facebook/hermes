@@ -535,9 +535,13 @@ class FlowChecker::ExprVisitor {
         if (id->_name == outer_.kw_.identLength) {
           resType = outer_.flowContext_.getNumber();
         } else {
-          outer_.sm_.error(
-              node->_property->getSourceRange(),
-              "ft: property " + id->_name->str() + " not defined in array");
+          // Allow ALL property lookups on arrays by overriding the actual type
+          // with 'any'.
+          // This enables calls to .map, .forEach, etc.
+          // TODO: Change this out for the actual type for each of the library
+          // functions.
+          outer_.setNodeType(node->_object, outer_.flowContext_.getAny());
+          resType = outer_.flowContext_.getAny();
         }
       }
     } else if (!llvh::isa<AnyType>(objType)) {
