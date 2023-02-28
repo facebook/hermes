@@ -211,7 +211,7 @@
     const childKey =
       widgetKey !== null && widgetKey !== undefined
         ? widgetKey
-        : `${child.constructor.name}_${parentCtx.childCounter++}`;
+        : `_${parentCtx.childCounter++}`;
     const newKey = `${parentCtx.key}_${childKey}`;
     return new Context(newKey);
   }
