@@ -610,6 +610,8 @@ class IRBuilder {
       LiteralString *propName,
       bool nonPointer);
 
+  LoadParentInst *createLoadParentInst(Value *object);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

@@ -1006,6 +1006,9 @@ class InstrGen {
     os_ << ",s_symbols[" << moduleGen_.stringTable.add(LS->getValue().str())
         << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
   }
+  void generateLoadParentInst(LoadParentInst &inst) {
+    hermes_fatal("LoadParentInst unimplemented");
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

@@ -955,6 +955,9 @@ class TypeInferenceImpl {
   Type inferPrStoreInst(PrStoreInst *inst) {
     return Type::createNoType();
   }
+  Type inferLoadParentInst(LoadParentInst *inst) {
+    return *inst->getInherentType();
+  }
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.

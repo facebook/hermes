@@ -834,3 +834,12 @@ Effects | May read and write memory.
 | Semantics   | Store the property without any checking.                                                                                                                                                                                                                                                                                  |
 | Effects     | May read memory.                                                                                                                                                                                                                                                                                                          |
 
+### LoadParent
+
+LoadParent | _
+--- | --- |
+Description | Loads the parent (the vtable) for a typed object instance of a class
+Example | %0 = LoadParent %object
+Arguments | %object is an instance of a typed class
+Semantics | Read the parent without any checks.
+Effects | May read memory.

@@ -1058,6 +1058,12 @@ PrStoreInst *IRBuilder::createPrStoreInst(
   return I;
 }
 
+LoadParentInst *IRBuilder::createLoadParentInst(Value *object) {
+  auto *inst = new LoadParentInst(object);
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

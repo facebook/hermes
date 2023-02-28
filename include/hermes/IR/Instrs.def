@@ -232,6 +232,8 @@ DEF_VALUE(HBCProfilePointInst, Instruction)
 DEF_VALUE(PrLoadInst, Instruction)
 DEF_VALUE(PrStoreInst, Instruction)
 
+DEF_VALUE(LoadParentInst, Instruction)
+
 #undef INCLUDE_HBC_BACKEND
 
 // Don't undef these if this file is being included in ValueKinds.def, since

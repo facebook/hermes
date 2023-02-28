@@ -865,6 +865,8 @@ void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 void Verifier::visitPrLoadInst(const PrLoadInst &Inst) {}
 void Verifier::visitPrStoreInst(const PrStoreInst &Inst) {}
 
+void Verifier::visitLoadParentInst(const LoadParentInst &Inst) {}
+
 } // namespace
 
 #endif
