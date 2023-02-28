@@ -88,7 +88,13 @@ void FlowTypesDumper::printTypeDescription(
 
     case TypeKind::Class: {
       auto *classType = llvh::cast<ClassType>(type);
-      os << classType->getClassName() << " {\n";
+      if (classType->getClassName().isValid())
+        os << classType->getClassName();
+      if (classType->getSuperClass()) {
+        os << " extends ";
+        printTypeRef(os, classType->getSuperClass());
+      }
+      os << " {\n";
       if (auto *constrType = classType->getConstructorType()) {
         os << "  %constructor: ";
         printTypeRef(os, constrType);

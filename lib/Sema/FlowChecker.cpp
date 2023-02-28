@@ -1450,8 +1450,11 @@ void FlowChecker::parseClassType(
 
   ClassType *homeObjectType = flowContext_.createClass(Identifier{});
   homeObjectType->init(
-      methods, /* constructorType */ nullptr, /* homeObjectType */ nullptr);
-  classType->init(fields, constructorType, homeObjectType);
+      methods,
+      /* constructorType */ nullptr,
+      /* homeObjectType */ nullptr,
+      /* superClass */ nullptr);
+  classType->init(fields, constructorType, homeObjectType, nullptr);
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {

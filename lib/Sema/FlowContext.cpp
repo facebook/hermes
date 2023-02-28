@@ -249,12 +249,14 @@ unsigned TypeWithId::_hashImpl() const {
 void ClassType::init(
     llvh::ArrayRef<Field> fields,
     FunctionType *constructorType,
-    ClassType *homeObjectType) {
+    ClassType *homeObjectType,
+    ClassType *superClass) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
 
   constructorType_ = constructorType;
   homeObjectType_ = homeObjectType;
+  superClass_ = superClass;
 
   fieldNameMap_.reserve(fields.size());
   size_t index = 0;

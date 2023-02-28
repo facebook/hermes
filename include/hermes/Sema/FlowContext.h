@@ -370,6 +370,9 @@ class ClassType : public TypeWithId {
   /// This also means we can query which class the field exists on easily.
   llvh::SmallDenseMap<Identifier, FieldLookupEntry> fieldNameMap_{};
 
+  /// Super class, nullptr if this class doesn't extend anything.
+  ClassType *superClass_ = nullptr;
+
  public:
   explicit ClassType(size_t id, Identifier className)
       : TypeWithId(TypeKind::Class, id), className_(className) {}
@@ -379,7 +382,8 @@ class ClassType : public TypeWithId {
   void init(
       llvh::ArrayRef<Field> fields,
       FunctionType *constructorType,
-      ClassType *homeObjectType);
+      ClassType *homeObjectType,
+      ClassType *superClass);
 
   static bool classof(const Type *t) {
     return t->getKind() == TypeKind::Class;
@@ -411,6 +415,11 @@ class ClassType : public TypeWithId {
   }
   /// Return the lookup entry of a field, None if it doesn't exist.
   hermes::OptValue<FieldLookupEntry> findField(Identifier id) const;
+
+  ClassType *getSuperClass() const {
+    assert(isInitialized());
+    return superClass_;
+  }
 };
 
 /// The type of the constructor of the class. This is what a class expression
