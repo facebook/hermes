@@ -13,6 +13,9 @@
   }
 
   class ComposedWidget extends Widget {
+    constructor() {
+      super();
+    }
     render() {
       throw new Error("Implement this in a subclass");
     }
