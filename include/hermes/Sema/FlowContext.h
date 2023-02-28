@@ -11,6 +11,11 @@
 #include "hermes/Sema/SemContext.h"
 
 namespace hermes {
+
+namespace ESTree {
+class MethodDefinitionNode;
+}
+
 namespace flow {
 
 #define _HERMES_SEMA_FLOW_SINGLETONS \
@@ -305,21 +310,65 @@ class TypeWithId : public Type {
 
 class ClassType : public TypeWithId {
  public:
+  /// Represents either a class field or a method.
   struct Field {
     Identifier name;
     Type *type;
-    Field(Identifier name, Type *type) : name(name), type(type) {}
+    /// The slot for PrLoad and PrStore, used during IRGen.
+    /// This ideally should be computed during conversion to IR Type,
+    /// but we don't have that yet.
+    size_t layoutSlotIR;
+    /// If the field is a method, AST for the method.
+    ESTree::MethodDefinitionNode *method;
+    Field(
+        Identifier name,
+        Type *type,
+        size_t layoutSlotIR,
+        ESTree::MethodDefinitionNode *method = nullptr)
+        : name(name), type(type), layoutSlotIR(layoutSlotIR), method(method) {}
+
+    bool isMethod() const {
+      return method != nullptr;
+    }
+  };
+
+  /// Lookup entry in the table, used to quickly find fields.
+  struct FieldLookupEntry {
+    /// The class on which this field is defined.
+    /// Fields may occur anywhere in the inheritance chain.
+    ClassType *classType;
+
+    /// Slot index in the fields_ list in classType.
+    size_t fieldsIndex;
+
+    explicit FieldLookupEntry() = default;
+    explicit FieldLookupEntry(ClassType *classType, size_t fieldsIndex)
+        : classType(classType), fieldsIndex(fieldsIndex) {}
+
+    /// Helper function to retrieve the field given the lookup entry.
+    const Field *getField() const {
+      return &classType->fields_[fieldsIndex];
+    }
   };
 
  private:
   /// Class name.
   Identifier const className_;
-  /// Fields.
+  /// The non-inherited fields of the class, which are pointed to from
+  /// the fieldNameMap_ for lookup from either this class or subclasses.
   llvh::SmallVector<Field, 4> fields_{};
   /// The constructor function.
   FunctionType *constructorType_ = nullptr;
-  /// Map from identifier to field index.
-  llvh::SmallDenseMap<Identifier, size_t> fieldNameMap_{};
+  /// The .prototype property ([[HomeObject]] in the spec) contains methods.
+  /// This class encodes those methods.
+  /// ClassTypes which represent home objects have null homeObjectType_.
+  ClassType *homeObjectType_ = nullptr;
+  /// Map from field name to field lookup entry.
+  /// Contains all fields in this class and all superClasses.
+  /// This allows us to quickly check how many fields to allocate for the class,
+  /// as well as quick lookup to see if a field exists.
+  /// This also means we can query which class the field exists on easily.
+  llvh::SmallDenseMap<Identifier, FieldLookupEntry> fieldNameMap_{};
 
  public:
   explicit ClassType(size_t id, Identifier className)
@@ -327,7 +376,10 @@ class ClassType : public TypeWithId {
 
   /// Initialize an empty (freshly created) instance. Note that fields are
   /// immutable after this.
-  void init(llvh::ArrayRef<Field> fields, FunctionType *constructorType);
+  void init(
+      llvh::ArrayRef<Field> fields,
+      FunctionType *constructorType,
+      ClassType *homeObjectType);
 
   static bool classof(const Type *t) {
     return t->getKind() == TypeKind::Class;
@@ -348,15 +400,17 @@ class ClassType : public TypeWithId {
     assert(isInitialized());
     return constructorType_;
   }
-  const llvh::SmallDenseMap<Identifier, size_t> &getFieldNameMap() const {
+  ClassType *getHomeObjectType() const {
+    assert(isInitialized());
+    return homeObjectType_;
+  }
+  const llvh::SmallDenseMap<Identifier, FieldLookupEntry> &getFieldNameMap()
+      const {
     assert(isInitialized());
     return fieldNameMap_;
   }
-  /// Return the index of a field which must exist.
-  size_t getFieldIndex(Identifier id) const;
-
-  /// Return a pointer to an existing field or nullptr.
-  const Field *findField(Identifier id) const;
+  /// Return the lookup entry of a field, None if it doesn't exist.
+  hermes::OptValue<FieldLookupEntry> findField(Identifier id) const;
 };
 
 /// The type of the constructor of the class. This is what a class expression

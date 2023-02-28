@@ -70,20 +70,58 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     consFunction = Builder.createCreateFunctionInst(func);
   }
   emitStore(Builder, consFunction, getDeclData(decl), true);
+
+  // Create and populate the "prototype" property (vtable).
+  // Must be done even if there are no methods to enable 'instanceof'.
+  auto *homeObject =
+      emitClassAllocation(classType->getHomeObjectType(), /* parent */ nullptr);
+
+  // The 'prototype' property is initially set as non-configurable,
+  // and we're overwriting it with our own.
+  // So we can't use StoreOwnProperty here because that attempts to define a
+  // configurable property.
+  // TODO: Do this properly by using a new instruction for class creation.
+  Builder.createStorePropertyStrictInst(
+      homeObject,
+      consFunction,
+      Builder.getLiteralString(kw_.identPrototype->str()));
 }
 
-Value *ESTreeIRGen::emitClassAllocation(flow::ClassType *classType) {
+Value *ESTreeIRGen::emitClassAllocation(
+    flow::ClassType *classType,
+    Value *parent) {
   // TODO: should create a sealed object, etc.
   AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+  propMap.reserve(classType->getFields().size());
 
+  // Generate code for each field, place it in the propMap.
   for (const flow::ClassType::Field &field : classType->getFields()) {
-    propMap.emplace_back(
-        Builder.getLiteralString(field.name), getDefaultInitValue(field.type));
+    if (field.isMethod()) {
+      // Create the code for the method.
+      Value *function = genFunctionExpression(
+          llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
+          field.name);
+      propMap.emplace_back(Builder.getLiteralString(field.name), function);
+    } else {
+      propMap.emplace_back(
+          Builder.getLiteralString(field.name),
+          getDefaultInitValue(field.type));
+    }
   }
 
-  return propMap.empty()
-      ? (Value *)Builder.createAllocObjectInst(0)
-      : (Value *)Builder.createAllocObjectLiteralInst(propMap);
+  // TODO: Have a specific instruction for allocating an object from a class
+  // that sets the parent, uses the prop map, etc.
+  Value *result;
+  if (propMap.empty()) {
+    result = Builder.createAllocObjectInst(0, parent);
+  } else {
+    result = Builder.createAllocObjectLiteralInst(propMap);
+    if (parent) {
+      Builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_silentSetPrototypeOf, {result, parent});
+    }
+  }
+  return result;
 }
 
 Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {

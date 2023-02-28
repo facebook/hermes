@@ -543,13 +543,31 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     if (!mem->_computed) {
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
-      size_t fieldIndex = classType->getFieldIndex(propName);
+      auto optFieldLookup = classType->findField(propName);
+      if (optFieldLookup) {
+        size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
+        return MemberExpressionResult{
+            Builder.createPrLoadInst(
+                baseValue,
+                fieldIndex,
+                Builder.getLiteralString(propName),
+                flowTypeToIRType(optFieldLookup->getField()->type)),
+            baseValue};
+      }
+      // Failed to find a class field, check the home object for methods.
+      auto optMethodLookup =
+          classType->getHomeObjectType()->findField(propName);
+      assert(
+          optMethodLookup && "must have typechecked as either method or field");
+      size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
+      // Lookup method on the parent, return baseValue in the result to
+      // correctly populate 'this' argument.
       return MemberExpressionResult{
           Builder.createPrLoadInst(
-              baseValue,
-              fieldIndex,
+              Builder.createLoadParentInst(baseValue),
+              methodIndex,
               Builder.getLiteralString(propName),
-              flowTypeToIRType(classType->getFields()[fieldIndex].type)),
+              flowTypeToIRType(optMethodLookup->getField()->type)),
           baseValue};
     }
   }
@@ -568,13 +586,15 @@ void ESTreeIRGen::emitMemberStore(
     if (!mem->_computed) {
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
-      size_t fieldIndex = classType->getFieldIndex(propName);
+      auto optFieldLookup = classType->findField(propName);
+      assert(optFieldLookup && "field lookup must succeed after typechecking");
+      size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
       Builder.createPrStoreInst(
           storedValue,
           baseValue,
           fieldIndex,
           Builder.getLiteralString(propName),
-          flowTypeToIRType(classType->getFields()[fieldIndex].type).isNonPtr());
+          flowTypeToIRType(optFieldLookup->getField()->type).isNonPtr());
       return;
     }
   }
@@ -1825,7 +1845,9 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     flow::ClassType *classType = consType->getClassType();
     assert(!hasSpread && "statically typed spread is not supported");
 
-    Value *newInst = emitClassAllocation(classType);
+    Value *newInst = emitClassAllocation(
+        classType,
+        Builder.createLoadPropertyInst(callee, kw_.identPrototype->str()));
 
     // If there is an explicit constructor, invoke it. Note that there is
     // always a dummy one, which we even loaded (for TDZ), but there is no need

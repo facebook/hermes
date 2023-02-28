@@ -530,9 +530,18 @@ class ESTreeIRGen {
 
   void genClassDeclaration(ESTree::ClassDeclarationNode *node);
 
+  /// Emit code to allocate the '.prototype' object for the class,
+  /// referred to in the spec as the [[HomeObject]] of the constructor function.
+  /// \return the object to be populated in the `.prototype` field.
+  Value *emitClassHomeObjectCreation(
+      ESTree::ClassBodyNode *classBody,
+      flow::ClassType *classType);
+
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.
-  Value *emitClassAllocation(flow::ClassType *classType);
+  /// \param parent the parent object of the newly allocated class, nullptr to
+  /// default to the Object prototype.
+  Value *emitClassAllocation(flow::ClassType *classType, Value *parent);
 
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);

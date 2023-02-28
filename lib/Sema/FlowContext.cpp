@@ -248,10 +248,13 @@ unsigned TypeWithId::_hashImpl() const {
 
 void ClassType::init(
     llvh::ArrayRef<Field> fields,
-    FunctionType *constructorType) {
+    FunctionType *constructorType,
+    ClassType *homeObjectType) {
   fields_.reserve(fields.size());
   fields_.append(fields.begin(), fields.end());
+
   constructorType_ = constructorType;
+  homeObjectType_ = homeObjectType;
 
   fieldNameMap_.reserve(fields.size());
   size_t index = 0;
@@ -259,20 +262,18 @@ void ClassType::init(
     assert(
         fieldNameMap_.count(f.name) == 0 && "Duplicate field name in a class");
 
-    fieldNameMap_[f.name] = index++;
+    fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
   }
+
   markAsInitialized();
 }
 
-size_t ClassType::getFieldIndex(Identifier id) const {
+hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findField(
+    Identifier id) const {
   auto it = fieldNameMap_.find(id);
-  assert(it != fieldNameMap_.end() && "field must exist");
+  if (it == fieldNameMap_.end())
+    return llvh::None;
   return it->second;
-}
-
-const ClassType::Field *ClassType::findField(Identifier id) const {
-  auto it = fieldNameMap_.find(id);
-  return it != fieldNameMap_.end() ? &fields_[it->second] : nullptr;
 }
 
 FlowContext::FlowContext() = default;

@@ -141,16 +141,26 @@ void FlowChecker::visit(ESTree::ClassDeclarationNode *node) {
 void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
   auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(node->_value);
 
-  // Skip non-constructors.
-  if (node->_kind != kw_.identConstructor)
-    return;
-
-  FunctionContext functionContext(
-      *this,
-      fe,
-      curClassContext_->classType->getConstructorType(),
-      curClassContext_->classType);
-  visitFunctionLike(fe, fe->_body, fe->_params);
+  if (node->_kind == kw_.identConstructor) {
+    FunctionContext functionContext(
+        *this,
+        fe,
+        curClassContext_->classType->getConstructorType(),
+        curClassContext_->classType);
+    visitFunctionLike(fe, fe->_body, fe->_params);
+  } else if (node->_key) {
+    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_key);
+    // Cast must be valid because all methods were registered as
+    // FunctionType.
+    auto optField = curClassContext_->classType->getHomeObjectType()->findField(
+        Identifier::getFromPointer(id->_name));
+    assert(optField.hasValue() && "method must have been registered");
+    FunctionType *funcType =
+        llvh::cast<FunctionType>(optField->getField()->type);
+    FunctionContext functionContext(
+        *this, fe, funcType, curClassContext_->classType);
+    visitFunctionLike(fe, fe->_body, fe->_params);
+  }
 }
 
 void FlowChecker::visit(ESTree::TypeAnnotationNode *node) {
@@ -259,17 +269,30 @@ class FlowChecker::ExprVisitor {
             node->_property->getSourceRange(),
             "ft: computed access to class instances not supported");
       } else {
+        bool found = false;
         auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        const ClassType::Field *field =
+        auto optField =
             classType->findField(Identifier::getFromPointer(id->_name));
-        if (!field) {
+        if (optField) {
+          resType = optField->getField()->type;
+          found = true;
+        } else {
+          auto optMethod = classType->getHomeObjectType()->findField(
+              Identifier::getFromPointer(id->_name));
+          if (optMethod) {
+            resType = optMethod->getField()->type;
+            found = true;
+            assert(
+                llvh::isa<FunctionType>(resType) &&
+                "methods must be functions");
+          }
+        }
+        if (!found) {
           // TODO: class declaration location.
           outer_.sm_.error(
               node->_property->getSourceRange(),
               "ft: property " + id->_name->str() + " not defined in class " +
                   classType->getClassNameOrDefault());
-        } else {
-          resType = field->type;
         }
       }
     } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType)) {
@@ -1318,6 +1341,10 @@ void FlowChecker::parseClassType(
 
   llvh::SmallDenseMap<UniqueString *, ESTree::Node *> fieldNames{};
   llvh::SmallVector<ClassType::Field, 4> fields{};
+
+  llvh::SmallDenseMap<UniqueString *, ESTree::Node *> methodNames{};
+  llvh::SmallVector<ClassType::Field, 4> methods{};
+
   FunctionType *constructorType = nullptr;
 
   auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
@@ -1352,31 +1379,68 @@ void FlowChecker::parseClassType(
         fieldType = flowContext_.getAny();
       }
 
-      fields.emplace_back(Identifier::getFromPointer(id->_name), fieldType);
+      fields.emplace_back(
+          Identifier::getFromPointer(id->_name), fieldType, fields.size());
     } else if (
         auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
       auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
 
-      if (method->_kind != kw_.identConstructor) {
-        sm_.error(method->getStartLoc(), "ft: methods not supported yet");
+      if (method->_kind == kw_.identConstructor) {
+        // Constructor
+        if (fe->_returnType) {
+          sm_.error(
+              fe->_returnType->getSourceRange(),
+              "ft: constructor cannot declare a return type");
+        }
+        // Check for disallowed attributes. Note that the parser already
+        // prevents some of these, but it doesn't hurt to check again.
+        if (method->_static || fe->_async || fe->_generator) {
+          sm_.error(
+              method->getStartLoc(),
+              "constructor cannot be static, a generator or async");
+        }
+
+        constructorType = parseFunctionType(
+            fe->_params, nullptr, false, false, flowContext_.getVoid());
         continue;
+      } else {
+        // Non-constructor method
+
+        if (method->_computed) {
+          sm_.error(
+              method->getStartLoc(),
+              "ft: computed property names in classes are unsupported");
+          continue;
+        }
+        if (method->_static || fe->_async || fe->_generator) {
+          sm_.error(
+              method->getStartLoc(),
+              "ft: static/async/generator methods unsupported");
+          continue;
+        }
+
+        // Check if the method is already declared.
+        auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+        auto [it, inserted] = methodNames.try_emplace(id->_name, method);
+        if (!inserted) {
+          sm_.error(
+              id->getStartLoc(),
+              "ft: method " + id->_name->str() + " already declared");
+          sm_.note(
+              it->second->getSourceRange(),
+              "ft: previous declaration of " + id->_name->str());
+          continue;
+        }
+
+        FunctionType *methodType = parseFunctionType(
+            fe->_params, fe->_returnType, fe->_async, fe->_generator);
+        methods.emplace_back(
+            Identifier::getFromPointer(id->_name),
+            methodType,
+            methods.size(),
+            method);
       }
 
-      if (fe->_returnType) {
-        sm_.error(
-            fe->_returnType->getSourceRange(),
-            "ft: constructor cannot declare a return type");
-      }
-      // Check for disallowed attributes. Note that the parser already prevents
-      // some of these, but it doesn't hurt to check again.
-      if (method->_static || fe->_async || fe->_async) {
-        sm_.error(
-            method->getStartLoc(),
-            "constructor cannot be static, a generator or async");
-      }
-
-      constructorType = parseFunctionType(
-          fe->_params, nullptr, false, false, flowContext_.getVoid());
     } else {
       sm_.error(
           node.getSourceRange(),
@@ -1384,7 +1448,10 @@ void FlowChecker::parseClassType(
     }
   }
 
-  classType->init(fields, constructorType);
+  ClassType *homeObjectType = flowContext_.createClass(Identifier{});
+  homeObjectType->init(
+      methods, /* constructorType */ nullptr, /* homeObjectType */ nullptr);
+  classType->init(fields, constructorType, homeObjectType);
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {

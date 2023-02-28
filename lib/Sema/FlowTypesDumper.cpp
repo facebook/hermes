@@ -94,6 +94,11 @@ void FlowTypesDumper::printTypeDescription(
         printTypeRef(os, constrType);
         os << '\n';
       }
+      if (auto *homeObject = classType->getHomeObjectType()) {
+        os << "  %homeObject: ";
+        printTypeRef(os, homeObject);
+        os << '\n';
+      }
       for (const ClassType::Field &field : classType->getFields()) {
         os << "  " << field.name << ": ";
         printTypeRef(os, field.type);

@@ -40,10 +40,12 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %dotProduct(): number
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %Vec2D(): undefined
-// CHECK-NEXT:  %2 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:  %3 = StoreOwnPropertyInst %0: closure, %2: object, 0: number, true: boolean
-// CHECK-NEXT:  %4 = StoreOwnPropertyInst %1: closure, %2: object, 1: number, true: boolean
-// CHECK-NEXT:  %5 = ReturnInst %2: object
+// CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %1: closure, "prototype": string
+// CHECK-NEXT:  %4 = AllocArrayInst (:object) 2: number
+// CHECK-NEXT:  %5 = StoreOwnPropertyInst %0: closure, %4: object, 0: number, true: boolean
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %1: closure, %4: object, 1: number, true: boolean
+// CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:function dotProduct(a: any, b: any): number
