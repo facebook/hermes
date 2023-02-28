@@ -532,9 +532,11 @@ class ESTreeIRGen {
 
   /// Emit code to allocate the '.prototype' object for the class,
   /// referred to in the spec as the [[HomeObject]] of the constructor function.
+  /// \param superClass if non-null the superClass of the class.
   /// \return the object to be populated in the `.prototype` field.
   Value *emitClassHomeObjectCreation(
       ESTree::ClassBodyNode *classBody,
+      Value *superClass,
       flow::ClassType *classType);
 
   /// Emit code to allocate an empty instance of the specified class and return

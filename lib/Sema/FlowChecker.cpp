@@ -94,6 +94,8 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
 }
 
 void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
+  visitExpression(node->_superClass, node);
+
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(node->_id);
   ClassType *classType = flowContext_.createClass(
       id ? Identifier::getFromPointer(id->_name) : Identifier());
@@ -103,8 +105,6 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
       flowContext_.createClassConstructor(classType);
 
   setNodeType(node, consType);
-
-  visitExpression(node->_superClass, node);
 
   // A new scope for the class expression name.
   ScopeRAII scope(*this);
@@ -131,8 +131,6 @@ void FlowChecker::visit(ESTree::ClassDeclarationNode *node) {
   assert(decl && "class declaration must have been resolved");
   auto *classType =
       llvh::cast<ClassConstructorType>(getDeclType(decl))->getClassType();
-
-  visitExpression(node->_superClass, node);
 
   ClassContext classContext(*this, classType);
   visitESTreeNode(*this, node->_body, node);
@@ -1031,6 +1029,7 @@ class FlowChecker::DeclareScopeTypes {
     for (const ForwardDecl &fd : forwardDecls) {
       if (llvh::isa<ClassType>(fd.type)) {
         auto *classNode = llvh::cast<ESTree::ClassDeclarationNode>(fd.astNode);
+        outer.visitExpression(classNode->_superClass, classNode);
         outer.parseClassType(
             classNode->_superClass,
             classNode->_body,
@@ -1335,10 +1334,6 @@ void FlowChecker::parseClassType(
     ClassType *classType) {
   assert(!classType->isInitialized());
 
-  if (superClass)
-    sm_.error(
-        superClass->getStartLoc(), "ft: super classes are not implemented");
-
   llvh::SmallDenseMap<UniqueString *, ESTree::Node *> fieldNames{};
   llvh::SmallVector<ClassType::Field, 4> fields{};
 
@@ -1346,6 +1341,18 @@ void FlowChecker::parseClassType(
   llvh::SmallVector<ClassType::Field, 4> methods{};
 
   FunctionType *constructorType = nullptr;
+
+  ClassType *superClassType = resolveSuperClass(superClass);
+
+  size_t nextFieldLayoutSlotIR = 0;
+  size_t nextMethodLayoutSlotIR = 0;
+  if (superClassType) {
+    // Offset based on the superclass if necessary, to avoid overwriting
+    // existing fields.
+    nextFieldLayoutSlotIR = superClassType->getFieldNameMap().size();
+    nextMethodLayoutSlotIR =
+        superClassType->getHomeObjectType()->getFieldNameMap().size();
+  }
 
   auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
   for (ESTree::Node &node : classBody->_body) {
@@ -1355,18 +1362,7 @@ void FlowChecker::parseClassType(
         continue;
       }
 
-      // Check if the field is already declared.
       auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
-      auto [it, inserted] = fieldNames.try_emplace(id->_name, prop);
-      if (!inserted) {
-        sm_.error(
-            id->getStartLoc(),
-            "ft: field " + id->_name->str() + " already declared");
-        sm_.note(
-            it->second->getSourceRange(),
-            "ft: previous declaration of " + id->_name->str());
-        continue;
-      }
 
       Type *fieldType;
       if (prop->_typeAnnotation) {
@@ -1379,8 +1375,46 @@ void FlowChecker::parseClassType(
         fieldType = flowContext_.getAny();
       }
 
-      fields.emplace_back(
-          Identifier::getFromPointer(id->_name), fieldType, fields.size());
+      // Check if the field is inherited, and reuse the index.
+      const ClassType::Field *superField = nullptr;
+      if (superClassType) {
+        auto superIt =
+            superClassType->findField(Identifier::getFromPointer(id->_name));
+        if (superIt) {
+          // Field is inherited.
+          superField = superIt->getField();
+          // Fields must be the same for class properties.
+          if (!fieldType->equals(superField->type)) {
+            sm_.error(
+                prop->getStartLoc(),
+                "ft: incompatible field type for override");
+          }
+        }
+      }
+
+      // Check if the field is already declared.
+      auto [it, inserted] = fieldNames.try_emplace(id->_name, prop);
+      if (!inserted) {
+        sm_.error(
+            id->getStartLoc(),
+            "ft: field " + id->_name->str() + " already declared");
+        sm_.note(
+            it->second->getSourceRange(),
+            "ft: previous declaration of " + id->_name->str());
+        continue;
+      }
+
+      if (superField) {
+        fields.emplace_back(
+            Identifier::getFromPointer(id->_name),
+            fieldType,
+            superField->layoutSlotIR);
+      } else {
+        fields.emplace_back(
+            Identifier::getFromPointer(id->_name),
+            fieldType,
+            nextFieldLayoutSlotIR++);
+      }
     } else if (
         auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
       auto *fe = llvh::cast<ESTree::FunctionExpressionNode>(method->_value);
@@ -1398,6 +1432,11 @@ void FlowChecker::parseClassType(
           sm_.error(
               method->getStartLoc(),
               "constructor cannot be static, a generator or async");
+        }
+        if (superClassType) {
+          sm_.error(
+              method->getStartLoc(),
+              "ft: constructor for inherited classes unsupported");
         }
 
         constructorType = parseFunctionType(
@@ -1419,8 +1458,31 @@ void FlowChecker::parseClassType(
           continue;
         }
 
-        // Check if the method is already declared.
         auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+        FunctionType *methodType = parseFunctionType(
+            fe->_params, fe->_returnType, fe->_async, fe->_generator);
+
+        // Check if the method is inherited, and reuse the index.
+        const ClassType::Field *superMethod = nullptr;
+        if (superClassType) {
+          auto superIt = superClassType->getHomeObjectType()->findField(
+              Identifier::getFromPointer(id->_name));
+          if (superIt) {
+            // Field is inherited.
+            superMethod = superIt->getField();
+            // Overriding method's function type must flow into the overridden
+            // method's function type.
+            CanFlowResult flowRes =
+                canAFlowIntoB(methodType, superMethod->type);
+            if (!flowRes.canFlow) {
+              sm_.error(
+                  method->getStartLoc(),
+                  "ft: incompatible method type for override");
+            }
+          }
+        }
+
+        // Check if the method is already declared.
         auto [it, inserted] = methodNames.try_emplace(id->_name, method);
         if (!inserted) {
           sm_.error(
@@ -1432,13 +1494,19 @@ void FlowChecker::parseClassType(
           continue;
         }
 
-        FunctionType *methodType = parseFunctionType(
-            fe->_params, fe->_returnType, fe->_async, fe->_generator);
-        methods.emplace_back(
-            Identifier::getFromPointer(id->_name),
-            methodType,
-            methods.size(),
-            method);
+        if (superMethod) {
+          methods.emplace_back(
+              Identifier::getFromPointer(id->_name),
+              methodType,
+              superMethod->layoutSlotIR,
+              method);
+        } else {
+          methods.emplace_back(
+              Identifier::getFromPointer(id->_name),
+              methodType,
+              nextMethodLayoutSlotIR++,
+              method);
+        }
       }
 
     } else {
@@ -1453,8 +1521,30 @@ void FlowChecker::parseClassType(
       methods,
       /* constructorType */ nullptr,
       /* homeObjectType */ nullptr,
-      /* superClass */ nullptr);
-  classType->init(fields, constructorType, homeObjectType, nullptr);
+      superClassType ? superClassType->getHomeObjectType() : nullptr);
+  classType->init(fields, constructorType, homeObjectType, superClassType);
+}
+
+ClassType *FlowChecker::resolveSuperClass(ESTree::Node *superClass) {
+  if (!superClass)
+    return nullptr;
+  if (!llvh::isa<ESTree::IdentifierNode>(superClass)) {
+    sm_.error(
+        superClass->getStartLoc(),
+        "ft: only identifiers may be extended as superclasses");
+    return nullptr;
+  }
+  Type *superType = flowContext_.findNodeType(superClass);
+  if (!superType) {
+    sm_.error(superClass->getStartLoc(), "ft: super type unknown");
+    return nullptr;
+  }
+  auto *superClassConsType = llvh::dyn_cast<ClassConstructorType>(superType);
+  if (!superClassConsType) {
+    sm_.error(superClass->getStartLoc(), "ft: super type must be a class");
+    return nullptr;
+  }
+  return superClassConsType->getClassType();
 }
 
 FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {

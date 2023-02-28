@@ -25,13 +25,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     return;
   }
 
-  assert(
-      !node->_superClass &&
-      "super class should have been rejected by the type checker");
-
   flow::ClassType *classType = consType->getClassType();
 
   auto *classBody = ESTree::cast<ESTree::ClassBodyNode>(node->_body);
+
+  Value *superClass = nullptr;
+  if (node->_superClass) {
+    superClass = genExpression(node->_superClass);
+  }
 
   // Emit the explicit constructor, if present.
   Value *consFunction;
@@ -73,8 +74,11 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
-  auto *homeObject =
-      emitClassAllocation(classType->getHomeObjectType(), /* parent */ nullptr);
+  auto *homeObject = emitClassAllocation(
+      classType->getHomeObjectType(),
+      superClass ? Builder.createLoadPropertyInst(
+                       superClass, kw_.identPrototype->str())
+                 : nullptr);
 
   // The 'prototype' property is initially set as non-configurable,
   // and we're overwriting it with our own.
@@ -92,20 +96,40 @@ Value *ESTreeIRGen::emitClassAllocation(
     Value *parent) {
   // TODO: should create a sealed object, etc.
   AllocObjectLiteralInst::ObjectPropertyMap propMap{};
-  propMap.reserve(classType->getFields().size());
+  propMap.resize(classType->getFieldNameMap().size());
 
   // Generate code for each field, place it in the propMap.
-  for (const flow::ClassType::Field &field : classType->getFields()) {
+  for (const auto it : classType->getFieldNameMap()) {
+    flow::ClassType::FieldLookupEntry entry = it.second;
+    const flow::ClassType::Field &field = *entry.getField();
+    assert(
+        propMap[field.layoutSlotIR].first == nullptr &&
+        "every entry must be filled exactly once");
+
     if (field.isMethod()) {
       // Create the code for the method.
-      Value *function = genFunctionExpression(
-          llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
-          field.name);
-      propMap.emplace_back(Builder.getLiteralString(field.name), function);
+      if (entry.classType == classType) {
+        Value *function = genFunctionExpression(
+            llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
+            field.name);
+        propMap[field.layoutSlotIR] = {
+            Builder.getLiteralString(field.name), function};
+      } else {
+        assert(parent && "inherited field without parent ClassType");
+        // Method is inherited. Read it from the parent.
+        propMap[field.layoutSlotIR] = {
+            Builder.getLiteralString(field.name),
+            Builder.createPrLoadInst(
+                parent,
+                field.layoutSlotIR,
+                Builder.getLiteralString(field.name),
+                flowTypeToIRType(field.type))};
+        continue;
+      }
     } else {
-      propMap.emplace_back(
+      propMap[field.layoutSlotIR] = {
           Builder.getLiteralString(field.name),
-          getDefaultInitValue(field.type));
+          getDefaultInitValue(field.type)};
     }
   }
 

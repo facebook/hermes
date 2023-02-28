@@ -255,6 +255,10 @@ class FlowChecker {
       ESTree::Node *body,
       ClassType *classType);
 
+  /// Resolve a superClass node for a class into a ClassType if possible.
+  /// \return nullptr on failure, reporting errors if any.
+  ClassType *resolveSuperClass(ESTree::Node *superClass);
+
   /// Result indicating whether a type can flow into another type. If it can,
   /// additionally indicates whether a checked cast is needed.
   struct CanFlowResult {

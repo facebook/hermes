@@ -258,12 +258,20 @@ void ClassType::init(
   homeObjectType_ = homeObjectType;
   superClass_ = superClass;
 
-  fieldNameMap_.reserve(fields.size());
+  if (superClass) {
+    // Copy the lookup table down from the superClass to avoid having to climb
+    // the whole chain every time we want to typecheck a property access.
+    fieldNameMap_.reserve(fields.size() + superClass->getFieldNameMap().size());
+    for (const auto &it : superClass->getFieldNameMap()) {
+      fieldNameMap_[it.first] = it.second;
+    }
+  } else {
+    fieldNameMap_.reserve(fields.size());
+  }
+
+  // Override the fields which have been overridden.
   size_t index = 0;
   for (const auto &f : this->fields_) {
-    assert(
-        fieldNameMap_.count(f.name) == 0 && "Duplicate field name in a class");
-
     fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
   }
 
