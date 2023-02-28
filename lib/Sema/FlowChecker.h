@@ -250,10 +250,7 @@ class FlowChecker {
   Type *parseGenericTypeAnnotation(ESTree::GenericTypeAnnotationNode *node);
 
   /// Parse a class type into an already created (but empty) class.
-  void parseClassType(
-      ESTree::Node *superClass,
-      ESTree::Node *body,
-      ClassType *classType);
+  class ParseClassType;
 
   /// Resolve a superClass node for a class into a ClassType if possible.
   /// \return nullptr on failure, reporting errors if any.
