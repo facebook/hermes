@@ -147,7 +147,7 @@ function reconcileChildren(
   oldChildren: RenderNode[],
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
-  const oldChildrenByKey: Map<string, RenderNode> = new Map();
+  const oldChildrenByKey: any = new Map();
   oldChildren.forEach(child => oldChildrenByKey.set(child.key, child));
 
   newChildren.forEach(child => {
@@ -165,8 +165,8 @@ function reconcileChildren(
 
 function mapEntitiesToComponents(
   entities: VirtualEntity[],
-): Map<number, Component[]> {
-  const map: Map<number, Component[]> = new Map();
+): any {
+  const map: any = new Map();
   entities.forEach(entity => {
     const key = entity.key;
     const value = entity.value;
@@ -202,8 +202,8 @@ function diffTrees(
     entityId => !newEntityIds.includes(entityId),
   );
 
-  const oldComponents = mapEntitiesToComponents(oldEntities);
-  const newComponents = mapEntitiesToComponents(newEntities);
+  const oldComponents: any = mapEntitiesToComponents(oldEntities);
+  const newComponents: any = mapEntitiesToComponents(newEntities);
 
   createdEntities.forEach(entityId => {
     const components = (newComponents.get(entityId) || []).map(
