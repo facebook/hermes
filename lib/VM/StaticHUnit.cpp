@@ -336,6 +336,7 @@ extern "C" SHLegacyValue _sh_get_template_object(
         Handle<> value{toPHV(cookedLegacyValue)};
         auto putRes = JSObject::defineOwnComputedPrimitive(
             templateObj, runtime, idx, dpf, value);
+        (void)putRes;
         assert(
             putRes != ExecutionStatus::EXCEPTION && *putRes &&
             "Failed to set cooked value to template object.");
