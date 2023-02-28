@@ -80,7 +80,8 @@ void ESTreeIRGen::genFunctionDeclaration(
 
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
-    Identifier nameHint) {
+    Identifier nameHint,
+    ESTree::Node *superClassNode) {
   if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         FE->getSourceRange(), Twine("async generators are unsupported"));
@@ -96,7 +97,7 @@ Value *ESTreeIRGen::genFunctionExpression(
 
   Function *newFunc = FE->_async ? genAsyncFunction(originalNameIden, FE)
       : FE->_generator           ? genGeneratorFunction(originalNameIden, FE)
-                                 : genES5Function(originalNameIden, FE);
+                       : genES5Function(originalNameIden, FE, superClassNode);
 
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
@@ -164,6 +165,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
+    ESTree::Node *superClassNode,
     bool isGeneratorInnerFunction) {
   assert(functionNode && "Function AST cannot be null");
 
@@ -189,72 +191,76 @@ Function *ESTreeIRGen::genES5Function(
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr));
 
-  auto compileFunc =
-      [this, newFunction, functionNode, isGeneratorInnerFunction, body]() {
-        FunctionContext newFunctionContext{
-            this, newFunction, functionNode->getSemInfo()};
+  auto compileFunc = [this,
+                      newFunction,
+                      functionNode,
+                      isGeneratorInnerFunction,
+                      superClassNode,
+                      body]() {
+    FunctionContext newFunctionContext{
+        this, newFunction, functionNode->getSemInfo()};
+    newFunctionContext.superClassNode_ = superClassNode;
 
-        if (isGeneratorInnerFunction) {
-          // StartGeneratorInst
-          // ResumeGeneratorInst
-          // at the beginning of the function, to allow for the first .next()
-          // call.
-          auto *initGenBB = Builder.createBasicBlock(newFunction);
-          Builder.setInsertionBlock(initGenBB);
-          Builder.createStartGeneratorInst();
-          auto *prologueBB = Builder.createBasicBlock(newFunction);
-          auto *prologueResumeIsReturn = Builder.createAllocStackInst(
-              genAnonymousLabelName("isReturn_prologue"));
-          genResumeGenerator(
-              GenFinally::No, prologueResumeIsReturn, prologueBB);
+    if (isGeneratorInnerFunction) {
+      // StartGeneratorInst
+      // ResumeGeneratorInst
+      // at the beginning of the function, to allow for the first .next()
+      // call.
+      auto *initGenBB = Builder.createBasicBlock(newFunction);
+      Builder.setInsertionBlock(initGenBB);
+      Builder.createStartGeneratorInst();
+      auto *prologueBB = Builder.createBasicBlock(newFunction);
+      auto *prologueResumeIsReturn = Builder.createAllocStackInst(
+          genAnonymousLabelName("isReturn_prologue"));
+      genResumeGenerator(GenFinally::No, prologueResumeIsReturn, prologueBB);
 
-          if (hasSimpleParams(functionNode)) {
-            // If there are simple params, then we don't need an extra
-            // yield/resume. They can simply be initialized on the first call to
-            // `.next`.
-            Builder.setInsertionBlock(prologueBB);
-            emitFunctionPrologue(
-                functionNode,
-                prologueBB,
-                InitES5CaptureState::Yes,
-                DoEmitDeclarations::Yes);
-          } else {
-            // If there are non-simple params, then we must add a new
-            // yield/resume. The `.next()` call will occur once in the outer
-            // function, before the iterator is returned to the caller of the
-            // `function*`.
-            auto *entryPointBB = Builder.createBasicBlock(newFunction);
-            auto *entryPointResumeIsReturn = Builder.createAllocStackInst(
-                genAnonymousLabelName("isReturn_entry"));
+      if (hasSimpleParams(functionNode)) {
+        // If there are simple params, then we don't need an extra
+        // yield/resume. They can simply be initialized on the first call to
+        // `.next`.
+        Builder.setInsertionBlock(prologueBB);
+        emitFunctionPrologue(
+            functionNode,
+            prologueBB,
+            InitES5CaptureState::Yes,
+            DoEmitDeclarations::Yes);
+      } else {
+        // If there are non-simple params, then we must add a new
+        // yield/resume. The `.next()` call will occur once in the outer
+        // function, before the iterator is returned to the caller of the
+        // `function*`.
+        auto *entryPointBB = Builder.createBasicBlock(newFunction);
+        auto *entryPointResumeIsReturn = Builder.createAllocStackInst(
+            genAnonymousLabelName("isReturn_entry"));
 
-            // Initialize parameters.
-            Builder.setInsertionBlock(prologueBB);
-            emitFunctionPrologue(
-                functionNode,
-                prologueBB,
-                InitES5CaptureState::Yes,
-                DoEmitDeclarations::Yes);
-            Builder.createSaveAndYieldInst(
-                Builder.getLiteralUndefined(), entryPointBB);
+        // Initialize parameters.
+        Builder.setInsertionBlock(prologueBB);
+        emitFunctionPrologue(
+            functionNode,
+            prologueBB,
+            InitES5CaptureState::Yes,
+            DoEmitDeclarations::Yes);
+        Builder.createSaveAndYieldInst(
+            Builder.getLiteralUndefined(), entryPointBB);
 
-            // Actual entry point of function from the caller's perspective.
-            Builder.setInsertionBlock(entryPointBB);
-            genResumeGenerator(
-                GenFinally::No,
-                entryPointResumeIsReturn,
-                Builder.createBasicBlock(newFunction));
-          }
-        } else {
-          emitFunctionPrologue(
-              functionNode,
-              Builder.createBasicBlock(newFunction),
-              InitES5CaptureState::Yes,
-              DoEmitDeclarations::Yes);
-        }
+        // Actual entry point of function from the caller's perspective.
+        Builder.setInsertionBlock(entryPointBB);
+        genResumeGenerator(
+            GenFinally::No,
+            entryPointResumeIsReturn,
+            Builder.createBasicBlock(newFunction));
+      }
+    } else {
+      emitFunctionPrologue(
+          functionNode,
+          Builder.createBasicBlock(newFunction),
+          InitES5CaptureState::Yes,
+          DoEmitDeclarations::Yes);
+    }
 
-        genStatement(body);
-        emitFunctionEpilogue(Builder.getLiteralUndefined());
-      };
+    genStatement(body);
+    emitFunctionEpilogue(Builder.getLiteralUndefined());
+  };
 
   enqueueCompilation(functionNode, ExtraKey::Normal, newFunction, compileFunc);
 
@@ -293,6 +299,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     auto *innerFn = genES5Function(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
+        /* classNode */ nullptr,
         true);
 
     emitFunctionPrologue(

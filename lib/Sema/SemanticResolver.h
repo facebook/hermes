@@ -163,7 +163,7 @@ class SemanticResolver {
   void visit(ESTree::ProgramNode *node);
 
   void visit(ESTree::FunctionDeclarationNode *funcDecl);
-  void visit(ESTree::FunctionExpressionNode *funcExpr);
+  void visit(ESTree::FunctionExpressionNode *funcExpr, ESTree::Node *parent);
   void visit(ESTree::ArrowFunctionExpressionNode *arrowFunc);
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
@@ -213,7 +213,7 @@ class SemanticResolver {
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
   void visit(ESTree::ClassPropertyNode *node);
-  void visit(ESTree::MethodDefinitionNode *node);
+  void visit(ESTree::MethodDefinitionNode *node, ESTree::Node *parent);
 
   void visit(ESTree::CallExpressionNode *node);
 
@@ -301,11 +301,13 @@ class SemanticResolver {
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
-      ESTree::NodeList &params);
+      ESTree::NodeList &params,
+      ESTree::MethodDefinitionNode *method = nullptr);
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
       ESTree::Node *body,
-      ESTree::NodeList &params);
+      ESTree::NodeList &params,
+      ESTree::MethodDefinitionNode *method);
 
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.
@@ -423,6 +425,9 @@ class FunctionContext {
 
   /// The AST node of the function.
   ESTree::FunctionLikeNode *const node;
+
+  /// Whether this function is a class constructor.
+  bool isConstructor{false};
 
   /// The currently active labels in the function.
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;

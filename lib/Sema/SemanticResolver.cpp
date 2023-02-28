@@ -105,8 +105,14 @@ void SemanticResolver::visit(ESTree::FunctionDeclarationNode *funcDecl) {
       funcDecl->_body,
       funcDecl->_params);
 }
-void SemanticResolver::visit(ESTree::FunctionExpressionNode *funcExpr) {
-  visitFunctionExpression(funcExpr, funcExpr->_body, funcExpr->_params);
+void SemanticResolver::visit(
+    ESTree::FunctionExpressionNode *funcExpr,
+    ESTree::Node *parent) {
+  visitFunctionExpression(
+      funcExpr,
+      funcExpr->_body,
+      funcExpr->_params,
+      llvh::dyn_cast_or_null<MethodDefinitionNode>(parent));
 }
 void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
   // Convert expression functions to a full-body to simplify IRGen.
@@ -689,7 +695,9 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
   }
 }
 
-void SemanticResolver::visit(ESTree::MethodDefinitionNode *node) {
+void SemanticResolver::visit(
+    ESTree::MethodDefinitionNode *node,
+    ESTree::Node *parent) {
   // If computed property, the key expression needs to be resolved.
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);
@@ -731,6 +739,13 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
               "eval() is disabled at runtime");
         }
       }
+    }
+  }
+
+  if (llvh::isa<SuperNode>(node->_callee)) {
+    if (!functionContext()->isConstructor) {
+      sm_.error(
+          node->getSourceRange(), "super() call only allowed in constructor");
     }
   }
 
@@ -859,13 +874,17 @@ void SemanticResolver::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
     ESTree::Node *body,
-    ESTree::NodeList &params) {
+    ESTree::NodeList &params,
+    ESTree::MethodDefinitionNode *method) {
   FunctionContext newFuncCtx{
       *this,
       node,
       curFunctionInfo(),
       curFunctionInfo()->strict,
       curFunctionInfo()->sourceVisibility};
+  if (method) {
+    newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
+  }
 
   FoundDirectives directives{};
 
@@ -1017,7 +1036,8 @@ void SemanticResolver::visitFunctionLike(
 void SemanticResolver::visitFunctionExpression(
     ESTree::FunctionExpressionNode *node,
     ESTree::Node *body,
-    ESTree::NodeList &params) {
+    ESTree::NodeList &params,
+    ESTree::MethodDefinitionNode *method) {
   if (ESTree::IdentifierNode *ident =
           llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
     // If there is a name, declare it.
@@ -1026,10 +1046,10 @@ void SemanticResolver::visitFunctionExpression(
         ident->_name, Decl::Kind::FunctionExprName, curScope_);
     semCtx_.setDeclarationDecl(ident, decl);
     bindingTable_.insert(ident->_name, Binding{decl, ident});
-    visitFunctionLike(node, ident, body, params);
+    visitFunctionLike(node, ident, body, params, method);
   } else {
     // Otherwise, no extra scope needed, just move on.
-    visitFunctionLike(node, nullptr, body, params);
+    visitFunctionLike(node, nullptr, body, params, method);
   }
 }
 

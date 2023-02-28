@@ -27,6 +27,10 @@ print(new C().inherited());
 // CHECK-NEXT: 1
 
 class D extends C {
+  constructor() {
+    super();
+  }
+
   inherited(): number {
     return 2;
   }
@@ -48,6 +52,10 @@ print(new D().onlyDerived());
 // CHECK-NEXT: 3 
 
 class E extends D {
+  constructor() {
+    super();
+  }
+
   inherited(): number {
     return 10;
   }

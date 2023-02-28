@@ -16,6 +16,9 @@ class C {
 }
 
 class D extends C {
+  constructor() {
+    super();
+  }
 }
 
 new D().inherited();
@@ -23,24 +26,26 @@ new D().inherited();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): any [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:frame = [C: closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %C(): undefined
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %inherited(): number
-// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) "inherited": string, %1: closure
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: closure, "prototype": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %D(): undefined
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: closure, "prototype": string
-// CHECK-NEXT:  %6 = PrLoadInst (:closure) %5: any, 0: number, "inherited": string
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "inherited": string, %6: closure
-// CHECK-NEXT:  %8 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %7: object, %5: any
-// CHECK-NEXT:  %9 = StorePropertyStrictInst %7: object, %4: closure, "prototype": string
-// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %4: closure, "prototype": string
-// CHECK-NEXT:  %11 = AllocObjectInst (:object) 0: number, %10: any
-// CHECK-NEXT:  %12 = LoadParentInst (:object) %11: object
-// CHECK-NEXT:  %13 = PrLoadInst (:closure) %12: object, 0: number, "inherited": string
-// CHECK-NEXT:  %14 = CallInst (:any) %13: closure, empty: any, empty: any, %11: object
-// CHECK-NEXT:  %15 = ReturnInst %14: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [C]: closure
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %inherited(): number
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) "inherited": string, %2: closure
+// CHECK-NEXT:  %4 = StorePropertyStrictInst %3: object, %0: closure, "prototype": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %D(): undefined
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %0: closure, "prototype": string
+// CHECK-NEXT:  %7 = PrLoadInst (:closure) %6: any, 0: number, "inherited": string
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "inherited": string, %7: closure
+// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %8: object, %6: any
+// CHECK-NEXT:  %10 = StorePropertyStrictInst %8: object, %5: closure, "prototype": string
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) %5: closure, "prototype": string
+// CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any
+// CHECK-NEXT:  %13 = ConstructInst (:undefined) %5: closure, %D(): undefined, empty: any, %12: object
+// CHECK-NEXT:  %14 = LoadParentInst (:object) %12: object
+// CHECK-NEXT:  %15 = PrLoadInst (:closure) %14: object, 0: number, "inherited": string
+// CHECK-NEXT:  %16 = CallInst (:any) %15: closure, empty: any, empty: any, %12: object
+// CHECK-NEXT:  %17 = ReturnInst %16: any
 // CHECK-NEXT:function_end
 
 // CHECK:function C(): undefined
@@ -58,5 +63,8 @@ new D().inherited();
 // CHECK:function D(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
+// CHECK-NEXT:  %1 = LoadFrameInst (:closure) [C@global]: closure
+// CHECK-NEXT:  %2 = CallInst (:any) %1: closure, %C(): undefined, empty: any, %0: any
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

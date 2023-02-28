@@ -54,12 +54,44 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
     auto *consMethod = llvh::cast<ESTree::MethodDefinitionNode>(&*it);
 
+    // Check that 'super()' call is the first statement in SH for derived
+    // classes.
+    // TODO: This is intentionally overly restrictive. In the future, we can
+    // check that super() call happens prior to any function calls or 'this'
+    // accesses.
+    if (node->_superClass) {
+      // Attempt to extract the super() call from the first statement of the
+      // block.
+      ESTree::CallExpressionNode *superCall =
+          llvh::dyn_cast_or_null<ESTree::CallExpressionNode>(
+              llvh::dyn_cast<ESTree::ExpressionStatementNode>(
+                  &llvh::cast<ESTree::BlockStatementNode>(
+                       llvh::cast<ESTree::FunctionExpressionNode>(
+                           consMethod->_value)
+                           ->_body)
+                       ->_body.front())
+                  ->_expression);
+      if (!superCall || !llvh::isa<ESTree::SuperNode>(superCall->_callee)) {
+        Mod->getContext().getSourceErrorManager().error(
+            node->getSourceRange(),
+            "first statement in derived class constructor must be super();");
+      }
+    }
+
     consFunction = genFunctionExpression(
         llvh::cast<ESTree::FunctionExpressionNode>(consMethod->_value),
-        consName);
-
+        consName,
+        node->_superClass);
   } else {
     // Create an empty constructor.
+    if (superClass) {
+      // TODO: An implicit constructor has to pass all arguments along to the
+      // parent class.
+      Mod->getContext().getSourceErrorManager().error(
+          node->getStartLoc(),
+          "inherited classes implicit constructor unsupported, "
+          "add an explicit constructor");
+    }
     Function *func;
     {
       IRBuilder::SaveRestore saveState{Builder};

@@ -393,6 +393,22 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
     callee = memResult.result;
+  } else if (llvh::isa<ESTree::SuperNode>(call->_callee)) {
+    if (curFunction()->calledSuperConstructor_) {
+      // Found another super() call than the one that actually initializes the
+      // base class.
+      Mod->getContext().getSourceErrorManager().error(
+          call->getSourceRange(), "multiple super() calls in constructor");
+    }
+    // Register the super() call so we detect any other usages in the function.
+    curFunction()->calledSuperConstructor_ = true;
+    // Check for a super() call.
+    // Call with the passed-in 'this'.
+    thisVal = curFunction()->jsParams[0];
+    assert(
+        curFunction()->superClassNode_ &&
+        "SemanticResolver must check super() is in a class with a superclass");
+    callee = genExpression(curFunction()->superClassNode_);
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);

@@ -628,6 +628,26 @@ class FlowChecker::ExprVisitor {
     }
   }
 
+  void visit(ESTree::SuperNode *node, ESTree::Node *parent) {
+    if (!llvh::isa<ESTree::CallExpressionNode>(parent) ||
+        !outer_.curClassContext_) {
+      outer_.sm_.error(
+          node->getSourceRange(),
+          "ft: super only supported in constructor call");
+      return;
+    }
+
+    ClassType *superClassType =
+        outer_.curClassContext_->classType->getSuperClass();
+    if (!superClassType) {
+      outer_.sm_.error(
+          node->getSourceRange(), "ft: super requires a base class");
+      return;
+    }
+
+    outer_.setNodeType(node, superClassType->getConstructorType());
+  }
+
   /// Check the types of the supplies arguments, adding checked casts if needed.
   bool checkArgumentTypes(
       FunctionType *ftype,
@@ -1432,11 +1452,6 @@ void FlowChecker::parseClassType(
           sm_.error(
               method->getStartLoc(),
               "constructor cannot be static, a generator or async");
-        }
-        if (superClassType) {
-          sm_.error(
-              method->getStartLoc(),
-              "ft: constructor for inherited classes unsupported");
         }
 
         constructorType = parseFunctionType(
