@@ -432,11 +432,12 @@ if (printDiff) {
 } else {
     print("Running...");
     // Warmup.
-    for(var i = 0; i < 50; ++i)
+    var i: number;
+    for(i = 0; i < 50; ++i)
       runFullTest(false);
     // The actual execution.
     let t1 = Date.now();
-    for(var i = 0; i < 5000; ++i)
+    for(i = 0; i < 5000; ++i)
       runFullTest(false);
     print(Date.now() - t1, "ms", i, "iterations");
 }

@@ -352,9 +352,10 @@
     print(JSON.stringify(runFullTest(true)));
   } else {
     print("Running...");
-    for (var i = 0; i < 50; ++i) runFullTest(false);
+    var i;
+    for (i = 0; i < 50; ++i) runFullTest(false);
     let t1 = Date.now();
-    for (var i = 0; i < 5000; ++i) runFullTest(false);
+    for (i = 0; i < 5000; ++i) runFullTest(false);
     print(Date.now() - t1, "ms", i, "iterations");
   }
 })();
