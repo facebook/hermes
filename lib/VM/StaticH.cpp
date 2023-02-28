@@ -1524,7 +1524,7 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
 }
 
 extern "C" SHLegacyValue
-_sh_ljs_is_in(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
+_sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
   Runtime &runtime = getRuntime(shr);
   CallResult<bool> cr{false};
   {

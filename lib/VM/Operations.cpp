@@ -2865,7 +2865,7 @@ extern "C" SHLegacyValue _sh_ljs_add_empty_string_rjs(
   }
 }
 
-extern "C" SHLegacyValue _sh_ljs_instance_of(
+extern "C" SHLegacyValue _sh_ljs_instance_of_rjs(
     SHRuntime *shr,
     SHLegacyValue *object,
     SHLegacyValue *constructor) {

@@ -695,10 +695,10 @@ class InstrGen {
         boolConv = true;
         break;
       case ValueKind::BinaryInInstKind: // in
-        funcUntypedOp = "_sh_ljs_is_in";
+        funcUntypedOp = "_sh_ljs_is_in_rjs";
         break;
       case ValueKind::BinaryInstanceOfInstKind:
-        funcUntypedOp = "_sh_ljs_instance_of";
+        funcUntypedOp = "_sh_ljs_instance_of_rjs";
         break;
       case ValueKind::BinaryLessThanInstKind:
         if (bothDouble) {
