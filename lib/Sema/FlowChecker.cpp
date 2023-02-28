@@ -1508,6 +1508,27 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(Type *a, Type *b) {
     return {};
   }
 
+  if (ClassType *classA = llvh::dyn_cast<ClassType>(a)) {
+    ClassType *classB = llvh::dyn_cast<ClassType>(b);
+    if (!classB)
+      return {};
+    return canAFlowIntoB(classA, classB);
+  }
+
+  return {};
+}
+
+FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
+    ClassType *a,
+    ClassType *b) {
+  // It can flow into any superclass.
+  ClassType *cur = a;
+  while (cur) {
+    // `b` is in the inheritance chain of `a`.
+    if (cur == b)
+      return {.canFlow = true};
+    cur = cur->getSuperClass();
+  }
   return {};
 }
 

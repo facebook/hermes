@@ -267,6 +267,7 @@ class FlowChecker {
   /// Return true if type \p a can "flow" into type \p b.
   /// TODO: generate message explaining why not.
   static CanFlowResult canAFlowIntoB(Type *a, Type *b);
+  static CanFlowResult canAFlowIntoB(ClassType *a, ClassType *b);
 
   /// If \c canFlow.needCheckedCast is set and \c compile_ is set, allocate an
   /// implicit checked cast node from the specified \p argument to
