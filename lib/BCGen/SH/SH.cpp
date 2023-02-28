@@ -1007,7 +1007,12 @@ class InstrGen {
         << "], s_prop_cache + " << nextCacheIdx_++ << ");\n";
   }
   void generateLoadParentInst(LoadParentInst &inst) {
-    hermes_fatal("LoadParentInst unimplemented");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_load_parent(shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ");\n";
   }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");

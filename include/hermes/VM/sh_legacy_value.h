@@ -209,6 +209,10 @@ static inline SHLegacyValue _sh_ljs_bool(bool b) {
   return _sh_ljs_encode_raw_etag(b, HVETag_Bool);
 }
 
+static inline SHLegacyValue _sh_ljs_object(void *p) {
+  return _sh_ljs_encode_raw_tag((uint64_t)p, HVTag_Object);
+}
+
 static inline SHLegacyValue _sh_ljs_undefined() {
   return _sh_ljs_encode_raw_etag(0, HVETag_Undefined);
 }

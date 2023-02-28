@@ -847,6 +847,14 @@ static inline void _sh_prstore_string(
   }
 }
 
+static inline SHLegacyValue _sh_load_parent(
+    SHRuntime *shr,
+    const SHLegacyValue *object) {
+  SHCompressedPointer parent = {
+      .raw = ((SHJSObject *)_sh_ljs_get_pointer(*object))->parent};
+  return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+}
+
 #ifdef __cplusplus
 }
 #endif
