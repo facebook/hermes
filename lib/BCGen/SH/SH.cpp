@@ -233,20 +233,21 @@ struct ModuleGen {
   explicit ModuleGen() : literalBuffers{stringTable} {}
 
   /// Generates the correct label for BasicBlock \p B based on \p bbMap and
-  /// outputs it through \p OS. If the JS function name is valid C then it will
-  /// be appended to the name for searchability, otherwise just the unique
-  /// number alone will be used.
+  /// outputs it through \p OS. If the JS function name contains characters
+  /// that aren't allowed in C identifiers, they will be replaced by '_'.
   void generateFunctionLabel(Function *F, llvh::raw_ostream &OS) {
-    OS << "_" << funcMap.find(F)->second;
+    OS << '_' << funcMap.find(F)->second << '_';
 
     auto name = F->getInternalNameStr();
     for (auto c : name) {
-      if (!(isalnum(c) || c == '_')) {
-        return;
+      if (('0' <= c && c <= '9') || ('a' <= c && c <= 'z') ||
+          ('A' <= c && c <= 'Z')) {
+        OS << c;
+      } else {
+        // Replace illegal identifier characters with '_'.
+        OS << '_';
       }
     }
-
-    OS << "_" << name;
   }
 };
 
