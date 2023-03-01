@@ -32,7 +32,7 @@ using namespace simdjson;
     );                                      \
   }
 
-#define ENABLE_SPECULATION
+// #define ENABLE_SPECULATION
 // #define ENABLE_SPECULATION_DEBUG
 // #define ENABLE_SPECULATION_DEBUG_VERBOSE
 
