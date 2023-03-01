@@ -66,3 +66,7 @@ try {
 }
 //CHECK-NEXT: caught RangeError Maximum prototype chain length exceeded
 
+function A(){}
+Object.defineProperty(A, Symbol.hasInstance, {value: function(){return true;}})
+print(undefined instanceof A);
+//CHECK-NEXT: true
