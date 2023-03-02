@@ -156,7 +156,7 @@ const char *stringKindTag(StringKind::Kind kind) {
       return "i";
   }
 
-  llvm_unreachable("Unrecognised String Kind.");
+  hermes_fatal("Unrecognised String Kind.");
 }
 
 } // namespace

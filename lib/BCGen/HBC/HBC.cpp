@@ -101,7 +101,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   if (options.verifyIR &&
       verifyModule(*M, &llvh::errs(), VerificationMode::IR_VALID)) {
     M->dump();
-    llvm_unreachable("IR verification failed");
+    hermes_fatal("IR verification failed");
   }
 }
 

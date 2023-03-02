@@ -535,7 +535,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
         }
       }
     } else {
-      llvm_unreachable("CreateArguments used for a non-Instruction.");
+      hermes_fatal("CreateArguments used for a non-Instruction.");
     }
   }
 
