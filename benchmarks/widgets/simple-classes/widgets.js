@@ -30,7 +30,7 @@ class ComposedWidget extends Widget {
   }
 
   reduce(ctx: Context): RenderNode {
-    let child = this.render();
+    let child: Widget = this.render();
     return child.reduce(ctx);
   }
 }
@@ -89,7 +89,7 @@ class Container extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: NumberComponent = new NumberComponent(13);
-    const children = this.children.map(child =>
+    const children: RenderNode[] = this.children.map(child =>
       RenderNode_createForChild(ctx, child),
     );
     return RenderNode_create(ctx, [component], children);
@@ -171,14 +171,14 @@ function mapEntitiesToComponents(
   entities: VirtualEntity[],
 ): any {
   const map: any = new Map();
-  entities.forEach(entity => {
-    const key = entity.key;
-    const value = entity.value;
+  entities.forEach((entity: VirtualEntity) => {
+    const key: number = entity.key;
+    const value: Component[] = entity.value;
     if (map.get(key) == undefined) {
       map.set(key, []);
     }
 
-    const components = map.get(key);
+    const components: Component[] = map.get(key);
     if (components !== undefined) {
       components.push(...value);
     } else {
@@ -196,39 +196,39 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds = oldEntities.map(entity => entity.key);
-  const newEntityIds = newEntities.map(entity => entity.key);
+  const oldEntityIds: number[] = oldEntities.map(entity => entity.key);
+  const newEntityIds: number[] = newEntities.map(entity => entity.key);
 
-  const createdEntities = newEntityIds.filter(
-    entityId => !oldEntityIds.includes(entityId),
+  const createdEntities: number[] = newEntityIds.filter(
+    (entityId: number) => !oldEntityIds.includes(entityId),
   );
-  const deletedEntities = oldEntityIds.filter(
-    entityId => !newEntityIds.includes(entityId),
+  const deletedEntities: number[] = oldEntityIds.filter(
+    (entityId: number) => !newEntityIds.includes(entityId),
   );
 
   const oldComponents: any = mapEntitiesToComponents(oldEntities);
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
-  createdEntities.forEach(entityId => {
+  createdEntities.forEach((entityId: number) => {
     const components = (newComponents.get(entityId) || []).map(
-      it => new ComponentPair(entityId, it),
+      (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
   });
 
-  newComponents.forEach((value, key) => {
+  newComponents.forEach((value: Component[], key: number) => {
     if (oldComponents.get(key) == undefined) {
       return;
     }
 
-    const oldComponentsForKey = oldComponents.get(key) || [];
-    const newComponentsForKey = value;
+    const oldComponentsForKey: Component[] = oldComponents.get(key) || [];
+    const newComponentsForKey: Component[] = value;
 
     const deleted = oldComponentsForKey.filter(
-      it => !newComponentsForKey.includes(it),
+      (it: Component) => !newComponentsForKey.includes(it),
     );
     const created = newComponentsForKey.filter(
-      it => !oldComponentsForKey.includes(it),
+      (it: Component) => !oldComponentsForKey.includes(it),
     );
 
     deleted.forEach(it => deletedComponents.push(new ComponentPair(key, it)));
@@ -245,22 +245,22 @@ function diffTrees(
 
 function runTest(includeTreeSerialization: boolean): ?SceneDiff {
   /* Render a tree with 10 widgets */
-  const oldCtx = new Context('root');
-  const oldWidgetTree = new TestApp(false).render();
-  const oldRenderTree = oldWidgetTree.reduce(oldCtx);
-  const oldEntityTree = oldRenderTree.reduce();
+  const oldCtx: Context = new Context('root');
+  const oldWidgetTree: Widget = new TestApp(false).render();
+  const oldRenderTree: RenderNode = oldWidgetTree.reduce(oldCtx);
+  const oldEntityTree: VirtualEntity[] = oldRenderTree.reduce();
 
   /* Render a tree with 25 widgets, the first 5 of which are the same */
-  const newCtx = new Context('root');
-  const newWidgetTree = new TestApp(true).render();
-  const newRenderTree = newWidgetTree.reduce(newCtx);
+  const newCtx: Context = new Context('root');
+  const newWidgetTree: Widget = new TestApp(true).render();
+  const newRenderTree: RenderNode = newWidgetTree.reduce(newCtx);
 
-  const reconciledRenderTree = reconcileRenderNode(
+  const reconciledRenderTree: RenderNode = reconcileRenderNode(
     newRenderTree,
     oldRenderTree,
   );
-  const reconciledEntityTree = reconciledRenderTree.reduce();
-  const diff = diffTrees(reconciledEntityTree, oldEntityTree);
+  const reconciledEntityTree: VirtualEntity[] = reconciledRenderTree.reduce();
+  const diff: SceneDiff = diffTrees(reconciledEntityTree, oldEntityTree);
   return includeTreeSerialization ? diff : null;
 }
 
@@ -351,8 +351,8 @@ class RenderNode {
   }
 
   reduce(): VirtualEntity[] {
-    const childrenEntities = (this.children || []).flatMap(child =>
-      child.reduce(),
+    const childrenEntities: VirtualEntity[] = (this.children || []).flatMap(
+      (child: RenderNode) => child.reduce(),
     );
     return [new VirtualEntity(this.id, this.components)].concat(
       childrenEntities,
