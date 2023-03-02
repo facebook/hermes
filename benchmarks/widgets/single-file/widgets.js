@@ -8,6 +8,8 @@
  * @format
  */
 
+'use strict';
+
 (function() {
 
 // ==> widget.js <==
