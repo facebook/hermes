@@ -388,6 +388,58 @@ public interface IPlatformDateTimeFormatter {
     }
   }
 
+  enum DateStyle {
+    FULL,
+    LONG,
+    MEDIUM,
+    SHORT,
+    UNDEFINED;
+
+    @Override
+    public String toString() {
+      switch (this) {
+        case FULL:
+          return "full";
+        case LONG:
+          return "long";
+        case MEDIUM:
+          return "medium";
+        case SHORT:
+          return "short";
+        case UNDEFINED:
+          return "";
+        default:
+          throw new IllegalArgumentException();
+      }
+    }
+  }
+
+  enum TimeStyle {
+    FULL,
+    LONG,
+    MEDIUM,
+    SHORT,
+    UNDEFINED;
+
+    @Override
+    public String toString() {
+      switch (this) {
+        case FULL:
+          return "full";
+        case LONG:
+          return "long";
+        case MEDIUM:
+          return "medium";
+        case SHORT:
+          return "short";
+        case UNDEFINED:
+          return "";
+        default:
+          throw new IllegalArgumentException();
+      }
+    }
+  }
+
   void configure(
       ILocaleObject<?> resolvedLocaleObject,
       String calendar,
@@ -403,7 +455,10 @@ public interface IPlatformDateTimeFormatter {
       Second second,
       TimeZoneName timeZoneName,
       HourCycle hourCycle,
-      Object timeZone)
+      Object timeZone,
+      DateStyle dateStyle,
+      TimeStyle timeStyle,
+      Object hour12)
       throws JSRangeErrorException;
 
   String format(double n) throws JSRangeErrorException;

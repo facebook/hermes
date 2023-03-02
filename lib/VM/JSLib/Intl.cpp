@@ -278,6 +278,7 @@ constexpr OptionData kDTFOptions[] = {
      platform_intl::Option::Kind::String,
      kDateRequired | kDateDefault},
     {u"day", platform_intl::Option::Kind::String, kDateRequired | kDateDefault},
+    {u"dayPeriod", platform_intl::Option::Kind::String, 0},
     {u"hour",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
@@ -287,10 +288,10 @@ constexpr OptionData kDTFOptions[] = {
     {u"second",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
+    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
     {u"timeZoneName", platform_intl::Option::Kind::String, 0},
     {u"dateStyle", platform_intl::Option::Kind::String, 0},
     {u"timeStyle", platform_intl::Option::Kind::String, 0},
-    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
 };
 
 constexpr OptionData kNumberFormatOptions[] = {
@@ -387,6 +388,34 @@ ExecutionStatus checkOptions(Runtime &runtime, const platform_intl::Options &) {
 }
 
 template <>
+ExecutionStatus checkOptions<platform_intl::DateTimeFormat>(
+    Runtime &runtime,
+    const platform_intl::Options &options) {
+  // https://www.ecma-international.org/wp-content/uploads/ECMA-402_9th_edition_june_2022.pdf
+  //  InitializeDateTimeFormat # 42
+  const bool hasExplicitFormatComponents {
+      options.find(u"weekday") != options.end() || 
+      options.find(u"era") != options.end() ||
+      options.find(u"year") != options.end() ||
+      options.find(u"month") != options.end() ||
+      options.find(u"day") != options.end() ||
+      options.find(u"day") != options.end() ||
+      options.find(u"dayPeriod") != options.end() ||
+      options.find(u"hour") != options.end() ||
+      options.find(u"minute") != options.end() ||
+      options.find(u"second") != options.end() ||
+      options.find(u"fractionalSecondDigits") != options.end() ||
+      options.find(u"timeZoneName") != options.end()};
+  if ( (options.find(u"dateStyle") != options.end() || options.find(u"timeStyle") != options.end() )
+    &&  hasExplicitFormatComponents) {
+    return runtime.raiseTypeError(
+        "{data/time}Style and ExplicitFormatComponents shouldn't be used together");
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
+template <>
 ExecutionStatus checkOptions<platform_intl::NumberFormat>(
     Runtime &runtime,
     const platform_intl::Options &options) {
@@ -434,7 +463,6 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // NumberFormat has a couple extra checks to make.
   if (LLVM_UNLIKELY(
           checkOptions<T>(runtime, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1423,6 +1451,14 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
       return ExecutionStatus::EXCEPTION;
     }
     toDateTimeOptions(*optionsRes, dtoFlags);
+
+    if (!(dtoFlags & kDTOTime) && (*optionsRes).find(u"timeStyle") != (*optionsRes).end())
+      return runtime.raiseTypeError(
+        "timeStyle not a valid option");
+
+    if (!(dtoFlags & kDTODate) && (*optionsRes).find(u"dateStyle") != (*optionsRes).end())
+      return runtime.raiseTypeError(
+        "dateStyle not a valid option");
 
     CallResult<std::unique_ptr<platform_intl::DateTimeFormat>> dtfRes =
         platform_intl::DateTimeFormat::create(
