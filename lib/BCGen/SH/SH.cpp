@@ -358,15 +358,19 @@ class InstrGen {
     hermes_fatal(err);
   }
 
+  /// Helper to generate a value in a register,
+  void generateRegister(Register reg) {
+    if (registerIsPointer(reg.getIndex())) {
+      os_ << "locals.t" << reg.getIndex();
+    } else {
+      os_ << "r" << reg.getIndex();
+    }
+  }
+
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
   void generateRegister(Value &val) {
-    Register reg = ra_.getRegister(&val);
-    if (registerIsPointer(reg.getIndex())) {
-      os_ << "locals.t" << ra_.getRegister(&val).getIndex();
-    } else {
-      os_ << "r" << ra_.getRegister(&val).getIndex();
-    }
+    generateRegister(ra_.getRegister(&val));
   }
 
   /// Helper to generate a pointer to a value that must always have an allocated
@@ -473,8 +477,13 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateMovInst(MovInst &inst) {
+    Register dstReg = ra_.getRegister(&inst);
+    if (ra_.isAllocated(inst.getSingleOperand()) &&
+        dstReg == ra_.getRegister(inst.getSingleOperand())) {
+      return;
+    }
     os_.indent(2);
-    generateRegister(inst);
+    generateRegister(dstReg);
     os_ << " = ";
     generateValue(*inst.getSingleOperand());
     os_ << ";\n";
