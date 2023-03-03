@@ -71,13 +71,13 @@ struct VMOnlyRuntimeFlags {
       "gc-min-heap",
       llvh::cl::desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
       llvh::cl::cat(GCCategory),
-      llvh::cl::init(MemorySize{0})};
+      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultMinHeapSize()})};
 
   llvh::cl::opt<MemorySize, false, MemorySizeParser> InitHeapSize{
       "gc-init-heap",
       llvh::cl::desc("Initial heap size.  Format: <unsigned>{{K,M,G}{iB}"),
       llvh::cl::cat(GCCategory),
-      llvh::cl::init(MemorySize{1024 * 1024})};
+      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultInitHeapSize()})};
 
   llvh::cl::opt<double> OccupancyTarget{
       "occupancy-target",
@@ -96,7 +96,7 @@ struct VMOnlyRuntimeFlags {
       "gc-max-heap",
       llvh::cl::desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
       llvh::cl::cat(GCCategory),
-      llvh::cl::init(MemorySize{1024 * 1024 * 1024})};
+      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultInitHeapSize()})};
 
   llvh::cl::opt<bool> ES6Promise{
       "Xes6-promise",

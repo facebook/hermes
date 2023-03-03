@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -gc-max-heap=1G -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes -gc-max-heap=1G %t.hbc | %FileCheck --match-full-lines %s
 
 print("Array.prototype.join with a large array should throw RangeError")
 // CHECK-LABEL: Array.prototype.join with a large array should throw RangeError
