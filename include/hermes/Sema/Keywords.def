@@ -29,5 +29,6 @@ HERMES_KEYWORD(Typeof, "typeof")
 HERMES_KEYWORD(Constructor, "constructor")
 HERMES_KEYWORD(Length, "length")
 HERMES_KEYWORD(Prototype, "prototype")
+HERMES_KEYWORD(Undefined, "undefined")
 
 #undef HERMES_KEYWORD

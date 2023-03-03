@@ -1798,7 +1798,8 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
   // For uses of undefined as the global property, we make an optimization
   // to always return undefined constant.
-  if (llvh::isa<GlobalObjectProperty>(Var) && StrName.str() == "undefined") {
+  if (llvh::isa<GlobalObjectProperty>(Var) &&
+      StrName.getUnderlyingPointer() == kw_.identUndefined) {
     return Builder.getLiteralUndefined();
   }
 
