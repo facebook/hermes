@@ -324,7 +324,7 @@ jobs:
       - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
       - CMAKE_DIR: 'C:\Program Files\CMake\bin'
       - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
-      - TAR_NAME: 'hermes-cli-windows.tar.gz'
+      - TAR_NAME: "hermes-cli-windows.tar.gz"
     steps:
       - checkout
 
@@ -493,14 +493,14 @@ jobs:
           name: Build Hermes with Emscripten for Website Playground
           environment:
             LINKER_FLAGS: -s WASM=1 \
-                          -s ALLOW_MEMORY_GROWTH=0 \
-                          -s TOTAL_MEMORY=33554432 \
-                          -s MODULARIZE=1 \
-                          -s EXPORT_NAME=createHermes \
-                          -s INVOKE_RUN=0 \
-                          -s EXIT_RUNTIME=1 \
-                          -s NODERAWFS=0 \
-                          -s EXTRA_EXPORTED_RUNTIME_METHODS=[callMain,FS]
+              -s ALLOW_MEMORY_GROWTH=0 \
+              -s TOTAL_MEMORY=33554432 \
+              -s MODULARIZE=1 \
+              -s EXPORT_NAME=createHermes \
+              -s INVOKE_RUN=0 \
+              -s EXIT_RUNTIME=1 \
+              -s NODERAWFS=0 \
+              -s EXTRA_EXPORTED_RUNTIME_METHODS=[callMain,FS]
           command: |
             echo LINKER_FLAGS: $LINKER_FLAGS
             cmake -S hermes -B playground \
@@ -553,7 +553,7 @@ jobs:
             yarn install
             echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
       - android/start-emulator-and-run-tests:
-          post-emulator-launch-assemble-command: ''
+          post-emulator-launch-assemble-command: ""
           run-tests-working-directory: react-native
           run-logcat: true
           test-command: >-
@@ -585,11 +585,21 @@ jobs:
             cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
             cmake --build ./build -j 4 --target hermesc
       - android/start-emulator-and-run-tests:
-          post-emulator-launch-assemble-command: ''
+          post-emulator-launch-assemble-command: ""
           run-tests-working-directory: hermes/android
           run-logcat: true
-          additional-emulator-args: -timezone Europe/Paris
+          additional-emulator-args: -partition-size 2048 -timezone Europe/Paris
           test-command: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+      - run:
+          name: Copy Results
+          command: |
+            mkdir -p /home/circleci/test-results/junit
+            find . -type f -regex ".*/connected/.*xml" -exec cp {} /home/circleci/test-results/junit \;
+          when: always
+      - store_test_results:
+          path: /home/circleci/test-results
+      - store_artifacts:
+          path: /home/circleci/test-results
 
   test-macos-test262:
     macos:

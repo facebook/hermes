@@ -12,6 +12,7 @@ buildDir.mkdirs()
 
 android {
   compileSdkVersion = rootProject.ext.compileSdkVersion
+  namespace "com.facebook.hermes"
 
   defaultConfig {
     minSdkVersion rootProject.ext.minSdkVersion
