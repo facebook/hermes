@@ -55,6 +55,9 @@ struct OptimizationSettings {
 
   /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
   bool useUnsafeIntrinsics{false};
+
+  /// Promote non-pointer registers out of the locals{} struct.
+  bool promoteNonPtr{false};
 };
 
 enum class DebugInfoSetting {

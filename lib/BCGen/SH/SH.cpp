@@ -18,6 +18,8 @@
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
 
+#include "llvh/ADT/BitVector.h"
+
 using namespace hermes;
 
 namespace {
@@ -272,7 +274,28 @@ class InstrGen {
         moduleGen_(moduleGen),
         scopeAnalysis_(scopeAnalysis),
         envSize_(envSize),
-        nextCacheIdx_(nextCacheIdx) {}
+        nextCacheIdx_(nextCacheIdx) {
+    registerIsPointer_.resize(ra_.getMaxRegisterUsage());
+    if (F_.getContext().getOptimizationSettings().promoteNonPtr) {
+      // Default every register to not be a pointer.
+      registerIsPointer_.reset();
+      // Check each register to see if it's a non-pointer.
+      for (auto &BB : F_) {
+        for (auto &I : BB) {
+          if (ra_.isAllocated(&I) && I.hasOutput()) {
+            if (!I.getType().isNonPtr()) {
+              // Set the bit if I sets the register to a pointer type.
+              // Numbers might be pointers, but the stack doesn't use HV32.
+              registerIsPointer_.set(ra_.getRegister(&I).getIndex());
+            }
+          }
+        }
+      }
+    } else {
+      // Optimization is not enabled, everything is a pointer.
+      registerIsPointer_.set();
+    }
+  }
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -289,6 +312,10 @@ class InstrGen {
       default:
         llvm_unreachable("Invalid kind");
     }
+  }
+
+  bool registerIsPointer(uint32_t r) const {
+    return registerIsPointer_[r];
   }
 
  private:
@@ -319,6 +346,9 @@ class InstrGen {
   /// Indices used to generate unique names for the jump buffers.
   uint32_t nextJBufIdx_{0};
 
+  /// Entry \c i is true if a pointer is ever written to register \c i.
+  llvh::BitVector registerIsPointer_{};
+
   void unimplemented(Instruction &inst) {
     std::string err{"Unimplemented "};
     err += inst.getName();
@@ -331,7 +361,12 @@ class InstrGen {
   /// Helper to generate a value that must always have an allocated register,
   /// for instance because we need to assign to it or take its address.
   void generateRegister(Value &val) {
-    os_ << "locals.t" << ra_.getRegister(&val).getIndex();
+    Register reg = ra_.getRegister(&val);
+    if (registerIsPointer(reg.getIndex())) {
+      os_ << "locals.t" << ra_.getRegister(&val).getIndex();
+    } else {
+      os_ << "r" << ra_.getRegister(&val).getIndex();
+    }
   }
 
   /// Helper to generate a pointer to a value that must always have an allocated
@@ -1656,27 +1691,6 @@ void generateFunction(
   //   locals.t1 = _sh_ljs_undefined();
   //   locals.t2 = _sh_ljs_undefined();
 
-  OS << "static SHLegacyValue ";
-  moduleGen.generateFunctionLabel(&F, OS);
-  OS << "(SHRuntime *shr) {\n"
-     << "  struct {\n    SHLocals head;\n";
-
-  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
-    OS << "    SHLegacyValue t" << i << ";\n";
-
-  OS << "  } locals;\n"
-     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head,"
-     << RA.getMaxRegisterUsage() << ");\n"
-     << "  locals.head.count =" << RA.getMaxRegisterUsage() << ";\n";
-
-  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i)
-    OS << "  locals.t" << i << " = _sh_ljs_undefined();\n";
-
-  // In the global function, ensure that we are linking to the correct
-  // library.
-  if (F.isGlobalScope())
-    OS << "  _SH_MODEL();\n";
-
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
   for (auto &B : order) {
@@ -1688,6 +1702,42 @@ void generateFunction(
 
   InstrGen instrGen(
       OS, RA, bbMap, F, moduleGen, scopeAnalysis, envSize, nextCacheIdx);
+
+  // Number of registers stored in the `locals` struct below.
+  uint32_t localsSize = 0;
+
+  OS << "static SHLegacyValue ";
+  moduleGen.generateFunctionLabel(&F, OS);
+  OS << "(SHRuntime *shr) {\n";
+
+  // In the global function, ensure that we are linking to the correct
+  // library.
+  if (F.isGlobalScope())
+    OS << "  _SH_MODEL();\n";
+
+  OS << "  struct {\n    SHLocals head;\n";
+
+  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i) {
+    if (instrGen.registerIsPointer(i)) {
+      OS << "    SHLegacyValue t" << i << ";\n";
+      ++localsSize;
+    }
+  }
+
+  OS << "  } locals;\n"
+     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head,"
+     << RA.getMaxRegisterUsage() << ");\n"
+     << "  locals.head.count =" << localsSize << ";\n";
+
+  // Initialize all registers to undefined.
+  for (size_t i = 0; i < RA.getMaxRegisterUsage(); ++i) {
+    if (instrGen.registerIsPointer(i)) {
+      OS << "  locals.t";
+    } else {
+      OS << "  SHLegacyValue r";
+    }
+    OS << i << " = _sh_ljs_undefined();\n";
+  }
 
   for (auto &B : order) {
     OS << "\n";
