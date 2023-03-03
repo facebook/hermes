@@ -12,9 +12,13 @@ exports[`flowDefToTSDef types/react 1`] = `
  */
 
 import * as React from 'react';
-type T2 = React.ReactNode;
-type T1 = JSX.Element;
-type T2 = React.ReactElement<typeof Component>;
+type T1 = React.ReactNode;
+type T2 = JSX.Element;
+type T3 = React.ReactElement<typeof Component>;
+type T4 = React.ForwardRefExoticComponent<Props>;
+type T4 = React.ForwardRefExoticComponent<
+  Props & React.RefAttributes<HTMLElement>
+>;
 type Props = {A: string};
 declare function Component(props: Props): React.ReactNode;
 "
