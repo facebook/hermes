@@ -4221,6 +4221,47 @@ class LoadParentInst : public Instruction {
   }
 };
 
+class StoreParentInst : public Instruction {
+  StoreParentInst(const StoreParentInst &) = delete;
+  void operator=(const StoreParentInst &) = delete;
+
+ public:
+  enum { StoredValueIdx, ObjectIdx };
+
+  explicit StoreParentInst(Value *storedValue, Value *object)
+      : Instruction(ValueKind::StoreParentInstKind) {
+    pushOperand(storedValue);
+    pushOperand(object);
+  }
+  explicit StoreParentInst(
+      const StoreParentInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getStoredValue() {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getObject() {
+    return getOperand(ObjectIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::MayWrite;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StoreParentInstKind;
+  }
+};
+
 } // end namespace hermes
 
 #endif

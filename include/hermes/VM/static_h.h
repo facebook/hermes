@@ -855,6 +855,17 @@ static inline SHLegacyValue _sh_load_parent(
   return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
 }
 
+static inline void _sh_store_parent(
+    SHRuntime *shr,
+    const SHLegacyValue *storedValue,
+    const SHLegacyValue *object) {
+  SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(*object);
+  SHJSObject *parentPtr = (SHJSObject *)_sh_ljs_get_pointer(*storedValue);
+  SHCompressedPointer parentCompressedPtr =
+      _sh_cp_encode_non_null(shr, parentPtr);
+  objectPtr->parent = parentCompressedPtr.raw;
+}
+
 #ifdef __cplusplus
 }
 #endif

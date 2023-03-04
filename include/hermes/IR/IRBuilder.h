@@ -611,6 +611,7 @@ class IRBuilder {
       bool nonPointer);
 
   LoadParentInst *createLoadParentInst(Value *object);
+  StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);
 
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.

@@ -1059,6 +1059,14 @@ class InstrGen {
     generateRegisterPtr(*inst.getObject());
     os_ << ");\n";
   }
+  void generateStoreParentInst(StoreParentInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_store_parent(shr, ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ");\n";
+  }
   void generateStoreStackInst(StoreStackInst &inst) {
     hermes_fatal("StoreStackInst should have been lowered.");
   }

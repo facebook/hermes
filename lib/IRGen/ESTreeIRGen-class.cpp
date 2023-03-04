@@ -173,8 +173,8 @@ Value *ESTreeIRGen::emitClassAllocation(
   } else {
     result = Builder.createAllocObjectLiteralInst(propMap);
     if (parent) {
-      Builder.createCallBuiltinInst(
-          BuiltinMethod::HermesBuiltin_silentSetPrototypeOf, {result, parent});
+      // TODO: Ensure that parent is typed correctly as 'object'.
+      Builder.createStoreParentInst(parent, result);
     }
   }
   return result;

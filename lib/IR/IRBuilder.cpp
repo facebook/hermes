@@ -1064,6 +1064,14 @@ LoadParentInst *IRBuilder::createLoadParentInst(Value *object) {
   return inst;
 }
 
+StoreParentInst *IRBuilder::createStoreParentInst(
+    Value *storedValue,
+    Value *object) {
+  auto *inst = new StoreParentInst(storedValue, object);
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

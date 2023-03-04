@@ -37,7 +37,7 @@ new D().inherited();
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %0: closure, "prototype": string
 // CHECK-NEXT:  %7 = PrLoadInst (:closure) %6: any, 0: number, "inherited": string
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "inherited": string, %7: closure
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, %8: object, %6: any
+// CHECK-NEXT:  %9 = StoreParentInst %6: any, %8: object
 // CHECK-NEXT:  %10 = StorePropertyStrictInst %8: object, %5: closure, "prototype": string
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) %5: closure, "prototype": string
 // CHECK-NEXT:  %12 = AllocObjectInst (:object) 0: number, %11: any

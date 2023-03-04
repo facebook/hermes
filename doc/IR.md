@@ -843,3 +843,13 @@ Example | %0 = LoadParent %object
 Arguments | %object is an instance of a typed class
 Semantics | Read the parent without any checks.
 Effects | May read memory.
+
+### StoreParent
+
+StoreParent | _
+--- | --- |
+Description | Stores the parent (the vtable) for a typed object instance of a class
+Example | StoreParent %storedValue (:object), %object (:object)
+Arguments | %object is an instance of a typed class, %storedValue is stored as the parent
+Semantics | Store the parent without any checks.
+Effects | May write memory.
