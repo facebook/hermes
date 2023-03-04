@@ -19,7 +19,7 @@ f();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): any [allCallsitesKnownInStrictMode]
+// CHECK:function global(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "f": string

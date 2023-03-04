@@ -11,7 +11,7 @@ switch (8) { case 2: case 9: 1?2:3}
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined

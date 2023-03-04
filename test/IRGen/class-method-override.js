@@ -28,7 +28,7 @@ new D().override();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): any [allCallsitesKnownInStrictMode]
+// CHECK:function global(): any
 // CHECK-NEXT:frame = [C: closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %C(): undefined

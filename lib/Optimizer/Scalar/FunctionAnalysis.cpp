@@ -117,6 +117,11 @@ void analyzeFunctionCallsites(Function *F) {
   // Attempt to start from a position of knowing all callsites.
   F->getAttributes()._allCallsitesKnownInStrictMode = true;
 
+  if (F->isGlobalScope()) {
+    // global function is called by the runtime, so its callsites aren't known.
+    F->getAttributes()._allCallsitesKnownInStrictMode = false;
+  }
+
   if (auto *newTargetParam = F->getNewTargetParam()) {
     // Uses of new.target can be used to leak the closure.
     // TODO: Allow certain instructions to use new.target.

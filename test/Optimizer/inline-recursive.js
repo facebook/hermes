@@ -18,7 +18,7 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): closure [allCallsitesKnownInStrictMode]
+// CHECK:function global(): closure
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %main(): undefined

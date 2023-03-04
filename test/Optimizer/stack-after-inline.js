@@ -18,7 +18,7 @@ function f1(num) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string

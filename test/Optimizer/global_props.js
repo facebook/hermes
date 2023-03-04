@@ -34,7 +34,7 @@ process = null;
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:function_end
 
-// OPT-CHECK:function global(): null [allCallsitesKnownInStrictMode]
+// OPT-CHECK:function global(): null
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "a": string
@@ -47,7 +47,7 @@ process = null;
 // OPT-CHECK-NEXT:  %7 = ReturnInst null: null
 // OPT-CHECK-NEXT:function_end
 
-// OPT-NONSTRICT:function global(): null [allCallsitesKnownInStrictMode]
+// OPT-NONSTRICT:function global(): null
 // OPT-NONSTRICT-NEXT:frame = []
 // OPT-NONSTRICT-NEXT:%BB0:
 // OPT-NONSTRICT-NEXT:  %0 = DeclareGlobalVarInst "a": string

@@ -17,7 +17,7 @@ function foo(p1, p2, p3) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// OPT-CHECK:function global(): undefined [allCallsitesKnownInStrictMode]
+// OPT-CHECK:function global(): undefined
 // OPT-CHECK-NEXT:frame = []
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string

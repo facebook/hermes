@@ -32,7 +32,7 @@ function ctor_load_store_test() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): string [allCallsitesKnownInStrictMode]
+// CHECK:function global(): string
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test": string
