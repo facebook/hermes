@@ -580,6 +580,35 @@ class FlowChecker::ExprVisitor {
     outer_.setNodeType(node, outer_.flowContext_.getBigInt());
   }
 
+  void visit(ESTree::UpdateExpressionNode *node) {
+    visitESTreeNode(*this, node->_argument, node);
+    Type *type = outer_.getNodeTypeOrAny(node->_argument);
+    if (llvh::isa<NumberType>(type) || llvh::isa<BigIntType>(type)) {
+      // number and bigint don't change.
+      outer_.setNodeType(node, type);
+      return;
+    }
+    if (auto *unionType = llvh::dyn_cast<UnionType>(type)) {
+      if (llvh::all_of(unionType->getTypes(), [](Type *t) -> bool {
+            return llvh::isa<NumberType>(t) || llvh::isa<BigIntType>(t);
+          })) {
+        // Unions of number/bigint don't change.
+        outer_.setNodeType(node, type);
+        return;
+      }
+    }
+    if (llvh::isa<AnyType>(type)) {
+      // any becomes (number|bigint).
+      llvh::SmallVector<Type *, 2> types{
+          outer_.flowContext_.getNumber(), outer_.flowContext_.getBigInt()};
+      outer_.setNodeType(node, outer_.flowContext_.createPopulatedUnion(types));
+      return;
+    }
+    outer_.sm_.error(
+        node->getSourceRange(),
+        "ft: update expression must be number or bigint");
+  }
+
   enum class BinopKind : uint8_t {
     // clang-format off
     eq, ne, strictEq, strictNe, lt, le, gt, ge, shl, sshr, ushr,
