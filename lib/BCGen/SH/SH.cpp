@@ -1715,6 +1715,11 @@ void generateFunction(
     bbCounter++;
   }
 
+  OS << "// ";
+  F.getContext().getSourceErrorManager().dumpCoords(
+      OS, F.getSourceRange().Start);
+  OS << '\n';
+
   unsigned envSize = F.getFunctionScope()->getVariables().size();
 
   InstrGen instrGen(
