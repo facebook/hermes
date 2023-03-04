@@ -560,7 +560,13 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferAsNumericInst(AsNumericInst *inst) {
-    return *inst->getInherentType();
+    if (inst->getSingleOperand()->getType().isNumberType()) {
+      return Type::createNumber();
+    }
+    if (inst->getSingleOperand()->getType().isBigIntType()) {
+      return Type::createBigInt();
+    }
+    return Type::createNumeric();
   }
   Type inferAsInt32Inst(AsInt32Inst *inst) {
     return *inst->getInherentType();

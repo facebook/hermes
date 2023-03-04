@@ -341,7 +341,7 @@ void Verifier::visitAsNumericInst(const AsNumericInst &Inst) {
       !isTerminator(&Inst),
       "Non-terminator cannot be the last instruction of a basic block");
   Assert(
-      Inst.getType() == Type::createNumeric(),
+      Inst.getType().isSubsetOf(Type::createNumeric()),
       "AsNumericInst must return a numeric type");
 }
 

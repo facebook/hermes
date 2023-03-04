@@ -264,16 +264,12 @@ class AsNumericInst : public SingleOperandInst {
  public:
   explicit AsNumericInst(Value *value)
       : SingleOperandInst(ValueKind::AsNumericInstKind, value) {
-    setType(*getInherentTypeImpl());
+    setType(Type::createNumeric());
   }
   explicit AsNumericInst(
       const AsNumericInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
-
-  static OptValue<Type> getInherentTypeImpl() {
-    return Type::createNumeric();
-  }
 
   static bool hasOutput() {
     return true;
