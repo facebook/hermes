@@ -14,7 +14,7 @@ let x;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global(): string|number [allCallsitesKnownInStrictMode]
+// CHECK:function global(): string|number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = ThrowIfEmptyInst (:nonempty) empty: empty
