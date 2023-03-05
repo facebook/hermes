@@ -149,10 +149,6 @@ class Type {
     return Type(A.bitmask_ & ~B.bitmask_, A.numBitmask_ & ~B.numBitmask_);
   }
 
-  constexpr bool isNoType() const {
-    return bitmask_ == 0;
-  }
-
   static constexpr Type createNoType() {
     return Type(0);
   }
@@ -203,10 +199,17 @@ class Type {
     return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Uint32));
   }
 
+  constexpr bool isNoType() const {
+    return bitmask_ == 0;
+  }
+
   constexpr bool isAnyType() const {
     return bitmask_ == TYPE_ANY_MASK;
   }
 
+  constexpr bool isEmptyType() const {
+    return IS_VAL(Empty);
+  }
   constexpr bool isUndefinedType() const {
     return IS_VAL(Undefined);
   }
