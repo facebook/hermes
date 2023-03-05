@@ -34,10 +34,10 @@ function check1() {
 // CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
 // CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any
+// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:nonempty) %2: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any
-// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: any, %5: any
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:nonempty) %4: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: nonempty, %5: nonempty
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = StoreFrameInst 10: number, [x]: any

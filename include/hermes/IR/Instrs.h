@@ -2759,17 +2759,50 @@ class ThrowIfEmptyInst : public Instruction {
   ThrowIfEmptyInst(const ThrowIfEmptyInst &) = delete;
   void operator=(const ThrowIfEmptyInst &) = delete;
 
+  /// Record the result type when the instruction was created. The recorded type
+  /// must be correct with respect to the instructions that consume it, which
+  /// is an invariant enforced by IRGen.
+  /// If through optimization we get to a point where the input type is Empty,
+  /// meaning that the TDZ is always going to throw, the result type of
+  /// ThrowIfEmptyInst would theoretically need to be something that represents
+  /// an "unreachable" type. Such a type would violate the type requirements of
+  /// all instructions consuming the result of ThrowIfEmpty, even though they
+  /// will never execute. Handling this "unreachable" type everywhere would
+  /// require a lot of complexity.
+  /// Instead, when we get to that point, we simply return the recorded type.
+  Type savedResultType_{};
+
  public:
   enum { CheckedValueIdx };
 
   explicit ThrowIfEmptyInst(Value *checkedValue)
       : Instruction(ValueKind::ThrowIfEmptyInstKind) {
     pushOperand(checkedValue);
+
+    // Calculate the correct result type, to preserve invariants for
+    // instructions that use this result.
+    setType(Type::subtractTy(checkedValue->getType(), Type::createEmpty()));
+    updateSavedResultType();
   }
   explicit ThrowIfEmptyInst(
       const ThrowIfEmptyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  /// For use only by TypeInference. Returns the result type that was recorded
+  /// before type inference. Please see doc for \c savedResultType_.
+  Type getSavedResultType() const {
+    return savedResultType_;
+  }
+  /// Record the current result type in \c savedResultType_ . This method only
+  /// needs to be called externally (by IRGen) if the operand type wasn't
+  /// correct during construction and was changed afterwards.
+  void updateSavedResultType() {
+    assert(
+        !getType().isNoType() && !getType().canBeEmpty() &&
+        "savedResultType cannot be NoType or contain EmptyType");
+    savedResultType_ = getType();
+  }
 
   Value *getCheckedValue() {
     return getOperand(CheckedValueIdx);
