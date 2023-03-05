@@ -861,6 +861,10 @@ void Type::print(llvh::raw_ostream &OS) const {
     OS << "any";
     return;
   }
+  if (isNonEmptyType()) {
+    OS << "nonempty";
+    return;
+  }
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {
     // Don't print the object type annotations if the type is closure or regex.
     if (i == (unsigned)Type::TypeKind::Object &&

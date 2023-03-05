@@ -206,6 +206,9 @@ class Type {
   constexpr bool isAnyType() const {
     return bitmask_ == TYPE_ANY_MASK;
   }
+  constexpr bool isNonEmptyType() const {
+    return bitmask_ == (TYPE_ANY_MASK & ~BIT_TO_VAL(Empty));
+  }
 
   constexpr bool isEmptyType() const {
     return IS_VAL(Empty);
