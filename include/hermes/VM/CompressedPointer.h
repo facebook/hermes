@@ -32,11 +32,13 @@ class CompressedPointer : private SHCompressedPointer {
   }
 
   static CompressedPointer encode(GCCell *ptr, PointerBase &base) {
-    return {_sh_cp_encode((SHRuntime *)&base, ptr)};
+    return CompressedPointer{_sh_cp_encode((SHRuntime *)&base, ptr).raw};
   }
+
   static CompressedPointer encodeNonNull(GCCell *ptr, PointerBase &base) {
     assert(ptr && "Pointer must be non-null.");
-    return {_sh_cp_encode_non_null((SHRuntime *)&base, ptr)};
+    return CompressedPointer{
+        _sh_cp_encode_non_null((SHRuntime *)&base, ptr).raw};
   }
 
   GCCell *get(PointerBase &base) const {
@@ -93,7 +95,6 @@ class CompressedPointer : private SHCompressedPointer {
 
  private:
   explicit CompressedPointer(RawType r) : SHCompressedPointer{r} {}
-  CompressedPointer(SHCompressedPointer c) : CompressedPointer(c.raw) {}
 };
 
 static_assert(
