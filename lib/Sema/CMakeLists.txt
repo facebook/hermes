@@ -15,4 +15,5 @@ add_hermes_library(hermesSema
     FlowChecker.cpp FlowChecker.h
     LINK_OBJLIBS
     hermesSupport
+    hermesAST
 )

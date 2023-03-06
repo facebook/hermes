@@ -6,7 +6,8 @@
 set(LINK_OBJLIBS
     dtoa
     hermesRegex
-    hermesPlatformUnicode)
+    hermesPlatformUnicode
+    LLVHSupport)
 
 if (ANDROID)
   set(LINK_LIBS log)
