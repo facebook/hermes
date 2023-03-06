@@ -311,9 +311,9 @@ if (HERMES_STATIC_LINK)
 endif()
 
 # Check if the linker supports deleting unused sections and ICF.
-check_linker_flag(CXX --gc-sections HAVE_GC_SECTIONS)
-check_linker_flag(CXX -dead_strip HAVE_DEAD_STRIP)
-check_linker_flag(CXX --icf=safe HAVE_ICF)
+check_linker_flag(CXX "LINKER:--gc-sections" HAVE_GC_SECTIONS)
+check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
+check_linker_flag(CXX "LINKER:--icf=safe" HAVE_ICF)
 
 if(HAVE_GC_SECTIONS)
   add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
