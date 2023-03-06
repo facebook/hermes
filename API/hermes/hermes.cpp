@@ -1332,6 +1332,10 @@ void HermesRuntime::unregisterForProfiling() {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
+void HermesRuntime::notifyNeedsTermination() {
+  impl(this)->runtime_.triggerTimeoutAsyncBreak();
+}
+
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
   HermesRuntimeImpl &concrete = *impl(this);
   vm::Runtime &runtime = concrete.runtime_;
