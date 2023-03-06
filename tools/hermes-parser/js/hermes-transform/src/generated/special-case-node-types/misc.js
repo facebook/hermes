@@ -15,6 +15,7 @@ import type {
   ESNode,
   FunctionTypeAnnotation as FunctionTypeAnnotationType,
   Identifier as IdentifierType,
+  InterpreterDirective as InterpreterDirectiveType,
   Token as TokenType,
   Comment as CommentType,
   TemplateElement as TemplateElementType,
@@ -165,7 +166,8 @@ export function Program(props: {
     comments: props.comments,
     interpreter:
       props.interpreter != null
-        ? asDetachedNode({
+        ? // $FlowFixMe[incompatible-call]
+          asDetachedNode<InterpreterDirectiveType>({
             type: 'InterpreterDirective',
             value: props.interpreter,
           })

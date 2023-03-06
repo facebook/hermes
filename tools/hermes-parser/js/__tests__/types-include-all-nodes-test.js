@@ -52,7 +52,7 @@ function getInterfaces(): $ReadOnlyMap<
           return;
         }
 
-        const properties = new Map();
+        const properties = new Map<string, PropertyEntry>();
 
         // add the properties directly declared on the node
         for (const property of node.body.properties) {

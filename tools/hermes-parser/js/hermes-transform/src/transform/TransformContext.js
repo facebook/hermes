@@ -362,9 +362,9 @@ export function getTransformContext(): TransformContextAdditions {
         return null;
       }
 
-      return nodes.map(node => {
+      return nodes.map((node): DetachedNode<?ESNode> => {
         if (node == null) {
-          // $FlowExpectedError[incompatible-call]
+          // $FlowExpectedError[incompatible-return]
           return node;
         }
         return shallowCloneNode<T>(node, {});

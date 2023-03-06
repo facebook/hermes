@@ -25,7 +25,10 @@ const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
-const VALID_REACT_IMPORTS = new Set(['React', 'react']);
+const VALID_REACT_IMPORTS = new Set<string | FlowESTree.StringLiteral>([
+  'React',
+  'react',
+]);
 
 export function flowDefToTSDef(
   originalCode: string,
@@ -1223,7 +1226,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       node: FlowESTree.GenericTypeAnnotation,
     ): TSESTree.TypeNode {
       const [fullTypeName, baseId] = (() => {
-        let names = [];
+        let names: Array<string> = [];
         let currentNode = node.id;
 
         while (currentNode != null) {
@@ -2489,8 +2492,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
   // wrap each transform so that we automatically preserve jsdoc comments
   // this just saves us manually wiring up every single case
   for (const key of Object.keys(transform)) {
-    const originalFn = transform[key];
+    const originalFn: $FlowFixMe = transform[key];
     // $FlowExpectedError[cannot-write]
+    // $FlowExpectedError[missing-local-annot]
     transform[key] = (node, ...args) => {
       const result = originalFn(node, ...args);
       if (Array.isArray(result)) {
