@@ -312,7 +312,11 @@ endif()
 
 # Check if the linker supports deleting unused sections and ICF.
 check_linker_flag(CXX "LINKER:--gc-sections" HAVE_GC_SECTIONS)
-check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
+# Only check for -dead_strip on Apple because some linkers may interpret it
+# as "-d -e ad_strip".
+if(APPLE)
+  check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
+endif()
 check_linker_flag(CXX "LINKER:--icf=safe" HAVE_ICF)
 
 if(HAVE_GC_SECTIONS)
