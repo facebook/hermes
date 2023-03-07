@@ -13,7 +13,8 @@
 #include <vector>
 
 template <typename A, typename B>
-std::vector<B> *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
+__attribute__((noinline)) std::vector<B>
+    *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
   auto *res = new std::vector<B>();
   for (double i = 0, e = in->size(); i < e; ++i)
     res->push_back(cb(in->at(i), i));
@@ -21,7 +22,8 @@ std::vector<B> *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
 }
 
 template <typename T>
-std::vector<T> *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
+__attribute__((noinline)) std::vector<T>
+    *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
   auto *res = new std::vector<T>();
   for (double i = 0, e = in->size(); i < e; ++i) {
     T el = in->at(i);
@@ -32,7 +34,7 @@ std::vector<T> *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
 }
 
 template <typename T>
-bool arrayIncludes(std::vector<T> *in, T t) {
+__attribute__((noinline)) bool arrayIncludes(std::vector<T> *in, T t) {
   for (double i = 0, e = in->size(); i < e; ++i)
     if (in->at(i) == t)
       return true;
@@ -40,7 +42,9 @@ bool arrayIncludes(std::vector<T> *in, T t) {
 }
 
 template <typename T>
-void arrayForEach(std::vector<T> *in, std::function<void(T)> cb) {
+__attribute__((noinline)) void arrayForEach(
+    std::vector<T> *in,
+    std::function<void(T)> cb) {
   for (double i = 0, e = in->size(); i < e; ++i)
     cb(in->at(i));
 }
@@ -344,7 +348,7 @@ struct MapVector {
   std::vector<std::pair<const double, std::vector<Component *> *> *> vec;
 };
 
-void mapVectorForEach(
+__attribute__((noinline)) void mapVectorForEach(
     MapVector *mv,
     std::function<void(double, std::vector<Component *> *)> cb) {
   for (double i = 0, e = mv->vec.size(); i < e; ++i) {
