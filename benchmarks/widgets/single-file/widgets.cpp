@@ -12,6 +12,14 @@
 #include <unordered_map>
 #include <vector>
 
+template <typename A, typename B>
+std::vector<B> *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
+  auto *res = new std::vector<B>();
+  for (double i = 0, e = in->size(); i < e; ++i)
+    res->push_back(cb(in->at(i), i));
+  return res;
+}
+
 class Component {
   virtual void rtti() {}
 };
@@ -174,9 +182,10 @@ class Container : public Widget {
 
   RenderNode *reduce(Context *ctx) override {
     auto *component = new NumberComponent(13);
-    auto *mappedChildren = new std::vector<RenderNode *>();
-    for (auto *child : *children)
-      mappedChildren->push_back(RenderNode::createForChild(ctx, child));
+    auto *mappedChildren = arrayMap<Widget *, RenderNode *>(
+        children, [ctx](Widget *child, double) {
+          return RenderNode::createForChild(ctx, child);
+        });
     auto *components = new std::vector<Component *>();
     components->push_back(component);
     return RenderNode::create(ctx, components, mappedChildren);
@@ -239,17 +248,16 @@ class TestApp : public ComposedWidget {
     if (sizes->size() != models->size())
       throw 11;
 
-    auto *ret = new std::vector<Widget *>();
-    for (size_t i = 0; i < models->size(); i++) {
-      double buttonSize = (*sizes)[i];
-      const char *modelPath = (*models)[i];
+    return arrayMap<
+        const char *,
+        Widget *>(models, [sizes](const char *modelPath, double i) {
+      double buttonSize = sizes->at(i);
       auto *widget = new ButtonAndModel(new RenderData{modelPath, buttonSize});
       char *key = (char *)malloc(strlen(modelPath) + 12);
       sprintf(key, "%s_%d", modelPath, buttonSize);
       widget->key = key;
-      ret->push_back(widget);
-    }
-    return ret;
+      return widget;
+    });
   }
 
   std::vector<Widget *> *getChildren() {
@@ -336,12 +344,10 @@ SceneDiff *diffTrees(
   auto *createdComponents = new std::vector<ComponentPair *>();
   auto *deletedComponents = new std::vector<ComponentPair *>();
 
-  auto *oldEntityIds = new std::vector<double>();
-  for (auto *entity : *oldEntities)
-    oldEntityIds->push_back(entity->first);
-  auto *newEntityIds = new std::vector<double>();
-  for (auto *entity : *newEntities)
-    newEntityIds->push_back(entity->first);
+  auto *oldEntityIds = arrayMap<VirtualEntity *, double>(
+      oldEntities, [](VirtualEntity *entity, double) { return entity->first; });
+  auto *newEntityIds = arrayMap<VirtualEntity *, double>(
+      newEntities, [](VirtualEntity *entity, double) { return entity->first; });
 
   auto *createdEntities = new std::vector<double>();
   for (double id : *newEntityIds)
@@ -362,8 +368,12 @@ SceneDiff *diffTrees(
     auto it = newComponents->map.find(entityId);
     if (it == newComponents->map.end())
       continue;
-    for (Component *component : *it->second)
-      createdComponents->push_back(new ComponentPair{entityId, component});
+    auto *components = arrayMap<Component *, ComponentPair *>(
+        it->second, [entityId](Component *component, double) {
+          return new ComponentPair{entityId, component};
+        });
+    for (double i = 0, e = components->size(); i < e; ++i)
+      createdComponents->push_back(components->at(i));
   }
 
   for (auto *kv : newComponents->vec) {
