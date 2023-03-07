@@ -20,6 +20,25 @@ std::vector<B> *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
   return res;
 }
 
+template <typename T>
+std::vector<T> *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
+  auto *res = new std::vector<T>();
+  for (double i = 0, e = in->size(); i < e; ++i) {
+    T el = in->at(i);
+    if (cb(el))
+      res->push_back(el);
+  }
+  return res;
+}
+
+template <typename T>
+bool arrayIncludes(std::vector<T> *in, T t) {
+  for (double i = 0, e = in->size(); i < e; ++i)
+    if (in->at(i) == t)
+      return true;
+  return false;
+}
+
 class Component {
   virtual void rtti() {}
 };
@@ -349,17 +368,12 @@ SceneDiff *diffTrees(
   auto *newEntityIds = arrayMap<VirtualEntity *, double>(
       newEntities, [](VirtualEntity *entity, double) { return entity->first; });
 
-  auto *createdEntities = new std::vector<double>();
-  for (double id : *newEntityIds)
-    if (std::find(oldEntityIds->begin(), oldEntityIds->end(), id) ==
-        oldEntityIds->end())
-      createdEntities->push_back(id);
-
-  auto *deletedEntities = new std::vector<double>();
-  for (double id : *oldEntityIds)
-    if (std::find(newEntityIds->begin(), newEntityIds->end(), id) ==
-        newEntityIds->end())
-      deletedEntities->push_back(id);
+  auto *createdEntities = arrayFilter<double>(
+      newEntityIds,
+      [oldEntityIds](double id) { return !arrayIncludes(oldEntityIds, id); });
+  auto *deletedEntities = arrayFilter<double>(
+      oldEntityIds,
+      [newEntityIds](double id) { return !arrayIncludes(newEntityIds, id); });
 
   auto *oldComponents = mapEntitiesToComponents(oldEntities);
   auto *newComponents = mapEntitiesToComponents(newEntities);
@@ -388,21 +402,14 @@ SceneDiff *diffTrees(
         : new std::vector<Component *>();
     auto *newComponentsForKey = value;
 
-    auto *deleted = new std::vector<Component *>();
-    for (auto *component : *oldComponentsForKey)
-      if (std::find(
-              newComponentsForKey->begin(),
-              newComponentsForKey->end(),
-              component) == newComponentsForKey->end())
-        deleted->push_back(component);
-
-    auto *created = new std::vector<Component *>();
-    for (auto *component : *newComponentsForKey)
-      if (std::find(
-              oldComponentsForKey->begin(),
-              oldComponentsForKey->end(),
-              component) == oldComponentsForKey->end())
-        created->push_back(component);
+    auto *deleted = arrayFilter<Component *>(
+        oldComponentsForKey, [newComponentsForKey](Component *component) {
+          return !arrayIncludes(newComponentsForKey, component);
+        });
+    auto *created = arrayFilter<Component *>(
+        newComponentsForKey, [oldComponentsForKey](Component *component) {
+          return !arrayIncludes(oldComponentsForKey, component);
+        });
 
     for (auto *component : *deleted)
       deletedComponents->push_back(new ComponentPair{key, component});
