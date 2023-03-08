@@ -2330,7 +2330,7 @@ class GetPNamesInst : public TerminatorInst {
   }
 
   SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+    return SideEffectKind::Unknown;
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2399,7 +2399,7 @@ class GetNextPNameInst : public TerminatorInst {
   }
 
   SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+    return SideEffectKind::Unknown;
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3488,6 +3488,9 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
   }
 
   SideEffectKind getSideEffect() {
+    // This instruction could throw in theory, if there are too many arguments.
+    // However, this is not a meaningful side-effect, since this instruction
+    // should be freely reordered or deleted.
     return SideEffectKind::MayWrite;
   }
 
@@ -3567,7 +3570,7 @@ class CreateThisInst : public Instruction {
   }
 
   SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+    return SideEffectKind::None;
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3644,7 +3647,7 @@ class GetConstructedObjectInst : public Instruction {
   }
 
   SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+    return SideEffectKind::None;
   }
 
   WordBitSet<> getChangedOperandsImpl() {
