@@ -55,6 +55,8 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addSimpleStackPromotion();
   PM.addFunctionAnalysis();
   PM.addInlining();
+  PM.addFunctionAnalysis();
+  PM.addInlining();
   PM.addTypeInference();
   PM.addSimpleStackPromotion();
   PM.addInstSimplify();
