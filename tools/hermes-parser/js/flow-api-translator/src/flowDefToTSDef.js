@@ -25,10 +25,7 @@ const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
-const VALID_REACT_IMPORTS = new Set<string | FlowESTree.StringLiteral>([
-  'React',
-  'react',
-]);
+const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
 
 export function flowDefToTSDef(
   originalCode: string,
@@ -123,7 +120,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           def.node.type === 'ImportDefaultSpecifier' ||
           def.node.type === 'ImportNamespaceSpecifier'
         ) {
-          return VALID_REACT_IMPORTS.has(def.parent.source);
+          return VALID_REACT_IMPORTS.has(def.parent.source.value);
         }
         return false;
       }

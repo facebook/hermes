@@ -37,11 +37,11 @@
     "test": "jest"
   },
   "workspaces": [
+    "flow-api-translator",
     "hermes-eslint",
     "hermes-estree",
-    "hermes-transform",
-    "hermes-translate",
-    "hermes-parser"
+    "hermes-parser",
+    "hermes-transform"
   ],
   "dependencies": {}
 }
