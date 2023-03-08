@@ -24,6 +24,7 @@
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
+#include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
@@ -77,9 +78,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   DebugSourceLocation sourceLocation_;
   std::vector<DebugSourceLocation> debugLocations_{};
-
-  /// Table mapping variable names to frame locations.
-  std::vector<Identifier> debugVariableNamesUTF8_;
 
   /// Table mapping addresses to textified callees.
   std::vector<DebugTextifiedCallee> textifiedCallees_;
@@ -135,6 +133,8 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   unsigned getFunctionID(Function *F);
 
+  unsigned getScopeDescID(ScopeDesc *S);
+
   /// \return the ID in the bytecode's bigint table for a given literal string
   /// \p value.
   unsigned getBigIntID(LiteralBigInt *value) const;
@@ -173,6 +173,11 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     return sourceLocation_;
   }
 
+  /// Patches the Debug source locations' with the scopeAddress with the actual
+  /// descriptor offsets into the debug info data.
+  void patchDebugSourceLocations(
+      const llvh::DenseMap<unsigned, unsigned> &scopeDescOffsetMap);
+
   /// Add the location of an opcode.
   void addDebugSourceLocation(const DebugSourceLocation &info);
   const std::vector<DebugSourceLocation> &getDebugLocations() const {
@@ -180,8 +185,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   bool hasDebugInfo() const {
-    return !debugLocations_.empty() || lexicalParentID_ ||
-        !debugVariableNamesUTF8_.empty() || !textifiedCallees_.empty();
+    return !debugLocations_.empty() || !textifiedCallees_.empty();
   }
 
   // Add the textified callee string for the callable in a given location.
@@ -191,34 +195,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   llvh::ArrayRef<DebugTextifiedCallee> getTextifiedCallees() const {
     return textifiedCallees_;
-  }
-
-  /// Add a debug variable named \name.
-  void setDebugVariableNamesUTF8(std::vector<Identifier> names) {
-    assert(
-        !complete_ &&
-        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    debugVariableNamesUTF8_ = std::move(names);
-  }
-
-  /// \return the list of debug variable names.
-  llvh::ArrayRef<Identifier> getDebugVariableNamesUTF8() const {
-    return debugVariableNamesUTF8_;
-  }
-
-  /// Set the lexical parent ID to \p parentId.
-  void setLexicalParentID(OptValue<uint32_t> parentID) {
-    assert(
-        !complete_ &&
-        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    lexicalParentID_ = parentID;
-  }
-
-  /// \return the lexical parent ID (that is, the function lexically enclosing
-  /// this function) or None if there is no lexical parent ID (i.e. the function
-  /// is global).
-  OptValue<uint32_t> getLexicalParentID() const {
-    return lexicalParentID_;
   }
 
   /// Shift the bytecode stream starting from \p loc left by 3 bytes.
@@ -289,6 +265,21 @@ class BytecodeModuleGenerator {
  private:
   /// Mapping from Function * to a sequential ID.
   AllocationTable<Function *> functionIDMap_{};
+
+  /// Mapping from ScopeDesc * to a sequential ID.
+  AllocationTable<ScopeDesc *> scopeDescIDMap_{};
+
+  /// The ScopeDesc * that have been added between calls to serializeScopeChain.
+  llvh::SetVector<ScopeDesc *> newScopeDescs_;
+
+  /// Mapping from ScopeDesc ID to its address in the scope descriptor debug
+  /// info.
+  llvh::DenseMap<unsigned, unsigned> scopeDescIDAddr_{};
+
+  unsigned serializeScopeChain(
+      StringTable &st,
+      DebugInfoGenerator &debugInfoGen,
+      ScopeDesc *s);
 
   /// Mapping from Function * to it's BytecodeFunctionGenerator *.
   DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
@@ -366,6 +357,9 @@ class BytecodeModuleGenerator {
 
   /// Add a function to functionIDMap_ if not already exist. Returns the ID.
   unsigned addFunction(Function *F);
+
+  /// Add a ScopeDesc to scopeDescIDMap_ if not already in it. Returns the ID.
+  unsigned addScopeDesc(ScopeDesc *S);
 
   /// Add a function to the list of functions.
   void setFunctionGenerator(

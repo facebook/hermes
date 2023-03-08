@@ -341,6 +341,15 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+ThrowIfHasRestrictedGlobalPropertyInst *
+IRBuilder::createThrowIfHasRestrictedGlobalPropertyInst(
+    llvh::StringRef property) {
+  auto *HRGP =
+      new ThrowIfHasRestrictedGlobalPropertyInst(getLiteralString(property));
+  insert(HRGP);
+  return HRGP;
+}
+
 CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
   auto CII = new CreateScopeInst(scopeDesc);
   insert(CII);

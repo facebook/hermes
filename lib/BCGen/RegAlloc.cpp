@@ -1016,7 +1016,17 @@ ScopeRegisterAnalysis::registerAndScopeForInstruction(Instruction *Inst) {
     auto sciIt = scopeCreationInsts_.find(originalScope);
     if (sciIt != scopeCreationInsts_.end()) {
       ScopeCreationInst *originalScopeCreation = sciIt->second;
-      return registerAndScopeAt(Inst, originalScopeCreation);
+      if (!preallocateScopeRegisters(Inst->getContext())) {
+        return registerAndScopeAt(Inst, originalScopeCreation);
+      }
+      // Use the pre-allocated registers. This is needed because RA_ could have
+      // decided to use fast allocation, in which case instructions won't be
+      // numbered (and intervals won't be computed), meaning registerAndScopeAt
+      // above will not find the scope register.
+      assert(RA_.isAllocated(originalScopeCreation) && "should be allocated");
+      Register sciReg = RA_.getRegister(originalScopeCreation);
+      assert(sciReg.isValid() && "scope register should be valid.");
+      return std::make_pair(sciReg, originalScope);
     }
   }
 

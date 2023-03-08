@@ -457,6 +457,15 @@ Arguments | %getter is a getter accessor, or undefined. %setter is a setter acce
 Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.
 
+### ThrowIfHasRestrictedGlobalPropertyInst
+ThrowIfHasRestrictedGlobalPropertyInst | _
+--- | --- |
+Description | Raises an exception if the given name is a restricted global property.
+Example |   ThrowIfHasRestrictedGlobalPropertyInst %name : string
+Arguments | %name is the name to be checked agains global restricted properties.
+Semantics | Implements the semantics of ES2023 9.1.1.4.14 followed by a throw if %name is a restricted global property.
+Effects | Unknown.
+
 ### AllocObjectInst
 
 AllocObjectInst | _

@@ -26,10 +26,10 @@ TEST(IRScopeChainTest, BasicScopeChainTest) {
   // "alpha", inside a scope containing variables "beta" and "delta". "gamma" is
   // not part of our scope chain and should be global.
   ScopeChain scopeChain{};
-  scopeChain.functions.emplace_back();
-  scopeChain.functions.back().variables = {"alpha"};
-  scopeChain.functions.emplace_back();
-  scopeChain.functions.back().variables = {"beta", "delta"};
+  scopeChain.scopes.emplace_back();
+  scopeChain.scopes.back().variables = {"alpha"};
+  scopeChain.scopes.emplace_back();
+  scopeChain.scopes.back().variables = {"beta", "delta"};
 
   hermes::parser::JSParser jsParser(
       *context, "print(alpha, beta, gamma, delta);");

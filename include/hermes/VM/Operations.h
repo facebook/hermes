@@ -475,6 +475,14 @@ CallResult<HermesValue> stringToBigInt(Runtime &runtime, Handle<> value);
 // ES2022 21.2.3 Properties of the BigInt Prototype Object - thisBigIntValue
 CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value);
 
+// ES2023 9.1.1.4.14 HasRestrictedGlobalProperty ( N )
+// The HasRestrictedGlobalProperty concrete method of a Global Environment
+// Record envRec takes argument N (a String) and returns either a normal
+// completion containing a Boolean or a throw completion. It determines if the
+// argument identifier is the name of a property of the global object that must
+// not be shadowed by a global lexical binding.
+bool hasRestrictedGlobalProperty(Runtime &runtime, SymbolID N);
+
 } // namespace vm
 } // namespace hermes
 

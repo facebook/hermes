@@ -12,7 +12,7 @@ function staticProto() {
   return {__proto__: null, a: 2, b: 3, c: 4};
 }
 //CHECK-LABEL:Function<staticProto>(1 params, 2 registers, 0 symbols):
-//CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000, textified callees 0x0000
+//CHECK-NEXT:Offset in debug table: source 0x000e, scope 0x0000, textified callees 0x0000
 //CHECK-NEXT:    LoadConstNull     r0
 //CHECK-NEXT:    NewObjectWithParent r0, r0
 //CHECK-NEXT:    LoadConstUInt8    r1, 2

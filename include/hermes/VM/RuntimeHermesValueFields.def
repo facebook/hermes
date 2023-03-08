@@ -20,9 +20,12 @@
 RUNTIME_HV_FIELD_PROTOTYPE(objectPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(errorConstructor)
 
-/// JSError.prototype, and prototype of all native error types.
-#define ALL_ERROR_TYPE(name) RUNTIME_HV_FIELD_PROTOTYPE(name##Prototype)
-#include "hermes/VM/NativeErrorTypes.def"
+/// JSError and JSError.prototype, and constructor and prototype of all native
+/// error types.
+#define ALL_ERROR_TYPE(name)                  \
+  RUNTIME_HV_FIELD_PROTOTYPE(name##Prototype) \
+  RUNTIME_HV_FIELD_PROTOTYPE(name##Constructor)
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 RUNTIME_HV_FIELD_PROTOTYPE(functionPrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(functionConstructor)

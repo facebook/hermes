@@ -47,11 +47,24 @@ TEST(DebugInfo, TestBasicInfo) {
   auto dbg = makeGenerator();
 
   auto debugOffset = dbg.appendSourceLocations(
-      Loc{0, 1, 1, 1, 0}, // Method starts in file1:1,1
+      Loc{0, 1, 1, 1, 0, 0, DebugSourceLocation::NO_REG}, // Method starts in
+                                                          // file1:1,1
       0,
       {
-          Loc{0, 1, 2, 1, 1}, // Opcode at address 0 is file1:2,1
-          Loc{2, 1, 3, 1, 1} // Opcode at address 2 is file1:3,1
+          Loc{0,
+              1,
+              2,
+              1,
+              1,
+              0,
+              DebugSourceLocation::NO_REG}, // Opcode at address 0 is file1:2,1
+          Loc{2,
+              1,
+              3,
+              1,
+              1,
+              0,
+              DebugSourceLocation::NO_REG} // Opcode at address 2 is file1:3,1
       });
 
   DebugInfo info = dbg.serializeWithMove();
@@ -64,12 +77,17 @@ TEST(DebugInfo, TestMultipleMethods) {
   auto dbg = makeGenerator();
 
   auto offset1 = dbg.appendSourceLocations(
-      Loc{0, 1, 1, 1, 0}, 0, {Loc{2, 1, 1, 4, 1}, Loc{4, 1, 3, 4, 1}});
+      Loc{0, 1, 1, 1, 0, 0, DebugSourceLocation::NO_REG},
+      0,
+      {Loc{2, 1, 1, 4, 1, 0, DebugSourceLocation::NO_REG},
+       Loc{4, 1, 3, 4, 1, 0, DebugSourceLocation::NO_REG}});
 
   auto offset2 = dbg.appendSourceLocations(
-      Loc{0, 1, 100, 1, 0},
+      Loc{0, 1, 100, 1, 0, 0, DebugSourceLocation::NO_REG},
       0,
-      {Loc{2, 1, 101, 4, 1}, Loc{8, 1, 102, 4, 1}, Loc{16, 1, 103, 4, 1}});
+      {Loc{2, 1, 101, 4, 1, 0, DebugSourceLocation::NO_REG},
+       Loc{8, 1, 102, 4, 1, 0, DebugSourceLocation::NO_REG},
+       Loc{16, 1, 103, 4, 1, 0, DebugSourceLocation::NO_REG}});
 
   DebugInfo info = dbg.serializeWithMove();
 
@@ -84,12 +102,14 @@ TEST(DebugInfo, TestMultipleFiles) {
   auto dbg = makeGenerator();
 
   auto offset = dbg.appendSourceLocations(
-      Loc{0, 1111, 1, 1, 0}, // Method starts in file #1111
+      Loc{0, 1111, 1, 1, 0, 0, DebugSourceLocation::NO_REG}, // Method starts in
+                                                             // file #1111
       0, // 0th function
       {
-          Loc{2, 2222, 1, 1, 1}, // Continues in #2222
-          Loc{4, 1111, 1, 2, 1}, // Back to 1111
-          Loc{6, 2222, 1, 2, 1} // Back to 2222
+          Loc{2, 2222, 1, 1, 1, 0, DebugSourceLocation::NO_REG}, // Continues in
+                                                                 // #2222
+          Loc{4, 1111, 1, 2, 1, 0, DebugSourceLocation::NO_REG}, // Back to 1111
+          Loc{6, 2222, 1, 2, 1, 0, DebugSourceLocation::NO_REG} // Back to 2222
       });
 
   DebugInfo info = dbg.serializeWithMove();
@@ -104,7 +124,10 @@ TEST(DebugInfo, TestLargeDeltas) {
   for (uint32_t i = 0; i < INT32_MAX; i += 123457) {
     auto dbg = makeGenerator();
     auto offset = dbg.appendSourceLocations(
-        Loc{0, 1, 1, 1, 0}, 0, {Loc{2, i, i, i, 1}, Loc{4, 1, 2, 2, 1}});
+        Loc{0, 1, 1, 1, 0, 0, DebugSourceLocation::NO_REG},
+        0,
+        {Loc{2, i, i, i, 1, 0, DebugSourceLocation::NO_REG},
+         Loc{4, 1, 2, 2, 1, 0, DebugSourceLocation::NO_REG}});
 
     DebugInfo info = dbg.serializeWithMove();
 
@@ -119,26 +142,35 @@ TEST(DebugInfo, TestGetAddress) {
   auto dbg = makeGenerator();
 
   dbg.appendSourceLocations(
-      Loc{0, 42, 1, 1, 0}, // Function is in file 42
+      Loc{0, 42, 1, 1, 0, 0, DebugSourceLocation::NO_REG}, // Function is in
+                                                           // file 42
       3, // function 3
       {
-          Loc{0, 42, 2, 1, 1}, // opcode 0 is at file42:2:1
-          Loc{2, 42, 3, 1, 1}, // opcode 2 is at file42:3:1
+          Loc{0, 42, 2, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 0 is at
+                                                               // file42:2:1
+          Loc{2, 42, 3, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 2 is at
+                                                               // file42:3:1
       });
 
   dbg.appendSourceLocations(
-      Loc{0, 12, 1, 1, 0}, // Function is in file 12
+      Loc{0, 12, 1, 1, 0, 0, DebugSourceLocation::NO_REG}, // Function is in
+                                                           // file 12
       0, // function 0
       {
-          Loc{0, 12, 6, 1, 1}, // opcode 0 is at file12:6:1
-          Loc{4, 12, 8, 1, 1}, // opcode 4 is at file12:8:1
+          Loc{0, 12, 6, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 0 is at
+                                                               // file12:6:1
+          Loc{4, 12, 8, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 4 is at
+                                                               // file12:8:1
       });
   dbg.appendSourceLocations(
-      Loc{0, 12, 1, 1, 0}, // Function is in file 12
+      Loc{0, 12, 1, 1, 0, 0, DebugSourceLocation::NO_REG}, // Function is in
+                                                           // file 12
       3, // function 3
       {
-          Loc{0, 12, 2, 1, 1}, // opcode 0 is at file12:2:1
-          Loc{2, 12, 3, 1, 1}, // opcode 2 is at file12:3:1
+          Loc{0, 12, 2, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 0 is at
+                                                               // file12:2:1
+          Loc{2, 12, 3, 1, 1, 0, DebugSourceLocation::NO_REG}, // opcode 2 is at
+                                                               // file12:3:1
       });
 
   DebugInfo info = dbg.serializeWithMove();

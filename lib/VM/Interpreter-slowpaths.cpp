@@ -79,7 +79,7 @@ ExecutionStatus Interpreter::caseDirectEval(
   // (as per the spec for strict callers, which is the only thing we support).
 
   ScopeChain scopeChain{};
-  scopeChain.functions.emplace_back();
+  scopeChain.scopes.emplace_back();
 
   auto cr = vm::directEval(
       runtime, Handle<StringPrimitive>::vmcast(input), scopeChain, false);
@@ -369,6 +369,18 @@ ExecutionStatus Interpreter::declareGlobalVarImpl(
       return ExecutionStatus::EXCEPTION;
     }
     runtime.clearThrownValue();
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::throwIfHasRestrictedGlobalPropertyImpl(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  GCScopeMarkerRAII mark{runtime};
+  if (LLVM_UNLIKELY(hasRestrictedGlobalProperty(
+          runtime, ID(ip->iThrowIfHasRestrictedGlobalProperty.op1)))) {
+    return runtime.raiseSyntaxError("Name is a restricted global identifier");
   }
   return ExecutionStatus::RETURNED;
 }

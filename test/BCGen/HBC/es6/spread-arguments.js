@@ -13,7 +13,7 @@ function foo(fn, x) {
 }
 
 // CHECK-LABEL: Function<foo>(3 params, 28 registers, 2 symbols):
-// CHECK-NEXT: Offset in debug table: source 0x{{.*}}, lexical 0x{{.*}}
+// CHECK-NEXT: Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
 // CHECK-NEXT:     LoadParam         r2, 2

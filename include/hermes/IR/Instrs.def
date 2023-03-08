@@ -23,6 +23,8 @@
 #define INCLUDE_HBC_BACKEND
 #endif
 
+DEF_VALUE(ThrowIfHasRestrictedGlobalPropertyInst, Instruction)
+
 MARK_FIRST(ScopeCreationInst)
 DEF_VALUE(ScopeCreationInst, Instruction)
 DEF_VALUE(CreateScopeInst, ScopeCreationInst)

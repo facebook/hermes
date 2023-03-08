@@ -2328,5 +2328,25 @@ CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
   return runtime.raiseTypeError("value is not a bigint");
 }
 
+bool hasRestrictedGlobalProperty(Runtime &runtime, SymbolID N) {
+  Handle<JSObject> globalObject = runtime.getGlobal();
+
+  // 1. Let ObjRec be envRec.[[ObjectRecord]].
+  // 2. Let globalObject be ObjRec.[[BindingObject]].
+
+  // 3. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
+  NamedPropertyDescriptor desc;
+  JSObject *existingProp =
+      JSObject::getNamedDescriptorUnsafe(globalObject, runtime, N, desc);
+
+  // 4. If existingProp is undefined, return false.
+  if (!existingProp) {
+    return false;
+  }
+
+  // 5. If existingProp.[[Configurable]] is true, return false.
+  // 6. Return true.
+  return !desc.flags.configurable;
+}
 } // namespace vm
 } // namespace hermes

@@ -233,7 +233,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
 /// the native error constructors. Populate the instance and prototype methods.
 #define ALL_ERROR_TYPE(name) \
   Handle<JSObject> create##name##Constructor(Runtime &runtime);
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 /// Populate the internal CallSite.prototype.
 void populateCallSitePrototype(Runtime &runtime);
