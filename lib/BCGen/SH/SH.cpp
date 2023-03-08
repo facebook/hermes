@@ -1499,6 +1499,17 @@ class InstrGen {
         << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
   void generateCallBuiltinInst(CallBuiltinInst &inst) {
+    if (inst.getBuiltinIndex() == BuiltinMethod::Math_sqrt) {
+      if (inst.getNumArguments() == 2 &&
+          inst.getArgument(1)->getType().isNumberType()) {
+        os_.indent(2);
+        generateRegister(inst);
+        os_ << " = _sh_ljs_double(sqrt(_sh_ljs_get_double(";
+        generateValue(*inst.getArgument(1));
+        os_ << ")));\n";
+        return;
+      }
+    }
     setupCallStack(inst, false);
     os_.indent(2);
     generateRegister(inst);
@@ -1800,6 +1811,7 @@ void generateModule(
   PM.addPass(new hbc::LoadConstants(true));
   PM.addPass(new hbc::LowerLoadStoreFrameInst());
   if (options.optimizationEnabled) {
+    PM.addTypeInference();
     // Lowers AllocObjects and its sequential literal properties into a single
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
