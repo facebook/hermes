@@ -264,7 +264,7 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
 static Value *inlineFunction(
     IRBuilder &builder,
     Function *F,
-    CallInst *CI,
+    BaseCallInst *CI,
     BasicBlock *nextBlock) {
   Function *intoFunction = builder.getInsertionBlock()->getParent();
 
@@ -348,6 +348,14 @@ static Value *inlineFunction(
         uint32_t index = LPI->getParam()->getIndexInParamList();
         operandMap[&I] = index < CI->getNumArguments()
             ? CI->getArgument(index)
+            : builder.getLiteralUndefined();
+        continue;
+      }
+
+      // For constructor calls, replace GetNewTargetInst with the closure.
+      if (llvh::isa<GetNewTargetInst>(&I)) {
+        operandMap[&I] = llvh::isa<ConstructInst>(CI)
+            ? CI->getCallee()
             : builder.getLiteralUndefined();
         continue;
       }
@@ -468,23 +476,14 @@ bool Inlining::runOnModule(Module *M) {
       }
     }
 
-    for (BaseCallInst *baseCall : callsites) {
-      auto *CI = llvh::dyn_cast<CallInst>(baseCall);
-      if (!CI) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Cannot inline function '"
-                         << FC->getInternalNameStr()
-                         << "': callsite is not a CallInst\n");
-        continue;
-      }
-
+    for (BaseCallInst *CI : callsites) {
+      // We know the callee is an IR function, so it must be possible to inline.
       Function *intoFunction = CI->getParent()->getParent();
 
       if (!canBeInlined(FC, intoFunction)) {
         if (FC->getAlwaysInline()) {
           FC->getParent()->getContext().getSourceErrorManager().warning(
-              baseCall->getLocation(),
-              "function marked 'inline' cannot be inlined");
+              CI->getLocation(), "function marked 'inline' cannot be inlined");
           FC->getParent()->getContext().getSourceErrorManager().note(
               FC->getSourceRange().Start, "function definition");
         }
