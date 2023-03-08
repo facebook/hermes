@@ -434,75 +434,97 @@ bool Inlining::runOnModule(Module *M) {
         llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
                      << "'\n");
 
-    // Check for allCallsitesKnownExceptErrorStructuredStackTrace here because
-    // we're only ever inlining functions with one callsites right now, which
-    // means that the function will be DCE'd completely and it won't ever be
-    // populated in the structured stack trace at runtime.
-    // This allows us to inline loose mode functions.
-    if (!FC->allCallsitesKnownExceptErrorStructuredStackTrace()) {
-      LLVM_DEBUG(
-          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
-                       << "': has unknown callsites\n");
-      continue;
+    llvh::SmallVector<BaseCallInst *, 2> callsites;
+
+    if (FC->getAlwaysInline()) {
+      callsites = getKnownCallsites(FC);
+    } else {
+      // Heuristic to determine whether to inline.
+      // Applied when the "inline" directive isn't specified.
+
+      // Check for allCallsitesKnownExceptErrorStructuredStackTrace here because
+      // we're only ever inlining functions with one callsites right now, which
+      // means that the function will be DCE'd completely and it won't ever be
+      // populated in the structured stack trace at runtime.
+      // This allows us to inline loose mode functions.
+      if (!FC->allCallsitesKnownExceptErrorStructuredStackTrace()) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline function '"
+                         << FC->getInternalNameStr()
+                         << "': has unknown callsites\n");
+        continue;
+      }
+
+      callsites = getKnownCallsites(FC);
+
+      if (callsites.size() != 1) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline function '"
+                         << FC->getInternalNameStr()
+                         << llvh::format(
+                                "': has %u callsites (requires 1)\n",
+                                callsites.size()));
+        continue;
+      }
     }
 
-    llvh::SmallVector<BaseCallInst *, 2> callsites = getKnownCallsites(FC);
+    for (BaseCallInst *baseCall : callsites) {
+      auto *CI = llvh::dyn_cast<CallInst>(baseCall);
+      if (!CI) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline function '"
+                         << FC->getInternalNameStr()
+                         << "': callsite is not a CallInst\n");
+        continue;
+      }
 
-    if (callsites.size() != 1) {
-      LLVM_DEBUG(
-          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
-                       << llvh::format(
-                              "': has %u callsites (requires 1)\n",
-                              callsites.size()));
-      continue;
+      Function *intoFunction = CI->getParent()->getParent();
+
+      if (!canBeInlined(FC, intoFunction)) {
+        if (FC->getAlwaysInline()) {
+          FC->getParent()->getContext().getSourceErrorManager().warning(
+              baseCall->getLocation(),
+              "function marked 'inline' cannot be inlined");
+          FC->getParent()->getContext().getSourceErrorManager().note(
+              FC->getSourceRange().Start, "function definition");
+        }
+        continue;
+      }
+
+      LLVM_DEBUG(llvh::dbgs() << "Inlining function '"
+                              << FC->getInternalNameStr() << "' ";
+                 FC->getContext().getSourceErrorManager().dumpCoords(
+                     llvh::dbgs(), FC->getSourceRange().Start);
+                 llvh::dbgs() << " into function '"
+                              << intoFunction->getInternalNameStr() << "' ";
+                 FC->getContext().getSourceErrorManager().dumpCoords(
+                     llvh::dbgs(), intoFunction->getSourceRange().Start);
+                 llvh::dbgs() << "\n";);
+
+      IRBuilder builder(M);
+
+      // Split the block in two and move all instructions following the call
+      // to the new block.
+      BasicBlock *nextBlock = builder.createBasicBlock(intoFunction);
+      builder.setInsertionBlock(nextBlock);
+
+      // Move the rest of the instructions.
+      auto it = CI->getIterator();
+      ++it; // Skip over the call.
+      auto e = CI->getParent()->end();
+      while (it != e)
+        builder.transferInstructionToCurrentBlock(&*it++);
+
+      // Perform the inlining.
+      builder.setInsertionPointAfter(CI);
+
+      auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);
+      CI->replaceAllUsesWith(returnValue);
+      CI->eraseFromParent();
+
+      ++NumInlinedCalls;
+      changed = true;
     }
-
-    auto *CI = llvh::dyn_cast<CallInst>(*callsites.begin());
-    if (!CI) {
-      LLVM_DEBUG(
-          llvh::dbgs() << "Cannot inline function '" << FC->getInternalNameStr()
-                       << "': callsite is not a CallInst\n");
-      continue;
-    }
-
-    Function *intoFunction = CI->getParent()->getParent();
-
-    if (!canBeInlined(FC, intoFunction))
-      continue;
-
-    LLVM_DEBUG(llvh::dbgs()
-                   << "Inlining function '" << FC->getInternalNameStr() << "' ";
-               FC->getContext().getSourceErrorManager().dumpCoords(
-                   llvh::dbgs(), FC->getSourceRange().Start);
-               llvh::dbgs() << " into function '"
-                            << intoFunction->getInternalNameStr() << "' ";
-               FC->getContext().getSourceErrorManager().dumpCoords(
-                   llvh::dbgs(), intoFunction->getSourceRange().Start);
-               llvh::dbgs() << "\n";);
-
-    IRBuilder builder(M);
-
-    // Split the block in two and move all instructions following the call
-    // to the new block.
-    BasicBlock *nextBlock = builder.createBasicBlock(intoFunction);
-    builder.setInsertionBlock(nextBlock);
-
-    // Move the rest of the instructions.
-    auto it = CI->getIterator();
-    ++it; // Skip over the call.
-    auto e = CI->getParent()->end();
-    while (it != e)
-      builder.transferInstructionToCurrentBlock(&*it++);
-
-    // Perform the inlining.
-    builder.setInsertionPointAfter(CI);
-
-    auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);
-    CI->replaceAllUsesWith(returnValue);
-    CI->eraseFromParent();
-
-    ++NumInlinedCalls;
-    changed = true;
   }
 
   return changed;
