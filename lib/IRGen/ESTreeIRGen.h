@@ -601,6 +601,15 @@ class ESTreeIRGen {
       ESTree::OptionalCallExpressionNode *call,
       BasicBlock *shortCircuitBB);
 
+  /// Generates the $SHBuiltin compiler intrinsics.
+  Value *genSHBuiltin(
+      ESTree::CallExpressionNode *call,
+      ESTree::IdentifierNode *builtin);
+
+  /// $SHBuiltin.call(fn, thisVal, arg1, arg2, ...)
+  /// Calls \c fn with \c thisVal and the specified args.
+  Value *genSHBuiltinCall(ESTree::CallExpressionNode *call);
+
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.
   /// \return the result value of the call.

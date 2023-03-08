@@ -170,6 +170,12 @@ void SemanticResolver::visit(
     }
   }
 
+  // $SHBuiltin should have been replaced with SHBuiltinNode as part of a member
+  // call expression earlier. Any use that gets here is invalid.
+  if (identifier->_name == kw_.identSHBuiltin) {
+    sm_.error(identifier->getSourceRange(), "invalid use of $SHBuiltin");
+  }
+
   resolveIdentifier(identifier, false);
 }
 
@@ -742,6 +748,23 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
     }
   }
 
+  // Check for $SHBuiltin, and transform the node if necessary to SHBuiltinNode.
+  // This allows typechecker/IRGen to simply match on SHBuiltinNode.
+  if (auto *methodCallee =
+          llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
+    if (auto *ident =
+            llvh::dyn_cast<ESTree::IdentifierNode>(methodCallee->_object)) {
+      if (ident->_name == kw_.identSHBuiltin && !methodCallee->_computed) {
+        Decl *decl = resolveIdentifier(ident, false);
+        if (decl && decl->kind == sema::Decl::Kind::UndeclaredGlobalProperty) {
+          auto *shBuiltin = new (astContext_) ESTree::SHBuiltinNode();
+          shBuiltin->copyLocationFrom(methodCallee->_object);
+          methodCallee->_object = shBuiltin;
+        }
+      }
+    }
+  }
+
   if (llvh::isa<SuperNode>(node->_callee)) {
     if (!functionContext()->isConstructor) {
       sm_.error(
@@ -1053,7 +1076,7 @@ void SemanticResolver::visitFunctionExpression(
   }
 }
 
-void SemanticResolver::resolveIdentifier(
+Decl *SemanticResolver::resolveIdentifier(
     IdentifierNode *identifier,
     bool inTypeof) {
   Decl *decl = checkIdentifierResolved(identifier);
@@ -1064,7 +1087,7 @@ void SemanticResolver::resolveIdentifier(
 
   // Resolved the identifier to a declaration, done.
   if (decl) {
-    return;
+    return decl;
   }
 
   // Undeclared variables outside `typeof` cause runtime errors in strict mode.
@@ -1095,6 +1118,8 @@ void SemanticResolver::resolveIdentifier(
 
   bindingTable_.insertIntoScope(
       globalScope_, identifier->_name, Binding{decl, identifier});
+
+  return decl;
 }
 
 Decl *SemanticResolver::checkIdentifierResolved(
@@ -1103,6 +1128,7 @@ Decl *SemanticResolver::checkIdentifierResolved(
   // pick the resolved declaration.
   if (LLVM_UNLIKELY(identifier->isUnresolvable()))
     return nullptr;
+
   if (sema::Decl *decl = semCtx_.getExpressionDecl(identifier))
     return decl;
 

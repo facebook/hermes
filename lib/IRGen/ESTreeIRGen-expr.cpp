@@ -378,6 +378,12 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+    // Check for SHBuiltin.
+    if (llvh::isa<ESTree::SHBuiltinNode>(Mem->_object)) {
+      return genSHBuiltin(
+          call, llvh::cast<ESTree::IdentifierNode>(Mem->_property));
+    }
+
     MemberExpressionResult memResult =
         genMemberExpression(Mem, MemberExpressionOperation::Load);
 
@@ -504,6 +510,47 @@ Value *ESTreeIRGen::genOptionalCallExpr(
   // If this isn't the first optional, no Phi needed, just return the
   // callResult.
   return callResult;
+}
+
+Value *ESTreeIRGen::genSHBuiltin(
+    ESTree::CallExpressionNode *call,
+    ESTree::IdentifierNode *builtin) {
+  if (builtin->_name == kw_.identCall) {
+    return genSHBuiltinCall(call);
+  }
+
+  Mod->getContext().getSourceErrorManager().error(
+      call->getSourceRange(), "unknown SH builtin call");
+  return Builder.getLiteralUndefined();
+}
+
+Value *ESTreeIRGen::genSHBuiltinCall(ESTree::CallExpressionNode *call) {
+  llvh::SmallVector<Value *, 4> args{};
+  Value *callee = nullptr;
+  Value *thisValue = nullptr;
+
+  for (ESTree::Node &arg : call->_arguments) {
+    Value *argVal = genExpression(&arg);
+    if (!callee) {
+      // First, fill the callee (required).
+      callee = argVal;
+    } else if (!thisValue) {
+      // Then, fill the thisValue (required).
+      thisValue = argVal;
+    } else {
+      // Any remaining args are passed through to the function.
+      args.push_back(argVal);
+    }
+  }
+
+  if (!thisValue) {
+    Mod->getContext().getSourceErrorManager().error(
+        call->getSourceRange(),
+        "SH builtin 'call' requires at least 2 arguments");
+    return Builder.getLiteralUndefined();
+  }
+
+  return Builder.createCallInst(callee, thisValue, args);
 }
 
 Value *ESTreeIRGen::emitCall(

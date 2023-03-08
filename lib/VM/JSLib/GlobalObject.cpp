@@ -766,6 +766,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       normalDPF,
       runtime.getGlobal()));
 
+  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
+      runtime.getGlobal(),
+      runtime,
+      Predefined::getSymbolID(Predefined::SHBuiltin),
+      constantDPF,
+      Runtime::getUndefinedValue()));
+
   // Define the 'require' function.
   runtime.requireFunction =
       NativeFunction::create(

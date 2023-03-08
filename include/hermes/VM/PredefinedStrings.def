@@ -454,6 +454,8 @@ STR(setPromiseRejectionTrackingHook, "setPromiseRejectionTrackingHook")
 STR(enablePromiseRejectionTracker, "enablePromiseRejectionTracker")
 STR(spawnAsync, "spawnAsync") /* NOLINT */
 
+STR(SHBuiltin, "$SHBuiltin")
+
 STR(require, "require")
 STR(requireFast, "requireFast")
 STR(context, "context")
@@ -526,6 +528,5 @@ STR(__rnReserved22, "nativeTraceIsTracing")
 #ifdef HERMES_ENABLE_FUZZILLI
 STR(fuzzilli, "fuzzilli")
 #endif
-
 
 #undef STR

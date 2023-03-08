@@ -312,7 +312,8 @@ class SemanticResolver {
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.
   /// Record an undeclared global property if no declaration is found.
-  void resolveIdentifier(ESTree::IdentifierNode *identifier, bool inTypeof);
+  /// \return the resolved Decl.
+  Decl *resolveIdentifier(ESTree::IdentifierNode *identifier, bool inTypeof);
 
   /// Look up \p identifier to see if it already has been resolved or has a
   /// binding assigned.

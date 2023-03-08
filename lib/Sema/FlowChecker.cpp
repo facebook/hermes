@@ -807,6 +807,16 @@ class FlowChecker::ExprVisitor {
   void visit(ESTree::CallExpressionNode *node) {
     visitESTreeChildren(*this, node);
 
+    // Check for $SHBuiltin.
+    if (auto *methodCallee =
+            llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
+      if (llvh::isa<ESTree::SHBuiltinNode>(methodCallee->_object)) {
+        checkSHBuiltin(
+            node, llvh::cast<ESTree::IdentifierNode>(methodCallee->_property));
+        return;
+      }
+    }
+
     Type *calleeType = outer_.getNodeTypeOrAny(node->_callee);
     // If the callee has no type, we have nothing to do/check.
     if (llvh::isa<AnyType>(calleeType))
@@ -844,6 +854,59 @@ class FlowChecker::ExprVisitor {
     }
 
     checkArgumentTypes(ftype, node, node->_arguments, "function");
+  }
+
+  void checkSHBuiltin(
+      ESTree::CallExpressionNode *call,
+      ESTree::IdentifierNode *builtin) {
+    if (builtin->_name == outer_.kw_.identCall) {
+      checkSHBuiltinCall(call);
+      return;
+    }
+
+    outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
+  }
+
+  /// $SHBuiltin.call(fn, this, arg1, ...)
+  /// must typecheck as an actual function call.
+  void checkSHBuiltinCall(ESTree::CallExpressionNode *call) {
+    auto it = call->_arguments.begin();
+    if (it == call->_arguments.end()) {
+      outer_.sm_.error(
+          call->getSourceRange(), "ft: call requires at least two arguments");
+      return;
+    }
+    ESTree::Node *callee = &*it;
+    Type *calleeType = outer_.getNodeTypeOrAny(callee);
+    // If the callee has no type, we have nothing to do/check.
+    if (llvh::isa<AnyType>(calleeType))
+      return;
+    if (!llvh::isa<FunctionType>(calleeType)) {
+      outer_.sm_.error(
+          callee->getSourceRange(), "ft: callee is not a function");
+      return;
+    }
+    auto *ftype = llvh::cast<FunctionType>(calleeType);
+    outer_.setNodeType(call, ftype->getReturnType());
+
+    ++it;
+    if (it == call->_arguments.end()) {
+      outer_.sm_.error(
+          call->getSourceRange(), "ft: call requires at least two arguments");
+      return;
+    }
+    Type *expectedThisType = ftype->getThisParam()
+        ? ftype->getThisParam()
+        : outer_.flowContext_.getAny();
+    ESTree::Node *thisArg = &*it;
+    Type *thisArgType = outer_.getNodeTypeOrAny(thisArg);
+    if (!canAFlowIntoB(thisArgType, expectedThisType).canFlow) {
+      outer_.sm_.error(thisArg->getSourceRange(), "ft: 'this' type mismatch");
+      return;
+    }
+
+    checkArgumentTypes(ftype, call, call->_arguments, "function", 2);
+    return;
   }
 
   void visit(ESTree::OptionalCallExpressionNode *node) {
@@ -909,12 +972,15 @@ class FlowChecker::ExprVisitor {
   }
 
   /// Check the types of the supplies arguments, adding checked casts if needed.
+  /// \param offset the number of arguments to ignore at the front of \p
+  ///   arguments. Used for $SHBuiltin.call, which has extra args at the front.
   bool checkArgumentTypes(
       FunctionType *ftype,
       ESTree::Node *callNode,
       ESTree::NodeList &arguments,
-      const llvh::Twine calleeName) {
-    size_t numArgs = arguments.size();
+      const llvh::Twine &calleeName,
+      uint32_t offset = 0) {
+    size_t numArgs = arguments.size() - offset;
     // FIXME: default arguments.
     if (ftype->getParams().size() != numArgs) {
       outer_.sm_.error(
@@ -925,10 +991,12 @@ class FlowChecker::ExprVisitor {
       return false;
     }
 
+    auto begin = arguments.begin();
+    std::advance(begin, offset);
+
     // Check the type of each argument.
     size_t argIndex = 0;
-    for (auto it = arguments.begin(), e = arguments.end(); it != e;
-         ++argIndex, ++it) {
+    for (auto it = begin, e = arguments.end(); it != e; ++argIndex, ++it) {
       ESTree::Node *arg = &*it;
 
       if (llvh::isa<ESTree::SpreadElementNode>(arg)) {

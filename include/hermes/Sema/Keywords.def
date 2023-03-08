@@ -30,5 +30,7 @@ HERMES_KEYWORD(Constructor, "constructor")
 HERMES_KEYWORD(Length, "length")
 HERMES_KEYWORD(Prototype, "prototype")
 HERMES_KEYWORD(Undefined, "undefined")
+HERMES_KEYWORD(SHBuiltin, "$SHBuiltin")
+HERMES_KEYWORD(Call, "call")
 
 #undef HERMES_KEYWORD

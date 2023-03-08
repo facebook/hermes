@@ -1174,6 +1174,11 @@ ESTREE_NODE_3_ARGS(
 ESTREE_LAST(Cover)
 
 // ================================================
+// Static Hermes-specific nodes
+
+ESTREE_NODE_0_ARGS(SHBuiltin, Base)
+
+// ================================================
 // FlowChecker generated nodes
 
 ESTREE_NODE_1_ARGS(
