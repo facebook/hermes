@@ -492,8 +492,10 @@ class RenderNode {
   }
 
   reduce(): VirtualEntity[] {
-    const childrenEntities: VirtualEntity[] = (this.children || []).flatMap(
-      (child: RenderNode) => child.reduce(),
+    const childrenEntities: VirtualEntity[] = [];
+    arrayPrototypeForEach_RenderNode(
+      this.children,
+      (child: RenderNode) => childrenEntities.push(...child.reduce()),
     );
     return [new VirtualEntity(this.id, this.components)].concat(
       childrenEntities,
