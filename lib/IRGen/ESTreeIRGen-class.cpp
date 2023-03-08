@@ -96,7 +96,12 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     {
       IRBuilder::SaveRestore saveState{Builder};
       func = Builder.createFunction(
-          consName, Function::DefinitionKind::ES5Function, true);
+          consName,
+          Function::DefinitionKind::ES5Function,
+          true,
+          CustomDirectives{
+              .sourceVisibility = SourceVisibility::Default,
+              .alwaysInline = false});
       Builder.setInsertionBlock(Builder.createBasicBlock(func));
       Builder.createReturnInst(Builder.getLiteralUndefined());
     }

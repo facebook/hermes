@@ -23,9 +23,9 @@ FunctionInfo *SemContext::newFunction(
     FunctionInfo *parentFunction,
     LexicalScope *parentScope,
     bool strict,
-    SourceVisibility sourceVisibility) {
+    CustomDirectives customDirectives) {
   functions_.emplace_back(
-      funcNode, parentFunction, parentScope, strict, sourceVisibility);
+      funcNode, parentFunction, parentScope, strict, customDirectives);
   return &functions_.back();
 }
 

@@ -1521,8 +1521,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   const bool strictMode_{};
   /// The source location of the function.
   SMRange SourceRange{};
-  /// The source visibility of the function.
-  SourceVisibility sourceVisibility_;
+  /// Information on custom directives found in this function.
+  CustomDirectives customDirectives_{};
 
   /// Attributes that have been set on this function.
   Attributes attributes_;
@@ -1552,7 +1552,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore = nullptr);
 
@@ -1677,7 +1677,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// Return the source visibility of the function.
   SourceVisibility getSourceVisibility() const {
-    return sourceVisibility_;
+    return customDirectives_.sourceVisibility;
+  }
+
+  /// \return whether the function should always be attempted to be inlined,
+  /// bypassing the heuristics that normally determine that.
+  bool getAlwaysInline() const {
+    return customDirectives_.alwaysInline;
   }
 
   OptValue<uint32_t> getStatementCount() const {
@@ -1786,7 +1792,7 @@ class NormalFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore = nullptr)
       : Function(
@@ -1795,7 +1801,7 @@ class NormalFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
-            sourceVisibility,
+            customDirectives,
             sourceRange,
             insertBefore) {}
 
@@ -1814,7 +1820,7 @@ class GeneratorFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
@@ -1823,7 +1829,7 @@ class GeneratorFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
-            sourceVisibility,
+            customDirectives,
             sourceRange,
             insertBefore) {}
 
@@ -1851,7 +1857,9 @@ class GeneratorInnerFunction final : public Function {
             strictMode,
             // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
             //  is used in the err stack trace instead of the inner gen fn name.
-            SourceVisibility::HideSource,
+            CustomDirectives{
+                .sourceVisibility = SourceVisibility::HideSource,
+                .alwaysInline = false},
             sourceRange,
             insertBefore) {
     setType(Type::createAnyType());
@@ -1870,7 +1878,7 @@ class AsyncFunction final : public Function {
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
@@ -1879,7 +1887,7 @@ class AsyncFunction final : public Function {
             originalName,
             definitionKind,
             strictMode,
-            sourceVisibility,
+            customDirectives,
             sourceRange,
             insertBefore) {}
 

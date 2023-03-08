@@ -130,7 +130,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       nameHint,
       Function::DefinitionKind::ES6Arrow,
       ESTree::isStrict(AF->strictness),
-      AF->getSemInfo()->sourceVisibility,
+      AF->getSemInfo()->customDirectives,
       AF->getSourceRange());
 
   auto compileFunc = [this,
@@ -187,7 +187,7 @@ Function *ESTreeIRGen::genES5Function(
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
-            functionNode->getSemInfo()->sourceVisibility,
+            functionNode->getSemInfo()->customDirectives,
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr));
 
@@ -287,7 +287,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
-      functionNode->getSemInfo()->sourceVisibility,
+      functionNode->getSemInfo()->customDirectives,
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
@@ -346,7 +346,7 @@ Function *ESTreeIRGen::genAsyncFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
-      functionNode->getSemInfo()->sourceVisibility,
+      functionNode->getSemInfo()->customDirectives,
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
@@ -709,7 +709,10 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       true,
-      SourceVisibility::Sensitive,
+      CustomDirectives{
+          .sourceVisibility = SourceVisibility::Sensitive,
+          .alwaysInline = false,
+      },
       sourceRange);
 
   function->addJSThisParam();

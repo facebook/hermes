@@ -66,7 +66,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -75,7 +75,7 @@ class IRBuilder {
       llvh::StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -87,7 +87,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -99,7 +99,7 @@ class IRBuilder {
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -117,7 +117,7 @@ class IRBuilder {
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{});
 
   /// Create a new ExternalScope with the given depth, which must be negative.

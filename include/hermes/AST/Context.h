@@ -115,6 +115,18 @@ enum class SourceVisibility {
   Sensitive,
 };
 
+/// Custom directives which were specified on a given function.
+struct CustomDirectives {
+  /// Source visibility of the given function.
+  SourceVisibility sourceVisibility{SourceVisibility::Default};
+
+  /// Whether we should _always_ attempt to inline the function,
+  /// regardless of the number of callsites it has.
+  /// It's possible the function can't be inlined if it contains
+  /// code which can't be inlined, but the heuristic won't reject it.
+  bool alwaysInline{false};
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:

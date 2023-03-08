@@ -170,8 +170,8 @@ class FunctionInfo {
   hermes::OptValue<Decl *> argumentsDecl{llvh::None};
   /// True if the function is strict mode.
   bool strict;
-  /// Source visibility of this function.
-  SourceVisibility sourceVisibility = SourceVisibility::Default;
+  /// Custom directives found in this function.
+  CustomDirectives customDirectives{};
   /// True if this function is an arrow function.
   bool const arrow;
   /// False if the parameter list contains any patterns.
@@ -202,11 +202,11 @@ class FunctionInfo {
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,
-      SourceVisibility sourceVisibility)
+      CustomDirectives customDirectives)
       : parentFunction(parentFunction),
         parentScope(parentScope),
         strict(strict),
-        sourceVisibility(sourceVisibility),
+        customDirectives(customDirectives),
         arrow(llvh::isa<ESTree::ArrowFunctionExpressionNode>(funcNode)) {}
 
   /// \return the top-level lexical scope of the function.
@@ -241,7 +241,7 @@ class SemContext {
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,
-      SourceVisibility sourceVisibility);
+      CustomDirectives customDirectives);
   /// \param parentFunction the function in which to put the scope, nullable.
   /// \param parentScope the parent lexical scope, nullable.
   /// \return a new lexical scope.

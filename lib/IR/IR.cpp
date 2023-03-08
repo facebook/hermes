@@ -158,7 +158,7 @@ Function::Function(
     Identifier originalName,
     DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore)
     : Value(kind),
@@ -170,7 +170,7 @@ Function::Function(
       definitionKind_(definitionKind),
       strictMode_(strictMode),
       SourceRange(sourceRange),
-      sourceVisibility_(sourceVisibility),
+      customDirectives_(customDirectives),
       internalName_(parent->deriveUniqueInternalName(originalName)) {
   if (insertBefore) {
     assert(insertBefore != this && "Cannot insert a function before itself!");

@@ -373,6 +373,8 @@ class SemanticResolver {
     /// If a source visibility directive is found, it is stored here, otherwise
     /// the value is SourceVisibility::Default.
     SourceVisibility sourceVisibility = SourceVisibility::Default;
+    /// If an "inline" directive is found, this is true.
+    bool alwaysInline = false;
   };
 
   /// Scan the list of directives in the beginning of a program or function.
@@ -459,7 +461,7 @@ class FunctionContext {
       ESTree::FunctionLikeNode *node,
       FunctionInfo *parentSemInfo,
       bool strict,
-      SourceVisibility sourceVisibility);
+      CustomDirectives customDirectives);
 
   ~FunctionContext();
 

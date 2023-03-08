@@ -182,7 +182,7 @@ void ESTreeIRGen::doIt() {
 
   topLevelFunction = Builder.createTopLevelFunction(
       ESTree::isStrict(Program->strictness),
-      Program->getSemInfo()->sourceVisibility,
+      Program->getSemInfo()->customDirectives,
       Program->getSourceRange());
 
   // Function context for topLevelFunction.

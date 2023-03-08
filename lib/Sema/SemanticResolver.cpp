@@ -73,14 +73,18 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
       node,
       nullptr,
       astContext_.isStrictMode(),
-      SourceVisibility::Default};
+      CustomDirectives{
+          .sourceVisibility = SourceVisibility::Default,
+          .alwaysInline = false}};
   llvh::SaveAndRestore setGlobalContext{globalFunctionContext_, &newFuncCtx};
   FoundDirectives directives = scanDirectives(node->_body);
   if (directives.useStrictNode)
     curFunctionInfo()->strict = true;
   node->strictness = makeStrictness(curFunctionInfo()->strict);
-  if (directives.sourceVisibility > curFunctionInfo()->sourceVisibility)
-    curFunctionInfo()->sourceVisibility = directives.sourceVisibility;
+  if (directives.sourceVisibility >
+      curFunctionInfo()->customDirectives.sourceVisibility)
+    curFunctionInfo()->customDirectives.sourceVisibility =
+        directives.sourceVisibility;
 
   {
     ScopeRAII programScope{*this, node};
@@ -904,7 +908,7 @@ void SemanticResolver::visitFunctionLike(
       node,
       curFunctionInfo(),
       curFunctionInfo()->strict,
-      curFunctionInfo()->sourceVisibility};
+      curFunctionInfo()->customDirectives};
   if (method) {
     newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
   }
@@ -922,8 +926,11 @@ void SemanticResolver::visitFunctionLike(
   if (directives.useStrictNode)
     curFunctionInfo()->strict = true;
   node->strictness = makeStrictness(curFunctionInfo()->strict);
-  if (directives.sourceVisibility > curFunctionInfo()->sourceVisibility)
-    curFunctionInfo()->sourceVisibility = directives.sourceVisibility;
+  if (directives.sourceVisibility >
+      curFunctionInfo()->customDirectives.sourceVisibility)
+    curFunctionInfo()->customDirectives.sourceVisibility =
+        directives.sourceVisibility;
+  curFunctionInfo()->customDirectives.alwaysInline = directives.alwaysInline;
 
   if (id) {
     // Set the expression decl of the id.
@@ -1546,6 +1553,10 @@ auto SemanticResolver::scanDirectives(ESTree::NodeList &body) const
       if (SourceVisibility::Sensitive > directives.sourceVisibility)
         directives.sourceVisibility = SourceVisibility::Sensitive;
     }
+
+    if (directive == kw_.identInline) {
+      directives.alwaysInline = true;
+    }
   }
   return directives;
 }
@@ -1667,7 +1678,7 @@ FunctionContext::FunctionContext(
     ESTree::FunctionLikeNode *node,
     FunctionInfo *parentSemInfo,
     bool strict,
-    SourceVisibility sourceVisibility)
+    CustomDirectives customDirectives)
     : resolver_(resolver),
       prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
@@ -1675,7 +1686,7 @@ FunctionContext::FunctionContext(
           parentSemInfo,
           resolver.curScope_,
           strict,
-          sourceVisibility)),
+          customDirectives)),
       node(node),
       decls(DeclCollector::run(
           node,

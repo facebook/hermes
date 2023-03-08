@@ -23,7 +23,7 @@ NormalFunction *IRBuilder::createFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   // Function must have a name. If the source doesn't provide the function name,
@@ -37,7 +37,7 @@ NormalFunction *IRBuilder::createFunction(
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
@@ -46,7 +46,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -59,7 +59,7 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
@@ -87,7 +87,7 @@ ExternalScope *IRBuilder::createExternalScope(
 
 Function *IRBuilder::createTopLevelFunction(
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
@@ -95,7 +95,7 @@ Function *IRBuilder::createTopLevelFunction(
       "global",
       Function::DefinitionKind::ES5Function,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange);
   M->setTopLevelFunction(F);
   return F;
@@ -105,7 +105,7 @@ NormalFunction *IRBuilder::createFunction(
     llvh::StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   Identifier OrigIden =
@@ -114,7 +114,7 @@ NormalFunction *IRBuilder::createFunction(
       OrigIden,
       definitionKind,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
@@ -123,7 +123,7 @@ AsyncFunction *IRBuilder::createAsyncFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -136,7 +136,7 @@ AsyncFunction *IRBuilder::createAsyncFunction(
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
