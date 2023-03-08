@@ -64,6 +64,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();
+  PM.addMem2Reg();
 
 #ifdef HERMES_RUN_WASM
   if (M.getContext().getUseUnsafeIntrinsics()) {

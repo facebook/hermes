@@ -34,14 +34,6 @@ function outer(a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [a]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %f2(): any
-// CHECK-NEXT:  %3 = BinaryAddInst (:string|number) %0: any, 1: number
-// CHECK-NEXT:  %4 = ReturnInst %3: string|number
-// CHECK-NEXT:function_end
-
-// CHECK:function f2(): any [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [a@outer]: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %0: any, 1: number
+// CHECK-NEXT:  %3 = ReturnInst %2: string|number
 // CHECK-NEXT:function_end
