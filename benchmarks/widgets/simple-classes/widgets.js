@@ -12,6 +12,136 @@
 
 (function() {
 
+function arrayPrototypeMap_number(arr: number[], cb: any): any {
+  'inline';
+  var length: number = arr.length;
+  var result: number[] = Array(length);
+  for (var i: number = 0; i < length; ++i) {
+    var elem: number = arr[i];
+    result[i] = cb(elem);
+  }
+  return result;
+}
+
+function arrayPrototypeMap_Widget(arr: Widget[], cb: any): any {
+  'inline';
+  var length: number = arr.length;
+  var result: Widget[] = Array(length);
+  for (var i: number = 0; i < length; ++i) {
+    var elem: Widget = arr[i];
+    result[i] = cb(elem);
+  }
+  return result;
+}
+
+function arrayPrototypeMap_Component(arr: Component[], cb: any): any {
+  'inline';
+  var length: number = arr.length;
+  var result: Component[] = Array(length);
+  for (var i: number = 0; i < length; ++i) {
+    var elem: Component = arr[i];
+    result[i] = cb(elem);
+  }
+  return result;
+}
+
+function arrayPrototypeMap_VirtualEntity(arr: VirtualEntity[], cb: any): any {
+  'inline';
+  var length: number = arr.length;
+  var result: VirtualEntity[] = Array(length);
+  for (var i: number = 0; i < length; ++i) {
+    var elem: VirtualEntity = arr[i];
+    result[i] = cb(elem);
+  }
+  return result;
+}
+
+function arrayPrototypeFilter_number(arr: number[], cb: any): number[] {
+  'inline';
+  var result: number[] = [];
+  var resultlength: number = 0;
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: number = arr[i];
+    if (cb(elem)) {
+      result[resultlength++] = elem;
+    }
+  }
+  return result;
+}
+
+function arrayPrototypeFilter_Component(arr: Component[], cb: any): Component[] {
+  'inline';
+  var result: Component[] = [];
+  var resultlength: number = 0;
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: Component = arr[i];
+    if (cb(elem)) {
+      result[resultlength++] = elem;
+    }
+  }
+  return result;
+}
+
+function arrayPrototypeIncludes_number(arr: number[], x: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: number = arr[i];
+    if (elem === x)
+      return true;
+  }
+  return false;
+}
+
+function arrayPrototypeIncludes_Component(arr: Component[], x: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: Component = arr[i];
+    if (elem === x)
+      return true;
+  }
+  return false;
+}
+
+function arrayPrototypeForEach_number(arr: number[], cb: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: number = arr[i];
+    cb(elem, i);
+  }
+}
+
+function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: RenderNode = arr[i];
+    cb(elem, i);
+  }
+}
+
+function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: VirtualEntity = arr[i];
+    cb(elem, i);
+  }
+}
+
+function arrayPrototypeForEach_Component(arr: Component[], cb: any) {
+  'inline';
+  var length: number = arr.length;
+  for (var i: number = 0; i < length; ++i) {
+    var elem: Component = arr[i];
+    cb(elem, i);
+  }
+}
+
 // ==> widget.js <==
 
 class Widget {
@@ -91,8 +221,9 @@ class Container extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: NumberComponent = new NumberComponent(13);
-    const children: RenderNode[] = this.children.map(child =>
-      RenderNode_createForChild(ctx, child),
+    const children: RenderNode[] = arrayPrototypeMap_Widget(
+      this.children,
+      child => RenderNode_createForChild(ctx, child),
     );
     return RenderNode_create(ctx, [component], children);
   }
@@ -154,9 +285,9 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  oldChildren.forEach(child => oldChildrenByKey.set(child.key, child));
+  arrayPrototypeForEach_RenderNode(oldChildren, child => oldChildrenByKey.set(child.key, child));
 
-  newChildren.forEach(child => {
+  arrayPrototypeForEach_RenderNode(newChildren, child => {
     const newKey = child.key;
     const oldChild = oldChildrenByKey.get(newKey);
     if (oldChild !== undefined) {
@@ -173,7 +304,7 @@ function mapEntitiesToComponents(
   entities: VirtualEntity[],
 ): any {
   const map: any = new Map();
-  entities.forEach((entity: VirtualEntity) => {
+  arrayPrototypeForEach_VirtualEntity(entities, (entity: VirtualEntity) => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
     if (map.get(key) == undefined) {
@@ -198,21 +329,21 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = oldEntities.map(entity => entity.key);
-  const newEntityIds: number[] = newEntities.map(entity => entity.key);
+  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(oldEntities, entity => entity.key);
+  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(newEntities, entity => entity.key);
 
-  const createdEntities: number[] = newEntityIds.filter(
-    (entityId: number) => !oldEntityIds.includes(entityId),
+  const createdEntities: number[] = arrayPrototypeFilter_number(newEntityIds,
+    (entityId: number) => !arrayPrototypeIncludes_number(oldEntityIds, entityId),
   );
-  const deletedEntities: number[] = oldEntityIds.filter(
-    (entityId: number) => !newEntityIds.includes(entityId),
+  const deletedEntities: number[] = arrayPrototypeFilter_number(oldEntityIds,
+    (entityId: number) => !arrayPrototypeIncludes_number(newEntityIds, entityId),
   );
 
   const oldComponents: any = mapEntitiesToComponents(oldEntities);
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
-  createdEntities.forEach((entityId: number) => {
-    const components = (newComponents.get(entityId) || []).map(
+  arrayPrototypeForEach_number(createdEntities, (entityId: number) => {
+    const components = arrayPrototypeMap_Component(newComponents.get(entityId) || [],
       (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
@@ -226,15 +357,23 @@ function diffTrees(
     const oldComponentsForKey: Component[] = oldComponents.get(key) || [];
     const newComponentsForKey: Component[] = value;
 
-    const deleted = oldComponentsForKey.filter(
-      (it: Component) => !newComponentsForKey.includes(it),
+    const deleted: Component[] = arrayPrototypeFilter_Component(
+      oldComponentsForKey,
+      (it: Component) => !arrayPrototypeIncludes_Component(newComponentsForKey, it),
     );
-    const created = newComponentsForKey.filter(
-      (it: Component) => !oldComponentsForKey.includes(it),
+    const created: Component[] = arrayPrototypeFilter_Component(
+      newComponentsForKey,
+      (it: Component) => !arrayPrototypeIncludes_Component(oldComponentsForKey, it),
     );
 
-    deleted.forEach(it => deletedComponents.push(new ComponentPair(key, it)));
-    created.forEach(it => createdComponents.push(new ComponentPair(key, it)));
+    arrayPrototypeForEach_Component(
+      deleted,
+      (it: Component) => deletedComponents.push(new ComponentPair(key, it)),
+    );
+    arrayPrototypeForEach_Component(
+      created,
+      (it: Component) => createdComponents.push(new ComponentPair(key, it)),
+    );
   });
 
   return new SceneDiff(
