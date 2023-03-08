@@ -653,6 +653,7 @@ def runTest(
                             js_source,
                             "-o",
                             fileToRun,
+                            "-Xenable-tdz",
                         ]
                         if optEnabled:
                             args.append("-O")
