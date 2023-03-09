@@ -12,6 +12,9 @@
 
 (function() {
 
+const mapPrototypeGet: any = Map.prototype.get;
+const mapPrototypeSet: any = Map.prototype.set;
+
 function arrayPrototypeMap_number(arr: number[], cb: any): any {
   'inline';
   var length: number = arr.length;
@@ -285,11 +288,11 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach_RenderNode(oldChildren, child => oldChildrenByKey.set(child.key, child));
+  arrayPrototypeForEach_RenderNode(oldChildren, child => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
 
   arrayPrototypeForEach_RenderNode(newChildren, child => {
     const newKey = child.key;
-    const oldChild = oldChildrenByKey.get(newKey);
+    const oldChild = $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
     if (oldChild !== undefined) {
       outChildren.push(reconcileRenderNode(child, oldChild));
     } else {
@@ -307,11 +310,11 @@ function mapEntitiesToComponents(
   arrayPrototypeForEach_VirtualEntity(entities, (entity: VirtualEntity) => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
-    if (map.get(key) == undefined) {
-      map.set(key, []);
+    if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
+      $SHBuiltin.call(mapPrototypeSet, map, key, []);
     }
 
-    const components: Component[] = map.get(key);
+    const components: Component[] = $SHBuiltin.call(mapPrototypeGet, map, key);
     if (components !== undefined) {
       components.push(...value);
     } else {
@@ -343,18 +346,18 @@ function diffTrees(
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
   arrayPrototypeForEach_number(createdEntities, (entityId: number) => {
-    const components = arrayPrototypeMap_Component(newComponents.get(entityId) || [],
+    const components = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || [],
       (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
   });
 
   newComponents.forEach((value: Component[], key: number) => {
-    if (oldComponents.get(key) == undefined) {
+    if ($SHBuiltin.call(mapPrototypeGet, oldComponents, key) == undefined) {
       return;
     }
 
-    const oldComponentsForKey: Component[] = oldComponents.get(key) || [];
+    const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || [];
     const newComponentsForKey: Component[] = value;
 
     const deleted: Component[] = arrayPrototypeFilter_Component(
