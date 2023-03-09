@@ -145,6 +145,24 @@ function arrayPrototypeForEach_Component(arr: Component[], cb: any) {
   }
 }
 
+function arrayPrototypeConcat_VirtualEntity(
+  arr1: VirtualEntity[],
+  arr2: VirtualEntity[],
+): VirtualEntity[] {
+  var i: number = 0;
+  var length: number = arr1.length;
+  var result: VirtualEntity[] = [];
+  var resultlength: number = 0;
+  for (i = 0; i < length; ++i) {
+    result[resultlength++] = arr1[i];
+  }
+  length = arr2.length;
+  for (i = 0; i < length; ++i) {
+    result[resultlength++] = arr2[i];
+  }
+  return result;
+}
+
 // ==> widget.js <==
 
 class Widget {
@@ -500,7 +518,8 @@ class RenderNode {
       this.children,
       (child: RenderNode) => childrenEntities.push(...child.reduce()),
     );
-    return [new VirtualEntity(this.id, this.components)].concat(
+    return arrayPrototypeConcat_VirtualEntity(
+      [new VirtualEntity(this.id, this.components)],
       childrenEntities,
     );
   }

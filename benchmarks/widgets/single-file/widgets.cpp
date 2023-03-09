@@ -53,6 +53,17 @@ __attribute__((noinline)) void arrayForEach(
     cb(in->at(i));
 }
 
+template <typename T>
+__attribute__((noinline)) std::vector<T>
+    *arrayConcat(std::vector<T> *arr1, std::vector<T> *arr2) {
+  auto *result = new std::vector<T>();
+  for (double i = 0, e = arr1->size(); i < e; ++i)
+    result->push_back(arr1->at(i));
+  for (double i = 0, e = arr2->size(); i < e; ++i)
+    result->push_back(arr2->at(i));
+  return result;
+}
+
 class Component {
   virtual void rtti() {}
 };
@@ -134,12 +145,13 @@ class RenderNode {
         children(children ? *children : new std::vector<RenderNode *>()) {}
 
   std::vector<VirtualEntity *> *reduce() {
-    auto *res = new std::vector<VirtualEntity *>();
-    res->push_back(new VirtualEntity{id, components});
+    auto *flat = new std::vector<VirtualEntity *>();
     for (auto *child : *children)
       for (auto *v : *child->reduce())
-        res->push_back(v);
-    return res;
+        flat->push_back(v);
+    return arrayConcat(
+        new std::vector<VirtualEntity *>{new VirtualEntity{id, components}},
+        flat);
   }
 
   static RenderNode *create(
