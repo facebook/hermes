@@ -335,8 +335,12 @@ SHERMES_EXPORT void _sh_ljs_create_environment(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level);
 
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_load_from_env(SHLegacyValue env, uint32_t index);
+/// Load the value at slot \p index from the given Environment \p env.
+static inline SHLegacyValue _sh_ljs_load_from_env(
+    SHLegacyValue env,
+    uint32_t index) {
+  return ((SHEnvironment *)_sh_ljs_get_pointer(env))->slots[index];
+}
 
 SHERMES_EXPORT void _sh_ljs_store_to_env(
     SHRuntime *shr,

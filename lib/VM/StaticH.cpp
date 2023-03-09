@@ -465,12 +465,6 @@ _sh_ljs_get_env(SHRuntime *shr, SHLegacyValue *frame, uint32_t level) {
   return HermesValue::encodeObjectValue(curEnv);
 }
 
-extern "C" SHLegacyValue _sh_ljs_load_from_env(
-    SHLegacyValue env,
-    uint32_t index) {
-  return vmcast<Environment>(HermesValue::fromRaw(env.raw))->slot(index);
-}
-
 extern "C" void _sh_ljs_store_to_env(
     SHRuntime *shr,
     SHLegacyValue env,

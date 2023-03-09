@@ -103,6 +103,17 @@ class Environment final
   const GCHermesValue *getSlots() const {
     return getTrailingObjects<GCHermesValue>();
   }
+
+  /// Dummy function for static asserts that may need private fields.
+  static inline void staticAsserts() {
+    static_assert(sizeof(Environment) == sizeof(SHEnvironment));
+    static_assert(
+        offsetof(Environment, parentEnvironment_) ==
+        offsetof(SHEnvironment, parentEnvironment));
+    static_assert(
+        offsetof(Environment, size_) == offsetof(SHEnvironment, size));
+    llvm_unreachable("staticAsserts must never be called.");
+  }
 };
 
 struct CallableVTable : public ObjectVTable {

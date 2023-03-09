@@ -9,6 +9,7 @@
 #define HERMES_SH_MIRROR_H
 
 #include "hermes/VM/sh_legacy_value.h"
+#include "hermes/VM/sh_runtime.h"
 
 #ifdef HERMESVM_COMPRESSED_POINTERS
 typedef uint32_t SHCompressedPointerRawType;
@@ -52,5 +53,14 @@ typedef struct SHJSObjectAndDirectProps {
   SHJSObject base;
   SHGCSmallHermesValue directProps[HERMESVM_DIRECT_PROPERTY_SLOTS];
 } SHJSObjectAndDirectProps;
+
+/// Struct mirroring the layout of Environment.
+typedef struct SHEnvironment {
+  SHGCCell base;
+  SHCompressedPointer parentEnvironment;
+  uint32_t size;
+
+  SHLegacyValue slots[0];
+} SHEnvironment;
 
 #endif
