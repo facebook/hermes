@@ -290,7 +290,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
   MutableHandle<> returnValue{runtime_};
   switch (lexer_.getCurToken()->getKind()) {
     case JSONTokenKind::String:
-      returnValue = lexer_.getCurToken()->getString().getHermesValue();
+      returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
       break;
     case JSONTokenKind::Number:
       returnValue =
@@ -392,14 +392,17 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
       "Wrong entrance to parseObject");
   auto object = runtime_.makeHandle(JSObject::create(runtime_));
 
-  if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+  // If the lexer encounters a string in this context, it should treat it as a
+  // key string, which means it will store the string as a symbol.
+  if (LLVM_UNLIKELY(
+          lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
     return object.getHermesValue();
   }
 
-  MutableHandle<StringPrimitive> key{runtime_};
+  MutableHandle<SymbolID> key{runtime_};
   GCScope gcScope{runtime_};
   auto marker = gcScope.createMarker();
   for (;;) {
@@ -409,7 +412,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
             lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
       return lexer_.error("Expect a string key in JSON object");
     }
-    key = lexer_.getCurToken()->getString().get();
+    key = lexer_.getCurToken()->getStrAsSymbol().get();
 
     if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -436,7 +439,8 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
         runtime_.makeHandle(*parRes));
 
     if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
-      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+      if (LLVM_UNLIKELY(
+              lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       continue;
