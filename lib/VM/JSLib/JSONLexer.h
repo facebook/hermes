@@ -138,6 +138,15 @@ class JSONLexer {
     return error(msg.concat(UTF16Ref(&ch, 1)));
   }
 
+  /// Raise a JSON parse unexpected character error.
+  LLVM_NODISCARD ExecutionStatus errorUnexpectedChar() {
+    if (token_.getKind() == JSONTokenKind::Eof) {
+      return error("Unexpected end of input");
+    }
+    return errorWithChar(
+        u"Unexpected character: ", getCurToken()->getFirstChar());
+  }
+
  private:
   /// Parse a JSONNumber.
   LLVM_NODISCARD ExecutionStatus scanNumber();

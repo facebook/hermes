@@ -269,8 +269,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
 
   // Make sure the next token must be EOF.
   if (LLVM_UNLIKELY(lexer_.getCurToken()->getKind() != JSONTokenKind::Eof)) {
-    return lexer_.errorWithChar(
-        "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
+    return lexer_.errorUnexpectedChar();
   }
 
   if (reviver_.get()) {
@@ -324,11 +323,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
       break;
 
     default:
-      if (lexer_.getCurToken()->getKind() == JSONTokenKind::Eof) {
-        return lexer_.error("Unexpected end of input");
-      }
-      return lexer_.errorWithChar(
-          "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
+      return lexer_.errorUnexpectedChar();
   }
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -380,7 +375,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
       } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RSquare) {
         break;
       } else {
-        return lexer_.error("Expect ']'");
+        return lexer_.errorUnexpectedChar();
       }
     }
     assert(
@@ -448,7 +443,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
     } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
       break;
     } else {
-      return lexer_.error("Expect '}'");
+      return lexer_.errorUnexpectedChar();
     }
   }
   assert(
