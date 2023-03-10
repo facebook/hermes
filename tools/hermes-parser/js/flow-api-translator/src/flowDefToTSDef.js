@@ -1498,13 +1498,6 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           };
         }
 
-        case '$Subtype':
-        case '$Supertype': {
-          // These types are deprecated and shouldn't be used in any modern code
-          // so let's not even bother trying to figure it out
-          throw unsupportedTranslationError(node, fullTypeName);
-        }
-
         case '$Values': {
           // `$Values<T>` => `T[keyof T]`
           const transformedType = assertHasExactlyNTypeParameters(1)[0];
