@@ -22,7 +22,7 @@ exports.bar = bar;
 
 // CHKOPT:Bytecode File Information:
 // CHKOPT-NEXT:  Bytecode version number: 94
-// CHKOPT-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHKOPT-NEXT:  Source hash: {{.*}}
 // CHKOPT-NEXT:  Function count: 7
 // CHKOPT-NEXT:  String count: 7
 // CHKOPT-NEXT:  BigInt count: 0
@@ -159,7 +159,7 @@ exports.bar = bar;
 
 // CHKDBG:Bytecode File Information:
 // CHKDBG-NEXT:  Bytecode version number: 94
-// CHKDBG-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHKDBG-NEXT:  Source hash: {{.*}}
 // CHKDBG-NEXT:  Function count: 7
 // CHKDBG-NEXT:  String count: 7
 // CHKDBG-NEXT:  BigInt count: 0

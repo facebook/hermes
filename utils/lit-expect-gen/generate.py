@@ -107,6 +107,14 @@ class CompilerOutput:
             if self.lines and self.lines[-1]:
                 self.lines.append("")
             return
+        src_hash_regex = r"(^\s*Source hash:) (\d|[a-z]){40}$"
+        hash_match = re.search(src_hash_regex, line)
+        if hash_match is not None:
+            source_hash_wildcard = (
+                f"// {self.check_prefix}-NEXT:" + hash_match.group(1) + " {{.*}}"
+            )
+            self.lines.append(source_hash_wildcard)
+            return
 
         if self.emit_check_next:
             self.lines.append(f"// {self.check_prefix}-NEXT:")

@@ -9,7 +9,7 @@
 
 // CHK-BCG0:Bytecode File Information:
 // CHK-BCG0-NEXT:  Bytecode version number: 94
-// CHK-BCG0-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHK-BCG0-NEXT:  Source hash: {{.*}}
 // CHK-BCG0-NEXT:  Function count: 18
 // CHK-BCG0-NEXT:  String count: 19
 // CHK-BCG0-NEXT:  BigInt count: 0

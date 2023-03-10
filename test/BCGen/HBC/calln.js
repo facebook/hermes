@@ -111,7 +111,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Bytecode File Information:
 // BCGEN-NEXT:  Bytecode version number: 94
-// BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// BCGEN-NEXT:  Source hash: {{.*}}
 // BCGEN-NEXT:  Function count: 6
 // BCGEN-NEXT:  String count: 6
 // BCGEN-NEXT:  BigInt count: 0

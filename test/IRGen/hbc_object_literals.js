@@ -118,7 +118,7 @@ var obj4 = {
 
 // BCGEN:Bytecode File Information:
 // BCGEN-NEXT:  Bytecode version number: 94
-// BCGEN-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// BCGEN-NEXT:  Source hash: {{.*}}
 // BCGEN-NEXT:  Function count: 2
 // BCGEN-NEXT:  String count: 24
 // BCGEN-NEXT:  BigInt count: 0

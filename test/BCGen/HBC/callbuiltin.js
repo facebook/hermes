@@ -93,7 +93,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Bytecode File Information:
 // CHKBC-NEXT:  Bytecode version number: 94
-// CHKBC-NEXT:  Source hash: 0000000000000000000000000000000000000000
+// CHKBC-NEXT:  Source hash: {{.*}}
 // CHKBC-NEXT:  Function count: 4
 // CHKBC-NEXT:  String count: 13
 // CHKBC-NEXT:  BigInt count: 0
