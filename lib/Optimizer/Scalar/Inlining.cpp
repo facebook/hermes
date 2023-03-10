@@ -23,7 +23,10 @@ STATISTIC(NumInlinedCalls, "Number of inlined calls");
 namespace hermes {
 
 /// Generate a list of basic blocks in simple depth-first-search order.
-/// Unreachable blocks are not included since we don't want to inline them.
+///
+/// Unreachable blocks are included.
+/// We have to inline unreachable blocks because they may be used by PhiInst
+/// which are reachable through another block.
 static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
   llvh::SmallVector<BasicBlock *, 4> order{};
   llvh::SmallVector<BasicBlock *, 4> stack{};
@@ -40,6 +43,14 @@ static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
 
     for (auto *succ : successors(BB))
       stack.push_back(succ);
+  }
+
+  // Add unreachable blocks.
+  for (BasicBlock &BB : *F) {
+    if (visited.insert(&BB).second) {
+      // Not visited before.
+      order.push_back(&BB);
+    }
   }
 
   return order;
