@@ -1758,3 +1758,14 @@ extern "C" void _sh_prstore_indirect(
   JSObject::setNamedSlotValueIndirectUnsafe(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
+
+extern "C" void _sh_store_parent(
+    SHRuntime *shr,
+    const SHLegacyValue *storedValue,
+    const SHLegacyValue *object) {
+  Runtime &runtime = getRuntime(shr);
+  Handle<JSObject> objectHandle = Handle<JSObject>::vmcast(toPHV(object));
+  Handle<JSObject> parentHandle = Handle<JSObject>::vmcast(toPHV(storedValue));
+  JSObject::unsafeSetParentInternal(
+      objectHandle.get(), runtime, parentHandle.get());
+}

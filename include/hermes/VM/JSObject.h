@@ -504,6 +504,14 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
+  /// Sets the internal prototype property on a typed object.
+  /// Used only for typed code, bypasses checks for Proxy, isExtensible, and
+  /// cycle checking.
+  static void
+  unsafeSetParentInternal(JSObject *self, Runtime &runtime, JSObject *parent) {
+    self->parent_.set(runtime, parent, runtime.getHeap());
+  }
+
   /// Return the value of an internal property slot. Use getDirectSlotValue if
   /// \p index is known to be in a direct property slot at compile time.
   static SmallHermesValue
