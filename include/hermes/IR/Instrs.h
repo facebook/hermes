@@ -199,7 +199,7 @@ class AddEmptyStringInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createString();
   }
 
@@ -235,7 +235,7 @@ class AsNumberInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createNumber();
   }
 
@@ -301,7 +301,7 @@ class AsInt32Inst : public SingleOperandInst {
   explicit AsInt32Inst(const AsInt32Inst *src, llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createInt32();
   }
 
@@ -690,7 +690,7 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
       llvh::ArrayRef<Value *> operands)
       : BaseCreateLexicalChildInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createClosure();
   }
 
@@ -898,7 +898,7 @@ class GetBuiltinClosureInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createClosure();
   }
 
@@ -1039,7 +1039,7 @@ class HBCGetGlobalObjectInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1653,7 +1653,7 @@ class AllocObjectInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1705,7 +1705,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1765,7 +1765,7 @@ class AllocObjectLiteralInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1836,7 +1836,7 @@ class GetTemplateObjectInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1943,7 +1943,7 @@ class AllocArrayInst : public Instruction {
     return getFirstNonLiteralIndex() == -1;
   }
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -1979,7 +1979,7 @@ class CreateArgumentsInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -2026,7 +2026,7 @@ class CreateRegExpInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createRegExp();
   }
 
@@ -2680,7 +2680,7 @@ class CoerceThisNSInst : public SingleOperandInst {
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -3853,7 +3853,7 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
       llvh::ArrayRef<Value *> operands)
       : BaseCreateLexicalChildInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -3882,7 +3882,7 @@ class HBCCreateGeneratorInst : public BaseCreateLexicalChildInst {
       llvh::ArrayRef<Value *> operands)
       : BaseCreateLexicalChildInst(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 
@@ -4240,7 +4240,7 @@ class LoadParentInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createObject();
   }
 

@@ -1088,7 +1088,7 @@ class Instruction
   /// instructions themselves have an inherent type.
   ///
   /// \return a Type if the instruction has an inherent type, None otherwise.
-  static OptValue<Type> getInherentTypeImpl() {
+  static llvh::Optional<Type> getInherentTypeImpl() {
     return llvh::None;
   }
 
@@ -1113,7 +1113,7 @@ class Instruction
   /// \c getInherentTypeImpl.
   ///
   /// \return a Type if the instruction has an inherent type, None otherwise.
-  OptValue<Type> getInherentType();
+  llvh::Optional<Type> getInherentType();
 
   /// \return whether this instruction has an output value.
   bool hasOutput();

@@ -480,7 +480,7 @@ SideEffectKind Instruction::getDerivedSideEffect() {
   }
 }
 
-OptValue<Type> Instruction::getInherentType() {
+llvh::Optional<Type> Instruction::getInherentType() {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");

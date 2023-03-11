@@ -1028,7 +1028,7 @@ class TypeInferenceImpl {
     for (auto &bbit : *f) {
       for (auto &it : bbit) {
         Instruction *inst = &it;
-        OptValue<Type> inherent = inst->getInherentType();
+        llvh::Optional<Type> inherent = inst->getInherentType();
         prePassTypes_.try_emplace(inst, inst->getType());
         // Clear to the inherent type if possible.
         inst->setType(inherent ? *inherent : Type::createNoType());
