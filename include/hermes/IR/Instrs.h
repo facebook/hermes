@@ -482,7 +482,9 @@ class LoadStackInst : public SingleOperandInst {
 
  public:
   explicit LoadStackInst(AllocStackInst *alloc)
-      : SingleOperandInst(ValueKind::LoadStackInstKind, alloc) {}
+      : SingleOperandInst(ValueKind::LoadStackInstKind, alloc) {
+    setType(alloc->getType());
+  }
   explicit LoadStackInst(
       const LoadStackInst *src,
       llvh::ArrayRef<Value *> operands)
