@@ -5,13 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// This optimization promotes stack allocations into virtual registers.
+/// The algorithm is based on:
+///
+/// Sreedhar and Gao. A linear time algorithm for placing phi-nodes. POPL '95.
+//===----------------------------------------------------------------------===//
+
 #define DEBUG_TYPE "mem2reg"
 
-#include "hermes/Optimizer/Scalar/Mem2Reg.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -746,7 +755,7 @@ static void promoteAllocStackToSSA(
   LLVM_DEBUG(llvh::dbgs() << " Finished placing Phis \n");
 }
 
-bool Mem2Reg::runOnFunction(Function *F) {
+static bool mem2reg(Function *F) {
   bool changed = false;
   DominanceInfo D(F);
 
@@ -789,6 +798,15 @@ bool Mem2Reg::runOnFunction(Function *F) {
 }
 
 Pass *hermes::createMem2Reg() {
+  class Mem2Reg : public FunctionPass {
+   public:
+    explicit Mem2Reg() : hermes::FunctionPass("Mem2Reg") {}
+    ~Mem2Reg() override = default;
+
+    bool runOnFunction(Function *F) override {
+      return mem2reg(F);
+    }
+  };
   return new Mem2Reg();
 }
 
