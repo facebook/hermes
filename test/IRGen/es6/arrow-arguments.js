@@ -75,13 +75,13 @@ function bar() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, ?anon_2_arguments: any, arrow1: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, ?anon_2_arguments: any, arrow1: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst %0: object, [?anon_2_arguments]: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [arrow1]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %arrow1(): any
@@ -125,13 +125,13 @@ function bar() {
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, ?anon_2_arguments: any, arrow3: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, ?anon_2_arguments: any, arrow3: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: any, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst %0: object, [?anon_2_arguments]: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [arrow3]: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [?anon_2_arguments]: any

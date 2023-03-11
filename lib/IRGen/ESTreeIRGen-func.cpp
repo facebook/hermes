@@ -403,6 +403,8 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   // "new.target".
   curFunction()->capturedNewTarget =
       Builder.createVariable(scope, genAnonymousLabelName("new.target"));
+  curFunction()->capturedNewTarget->setType(
+      curFunction()->function->getNewTargetParam()->getType());
   emitStore(
       Builder,
       Builder.createGetNewTargetInst(

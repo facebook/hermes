@@ -14,13 +14,13 @@ var func2 = () => { return 11; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = DeclareGlobalVarInst "func1": string
 // CHECK-NEXT:  %6 = DeclareGlobalVarInst "func2": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_ret: any

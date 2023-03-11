@@ -61,8 +61,8 @@ function func4() {
 // CHECK:function func1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %1 = ReturnInst %0: undefined|closure
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -75,14 +75,14 @@ function func4() {
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) [a]: any
 // CHECK-NEXT:  %3 = CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %5 = ReturnInst %4: any
+// CHECK-NEXT:  %4 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %5 = ReturnInst %4: undefined|closure
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %8 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: any, undefined: undefined
+// CHECK-NEXT:  %8 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: undefined|closure, undefined: undefined
 // CHECK-NEXT:  %10 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
@@ -90,19 +90,19 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func3(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, innerFunction: any, innerArrow1: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, innerFunction: any, innerArrow1: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow1]: any
 // CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %innerFunction(): any
 // CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [innerFunction]: any
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %9 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %10 = BinaryStrictlyNotEqualInst (:any) %9: any, undefined: undefined
+// CHECK-NEXT:  %9 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %10 = BinaryStrictlyNotEqualInst (:any) %9: undefined|closure, undefined: undefined
 // CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %10: any
 // CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %innerArrow1(): any
 // CHECK-NEXT:  %13 = StoreFrameInst %12: closure, [innerArrow1]: any
@@ -119,8 +119,8 @@ function func4() {
 // CHECK:function func4(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "prototype": string
+// CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: undefined|closure, "prototype": string
 // CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
@@ -129,8 +129,8 @@ function func4() {
 // CHECK:function innerFunction(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %1 = ReturnInst %0: undefined|closure
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -140,8 +140,8 @@ function func4() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [innerArrow2]: any
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [?anon_1_new.target@func3]: any
-// CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: any, undefined: undefined
+// CHECK-NEXT:  %2 = LoadFrameInst (:undefined|closure) [?anon_1_new.target@func3]: undefined|closure
+// CHECK-NEXT:  %3 = BinaryStrictlyNotEqualInst (:any) %2: undefined|closure, undefined: undefined
 // CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %innerArrow2(): any
 // CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [innerArrow2]: any
@@ -155,8 +155,8 @@ function func4() {
 // CHECK:arrow innerArrow2(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [?anon_1_new.target@func3]: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:  %0 = LoadFrameInst (:undefined|closure) [?anon_1_new.target@func3]: undefined|closure
+// CHECK-NEXT:  %1 = ReturnInst %0: undefined|closure
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

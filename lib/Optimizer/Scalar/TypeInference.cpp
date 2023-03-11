@@ -810,7 +810,7 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferGetNewTargetInst(GetNewTargetInst *inst) {
-    return Type::createAnyType();
+    return inst->getOperand(GetNewTargetInst::GetNewTargetParamIdx)->getType();
   }
   Type inferThrowIfEmptyInst(ThrowIfEmptyInst *inst) {
     Type type = inst->getCheckedValue()->getType();

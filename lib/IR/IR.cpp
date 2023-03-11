@@ -152,6 +152,22 @@ ExternalScope::ExternalScope(Function *function, int32_t depth)
   function->addExternalScope(this);
 }
 
+/// Determine the type of a function's \c new.target, based on the function's
+/// \c DefinitionKind.
+static Type functionNewTargetType(Function::DefinitionKind defKind) {
+  switch (defKind) {
+    case Function::DefinitionKind::ES5Function:
+      return Type::unionTy(Type::createClosure(), Type::createUndefined());
+    case Function::DefinitionKind::ES6Constructor:
+      return Type::createClosure();
+    case Function::DefinitionKind::ES6Arrow:
+      // Arrow functions never access their own new.target.
+      return Type::createNoType();
+    case Function::DefinitionKind::ES6Method:
+      return Type::createUndefined();
+  }
+}
+
 Function::Function(
     ValueKind kind,
     Module *parent,
@@ -172,6 +188,9 @@ Function::Function(
       SourceRange(sourceRange),
       customDirectives_(customDirectives),
       internalName_(parent->deriveUniqueInternalName(originalName)) {
+  // Determine the type of new.target.
+  newTargetParam_.setType(functionNewTargetType(definitionKind_));
+
   if (insertBefore) {
     assert(insertBefore != this && "Cannot insert a function before itself!");
     assert(

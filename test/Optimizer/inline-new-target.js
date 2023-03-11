@@ -34,19 +34,19 @@ function outer2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %outer(): any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %outer(): undefined|closure
 // CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "outer": string
 // CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %outer2(): object
 // CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "outer2": string
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function outer(a: any, b: any): any
+// CHECK:function outer(a: any, b: any): undefined|closure
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %f1(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %f1(): any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = ReturnInst %1: any
+// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %f1(): undefined|closure
+// CHECK-NEXT:  %1 = CallInst (:undefined|closure) %0: closure, %f1(): undefined|closure, empty: any, undefined: undefined
+// CHECK-NEXT:  %2 = ReturnInst %1: undefined|closure
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): object
@@ -58,11 +58,11 @@ function outer2(){
 // CHECK-NEXT:  %3 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
-// CHECK:function f1(): any
+// CHECK:function f1(): undefined|closure
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %1 = ReturnInst %0: any
+// CHECK-NEXT:  %0 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %1 = ReturnInst %0: undefined|closure
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined [allCallsitesKnownInStrictMode]

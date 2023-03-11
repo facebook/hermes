@@ -41,7 +41,7 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %1 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: undefined|closure
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

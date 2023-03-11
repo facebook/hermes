@@ -26,13 +26,13 @@ function foo(x = () => this) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, x: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %7 = BinaryStrictlyNotEqualInst (:any) %6: any, undefined: undefined

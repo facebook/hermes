@@ -42,13 +42,13 @@ function outer2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, innerArrow1: any, innerArrow2: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, innerArrow1: any, innerArrow2: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow1]: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [innerArrow2]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %innerArrow1(): any
@@ -59,13 +59,13 @@ function outer2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer2(): any
-// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: any, inner3: any, innerArrow4: any]
+// CHECK-NEXT:frame = [?anon_0_this: any, ?anon_1_new.target: undefined|closure, inner3: any, innerArrow4: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
-// CHECK-NEXT:  %3 = GetNewTargetInst (:any) %new.target: any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [?anon_1_new.target]: any
+// CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow4]: any
 // CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %inner3(): any
 // CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [inner3]: any

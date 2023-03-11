@@ -2741,6 +2741,7 @@ class GetNewTargetInst : public Instruction {
   explicit GetNewTargetInst(Value *param)
       : Instruction(ValueKind::GetNewTargetInstKind) {
     pushOperand(param);
+    setType(param->getType());
   }
   explicit GetNewTargetInst(
       const GetNewTargetInst *src,

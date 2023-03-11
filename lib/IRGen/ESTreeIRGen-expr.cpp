@@ -1867,18 +1867,22 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
   // Recognize "new.target"
-  if (cast<ESTree::IdentifierNode>(MP->_meta)->_name->str() == "new") {
-    if (cast<ESTree::IdentifierNode>(MP->_property)->_name->str() == "target") {
+  if (cast<ESTree::IdentifierNode>(MP->_meta)->_name == kw_.identNew) {
+    if (cast<ESTree::IdentifierNode>(MP->_property)->_name == kw_.identTarget) {
       Value *value;
 
-      if (curFunction()->function->getDefinitionKind() ==
-              Function::DefinitionKind::ES6Arrow ||
-          curFunction()->function->getDefinitionKind() ==
-              Function::DefinitionKind::ES6Method) {
-        value = curFunction()->capturedNewTarget;
-      } else {
-        value = Builder.createGetNewTargetInst(
-            curFunction()->function->getNewTargetParam());
+      switch (curFunction()->function->getDefinitionKind()) {
+        case Function::DefinitionKind::ES5Function:
+        case Function::DefinitionKind::ES6Constructor:
+          value = Builder.createGetNewTargetInst(
+              curFunction()->function->getNewTargetParam());
+          break;
+        case Function::DefinitionKind::ES6Arrow:
+          value = curFunction()->capturedNewTarget;
+          break;
+        case Function::DefinitionKind::ES6Method:
+          value = Builder.getLiteralUndefined();
+          break;
       }
 
       // If it is a variable, we must issue a load.
