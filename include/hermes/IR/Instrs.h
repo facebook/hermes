@@ -558,7 +558,9 @@ class LoadFrameInst : public SingleOperandInst {
 
  public:
   explicit LoadFrameInst(Variable *alloc)
-      : SingleOperandInst(ValueKind::LoadFrameInstKind, alloc) {}
+      : SingleOperandInst(ValueKind::LoadFrameInstKind, alloc) {
+    setType(alloc->getType());
+  }
   explicit LoadFrameInst(
       const LoadFrameInst *src,
       llvh::ArrayRef<Value *> operands)
