@@ -727,7 +727,6 @@ void ESTreeIRGen::emitRestElement(
   // newValueBlock:
   Builder.setInsertionBlock(newValueBlock);
   auto *nVal = Builder.createLoadStackInst(n);
-  nVal->setType(Type::createNumber());
   // A[n] = stepValue;
   // Unfortunately this can throw because our arrays can have limited range.
   // The spec doesn't specify what to do in this case, but the reasonable thing

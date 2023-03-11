@@ -321,7 +321,9 @@ void Verifier::visitHBCStoreToEnvironmentInst(
 }
 void Verifier::visitHBCLoadFromEnvironmentInst(
     const HBCLoadFromEnvironmentInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(
+      Inst.getType() == Inst.getResolvedName()->getType(),
+      "HBCLoadFromEnvironment type must be the same as the variable type");
 }
 void Verifier::visitHBCResolveEnvironment(const HBCResolveEnvironment &Inst) {
   // Nothing to verify at this point.
@@ -425,11 +427,15 @@ void Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
 }
 
 void Verifier::visitLoadFrameInst(const LoadFrameInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(
+      Inst.getType() == Inst.getLoadVariable()->getType(),
+      "LoadFrameInst type must be the same as the variable type");
 }
 
 void Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(
+      Inst.getType() == Inst.getPtr()->getType(),
+      "LoadStackInst type must be the same as the AllocStackInst type");
 }
 
 void Verifier::visitBaseCreateCallableInst(const BaseCreateCallableInst &Inst) {
