@@ -876,12 +876,12 @@ void Type::print(llvh::raw_ostream &OS) const {
     OS << "notype";
     return;
   }
-  if (isAnyType()) {
-    OS << "any";
+  if (isAnyOrEmptyType()) {
+    OS << "any|empty";
     return;
   }
-  if (isNonEmptyType()) {
-    OS << "nonempty";
+  if (isAnyType()) {
+    OS << "any";
     return;
   }
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {

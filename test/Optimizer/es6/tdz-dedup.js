@@ -44,18 +44,18 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_store(p: any): any
-// CHECK-NEXT:frame = [p: any, x: any]
+// CHECK-NEXT:frame = [p: any, x: any|empty]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHECK-NEXT:  %2 = StoreFrameInst empty: empty, [x]: any
-// CHECK-NEXT:  %3 = StoreFrameInst 10: number, [x]: any
+// CHECK-NEXT:  %2 = StoreFrameInst empty: empty, [x]: any|empty
+// CHECK-NEXT:  %3 = StoreFrameInst 10: number, [x]: any|empty
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [p]: any
 // CHECK-NEXT:  %5 = CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:nonempty) %6: any
-// CHECK-NEXT:  %8 = ReturnInst %7: nonempty
+// CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
@@ -67,12 +67,12 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check(): any
-// CHECK-NEXT:frame = [inner: any, x: any]
+// CHECK-NEXT:frame = [inner: any, x: any|empty]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %inner(): any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [inner]: any
-// CHECK-NEXT:  %3 = StoreFrameInst 0: number, [x]: any
+// CHECK-NEXT:  %3 = StoreFrameInst 0: number, [x]: any|empty
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [inner]: any
 // CHECK-NEXT:  %5 = ReturnInst %4: any
 // CHECK-NEXT:%BB1:
@@ -84,28 +84,28 @@ function check_after_check() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:nonempty) %2: any
-// CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: nonempty
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:nonempty) %5: any
-// CHECK-NEXT:  %7 = StoreFrameInst %4: any, [x@check_after_check]: any
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
+// CHECK-NEXT:  %4 = UnaryIncInst (:any) %3: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) %5: any|empty
+// CHECK-NEXT:  %7 = StoreFrameInst %4: any, [x@check_after_check]: any|empty
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [p]: any
 // CHECK-NEXT:  %9 = CondBranchInst %8: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHECK-NEXT:  %11 = ThrowIfEmptyInst (:nonempty) %10: any
-// CHECK-NEXT:  %12 = UnaryIncInst (:any) %11: nonempty
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHECK-NEXT:  %14 = ThrowIfEmptyInst (:nonempty) %13: any
-// CHECK-NEXT:  %15 = StoreFrameInst %12: any, [x@check_after_check]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHECK-NEXT:  %11 = ThrowIfEmptyInst (:any) %10: any|empty
+// CHECK-NEXT:  %12 = UnaryIncInst (:any) %11: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHECK-NEXT:  %14 = ThrowIfEmptyInst (:any) %13: any|empty
+// CHECK-NEXT:  %15 = StoreFrameInst %12: any, [x@check_after_check]: any|empty
 // CHECK-NEXT:  %16 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %17 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %18 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHECK-NEXT:  %19 = ThrowIfEmptyInst (:nonempty) %18: any
-// CHECK-NEXT:  %20 = ReturnInst %19: nonempty
+// CHECK-NEXT:  %18 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHECK-NEXT:  %19 = ThrowIfEmptyInst (:any) %18: any|empty
+// CHECK-NEXT:  %20 = ReturnInst %19: any
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %21 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -148,39 +148,39 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check(): undefined|closure
-// CHKOPT-NEXT:frame = [inner: closure, x: any]
+// CHKOPT-NEXT:frame = [inner: closure, x: any|empty]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
-// CHKOPT-NEXT:  %1 = CreateFunctionInst (:closure) %inner(): nonempty
+// CHKOPT-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
+// CHKOPT-NEXT:  %1 = CreateFunctionInst (:closure) %inner(): any
 // CHKOPT-NEXT:  %2 = StoreFrameInst %1: closure, [inner]: closure
-// CHKOPT-NEXT:  %3 = StoreFrameInst 0: number, [x]: any
+// CHKOPT-NEXT:  %3 = StoreFrameInst 0: number, [x]: any|empty
 // CHKOPT-NEXT:  %4 = LoadFrameInst (:closure) [inner]: closure
 // CHKOPT-NEXT:  %5 = ReturnInst %4: closure
 // CHKOPT-NEXT:%BB1:
 // CHKOPT-NEXT:  %6 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end
 
-// CHKOPT:function inner(p: any): nonempty
+// CHKOPT:function inner(p: any): any
 // CHKOPT-NEXT:frame = [p: any]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHKOPT-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHKOPT-NEXT:  %2 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHKOPT-NEXT:  %3 = ThrowIfEmptyInst (:nonempty) %2: any
-// CHKOPT-NEXT:  %4 = UnaryIncInst (:number|bigint) %3: nonempty
-// CHKOPT-NEXT:  %5 = StoreFrameInst %4: number|bigint, [x@check_after_check]: any
+// CHKOPT-NEXT:  %2 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
+// CHKOPT-NEXT:  %4 = UnaryIncInst (:number|bigint) %3: any
+// CHKOPT-NEXT:  %5 = StoreFrameInst %4: number|bigint, [x@check_after_check]: any|empty
 // CHKOPT-NEXT:  %6 = LoadFrameInst (:any) [p]: any
 // CHKOPT-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %8 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHKOPT-NEXT:  %9 = UnaryIncInst (:number|bigint) %8: any
-// CHKOPT-NEXT:  %10 = StoreFrameInst %9: number|bigint, [x@check_after_check]: any
+// CHKOPT-NEXT:  %8 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %9 = UnaryIncInst (:number|bigint) %8: any|empty
+// CHKOPT-NEXT:  %10 = StoreFrameInst %9: number|bigint, [x@check_after_check]: any|empty
 // CHKOPT-NEXT:  %11 = BranchInst %BB3
 // CHKOPT-NEXT:%BB2:
 // CHKOPT-NEXT:  %12 = BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  %13 = LoadFrameInst (:any) [x@check_after_check]: any
-// CHKOPT-NEXT:  %14 = ReturnInst %13: any
+// CHKOPT-NEXT:  %13 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %14 = ReturnInst %13: any|empty
 // CHKOPT-NEXT:%BB4:
 // CHKOPT-NEXT:  %15 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end

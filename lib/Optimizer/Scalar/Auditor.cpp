@@ -123,7 +123,7 @@ static void auditInferredTypes(Function *F) {
         TypeClosure++;
       } else if (t.isRegExpType()) {
         TypeRegexp++;
-      } else if (t.isAnyType()) {
+      } else if (t.isAnyOrEmptyType() || t.isAnyType()) {
         TypeAny++;
       } else {
         // Other cases not counted above, e.g. union types.

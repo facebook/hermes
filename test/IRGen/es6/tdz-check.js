@@ -57,69 +57,69 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check1(): any
-// CHECK-NEXT:frame = [x: any, y: any]
+// CHECK-NEXT:frame = [x: any|empty, y: any|empty]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
-// CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:nonempty) %2: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:nonempty) %4: any
-// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: nonempty, %5: nonempty
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
+// CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any|empty
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
+// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) [y]: any|empty
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any|empty
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: any, %5: any
 // CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = StoreFrameInst 10: number, [x]: any
-// CHECK-NEXT:  %9 = StoreFrameInst 1: number, [y]: any
+// CHECK-NEXT:  %8 = StoreFrameInst 10: number, [x]: any|empty
+// CHECK-NEXT:  %9 = StoreFrameInst 1: number, [y]: any|empty
 // CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check2(p: any): any
-// CHECK-NEXT:frame = [p: any, b: any, a: any]
+// CHECK-NEXT:frame = [p: any, b: any, a: any|empty]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [b]: any
-// CHECK-NEXT:  %3 = StoreFrameInst empty: empty, [a]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:nonempty) %4: any
-// CHECK-NEXT:  %6 = StoreFrameInst %5: nonempty, [b]: any
-// CHECK-NEXT:  %7 = StoreFrameInst undefined: undefined, [a]: any
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [a]: any
-// CHECK-NEXT:  %9 = ThrowIfEmptyInst (:nonempty) %8: any
+// CHECK-NEXT:  %3 = StoreFrameInst empty: empty, [a]: any|empty
+// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) [a]: any|empty
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any|empty
+// CHECK-NEXT:  %6 = StoreFrameInst %5: any, [b]: any
+// CHECK-NEXT:  %7 = StoreFrameInst undefined: undefined, [a]: any|empty
+// CHECK-NEXT:  %8 = LoadFrameInst (:any|empty) [a]: any|empty
+// CHECK-NEXT:  %9 = ThrowIfEmptyInst (:any) %8: any|empty
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %11 = BinaryAddInst (:any) %9: nonempty, %10: any
+// CHECK-NEXT:  %11 = BinaryAddInst (:any) %9: any, %10: any
 // CHECK-NEXT:  %12 = ReturnInst %11: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check3(): any
-// CHECK-NEXT:frame = [x: any, check3_inner: any]
+// CHECK-NEXT:frame = [x: any|empty, check3_inner: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %check3_inner(): any
 // CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [check3_inner]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) [check3_inner]: any
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:nonempty) %6: any
-// CHECK-NEXT:  %8 = ReturnInst %7: nonempty
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any|empty
+// CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check4(): any
-// CHECK-NEXT:frame = [x: any]
+// CHECK-NEXT:frame = [x: any|empty]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any
-// CHECK-NEXT:  %1 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %2 = ThrowIfEmptyInst (:nonempty) %1: any
-// CHECK-NEXT:  %3 = StoreFrameInst 10: number, [x]: any
-// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:nonempty) %5: any
-// CHECK-NEXT:  %7 = ReturnInst %6: nonempty
+// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
+// CHECK-NEXT:  %1 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %2 = ThrowIfEmptyInst (:any) %1: any|empty
+// CHECK-NEXT:  %3 = StoreFrameInst 10: number, [x]: any|empty
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any|empty
+// CHECK-NEXT:  %5 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) %5: any|empty
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -127,9 +127,9 @@ function check4() {
 // CHECK:function check3_inner(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:any) [x@check3]: any
-// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:nonempty) %0: any
-// CHECK-NEXT:  %2 = BinaryAddInst (:any) %1: nonempty, 1: number
+// CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [x@check3]: any|empty
+// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %2 = BinaryAddInst (:any) %1: any, 1: number
 // CHECK-NEXT:  %3 = ReturnInst %2: any
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined

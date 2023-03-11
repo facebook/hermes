@@ -2782,7 +2782,7 @@ class ThrowIfEmptyInst : public Instruction {
   /// will never execute. Handling this "unreachable" type everywhere would
   /// require a lot of complexity.
   /// Instead, when we get to that point, we simply return the recorded type.
-  Type savedResultType_{};
+  Type savedResultType_ = Type::createAnyType();
 
  public:
   enum { CheckedValueIdx };

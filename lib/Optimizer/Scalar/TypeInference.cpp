@@ -94,7 +94,7 @@ static Type inferMemoryLocationType(Value *addr) {
 
       default:
         // Other instructions that may write to alloc stack thwart our analysis.
-        return Type::createAnyType();
+        return Type::createAnyOrEmpty();
     }
 
     if (!storedVal)
@@ -285,7 +285,7 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
 /// \return true if the return type was changed.
 static bool inferFunctionReturnType(Function *F) {
   Type originalTy = F->getType();
-  Type returnTy;
+  Type returnTy = Type::createAnyType();
   bool first = true;
 
   if (llvh::isa<GeneratorInnerFunction>(F)) {
@@ -329,7 +329,7 @@ static void propagateArgs(
   IRBuilder builder(F);
   for (uint32_t i = 0, e = F->getJSDynamicParams().size(); i < e; ++i) {
     auto *P = F->getJSDynamicParam(i);
-    Type paramTy;
+    Type paramTy = Type::createAnyType();
     bool first = true;
 
     // For each call sites.
@@ -380,7 +380,7 @@ static Type inferBaseCallInst(CallGraphProvider *cgp, BaseCallInst *CI) {
              << " callees for : " << CI->getName().str() << "\n");
 
   bool first = true;
-  Type retTy;
+  Type retTy = Type::createAnyType();
 
   for (auto *F : funcs) {
     if (first && !F->getType().isNoType()) {
@@ -478,7 +478,7 @@ class TypeInferenceImpl {
       }
     }
 
-    Type inferredTy;
+    Type inferredTy = Type::createAnyType();
 
     // Attempt inference for the given instruction.
     // It's possible that inference will result in the same type being
@@ -688,7 +688,7 @@ class TypeInferenceImpl {
   }
   Type inferLoadPropertyInst(LoadPropertyInst *inst) {
     bool first = true;
-    Type retTy;
+    Type retTy = Type::createAnyType();
     bool unique = true;
 
     // Bail out if there are unknown receivers.
@@ -840,7 +840,7 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferHBCLoadFromEnvironmentInst(HBCLoadFromEnvironmentInst *inst) {
-    return Type::createAnyType();
+    return Type::createAnyOrEmpty();
   }
   Type inferUnreachableInst(UnreachableInst *inst) {
     return Type::createNoType();

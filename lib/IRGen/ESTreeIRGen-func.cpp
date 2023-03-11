@@ -396,14 +396,15 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   auto *scope = curFunction()->function->getFunctionScope();
 
   // "this".
-  auto *th = Builder.createVariable(scope, genAnonymousLabelName("this"));
+  auto *th = Builder.createVariable(
+      scope, genAnonymousLabelName("this"), Type::createAnyType());
   curFunction()->capturedThis = th;
   emitStore(Builder, curFunction()->jsParams[0], th, true);
 
   // "new.target".
-  curFunction()->capturedNewTarget =
-      Builder.createVariable(scope, genAnonymousLabelName("new.target"));
-  curFunction()->capturedNewTarget->setType(
+  curFunction()->capturedNewTarget = Builder.createVariable(
+      scope,
+      genAnonymousLabelName("new.target"),
       curFunction()->function->getNewTargetParam()->getType());
   emitStore(
       Builder,
@@ -414,8 +415,8 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
-    auto *args =
-        Builder.createVariable(scope, genAnonymousLabelName("arguments"));
+    auto *args = Builder.createVariable(
+        scope, genAnonymousLabelName("arguments"), Type::createObject());
     curFunction()->capturedArguments = args;
     emitStore(Builder, curFunction()->createArgumentsInst, args, true);
   }
@@ -501,9 +502,12 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
             "customData can be bound only if recompiling AST");
 
         if (!decl->customData) {
-          var = Builder.createVariable(func->getFunctionScope(), decl->name);
-          var->setObeysTDZ(
-              Mod->getContext().getCodeGenerationSettings().enableTDZ);
+          bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
+          var = Builder.createVariable(
+              func->getFunctionScope(),
+              decl->name,
+              tdz ? Type::createAnyOrEmpty() : Type::createAnyType());
+          var->setObeysTDZ(tdz);
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
@@ -533,7 +537,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
             "customData can be bound only if recompiling AST");
 
         if (!decl->customData) {
-          var = Builder.createVariable(func->getFunctionScope(), decl->name);
+          var = Builder.createVariable(
+              func->getFunctionScope(), decl->name, Type::createAnyType());
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
@@ -591,16 +596,21 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
 
     LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << decl->name << "\n");
 
-    Variable *var =
-        Builder.createVariable(newFunc->getFunctionScope(), decl->name);
+    // If not simple parameter list, enable TDZ and init every param.
+    bool tdz = !semInfo->simpleParameterList &&
+        Mod->getContext().getCodeGenerationSettings().enableTDZ;
+    Variable *var = Builder.createVariable(
+        newFunc->getFunctionScope(),
+        decl->name,
+        tdz ? Type::createAnyOrEmpty() : Type::createAnyType());
     setDeclData(decl, var);
 
     // If not simple parameter list, enable TDZ and init every param.
     if (!semInfo->simpleParameterList) {
-      var->setObeysTDZ(Mod->getContext().getCodeGenerationSettings().enableTDZ);
+      var->setObeysTDZ(tdz);
       Builder.createStoreFrameInst(
-          var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
-                             : (Literal *)Builder.getLiteralUndefined(),
+          tdz ? (Literal *)Builder.getLiteralEmpty()
+              : (Literal *)Builder.getLiteralUndefined(),
           var);
     }
   }

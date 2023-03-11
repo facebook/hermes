@@ -482,16 +482,19 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
     assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
     Variable *oldVar = llvh::cast<Variable>(getDeclData(decl));
     // Create a copy of the variable. Note that it doesn't need TDZ, since we
-    // are initializing it here.
-    Variable *newVar =
-        Builder.createVariable(function->getFunctionScope(), decl->name);
+    // are initializing it here. However, for now we are keeping the "empty" in
+    // its type, since there is no way to remove it without ThrowIfEmpty.
+    Variable *newVar = Builder.createVariable(
+        function->getFunctionScope(), decl->name, oldVar->getType());
 
     vars.emplace_back(oldVar, newVar);
 
     // Note that we are using a direct load/store, which doesn't check TDZ. If
     // our thinking is correct, all variables declared in the for(;;) must have
     // been initialized.
-    Builder.createStoreFrameInst(Builder.createLoadFrameInst(oldVar), newVar);
+    LoadFrameInst *load = Builder.createLoadFrameInst(oldVar);
+    load->setType(newVar->getType());
+    Builder.createStoreFrameInst(load, newVar);
 
     // Update the declaration to resolve to the new variable.
     setDeclData(decl, newVar);

@@ -167,14 +167,18 @@ JSDynamicParam *IRBuilder::createJSDynamicParam(
   return parent->addJSDynamicParam(createIdentifier(name));
 }
 
-Variable *IRBuilder::createVariable(VariableScope *Parent, Identifier Name) {
-  return new Variable(Parent, Name);
+Variable *
+IRBuilder::createVariable(VariableScope *Parent, Identifier Name, Type type) {
+  auto *var = new Variable(Parent, Name);
+  var->setType(type);
+  return var;
 }
 
 Variable *IRBuilder::createVariable(
     VariableScope *Parent,
-    llvh::StringRef Name) {
-  return createVariable(Parent, createIdentifier(Name));
+    llvh::StringRef Name,
+    Type type) {
+  return createVariable(Parent, createIdentifier(Name), type);
 }
 
 LiteralNumber *IRBuilder::getLiteralNumber(double value) {

@@ -45,7 +45,9 @@ class Instruction;
 class Context;
 class TerminatorInst;
 
-/// This is an instance of a JavaScript type.
+/// Representation of a type in the IR. This roughly corresponds for JavaScript
+/// types, but represents lower level concepts like "empty" type for TDZ and
+/// integers.
 class Type {
   // Encodes the JavaScript type hierarchy.
   enum TypeKind {
@@ -101,8 +103,12 @@ class Type {
 #define NUM_BIT_TO_VAL(XX) (1 << NumTypeKind::XX)
 #define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
 
-  // The 'Any' type means all possible types.
-  static constexpr uint16_t TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
+  // All possible types including "empty".
+  static constexpr uint16_t TYPE_ANY_OR_EMPTY_MASK =
+      (1u << TypeKind::LAST_TYPE) - 1;
+  // All possible types except "empty".
+  static constexpr uint16_t TYPE_NON_EMPTY_MASK =
+      TYPE_ANY_OR_EMPTY_MASK & ~BIT_TO_VAL(Empty);
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
@@ -122,19 +128,17 @@ class Type {
 
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
-  uint16_t bitmask_{TYPE_ANY_MASK};
+  uint16_t bitmask_{0};
   /// Each bit represent the possibility of the type being the subtype of number
   /// that's represented in the number type enum entry. If the number bit is not
   /// set, this bitmask is meaningless.
-  uint16_t numBitmask_{ANY_NUM_BITS};
+  uint16_t numBitmask_{0};
 
   /// The constructor is only accessible by static builder methods.
   constexpr explicit Type(uint16_t mask, uint16_t numMask = ANY_NUM_BITS)
       : bitmask_(mask), numBitmask_(numMask) {}
 
  public:
-  constexpr Type() = default;
-
   static constexpr Type unionTy(Type A, Type B) {
     return Type(A.bitmask_ | B.bitmask_, A.numBitmask_ | B.numBitmask_);
   }
@@ -152,8 +156,11 @@ class Type {
   static constexpr Type createNoType() {
     return Type(0);
   }
+  static constexpr Type createAnyOrEmpty() {
+    return Type(TYPE_ANY_OR_EMPTY_MASK);
+  }
   static constexpr Type createAnyType() {
-    return Type(TYPE_ANY_MASK);
+    return Type(TYPE_NON_EMPTY_MASK);
   }
   /// Create an uninitialized TDZ type.
   static constexpr Type createEmpty() {
@@ -203,11 +210,11 @@ class Type {
     return bitmask_ == 0;
   }
 
-  constexpr bool isAnyType() const {
-    return bitmask_ == TYPE_ANY_MASK;
+  constexpr bool isAnyOrEmptyType() const {
+    return bitmask_ == TYPE_ANY_OR_EMPTY_MASK;
   }
-  constexpr bool isNonEmptyType() const {
-    return bitmask_ == (TYPE_ANY_MASK & ~BIT_TO_VAL(Empty));
+  constexpr bool isAnyType() const {
+    return bitmask_ == TYPE_NON_EMPTY_MASK;
   }
 
   constexpr bool isEmptyType() const {
@@ -475,7 +482,7 @@ class Value {
   ValueKind Kind;
 
   /// The JavaScript type of the value.
-  Type valueType;
+  Type valueType = Type::createAnyType();
 
   /// A list of users of this instruction.
   UseListTy Users;
