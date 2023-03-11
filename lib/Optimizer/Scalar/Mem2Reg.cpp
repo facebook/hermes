@@ -733,6 +733,8 @@ static void promoteAllocStackToSSA(
       auto *val = getLiveOutValue(pred, phiLoc, DT, stores);
       phi->addEntry(val, pred);
     }
+
+    phi->setType(ASI->getType());
   }
 
   {
