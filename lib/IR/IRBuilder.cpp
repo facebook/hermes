@@ -280,13 +280,16 @@ TryEndInst *IRBuilder::createTryEndInst() {
   return I;
 }
 
-AllocStackInst *IRBuilder::createAllocStackInst(llvh::StringRef varName) {
+AllocStackInst *IRBuilder::createAllocStackInst(
+    llvh::StringRef varName,
+    Type type) {
   Identifier Iden = createIdentifier(varName);
-  return createAllocStackInst(Iden);
+  return createAllocStackInst(Iden, type);
 }
 
-AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName) {
+AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName, Type type) {
   auto *AHI = new AllocStackInst(varName);
+  AHI->setType(type);
   insert(AHI);
   return AHI;
 }

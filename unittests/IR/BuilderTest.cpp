@@ -89,8 +89,10 @@ TEST(BuilderTest, ReplaceAllUsesWith) {
   auto Right = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(Entry);
-  auto A0 = Builder.createAllocStackInst("some_variable");
-  auto A1 = Builder.createAllocStackInst("another_variable");
+  auto A0 =
+      Builder.createAllocStackInst("some_variable", Type::createAnyType());
+  auto A1 =
+      Builder.createAllocStackInst("another_variable", Type::createAnyType());
   Builder.createCondBranchInst(Cond, Left, Right);
 
   Builder.setInsertionBlock(Left);
@@ -250,8 +252,8 @@ TEST(BuilderTest, CreateAndManipulateFrameTest) {
   Identifier SomeName0 = Ctx->getIdentifier("some_name");
   Identifier SomeName1 = Ctx->getIdentifier("another_name");
 
-  auto A0 = Builder.createAllocStackInst(SomeName0);
-  auto A1 = Builder.createAllocStackInst(SomeName1);
+  auto A0 = Builder.createAllocStackInst(SomeName0, Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst(SomeName1, Type::createAnyType());
 
   auto Val0 = Builder.createLoadStackInst(A0);
   auto Val1 = Builder.createLoadStackInst(A1);
@@ -272,8 +274,8 @@ TEST(BuilderTest, NestedFunctionFrameTest) {
       "callee", Function::DefinitionKind::ES5Function, true);
 
   Builder.setInsertionBlock(Builder.createBasicBlock(Caller));
-  auto A0 = Builder.createAllocStackInst("one");
-  auto A1 = Builder.createAllocStackInst("two");
+  auto A0 = Builder.createAllocStackInst("one", Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst("two", Type::createAnyType());
   Builder.createReturnInst(Builder.createLoadStackInst(A0));
 
   Builder.setInsertionBlock(Builder.createBasicBlock(Callee));

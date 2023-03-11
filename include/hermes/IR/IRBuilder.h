@@ -262,9 +262,9 @@ class IRBuilder {
 
   ReturnInst *createReturnInst(Value *Val);
 
-  AllocStackInst *createAllocStackInst(llvh::StringRef varName);
+  AllocStackInst *createAllocStackInst(llvh::StringRef varName, Type type);
 
-  AllocStackInst *createAllocStackInst(Identifier varName);
+  AllocStackInst *createAllocStackInst(Identifier varName, Type type);
 
   AsNumberInst *createAsNumberInst(Value *val);
 

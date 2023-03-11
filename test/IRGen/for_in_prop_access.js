@@ -99,17 +99,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
 // CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
@@ -135,17 +135,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %5 = StoreFrameInst 0: number, [ret]: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %9 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %11 = StoreStackInst %10: any, %7: any
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %13 = GetPNamesInst %6: any, %7: any, %8: any, %9: any, %BB1, %BB2
+// CHECK-NEXT:  %13 = GetPNamesInst %6: any, %7: any, %8: number, %9: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %15 = ReturnInst %14: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %16 = GetNextPNameInst %12: any, %7: any, %8: any, %9: any, %6: any, %BB1, %BB3
+// CHECK-NEXT:  %16 = GetNextPNameInst %12: any, %7: any, %8: number, %9: number, %6: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %17 = LoadStackInst (:any) %12: any
 // CHECK-NEXT:  %18 = StoreFrameInst %17: any, [x]: any
@@ -175,17 +175,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %7 = StoreFrameInst %6: any, [obj1]: any
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %10 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %11 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %13 = StoreStackInst %12: any, %9: any
 // CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %15 = GetPNamesInst %8: any, %9: any, %10: any, %11: any, %BB1, %BB2
+// CHECK-NEXT:  %15 = GetPNamesInst %8: any, %9: any, %10: number, %11: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %17 = ReturnInst %16: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %18 = GetNextPNameInst %14: any, %9: any, %10: any, %11: any, %8: any, %BB1, %BB3
+// CHECK-NEXT:  %18 = GetNextPNameInst %14: any, %9: any, %10: number, %11: number, %8: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %19 = LoadStackInst (:any) %14: any
 // CHECK-NEXT:  %20 = StoreFrameInst %19: any, [x]: any
@@ -210,17 +210,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
 // CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
@@ -246,17 +246,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
 // CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any
@@ -287,17 +287,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:  %4 = StoreFrameInst 0: number, [ret]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %10 = StoreStackInst %9: any, %6: any
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: any, %8: any, %BB1, %BB2
+// CHECK-NEXT:  %12 = GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [ret]: any
 // CHECK-NEXT:  %14 = ReturnInst %13: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: any, %8: any, %5: any, %BB1, %BB3
+// CHECK-NEXT:  %15 = GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %11: any
 // CHECK-NEXT:  %17 = StoreFrameInst %16: any, [x]: any

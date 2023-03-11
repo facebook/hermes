@@ -198,8 +198,8 @@ void ESTreeIRGen::doIt() {
   Value *retVal;
   {
     // Allocate the return register, initialize it to undefined.
-    curFunction()->globalReturnRegister =
-        Builder.createAllocStackInst(genAnonymousLabelName("ret"));
+    curFunction()->globalReturnRegister = Builder.createAllocStackInst(
+        genAnonymousLabelName("ret"), Type::createAnyType());
     Builder.createStoreStackInst(
         Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
 
@@ -448,10 +448,10 @@ void ESTreeIRGen::emitIteratorCloseSlow(
 
 ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   // Each of these will be modified by "next", so we use a stack storage.
-  auto *iterStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("iter"));
-  auto *sourceOrNext =
-      Builder.createAllocStackInst(genAnonymousLabelName("sourceOrNext"));
+  auto *iterStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("iter"), Type::createAnyType());
+  auto *sourceOrNext = Builder.createAllocStackInst(
+      genAnonymousLabelName("sourceOrNext"), Type::createAnyType());
   Builder.createStoreStackInst(obj, sourceOrNext);
   auto *iter = Builder.createIteratorBeginInst(sourceOrNext);
   Builder.createStoreStackInst(iter, iterStorage);
@@ -479,15 +479,16 @@ void ESTreeIRGen::emitDestructuringArray(
   const IteratorRecord iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
-  auto *iteratorDone =
-      Builder.createAllocStackInst(genAnonymousLabelName("iterDone"));
+  auto *iteratorDone = Builder.createAllocStackInst(
+      genAnonymousLabelName("iterDone"), Type::createAnyType());
   Builder.createStoreStackInst(Builder.getLiteralUndefined(), iteratorDone);
 
-  auto *value =
-      Builder.createAllocStackInst(genAnonymousLabelName("iterValue"));
+  auto *value = Builder.createAllocStackInst(
+      genAnonymousLabelName("iterValue"), Type::createAnyType());
 
   SharedExceptionHandler handler{};
-  handler.exc = Builder.createAllocStackInst(genAnonymousLabelName("exc"));
+  handler.exc = Builder.createAllocStackInst(
+      genAnonymousLabelName("exc"), Type::createAnyType());
   // All exception handlers branch to this block.
   handler.exceptionBlock = Builder.createBasicBlock(Builder.getFunction());
 
@@ -707,7 +708,8 @@ void ESTreeIRGen::emitRestElement(
   }
 
   auto *A = Builder.createAllocArrayInst({}, 0);
-  auto *n = Builder.createAllocStackInst(genAnonymousLabelName("n"));
+  auto *n = Builder.createAllocStackInst(
+      genAnonymousLabelName("n"), Type::createNumber());
 
   // n = 0.
   Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), n);

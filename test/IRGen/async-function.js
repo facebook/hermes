@@ -136,10 +136,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = ReturnInst 1: number
 // CHECK-NEXT:%BB1:
@@ -152,20 +152,20 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %6 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %7 = SaveAndYieldInst 2: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: any
-// CHECK-NEXT:  %10 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB4, %BB5
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: boolean
+// CHECK-NEXT:  %10 = LoadStackInst (:boolean) %6: boolean
+// CHECK-NEXT:  %11 = CondBranchInst %10: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %12 = StoreFrameInst %9: any, [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any
@@ -180,12 +180,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %7 = LoadParamInst (:any) %?anon_2_param: any
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_iter: any
@@ -201,9 +201,9 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %18 = ReturnInst %2: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %19 = ResumeGeneratorInst (:any) %5: any
-// CHECK-NEXT:  %20 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %21 = CondBranchInst %20: any, %BB5, %BB6
+// CHECK-NEXT:  %19 = ResumeGeneratorInst (:any) %5: boolean
+// CHECK-NEXT:  %20 = LoadStackInst (:boolean) %5: boolean
+// CHECK-NEXT:  %21 = CondBranchInst %20: boolean, %BB5, %BB6
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %22 = LoadStackInst (:any) %9: any
 // CHECK-NEXT:  %23 = IteratorNextInst (:any) %8: any, %22: any
@@ -227,14 +227,14 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %37 = SaveAndYieldInst undefined: undefined, %BB4
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %38 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %39 = AllocStackInst (:any) $?anon_8_isReturn: any
+// CHECK-NEXT:  %39 = AllocStackInst (:boolean) $?anon_8_isReturn: any
 // CHECK-NEXT:  %40 = SaveAndYieldInst %38: any, %BB11
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %41 = ReturnInst %19: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %42 = ResumeGeneratorInst (:any) %39: any
-// CHECK-NEXT:  %43 = LoadStackInst (:any) %39: any
-// CHECK-NEXT:  %44 = CondBranchInst %43: any, %BB12, %BB13
+// CHECK-NEXT:  %42 = ResumeGeneratorInst (:any) %39: boolean
+// CHECK-NEXT:  %43 = LoadStackInst (:boolean) %39: boolean
+// CHECK-NEXT:  %44 = CondBranchInst %43: boolean, %BB12, %BB13
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %45 = StoreFrameInst %42: any, [x]: any
 // CHECK-NEXT:  %46 = LoadFrameInst (:any) [x]: any
@@ -249,20 +249,20 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %6 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %7 = SaveAndYieldInst 2: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: any
-// CHECK-NEXT:  %10 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB4, %BB5
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: boolean
+// CHECK-NEXT:  %10 = LoadStackInst (:boolean) %6: boolean
+// CHECK-NEXT:  %11 = CondBranchInst %10: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %12 = StoreFrameInst %9: any, [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [x]: any

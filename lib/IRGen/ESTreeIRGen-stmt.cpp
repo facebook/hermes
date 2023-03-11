@@ -457,7 +457,8 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // Create the "first" flag and set it to true.
   AllocStackInst *firstStack = nullptr;
   if (loop->_update) {
-    firstStack = Builder.createAllocStackInst(genAnonymousLabelName("first"));
+    firstStack = Builder.createAllocStackInst(
+        genAnonymousLabelName("first"), Type::createBoolean());
     Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
   }
   Builder.createBranchInst(loopBlock);
@@ -546,14 +547,14 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   // The state of the enumerator. Notice that the instruction writes to the
   // storage
   // variables just like Load/Store instructions write to stack allocations.
-  auto *iteratorStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("iter"));
-  auto *baseStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("base"));
-  auto *indexStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("idx"));
-  auto *sizeStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("size"));
+  auto *iteratorStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("iter"), Type::createAnyType());
+  auto *baseStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("base"), Type::createAnyType());
+  auto *indexStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("idx"), Type::createNumber());
+  auto *sizeStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("size"), Type::createNumber());
 
   // Check for the obscure case "for(var i = init in ....)". We need to
   // initialize the loop variable with the initializer.
@@ -579,8 +580,8 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   Builder.createStoreStackInst(object, baseStorage);
 
   // The storage for the property name that the enumerator loads:
-  auto *propertyStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("prop"));
+  auto *propertyStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("prop"), Type::createAnyType());
 
   /*
     We generate the following loop structure for the for-in loops:

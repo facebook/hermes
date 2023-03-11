@@ -272,7 +272,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   if (variableLength) {
     // Avoid emitting the extra instructions unless we actually need to,
     // to simplify tests and because it's easy.
-    nextIndex = Builder.createAllocStackInst("nextIndex");
+    nextIndex = Builder.createAllocStackInst("nextIndex", Type::createNumber());
     Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), nextIndex);
   }
 
@@ -1204,8 +1204,8 @@ Value *ESTreeIRGen::genYieldOrAwaitExpr(Value *value) {
   auto *bb = Builder.getInsertionBlock();
   auto *next = Builder.createBasicBlock(bb->getParent());
 
-  auto *resumeIsReturn =
-      Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+  auto *resumeIsReturn = Builder.createAllocStackInst(
+      genAnonymousLabelName("isReturn"), Type::createBoolean());
 
   Builder.createSaveAndYieldInst(value, next);
   Builder.setInsertionBlock(next);
@@ -1264,19 +1264,20 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   // The "received" value when the user resumes the generator.
   // Initialized to undefined on the first run, then stored to immediately
   // following any genResumeGenerator.
-  auto *received =
-      Builder.createAllocStackInst(genAnonymousLabelName("received"));
+  auto *received = Builder.createAllocStackInst(
+      genAnonymousLabelName("received"), Type::createAnyType());
   Builder.createStoreStackInst(Builder.getLiteralUndefined(), received);
 
   // The "isReturn" value when the user resumes the generator.
   // Stored to immediately following any genResumeGenerator.
-  auto *resumeIsReturn =
-      Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+  auto *resumeIsReturn = Builder.createAllocStackInst(
+      genAnonymousLabelName("isReturn"), Type::createBoolean());
 
   // The final result of the `yield*` expression.
   // This can be set from either the body or the handler, so it is placed
   // in the stack to allow populating it from anywhere.
-  auto *result = Builder.createAllocStackInst(genAnonymousLabelName("result"));
+  auto *result = Builder.createAllocStackInst(
+      genAnonymousLabelName("result"), Type::createAnyType());
 
   Builder.createBranchInst(getNextBlock);
 
@@ -1973,7 +1974,8 @@ Value *ESTreeIRGen::genLogicalExpression(
   // Generate a new temporary stack allocation.
   auto tempVarName = genAnonymousLabelName("logical");
   auto parentFunc = Builder.getInsertionBlock()->getParent();
-  auto tempVar = Builder.createAllocStackInst(tempVarName);
+  auto tempVar =
+      Builder.createAllocStackInst(tempVarName, Type::createAnyType());
 
   auto evalRHSBlock = Builder.createBasicBlock(parentFunc);
   auto continueBlock = Builder.createBasicBlock(parentFunc);

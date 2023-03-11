@@ -128,19 +128,19 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %6 = SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = ResumeGeneratorInst (:any) %5: any
-// CHECK-NEXT:  %9 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %10 = CondBranchInst %9: any, %BB4, %BB5
+// CHECK-NEXT:  %8 = ResumeGeneratorInst (:any) %5: boolean
+// CHECK-NEXT:  %9 = LoadStackInst (:boolean) %5: boolean
+// CHECK-NEXT:  %10 = CondBranchInst %9: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
@@ -151,20 +151,20 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %6 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %7 = SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: any
-// CHECK-NEXT:  %10 = LoadStackInst (:any) %6: any
-// CHECK-NEXT:  %11 = CondBranchInst %10: any, %BB4, %BB5
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: boolean
+// CHECK-NEXT:  %10 = LoadStackInst (:boolean) %6: boolean
+// CHECK-NEXT:  %11 = CondBranchInst %10: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %12 = StoreFrameInst %9: any, [x]: any
 // CHECK-NEXT:  %13 = ReturnInst undefined: undefined
@@ -176,10 +176,10 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = [x: any, i: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %6 = StoreFrameInst %5: any, [x]: any
@@ -195,16 +195,16 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %14 = UnaryIncInst (:any) %13: number|bigint
 // CHECK-NEXT:  %15 = StoreFrameInst %14: any, [i]: any
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) %11: any, %13: number|bigint
-// CHECK-NEXT:  %17 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %17 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %18 = SaveAndYieldInst %16: any, %BB5
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %20 = CondBranchInst true: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %21 = ResumeGeneratorInst (:any) %17: any
-// CHECK-NEXT:  %22 = LoadStackInst (:any) %17: any
-// CHECK-NEXT:  %23 = CondBranchInst %22: any, %BB7, %BB8
+// CHECK-NEXT:  %21 = ResumeGeneratorInst (:any) %17: boolean
+// CHECK-NEXT:  %22 = LoadStackInst (:boolean) %17: boolean
+// CHECK-NEXT:  %23 = CondBranchInst %22: boolean, %BB7, %BB8
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %24 = BranchInst %BB6
 // CHECK-NEXT:%BB7:
@@ -215,19 +215,19 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn: any
+// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:  %6 = SaveAndYieldInst 1: number, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = ReturnInst %2: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = ResumeGeneratorInst (:any) %5: any
-// CHECK-NEXT:  %9 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %10 = CondBranchInst %9: any, %BB4, %BB5
+// CHECK-NEXT:  %8 = ResumeGeneratorInst (:any) %5: boolean
+// CHECK-NEXT:  %9 = LoadStackInst (:boolean) %5: boolean
+// CHECK-NEXT:  %10 = CondBranchInst %9: boolean, %BB4, %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB4:
@@ -238,10 +238,10 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
@@ -253,7 +253,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %10: any, "next": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_1_received: any
 // CHECK-NEXT:  %14 = StoreStackInst undefined: undefined, %13: any
-// CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_2_isReturn: any
+// CHECK-NEXT:  %15 = AllocStackInst (:boolean) $?anon_2_isReturn: any
 // CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_3_result: any
 // CHECK-NEXT:  %17 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
@@ -272,10 +272,10 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %27 = LoadPropertyInst (:any) %26: any, "value": string
 // CHECK-NEXT:  %28 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %29 = ResumeGeneratorInst (:any) %15: any
+// CHECK-NEXT:  %29 = ResumeGeneratorInst (:any) %15: boolean
 // CHECK-NEXT:  %30 = StoreStackInst %29: any, %13: any
-// CHECK-NEXT:  %31 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %32 = CondBranchInst %31: any, %BB9, %BB3
+// CHECK-NEXT:  %31 = LoadStackInst (:boolean) %15: boolean
+// CHECK-NEXT:  %32 = CondBranchInst %31: boolean, %BB9, %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %33 = CatchInst (:any)
 // CHECK-NEXT:  %34 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, %10: any, "throw": string
@@ -336,12 +336,12 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %7 = LoadParamInst (:any) %?anon_2_param: any
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_3_iter: any
@@ -357,9 +357,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %18 = ReturnInst %2: any
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %19 = ResumeGeneratorInst (:any) %5: any
-// CHECK-NEXT:  %20 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %21 = CondBranchInst %20: any, %BB5, %BB6
+// CHECK-NEXT:  %19 = ResumeGeneratorInst (:any) %5: boolean
+// CHECK-NEXT:  %20 = LoadStackInst (:boolean) %5: boolean
+// CHECK-NEXT:  %21 = CondBranchInst %20: boolean, %BB5, %BB6
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %22 = LoadStackInst (:any) %9: any
 // CHECK-NEXT:  %23 = IteratorNextInst (:any) %8: any, %22: any
@@ -383,14 +383,14 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %37 = SaveAndYieldInst undefined: undefined, %BB4
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %38 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %39 = AllocStackInst (:any) $?anon_8_isReturn: any
+// CHECK-NEXT:  %39 = AllocStackInst (:boolean) $?anon_8_isReturn: any
 // CHECK-NEXT:  %40 = SaveAndYieldInst %38: any, %BB11
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %41 = ReturnInst %19: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %42 = ResumeGeneratorInst (:any) %39: any
-// CHECK-NEXT:  %43 = LoadStackInst (:any) %39: any
-// CHECK-NEXT:  %44 = CondBranchInst %43: any, %BB12, %BB13
+// CHECK-NEXT:  %42 = ResumeGeneratorInst (:any) %39: boolean
+// CHECK-NEXT:  %43 = LoadStackInst (:boolean) %39: boolean
+// CHECK-NEXT:  %44 = CondBranchInst %43: boolean, %BB12, %BB13
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %45 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB12:
@@ -401,12 +401,12 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:frame = [x: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: any
-// CHECK-NEXT:  %3 = LoadStackInst (:any) %1: any
-// CHECK-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
+// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
+// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
+// CHECK-NEXT:  %4 = CondBranchInst %3: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %7 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %8 = BinaryStrictlyNotEqualInst (:any) %7: any, undefined: undefined
@@ -414,9 +414,9 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst %2: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %11 = ResumeGeneratorInst (:any) %5: any
-// CHECK-NEXT:  %12 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:  %13 = CondBranchInst %12: any, %BB6, %BB7
+// CHECK-NEXT:  %11 = ResumeGeneratorInst (:any) %5: boolean
+// CHECK-NEXT:  %12 = LoadStackInst (:boolean) %5: boolean
+// CHECK-NEXT:  %13 = CondBranchInst %12: boolean, %BB6, %BB7
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined
@@ -426,14 +426,14 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %18 = StoreFrameInst %17: any, [x]: any
 // CHECK-NEXT:  %19 = SaveAndYieldInst undefined: undefined, %BB5
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %20 = AllocStackInst (:any) $?anon_2_isReturn: any
+// CHECK-NEXT:  %20 = AllocStackInst (:boolean) $?anon_2_isReturn: any
 // CHECK-NEXT:  %21 = SaveAndYieldInst 1: number, %BB8
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %22 = ReturnInst %11: any
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %23 = ResumeGeneratorInst (:any) %20: any
-// CHECK-NEXT:  %24 = LoadStackInst (:any) %20: any
-// CHECK-NEXT:  %25 = CondBranchInst %24: any, %BB9, %BB10
+// CHECK-NEXT:  %23 = ResumeGeneratorInst (:any) %20: boolean
+// CHECK-NEXT:  %24 = LoadStackInst (:boolean) %20: boolean
+// CHECK-NEXT:  %25 = CondBranchInst %24: boolean, %BB9, %BB10
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %26 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB9:

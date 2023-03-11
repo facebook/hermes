@@ -37,18 +37,18 @@ function foo(obj) {
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %5 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %6 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %7 = StoreFrameInst 10: number, [x]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) [obj]: any
 // CHECK-NEXT:  %9 = StoreStackInst %8: any, %4: any
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %11 = GetPNamesInst %3: any, %4: any, %5: any, %6: any, %BB1, %BB2
+// CHECK-NEXT:  %11 = GetPNamesInst %3: any, %4: any, %5: number, %6: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = ReturnInst %12: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
+// CHECK-NEXT:  %14 = GetNextPNameInst %10: any, %4: any, %5: number, %6: number, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %15 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:  %16 = StoreFrameInst %15: any, [x]: any

@@ -35,8 +35,8 @@ TEST(IRUtilsTest, Dominators1) {
   auto Right = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(Entry);
-  auto A0 = Builder.createAllocStackInst("A0");
-  auto A1 = Builder.createAllocStackInst("A1");
+  auto A0 = Builder.createAllocStackInst("A0", Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst("A1", Type::createAnyType());
   Builder.createCondBranchInst(Cond, Left, Right);
 
   Builder.setInsertionBlock(Left);

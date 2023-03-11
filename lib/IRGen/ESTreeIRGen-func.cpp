@@ -211,7 +211,7 @@ Function *ESTreeIRGen::genES5Function(
       Builder.createStartGeneratorInst();
       auto *prologueBB = Builder.createBasicBlock(newFunction);
       auto *prologueResumeIsReturn = Builder.createAllocStackInst(
-          genAnonymousLabelName("isReturn_prologue"));
+          genAnonymousLabelName("isReturn_prologue"), Type::createBoolean());
       genResumeGenerator(GenFinally::No, prologueResumeIsReturn, prologueBB);
 
       if (hasSimpleParams(functionNode)) {
@@ -231,7 +231,7 @@ Function *ESTreeIRGen::genES5Function(
         // `function*`.
         auto *entryPointBB = Builder.createBasicBlock(newFunction);
         auto *entryPointResumeIsReturn = Builder.createAllocStackInst(
-            genAnonymousLabelName("isReturn_entry"));
+            genAnonymousLabelName("isReturn_entry"), Type::createBoolean());
 
         // Initialize parameters.
         Builder.setInsertionBlock(prologueBB);

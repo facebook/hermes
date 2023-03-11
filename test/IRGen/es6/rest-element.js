@@ -64,8 +64,8 @@ function f4(t) {
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_3_iterValue: any
 // CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_exc: any
 // CHECK-NEXT:  %13 = AllocArrayInst (:object) 0: number
-// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_n: any
-// CHECK-NEXT:  %15 = StoreStackInst 0: number, %14: any
+// CHECK-NEXT:  %14 = AllocStackInst (:number) $?anon_5_n: any
+// CHECK-NEXT:  %15 = StoreStackInst 0: number, %14: number
 // CHECK-NEXT:  %16 = LoadStackInst (:any) %9: any
 // CHECK-NEXT:  %17 = CondBranchInst %16: any, %BB1, %BB2
 // CHECK-NEXT:%BB3:
@@ -79,7 +79,7 @@ function f4(t) {
 // CHECK-NEXT:  %24 = StoreStackInst %23: any, %9: any
 // CHECK-NEXT:  %25 = CondBranchInst %23: any, %BB1, %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %26 = LoadStackInst (:number) %14: any
+// CHECK-NEXT:  %26 = LoadStackInst (:number) %14: number
 // CHECK-NEXT:  %27 = TryStartInst %BB7, %BB8
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %28 = StoreFrameInst %13: object, [a]: any
@@ -90,7 +90,7 @@ function f4(t) {
 // CHECK-NEXT:  %32 = BranchInst %BB3
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %33 = BinaryAddInst (:number) %26: number, 1: number
-// CHECK-NEXT:  %34 = StoreStackInst %33: number, %14: any
+// CHECK-NEXT:  %34 = StoreStackInst %33: number, %14: number
 // CHECK-NEXT:  %35 = BranchInst %BB2
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %36 = StorePropertyLooseInst %21: any, %13: object, %26: number
@@ -136,7 +136,7 @@ function f4(t) {
 // CHECK-NEXT:  %21 = StoreStackInst %20: any, %10: any
 // CHECK-NEXT:  %22 = CondBranchInst %20: any, %BB7, %BB8
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %23 = LoadStackInst (:number) %30: any
+// CHECK-NEXT:  %23 = LoadStackInst (:number) %30: number
 // CHECK-NEXT:  %24 = TryStartInst %BB9, %BB10
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:  %25 = TryStartInst %BB11, %BB12
@@ -146,8 +146,8 @@ function f4(t) {
 // CHECK-NEXT:  %28 = BranchInst %BB3
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %29 = AllocArrayInst (:object) 0: number
-// CHECK-NEXT:  %30 = AllocStackInst (:any) $?anon_5_n: any
-// CHECK-NEXT:  %31 = StoreStackInst 0: number, %30: any
+// CHECK-NEXT:  %30 = AllocStackInst (:number) $?anon_5_n: any
+// CHECK-NEXT:  %31 = StoreStackInst 0: number, %30: number
 // CHECK-NEXT:  %32 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:  %33 = CondBranchInst %32: any, %BB7, %BB6
 // CHECK-NEXT:%BB2:
@@ -161,7 +161,7 @@ function f4(t) {
 // CHECK-NEXT:  %39 = BranchInst %BB3
 // CHECK-NEXT:%BB15:
 // CHECK-NEXT:  %40 = BinaryAddInst (:number) %23: number, 1: number
-// CHECK-NEXT:  %41 = StoreStackInst %40: number, %30: any
+// CHECK-NEXT:  %41 = StoreStackInst %40: number, %30: number
 // CHECK-NEXT:  %42 = BranchInst %BB6
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %43 = StorePropertyLooseInst %18: any, %29: object, %23: number
@@ -243,16 +243,16 @@ function f4(t) {
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [d]: any
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_1_base: any
-// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_2_idx: any
-// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_3_size: any
+// CHECK-NEXT:  %5 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %6 = AllocStackInst (:number) $?anon_3_size: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [t]: any
 // CHECK-NEXT:  %8 = StoreStackInst %7: any, %4: any
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_4_prop: any
-// CHECK-NEXT:  %10 = GetPNamesInst %3: any, %4: any, %5: any, %6: any, %BB1, %BB2
+// CHECK-NEXT:  %10 = GetPNamesInst %3: any, %4: any, %5: number, %6: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %12 = GetNextPNameInst %9: any, %4: any, %5: any, %6: any, %3: any, %BB1, %BB3
+// CHECK-NEXT:  %12 = GetNextPNameInst %9: any, %4: any, %5: number, %6: number, %3: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = LoadStackInst (:any) %9: any
 // CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_iter: any
@@ -265,8 +265,8 @@ function f4(t) {
 // CHECK-NEXT:  %21 = AllocStackInst (:any) $?anon_8_iterValue: any
 // CHECK-NEXT:  %22 = AllocStackInst (:any) $?anon_9_exc: any
 // CHECK-NEXT:  %23 = AllocArrayInst (:object) 0: number
-// CHECK-NEXT:  %24 = AllocStackInst (:any) $?anon_10_n: any
-// CHECK-NEXT:  %25 = StoreStackInst 0: number, %24: any
+// CHECK-NEXT:  %24 = AllocStackInst (:number) $?anon_10_n: any
+// CHECK-NEXT:  %25 = StoreStackInst 0: number, %24: number
 // CHECK-NEXT:  %26 = LoadStackInst (:any) %19: any
 // CHECK-NEXT:  %27 = CondBranchInst %26: any, %BB4, %BB5
 // CHECK-NEXT:%BB6:
@@ -280,7 +280,7 @@ function f4(t) {
 // CHECK-NEXT:  %34 = StoreStackInst %33: any, %19: any
 // CHECK-NEXT:  %35 = CondBranchInst %33: any, %BB4, %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %36 = LoadStackInst (:number) %24: any
+// CHECK-NEXT:  %36 = LoadStackInst (:number) %24: number
 // CHECK-NEXT:  %37 = TryStartInst %BB10, %BB11
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %38 = StoreFrameInst %23: object, [d]: any
@@ -291,7 +291,7 @@ function f4(t) {
 // CHECK-NEXT:  %42 = BranchInst %BB6
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %43 = BinaryAddInst (:number) %36: number, 1: number
-// CHECK-NEXT:  %44 = StoreStackInst %43: number, %24: any
+// CHECK-NEXT:  %44 = StoreStackInst %43: number, %24: number
 // CHECK-NEXT:  %45 = BranchInst %BB5
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %46 = StorePropertyLooseInst %31: any, %23: object, %36: number
@@ -352,7 +352,7 @@ function f4(t) {
 // CHECK-NEXT:  %33 = StoreStackInst %32: any, %10: any
 // CHECK-NEXT:  %34 = CondBranchInst %32: any, %BB10, %BB11
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %35 = LoadStackInst (:number) %42: any
+// CHECK-NEXT:  %35 = LoadStackInst (:number) %42: number
 // CHECK-NEXT:  %36 = TryStartInst %BB12, %BB13
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %37 = TryStartInst %BB14, %BB15
@@ -362,8 +362,8 @@ function f4(t) {
 // CHECK-NEXT:  %40 = BranchInst %BB2
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:  %41 = AllocArrayInst (:object) 0: number
-// CHECK-NEXT:  %42 = AllocStackInst (:any) $?anon_5_n: any
-// CHECK-NEXT:  %43 = StoreStackInst 0: number, %42: any
+// CHECK-NEXT:  %42 = AllocStackInst (:number) $?anon_5_n: any
+// CHECK-NEXT:  %43 = StoreStackInst 0: number, %42: number
 // CHECK-NEXT:  %44 = LoadStackInst (:any) %10: any
 // CHECK-NEXT:  %45 = CondBranchInst %44: any, %BB10, %BB9
 // CHECK-NEXT:%BB8:
@@ -377,7 +377,7 @@ function f4(t) {
 // CHECK-NEXT:  %51 = BranchInst %BB2
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:  %52 = BinaryAddInst (:number) %35: number, 1: number
-// CHECK-NEXT:  %53 = StoreStackInst %52: number, %42: any
+// CHECK-NEXT:  %53 = StoreStackInst %52: number, %42: number
 // CHECK-NEXT:  %54 = BranchInst %BB9
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %55 = StorePropertyLooseInst %30: any, %41: object, %35: number

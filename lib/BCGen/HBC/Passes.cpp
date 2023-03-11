@@ -420,7 +420,8 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   }
 
   builder.setInsertionPoint(createArguments);
-  AllocStackInst *lazyReg = builder.createAllocStackInst("arguments");
+  AllocStackInst *lazyReg =
+      builder.createAllocStackInst("arguments", Type::createObject());
   builder.createStoreStackInst(builder.getLiteralUndefined(), lazyReg);
 
   // Process all LoadPropertyInst's first because they may add another user

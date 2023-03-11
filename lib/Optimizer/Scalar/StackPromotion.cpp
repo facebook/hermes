@@ -53,7 +53,7 @@ static void promoteConstVariable(
   IRBuilder builder(func->getParent());
   BasicBlock &entry = func->front();
   builder.setInsertionBlock(&entry);
-  auto *stackVar = builder.createAllocStackInst(V->getName());
+  auto *stackVar = builder.createAllocStackInst(V->getName(), V->getType());
   stackVar->moveBefore(&*entry.begin());
 
   IRBuilder::InstructionDestroyer destroyer;
@@ -280,7 +280,8 @@ bool promoteVariables(
       continue;
 
     builder.setInsertionPoint(&*F->begin()->begin());
-    auto *stackVar = builder.createAllocStackInst(var->getName());
+    auto *stackVar =
+        builder.createAllocStackInst(var->getName(), var->getType());
     builder.createStoreStackInst(builder.getLiteralUndefined(), stackVar);
     stackMap[var] = stackVar;
     changed = true;
