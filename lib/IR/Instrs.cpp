@@ -198,6 +198,7 @@ PhiInst::PhiInst(const ValueListType &values, const BasicBlockListType &blocks)
     pushOperand(values[i]);
     pushOperand(blocks[i]);
   }
+  recalculateResultType();
 }
 
 unsigned PhiInst::getNumEntries() const {
@@ -219,14 +220,40 @@ std::pair<Value *, BasicBlock *> PhiInst::getEntry(unsigned i) const {
 void PhiInst::updateEntry(unsigned i, Value *val, BasicBlock *BB) {
   setOperand(val, indexOfPhiEntry(i));
   setOperand(BB, indexOfPhiEntry(i) + 1);
+  recalculateResultType();
 }
 
 void PhiInst::addEntry(Value *val, BasicBlock *BB) {
   pushOperand(val);
   pushOperand(BB);
+  setType(Type::unionTy(getType(), val->getType()));
 }
 
 void PhiInst::removeEntry(unsigned index) {
+  removeEntryHelper(index);
+  recalculateResultType();
+}
+
+void PhiInst::removeEntry(BasicBlock *BB) {
+  bool needRecalc = false;
+  unsigned i = 0;
+  // For each one of the entries:
+  while (i < getNumEntries()) {
+    // If this entry is from the BB we want to remove, then remove it.
+    if (getEntry(i).second == BB) {
+      removeEntryHelper(i);
+      needRecalc = true;
+      // keep the current iteration index.
+      continue;
+    }
+    // Else, move to the next entry.
+    i++;
+  }
+  if (needRecalc)
+    recalculateResultType();
+}
+
+void PhiInst::removeEntryHelper(unsigned index) {
   // Remove the pair at the right offset. See calculation of getEntry above.
   unsigned startIdx = indexOfPhiEntry(index);
   // Remove the value:
@@ -236,19 +263,11 @@ void PhiInst::removeEntry(unsigned index) {
   removeOperand(startIdx);
 }
 
-void PhiInst::removeEntry(BasicBlock *BB) {
-  unsigned i = 0;
-  // For each one of the entries:
-  while (i < getNumEntries()) {
-    // If this entry is from the BB we want to remove, then remove it.
-    if (getEntry(i).second == BB) {
-      removeEntry(i);
-      // keep the current iteration index.
-      continue;
-    }
-    // Else, move to the next entry.
-    i++;
-  }
+void PhiInst::recalculateResultType() {
+  Type res = Type::createNoType();
+  for (unsigned i = 0, e = getNumEntries(); i != e; ++i)
+    res = Type::unionTy(res, getEntry(i).first->getType());
+  setType(res);
 }
 
 GetPNamesInst::GetPNamesInst(

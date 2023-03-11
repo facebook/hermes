@@ -2593,6 +2593,13 @@ class PhiInst : public Instruction {
     ValueKind kind = V->getKind();
     return kind == ValueKind::PhiInstKind;
   }
+
+ private:
+  /// Remove an entry without recalculating the result type.
+  void removeEntryHelper(unsigned index);
+
+  /// Calculate the result type as a union of all incoming types and update it.
+  void recalculateResultType();
 };
 
 class MovInst : public SingleOperandInst {

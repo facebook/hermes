@@ -86,8 +86,8 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %9 = StoreFrameInst 2: number, [age]: any
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = PhiInst (:any) 2: number, %BB1, true: boolean, %BB2
-// CHECK-NEXT:  %12 = ReturnInst %11: any
+// CHECK-NEXT:  %11 = PhiInst (:boolean|number) 2: number, %BB1, true: boolean, %BB2
+// CHECK-NEXT:  %12 = ReturnInst %11: boolean|number
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
