@@ -338,6 +338,8 @@ class RegisterAllocator {
   Function *F;
 
  public:
+  using RegisterType = Register;
+
   /// Dump the status of the allocator in a textual form.
   void dump();
 

@@ -7,7 +7,6 @@
 
 #include "hermes/BCGen/HBC/HBC.h"
 
-#include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/ISel.h"
@@ -18,6 +17,7 @@
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/Lowering.h"
+#include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"

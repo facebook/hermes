@@ -8,13 +8,13 @@
 #ifndef HERMES_BCGEN_HBC_PASSES_H
 #define HERMES_BCGEN_HBC_PASSES_H
 
-#include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/MovElimination.h"
 
 namespace hermes {
 namespace hbc {

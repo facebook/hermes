@@ -13,6 +13,7 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/Lowering.h"
+#include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/BigIntSupport.h"

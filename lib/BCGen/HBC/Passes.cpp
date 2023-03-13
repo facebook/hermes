@@ -7,12 +7,12 @@
 
 #include "hermes/BCGen/HBC/Passes.h"
 
-#include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/Lowering.h"
+#include "hermes/BCGen/MovElimination.h"
 
 #include "llvh/ADT/SetVector.h"
 

@@ -7,9 +7,9 @@
 
 #include "hermes/BCGen/HBC/ISel.h"
 
-#include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/BigIntSupport.h"
