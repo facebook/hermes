@@ -8,6 +8,7 @@
 #ifndef HERMES_BCGEN_SH_LOWERCALLS_H
 #define HERMES_BCGEN_SH_LOWERCALLS_H
 
+#include "SHRegAlloc.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
@@ -18,7 +19,7 @@ namespace hermes::sh {
 /// those moved values. Should only run once, right before MovElimination.
 class LowerCalls : public FunctionPass {
  public:
-  explicit LowerCalls(hbc::HVMRegisterAllocator &RA)
+  explicit LowerCalls(SHRegisterAllocator &RA)
       : FunctionPass("LowerCalls"), RA_(RA) {}
   ~LowerCalls() override = default;
   bool runOnFunction(Function *F) override {
@@ -61,7 +62,7 @@ class LowerCalls : public FunctionPass {
   }
 
  protected:
-  hbc::HVMRegisterAllocator &RA_;
+  SHRegisterAllocator &RA_;
 };
 
 } // namespace hermes::sh

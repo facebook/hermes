@@ -7,6 +7,7 @@ add_hermes_library(hermesSHBackend
   LowerCalls.h
   RecreateCheapValues.h
   SH.cpp
+  SHRegAlloc.cpp SHRegAlloc.h
   LINK_OBJLIBS
   hermesBackend
   hermesInst

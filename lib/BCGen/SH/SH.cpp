@@ -9,6 +9,7 @@
 
 #include "LowerCalls.h"
 #include "RecreateCheapValues.h"
+#include "SHRegAlloc.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
@@ -264,7 +265,7 @@ class InstrGen {
   /// \p envSize is the environment size of the current function
   InstrGen(
       llvh::raw_ostream &os,
-      hbc::HVMRegisterAllocator &ra,
+      sh::SHRegisterAllocator &ra,
       const llvh::DenseMap<BasicBlock *, unsigned> &bbMap,
       Function &F,
       ModuleGen &moduleGen,
@@ -327,7 +328,7 @@ class InstrGen {
   llvh::raw_ostream &os_;
 
   /// The register allocator that was created for the current function
-  hbc::HVMRegisterAllocator &ra_;
+  sh::SHRegisterAllocator &ra_;
 
   /// A map from basic blocks to unique numbers for identification
   const llvh::DenseMap<BasicBlock *, unsigned> &bbMap_;
@@ -363,7 +364,7 @@ class InstrGen {
   }
 
   /// Helper to generate a value in a register,
-  void generateRegister(Register reg) {
+  void generateRegister(sh::Register reg) {
     if (registerIsPointer(reg.getIndex())) {
       os_ << "locals.t" << reg.getIndex();
     } else {
@@ -481,7 +482,7 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateMovInst(MovInst &inst) {
-    Register dstReg = ra_.getRegister(&inst);
+    sh::Register dstReg = ra_.getRegister(&inst);
     if (ra_.isAllocated(inst.getSingleOperand()) &&
         dstReg == ra_.getRegister(inst.getSingleOperand())) {
       return;
@@ -1676,7 +1677,7 @@ void generateFunction(
 
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 
-  hbc::HVMRegisterAllocator RA(&F);
+  sh::SHRegisterAllocator RA(&F);
 
   RA.allocate(order);
 

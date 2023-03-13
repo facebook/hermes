@@ -1,6 +1,14 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 #ifndef HERMES_BCGEN_SH_RECREATECHEAPVALUES_H
 #define HERMES_BCGEN_SH_RECREATECHEAPVALUES_H
 
+#include "SHRegAlloc.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
@@ -12,7 +20,7 @@ namespace hermes::sh {
 /// Must run after RA since that's when Movs are introduced.
 class RecreateCheapValues : public FunctionPass {
  public:
-  explicit RecreateCheapValues(hbc::HVMRegisterAllocator &RA)
+  explicit RecreateCheapValues(SHRegisterAllocator &RA)
       : FunctionPass("RecreateCheapValues"), RA_(RA) {}
   ~RecreateCheapValues() override = default;
   bool runOnFunction(Function *F) override {
@@ -58,7 +66,7 @@ class RecreateCheapValues : public FunctionPass {
   }
 
  private:
-  hbc::HVMRegisterAllocator &RA_;
+  SHRegisterAllocator &RA_;
 };
 
 } // namespace hermes::sh
