@@ -1687,7 +1687,6 @@ void generateFunction(
   if (options.optimizationEnabled) {
     PM.addPass(new MovElimination(RA));
     PM.addPass(new hbc::RecreateCheapValues(RA));
-    PM.addPass(new hbc::LoadConstantValueNumbering(RA));
   }
   PM.run(&F);
 
