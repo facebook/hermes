@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/SH/SH.h"
 
+#include "LowerCalls.h"
 #include "RecreateCheapValues.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
@@ -1686,7 +1687,7 @@ void generateFunction(
 
   PassManager PM;
   PM.addPass(new LowerStoreInstrs(RA));
-  PM.addPass(new hbc::LowerCalls(RA));
+  PM.addPass(new sh::LowerCalls(RA));
   if (options.optimizationEnabled) {
     PM.addPass(new MovElimination(RA));
     PM.addPass(new sh::RecreateCheapValues(RA));
