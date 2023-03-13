@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/SH/SH.h"
 
+#include "RecreateCheapValues.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
@@ -1686,7 +1687,7 @@ void generateFunction(
   PM.addPass(new hbc::LowerCalls(RA));
   if (options.optimizationEnabled) {
     PM.addPass(new MovElimination(RA));
-    PM.addPass(new hbc::RecreateCheapValues(RA));
+    PM.addPass(new sh::RecreateCheapValues(RA));
   }
   PM.run(&F);
 

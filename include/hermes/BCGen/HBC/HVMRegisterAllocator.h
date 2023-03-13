@@ -13,6 +13,9 @@
 #include "hermes/IR/IR.h"
 
 namespace hermes {
+
+class BaseCallInst;
+
 namespace hbc {
 
 class HVMRegisterAllocator : public RegisterAllocator {
