@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
+#include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/IR.h"

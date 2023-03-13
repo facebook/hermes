@@ -81,19 +81,6 @@ class LowerAllocObjectLiteral : public FunctionPass {
   bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst);
 };
 
-/// Lowers Store instructions down to MOVs after register allocation.
-class LowerStoreInstrs : public FunctionPass {
- public:
-  explicit LowerStoreInstrs(RegisterAllocator &RA)
-      : FunctionPass("LowerStoreInstrs"), RA_(RA) {}
-  ~LowerStoreInstrs() override = default;
-
-  bool runOnFunction(Function *F) override;
-
- private:
-  RegisterAllocator &RA_;
-};
-
 /// Transform number-like string properties into a LiteralNumber.
 class LowerNumericProperties : public FunctionPass {
  public:

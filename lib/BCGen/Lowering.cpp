@@ -584,34 +584,6 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   return true;
 }
 
-bool LowerStoreInstrs::runOnFunction(Function *F) {
-  IRBuilder builder(F);
-  IRBuilder::InstructionDestroyer destroyer;
-  bool changed = false;
-
-  PostOrderAnalysis PO(F);
-  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
-  for (auto *bbit : order) {
-    for (auto &it : bbit->getInstList()) {
-      auto *SSI = llvh::dyn_cast<StoreStackInst>(&it);
-      if (!SSI)
-        continue;
-
-      Value *ptr = SSI->getPtr();
-      Value *val = SSI->getValue();
-
-      builder.setInsertionPoint(&it);
-      auto dstReg = RA_.getRegister(ptr);
-      auto *mov = builder.createMovInst(val);
-      RA_.updateRegister(mov, dstReg);
-      it.replaceAllUsesWith(mov);
-      destroyer.add(&it);
-      changed = true;
-    }
-  }
-  return changed;
-}
-
 bool LowerNumericProperties::stringToNumericProperty(
     IRBuilder &builder,
     Instruction &Inst,
