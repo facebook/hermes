@@ -68,7 +68,7 @@ function intersectSets<T>(
   first: $ReadOnlySet<T>,
   other: $ReadOnlySet<T>,
 ): Set<T> {
-  const ret = new Set();
+  const ret = new Set<T>();
   for (const value of first) {
     if (other.has(value)) {
       ret.add(value);

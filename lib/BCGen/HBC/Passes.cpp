@@ -204,6 +204,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<ThrowIfHasRestrictedGlobalPropertyInst>(Inst) &&
+      opIndex == ThrowIfHasRestrictedGlobalPropertyInst::PropertyIdx) {
+    return true;
+  }
+
   return false;
 }
 
@@ -535,7 +540,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
         }
       }
     } else {
-      llvm_unreachable("CreateArguments used for a non-Instruction.");
+      hermes_fatal("CreateArguments used for a non-Instruction.");
     }
   }
 

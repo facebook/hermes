@@ -67,6 +67,9 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Whether the module constitutes a single function
   bool singleFunction_;
 
+  /// Hash of all source files.
+  SHA1 sourceHash_{SHA1{}};
+
   explicit BCProviderFromSrc(std::unique_ptr<hbc::BytecodeModule> module);
 
   /// No need to do anything since it's already created as part of
@@ -206,6 +209,14 @@ class BCProviderFromSrc final : public BCProviderBase {
   hbc::BytecodeModule *getBytecodeModule() {
     return module_.get();
   }
+
+  SHA1 getSourceHash() const override {
+    return sourceHash_;
+  };
+
+  void setSourceHash(const SHA1 &hash) {
+    sourceHash_ = hash;
+  };
 };
 
 /// BCProviderLazy is used during lazy compilation. When a function is created

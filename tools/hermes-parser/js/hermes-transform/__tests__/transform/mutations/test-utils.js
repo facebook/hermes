@@ -90,7 +90,7 @@ export function parseAndGetAstAndNode<T: ESNode = ESNode>(
   let target: T | null = null;
   traverse(code, ast, scopeManager, () => ({
     // $FlowExpectedError[invalid-computed-prop] - this is guaranteed safe
-    [type](node) {
+    [type](node: T | null) {
       target = node;
     },
   }));

@@ -97,14 +97,20 @@ export function ${node.name}(props: {
   const node = detachedProps<${node.name}Type>(props.parent, {
     type: '${type}',
     ${node.arguments
-      .map(arg => {
+      .flatMap(arg => {
         switch (arg.type) {
           case 'NodePtr':
-            return `${arg.name}: asDetachedNode(props.${arg.name})`;
+            return [
+              '// $FlowFixMe[incompatible-call]',
+              `${arg.name}: asDetachedNode(props.${arg.name})`,
+            ];
           case 'NodeList':
-            return `${arg.name}: props.${arg.name}${
-              arg.optional ? '?.' : '.'
-            }map(n => asDetachedNode(n))`;
+            return [
+              '// $FlowFixMe[incompatible-call]',
+              `${arg.name}: props.${arg.name}${
+                arg.optional ? '?.' : '.'
+              }map(n => asDetachedNode(n))`,
+            ];
           default:
             return `${arg.name}: props.${arg.name}`;
         }

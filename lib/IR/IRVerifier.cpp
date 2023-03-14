@@ -458,6 +458,11 @@ void Verifier::visitLoadStackInst(const LoadStackInst &Inst) {
   // Nothing to verify at this point.
 }
 
+void Verifier::visitThrowIfHasRestrictedGlobalPropertyInst(
+    const ThrowIfHasRestrictedGlobalPropertyInst &Inst) {
+  // Nothing to verify at this point.
+}
+
 void Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
   Assert(functionState, "function state cannot be null");
   Assert(

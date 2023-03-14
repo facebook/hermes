@@ -109,7 +109,7 @@ export interface Position {
 }
 
 // note: this is only ever present on Program.interpreter, never in the body
-interface InterpreterDirective extends BaseNode {
+export interface InterpreterDirective extends BaseNode {
   type: 'InterpreterDirective';
   value: string;
 }

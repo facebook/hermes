@@ -38,7 +38,7 @@ export function transformAST(
   {ast, scopeManager, code}: ParseResult,
   visitors: TransformVisitor,
 ): TransformASTResult {
-  // traverse the AST and colllect the mutations
+  // traverse the AST and collect the mutations
   const transformContext = getTransformContext();
   traverseWithContext(
     code,

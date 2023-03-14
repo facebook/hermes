@@ -21,7 +21,7 @@ function foo(x) {
 }
 
 //CHECK-LABEL:Function<foo>(2 params, 7 registers, 1 symbols):
-//CHECK-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x{{.*}}
+//CHECK-NEXT:Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
 //CHECK-NEXT:    CreateEnvironment r0
 //CHECK-NEXT:    LoadParam         r1, 1
 //CHECK-NEXT:    LoadConstUInt8    r2, 10
@@ -38,7 +38,7 @@ function foo(x) {
 //CHECK-NEXT:    Ret               r4
 
 //CHKOPT-LABEL:Function<foo>(2 params, 2 registers, 0 symbols):
-//CHKOPT-NEXT:Offset in debug table: source 0x{{.*}}, lexical 0x{{.*}}
+//CHKOPT-NEXT:Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
 //CHKOPT-NEXT:    LoadParam         r0, 1
 //CHKOPT-NEXT:    JmpTrue           L1, r0
 //CHKOPT-NEXT:    LoadConstUInt8    r1, 10

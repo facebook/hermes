@@ -100,7 +100,7 @@ void SerializedLiteralGenerator::serializeBuffer(
         newTag = NullTag;
         break;
       default:
-        llvm_unreachable("Invalid Literal Kind");
+        hermes_fatal("Invalid Literal Kind");
     }
 
     if (newTag != lastTag || seqLength == SequenceMax) {
@@ -148,7 +148,7 @@ void SerializedLiteralGenerator::serializeBuffer(
         /* no-op */
         break;
       default:
-        llvm_unreachable("Invalid Literal Kind");
+        hermes_fatal("Invalid Literal Kind");
     }
   }
   // The last value in the buffer can't get serialized in the loop.

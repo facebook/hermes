@@ -650,7 +650,7 @@ export interface ImportSpecifier extends BaseNode {
   +type: 'ImportSpecifier';
   +local: Identifier;
   +imported: Identifier;
-  +importKind: ImportKind;
+  +importKind: ?ImportKind;
 }
 export type IterationStatement =
   | DoWhileStatement

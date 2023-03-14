@@ -145,6 +145,7 @@ NATIVE_FUNCTION(hermesBuiltinApply)
 NATIVE_FUNCTION(hermesBuiltinEnsureObject)
 NATIVE_FUNCTION(hermesBuiltinGetMethod)
 NATIVE_FUNCTION(hermesBuiltinExponentiate)
+NATIVE_FUNCTION(hermesBuiltinGetOriginalNativeErrorConstructor)
 NATIVE_FUNCTION(hermesBuiltinExportAll)
 NATIVE_FUNCTION(hermesBuiltinInitRegexNamedGroups)
 NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
@@ -400,7 +401,7 @@ NATIVE_FUNCTION(instrumentReturnNth)
 #endif
 
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 
 // NativeConstructor

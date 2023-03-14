@@ -101,7 +101,7 @@ Handle<JSObject> createErrorConstructor(Runtime &runtime) {
 // Error types take in one.
 #define NATIVE_ERROR_TYPE(name) ERR_HELPER(name, 1)
 #define AGGREGATE_ERROR_TYPE(name) ERR_HELPER(name, 2)
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 static CallResult<HermesValue> constructErrorObject(
     Runtime &runtime,
@@ -241,7 +241,7 @@ AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
     return constructErrorObject(                                               \
         runtime, args, args.getArgHandle(0), args.getArgHandle(1), prototype); \
   }
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 /// ES11.0 19.5.3.4
 CallResult<HermesValue>

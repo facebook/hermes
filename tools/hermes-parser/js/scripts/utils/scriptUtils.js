@@ -92,7 +92,8 @@ type Package =
   | 'hermes-eslint'
   | 'hermes-estree'
   | 'hermes-parser'
-  | 'hermes-transform';
+  | 'hermes-transform'
+  | 'flow-api-translator';
 
 type ArtifactOptions = $ReadOnly<{
   code: string,

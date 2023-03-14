@@ -494,6 +494,9 @@ void DictPropertyMap::forEachProperty(
     Handle<DictPropertyMap> selfHandle,
     Runtime &runtime,
     const CallbackFunction &callback) {
+  // Re-entering JS execution in this context can cause the property
+  // descriptors to change (e.g. T138148986)
+  NoRJSScope scope{runtime};
   GCScopeMarkerRAII gcMarker{runtime};
   for (size_type
            i = 0,
@@ -528,6 +531,9 @@ bool DictPropertyMap::forEachPropertyWhile(
     Handle<DictPropertyMap> selfHandle,
     Runtime &runtime,
     const CallbackFunction &callback) {
+  // Re-entering JS execution in this context can cause the property
+  // descriptors to change (e.g. T138148986)
+  NoRJSScope scope{runtime};
   GCScopeMarkerRAII gcMarker{runtime};
   for (size_type
            i = 0,

@@ -25,7 +25,7 @@ const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
-const VALID_REACT_IMPORTS = new Set(['React', 'react']);
+const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
 
 export function flowDefToTSDef(
   originalCode: string,
@@ -120,7 +120,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           def.node.type === 'ImportDefaultSpecifier' ||
           def.node.type === 'ImportNamespaceSpecifier'
         ) {
-          return VALID_REACT_IMPORTS.has(def.parent.source);
+          return VALID_REACT_IMPORTS.has(def.parent.source.value);
         }
         return false;
       }
@@ -1222,42 +1222,61 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     GenericTypeAnnotation(
       node: FlowESTree.GenericTypeAnnotation,
     ): TSESTree.TypeNode {
-      if (node.id.type !== 'Identifier') {
-        return {
-          type: 'TSTypeReference',
-          typeName: transform.QualifiedTypeIdentifier(node.id),
-          typeParameters:
-            node.typeParameters == null
-              ? undefined
-              : transform.TypeParameterInstantiation(node.typeParameters),
-        };
-      }
+      const [fullTypeName, baseId] = (() => {
+        let names: Array<string> = [];
+        let currentNode = node.id;
 
-      // attempt to handle any of flow's utilitiy types
-      const originalTypeName = node.id.name;
+        while (currentNode != null) {
+          switch (currentNode.type) {
+            case 'Identifier': {
+              names.unshift(currentNode.name);
+              return [names.join('.'), currentNode];
+            }
+            case 'QualifiedTypeIdentifier': {
+              names.unshift(currentNode.id.name);
+              currentNode = currentNode.qualification;
+              break;
+            }
+          }
+        }
+
+        throw translationError(
+          node,
+          `Invalid program state, types should only contain 'Identifier' and 'QualifiedTypeIdentifier' nodes.`,
+        );
+      })();
+
       const assertHasExactlyNTypeParameters = (
         count: number,
       ): $ReadOnlyArray<TSESTree.TypeNode> => {
-        if (
-          node.typeParameters == null ||
-          node.typeParameters.params.length !== count
-        ) {
+        if (node.typeParameters != null) {
+          if (node.typeParameters.params.length !== count) {
+            throw translationError(
+              node,
+              `Expected exactly ${count} type parameter${
+                count > 1 ? 's' : ''
+              } with \`${fullTypeName}\``,
+            );
+          }
+
+          const res = [];
+          for (const param of node.typeParameters.params) {
+            res.push(transform.TypeAnnotationType(param));
+          }
+          return res;
+        }
+
+        if (count !== 0) {
           throw translationError(
             node,
-            `Expected exactly ${count} type parameter${
-              count > 1 ? 's' : ''
-            } with \`${originalTypeName}\``,
+            `Expected no type parameters with \`${fullTypeName}\``,
           );
         }
 
-        const res = [];
-        for (const param of node.typeParameters.params) {
-          res.push(transform.TypeAnnotationType(param));
-        }
-        return res;
+        return [];
       };
 
-      switch (originalTypeName) {
+      switch (fullTypeName) {
         case '$Call':
         case '$ObjMap':
         case '$ObjMapConst':
@@ -1285,7 +1304,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           type PropType = ReturnType<ExtractPropType<Obj>>; // number
           ```
           */
-          throw unsupportedTranslationError(node, originalTypeName);
+          throw unsupportedTranslationError(node, fullTypeName);
         }
 
         case '$Diff':
@@ -1479,13 +1498,6 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           };
         }
 
-        case '$Subtype':
-        case '$Supertype': {
-          // These types are deprecated and shouldn't be used in any modern code
-          // so let's not even bother trying to figure it out
-          throw unsupportedTranslationError(node, originalTypeName);
-        }
-
         case '$Values': {
           // `$Values<T>` => `T[keyof T]`
           const transformedType = assertHasExactlyNTypeParameters(1)[0];
@@ -1536,6 +1548,127 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               typeAnnotation: param,
             },
           };
+        }
+      }
+
+      // React special conversion:
+      if (isReactImport(baseId)) {
+        switch (fullTypeName) {
+          // React.Node -> React.ReactNode
+          case 'React.Node': {
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: transform.Identifier(baseId, false),
+                right: {
+                  type: 'Identifier',
+                  name: `ReactNode`,
+                },
+              },
+              typeParameters: undefined,
+            };
+          }
+          // React.Element<typeof Component> -> React.ReactElement<typeof Component>
+          case 'React.Element': {
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: transform.Identifier(baseId, false),
+                right: {
+                  type: 'Identifier',
+                  name: `ReactElement`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          }
+          // React.MixedElement -> JSX.Element
+          case 'React.MixedElement': {
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: {
+                  type: 'Identifier',
+                  name: 'JSX',
+                },
+                right: {
+                  type: 'Identifier',
+                  name: 'Element',
+                },
+              },
+              typeParameters: undefined,
+            };
+          }
+          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config>
+          // React.AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
+          case 'React.AbstractComponent': {
+            const typeParameters = node.typeParameters;
+            if (typeParameters == null || typeParameters.params.length === 0) {
+              throw translationError(
+                node,
+                `Expected at least 1 type parameter with \`${fullTypeName}\``,
+              );
+            }
+            const params = typeParameters.params;
+            if (params.length > 2) {
+              throw translationError(
+                node,
+                `Expected at no more than 2 type parameters with \`${fullTypeName}\``,
+              );
+            }
+
+            let newTypeParam = transform.TypeAnnotationType(params[0]);
+            if (params[1] != null) {
+              newTypeParam = {
+                type: 'TSIntersectionType',
+                types: [
+                  newTypeParam,
+                  {
+                    type: 'TSTypeReference',
+                    typeName: {
+                      type: 'TSQualifiedName',
+                      left: {
+                        type: 'Identifier',
+                        name: 'React',
+                      },
+                      right: {
+                        type: 'Identifier',
+                        name: 'RefAttributes',
+                      },
+                    },
+                    typeParameters: {
+                      type: 'TSTypeParameterInstantiation',
+                      params: [transform.TypeAnnotationType(params[1])],
+                    },
+                  },
+                ],
+              };
+            }
+
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: transform.Identifier(baseId, false),
+                right: {
+                  type: 'Identifier',
+                  name: `ForwardRefExoticComponent`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: [newTypeParam],
+              },
+            };
+          }
         }
       }
 
@@ -1647,7 +1780,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               }
               return {
                 type: 'ImportSpecifier',
-                importKind: spec.importKind ?? 'value',
+                importKind: spec.importKind === 'type' ? 'type' : null,
                 imported: transform.Identifier(spec.imported, false),
                 local: transform.Identifier(spec.local, false),
               };
@@ -2113,38 +2246,6 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     ): TSESTree.TSQualifiedName {
       const qual = node.qualification;
 
-      // React special conversion:
-      if (qual.type === 'Identifier' && isReactImport(qual)) {
-        switch (node.id.name) {
-          // React.Something -> React.ReactSomething
-          case 'Element':
-          case 'Node': {
-            return {
-              type: 'TSQualifiedName',
-              left: transform.Identifier(qual, false),
-              right: {
-                type: 'Identifier',
-                name: `React${node.id.name}`,
-              },
-            };
-          }
-          // React.MixedElement -> JSX.Element
-          case 'MixedElement': {
-            return {
-              type: 'TSQualifiedName',
-              left: {
-                type: 'Identifier',
-                name: 'JSX',
-              },
-              right: {
-                type: 'Identifier',
-                name: 'Element',
-              },
-            };
-          }
-        }
-      }
-
       return {
         type: 'TSQualifiedName',
         left:
@@ -2381,8 +2482,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
   // wrap each transform so that we automatically preserve jsdoc comments
   // this just saves us manually wiring up every single case
   for (const key of Object.keys(transform)) {
-    const originalFn = transform[key];
+    const originalFn: $FlowFixMe = transform[key];
     // $FlowExpectedError[cannot-write]
+    // $FlowExpectedError[missing-local-annot]
     transform[key] = (node, ...args) => {
       const result = originalFn(node, ...args);
       if (Array.isArray(result)) {

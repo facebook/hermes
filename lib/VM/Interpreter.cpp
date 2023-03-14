@@ -827,6 +827,9 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
+  // Make sure we are not re-entering JS execution from a context that doesn't
+  // allow reentrancy
+  assert(this->noRJSLevel_ == 0 && "No JS execution allowed right now.");
   return interpretFunctionImpl(newCodeBlock);
 }
 
@@ -2043,21 +2046,26 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CreateInnerEnvironment) {
+        CAPTURE_IP(
+            O1REG(CreateInnerEnvironment) = Environment::create(
+                runtime,
+                Handle<Environment>::vmcast(&O2REG(CreateInnerEnvironment)),
+                ip->iCreateInnerEnvironment.op3));
+        ip = NEXTINST(CreateInnerEnvironment);
+        DISPATCH;
+      }
+
       CASE(CreateEnvironment) {
         tmpHandle = HermesValue::encodeObjectValueUnsafe(
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
 
-        CAPTURE_IP_ASSIGN(
-            HermesValue envHV,
-            Environment::create(
+        CAPTURE_IP(
+            O1REG(CreateEnvironment) = Environment::create(
                 runtime,
                 Handle<Environment>::vmcast_or_null(tmpHandle),
                 curCodeBlock->getEnvironmentSize()));
 
-        O1REG(CreateEnvironment) = envHV;
-#ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = envHV;
-#endif
         tmpHandle = HermesValue::encodeUndefinedValue();
         ip = NEXTINST(CreateEnvironment);
         DISPATCH;
@@ -2128,6 +2136,17 @@ tailCall:
           goto exception;
         }
         ip = NEXTINST(DeclareGlobalVar);
+        DISPATCH;
+      }
+
+      CASE(ThrowIfHasRestrictedGlobalProperty) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            throwIfHasRestrictedGlobalPropertyImpl(runtime, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        ip = NEXTINST(ThrowIfHasRestrictedGlobalProperty);
         DISPATCH;
       }
 

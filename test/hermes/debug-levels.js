@@ -59,7 +59,7 @@ function throwingFunction() {throw new Error();}
 // SOURCEMAP-NOT: {{.*}} function idx {{.*}}, starts at line 19 col 1
 // SOURCEMAP-G-NOT: {{.*}} function idx {{.*}}, starts at line 19 col 1
 
-// SHARED-LABEL: Debug lexical table:
+// SHARED-LABEL: Debug scope descriptor table:
 // G3: {{.*}} variable count: 1
 // G2-NOT: {{.*}} variable count: 1
 // G1-NOT: {{.*}} variable count: 1

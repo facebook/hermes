@@ -104,7 +104,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
   const StreamVector<uint8_t> &data = info.viewData();
-  uint32_t lexOffset = info.lexicalDataOffset();
+  uint32_t scopeDescOffset = info.scopeDescDataOffset();
   uint32_t tCalleeOffset = info.textifiedCalleeOffset();
   uint32_t stOffset = info.stringTableOffset();
 
@@ -112,7 +112,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
       (uint32_t)filenameTable.size(),
       (uint32_t)filenameStorage.size(),
       (uint32_t)files.size(),
-      lexOffset,
+      scopeDescOffset,
       tCalleeOffset,
       stOffset,
       (uint32_t)data.size()};
