@@ -324,9 +324,6 @@ Instruction::Instruction(
     const Instruction *src,
     llvh::ArrayRef<Value *> operands)
     : Instruction(src->getKind()) {
-  assert(
-      src->getNumOperands() == operands.size() && "invalid number of operands");
-
   setType(src->getType());
 
   location_ = src->location_;

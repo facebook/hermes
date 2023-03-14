@@ -23,34 +23,19 @@ STATISTIC(NumInlinedCalls, "Number of inlined calls");
 namespace hermes {
 
 /// Generate a list of basic blocks in simple depth-first-search order.
-///
-/// Unreachable blocks are included.
-/// We have to inline unreachable blocks because they may be used by PhiInst
-/// which are reachable through another block.
-static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
-  llvh::SmallVector<BasicBlock *, 4> order{};
+static llvh::SmallSetVector<BasicBlock *, 4> orderDFS(Function *F) {
+  llvh::SmallSetVector<BasicBlock *, 4> order{};
   llvh::SmallVector<BasicBlock *, 4> stack{};
-  llvh::SmallDenseSet<BasicBlock *> visited{};
 
   stack.push_back(&*F->begin());
   while (!stack.empty()) {
     BasicBlock *BB = stack.back();
     stack.pop_back();
-    if (!visited.insert(BB).second)
+    if (!order.insert(BB))
       continue;
-
-    order.push_back(BB);
 
     for (auto *succ : successors(BB))
       stack.push_back(succ);
-  }
-
-  // Add unreachable blocks.
-  for (BasicBlock &BB : *F) {
-    if (visited.insert(&BB).second) {
-      // Not visited before.
-      order.push_back(&BB);
-    }
   }
 
   return order;
@@ -315,32 +300,41 @@ static Value *inlineFunction(
   // Branch to the entry block.
   builder.createBranchInst(cast<BasicBlock>(operandMap[order[0]]));
 
+  /// Translate \p oldOp, which is an operand of \p I.
+  /// Return the translated operand.
+  auto translateOperand = [&operandMap](
+                              Instruction *I, Value *oldOp) -> Value * {
+    Value *newOp = nullptr;
+
+    if (llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
+        llvh::isa<BasicBlock>(oldOp)) {
+      // Operands must already have been visited.
+      newOp = operandMap[oldOp];
+      assert(newOp && "operand not visited before instruction");
+    } else if (
+        llvh::isa<Label>(oldOp) || llvh::isa<Literal>(oldOp) ||
+        llvh::isa<Function>(oldOp) || llvh::isa<Variable>(oldOp) ||
+        llvh::isa<EmptySentinel>(oldOp)) {
+      // Labels, literals and variables are unchanged.
+      newOp = oldOp;
+    } else {
+      llvh::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
+      llvh::errs() << "INVALID OPERAND     : " << oldOp->getKindStr() << '\n';
+      llvm_unreachable("unexpected operand kind");
+    }
+
+    return newOp;
+  };
+
   // Translate all operands of the passed instruction and store them into
   // translatedOperands[].
   auto translateOperands = [&](Instruction *I) {
+    assert(!llvh::isa<PhiInst>(I) && "phi must be handled specially");
     translatedOperands.clear();
 
     for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
       Value *oldOp = I->getOperand(i);
-      Value *newOp = nullptr;
-
-      if (llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
-          llvh::isa<BasicBlock>(oldOp)) {
-        // Operands must already have been visited.
-        newOp = operandMap[oldOp];
-        assert(newOp && "operand not visited before instruction");
-      } else if (
-          llvh::isa<Label>(oldOp) || llvh::isa<Literal>(oldOp) ||
-          llvh::isa<Function>(oldOp) || llvh::isa<Variable>(oldOp) ||
-          llvh::isa<EmptySentinel>(oldOp)) {
-        // Labels, literals and variables are unchanged.
-        newOp = oldOp;
-      } else {
-        llvh::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
-        llvh::errs() << "INVALID OPERAND     : " << oldOp->getKindStr() << '\n';
-        llvm_unreachable("unexpected operand kind");
-      }
-
+      Value *newOp = translateOperand(I, oldOp);
       translatedOperands.push_back(newOp);
     }
   };
@@ -375,10 +369,9 @@ static Value *inlineFunction(
       // Translate the operands.
       if (auto *phi = llvh::dyn_cast<PhiInst>(&I)) {
         // We cannot translate phi operands yet because the instruction is not
-        // dominated by its operands (unlike all others). So, use empty
-        // operands and save the Phi for later.
+        // dominated by its operands (unlike all others).
+        // So save the Phi for later.
         translatedOperands.clear();
-        translatedOperands.resize(phi->getNumOperands(), nullptr);
         phis.push_back(phi);
       } else {
         translateOperands(&I);
@@ -427,11 +420,17 @@ static Value *inlineFunction(
   // Finish the job by translating the operands of the phi instructions we
   // saved earlier.
   for (PhiInst *oldPhi : phis) {
-    translateOperands(oldPhi);
-
     auto *newPhi = cast<PhiInst>(operandMap[oldPhi]);
-    for (unsigned i = 0, e = translatedOperands.size(); i != e; ++i)
-      newPhi->setOperand(translatedOperands[i], i);
+    for (unsigned i = 0, e = oldPhi->getNumEntries(); i != e; ++i) {
+      auto [oldVal, oldBlock] = oldPhi->getEntry(i);
+      // Only translate if the block is reachable.
+      if (order.count(oldBlock)) {
+        Value *newVal = translateOperand(oldPhi, oldVal);
+        Value *newBlock = operandMap[oldBlock];
+        assert(newBlock && "unmapped block for reachable phi operand");
+        newPhi->addEntry(newVal, llvh::cast<BasicBlock>(newBlock));
+      }
+    }
   }
 
   builder.setInsertionBlock(returnBlock);
