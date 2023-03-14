@@ -313,7 +313,7 @@ cl::opt<bool> VerifyIR(
 
 cl::opt<bool> DumpOperandRegisters(
     "dump-operand-registers",
-    cl::desc("Dump registers assigned to instruction operands"),
+    cl::desc("Dump registers for operands instead of instruction numbers"),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpUseList(
