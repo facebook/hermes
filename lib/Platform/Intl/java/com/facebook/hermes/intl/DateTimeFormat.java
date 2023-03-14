@@ -130,13 +130,6 @@ public class DateTimeFormat {
     if (!JSObjects.isUndefined(JSObjects.Get(options, "dateStyle")) || !JSObjects.isUndefined(JSObjects.Get(options, "timeStyle")) )
       needDefaults = false;
 
-    if (required.equals("date") && !JSObjects.isUndefined(JSObjects.Get(options, "timeStyle"))) {
-      // throw // TODO throw TypeError
-    }
-
-    if (required.equals("time") && !JSObjects.isUndefined(JSObjects.Get(options, "dateStyle"))) {
-      // throw // TODO throw TypeError
-    }
 
     if (needDefaults && (defaults.equals("date") || defaults.equals("all"))) {
       for (String property : new String[] {"year", "month", "day"}) {

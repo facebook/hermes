@@ -393,8 +393,7 @@ ExecutionStatus checkOptions<platform_intl::DateTimeFormat>(
     const platform_intl::Options &options) {
   // https://www.ecma-international.org/wp-content/uploads/ECMA-402_9th_edition_june_2022.pdf
   //  InitializeDateTimeFormat # 42
-  const bool hasExplicitFormatComponents {
-      options.find(u"weekday") != options.end() || 
+  const bool hasExplicitFormatComponents = options.find(u"weekday") != options.end() ||
       options.find(u"era") != options.end() ||
       options.find(u"year") != options.end() ||
       options.find(u"month") != options.end() ||
@@ -405,11 +404,11 @@ ExecutionStatus checkOptions<platform_intl::DateTimeFormat>(
       options.find(u"minute") != options.end() ||
       options.find(u"second") != options.end() ||
       options.find(u"fractionalSecondDigits") != options.end() ||
-      options.find(u"timeZoneName") != options.end()};
-  if ( (options.find(u"dateStyle") != options.end() || options.find(u"timeStyle") != options.end() )
-    &&  hasExplicitFormatComponents) {
+      options.find(u"timeZoneName") != options.end();
+  const bool hasStyle = options.find(u"dateStyle") != options.end() || options.find(u"timeStyle") != options.end();
+  if ( hasStyle && hasExplicitFormatComponents) {
     return runtime.raiseTypeError(
-        "{data/time}Style and ExplicitFormatComponents shouldn't be used together");
+        "{data/time}Style and explicit format components shouldn't be used together");
   }
 
   return ExecutionStatus::RETURNED;
@@ -463,6 +462,7 @@ CallResult<HermesValue> intlServiceConstructor(
     return ExecutionStatus::EXCEPTION;
   }
 
+  // Service specific checks ..
   if (LLVM_UNLIKELY(
           checkOptions<T>(runtime, *optionsRes) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1452,11 +1452,11 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     }
     toDateTimeOptions(*optionsRes, dtoFlags);
 
-    if (!(dtoFlags & kDTOTime) && (*optionsRes).find(u"timeStyle") != (*optionsRes).end())
+    if (!(dtoFlags & kDTOTime) && optionsRes->find(u"timeStyle") != optionsRes->end())
       return runtime.raiseTypeError(
         "timeStyle not a valid option");
 
-    if (!(dtoFlags & kDTODate) && (*optionsRes).find(u"dateStyle") != (*optionsRes).end())
+    if (!(dtoFlags & kDTODate) && optionsRes->find(u"dateStyle") != optionsRes->end())
       return runtime.raiseTypeError(
         "dateStyle not a valid option");
 

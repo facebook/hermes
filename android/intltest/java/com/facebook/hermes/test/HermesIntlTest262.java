@@ -162,7 +162,7 @@ public class HermesIntlTest262 extends InstrumentationTestCase {
             "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
             "test262/test/intl402/DateTimeFormat/timezone-canonicalized.js",
             "test262/test/intl402/DateTimeFormat/timezone-utc.js",
-            // We dont' support dateStyle, timeStyle, dayPeriod, and fractionalSecondDigits.
+            // We dont' support dayPeriod, and fractionalSecondDigits.
             "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
             "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-invalid.js",
