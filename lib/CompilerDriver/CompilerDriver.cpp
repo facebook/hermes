@@ -393,7 +393,7 @@ static opt<bool> DumpUseList(
 
 static opt<LocationDumpMode> DumpSourceLocation(
     "dump-source-location",
-    desc("Print source location information in IR or AST dumps."),
+    desc("Print source location information in IR/AST/bytecode dumps."),
     init(LocationDumpMode::None),
     values(
         clEnumValN(
@@ -1710,6 +1710,10 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
   hbc::DisassemblyOptions disassemblyOptions = cl::Pretty
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
+  if (cl::DumpSourceLocation != LocationDumpMode::None) {
+    disassemblyOptions =
+        disassemblyOptions | hbc::DisassemblyOptions::IncludeSource;
+  }
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
   disassembler.setOptions(disassemblyOptions);
   disassembler.disassemble(fileOS.os());
