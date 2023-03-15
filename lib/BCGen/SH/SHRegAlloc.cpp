@@ -813,28 +813,34 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
       : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
 
   void printInstructionDestination(Instruction *I) override {
+    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
+
     if (!allocator.isAllocated(I)) {
-      os << "$??? ";
+      os << "$???";
     } else {
-      os << "$" << allocator.getRegister(I) << " ";
+      os << "$" << allocator.getRegister(I);
     }
 
-    if (allocator.hasInstructionNumber(I)) {
-      auto idx = allocator.getInstructionNumber(I);
-      Interval &ivl = allocator.getInstructionInterval(I);
-      os << "@" << idx << " " << ivl << "\t";
-    } else {
-      os << "          \t";
-    }
+    if (!codeGenOpts.dumpOperandRegisters) {
+      os << " ";
+      if (allocator.hasInstructionNumber(I)) {
+        auto idx = allocator.getInstructionNumber(I);
+        Interval &ivl = allocator.getInstructionInterval(I);
+        os << "@" << idx << " " << ivl << "\t";
+      } else {
+        os << "          \t";
+      }
 
-    IRPrinter::printInstructionDestination(I);
+      IRPrinter::printInstructionDestination(I);
+    }
   }
 
   void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    IRPrinter::printValueLabel(I, V, opIndex);
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
     if (codeGenOpts.dumpOperandRegisters && allocator.isAllocated(V)) {
-      os << " @ $" << allocator.getRegister(V);
+      os << "$" << allocator.getRegister(V);
+    } else {
+      IRPrinter::printValueLabel(I, V, opIndex);
     }
   }
 };
