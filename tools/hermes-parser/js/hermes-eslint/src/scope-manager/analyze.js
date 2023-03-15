@@ -55,7 +55,7 @@ type AnalyzeOptions = $ReadOnly<{
    */
   fbt: boolean,
 }>;
-type PartialAnalyzeOptions = $ReadOnly<$Partial<AnalyzeOptions>>;
+type PartialAnalyzeOptions = $ReadOnly<Partial<AnalyzeOptions>>;
 
 const DEFAULT_OPTIONS: AnalyzeOptions = {
   globalReturn: false,

@@ -35,7 +35,7 @@ for (const node of GetHermesESTreeJSON()) {
     `
 type ${signatureName} = (
   node: ?${node.name},
-  newProps: $Partial<${propTypes}>,
+  newProps: Partial<${propTypes}>,
 ) => void;
 `,
   );

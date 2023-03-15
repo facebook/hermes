@@ -149,7 +149,7 @@ export function updateAllParentPointers(node: ESNode) {
  *
  * This will only create a new object if the overrides actually result in a change.
  */
-export function nodeWith<T: ESNode>(node: T, overrideProps: $Partial<T>): T {
+export function nodeWith<T: ESNode>(node: T, overrideProps: Partial<T>): T {
   // Check if this will actually result in a change, maintaining referential equality is important.
   const willBeUnchanged = Object.entries(overrideProps).every(([key, value]) =>
     // $FlowExpectedError[prop-missing]

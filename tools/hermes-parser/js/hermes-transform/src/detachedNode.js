@@ -62,7 +62,7 @@ export const asDetachedNode: {
 // used by the node type function codegen
 export function detachedProps<T: BaseNode>(
   parent: ?ESNode,
-  props: $ReadOnly<$Partial<{...}>>,
+  props: $ReadOnly<Partial<{...}>>,
   config: DetachConfig = {},
 ): DetachedNode<T> {
   // $FlowExpectedError[incompatible-type]
@@ -129,7 +129,7 @@ export function detachedProps<T: BaseNode>(
  */
 export function shallowCloneNode<T: ESNode>(
   node: T,
-  newProps: $ReadOnly<$Partial<{...}>>,
+  newProps: $ReadOnly<Partial<{...}>>,
   config?: DetachConfig = {},
 ): DetachedNode<T> {
   return detachedProps(
@@ -148,7 +148,7 @@ export function shallowCloneNode<T: ESNode>(
  */
 export function deepCloneNode<T: ESNode>(
   node: T,
-  newProps: $ReadOnly<$Partial<{...}>>,
+  newProps: $ReadOnly<Partial<{...}>>,
 ): DetachedNode<T> {
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(
