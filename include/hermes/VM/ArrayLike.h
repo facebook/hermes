@@ -22,7 +22,7 @@ namespace vm {
 
 /// ES9 7.3.17 CreateListFromArrayLike
 /// Returns the length of the List
-inline CallResult<uint64_t> getArrayLikeLength(
+inline CallResult<uint64_t> getArrayLikeLength_RJS(
     Handle<JSObject> arrayLikeHandle,
     Runtime &runtime) {
   auto propRes = JSObject::getNamed_RJS(
@@ -40,7 +40,7 @@ inline CallResult<uint64_t> getArrayLikeLength(
 /// however it likes.  It is permitted to allocate, and it must return
 /// ExecutionStatus.
 template <typename ElementCB>
-ExecutionStatus createListFromArrayLike(
+ExecutionStatus createListFromArrayLike_RJS(
     Handle<JSObject> arrayLikeHandle,
     Runtime &runtime,
     uint64_t length,

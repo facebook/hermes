@@ -683,7 +683,7 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 
   MutableHandle<> thisVal{runtime};
   if (isConstructor) {
-    auto thisValRes = Callable::createThisForConstruct(fn, runtime);
+    auto thisValRes = Callable::createThisForConstruct_RJS(fn, runtime);
     if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

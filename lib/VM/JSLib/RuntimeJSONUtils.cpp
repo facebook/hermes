@@ -497,7 +497,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   auto valHandle = runtime_.makeHandle(std::move(*propRes));
   if (*isArrayRes) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
-    CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
+    CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(objHandle, runtime_);
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -615,7 +615,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is arrayish
 
-  CallResult<uint64_t> lenRes = getArrayLikeLength(replacerArray, runtime_);
+  CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(replacerArray, runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -931,7 +931,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
   }
   depthCount_++;
   output_.push_back(u'[');
-  CallResult<uint64_t> lenRes = getArrayLikeLength(
+  CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(
       runtime_.makeHandle(vmcast<JSObject>(
           stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
       runtime_);

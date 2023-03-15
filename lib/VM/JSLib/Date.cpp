@@ -111,7 +111,7 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
   auto cons = defineSystemConstructor<JSDate>(
       runtime,
       Predefined::getSymbolID(Predefined::Date),
-      dateConstructor,
+      dateConstructor_RJS,
       datePrototype,
       7,
       CellKind::JSDateKind);
@@ -243,7 +243,7 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
       datePrototype,
       Predefined::getSymbolID(Predefined::setTime),
       nullptr,
-      datePrototypeSetTime,
+      datePrototypeSetTime_RJS,
       1);
 
   auto defineSetterMethod =
@@ -261,84 +261,84 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::setMilliseconds),
       1,
       false,
-      datePrototypeSetMilliseconds);
+      datePrototypeSetMilliseconds_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCMilliseconds),
       1,
       true,
-      datePrototypeSetMilliseconds);
+      datePrototypeSetMilliseconds_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setSeconds),
       2,
       false,
-      datePrototypeSetSeconds);
+      datePrototypeSetSeconds_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCSeconds),
       2,
       true,
-      datePrototypeSetSeconds);
+      datePrototypeSetSeconds_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setMinutes),
       3,
       false,
-      datePrototypeSetMinutes);
+      datePrototypeSetMinutes_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCMinutes),
       3,
       true,
-      datePrototypeSetMinutes);
+      datePrototypeSetMinutes_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setHours),
       4,
       false,
-      datePrototypeSetHours);
+      datePrototypeSetHours_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCHours),
       4,
       true,
-      datePrototypeSetHours);
+      datePrototypeSetHours_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setDate),
       1,
       false,
-      datePrototypeSetDate);
+      datePrototypeSetDate_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCDate),
       1,
       true,
-      datePrototypeSetDate);
+      datePrototypeSetDate_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setMonth),
       2,
       false,
-      datePrototypeSetMonth);
+      datePrototypeSetMonth_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCMonth),
       2,
       true,
-      datePrototypeSetMonth);
+      datePrototypeSetMonth_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setFullYear),
       3,
       false,
-      datePrototypeSetFullYear);
+      datePrototypeSetFullYear_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setUTCFullYear),
       3,
       true,
-      datePrototypeSetFullYear);
+      datePrototypeSetFullYear_RJS);
   defineSetterMethod(
       Predefined::getSymbolID(Predefined::setYear),
       1,
       false,
-      datePrototypeSetYear);
+      datePrototypeSetYear_RJS);
 
   defineMethod(
       runtime,
       datePrototype,
       Predefined::getSymbolID(Predefined::toJSON),
       nullptr,
-      datePrototypeToJSON,
+      datePrototypeToJSON_RJS,
       1);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -360,14 +360,14 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
       cons,
       Predefined::getSymbolID(Predefined::parse),
       nullptr,
-      dateParse,
+      dateParse_RJS,
       1);
   defineMethod(
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::UTC),
       nullptr,
-      dateUTC,
+      dateUTC_RJS,
       7);
   defineMethod(
       runtime,
@@ -383,7 +383,9 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
 /// Takes \p args in UTC time of the form:
 /// (year, month, [, date [, hours [, minutes [, seconds [, ms]]]]])
 /// and returns the unclipped time in milliseconds since Jan 1 1970 UTC.
-static CallResult<double> makeTimeFromArgs(Runtime &runtime, NativeArgs args) {
+static CallResult<double> makeTimeFromArgs_RJS(
+    Runtime &runtime,
+    NativeArgs args) {
   const double nan = std::numeric_limits<double>::quiet_NaN();
   auto argCount = args.getArgCount();
 
@@ -415,7 +417,7 @@ static CallResult<double> makeTimeFromArgs(Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-dateConstructor(void *, Runtime &runtime, NativeArgs args) {
+dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
   if (args.isConstructorCall()) {
     auto self = args.vmcastThis<JSDate>();
     uint32_t argCount = args.getArgCount();
@@ -453,7 +455,7 @@ dateConstructor(void *, Runtime &runtime, NativeArgs args) {
     } else {
       // General case: read all fields in and compute timestamp.
       CallResult<double> cr{0};
-      cr = makeTimeFromArgs(runtime, args);
+      cr = makeTimeFromArgs_RJS(runtime, args);
       if (cr == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -473,7 +475,8 @@ dateConstructor(void *, Runtime &runtime, NativeArgs args) {
   return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, str));
 }
 
-CallResult<HermesValue> dateParse(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue>
+dateParse_RJS(void *, Runtime &runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -483,7 +486,7 @@ CallResult<HermesValue> dateParse(void *, Runtime &runtime, NativeArgs args) {
           runtime, runtime.makeHandle(std::move(*res)))));
 }
 
-CallResult<HermesValue> dateUTC(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
   // With less than 2 arguments, this is implementation-dependent behavior.
   // We define the behavior that test262 expects here.
   if (args.getArgCount() == 0) {
@@ -499,7 +502,7 @@ CallResult<HermesValue> dateUTC(void *, Runtime &runtime, NativeArgs args) {
         timeClip(makeDate(makeDay(y, 0, 1), makeTime(0, 0, 0, 0))));
   }
   CallResult<double> cr{0};
-  cr = makeTimeFromArgs(runtime, args);
+  cr = makeTimeFromArgs_RJS(runtime, args);
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -686,7 +689,7 @@ datePrototypeGetterHelper(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Set the [[PrimitiveValue]] to the given time.
 CallResult<HermesValue>
-datePrototypeSetTime(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetTime_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -703,7 +706,7 @@ datePrototypeSetTime(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Set the milliseconds as provided and return the new time value.
 CallResult<HermesValue>
-datePrototypeSetMilliseconds(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -729,7 +732,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes 2 arguments: seconds, milliseconds.
 /// Set the seconds, optionally milliseconds, and return the new time.
 CallResult<HermesValue>
-datePrototypeSetSeconds(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -766,7 +769,7 @@ datePrototypeSetSeconds(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes 3 arguments: minutes, seconds, milliseconds.
 /// Set the minutes, optionally seconds and milliseconds, return time.
 CallResult<HermesValue>
-datePrototypeSetMinutes(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -812,7 +815,7 @@ datePrototypeSetMinutes(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes 4 arguments: hours, minutes, seconds, milliseconds.
 /// Set the hours, optionally minutes, seconds, and milliseconds, return time.
 CallResult<HermesValue>
-datePrototypeSetHours(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -867,7 +870,7 @@ datePrototypeSetHours(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Set the date of the month and return the new time.
 CallResult<HermesValue>
-datePrototypeSetDate(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -893,7 +896,7 @@ datePrototypeSetDate(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes 2 arguments: month and date.
 /// Set the month, optionally the date of the month, return the time.
 CallResult<HermesValue>
-datePrototypeSetMonth(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -928,7 +931,7 @@ datePrototypeSetMonth(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes 3 arguments: full year, month and date.
 /// Set the full year, optionally the month and date, return the time.
 CallResult<HermesValue>
-datePrototypeSetFullYear(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -977,7 +980,7 @@ datePrototypeSetFullYear(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Per spec, adds 1900 if the year is between 0 and 99.
 /// Sets the year to the new year and returns the time.
 CallResult<HermesValue>
-datePrototypeSetYear(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -1007,7 +1010,7 @@ datePrototypeSetYear(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-datePrototypeToJSON(void *ctx, Runtime &runtime, NativeArgs args) {
+datePrototypeToJSON_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.getThisHandle();
   auto objRes = toObject(runtime, selfHandle);
   if (objRes == ExecutionStatus::EXCEPTION) {

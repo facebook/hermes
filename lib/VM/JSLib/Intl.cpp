@@ -201,14 +201,14 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
   }
   auto localeObj = runtime.makeHandle(vmcast<JSObject>(*objRes));
 
-  CallResult<uint64_t> lengthRes = getArrayLikeLength(localeObj, runtime);
+  CallResult<uint64_t> lengthRes = getArrayLikeLength_RJS(localeObj, runtime);
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   bool isProxy = localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
-          createListFromArrayLike(
+          createListFromArrayLike_RJS(
               localeObj,
               runtime,
               *lengthRes,
