@@ -11,12 +11,11 @@
 'use strict';
 
 import type {Program} from 'hermes-estree';
-import type {VisitorKeys as VisitorKeysType} from './HermesESLintVisitorKeys';
+import type {VisitorKeysType} from 'hermes-parser';
 import type {PartialAnalyzeOptions, ScopeManager} from './scope-manager';
 
 import * as HermesParser from 'hermes-parser';
 import {analyze} from './scope-manager';
-import VisitorKeys from './HermesESLintVisitorKeys';
 
 type ParseForESLintOptions = $ReadOnly<{
   ...PartialAnalyzeOptions,
@@ -45,6 +44,8 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
     throw e;
   }
 }
+
+const VisitorKeys = HermesParser.FlowVisitorKeys;
 
 type ParseForESLintReturn = {
   ast: Program,

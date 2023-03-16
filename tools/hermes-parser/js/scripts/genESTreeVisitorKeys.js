@@ -51,8 +51,8 @@ const visitorKeysFileContents = `module.exports = ${JSON.stringify(
 
 formatAndWriteSrcArtifact({
   code: visitorKeysFileContents,
-  package: 'hermes-eslint',
-  file: 'HermesESLintVisitorKeys.js',
+  package: 'hermes-parser',
+  file: 'generated/ESTreeVisitorKeys.js',
   // This file is shadowed by a manual `.js.flow` file
   flow: false,
 });
