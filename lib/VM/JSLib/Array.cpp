@@ -1093,10 +1093,6 @@ class StandardSortModel : public SortModel {
     JSObject::getComputedPrimitiveDescriptor(
         obj_, runtime_, aHandle_, aDescObjHandle_, aTmpNameStorage_, aDesc);
 
-    ComputedPropertyDescriptor bDesc;
-    JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
-
     if (aDescObjHandle_) {
       if (LLVM_LIKELY(!aDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(
@@ -1135,6 +1131,11 @@ class StandardSortModel : public SortModel {
         }
       }
     }
+
+    ComputedPropertyDescriptor bDesc;
+    JSObject::getComputedPrimitiveDescriptor(
+        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
+
     if (bDescObjHandle_) {
       if (LLVM_LIKELY(!bDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(

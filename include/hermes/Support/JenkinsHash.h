@@ -13,6 +13,7 @@
 namespace hermes {
 
 using JenkinsHash = uint32_t;
+inline constexpr JenkinsHash JenkinsHashInit = 0;
 
 namespace jenkins_details {
 template <typename CharT>

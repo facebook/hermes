@@ -188,8 +188,8 @@ bool FuncSigOpts::runOnModule(Module *M) {
   return changed;
 }
 
-Pass *hermes::createFuncSigOpts() {
-  return new FuncSigOpts();
+std::unique_ptr<Pass> hermes::createFuncSigOpts() {
+  return std::make_unique<FuncSigOpts>();
 }
 
 #undef DEBUG_TYPE

@@ -1714,12 +1714,26 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
         new (context_)
             ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
   } else {
-    // Productions valid here:
-    //   for [await] ( Expression_opt
-    //   for [await] ( LeftHandSideExpression
-
     if (!check(TokenKind::semi)) {
-      auto optExpr1 = parseExpression(Param{});
+      llvh::Optional<ESTree::Node *> optExpr1;
+      if (await) {
+        //   for await ( LeftHandSideExpression
+        //               ^
+        optExpr1 = parseLeftHandSideExpression();
+      } else {
+        // ForStatement:
+        //   for ( Expression_opt
+        //         ^
+        // ForInOfStatement:
+        //   for ( LeftHandSideExpression
+        //         ^
+        // Lookahead for LeftHandSideExpression cannot be 'let' or 'async of'.
+        // We've handled `let` above.
+        // To distinguish between the two productions here, we let the resolver
+        // check that the LHS of the `of` or `in` is valid (the resolver will
+        // throw the error instead of the parser).
+        optExpr1 = parseExpression(Param{});
+      }
       if (!optExpr1)
         return None;
       expr1 = optExpr1.getValue();
@@ -4544,7 +4558,8 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
     SMRange startRange = tok_->getSourceRange();
 
     bool declare = false;
-    bool isPrivate = false;
+    bool readonly = false;
+    ESTree::NodeLabel accessibility = nullptr;
 
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow() && check(declareIdent_)) {
@@ -4561,14 +4576,31 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 #endif
 
 #if HERMES_PARSE_TS
-    if (context_.getParseTS() && check(TokenKind::rw_private)) {
-      // Check for "private" class properties.
-      auto optNext = lexer_.lookahead1(llvh::None);
-      if (optNext.hasValue() &&
-          (*optNext == TokenKind::rw_static ||
-           *optNext == TokenKind::identifier)) {
-        isPrivate = true;
-        advance();
+    if (context_.getParseTS()) {
+      // In TS, modifiers may appear in this order: accessibility - static -
+      // readonly. And all of them can be used as identifier.
+      if (checkN(
+              TokenKind::rw_private,
+              TokenKind::rw_protected,
+              TokenKind::rw_public)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          accessibility = tok_->getResWordIdentifier();
+          advance();
+        }
+      }
+
+      if (check(TokenKind::rw_static)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          isStatic = true;
+          advance();
+        }
+      }
+
+      if (check(readonlyIdent_)) {
+        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+          readonly = true;
+          advance();
+        }
       }
     }
 #endif
@@ -4579,15 +4611,21 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         break;
 
       case TokenKind::rw_static:
-        // static MethodDefinition
-        // static FieldDefinition
-        isStatic = true;
-        advance();
+        if (context_.getParseTS() && (readonly || isStatic)) {
+          // Don't advance() when `readonly` or `static` is already seen,
+          // so the current one can be regarded as an identifier.
+          // `static` modifier cannot come after `readonly` in TS.
+        } else {
+          // static MethodDefinition
+          // static FieldDefinition
+          isStatic = true;
+          advance();
+        }
         // intentional fallthrough
       default: {
         // ClassElement
-        auto optElem =
-            parseClassElement(isStatic, startRange, declare, isPrivate);
+        auto optElem = parseClassElement(
+            isStatic, startRange, declare, readonly, accessibility);
         if (!optElem)
           return None;
         if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -4641,11 +4679,13 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool isStatic,
     SMRange startRange,
     bool declare,
-    bool isPrivate,
+    bool readonly,
+    ESTree::NodeLabel accessibility,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
   bool optional = false;
+  bool isPrivate = false;
 
   enum class SpecialKind {
     None,
@@ -4665,6 +4705,28 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   // Set to false if the identifiers 'get' or 'set' were already parsed as
   // function names instead of as getter/setter specifiers.
   bool doParsePropertyName = true;
+
+  /// \return true when the current token indicates that `static` was actually
+  /// the property name and not a modifier.
+  /// e.g. `static() {}` returns true when the current tok is '(',
+  /// but `static x;` returns false when the current tok is 'x'.
+  /// When this returns `true`, we're done parsing the property name,
+  /// and we might have to use `static` as the property name if it was given in.
+  const auto staticIsPropertyName = [this]() -> bool {
+    if (checkN(
+            TokenKind::l_paren,
+            TokenKind::equal,
+            TokenKind::r_brace,
+            TokenKind::semi)) {
+      return true;
+    }
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+    if (context_.getParseTypes() && check(TokenKind::less, TokenKind::colon)) {
+      return true;
+    }
+#endif
+    return false;
+  };
 
   ESTree::Node *prop = nullptr;
   if (check(getIdent_)) {
@@ -4727,10 +4789,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
-  } else if (check(TokenKind::l_paren, TokenKind::less) && isStatic) {
-    // We've already parsed 'static', but there is nothing between 'static'
-    // and the '(', so it must be used as the PropertyName and not as an
-    // indicator for a static function.
+  } else if (isStatic && staticIsPropertyName()) {
+    // This is the name of the property/method.
+    // We've already parsed 'static', but it must be used as the
+    // PropertyName and not as an indicator for a static function.
     prop = setLocation(
         startRange,
         startRange,
@@ -4825,6 +4887,17 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       return None;
     }
     if (isPrivate) {
+      if (accessibility) {
+        error(
+            startRange,
+            "An accessibility modifier cannot be used with a private identifier");
+      }
+      ESTree::Node *modifiers = nullptr;
+#if HERMES_PARSE_TS
+      if (context_.getParseTS()) {
+        modifiers = new (context_) ESTree::TSModifiersNode(nullptr, readonly);
+      }
+#endif
       return setLocation(
           prop,
           getPrevTokenEndLoc(),
@@ -4835,8 +4908,16 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
               declare,
               optional,
               variance,
-              typeAnnotation));
+              typeAnnotation,
+              modifiers));
     }
+    ESTree::Node *modifiers = nullptr;
+#if HERMES_PARSE_TS
+    if (context_.getParseTS()) {
+      modifiers =
+          new (context_) ESTree::TSModifiersNode(accessibility, readonly);
+    }
+#endif
     return setLocation(
         startRange,
         getPrevTokenEndLoc(),
@@ -4848,7 +4929,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             declare,
             optional,
             variance,
-            typeAnnotation));
+            typeAnnotation,
+            modifiers));
   }
 
   if (declare) {
@@ -4889,10 +4971,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
 
   ESTree::Node *returnType = nullptr;
-#if HERMES_PARSE_FLOW
-  if (context_.getParseFlow() && check(TokenKind::colon)) {
+#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
+  if (context_.getParseTypes() && check(TokenKind::colon)) {
     SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
-    auto optRet = parseTypeAnnotationFlow(annotStart);
+    auto optRet = parseTypeAnnotation(annotStart);
     if (!optRet)
       return None;
     returnType = *optRet;

@@ -245,6 +245,52 @@ function deserialize##NAME() {     \
   };                               \
 }
 
+#define ESTREE_NODE_9_ARGS(        \
+    NAME,                          \
+    BASE,                          \
+    ARG0TY,                        \
+    ARG0NM,                        \
+    ARG0OPT,                       \
+    ARG1TY,                        \
+    ARG1NM,                        \
+    ARG1PT,                        \
+    ARG2TY,                        \
+    ARG2NM,                        \
+    ARG2PT,                        \
+    ARG3TY,                        \
+    ARG3NM,                        \
+    ARG3PT,                        \
+    ARG4TY,                        \
+    ARG4NM,                        \
+    ARG4PT,                        \
+    ARG5TY,                        \
+    ARG5NM,                        \
+    ARG5PT,                        \
+    ARG6TY,                        \
+    ARG6NM,                        \
+    ARG6PT,                        \
+    ARG7TY,                        \
+    ARG7NM,                        \
+    ARG7PT,                        \
+    ARG8TY,                        \
+    ARG8NM,                        \
+    ARG8PT)                        \
+function deserialize##NAME() {     \
+  return {                         \
+    type : #NAME,                  \
+    loc : this.addEmptyLoc(),      \
+    ARG0NM : ARG0TY,               \
+    ARG1NM : ARG1TY,               \
+    ARG2NM : ARG2TY,               \
+    ARG3NM : ARG3TY,               \
+    ARG4NM : ARG4TY,               \
+    ARG5NM : ARG5TY,               \
+    ARG6NM : ARG6TY,               \
+    ARG7NM : ARG7TY,               \
+    ARG8NM : ARG8TY,               \
+  };                               \
+}
+
 // ESTREE_FIRST and ESTREE_LAST are not actual AST nodes but still
 // appear in the NodeKind enum. We must include them in the array of
 // node deserializers so that it can be indexed into by NodeKind.
@@ -270,6 +316,7 @@ function deserialize##NAME##Last() {                               \
 #define ESTREE_NODE_6_ARGS(NAME, ...) deserialize##NAME,
 #define ESTREE_NODE_7_ARGS(NAME, ...) deserialize##NAME,
 #define ESTREE_NODE_8_ARGS(NAME, ...) deserialize##NAME,
+#define ESTREE_NODE_9_ARGS(NAME, ...) deserialize##NAME,
 #define ESTREE_FIRST(NAME, ...)       deserialize##NAME##First,
 #define ESTREE_LAST(NAME)             deserialize##NAME##Last,
 

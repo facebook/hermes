@@ -12,7 +12,7 @@ import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
-import {removeFromArray} from './utils/arrayUtils';
+import {astArrayMutationHelpers} from 'hermes-parser';
 import {getStatementParent} from './utils/getStatementParent';
 import * as t from '../../generated/node-types';
 
@@ -43,7 +43,7 @@ export function performRemoveStatementMutation(
     const parent: interface {
       [string]: $ReadOnlyArray<DetachedNode<Statement | ModuleDeclaration>>,
     } = removalParent.parent;
-    parent[removalParent.key] = removeFromArray(
+    parent[removalParent.key] = astArrayMutationHelpers.removeFromArray(
       parent[removalParent.key],
       removalParent.targetIndex,
     );

@@ -4,7 +4,8 @@
 [ignore]
 <PROJECT_ROOT>/.*/dist
 <PROJECT_ROOT>/.*/node_modules
-<PROJECT_ROOT>/hermes-translate/__tests__/flowDefToTSDef/fixtures
+<PROJECT_ROOT>/flow-api-translator/__tests__/flowDefToTSDef/fixtures
+<PROJECT_ROOT>/flow-api-translator/__tests__/flowToJS/fixtures
 
 [options]
 name=hermes-parser
@@ -22,10 +23,9 @@ module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.
 module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
 
 enums=true
-inference_mode=constrain_writes
 
 [version]
-^0.194.0
+^0.201.0
 
 [lints]
 untyped-type-import=error

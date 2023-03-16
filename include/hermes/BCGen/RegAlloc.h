@@ -123,6 +123,7 @@ class RegisterFile {
 
 class Function;
 class Instruction;
+class ScopeCreationInst;
 class PhiInst;
 class CallInst;
 
@@ -344,6 +345,10 @@ class RegisterAllocator {
   /// \returns the computed live interval for the instruction \p I.
   Interval &getInstructionInterval(Instruction *I);
 
+  /// \return The register assigned to \p Value, if it is available at \p At; or
+  /// an invalid Register if \p Value is not available at \p At.
+  Register getRegisterForInstructionAt(Instruction *Value, Instruction *At);
+
   explicit RegisterAllocator(Function *func) : F(func) {}
 
   virtual ~RegisterAllocator() = default;
@@ -414,6 +419,59 @@ class RegisterAllocator {
   virtual unsigned getMaxRegisterUsage() {
     return file.getMaxRegisterUsage();
   }
+};
+
+/// Analysis for mapping Instructions to the VM register holding its lexical
+/// Environment (or the closest one that's available). In the following example
+///
+///  1: CreateEnvironment r0
+///  2: LoadConstDouble r1, 1.0
+///  3: LoadConstDouble r2, 2.0
+///  4: AddN r0, r1, r2
+///  5: AddN r0, r0, r0
+///
+/// registerAndScopeForInstruction(1): invalid Register
+/// registerAndScopeForInstruction(2): r0
+/// registerAndScopeForInstruction(3): r0
+/// registerAndScopeForInstruction(4): r0
+/// registerAndScopeForInstruction(5): invalid Register
+///
+/// This analysis use the register allocation to provide that information, and
+/// thus register allocation must be done prior to using
+/// registerAndScopeForInstruction. However, the analysis should be created
+/// before register allocation is performed. That's necessary as the analysis
+/// pre-allocated the environment registers upon initialization in case the code
+/// is being compiled with debug information.
+class ScopeRegisterAnalysis {
+  ScopeRegisterAnalysis(const ScopeRegisterAnalysis &) = delete;
+  void operator=(const ScopeRegisterAnalysis &) = delete;
+
+ public:
+  /// Initializes this scope register analysis object. In full debug info
+  /// generation mode this constructor will also pre-allocate the environment
+  /// registers.
+  explicit ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA);
+
+  /// \return a pair with the register and the ScopeDesc for the Environment
+  /// that's available at \p Inst. This Environment may be the one representing
+  /// the lexical scope for \p Inst or, if that's not available, one of its
+  /// parents; if no Environments are available at \p Inst, returns
+  /// std::pair(invalid register, nullptr ScopeDesc);
+  std::pair<Register, ScopeDesc *> registerAndScopeForInstruction(
+      Instruction *Inst);
+
+ private:
+  /// \return a pair with the register and the ScopeDesc for the Environment
+  /// created by \p SCI if it is available at \p Inst. If it's not available,
+  /// recursively try to find the closest Environment that's available at
+  /// \p Inst; if no Environments are available at \p Inst, returns
+  /// std::pair(invalid register, nullptr ScopeDesc);
+  std::pair<Register, ScopeDesc *> registerAndScopeAt(
+      Instruction *Inst,
+      ScopeCreationInst *SCI);
+
+  RegisterAllocator &RA_;
+  llvh::DenseMap<ScopeDesc *, ScopeCreationInst *> scopeCreationInsts_;
 };
 
 } // namespace hermes

@@ -178,8 +178,8 @@ bool CSE::runOnFunction(Function *F) {
   return CCtx.run();
 }
 
-Pass *hermes::createCSE() {
-  return new CSE();
+std::unique_ptr<Pass> hermes::createCSE() {
+  return std::make_unique<CSE>();
 }
 
 #undef DEBUG_TYPE

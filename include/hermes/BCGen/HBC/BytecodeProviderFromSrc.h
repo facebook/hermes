@@ -67,6 +67,9 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Whether the module constitutes a single function
   bool singleFunction_;
 
+  /// Hash of all source files.
+  SHA1 sourceHash_{SHA1{}};
+
   explicit BCProviderFromSrc(std::unique_ptr<hbc::BytecodeModule> module);
 
   /// No need to do anything since it's already created as part of
@@ -206,6 +209,14 @@ class BCProviderFromSrc final : public BCProviderBase {
   hbc::BytecodeModule *getBytecodeModule() {
     return module_.get();
   }
+
+  SHA1 getSourceHash() const override {
+    return sourceHash_;
+  };
+
+  void setSourceHash(const SHA1 &hash) {
+    sourceHash_ = hash;
+  };
 };
 
 /// BCProviderLazy is used during lazy compilation. When a function is created
@@ -219,7 +230,7 @@ class BCProviderLazy final : public BCProviderBase {
 
   /// No debug information will be available without compiling it.
   void createDebugInfo() override {
-    llvm_unreachable("Accessing debug info from a lazy module");
+    hermes_fatal("Accessing debug info from a lazy module");
   }
 
  public:
@@ -234,20 +245,20 @@ class BCProviderLazy final : public BCProviderBase {
   }
 
   StringTableEntry getStringTableEntry(uint32_t index) const override {
-    llvm_unreachable("Accessing string table from a lazy module");
+    hermes_fatal("Accessing string table from a lazy module");
   }
 
   const uint8_t *getBytecode(uint32_t) const override {
-    llvm_unreachable("Accessing bytecode from a lazy module");
+    hermes_fatal("Accessing bytecode from a lazy module");
   }
 
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
       uint32_t) const override {
-    llvm_unreachable("Accessing exception info from a lazy module");
+    hermes_fatal("Accessing exception info from a lazy module");
   }
 
   const hbc::DebugOffsets *getDebugOffsets(uint32_t) const override {
-    llvm_unreachable("Accessing debug offsets from a lazy module");
+    hermes_fatal("Accessing debug offsets from a lazy module");
   }
 
   bool isFunctionLazy(uint32_t) const override {

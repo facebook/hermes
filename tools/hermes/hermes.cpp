@@ -68,7 +68,7 @@ static opt<bool> GCPrintStats(
 
 static opt<unsigned> ExecutionTimeLimit(
     "time-limit",
-    llvh::cl::desc("Number of milliseconds after which to abort JS exeuction"),
+    llvh::cl::desc("Number of milliseconds after which to abort JS execution"),
     llvh::cl::init(0));
 } // namespace cl
 
@@ -112,6 +112,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableHermesInternal(cl::EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               cl::EnableHermesInternalTestMethods)
+          .withMaxNumRegisters(1024 * 1024)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;

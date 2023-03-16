@@ -132,6 +132,9 @@ void HBCISel::resolveRelocations() {
         case Relocation::DebugInfo:
           // Nothing, just keep track of the location.
           break;
+        case Relocation::TextifiedCallee:
+          // Nothing to update.
+          break;
         case Relocation::JumpTableDispatch:
           auto &switchImmInfo = switchImmInfo_[cast<SwitchImmInst>(pointer)];
           // update default target jmp
@@ -262,8 +265,17 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
     if (!getDebugSourceLocation(manager, location, &info)) {
       llvm_unreachable("Unable to get source location");
     }
+    std::pair<Register, ScopeDesc *> regAndScopeDesc =
+        SRA_.registerAndScopeForInstruction(inst);
     info.address = reloc.loc;
     info.statement = needDebugStatementNo ? inst->getStatementIndex() : 0;
+    /// The scope offset in the debug information is only available very late in
+    /// the compilation pipeline; Thus, populate info.scopeAddress with and ID
+    /// that is then used to find the correct value for this field.
+    info.scopeAddress = BCFGen_->getScopeDescID(regAndScopeDesc.second);
+    info.envReg = !regAndScopeDesc.first.isValid()
+        ? DebugSourceLocation::NO_REG
+        : regAndScopeDesc.first.getIndex();
     BCFGen_->addDebugSourceLocation(info);
   }
 
@@ -273,24 +285,19 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
     getDebugSourceLocation(manager, F_->getSourceRange().Start, &info);
     info.address = 0;
     info.statement = 0;
+    info.scopeAddress = BCFGen_->getScopeDescID(F_->getFunctionScopeDesc());
+    info.envReg = 0;
     BCFGen_->setSourceLocation(info);
   }
 }
 
-void HBCISel::addDebugLexicalInfo() {
-  // Only emit if debug info is enabled.
-  if (F_->getContext().getDebugInfoSetting() != DebugInfoSetting::ALL)
-    return;
-
-  // Set the lexical parent.
-  Function *parent = scopeAnalysis_.getLexicalParent(F_);
-  if (parent)
-    BCFGen_->setLexicalParentID(BCFGen_->getFunctionID(parent));
-
-  std::vector<Identifier> names;
-  for (const Variable *var : F_->getFunctionScopeDesc()->getVariables())
-    names.push_back(var->getName());
-  BCFGen_->setDebugVariableNames(std::move(names));
+void HBCISel::addDebugTextifiedCalleeInfo() {
+  for (auto &reloc : relocations_) {
+    if (reloc.type != Relocation::TextifiedCallee)
+      continue;
+    BCFGen_->addDebugTextfiedCallee(
+        {reloc.loc, llvh::cast<LiteralString>(reloc.pointer)->getValue()});
+  }
 }
 
 void HBCISel::populatePropertyCachingInfo() {
@@ -783,18 +790,13 @@ void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   if (elementCount == 0) {
     BCFGen_->emitNewArray(dstReg, sizeHint);
   } else {
-    SmallVector<Literal *, 8> elements;
-    for (unsigned i = 0, e = Inst->getElementCount(); i < e; ++i) {
-      elements.push_back(cast<Literal>(Inst->getArrayElement(i)));
-    }
-    auto bufIndex =
-        BCFGen_->BMGen_.addArrayBuffer(ArrayRef<Literal *>{elements});
-    if (bufIndex <= UINT16_MAX) {
+    auto bufIndex = BCFGen_->BMGen_.serializedLiteralOffsetFor(Inst);
+    if (bufIndex.first <= UINT16_MAX) {
       BCFGen_->emitNewArrayWithBuffer(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex);
+          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
     } else {
       BCFGen_->emitNewArrayWithBufferLong(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex);
+          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
     }
   }
 }
@@ -802,6 +804,12 @@ void HBCISel::generateCreateArgumentsInst(
     CreateArgumentsInst *Inst,
     BasicBlock *next) {
   llvm_unreachable("CreateArgumentsInst should have been lowered.");
+}
+void HBCISel::generateThrowIfHasRestrictedGlobalPropertyInst(
+    ThrowIfHasRestrictedGlobalPropertyInst *Inst,
+    BasicBlock *next) {
+  auto property = BCFGen_->getIdentifierID(Inst->getProperty());
+  BCFGen_->emitThrowIfHasRestrictedGlobalProperty(property);
 }
 void HBCISel::generateCreateFunctionInst(
     CreateFunctionInst *Inst,
@@ -843,21 +851,13 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
     HBCAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
-  int e = Inst->getKeyValuePairCount();
-  SmallVector<Literal *, 8> objKeys;
-  SmallVector<Literal *, 8> objVals;
-  for (int ind = 0; ind < e; ind++) {
-    auto keyValuePair = Inst->getKeyValuePair(ind);
-    objKeys.push_back(cast<Literal>(keyValuePair.first));
-    objVals.push_back(cast<Literal>(keyValuePair.second));
-  }
+  unsigned e = Inst->getKeyValuePairCount();
 
   // size hint operand of NewObjectWithBuffer opcode is 16-bit.
   uint32_t sizeHint =
       std::min((uint32_t)UINT16_MAX, Inst->getSizeHint()->asUInt32());
 
-  auto buffIdxs = BCFGen_->BMGen_.addObjectBuffer(
-      llvh::ArrayRef<Literal *>{objKeys}, llvh::ArrayRef<Literal *>{objVals});
+  auto buffIdxs = BCFGen_->BMGen_.serializedLiteralOffsetFor(Inst);
   if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
         result, sizeHint, e, buffIdxs.first, buffIdxs.second);
@@ -1689,11 +1689,13 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
   LLVM_DEBUG(dbgs() << "Generating the instruction " << ii->getName() << "\n");
 
   // Generate the debug info.
+  bool isDebugInfoLevelThrowing = false;
   switch (F_->getContext().getDebugInfoSetting()) {
     case DebugInfoSetting::THROWING:
       if (!ii->mayExecute()) {
         break;
       }
+      isDebugInfoLevelThrowing = true;
     // Falls through - if ii can execute.
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
@@ -1702,6 +1704,16 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
             {BCFGen_->getCurrentLocation(),
              Relocation::RelocationType::DebugInfo,
              ii});
+      }
+      if (!isDebugInfoLevelThrowing) {
+        if (auto *call = llvh::dyn_cast<CallInst>(ii)) {
+          if (LiteralString *textifiedCallee = call->getTextifiedCallee()) {
+            relocations_.push_back(
+                {BCFGen_->getCurrentLocation(),
+                 Relocation::RelocationType::TextifiedCallee,
+                 textifiedCallee});
+          }
+        }
       }
       break;
   }
@@ -1744,8 +1756,8 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   resolveRelocations();
   resolveExceptionHandlers();
   addDebugSourceLocationInfo(outSourceMap);
+  addDebugTextifiedCalleeInfo();
   generateJumpTable();
-  addDebugLexicalInfo();
   populatePropertyCachingInfo();
   BCFGen_->bytecodeGenerationComplete();
 }

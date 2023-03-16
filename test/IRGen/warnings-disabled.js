@@ -6,6 +6,7 @@
  */
 
 // RUN: (echo "START" && %hermes -dump-ir -w %s 2>&1 >/dev/null && echo "END" ) | %FileCheck %s --match-full-lines
+// REQUIRES: !fbcode_coverage
 
 // CHECK: START
 "use strict";

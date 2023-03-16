@@ -10,6 +10,7 @@
 
 var x;
 x = Error;
+x = AggregateError;
 x = EvalError;
 x = RangeError;
 x = ReferenceError;

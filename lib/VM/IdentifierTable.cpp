@@ -366,7 +366,16 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
     Runtime &runtime,
     llvh::ArrayRef<char16_t> str) {
-  auto idx = hashTable_.lookupString(str, hashString(str));
+  return getExistingStringPrimitiveOrNullWithHash(
+      runtime, str, hashString(str));
+}
+
+StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNullWithHash(
+    Runtime &runtime,
+    llvh::ArrayRef<char16_t> str,
+    uint32_t hash) {
+  assert(hash == hashString(str) && "hash is not correct");
+  auto idx = hashTable_.lookupString(str, hash);
   if (!hashTable_.isValid(idx)) {
     return nullptr;
   }

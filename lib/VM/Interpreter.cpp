@@ -277,8 +277,7 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     // Call the bound function.
     return BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
   } else {
-    return runtime.raiseTypeErrorForValue(
-        Handle<>(callTarget), " is not a function");
+    return runtime.raiseTypeErrorForCallable(Handle<>(callTarget));
   }
 }
 
@@ -828,6 +827,9 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
+  // Make sure we are not re-entering JS execution from a context that doesn't
+  // allow reentrancy
+  assert(this->noRJSLevel_ == 0 && "No JS execution allowed right now.");
   return interpretFunctionImpl(newCodeBlock);
 }
 
@@ -1182,7 +1184,6 @@ tailCall:
     if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
       O1REG(name) =                                                           \
           HermesValue::encodeDoubleValue(do##name(O2REG(name).getNumber()));  \
-      gcScope.flushToSmallCount(KEEP_HANDLES);                                \
       ip = NEXTINST(name);                                                    \
       DISPATCH;                                                               \
     }                                                                         \
@@ -2045,24 +2046,27 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CreateInnerEnvironment) {
+        CAPTURE_IP(
+            O1REG(CreateInnerEnvironment) = Environment::create(
+                runtime,
+                Handle<Environment>::vmcast(&O2REG(CreateInnerEnvironment)),
+                ip->iCreateInnerEnvironment.op3));
+        ip = NEXTINST(CreateInnerEnvironment);
+        DISPATCH;
+      }
+
       CASE(CreateEnvironment) {
         tmpHandle = HermesValue::encodeObjectValueUnsafe(
             FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
 
         CAPTURE_IP(
-            res = Environment::create(
+            O1REG(CreateEnvironment) = Environment::create(
                 runtime,
                 Handle<Environment>::vmcast_or_null(tmpHandle),
                 curCodeBlock->getEnvironmentSize()));
-        if (res == ExecutionStatus::EXCEPTION) {
-          goto exception;
-        }
-        O1REG(CreateEnvironment) = *res;
-#ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = *res;
-#endif
+
         tmpHandle = HermesValue::encodeUndefinedValue();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateEnvironment);
         DISPATCH;
       }
@@ -2126,48 +2130,23 @@ tailCall:
       }
 
       CASE(DeclareGlobalVar) {
-        DefinePropertyFlags dpf =
-            DefinePropertyFlags::getDefaultNewPropertyFlags();
-        dpf.configurable = 0;
-        // Do not overwrite existing globals with undefined.
-        dpf.setValue = 0;
+        CAPTURE_IP_ASSIGN(
+            auto res, declareGlobalVarImpl(runtime, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        ip = NEXTINST(DeclareGlobalVar);
+        DISPATCH;
+      }
 
+      CASE(ThrowIfHasRestrictedGlobalProperty) {
         CAPTURE_IP_ASSIGN(
             auto res,
-            JSObject::defineOwnProperty(
-                runtime.getGlobal(),
-                runtime,
-                ID(ip->iDeclareGlobalVar.op1),
-                dpf,
-                Runtime::getUndefinedValue(),
-                PropOpFlags().plusThrowOnError()));
-        if (res == ExecutionStatus::EXCEPTION) {
-          assert(
-              !runtime.getGlobal()->isProxyObject() &&
-              "global can't be a proxy object");
-          // If the property already exists, this should be a noop.
-          // Instead of incurring the cost to check every time, do it
-          // only if an exception is thrown, and swallow the exception
-          // if it exists, since we didn't want to make the call,
-          // anyway.  This most likely means the property is
-          // non-configurable.
-          NamedPropertyDescriptor desc;
-          CAPTURE_IP_ASSIGN(
-              auto res,
-              JSObject::getOwnNamedDescriptor(
-                  runtime.getGlobal(),
-                  runtime,
-                  ID(ip->iDeclareGlobalVar.op1),
-                  desc));
-          if (!res) {
-            goto exception;
-          } else {
-            runtime.clearThrownValue();
-          }
-          // fall through
+            throwIfHasRestrictedGlobalPropertyImpl(runtime, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
         }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(DeclareGlobalVar);
+        ip = NEXTINST(ThrowIfHasRestrictedGlobalProperty);
         DISPATCH;
       }
 

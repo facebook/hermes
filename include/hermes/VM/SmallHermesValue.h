@@ -19,11 +19,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -32,6 +28,13 @@ class StringPrimitive;
 class GCCell;
 class Runtime;
 
+/// If compressed pointers are allowed, then we should also compress
+/// HermesValues. This means that when compressed pointers are allowed,
+/// SmallHermesValue will almost always be 32 bits, except with MallocGC, which
+/// does not support compressed pointers. Depending on the compressed pointers
+/// flag, SmallHermesValue will alias SmallHermesValueAdaptor or HermesValue32.
+
+#ifndef HERMESVM_ALLOW_COMPRESSED_POINTERS
 /// An adaptor class that provides the API of a SmallHermesValue is internally
 /// just a HermesValue.
 class SmallHermesValueAdaptor : protected HermesValue {
@@ -168,6 +171,9 @@ class SmallHermesValueAdaptor : protected HermesValue {
     return SmallHermesValueAdaptor{HermesValue::encodeEmptyValue()};
   }
 };
+using SmallHermesValue = SmallHermesValueAdaptor;
+
+#else // #ifndef HERMESVM_ALLOW_COMPRESSED_POINTERS
 
 /// A compressed HermesValue that is always equal to the size of a
 /// CompressedPointer. It uses the least significant bits (guaranteed to be zero
@@ -476,18 +482,9 @@ class HermesValue32 {
     raw_ = other.raw_;
   }
 };
+using SmallHermesValue = HermesValue32;
 
-/// If compressed pointers are allowed, then we should also compress
-/// HermesValues. This means that when compressed pointers are allowed,
-/// SmallHermesValue will almost always be 32 bits, except with MallocGC, which
-/// does not support compressed pointers.
-using SmallHermesValue =
-#ifdef HERMESVM_ALLOW_COMPRESSED_POINTERS
-    HermesValue32
-#else
-    SmallHermesValueAdaptor
-#endif
-    ;
+#endif // #ifndef HERMESVM_ALLOW_COMPRESSED_POINTERS
 
 static_assert(
     std::is_trivial<SmallHermesValue>::value,
@@ -498,5 +495,4 @@ using GCSmallHermesValue = GCHermesValueBase<SmallHermesValue>;
 } // end namespace vm
 } // end namespace hermes
 
-#pragma GCC diagnostic pop
 #endif // HERMES_VM_HERMESVALUE_H

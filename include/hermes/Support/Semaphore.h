@@ -32,10 +32,14 @@ class Semaphore {
   sem_t *getSemaphorePtr();
 
  public:
-  /// Initialize the OS semaphore.
-  /// \p semaphoreName is used to create the named semaphore if unnamed
-  /// semaphore is not supported on target platform.
-  bool open(const char *semaphoreName);
+  /// Initialize an unnamed OS semaphore.
+  /// \p semaphorePrefix is used to create a temporary named semaphore if
+  /// unnamed semaphores are not supported on target platform. It must be a
+  /// valid semaphore name (see
+  /// https://man7.org/linux/man-pages/man7/sem_overview.7.html), which will be
+  /// suffixed with the thread ID to ensure the created semaphore is not
+  /// accessible from other any other thread.
+  bool open(const char *semaphorePrefix);
 
   /// Destory the underlying OS semaphore.
   bool close();

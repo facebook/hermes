@@ -32,6 +32,7 @@ add_hermes_library(hermesHBCBackend
   LINK_LIBS
   hermesBackend
   hermesInst
+  hermesRegex
   hermesSourceMap
   hermesAST
   hermesPublic

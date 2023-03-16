@@ -520,8 +520,8 @@ bool StackPromotion::runOnModule(Module *M) {
   return changed;
 }
 
-Pass *hermes::createStackPromotion() {
-  return new StackPromotion();
+std::unique_ptr<Pass> hermes::createStackPromotion() {
+  return std::make_unique<StackPromotion>();
 }
 
 #undef DEBUG_TYPE

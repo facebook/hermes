@@ -10,6 +10,8 @@
 
 #include "llvh/ADT/StringRef.h"
 
+#include <memory>
+
 namespace hermes {
 
 class Function;
@@ -83,7 +85,7 @@ class ModulePass : public Pass {
 };
 
 /// Pass header declaration.
-#define PASS(ID, NAME, DESCRIPTION) Pass *create##ID();
+#define PASS(ID, NAME, DESCRIPTION) std::unique_ptr<Pass> create##ID();
 #include "Passes.def"
 
 } // namespace hermes

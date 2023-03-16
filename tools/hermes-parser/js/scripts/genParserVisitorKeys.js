@@ -52,7 +52,7 @@ export const HERMES_AST_VISITOR_KEYS = ${JSON.stringify(visitorKeys, null, 2)};
 formatAndWriteSrcArtifact({
   code: visitorKeysFileContents,
   package: 'hermes-parser',
-  file: 'generated/visitor-keys.js',
+  file: 'generated/ParserVisitorKeys.js',
   // This file is shadowed by a manual `.js.flow` file
   flow: false,
 });

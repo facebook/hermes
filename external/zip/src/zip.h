@@ -313,7 +313,7 @@ extern int zip_entries_total(struct zip_t *zip);
  * @return the number of deleted entries, or negative number (< 0) on error.
  */
 extern int zip_entries_delete(struct zip_t *zip, char *const entries[],
-                              size_t len);
+                              const size_t len);
 
 /**
  * Extracts a zip archive stream into directory.

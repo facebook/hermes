@@ -6,7 +6,7 @@
  */
 
 #include "ESTreeIRGen.h"
-#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/UTF8.h"
 
 #include "llvh/ADT/ScopeExit.h"
@@ -498,6 +498,142 @@ Value *ESTreeIRGen::genOptionalCallExpr(
   return callResult;
 }
 
+/// \return a LiteralString with a textual representation of given \p call
+/// expression. This representation is built from the original source code, with
+/// some changes:
+///
+/// 1. unprintable character, new line, and spaces following new lines, are not
+///    emitted.
+/// 2. output is limited to kMaxTextifiedCalleeSizeUTF8Chars. If the source code
+/// is longer than the maximum number of characters, then the returned callee
+/// will look like
+///
+///  source code     : aaaaaaaaaa[.]+bbbbbbbbbb
+///  textified callee: "aaaaaaaaaa(...)bbbbbbbbbb"
+static LiteralString *getTextifiedCallExpr(
+    IRBuilder &builder,
+    ESTree::CallExpressionLikeNode *call) {
+  constexpr uint32_t kMaxTextifiedCalleeSizeUTF8Chars = 64;
+  // Pessimizing the maximum buffer size for the textified callee as if all
+  // characters were 4 bytes.
+  llvh::SmallVector<char, kMaxTextifiedCalleeSizeUTF8Chars * 4> textifiedCallee;
+  llvh::raw_svector_ostream OS(textifiedCallee);
+  ESTree::Node *callee{};
+  if (auto *C = llvh::dyn_cast<ESTree::CallExpressionNode>(call)) {
+    callee = C->_callee;
+  } else if (
+      auto *O = llvh::dyn_cast<ESTree::OptionalCallExpressionNode>(call)) {
+    callee = O->_callee;
+  } else {
+    llvm_unreachable("Unhandled CallExpressionLikeNode sub-type.");
+  }
+
+  // Count of how many UTF8 character are on the textified callee string.
+  uint32_t numUTF8Chars = 0;
+  const char *begin = callee->getSourceRange().Start.getPointer();
+  const char *end = callee->getSourceRange().End.getPointer();
+
+  const char *pos = begin;
+
+  /// Helper function that scans the input source code searching for the next
+  /// UTF8 char starting at \p iter. \return a StringRef with the chars that
+  /// form the next UTF8 char on the input, or None if the input has been
+  /// exhausted. Upon return, \p iter will be modified 1-past the last char
+  /// consumed from the input.
+  auto nextUTF8Char = [end](const char *&iter) -> OptValue<llvh::StringRef> {
+    assert(iter < end && "iter is past end");
+    const char *start;
+    bool skipSpace = false;
+    bool newLine;
+    bool unprintableChar;
+    // The function may need to decode several UTF8 charaters to skip new lines,
+    // spaces following new lines, and unprintable characters.
+    do {
+      if (iter == end) {
+        return llvh::None;
+      }
+
+      // From start, where does the current UTF8 character ends?
+      start = iter;
+      for (++iter; iter < end && isUTF8ContinuationByte(*iter); ++iter) {
+        // nothing
+      }
+
+      newLine = *start == '\n';
+      skipSpace |= newLine;
+      unprintableChar = static_cast<uint8_t>(*start) < 32;
+    } while (unprintableChar || newLine || (skipSpace && *start == ' '));
+
+    const size_t utf8CharLength = static_cast<size_t>(iter - start);
+    return llvh::StringRef{start, utf8CharLength};
+  };
+
+  // The algorithm is split in three separate steps:
+  // 1. Find the range in the input source that contains the first half of the
+  //    UTF8 characters that should be present on the output.
+  // 2. Find the window into the input source starting at the end of the range
+  //    computed in 1. and containing another half of the maximum output length.
+  //    This window is [mark, pos).
+  // 3. Slide the [mark, pos) window found in 2 until pos equals end.
+  //
+  // If the input is exhausted in 1. or 2., then the output string will contain
+  // a "copy" of the input source (minus the characters listed above); it will
+  // otherwise be prefix"(...)"suffix, with prefix being the first
+  // kMaxTextifiedCalleeSizeUTF8Chars / 2 UTF8 chars in the input source, and
+  // suffix, the last kMaxTextifiedCalleeSizeUTF8Chars / 2 UTF8 chars.
+
+  // Scan the input string starting from the first position until half of the
+  // maximum of allowed character have been scanned.
+  while (pos < end && numUTF8Chars < kMaxTextifiedCalleeSizeUTF8Chars / 2) {
+    if (auto ch = nextUTF8Char(pos)) {
+      ++numUTF8Chars;
+      OS << *ch;
+    }
+  }
+
+  assert(
+      (pos == end || numUTF8Chars == kMaxTextifiedCalleeSizeUTF8Chars / 2) &&
+      "Invalid source range");
+
+  // Now save the current position, and advance it until the end of the buffer,
+  // or until enough UTF8 characters are found.
+  const char *mark = pos;
+  while (pos < end && numUTF8Chars < kMaxTextifiedCalleeSizeUTF8Chars) {
+    if (nextUTF8Char(pos)) {
+      ++numUTF8Chars;
+    }
+  }
+
+  assert(
+      (pos == end || numUTF8Chars == kMaxTextifiedCalleeSizeUTF8Chars) &&
+      "Invalid source range");
+
+  if (pos < end) {
+    // Slide the suffix window if pos is not at the end of the input.
+    OS << "(...)";
+
+    while (pos < end) {
+      auto ch = nextUTF8Char(mark);
+      assert(ch && "should have a character");
+      (void)ch;
+      nextUTF8Char(pos);
+    }
+  }
+
+  // The input should be exhausted by now, and pos should be equal to end --
+  // meaning all characters have been decoded.
+  assert(pos == end && "Invalid source range");
+
+  // Now add all characters between mark and end to the textified callable.
+  while (mark < end) {
+    auto ch = nextUTF8Char(mark);
+    assert(ch && "should have a character");
+    OS << *ch;
+  }
+
+  return builder.getLiteralString(OS.str());
+}
+
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
@@ -515,7 +651,8 @@ Value *ESTreeIRGen::emitCall(
       args.push_back(genExpression(&arg));
     }
 
-    return Builder.createCallInst(callee, thisVal, args);
+    return Builder.createCallInst(
+        getTextifiedCallExpr(Builder, call), callee, thisVal, args);
   }
 
   // Otherwise, there exists a spread argument, so the number of arguments
@@ -1151,6 +1288,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   // Avoid using emitIteratorNext here because the spec does not.
   Builder.setInsertionBlock(getNextBlock);
   auto *nextResult = Builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
       iteratorRecord.nextMethod,
       iteratorRecord.iterator,
       {Builder.createLoadStackInst(received)});
@@ -1205,6 +1343,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 // iv. Let innerReturnResult be
                 // ? Call(return, iterator, received.[[Value]]).
                 auto *innerReturnResult = Builder.createCallInst(
+                    CallInst::kNoTextifiedCallee,
                     returnMethod,
                     iteratorRecord.iterator,
                     {Builder.createLoadStackInst(received)});
@@ -1290,7 +1429,10 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // propagated. Normal completions from an inner throw method are
         // processed similarly to an inner next.
         auto *innerResult = Builder.createCallInst(
-            throwMethod, iteratorRecord.iterator, {catchReg});
+            CallInst::kNoTextifiedCallee,
+            throwMethod,
+            iteratorRecord.iterator,
+            {catchReg});
         // ii. 4. If Type(innerResult) is not Object,
         //        throw a TypeError exception.
         emitEnsureObject(
@@ -2002,7 +2144,8 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
     callee = genExpression(Expr->_tag);
   }
 
-  return Builder.createCallInst(callee, thisVal, tagFuncArgList);
+  return Builder.createCallInst(
+      CallInst::kNoTextifiedCallee, callee, thisVal, tagFuncArgList);
 }
 
 } // namespace irgen

@@ -17,7 +17,7 @@ import {
 
 const predicateFunctions: Array<string> = [];
 
-const NODES_WITH_SPECIAL_HANDLING = new Set([]);
+const NODES_WITH_SPECIAL_HANDLING = new Set<string>([]);
 
 const nodes = GetHermesESTreeJSON()
   .map(n => n.name)

@@ -788,8 +788,8 @@ bool Mem2Reg::runOnFunction(Function *F) {
   return changed;
 }
 
-Pass *hermes::createMem2Reg() {
-  return new Mem2Reg();
+std::unique_ptr<Pass> hermes::createMem2Reg() {
+  return std::make_unique<Mem2Reg>();
 }
 
 #undef DEBUG_TYPE

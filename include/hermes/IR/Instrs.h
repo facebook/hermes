@@ -29,6 +29,42 @@ namespace hermes {
 /// binary operations.
 bool isSideEffectFree(Type T);
 
+class ThrowIfHasRestrictedGlobalPropertyInst : public Instruction {
+  ThrowIfHasRestrictedGlobalPropertyInst(
+      const ThrowIfHasRestrictedGlobalPropertyInst &) = delete;
+  void operator=(const ThrowIfHasRestrictedGlobalPropertyInst &) = delete;
+
+ public:
+  enum { PropertyIdx };
+  ThrowIfHasRestrictedGlobalPropertyInst(LiteralString *name)
+      : Instruction(ValueKind::ThrowIfHasRestrictedGlobalPropertyInstKind) {
+    setType(Type::createNoType());
+    pushOperand(name);
+  }
+
+  explicit ThrowIfHasRestrictedGlobalPropertyInst(
+      const ThrowIfHasRestrictedGlobalPropertyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  LiteralString *getProperty() const {
+    return llvh::cast<LiteralString>(getOperand(PropertyIdx));
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(
+        V->getKind(), ValueKind::ThrowIfHasRestrictedGlobalPropertyInstKind);
+  }
+};
+
 /// Base class for instructions that are used for scope creation (e.g.,
 /// HBCCreateEnvironment, CreateScopeInst, etc). All these operands have the
 /// descriptor for the scope they are creating as the last operand.
@@ -703,11 +739,27 @@ class CallInst : public Instruction {
   // hard-coded offsets when accessing the arguments.
   using Instruction::getOperand;
 
+  LiteralString *textifiedCallee;
+
  public:
+  /// Constant used to indicate that a CallInst does not have a textified
+  /// callee.
+  static constexpr LiteralString *kNoTextifiedCallee = nullptr;
+
   enum { CalleeIdx, ThisIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
+  /// A textified version of the callee, e.g., in
+  ///
+  ///  a.b[0].c()
+  ///
+  /// this will be the literal string "a.b[0].c". This is then used to emit
+  /// nicer error messages if the callee is not a callable. If no textified
+  /// version of the callee is available this will be nullptr.
+  LiteralString *getTextifiedCallee() const {
+    return textifiedCallee;
+  }
   Value *getCallee() const {
     return getOperand(CalleeIdx);
   }
@@ -730,10 +782,11 @@ class CallInst : public Instruction {
 
   explicit CallInst(
       ValueKind kind,
+      LiteralString *textifiedCallee,
       Value *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : Instruction(kind) {
+      : Instruction(kind), textifiedCallee(textifiedCallee) {
     pushOperand(callee);
     pushOperand(thisValue);
     for (const auto &arg : args) {
@@ -741,7 +794,7 @@ class CallInst : public Instruction {
     }
   }
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : Instruction(src, operands), textifiedCallee(src->textifiedCallee) {}
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::Unknown;
@@ -760,6 +813,13 @@ class ConstructInst : public CallInst {
   ConstructInst(const ConstructInst &) = delete;
   void operator=(const ConstructInst &) = delete;
 
+  // This class doesn't support the textified callee feature; thus make
+  // getTextifiedCallee and kNoTextifiedCallee private on this subclass.
+  // Accessing getTextifiedCallee via (the base class) CallInst is harmless as
+  // it will always return kNoTextifiedCallee.
+  using CallInst::getTextifiedCallee;
+  using CallInst::kNoTextifiedCallee;
+
  public:
   Value *getConstructor() const {
     return getCallee();
@@ -769,7 +829,12 @@ class ConstructInst : public CallInst {
       Value *constructor,
       LiteralUndefined *undefined,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::ConstructInstKind, constructor, undefined, args) {
+      : CallInst(
+            ValueKind::ConstructInstKind,
+            kNoTextifiedCallee,
+            constructor,
+            undefined,
+            args) {
     setType(Type::createObject());
   }
   explicit ConstructInst(
@@ -788,12 +853,24 @@ class CallBuiltinInst : public CallInst {
   CallBuiltinInst(const CallBuiltinInst &) = delete;
   void operator=(const CallBuiltinInst &) = delete;
 
+  // This class doesn't support the textified callee feature; thus make
+  // getTextifiedCallee and kNoTextifiedCallee private on this subclass.
+  // Accessing getTextifiedCallee via (the base class) CallInst is harmless as
+  // it will always return kNoTextifiedCallee.
+  using CallInst::getTextifiedCallee;
+  using CallInst::kNoTextifiedCallee;
+
  public:
   explicit CallBuiltinInst(
       LiteralNumber *callee,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
+      : CallInst(
+            ValueKind::CallBuiltinInstKind,
+            kNoTextifiedCallee,
+            callee,
+            thisValue,
+            args) {
     assert(
         callee->getValue() == (int)callee->getValue() &&
         callee->getValue() < (double)BuiltinMethod::_count &&
@@ -919,8 +996,17 @@ class HBCCallNInst : public CallInst {
   /// including 'this'.
   static constexpr uint32_t kMaxArgs = 4;
 
-  explicit HBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallNInstKind, callee, thisValue, args) {
+  explicit HBCCallNInst(
+      LiteralString *functionName,
+      Value *callee,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : CallInst(
+            ValueKind::HBCCallNInstKind,
+            functionName,
+            callee,
+            thisValue,
+            args) {
     // +1 for 'this'.
     assert(
         kMinArgs <= args.size() + 1 && args.size() + 1 <= kMaxArgs &&
@@ -2976,12 +3062,24 @@ class HBCConstructInst : public CallInst {
   HBCConstructInst(const HBCConstructInst &) = delete;
   void operator=(const HBCConstructInst &) = delete;
 
+  // This class doesn't support the textified callee feature; thus make
+  // getTextifiedCallee and kNoTextifiedCallee private on this subclass.
+  // Accessing getTextifiedCallee via (the base class) CallInst is harmless as
+  // it will always return kNoTextifiedCallee.
+  using CallInst::getTextifiedCallee;
+  using CallInst::kNoTextifiedCallee;
+
  public:
   explicit HBCConstructInst(
       Value *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCConstructInstKind, callee, thisValue, args) {}
+      : CallInst(
+            ValueKind::HBCConstructInstKind,
+            kNoTextifiedCallee,
+            callee,
+            thisValue,
+            args) {}
   explicit HBCConstructInst(
       const HBCConstructInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3042,10 +3140,16 @@ class HBCCallDirectInst : public CallInst {
   static constexpr unsigned MAX_ARGUMENTS = 255;
 
   explicit HBCCallDirectInst(
+      LiteralString *textifiedCallee,
       Function *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallDirectInstKind, callee, thisValue, args) {
+      : CallInst(
+            ValueKind::HBCCallDirectInstKind,
+            textifiedCallee,
+            callee,
+            thisValue,
+            args) {
     assert(
         getNumArguments() <= MAX_ARGUMENTS &&
         "Too many arguments to HBCCallDirect");
@@ -3290,7 +3394,7 @@ class ResumeGeneratorInst : public Instruction {
   }
 
   WordBitSet<> getChangedOperandsImpl() {
-    return {};
+    return WordBitSet<>{}.set(IsReturnIdx);
   }
 
   Value *getIsReturn() {

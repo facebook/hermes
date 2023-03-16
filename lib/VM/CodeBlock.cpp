@@ -278,12 +278,23 @@ OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   }
 }
 
-OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
+OptValue<uint32_t> CodeBlock::getScopeDescDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
   if (!debugOffsets)
     return llvh::None;
-  uint32_t ret = debugOffsets->lexicalData;
+  uint32_t ret = debugOffsets->scopeDescData;
+  if (ret == hbc::DebugOffsets::NO_OFFSET)
+    return llvh::None;
+  return ret;
+}
+
+OptValue<uint32_t> CodeBlock::getTextifiedCalleeOffset() const {
+  auto *debugOffsets =
+      runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
+  if (!debugOffsets)
+    return llvh::None;
+  uint32_t ret = debugOffsets->textifiedCallees;
   if (ret == hbc::DebugOffsets::NO_OFFSET)
     return llvh::None;
   return ret;

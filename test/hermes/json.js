@@ -59,23 +59,23 @@ function parse(json) {
   }
 }
 parse("015");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token in number: 1
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character in number: 1
 parse("+5");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: +
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: +
 parse("[5,]");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: ]
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: ]
 parse("[0x5]");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: x
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: x
 parse("[\"\\v\"]");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Invalid escape sequence: v
 parse("nulltrue");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: t
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: t
 parse("nul");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected end of input
 parse("{5: 5}");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Expect a string key in JSON object
 parse("{\"5\": true");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Expect '}'
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected end of input
 parse("{\"ab\"}");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Expect ':' after the key in JSON object
 parse("\"\\u");
@@ -83,19 +83,19 @@ parse("\"\\u");
 parse("\"\\uabcg\"");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Invalid unicode point character: g
 parse("ef");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: e
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: e
 parse("\"\\\"");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected end of input
 parse("\"\\a\"");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Invalid escape sequence: a
 parse("{}[]");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: [
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: [
 parse("");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected end of input
 parse("abc");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected token: a
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: a
 parse("[true");
-//CHECK-NEXT: SyntaxError: JSON Parse error: Expect ']'
+//CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected end of input
 
 // reviver
 function reviver(key, value) {

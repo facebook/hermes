@@ -50,8 +50,12 @@ static bool performFunctionDCE(Function *F) {
       // CreateScopeInst may not have any users, but it is lowered to
       // HBCCreateEnvironmentInst which should always be emitted and DCE'd if
       // appropriate.
+      //
+      // HasRestrictedGlobalPropertyInst doesn't have a result but should never
+      // be removed as they perform runtime validation.
       if (I->mayWriteMemory() || llvh::isa<TerminatorInst>(I) ||
-          llvh::isa<CreateScopeInst>(I)) {
+          llvh::isa<CreateScopeInst>(I) ||
+          llvh::isa<ThrowIfHasRestrictedGlobalPropertyInst>(I)) {
         continue;
       }
 
@@ -136,8 +140,8 @@ bool DCE::runOnModule(Module *M) {
   return changed | localChanged;
 }
 
-Pass *hermes::createDCE() {
-  return new DCE();
+std::unique_ptr<Pass> hermes::createDCE() {
+  return std::make_unique<DCE>();
 }
 
 #undef DEBUG_TYPE

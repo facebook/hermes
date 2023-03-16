@@ -15,8 +15,11 @@
 import Fuzzilli
 
 struct Profile {
-    let processArguments: [String]
+    let getProcessArguments: (_: Bool) -> [String]
     let processEnv: [String : String]
+    let maxExecsBeforeRespawn: Int
+    // Timeout is in milliseconds.
+    let timeout: Int
     let codePrefix: String
     let codeSuffix: String
     let ecmaVersion: ECMAScriptVersion
@@ -25,12 +28,12 @@ struct Profile {
     // Used to verify that crashes can be detected.
     let crashTests: [String]
 
-    let additionalCodeGenerators: WeightedList<CodeGenerator>
+    let additionalCodeGenerators: [(CodeGenerator, Int)]
     let additionalProgramTemplates: WeightedList<ProgramTemplate>
 
     let disabledCodeGenerators: [String]
 
-    let additionalBuiltins: [String: Type]
+    let additionalBuiltins: [String: JSType]
 }
 
 let profiles = [

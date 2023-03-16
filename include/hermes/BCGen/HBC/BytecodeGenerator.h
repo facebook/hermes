@@ -20,10 +20,11 @@
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/RegExpSerialization.h"
+#include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
@@ -78,8 +79,8 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   DebugSourceLocation sourceLocation_;
   std::vector<DebugSourceLocation> debugLocations_{};
 
-  /// Table mapping variable names to frame locations.
-  std::vector<Identifier> debugVariableNames_;
+  /// Table mapping addresses to textified callees.
+  std::vector<DebugTextifiedCallee> textifiedCallees_;
 
   /// Lexical parent function ID, i.e. the lexically containing function.
   OptValue<uint32_t> lexicalParentID_{};
@@ -132,6 +133,8 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   unsigned getFunctionID(Function *F);
 
+  unsigned getScopeDescID(ScopeDesc *S);
+
   /// \return the ID in the bytecode's bigint table for a given literal string
   /// \p value.
   unsigned getBigIntID(LiteralBigInt *value) const;
@@ -170,6 +173,11 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     return sourceLocation_;
   }
 
+  /// Patches the Debug source locations' with the scopeAddress with the actual
+  /// descriptor offsets into the debug info data.
+  void patchDebugSourceLocations(
+      const llvh::DenseMap<unsigned, unsigned> &scopeDescOffsetMap);
+
   /// Add the location of an opcode.
   void addDebugSourceLocation(const DebugSourceLocation &info);
   const std::vector<DebugSourceLocation> &getDebugLocations() const {
@@ -177,36 +185,16 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   bool hasDebugInfo() const {
-    return !debugLocations_.empty() || lexicalParentID_ ||
-        !debugVariableNames_.empty();
+    return !debugLocations_.empty() || !textifiedCallees_.empty();
   }
 
-  /// Add a debug variable named \name.
-  void setDebugVariableNames(std::vector<Identifier> names) {
-    assert(
-        !complete_ &&
-        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    debugVariableNames_ = std::move(names);
+  // Add the textified callee string for the callable in a given location.
+  void addDebugTextfiedCallee(const DebugTextifiedCallee &tCallee) {
+    textifiedCallees_.emplace_back(tCallee);
   }
 
-  /// \return the list of debug variable names.
-  llvh::ArrayRef<Identifier> getDebugVariableNames() const {
-    return debugVariableNames_;
-  }
-
-  /// Set the lexical parent ID to \p parentId.
-  void setLexicalParentID(OptValue<uint32_t> parentID) {
-    assert(
-        !complete_ &&
-        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    lexicalParentID_ = parentID;
-  }
-
-  /// \return the lexical parent ID (that is, the function lexically enclosing
-  /// this function) or None if there is no lexical parent ID (i.e. the function
-  /// is global).
-  OptValue<uint32_t> getLexicalParentID() const {
-    return lexicalParentID_;
+  llvh::ArrayRef<DebugTextifiedCallee> getTextifiedCallees() const {
+    return textifiedCallees_;
   }
 
   /// Shift the bytecode stream starting from \p loc left by 3 bytes.
@@ -270,15 +258,32 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 /// This class is used by the hermes backend.
 /// It wraps all data required to generate the module.
 class BytecodeModuleGenerator {
+ public:
+  using LiteralOffset = std::pair<uint32_t, uint32_t>;
+  using LiteralOffsetMapTy = llvh::DenseMap<const Instruction *, LiteralOffset>;
+
+ private:
   /// Mapping from Function * to a sequential ID.
   AllocationTable<Function *> functionIDMap_{};
+
+  /// Mapping from ScopeDesc * to a sequential ID.
+  AllocationTable<ScopeDesc *> scopeDescIDMap_{};
+
+  /// The ScopeDesc * that have been added between calls to serializeScopeChain.
+  llvh::SetVector<ScopeDesc *> newScopeDescs_;
+
+  /// Mapping from ScopeDesc ID to its address in the scope descriptor debug
+  /// info.
+  llvh::DenseMap<unsigned, unsigned> scopeDescIDAddr_{};
+
+  unsigned serializeScopeChain(
+      StringTable &st,
+      DebugInfoGenerator &debugInfoGen,
+      ScopeDesc *s);
 
   /// Mapping from Function * to it's BytecodeFunctionGenerator *.
   DenseMap<Function *, std::unique_ptr<BytecodeFunctionGenerator>>
       functionGenerators_{};
-
-  /// Generate literals buffer for object/array.
-  SerializedLiteralGenerator literalGenerator_;
 
   /// The mapping from strings to ID for strings in the resulting bytecode
   /// module.
@@ -321,6 +326,11 @@ class BytecodeModuleGenerator {
   /// They are stored as chars in order to shorten bytecode size
   std::vector<unsigned char> objValBuffer_{};
 
+  /// A map from instruction to literal offset in the corresponding buffers.
+  /// \c arrayBuffer_, \c objKeyBuffer_, \c objValBuffer_.
+  /// This map is populated before instruction selection.
+  LiteralOffsetMapTy literalOffsetMap_{};
+
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
@@ -343,11 +353,13 @@ class BytecodeModuleGenerator {
   /// Constructor which enables optimizations if \p optimizationEnabled is set.
   BytecodeModuleGenerator(
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
-      : literalGenerator_(*this, options.optimizationEnabled),
-        options_(options) {}
+      : options_(options) {}
 
   /// Add a function to functionIDMap_ if not already exist. Returns the ID.
   unsigned addFunction(Function *F);
+
+  /// Add a ScopeDesc to scopeDescIDMap_ if not already in it. Returns the ID.
+  unsigned addScopeDesc(ScopeDesc *S);
 
   /// Add a function to the list of functions.
   void setFunctionGenerator(
@@ -390,6 +402,18 @@ class BytecodeModuleGenerator {
   /// \return the index of the bigint in the table.
   uint32_t addBigInt(bigint::ParsedBigInt bigint);
 
+  /// Set the serialized literal tables that this generator will use. Once set,
+  /// no further modifications are possible.
+  /// \param arrayBuffer buffer containing the serialized array literals.
+  /// \param objBuffer buffer containing the keys of serialized object literals.
+  /// \param valBuffer buffer containing the values of serialized object
+  ///     literals.
+  void initializeSerializedLiterals(
+      std::vector<unsigned char> &&arrayBuffer,
+      std::vector<unsigned char> &&keyBuffer,
+      std::vector<unsigned char> &&valBuffer,
+      LiteralOffsetMapTy &&offsetMap);
+
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
   uint32_t addRegExp(CompiledRegExp *regexp);
@@ -415,17 +439,6 @@ class BytecodeModuleGenerator {
   /// \param stringID the index of the corresponding source in the string table.
   void addFunctionSource(uint32_t functionID, uint32_t stringID);
 
-  /// Returns the starting offset of the elements.
-  uint32_t addArrayBuffer(ArrayRef<Literal *> elements);
-
-  /// Add to the the object buffer using \keys as the array of keys, and
-  /// \vals as the array of values.
-  /// Returns a pair where the first value is the object's offset into the
-  /// key buffer, and the second value is its offset into the value buffer.
-  std::pair<uint32_t, uint32_t> addObjectBuffer(
-      ArrayRef<Literal *> keys,
-      ArrayRef<Literal *> vals);
-
   /// Serializes the array of literals given into a compact char buffer.
   /// The serialization format can be found in:
   /// include/hermes/VM/SerializedLiteralParser.h
@@ -443,6 +456,17 @@ class BytecodeModuleGenerator {
       ArrayRef<Literal *> literals,
       std::vector<unsigned char> &buff,
       bool isKeyBuffer);
+
+  /// For a given instruction \p inst that has an associated serialized literal,
+  /// obtain the offset of the literal in the associated buffer. In case of
+  /// an object literal, it is a pair of offsets (key and value). In case of
+  /// array literal, only the first offset is used.
+  LiteralOffset serializedLiteralOffsetFor(const Instruction *inst) {
+    assert(
+        literalOffsetMap_.count(inst) &&
+        "instruction has no serialized literal");
+    return literalOffsetMap_[inst];
+  }
 
   /// \return a BytecodeModule.
   std::unique_ptr<BytecodeModule> generate();

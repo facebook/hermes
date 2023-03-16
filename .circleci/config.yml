@@ -1,18 +1,8 @@
 version: 2.1
 
-# The Linux jobs include hacks and flags that restricts parallelism, and re-try
-# with less parallelism on failure.
-#
-# This is because CircleCI Linux jobs have 2 CPUs and 4GB RAM allocated via
-# cgroups, but run on machines that advertise 36 CPUs and 68GB RAM. This means
-# that most build tools will spawn 36 jobs and quickly choke to death. Even
-# with just 4 jobs, 4GB may be too little, so we retry serially on failure.
-#
-# Comments saying "see top comment" refer to this.
-
 orbs:
   win: circleci/windows@2.4.0
-  android: circleci/android@1.0.3
+  android: circleci/android@2.0.3
   node: circleci/node@4.7.0
 
 workflows:
@@ -61,59 +51,48 @@ apple_defaults: &apple_defaults
 jobs:
   android:
     executor:
-      name: android/android
-      sdk-version: '28'
-      variant: ndk
+      name: android/android-machine
+      tag: 2022.04.1
+    working_directory: /home/circleci
     environment:
-      - HERMES_WS_DIR: /tmp/hermes
-      - TERM: dumb
-      - DEBIAN_FRONTEND: noninteractive
+      HERMES_WS_DIR: /home/circleci
     steps:
-      - checkout
       - run:
           name: Set up workspace and install dependencies
           command: |
             yes | sdkmanager "cmake;3.18.1" &
-            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
-            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            sudo apt-get update
-            sudo apt-get install -y cmake ninja-build libicu-dev
-            wait
-            sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            # See top comment
-            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
-            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.18.1/bin/ninja
+            sudo apt update && sudo apt install -y libicu-dev
+      - checkout:
+          path: hermes
       - run:
           name: Build Hermes Compiler
           command: |
-            cd "$HERMES_WS_DIR"
-            cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake -S hermes -B build
             # Build the Hermes compiler so that the cross compiler build can
             # access it to build the VM
-            cmake --build ./build --target hermesc
+            cmake --build ./build --target hermesc -j 4
       - run:
           name: Build Hermes for Android
           command: |
-            export ANDROID_SDK="$ANDROID_HOME"
-            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
-            cd "$HERMES_WS_DIR/hermes/android" && ./gradlew githubRelease
+            cd hermes/android
+            ./gradlew githubRelease
       - run:
           name: Copy artifacts
           command: |
-            cd "$HERMES_WS_DIR"
-            cp "build_android/distributions"/hermes-runtime-android-*.tar.gz "output"
+            mkdir output
+            cp build_android/distributions/hermes-runtime-android-*.tar.gz output
       - run:
           name: Checksum artifacts
           command: |
-            cd "$HERMES_WS_DIR/output"
+            cd output
             for file in *
             do
               sha256sum "$file" > "$file.sha256"
             done
       - store_artifacts:
-          path: /tmp/hermes/output/
+          path: output
       - persist_to_workspace:
-          root: /tmp/hermes/output/
+          root: output
           paths:
             - .
 
@@ -552,6 +531,7 @@ jobs:
   test-e2e:
     executor:
       name: android/android-machine
+      tag: 2022.04.1
     working_directory: /home/circleci
     environment:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/circleci/hermes
@@ -562,7 +542,7 @@ jobs:
       - run:
           name: Setup dependencies
           command: |
-            (yes | sdkmanager "cmake;3.18.1" --verbose) || true
+            (yes | sdkmanager "cmake;3.22.1" --verbose) || true
       - checkout:
           path: hermes
       - run:
@@ -584,6 +564,7 @@ jobs:
   test-e2e-intl:
     executor:
       name: android/android-machine
+      tag: 2022.04.1
     working_directory: /home/circleci
     environment:
       HERMES_WS_DIR: /home/circleci

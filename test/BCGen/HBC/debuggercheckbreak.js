@@ -8,15 +8,15 @@
 // RUN: %hermes -dump-bytecode -target=HBC %s -O -g | %FileCheck %s --match-full-lines
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+//CHECK-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "test1"
 //CHECK-NEXT:    CreateEnvironment r0
-//CHECK-NEXT:    CreateClosure     r1, r0, Function<test1>
-//CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    PutById           r0, r1, 1, "test1"
-//CHECK-NEXT:    LoadConstUndefined r0
+//CHECK-NEXT:    CreateClosure     r2, r0, Function<test1>
+//CHECK-NEXT:    GetGlobalObject   r1
+//CHECK-NEXT:    PutById           r1, r2, 1, "test1"
+//CHECK-NEXT:    LoadConstUndefined r1
 //CHECK-NEXT:    AsyncBreakCheck
-//CHECK-NEXT:    Ret               r0
+//CHECK-NEXT:    Ret               r1
 
 //CHECK-LABEL:Function<test1>(1 params, 16 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}

@@ -20,7 +20,7 @@ using namespace facebook::hermes;
 
 struct HermesTestHelper {
   static size_t rootsListLength(const HermesRuntime &rt) {
-    return rt.rootsListLength();
+    return rt.rootsListLengthForTests();
   }
 
   static int64_t calculateRootsListChange(
@@ -351,44 +351,26 @@ TEST(HermesRuntimeDeathTest, ValueTest) {
 
 TEST_F(HermesRuntimeTest, DontGrowWhenMoveObjectOutOfValue) {
   Value val = Object(*rt);
+  // Keep the object alive during measurement.
+  std::unique_ptr<Object> obj;
   auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Object obj = std::move(val).getObject(*rt);
-    (void)obj;
+    obj = std::make_unique<Object>(std::move(val).getObject(*rt));
   });
   EXPECT_EQ(rootsDelta, 0);
 }
 
 TEST_F(HermesRuntimeTest, DontGrowWhenCloneObject) {
   Value val = Object(*rt);
+  constexpr int kCloneCount = 1000;
+  // Keep the objects alive during measurement.
+  std::vector<Object> objects;
+  objects.reserve(kCloneCount);
   auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    for (int i = 0; i < 1000; i++) {
-      Object obj = val.getObject(*rt);
-      (void)obj;
+    for (size_t i = 0; i < kCloneCount; i++) {
+      objects.push_back(val.getObject(*rt));
     }
   });
   EXPECT_EQ(rootsDelta, 0);
-}
-
-TEST_F(HermesRuntimeTest, ScopeCleansUpObjectReferences) {
-  Object o1(*rt);
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Scope s(*rt);
-    Object o2(*rt);
-    Object o3(*rt);
-  });
-  EXPECT_EQ(rootsDelta, 0);
-}
-
-TEST_F(HermesRuntimeTest, ReferencesCanEscapeScope) {
-  Value v;
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Scope s(*rt);
-    Object o1(*rt);
-    Object o2(*rt);
-    Object o3(*rt);
-    v = std::move(o2);
-  });
-  EXPECT_EQ(rootsDelta, 1);
 }
 
 TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
@@ -509,6 +491,30 @@ JSON.stringify(JSON.parse(out).callstack.map(x => x.SourceLocation));
   const char *expected =
       "[\"crashCode.js:2:41\",\"crashCode.js:3:27\",\"crashCode.js:4:27\",\"crashCode.js:5:14\",null]";
   EXPECT_EQ(callstack, expected);
+}
+
+TEST_F(HermesRuntimeTest, SpreadHostObjectWithOwnProperties) {
+  class HostObjectWithPropertyNames : public HostObject {
+    std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
+      return PropNameID::names(rt, "prop1", "1", "2", "prop2", "3");
+    }
+    Value get(Runtime &runtime, const PropNameID &name) override {
+      return Value();
+    }
+  };
+
+  Object ho = Object::createFromHostObject(
+      *rt, std::make_shared<HostObjectWithPropertyNames>());
+  rt->global().setProperty(*rt, "ho", ho);
+
+  auto res = eval(R"###(
+var spreaded = {...ho};
+var props = Object.getOwnPropertyNames(spreaded);
+props.toString();
+)###")
+                 .getString(*rt)
+                 .utf8(*rt);
+  EXPECT_EQ(res, "1,2,3,prop1,prop2");
 }
 
 TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
@@ -1005,7 +1011,7 @@ class HermesRuntimeTestSmallHeap : public HermesRuntimeTestBase {
                 .build()) {}
 };
 
-TEST_F(HermesRuntimeTestSmallHeap, OOMExceptionTest) {
+TEST_F(HermesRuntimeTestSmallHeap, HostFunctionPropagatesOOMExceptionTest) {
   auto func = Function::createFromHostFunction(
       *rt,
       PropNameID::forAscii(*rt, ""),
@@ -1028,6 +1034,50 @@ TEST_F(HermesRuntimeTestSmallHeap, OOMExceptionTest) {
 )#");
   EXPECT_THROW(func.call(*rt, makeOOM), ::hermes::vm::JSOutOfMemoryError);
 }
+
+TEST_F(HermesRuntimeTestSmallHeap, CreateJSErrorPropagatesOOMExceptionTest) {
+  eval(R"#(
+globalThis.Error = function (){
+  var outer = [];
+  while(true){
+    var inner = [];
+    for (var i = 0; i < 10000; i++) inner.push({});
+    outer.push(inner);
+  }
+};
+)#");
+  EXPECT_THROW(throw JSError(*rt, "Foo"), ::hermes::vm::JSOutOfMemoryError);
+}
 #endif
+
+TEST_F(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
+  Function alwaysThrows = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, "alwaysThrows"),
+      0,
+      [](Runtime &, const Value &, const Value *, size_t) -> Value {
+        throw std::logic_error(
+            "Native std::logic_error C++ exception in Host Function");
+      });
+  rt->global().setProperty(*rt, "alwaysThrows", alwaysThrows);
+  rt->global().setProperty(*rt, "Error", 10);
+
+  auto test = eval(
+                  R"#((function(val) {
+                          'use strict';
+                          try {
+                            alwaysThrows(val);
+                          } catch(e) {
+                            return 'typeof Error is ' + typeof(Error) + '; ' + e.message;
+                          }
+                          throw new Error('Unreachable statement');
+                       }))#")
+                  .getObject(*rt)
+                  .getFunction(*rt);
+  EXPECT_EQ(
+      "typeof Error is number; Exception in HostFunction: Native "
+      "std::logic_error C++ exception in Host Function",
+      test.call(*rt).getString(*rt).utf8(*rt));
+}
 
 } // namespace

@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes -O %s
-// RUN: %hermes -O -Xdump-between-passes %s 2>&1 | %FileCheck --match-full-lines %s --check-prefix CHKIR
+// RUN: %hermes -O -Xdump-after-all %s 2>&1 | %FileCheck --match-full-lines %s --check-prefix CHKIR
 // RUN: %hermes -O -dump-ra %s | %FileCheck --match-full-lines %s --check-prefix CHKRA
 
 // This test exercises an issue found in LowerArgumentsArray in which PHI nodes
@@ -22,14 +22,14 @@ function decrementArguments() {
 print(decrementArguments());
 
 
-// CHKIR-LABEL: *** AFTER LowerConstruction
+// CHKIR-LABEL: *** AFTER Function pass LowerConstruction
 // CHKIR-LABEL: function decrementArguments#0#1()#2 : number
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:
 // CHKIR-NEXT:   %4 = PhiInst undefined : undefined, %BB0, %2 : object, %BB1
 // CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number|bigint, %BB1
 // CHKIR-LABEL: %BB2:
-// CHKIR-LABEL: *** AFTER LowerArgumentsArray
+// CHKIR-LABEL: *** AFTER Function pass LowerArgumentsArray
 // CHKIR-LABEL: function decrementArguments#0#1()#2 : number
 // CHKIR-LABEL: %BB0:
 // CHKIR-LABEL: %BB1:

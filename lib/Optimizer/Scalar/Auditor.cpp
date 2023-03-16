@@ -147,8 +147,8 @@ bool Auditor::runOnFunction(Function *F) {
   return false;
 }
 
-Pass *hermes::createAuditor() {
-  return new Auditor();
+std::unique_ptr<Pass> hermes::createAuditor() {
+  return std::make_unique<Auditor>();
 }
 
 #undef DEBUG_TYPE

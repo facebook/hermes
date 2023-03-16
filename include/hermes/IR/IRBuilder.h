@@ -290,6 +290,9 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  ThrowIfHasRestrictedGlobalPropertyInst *
+  createThrowIfHasRestrictedGlobalPropertyInst(llvh::StringRef property);
+
   CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
 
   CreateFunctionInst *createCreateFunctionInst(
@@ -307,11 +310,17 @@ class IRBuilder {
       Variable *ptr,
       ScopeCreationInst *scope);
 
-  CallInst *
-  createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
+  CallInst *createCallInst(
+      LiteralString *textifiedCallee,
+      Value *callee,
+      Value *thisValue,
+      ArrayRef<Value *> args);
 
-  HBCCallNInst *
-  createHBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
+  HBCCallNInst *createHBCCallNInst(
+      LiteralString *textifiedCallee,
+      Value *callee,
+      Value *thisValue,
+      ArrayRef<Value *> args);
 
   ConstructInst *createConstructInst(
       Value *constructor,
@@ -547,6 +556,7 @@ class IRBuilder {
 #endif
 
   HBCCallDirectInst *createHBCCallDirectInst(
+      LiteralString *textifiedCallee,
       Function *callee,
       Value *thisValue,
       ArrayRef<Value *> arguments);

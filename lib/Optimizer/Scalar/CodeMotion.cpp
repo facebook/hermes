@@ -234,8 +234,8 @@ bool CodeMotion::runOnFunction(Function *F) {
   return changed;
 }
 
-Pass *hermes::createCodeMotion() {
-  return new CodeMotion();
+std::unique_ptr<Pass> hermes::createCodeMotion() {
+  return std::make_unique<CodeMotion>();
 }
 
 #undef DEBUG_TYPE

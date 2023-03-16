@@ -12,6 +12,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/VM/CallResult.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -71,7 +72,7 @@ Handle<JSObject> createErrorConstructor(Runtime &runtime) {
 
 // The constructor creation functions have to be expanded from macros because
 // the constructor functions are expanded from macros.
-#define NATIVE_ERROR_TYPE(error_name)                                       \
+#define ERR_HELPER(error_name, argCount)                                    \
   Handle<JSObject> create##error_name##Constructor(Runtime &runtime) {      \
     auto errorPrototype =                                                   \
         Handle<JSObject>::vmcast(&runtime.error_name##Prototype);           \
@@ -92,26 +93,29 @@ Handle<JSObject> createErrorConstructor(Runtime &runtime) {
         error_name##Constructor,                                            \
         errorPrototype,                                                     \
         Handle<JSObject>::vmcast(&runtime.errorConstructor),                \
-        1,                                                                  \
+        argCount,                                                           \
         NativeConstructor::creatorFunction<JSError>,                        \
         CellKind::JSErrorKind);                                             \
   }
-#include "hermes/VM/NativeErrorTypes.def"
+// The AggregateError constructor takes in two parameters, while all the other
+// Error types take in one.
+#define NATIVE_ERROR_TYPE(name) ERR_HELPER(name, 1)
+#define AGGREGATE_ERROR_TYPE(name) ERR_HELPER(name, 2)
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 static CallResult<HermesValue> constructErrorObject(
     Runtime &runtime,
     NativeArgs args,
+    Handle<> message,
+    Handle<> opts,
     Handle<JSObject> prototype) {
   MutableHandle<JSError> selfHandle{runtime};
-
   // If constructor, use the allocated object, otherwise allocate a new one.
-  // Everything else is the same after that.
   if (args.isConstructorCall()) {
     selfHandle = vmcast<JSError>(args.getThisArg());
   } else {
     selfHandle = JSError::create(runtime, prototype).get();
   }
-
   // Record the stack trace, skipping this entry.
   if (LLVM_UNLIKELY(
           JSError::recordStackTrace(selfHandle, runtime, true) ==
@@ -128,10 +132,9 @@ static CallResult<HermesValue> constructErrorObject(
 
   // new Error(message).
   // Only proceed when 'typeof message' isn't undefined.
-  if (!args.getArg(0).isUndefined()) {
+  if (!message->isUndefined()) {
     if (LLVM_UNLIKELY(
-            JSError::setMessage(
-                selfHandle, runtime, runtime.makeHandle(args.getArg(0))) ==
+            JSError::setMessage(selfHandle, runtime, message) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -140,7 +143,7 @@ static CallResult<HermesValue> constructErrorObject(
   // https://tc39.es/proposal-error-cause/
   // InstallErrorCause(O, options).
   // If Type(options) is Object and ? HasProperty(options, "cause") is true
-  if (Handle<JSObject> options = args.dyncastArg<JSObject>(1)) {
+  if (auto options = Handle<JSObject>::dyn_vmcast(opts)) {
     GCScopeMarkerRAII marker{runtime};
     NamedPropertyDescriptor desc;
     Handle<JSObject> propObj =
@@ -172,16 +175,73 @@ static CallResult<HermesValue> constructErrorObject(
   return selfHandle.getHermesValue();
 }
 
+// ES2023 20.5.7.1.1
+static CallResult<HermesValue> constructAggregateErrorObject(
+    Runtime &runtime,
+    NativeArgs args,
+    Handle<JSObject> prototype) {
+  // 1-4 handled in constructErrorObject
+  CallResult<HermesValue> errorObj = constructErrorObject(
+      runtime, args, args.getArgHandle(1), args.getArgHandle(2), prototype);
+  if (LLVM_UNLIKELY(errorObj == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto errorObjHandle = runtime.makeHandle<JSObject>(*errorObj);
+
+  // 5. Let errorsList be ? IterableToList(errors).
+  CallResult<Handle<JSArray>> errorsList =
+      iterableToArray(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(errorsList == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 6. Perform ! DefinePropertyOrThrow(O, "errors", PropertyDescriptor {
+  // [[Configurable]]: true, [[Enumerable]]: false, [[Writable]]: true,
+  // [[Value]]: CreateArrayFromList(errorsList) }).
+
+  CallResult<bool> res = JSObject::defineOwnProperty(
+      errorObjHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::errors),
+      DefinePropertyFlags::getNewNonEnumerableFlags(),
+      *errorsList);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 7. Return O.
+  return errorObjHandle.getHermesValue();
+}
+
+// Note- the following names for the error and aggregate functions are spelled
+// to exactly match the names in NativeErrorTypes.def. They are used in the
+// ERR_HELPER macro defined above.
+CallResult<HermesValue>
+ErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
+  auto prototype = runtime.makeHandle<JSObject>(runtime.ErrorPrototype);
+  return constructErrorObject(
+      runtime, args, args.getArgHandle(0), args.getArgHandle(1), prototype);
+}
+
+// AggregateError has a different constructor body than the other errors.
+CallResult<HermesValue>
+AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
+  return constructAggregateErrorObject(
+      runtime,
+      args,
+      runtime.makeHandle<JSObject>(runtime.AggregateErrorPrototype));
+}
+
 // Constructor functions have to be expanded from macro because they are
 // native calls, and their interface are restricted. No extra parameters
-// can be passed in.
-#define ALL_ERROR_TYPE(name)                                                   \
+// can be passed in. We can't use the #ALL_ERROR_TYPE macro since AggregateError
+// requires a different constructor.
+#define NATIVE_ERROR_TYPE(name)                                                \
   CallResult<HermesValue> name##Constructor(                                   \
       void *, Runtime &runtime, NativeArgs args) {                             \
+    auto prototype = runtime.makeHandle<JSObject>(runtime.name##Prototype);    \
     return constructErrorObject(                                               \
-        runtime, args, runtime.makeHandle<JSObject>(runtime.name##Prototype)); \
+        runtime, args, args.getArgHandle(0), args.getArgHandle(1), prototype); \
   }
-#include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
 /// ES11.0 19.5.3.4
 CallResult<HermesValue>

@@ -210,7 +210,9 @@ class CodeBlock final
   /// with the current function if an entry is found, or llvh::None if not.
   OptValue<uint32_t> getFunctionSourceID() const;
 
-  OptValue<uint32_t> getDebugLexicalDataOffset() const;
+  OptValue<uint32_t> getScopeDescDataOffset() const;
+
+  OptValue<uint32_t> getTextifiedCalleeOffset() const;
 
   const inst::Inst *getOffsetPtr(uint32_t offset) const {
     assert(begin() + offset < end() && "offset out of bounds");

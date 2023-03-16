@@ -1,7 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`flowDefToTSDef types/utilities/$Supertype 1`] = `
-[ExpectedTranslationError: 
-> 11 | type T = $Supertype<Foo>;
-     |          ^^^^^^^^^^^^^^^ Unsupported feature: Translating "$Supertype" is currently not supported.]
-`;

@@ -74,14 +74,21 @@ class ConsecutiveStringStorage {
 
   /// Construct from a list of unique strings.  Note that this is only
   /// instantiated for a small number of different \p I types.
-  template <typename I>
-  ConsecutiveStringStorage(I begin, I end, bool optimize = false);
+  /// \param Force8Bit if set to std::true_type, indicates that the input
+  ///     is *not* utf-8 encoded and consists of 8-bit bytes. If set to
+  ///     std::false_type, the input is utf-8 encoded.
+  template <typename I, typename Force8Bit>
+  ConsecutiveStringStorage(I begin, I end, Force8Bit, bool optimize);
 
   /// Construct from a list of unique strings.
   explicit ConsecutiveStringStorage(
       llvh::ArrayRef<llvh::StringRef> strings,
       bool optimize = false)
-      : ConsecutiveStringStorage(strings.begin(), strings.end(), optimize) {}
+      : ConsecutiveStringStorage(
+            strings.begin(),
+            strings.end(),
+            std::false_type{},
+            optimize) {}
 
   /// Construct from a table and storage.
   ConsecutiveStringStorage(

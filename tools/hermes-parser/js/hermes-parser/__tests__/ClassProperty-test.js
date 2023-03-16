@@ -53,6 +53,7 @@ describe('PropertyDefinition', () => {
                   },
                   "optional": false,
                   "static": false,
+                  "tsModifiers": null,
                   "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": null,
@@ -69,6 +70,7 @@ describe('PropertyDefinition', () => {
                   },
                   "optional": false,
                   "static": false,
+                  "tsModifiers": null,
                   "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": {
@@ -90,6 +92,7 @@ describe('PropertyDefinition', () => {
                   },
                   "optional": false,
                   "static": true,
+                  "tsModifiers": null,
                   "type": "PropertyDefinition",
                   "typeAnnotation": null,
                   "value": {
@@ -163,6 +166,7 @@ describe('PropertyDefinition', () => {
                       },
                       "optional": false,
                       "static": false,
+                      "tsModifiers": null,
                       "type": "PropertyDefinition",
                       "typeAnnotation": {
                         "type": "TypeAnnotation",
@@ -250,6 +254,7 @@ describe('PropertyDefinition', () => {
                       },
                       "optional": false,
                       "static": false,
+                      "tsModifiers": null,
                       "type": "PropertyDefinition",
                       "typeAnnotation": {
                         "type": "TypeAnnotation",

@@ -97,7 +97,15 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     }
     auto output = runtime.makeHandle<StringPrimitive>(*result);
     // Copy directly into the StringPrimitive storage.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
+
     std::copy(str.begin(), str.end(), output->castToASCIIPointerForWrite());
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     return output.getHermesValue();
   }
 
@@ -194,14 +202,29 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
 CallResult<HermesValue> StringPrimitive::createDynamic(
     Runtime &runtime,
     UTF16Ref str) {
-  if (LLVM_LIKELY(isAllASCII(str.begin(), str.end()))) {
+  return createDynamicWithKnownEncoding(
+      runtime, str, isAllASCII(str.begin(), str.end()));
+}
+
+CallResult<HermesValue> StringPrimitive::createDynamicWithKnownEncoding(
+    Runtime &runtime,
+    UTF16Ref str,
+    bool isASCII) {
+  if (LLVM_LIKELY(isASCII)) {
     auto res = DynamicASCIIStringPrimitive::create(runtime, str.size());
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // Copy directly into the StringPrimitive storage.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#endif
     std::copy(
         str.begin(), str.end(), res->getString()->castToASCIIPointerForWrite());
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
     return res;
   } else {
     return DynamicUTF16StringPrimitive::create(runtime, str);

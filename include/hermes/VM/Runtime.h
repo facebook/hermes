@@ -29,6 +29,7 @@
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
+#include "hermes/VM/Profiler/SamplingProfilerDefs.h"
 #include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/RegExpMatch.h"
@@ -81,10 +82,13 @@ struct RuntimeOffsets;
 class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
-class SamplingProfiler;
 class CodeCoverageProfiler;
 struct MockedEnvironment;
 struct StackTracesTree;
+
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
+class SamplingProfiler;
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #ifdef HERMESVM_PROFILER_BB
 class JSArray;
@@ -192,9 +196,9 @@ using CrashTrace = CrashTraceNoop;
 
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
-class Runtime : public PointerBase,
-                public HandleRootOwner,
-                private GCBase::GCCallbacks {
+class HERMES_EMPTY_BASES Runtime : public PointerBase,
+                                   public HandleRootOwner,
+                                   private GCBase::GCCallbacks {
  public:
   static std::shared_ptr<Runtime> create(const RuntimeConfig &runtimeConfig);
 
@@ -631,6 +635,11 @@ class Runtime : public PointerBase,
   uint32_t getCurrentFrameOffset() const;
 #endif
 
+  /// Flag the interpreter that an error with the specified \p msg must be
+  /// thrown when execution resumes.
+  /// \return ExecutionResult::EXCEPTION
+  LLVM_NODISCARD ExecutionStatus raiseError(const TwineChar16 &msg);
+
   /// Flag the interpreter that a type error with the specified message must be
   /// thrown when execution resumes.
   /// If the message is not a string, it is converted using toString().
@@ -654,9 +663,16 @@ class Runtime : public PointerBase,
   /// resumes. The string thrown concatenates \p msg1, a description of \p
   /// value, and \p msg2. \return ExecutionResult::EXCEPTION
   LLVM_NODISCARD ExecutionStatus raiseTypeErrorForValue(
-      llvh::StringRef msg1,
+      const TwineChar16 &msg1,
       Handle<> value,
-      llvh::StringRef msg2);
+      const TwineChar16 &msg2);
+
+  /// Flag the interpreter that a type error must be thrown when execution
+  /// resumes. The string thrown concatenates either the textified callable for
+  /// \p callable (if it is available) with " is not a function"; or a
+  /// description of \p callable with " is not a function". \return
+  /// ExecutionResult::EXCEPTION
+  LLVM_NODISCARD ExecutionStatus raiseTypeErrorForCallable(Handle<> callable);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
@@ -811,9 +827,11 @@ class Runtime : public PointerBase,
     return *codeCoverageProfiler_;
   }
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   /// Sampling profiler data for this runtime. The ctor/dtor of SamplingProfiler
   /// will automatically register/unregister this runtime from profiling.
   std::unique_ptr<SamplingProfiler> samplingProfiler;
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   /// Time limit monitor data for this runtime.
   std::shared_ptr<TimeLimitMonitor> timeLimitMonitor;
@@ -1359,6 +1377,12 @@ class Runtime : public PointerBase,
   /// making it optional. If this is accessed when the optional value is cleared
   /// (the invalid state) we assert.
   llvh::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+
+  /// The number of alive/active NoRJSScopes. If nonzero, then no JS execution
+  /// is allowed
+  uint32_t noRJSLevel_{0};
+
+  friend class NoRJSScope;
 #endif
 
  public:
@@ -1720,6 +1744,7 @@ class NoAllocScope {
   NoAllocScope() = delete;
 };
 using NoHandleScope = NoAllocScope;
+using NoRJSScope = NoAllocScope;
 
 #else
 
@@ -1788,6 +1813,14 @@ class NoAllocScope : public BaseNoScope {
  public:
   explicit NoAllocScope(Runtime &runtime) : NoAllocScope(runtime.getHeap()) {}
   explicit NoAllocScope(GC &gc) : BaseNoScope(&gc.noAllocLevel_) {}
+  using BaseNoScope::BaseNoScope;
+  using BaseNoScope::operator=;
+};
+
+/// RAII class to temporarily disallow reentering JS execution.
+class NoRJSScope : public BaseNoScope {
+ public:
+  explicit NoRJSScope(Runtime &runtime) : BaseNoScope(&runtime.noRJSLevel_) {}
   using BaseNoScope::BaseNoScope;
   using BaseNoScope::operator=;
 };

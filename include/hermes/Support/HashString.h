@@ -30,7 +30,7 @@ template <typename T>
 uint32_t hashString(llvh::ArrayRef<T> str) {
   static_assert(
       sizeof(JenkinsHash) == sizeof(uint32_t), "Jenkins Hash must be 32-bit");
-  hermes::JenkinsHash hash = 0;
+  hermes::JenkinsHash hash = hermes::JenkinsHashInit;
   for (const T c : str) {
     hash = hermes::updateJenkinsHash(hash, c);
   }

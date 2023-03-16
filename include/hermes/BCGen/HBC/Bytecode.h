@@ -16,8 +16,8 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 
@@ -121,7 +121,7 @@ class BytecodeFunction {
 
   bool hasDebugInfo() const {
     return debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
+        debugOffsets_.scopeDescData != DebugOffsets::NO_OFFSET;
   }
 
   const DebugOffsets *getDebugOffsets() const {

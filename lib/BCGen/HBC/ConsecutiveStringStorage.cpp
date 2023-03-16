@@ -233,7 +233,7 @@ class StringPacker {
         continue;
       }
       const CharT *chars = entry.chars_.data();
-      JenkinsHash hash = 0;
+      JenkinsHash hash = JenkinsHashInit;
       size_t i = charsSize;
       while (i--) {
         hash = updateJenkinsHash(hash, chars[i]);
@@ -571,8 +571,8 @@ class StringTableBuilder {
   /// and end.  Note that we do not always copy the underlying string data so
   /// the resulting builder must not outlive these strings.  In delta
   /// optimizing mode, only new strings are added here and packed.
-  template <typename I>
-  StringTableBuilder(I begin, I end) {
+  template <typename I, typename Force8Bit>
+  StringTableBuilder(I begin, I end, Force8Bit) {
     // Generate and store a StringEntry for each string.
     // Remember the index of each string in our StringEntry, so that we can
     // later output the table in the correct order.
@@ -586,7 +586,7 @@ class StringTableBuilder {
       static_assert(sizeof(str.data()[0]) == 1, "strings must be UTF8");
       const unsigned char *begin = (const unsigned char *)str.data();
       const unsigned char *end = begin + str.size();
-      if (isAllASCII(begin, end)) {
+      if (Force8Bit::value || isAllASCII(begin, end)) {
         ArrayRef<unsigned char> astr(begin, end);
         asciiStrings_.emplace_back(index, astr);
       } else {
@@ -713,14 +713,15 @@ class StringTableBuilder {
 namespace hermes {
 namespace hbc {
 
-template <typename I>
+template <typename I, typename Force8Bit>
 ConsecutiveStringStorage::ConsecutiveStringStorage(
     I begin,
     I end,
+    Force8Bit,
     bool optimize) {
   // Prepare to build our string table.
   // Generate storage for our ASCII and u16 strings.
-  StringTableBuilder builder(begin, end);
+  StringTableBuilder builder(begin, end, Force8Bit{});
   std::vector<unsigned char> asciiStorage;
   std::vector<char16_t> u16Storage;
   builder.packIntoStorage(&asciiStorage, &u16Storage, optimize);
@@ -741,16 +742,25 @@ ConsecutiveStringStorage::ConsecutiveStringStorage(
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     StringSetVector::const_iterator begin,
     StringSetVector::const_iterator end,
+    std::false_type,
     bool optimize);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     StringSetVector::iterator begin,
     StringSetVector::iterator end,
+    std::false_type,
     bool optimize);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     ArrayRef<llvh::StringRef>::const_iterator begin,
     ArrayRef<llvh::StringRef>::const_iterator end,
+    std::false_type,
+    bool optimize);
+
+template ConsecutiveStringStorage::ConsecutiveStringStorage(
+    StringSetVector::const_iterator begin,
+    StringSetVector::const_iterator end,
+    std::true_type,
     bool optimize);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {

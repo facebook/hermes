@@ -46,7 +46,6 @@ SKIP_LIST = [
     "mjsunit/regress/regress-deopt-in-array-literal-spread.js",
     "mjsunit/regress/regress-crbug-621816.js",
     "mjsunit/computed-property-names-deopt.js",
-    "test262/test/language/expressions/object/computed-property-evaluation-order.js",
     "test262/test/language/module-code/eval-export-dflt-expr-err-eval.js",
     "test262/test/language/module-code/eval-export-dflt-expr-err-get-value.js",
     # Defines __proto__ multiple times in literal and expects it to throw.
@@ -217,6 +216,7 @@ SKIP_LIST = [
     "test262/test/language/expressions/dynamic-import/",
     "test262/test/language/expressions/import.meta/",
     "test262/test/language/expressions/new.target/",
+    "test262/test/language/expressions/object/cpn-obj-lit-computed-property-name-from-async-arrow-function-expression.js",
     "test262/test/language/expressions/object/method-definition/",
     "test262/test/language/expressions/super/",
     "test262/test/language/module-code/",
@@ -1993,7 +1993,6 @@ HANDLESAN_SKIP_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
-    "AggregateError",
     "Promise.prototype.finally",
     "Symbol.asyncIterator",
     "Symbol.species",
@@ -2009,7 +2008,6 @@ UNSUPPORTED_FEATURES = [
     "class-static-methods-private",
     "class-static-block",
     "class-methods-private",
-    "computed-property-names",
     "const",
     "destructuring-binding",
     "dynamic-import",
@@ -2028,7 +2026,6 @@ UNSUPPORTED_FEATURES = [
     "ShadowRealm",
     "tail-call-optimization",
     "Temporal",
-    "well-formed-json-stringify",
     "u180e",
 ]
 

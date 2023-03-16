@@ -54,7 +54,7 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
-CallResult<Handle<JSError>> JSError::getErrorFromStackTarget_RJS(
+CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
     Runtime &runtime,
     Handle<JSObject> targetHandle) {
   if (targetHandle) {
@@ -81,8 +81,7 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
-  auto errorHandleRes =
-      JSError::getErrorFromStackTarget_RJS(runtime, targetHandle);
+  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
   if (errorHandleRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

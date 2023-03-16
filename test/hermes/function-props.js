@@ -21,3 +21,10 @@ print(isNaN.name);
 //CHECK: isNaN
 print(Function.name);
 //CHECK: Function
+
+var a_func = function(){};
+print(a_func.hasOwnProperty("prototype"));
+//CHECK: true
+var a_arrow = () => {};
+print(a_arrow.hasOwnProperty("prototype"));
+//CHECK: false

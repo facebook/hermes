@@ -652,8 +652,8 @@ bool InstSimplify::runOnFunction(Function *F) {
   return changed;
 }
 
-Pass *hermes::createInstSimplify() {
-  return new InstSimplify();
+std::unique_ptr<Pass> hermes::createInstSimplify() {
+  return std::make_unique<InstSimplify>();
 }
 
 #undef DEBUG_TYPE

@@ -15,6 +15,15 @@
 // This file provides portable definitions of compiler specific macros
 // It is modelled after LLVM's Compiler.h
 
+// Force MSVC to enable empty base class optimization; this is necessary
+// for PointerBase alignment requirements in some cases when using
+// HERMESVM_CONTIGUOUS_HEAP
+#ifdef _MSC_VER
+#define HERMES_EMPTY_BASES __declspec(empty_bases)
+#else
+#define HERMES_EMPTY_BASES
+#endif
+
 // Some compilers will warn about unused variables, unless those variable types
 // have a nontrivial constructor or destructor. This is due to types like
 // std::lock_guard, whose variables are typically instantiated but not used.

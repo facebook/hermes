@@ -574,14 +574,18 @@ static CallResult<HermesValue> getCodeBlockFileName(
     const CodeBlock *codeBlock,
     OptValue<hbc::DebugSourceLocation> location) {
   RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
-  if (location) {
-    auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
-    return StringPrimitive::createEfficient(
-        runtime, debugInfo->getFilenameByID(location->filenameId));
-  } else {
-    llvh::StringRef sourceURL = runtimeModule->getSourceURL();
-    if (!sourceURL.empty()) {
-      return StringPrimitive::createEfficient(runtime, sourceURL);
+  if (!runtimeModule->getBytecode()->isLazy()) {
+    // Lazy code blocks do not have debug information (and will hermes_fatal if
+    // you try to access it), so only touch it for non-lazy blocks.
+    if (location) {
+      auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
+      return StringPrimitive::createEfficient(
+          runtime, debugInfo->getFilenameByID(location->filenameId));
+    } else {
+      llvh::StringRef sourceURL = runtimeModule->getSourceURL();
+      if (!sourceURL.empty()) {
+        return StringPrimitive::createEfficient(runtime, sourceURL);
+      }
     }
   }
   return HermesValue::encodeUndefinedValue();
@@ -803,6 +807,24 @@ hermesInternalFuzzilli(void *, Runtime &runtime, NativeArgs args) {
 }
 #endif // HERMES_ENABLE_FUZZILLI
 
+static CallResult<HermesValue>
+hermesInternalIsLazy(void *, Runtime &runtime, NativeArgs args) {
+  auto callable = args.dyncastArg<Callable>(0);
+  if (!callable) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  auto codeBlock = getLeafCodeBlock(callable, runtime);
+  if (!codeBlock) {
+    // Native function is never lazy.
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
+  return HermesValue::encodeBoolValue(
+      runtimeModule && runtimeModule->getBytecode()->isLazy());
+}
+
 Handle<JSObject> createHermesInternalObject(
     Runtime &runtime,
     const JSLibFlags &flags) {
@@ -912,6 +934,7 @@ Handle<JSObject> createHermesInternalObject(
     defineInternMethod(
         P::copyDataProperties, hermesBuiltinCopyDataProperties, 3);
     defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
+    defineInternMethodAndSymbol("isLazy", hermesInternalIsLazy);
     defineInternMethod(P::drainJobs, hermesInternalDrainJobs);
   }
 

@@ -188,7 +188,7 @@ uint32_t fromDoubleResultSize(double src);
 OperationStatus fromDouble(MutableBigIntRef dst, double src);
 
 /// \return \p src converted to double.
-double toDouble(ImmutableBigIntRef src);
+OperationStatus toDouble(double &dst, ImmutableBigIntRef src);
 
 /// Holds the bytes in a parsed BigInt value.
 class ParsedBigInt {

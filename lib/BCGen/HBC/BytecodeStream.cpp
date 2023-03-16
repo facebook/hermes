@@ -94,7 +94,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   debugInfoOffset_ = loc_;
 
   if (options_.stripDebugInfoSection) {
-    const DebugInfoHeader empty = {0, 0, 0, 0, 0};
+    const DebugInfoHeader empty = {0, 0, 0, 0, 0, 0, 0};
     writeBinary(empty);
     return;
   }
@@ -104,13 +104,17 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
   const StreamVector<uint8_t> &data = info.viewData();
-  uint32_t lexOffset = info.lexicalDataOffset();
+  uint32_t scopeDescOffset = info.scopeDescDataOffset();
+  uint32_t tCalleeOffset = info.textifiedCalleeOffset();
+  uint32_t stOffset = info.stringTableOffset();
 
   DebugInfoHeader header{
       (uint32_t)filenameTable.size(),
       (uint32_t)filenameStorage.size(),
       (uint32_t)files.size(),
-      lexOffset,
+      scopeDescOffset,
+      tCalleeOffset,
+      stOffset,
       (uint32_t)data.size()};
   writeBinary(header);
   writeBinaryArray(filenameTable);
@@ -186,7 +190,8 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
       if (isLayout_) {
         // Deduplicate the bytecode during layout phase.
         DedupKey key = entry->getOpcodeArray();
-        auto pair = bcMap.insert(std::make_pair(key, loc_));
+        auto pair =
+            bcMap.insert(std::make_pair(key, static_cast<uint32_t>(loc_)));
         if (!pair.second) {
           reuse = true;
           entry->setOffset(pair.first->second);

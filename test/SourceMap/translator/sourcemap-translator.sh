@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes
+# REQUIRES: !fbcode_coverage
 # shellcheck shell=bash disable=SC2086
 
 # This test is an end-to-end merge input source-map with hermes debuginfo symbolication test.

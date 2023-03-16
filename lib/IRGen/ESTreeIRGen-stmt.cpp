@@ -728,8 +728,11 @@ void ESTreeIRGen::genImportDeclaration(
       require->getName().str() == "require" &&
       "CJS module second parameter must be 'require'");
   auto *source = genExpression(importDecl->_source);
-  auto *exports =
-      Builder.createCallInst(require, Builder.getLiteralUndefined(), {source});
+  auto *exports = Builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
+      require,
+      Builder.getLiteralUndefined(),
+      {source});
   // An import declaration is a list of import specifiers.
   for (ESTree::Node &spec : importDecl->_specifiers) {
     if (auto *ids = llvh::dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
@@ -823,6 +826,7 @@ void ESTreeIRGen::genExportNamedDeclaration(
   }
 
   auto *source = exportDecl->_source ? Builder.createCallInst(
+                                           CallInst::kNoTextifiedCallee,
                                            require,
                                            Builder.getLiteralUndefined(),
                                            {genExpression(exportDecl->_source)})
@@ -891,6 +895,7 @@ void ESTreeIRGen::genExportAllDeclaration(
       "CJS module second parameter must be 'require'");
   // export * from 'file.js';
   auto *source = Builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
       require,
       Builder.getLiteralUndefined(),
       {genExpression(exportDecl->_source)});

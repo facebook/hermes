@@ -9,6 +9,7 @@
 
 #include "llvh/Support/Compiler.h"
 
+#include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
@@ -109,15 +110,6 @@ void hermesFatalErrorHandler(
 
 namespace {
 
-// Max size of the runtime's register stack.
-// The runtime register stack needs to be small enough to be allocated on the
-// native thread stack in Android (1MiB) and on MacOS's thread stack (512 KiB)
-// Calculated by: (thread stack size - size of runtime -
-// 8 memory pages for other stuff in the thread)
-static constexpr unsigned kMaxNumRegisters =
-    (512 * 1024 - sizeof(::hermes::vm::Runtime) - 4096 * 8) /
-    sizeof(::hermes::vm::PinnedHermesValue);
-
 void raw_ostream_append(llvh::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
@@ -152,6 +144,12 @@ class InstallHermesFatalErrorHandler {
   }
 };
 
+#if !HERMESVM_SAMPLING_PROFILER_AVAILABLE
+void throwHermesNotCompiledWithSamplingProfilerSupport() {
+  throw std::logic_error(
+      "Hermes was not compiled with SamplingProfiler support");
+}
+#endif // !HERMESVM_SAMPLING_PROFILER_AVAILABLE
 } // namespace
 
 class HermesRuntimeImpl final : public HermesRuntime,
@@ -163,11 +161,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
       : hermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
         weakHermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
-        rt_(::hermes::vm::Runtime::create(
-            runtimeConfig.rebuild()
-                .withRegisterStack(nullptr)
-                .withMaxNumRegisters(kMaxNumRegisters)
-                .build())),
+        rt_(::hermes::vm::Runtime::create(runtimeConfig)),
         runtime_(*rt_),
         vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()) {
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -194,15 +188,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
-          for (auto &val : hermesValues_)
-            if (val.get() > 0)
-              acceptor.accept(const_cast<vm::PinnedHermesValue &>(val.phv));
+          hermesValues_.forEach([&acceptor](HermesPointerValue &element) {
+            acceptor.accept(element.value());
+          });
         });
     runtime_.addCustomWeakRootsFunction(
         [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
-          for (auto &val : weakHermesValues_)
-            if (val.get() > 0)
-              acceptor.acceptWeak(val.wr);
+          weakHermesValues_.forEach([&acceptor](WeakRefPointerValue &element) {
+            acceptor.acceptWeak(element.value());
+          });
         });
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.addCustomSnapshotFunction(
@@ -213,7 +207,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               "ManagedValues",
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::JSIHermesValueList),
-              hermesValues_.size() * sizeof(HermesPointerValue),
+              hermesValues_.capacity() * sizeof(HermesPointerValue),
               0);
           snap.beginNode();
           snap.endNode(
@@ -222,7 +216,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::
                       JSIWeakHermesValueList),
-              weakHermesValues_.size() * sizeof(WeakRefPointerValue),
+              weakHermesValues_.capacity() * sizeof(WeakRefPointerValue),
               0);
         },
         [](vm::HeapSnapshot &snap) {
@@ -253,87 +247,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // This should only be called once by the factory.
   void setDebugger(std::unique_ptr<debugger::Debugger> d) {
     debugger_ = std::move(d);
-  }
-
-  struct CountedPointerValue : PointerValue {
-    CountedPointerValue() : refCount(1) {}
-
-    void invalidate() override {
-#ifdef ASSERT_ON_DANGLING_VM_REFS
-      assert(
-          ((1 << 31) & refCount) == 0 &&
-          "This PointerValue was left dangling after the Runtime was destroyed.");
-#endif
-      dec();
-    }
-
-    void inc() {
-      // It is always safe to use relaxed operations for incrementing the
-      // reference count, because the only operation that may occur concurrently
-      // with it is decrementing the reference count, and we do not need to
-      // enforce any ordering between the two.
-      auto oldCount = refCount.fetch_add(1, std::memory_order_relaxed);
-      assert(oldCount && "Cannot resurrect a pointer");
-      assert(oldCount + 1 != 0 && "Ref count overflow");
-      (void)oldCount;
-    }
-
-    void dec() {
-      // It is safe to use relaxed operations here because decrementing the
-      // reference count is the only access that may be performed without proper
-      // synchronisation. As a result, the only ordering we need to enforce when
-      // decrementing is that the vtable pointer used to call \c invalidate is
-      // loaded from before the decrement, in case the decrement ends up causing
-      // this value to be freed. We get this ordering from the fact that the
-      // vtable read and the reference count update form a load-store control
-      // dependency, which preserves their ordering on any reasonable hardware.
-      auto oldCount = refCount.fetch_sub(1, std::memory_order_relaxed);
-      assert(oldCount > 0 && "Ref count underflow");
-      (void)oldCount;
-    }
-
-    uint32_t get() const {
-      return refCount.load(std::memory_order_relaxed);
-    }
-
-#ifdef ASSERT_ON_DANGLING_VM_REFS
-    void markDangling() {
-      // Mark this PointerValue as dangling by setting the top bit AND the
-      // second-top bit. The top bit is used to determine if the pointer is
-      // dangling. Setting the second-top bit ensures that accidental
-      // over-calling the dec() function doesn't clear the top bit without
-      // complicating the implementation of dec().
-      refCount |= 0b11 << 30;
-    }
-#endif
-
-   private:
-    std::atomic<uint32_t> refCount;
-  };
-
-  struct HermesPointerValue final : CountedPointerValue {
-    HermesPointerValue(vm::HermesValue hv) : phv(hv) {}
-
-    // This should only ever be modified by the GC.  We const_cast the
-    // reference before passing it to the GC.
-    const vm::PinnedHermesValue phv;
-  };
-
-  struct WeakRefPointerValue final : CountedPointerValue {
-    WeakRefPointerValue(vm::WeakRoot<vm::JSObject> _wr) : wr(_wr) {}
-
-    vm::WeakRoot<vm::JSObject> wr;
-  };
-
-  HermesPointerValue *clone(const Runtime::PointerValue *pv) {
-    if (!pv) {
-      return nullptr;
-    }
-    // These are only ever allocated by us, so we can remove their constness
-    auto result = static_cast<HermesPointerValue *>(
-        const_cast<Runtime::PointerValue *>(pv));
-    result->inc();
-    return result;
   }
 
   template <typename T>
@@ -549,14 +462,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
         dynamic_cast<const HermesPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a HermesPointerValue");
     return static_cast<const HermesPointerValue *>(getPointerValue(pointer))
-        ->phv;
+        ->value();
   }
 
   static const ::hermes::vm::PinnedHermesValue &phv(const jsi::Value &value) {
     assert(
         dynamic_cast<const HermesPointerValue *>(getPointerValue(value)) &&
         "Pointer does not contain a HermesPointerValue");
-    return static_cast<const HermesPointerValue *>(getPointerValue(value))->phv;
+    return static_cast<const HermesPointerValue *>(getPointerValue(value))
+        ->value();
   }
 
   static ::hermes::vm::Handle<::hermes::vm::HermesValue> stringHandle(
@@ -579,11 +493,13 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
   }
 
-  static ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(jsi::Pointer &pointer) {
+  static const ::hermes::vm::WeakRoot<vm::JSObject> &weakRoot(
+      const jsi::Pointer &pointer) {
     assert(
-        dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
+        dynamic_cast<const WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
-    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))->wr;
+    return static_cast<const WeakRefPointerValue *>(getPointerValue(pointer))
+        ->value();
   }
 
   // These helpers use public (mostly) interfaces on the runtime and
@@ -717,11 +633,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
   bool hasProperty(const jsi::Object &, const jsi::PropNameID &name) override;
   bool hasProperty(const jsi::Object &, const jsi::String &name) override;
   void setPropertyValue(
-      jsi::Object &,
+      const jsi::Object &,
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
   void setPropertyValue(
-      jsi::Object &,
+      const jsi::Object &,
       const jsi::String &name,
       const jsi::Value &value) override;
   bool isArray(const jsi::Object &) const override;
@@ -732,7 +648,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
-  jsi::Value lockWeakObject(jsi::WeakObject &) override;
+  jsi::Value lockWeakObject(const jsi::WeakObject &) override;
 
   jsi::Array createArray(size_t length) override;
   jsi::ArrayBuffer createArrayBuffer(
@@ -741,8 +657,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
   jsi::Value getValueAtIndex(const jsi::Array &, size_t i) override;
-  void setValueAtIndexImpl(jsi::Array &, size_t i, const jsi::Value &value)
-      override;
+  void setValueAtIndexImpl(
+      const jsi::Array &,
+      size_t i,
+      const jsi::Value &value) override;
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
@@ -796,25 +714,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::get for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': " + ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::get for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': " + ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::get: for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': <unknown exception>")));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::get: for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': <unknown exception>");
       }
 
       return hvFromValue(ret);
@@ -834,25 +744,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::set for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': " + ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::set for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': " + ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::set: for prop '" +
-                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
-                            id) +
-                        "': <unknown exception>")));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::set: for prop '"} +
+            rt_.runtime_.getIdentifierTable().getStringViewForDev(
+                rt_.runtime_, id) +
+            "': <unknown exception>");
       }
       return true;
     }
@@ -886,20 +788,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    std::string("Exception in HostObject::getPropertyNames: ") +
-                        ex.what())));
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{"Exception in HostObject::getPropertyNames: "} +
+            ex.what());
       } catch (...) {
-        return rt_.runtime_.setThrownValue(hvFromValue(
-            rt_.global()
-                .getPropertyAsFunction(rt_, "Error")
-                .call(
-                    rt_,
-                    "Exception in HostObject::getPropertyNames: <unknown>")));
+        return rt_.runtime_.raiseError(vm::TwineChar16{
+            "Exception in HostObject::getPropertyNames: <unknown>"});
       }
     };
   };
@@ -937,17 +831,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       catch (const jsi::JSError &error) {
         return runtime.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt.runtime_.setThrownValue(hvFromValue(
-            rt.global()
-                .getPropertyAsFunction(rt, "Error")
-                .call(
-                    rt,
-                    std::string("Exception in HostFunction: ") + ex.what())));
+        return runtime.raiseError(
+            vm::TwineChar16{"Exception in HostFunction: "} + ex.what());
       } catch (...) {
-        return rt.runtime_.setThrownValue(
-            hvFromValue(rt.global()
-                            .getPropertyAsFunction(rt, "Error")
-                            .call(rt, "Exception in HostFunction: <unknown>")));
+        return runtime.raiseError("Exception in HostFunction: <unknown>");
       }
 
       return hvFromValue(ret);
@@ -961,51 +848,113 @@ class HermesRuntimeImpl final : public HermesRuntime,
     HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
+  // A ManagedChunkedList element that indicates whether it's occupied based on
+  // a refcount.
   template <typename T>
-  class ManagedValues {
-   public:
-    using iterator = typename std::list<T>::iterator;
+  struct ManagedValue : PointerValue {
+    ManagedValue() : refCount_(0) {}
 
+    // Determine whether the element is occupied by inspecting the refcount.
+    bool isFree() const {
+      return refCount_.load(std::memory_order_relaxed) == 0;
+    }
+
+    // Store a value and start the refcount at 1. After invocation, this
+    // instance is occupied with a value, and the "nextFree" methods should
+    // not be used until the value is released.
     template <typename... Args>
-    T &add(Args &&...args) {
-      // If the size has hit the target size, collect unused values.
-      if (LLVM_UNLIKELY(size() >= targetSize_))
-        collect();
-      values_.emplace_front(std::forward<Args>(args)...);
-      return values_.front();
+    void emplace(Args &&...args) {
+      assert(isFree() && "Emplacing already occupied value");
+      refCount_.store(1, std::memory_order_relaxed);
+      new (&value_) T(std::forward<Args>(args)...);
     }
 
-    iterator begin() {
-      return values_.begin();
-    }
-    iterator end() {
-      return values_.end();
-    }
-    iterator erase(iterator it) {
-      return values_.erase(it);
-    }
-    iterator eraseIfExpired(iterator it) {
-      auto next = std::next(it);
-      if (it->get() == 0) {
-        // TSAN will complain here because the value is being freed without any
-        // explicit synchronisation with a background thread that may have just
-        // updated the reference count (and read the vtable in the process).
-        // However, this can be safely ignored because the check above creates a
-        // load-store control dependency, and the free below therefore cannot be
-        // reordered before the check on the reference count.
-        TsanIgnoreWritesBegin();
-        values_.erase(it);
-        TsanIgnoreWritesEnd();
-      }
-      return next;
+    // Get the next free element. Must not be called when this instance is
+    // occupied with a value.
+    ManagedValue<T> *getNextFree() {
+      assert(isFree() && "Free pointer unusuable while occupied");
+      return nextFree_;
     }
 
-    size_t size() const {
-      return values_.size();
+    // Set the next free element. Must not be called when this instance is
+    // occupied with a value.
+    void setNextFree(ManagedValue<T> *nextFree) {
+      assert(isFree() && "Free pointer unusuable while occupied");
+      nextFree_ = nextFree;
     }
 
+    T &value() {
+      assert(!isFree() && "Value not present");
+      return value_;
+    }
+
+    const T &value() const {
+      assert(!isFree() && "Value not present");
+      return value_;
+    }
+
+    void invalidate() override {
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+      assert(
+          ((1 << 31) & refCount_) == 0 &&
+          "This PointerValue was left dangling after the Runtime was destroyed.");
+#endif
+      dec();
+    }
+
+    void inc() {
+      // It is always safe to use relaxed operations for incrementing the
+      // reference count, because the only operation that may occur concurrently
+      // with it is decrementing the reference count, and we do not need to
+      // enforce any ordering between the two.
+      auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
+      assert(oldCount && "Cannot resurrect a pointer");
+      assert(oldCount + 1 != 0 && "Ref count overflow");
+      (void)oldCount;
+    }
+
+    void dec() {
+      // It is safe to use relaxed operations here because decrementing the
+      // reference count is the only access that may be performed without proper
+      // synchronisation. As a result, the only ordering we need to enforce when
+      // decrementing is that the vtable pointer used to call \c invalidate is
+      // loaded from before the decrement, in case the decrement ends up causing
+      // this value to be freed. We get this ordering from the fact that the
+      // vtable read and the reference count update form a load-store control
+      // dependency, which preserves their ordering on any reasonable hardware.
+      auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+      assert(oldCount > 0 && "Ref count underflow");
+      (void)oldCount;
+    }
+
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+    void markDangling() {
+      // Mark this PointerValue as dangling by setting the top bit AND the
+      // second-top bit. The top bit is used to determine if the pointer is
+      // dangling. Setting the second-top bit ensures that accidental
+      // over-calling the dec() function doesn't clear the top bit without
+      // complicating the implementation of dec().
+      refCount_ |= 0b11 << 30;
+    }
+#endif
+
+   private:
+    std::atomic<uint32_t> refCount_;
+    union {
+      T value_;
+      ManagedValue<T> *nextFree_;
+    };
+  };
+
+  template <typename T>
+  class ManagedValues : public ::hermes::ManagedChunkedList<ManagedValue<T>> {
+    static constexpr double kSizingWeight_ = 0.5;
+
+   public:
     explicit ManagedValues(double occupancyRatio)
-        : occupancyRatio_{occupancyRatio} {}
+        : ::hermes::ManagedChunkedList<ManagedValue<T>>(
+              occupancyRatio,
+              kSizingWeight_) {}
 
 #ifdef ASSERT_ON_DANGLING_VM_REFS
     // If we have active HermesValuePointers when deconstructing, these will
@@ -1016,27 +965,34 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // deferring the assert it's a bit easier to see what's holding the pointers
     // for too long.
     ~ManagedValues() {
-      collect();
-      if (!values_.empty()) {
-        for (auto &val : values_)
-          val.markDangling();
+      ::hermes::ManagedChunkedList<ManagedValue<T>>::collect();
+      bool empty = true;
+      ::hermes::ManagedChunkedList<ManagedValue<T>>::forEach(
+          [&empty](ManagedValue<T> &element) {
+            element.markDangling();
+            empty = false;
+          });
+      if (!empty) {
         // This is the deliberate memory leak described above.
-        new std::list<T>(std::move(values_));
+        new ::hermes::ManagedChunkedList(std::move(*this));
       }
     }
 #endif
-
-   private:
-    void collect() {
-      for (auto it = values_.begin(), e = values_.end(); it != e;)
-        it = eraseIfExpired(it);
-      targetSize_ = size() / occupancyRatio_;
-    }
-
-    double occupancyRatio_;
-    size_t targetSize_ = 0;
-    std::list<T> values_;
   };
+
+  using HermesPointerValue = ManagedValue<vm::PinnedHermesValue>;
+  using WeakRefPointerValue = ManagedValue<vm::WeakRoot<vm::JSObject>>;
+
+  HermesPointerValue *clone(const Runtime::PointerValue *pv) {
+    if (!pv) {
+      return nullptr;
+    }
+    // These are only ever allocated by us, so we can remove their constness
+    auto result = static_cast<HermesPointerValue *>(
+        const_cast<Runtime::PointerValue *>(pv));
+    result->inc();
+    return result;
+  }
 
  protected:
   /// Helper function that is parameterized over the type of context being
@@ -1048,8 +1004,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       unsigned int paramCount);
 
  public:
-  ManagedValues<HermesPointerValue> hermesValues_;
-  ManagedValues<WeakRefPointerValue> weakHermesValues_;
+  ManagedValues<vm::PinnedHermesValue> hermesValues_;
+  ManagedValues<vm::WeakRoot<vm::JSObject>> weakHermesValues_;
   std::shared_ptr<::hermes::vm::Runtime> rt_;
   ::hermes::vm::Runtime &runtime_;
   friend class debugger::Debugger;
@@ -1111,34 +1067,55 @@ std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
 }
 
 void HermesRuntime::enableSamplingProfiler() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   ::hermes::vm::SamplingProfiler::enable();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::disableSamplingProfiler() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   ::hermes::vm::SamplingProfiler::disable();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   std::error_code ec;
   llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
   if (ec) {
     throw std::system_error(ec);
   }
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+#else
+  throw std::logic_error(
+      "Hermes was not compiled with SamplingProfilerSupport");
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   llvh::raw_os_ostream os(stream);
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   vm::SamplingProfiler *sp = impl(this)->runtime_.samplingProfiler.get();
   if (!sp) {
     throw jsi::JSINativeException("Runtime not registered for profiling");
   }
   llvh::raw_os_ostream os(stream);
   sp->serializeInDevToolsFormat(os);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
@@ -1331,21 +1308,28 @@ void HermesRuntime::debugJavaScript(
 #endif
 
 void HermesRuntime::registerForProfiling() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   vm::Runtime &runtime = impl(this)->runtime_;
   if (runtime.samplingProfiler) {
     ::hermes::hermes_fatal(
         "re-registering HermesVMs for profiling is not allowed");
   }
-  runtime.samplingProfiler =
-      std::make_unique<::hermes::vm::SamplingProfiler>(runtime);
+  runtime.samplingProfiler = ::hermes::vm::SamplingProfiler::create(runtime);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::unregisterForProfiling() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (!impl(this)->runtime_.samplingProfiler) {
     ::hermes::hermes_fatal(
         "unregistering HermesVM not registered for profiling is not allowed");
   }
   impl(this)->runtime_.samplingProfiler.reset();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
@@ -1376,8 +1360,8 @@ jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
           buffer, sourceMapBuf, sourceURL));
 }
 
-size_t HermesRuntime::rootsListLength() const {
-  return impl(this)->hermesValues_.size();
+size_t HermesRuntime::rootsListLengthForTests() const {
+  return impl(this)->hermesValues_.sizeForTests();
 }
 
 namespace {
@@ -1710,8 +1694,9 @@ jsi::String HermesRuntimeImpl::bigintToString(
   }
 
   vm::GCScope gcScope(runtime_);
-  vm::CallResult<vm::HermesValue> toStringRes =
-      phv(bigint).getBigInt()->toString(runtime_, radix);
+  vm::CallResult<vm::HermesValue> toStringRes = vm::BigIntPrimitive::toString(
+      runtime_, vm::createPseudoHandle(phv(bigint).getBigInt()), radix);
+
   checkStatus(toStringRes.getStatus());
   return add<jsi::String>(*toStringRes);
 }
@@ -1891,7 +1876,7 @@ bool HermesRuntimeImpl::hasProperty(
 }
 
 void HermesRuntimeImpl::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::String &name,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
@@ -1906,7 +1891,7 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 void HermesRuntimeImpl::setPropertyValue(
-    jsi::Object &obj,
+    const jsi::Object &obj,
     const jsi::PropNameID &name,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
@@ -1975,8 +1960,8 @@ jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
       static_cast<vm::JSObject *>(phv(obj).getObject()), runtime_));
 }
 
-jsi::Value HermesRuntimeImpl::lockWeakObject(jsi::WeakObject &wo) {
-  vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
+jsi::Value HermesRuntimeImpl::lockWeakObject(const jsi::WeakObject &wo) {
+  const vm::WeakRoot<vm::JSObject> &wr = weakRoot(wo);
 
   if (const auto ptr = wr.get(runtime_, runtime_.getHeap()))
     return add<jsi::Object>(vm::HermesValue::encodeObjectValue(ptr));
@@ -2045,7 +2030,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
 }
 
 void HermesRuntimeImpl::setValueAtIndexImpl(
-    jsi::Array &arr,
+    const jsi::Array &arr,
     size_t i,
     const jsi::Value &value) {
   vm::GCScope gcScope(runtime_);
@@ -2165,7 +2150,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   //    in 15.2.4
   //
   // Note that 13.2.2.1-4 are also handled by the call to newObject.
-  auto thisRes = vm::Callable::createThisForConstruct(funcHandle, runtime_);
+  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime_);
   // We need to capture this in case the ctor doesn't return an object,
   // we need to return this object.
   auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));
@@ -2235,34 +2220,11 @@ bool HermesRuntimeImpl::instanceOf(
 }
 
 jsi::Runtime::ScopeState *HermesRuntimeImpl::pushScope() {
-  return reinterpret_cast<ScopeState *>(&hermesValues_.add(
-      vm::HermesValue::encodeNativeUInt32(kSentinelNativeValue)));
+  return nullptr;
 }
 
 void HermesRuntimeImpl::popScope(ScopeState *prv) {
-  HermesPointerValue *sentinel = reinterpret_cast<HermesPointerValue *>(prv);
-  assert(sentinel->phv.isNativeValue());
-  assert(sentinel->phv.getNativeUInt32() == kSentinelNativeValue);
-
-  for (auto it = hermesValues_.begin(); it != hermesValues_.end();) {
-    auto &value = *it;
-
-    if (&value == sentinel) {
-      hermesValues_.erase(it);
-      return;
-    }
-
-    if (value.phv.isNativeValue()) {
-      // We reached another sentinel value or we started added another native
-      // value to the hermesValue_ list. This should not happen.
-      std::terminate();
-    }
-
-    it = hermesValues_.eraseIfExpired(it);
-  }
-
-  // We did not find a sentinel value.
-  std::terminate();
+  assert(!prv && "pushScope only returns nullptrs");
 }
 
 void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
@@ -2348,6 +2310,8 @@ vm::RuntimeConfig hardenedHermesRuntimeConfig() {
   config.withEnableEval(false);
   config.withArrayBuffer(false);
   config.withES6Proxy(false);
+  config.withEnableHermesInternal(false);
+  config.withEnableHermesInternalTestMethods(false);
 
   // Enabled hardening options.
   config.withRandomizeMemoryLayout(true);

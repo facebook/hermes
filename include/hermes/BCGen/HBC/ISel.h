@@ -43,6 +43,8 @@ class HBCISel {
       CatchType,
       // Debug info
       DebugInfo,
+      // Textified callee
+      TextifiedCallee,
       // Jump table dispatch
       JumpTableDispatch,
     };
@@ -84,6 +86,11 @@ class HBCISel {
   /// The function scope depth analysis, used to determine the lexical parents
   /// and scope depth of each function.
   FunctionScopeAnalysis &scopeAnalysis_;
+
+  /// The scope register analysis, used to determine which register contains the
+  /// Environment that's equivalent to the source-level scope where this
+  /// instruction was emitted.
+  ScopeRegisterAnalysis &SRA_;
 
   /// For each Basic Block, we map to its beginning instruction location
   /// and the next basic block. We need this information to resolve jump
@@ -141,7 +148,7 @@ class HBCISel {
 
   /// Add applicable debug info.
   void addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap);
-  void addDebugLexicalInfo();
+  void addDebugTextifiedCalleeInfo();
 
   /// Populate Property caching metadata to the function.
   void populatePropertyCachingInfo();
@@ -182,11 +189,13 @@ class HBCISel {
       BytecodeFunctionGenerator *BCFGen,
       HVMRegisterAllocator &RA,
       FunctionScopeAnalysis &scopeAnalysis,
+      ScopeRegisterAnalysis &SRA,
       const BytecodeGenerationOptions &options)
       : F_(F),
         BCFGen_(BCFGen),
         RA_(RA),
         scopeAnalysis_(scopeAnalysis),
+        SRA_(SRA),
         bytecodeGenerationOptions_(options) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
   }

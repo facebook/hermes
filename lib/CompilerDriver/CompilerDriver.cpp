@@ -35,6 +35,7 @@
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/Statistic.h"
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -72,6 +73,7 @@ using llvh::cl::list;
 using llvh::cl::opt;
 using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
+using llvh::cl::ReallyHidden;
 using llvh::cl::value_desc;
 using llvh::cl::values;
 using llvh::cl::ValuesClass;
@@ -377,6 +379,12 @@ static opt<bool> DumpSourceLevelScope(
     init(false),
     cat(CompilerCategory));
 
+static opt<bool> DumpTextifiedCallee(
+    "dump-textified-callee",
+    desc("Print the Call instruction's textified callee."),
+    init(false),
+    cat(CompilerCategory));
+
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
     desc("Print the use list if the instruction has any users."),
@@ -385,7 +393,7 @@ static opt<bool> DumpUseList(
 
 static opt<LocationDumpMode> DumpSourceLocation(
     "dump-source-location",
-    desc("Print source location information in IR or AST dumps."),
+    desc("Print source location information in IR/AST/bytecode dumps."),
     init(LocationDumpMode::None),
     values(
         clEnumValN(
@@ -409,11 +417,44 @@ static opt<bool> IncludeRawASTProp(
     Hidden,
     cat(CompilerCategory));
 
-static opt<bool> DumpBetweenPasses(
-    "Xdump-between-passes",
+static opt<bool> DumpBeforeAll(
+    "Xdump-before-all",
     init(false),
     Hidden,
-    desc("Print IR after every optimization pass"),
+    desc("Dump the IR before every optimization pass"),
+    cat(CompilerCategory));
+
+static list<std::string> DumpBefore(
+    "Xdump-before",
+    Hidden,
+    desc("Dump the IR before each given pass"),
+    cat(CompilerCategory));
+
+static opt<bool> DumpAfterAll(
+    "Xdump-after-all",
+    init(false),
+    Hidden,
+    desc("Dump the IR after every optimization pass"),
+    cat(CompilerCategory));
+
+static list<std::string> DumpAfter(
+    "Xdump-after",
+    Hidden,
+    desc("Dump the IR after each given pass"),
+    cat(CompilerCategory));
+
+static list<std::string> FunctionsToDump(
+    "Xfunctions-to-dump",
+    Hidden,
+    desc("Only dump the IR for the given functions"),
+    cat(CompilerCategory));
+
+static opt<bool> GenerateNamesForAnonymousFunctions(
+    "Xgen-names-anon-functions",
+    init(false),
+    ReallyHidden,
+    desc("Instructs the compiler to create a synthetic label for anonymous "
+         "functions"),
     cat(CompilerCategory));
 
 #ifndef NDEBUG
@@ -1022,6 +1063,23 @@ static void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
   }
 }
 
+static llvh::SmallDenseSet<llvh::StringRef> stringListOptToDenseSet(
+    const llvh::cl::list<std::string> &list) {
+  llvh::SmallDenseSet<llvh::StringRef> ret;
+  for (llvh::StringRef s : list) {
+    ret.insert(s);
+  }
+  return ret;
+}
+
+void initializeDumpOptions(
+    CodeGenerationSettings::DumpSettings &dumpSettings,
+    const llvh::cl::opt<bool> &dumpAll,
+    const llvh::cl::list<std::string> &passes) {
+  dumpSettings.all = dumpAll;
+  dumpSettings.passes = stringListOptToDenseSet(passes);
+}
+
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
@@ -1031,10 +1089,16 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
+  codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
-  codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
+  initializeDumpOptions(
+      codeGenOpts.dumpBefore, cl::DumpBeforeAll, cl::DumpBefore);
+  initializeDumpOptions(codeGenOpts.dumpAfter, cl::DumpAfterAll, cl::DumpAfter);
+  codeGenOpts.functionsToDump = stringListOptToDenseSet(cl::FunctionsToDump);
+  codeGenOpts.generateNameForUnnamedFunctions =
+      cl::GenerateNamesForAnonymousFunctions;
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;
   }
@@ -1646,6 +1710,10 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
   hbc::DisassemblyOptions disassemblyOptions = cl::Pretty
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
+  if (cl::DumpSourceLocation != LocationDumpMode::None) {
+    disassemblyOptions =
+        disassemblyOptions | hbc::DisassemblyOptions::IncludeSource;
+  }
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
   disassembler.setOptions(disassemblyOptions);
   disassembler.disassemble(fileOS.os());
@@ -1754,8 +1822,11 @@ CompileResult generateBytecodeForSerialization(
     }
 
     if (cl::DumpTarget == DumpBytecode) {
-      disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
-          std::move(bytecodeModule)));
+      std::unique_ptr<hbc::BCProviderFromSrc> provider =
+          hbc::BCProviderFromSrc::createBCProviderFromSrc(
+              std::move(bytecodeModule));
+      provider->setSourceHash(sourceHash);
+      disassembleBytecode(std::move(provider));
     }
   } else {
     llvm_unreachable("Invalid bytecode kind");
@@ -2083,6 +2154,9 @@ void printHermesVersion(
     s << "  Features:\n"
 #ifdef HERMES_ENABLE_DEBUGGER
       << "    Debugger\n"
+#endif
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+      << "    Contiguous Heap\n"
 #endif
       << "    Zip file input\n";
   }

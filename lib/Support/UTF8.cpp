@@ -169,4 +169,27 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
+void convertUTF8WithSurrogatesToUTF8WithReplacements(
+    std::string &output,
+    llvh::StringRef input) {
+  // Temporary buffer to convert input to UTF16.
+  llvh::SmallVector<char16_t, 8> ustr;
+  // The temporary string cannot possibly have more characters than input. Using
+  // reserve avoids default-initializing the elements.
+  ustr.reserve(input.size());
+  // ustr is pessimistically allocated, so pass a raw pointer to its contents to
+  // convertUTF8WithSurrogatesToUTF16. The alternative is to use a
+  // std::back_inserter that would resize the buffer if needed. It turns out
+  // that the resulting code using std::back_inserter is considerably larger.
+  char16_t *ustrEnd =
+      convertUTF8WithSurrogatesToUTF16(ustr.data(), input.begin(), input.end());
+  // Sanity-check for buffer overflow.
+  assert(
+      static_cast<uintptr_t>(ustrEnd - ustr.data()) <= ustr.capacity() &&
+      "buffer overflow while converting UTF8 surrogates");
+  // Now convert the UTF16 string to UTF8 without surrogates.
+  convertUTF16ToUTF8WithReplacements(
+      output, llvh::makeArrayRef(ustr.data(), ustrEnd));
+}
+
 } // namespace hermes

@@ -215,7 +215,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   friend class HermesRuntimeImpl;
 
   friend struct ::HermesTestHelper;
-  size_t rootsListLength() const;
+  size_t rootsListLengthForTests() const;
 
   // Do not add any members here.  This ensures that there are no
   // object size inconsistencies.  All data should be in the impl

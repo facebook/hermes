@@ -73,7 +73,7 @@ declare module 'prettier' {
     options: Options,
   ) => AST;
 
-  declare export type Options = $Partial<RequiredOptions>;
+  declare export type Options = Partial<RequiredOptions>;
   declare export type RequiredOptions = {
     ...DocPrinterOptions,
     /**

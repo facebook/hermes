@@ -10,9 +10,9 @@
 
 #include "hermes/BCGen/HBC/BytecodeVersion.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Compiler.h"
-#include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringTableEntry.h"
 
@@ -382,8 +382,12 @@ struct DebugInfoHeader {
 
   // Count of the file table.
   uint32_t fileRegionCount;
-  // Byte offset in the debug data for the lexical data.
-  uint32_t lexicalDataOffset;
+  // Byte offset in the debug data for the scope descriptors.
+  uint32_t scopeDescDataOffset;
+  // Byte offset in the debug data for the textified callee table.
+  uint32_t textifiedCalleeOffset;
+  // Byte offset in the debug data for the string table.
+  uint32_t stringTableOffset;
   // Size in bytes of the debug data.
   uint32_t debugDataSize;
 };

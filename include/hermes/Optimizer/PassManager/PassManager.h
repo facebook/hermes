@@ -9,14 +9,13 @@
 #define HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H
 
 #include "hermes/Optimizer/PassManager/Pass.h"
-#include "hermes/Support/Statistic.h"
-#include "hermes/Support/Timer.h"
 
+#include "hermes/AST/Context.h"
 #include "llvh/ADT/StringRef.h"
-#include "llvh/ADT/StringSwitch.h"
-#include "llvh/Support/Debug.h"
 
-#define DEBUG_TYPE "passmanager"
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace hermes {
 
@@ -25,24 +24,23 @@ namespace hermes {
 /// the order of the passes, the order of the functions to be processed and the
 /// invalidation of analysis.
 class PassManager {
-  std::vector<Pass *> pipeline;
+  const CodeGenerationSettings &cgSettings_;
+  std::vector<std::unique_ptr<Pass>> pipeline_;
 
  public:
-  ~PassManager() {
-    for (auto *p : pipeline) {
-      delete p;
-    }
-  }
+  explicit PassManager(const CodeGenerationSettings &settings);
+
+  ~PassManager();
 
 /// Add a pass by appending its name.
-#define PASS(ID, NAME, DESCRIPTION) \
-  void add##ID() {                  \
-    Pass *P = hermes::create##ID(); \
-    pipeline.push_back(P);          \
+#define PASS(ID, NAME, DESCRIPTION)                       \
+  void add##ID() {                                        \
+    addPass(std::unique_ptr<Pass>(hermes::create##ID())); \
   }
 #include "Passes.def"
 
   /// Add a pass by name.
+  /// Note: Only works for passes that are part of Passes.def.
   bool addPassForName(llvh::StringRef name) {
 #define PASS(ID, NAME, DESCRIPTION) \
   if (name == NAME) {               \
@@ -53,120 +51,35 @@ class PassManager {
     return false;
   }
 
-  static std::string getCustomPassText() {
+  /// Lists and describes the passes in Passes.def.
+  static llvh::StringRef getCustomPassText() {
     return
 #define PASS(ID, NAME, DESCRIPTION) NAME ": " DESCRIPTION "\n"
 #include "Passes.def"
         ;
   }
 
-  /// Add a pass by reference.
-  void addPass(Pass *P) {
-    pipeline.push_back(P);
+  /// Adds the pass \p Pass with the provided \p args to this pass manager.
+  template <typename Pass, typename... Args>
+  void addPass(Args &&...args) {
+    addPass(std::make_unique<Pass>(std::forward<Args>(args)...));
   }
 
-  void run(Function *F) {
-    if (F->isLazy())
-      return;
+  /// Runs this pass manager on the given Function \p F.
+  /// \pre Only FunctionPasses are registered with this PassManager.
+  void run(Function *F);
 
-    // Optionally dump the IR after every pass if the flag is set.
-    Pass *lastPass = nullptr;
-    auto dumpLastPass = [&lastPass, F](Pass *newPass) {
-      if (!F->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-        return;
+  /// Runs this pass manager on the given Module \p M.
+  void run(Module *M);
 
-      if (!lastPass) {
-        llvh::dbgs() << "*** INITIAL STATE\n\n";
-      } else {
-        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-      }
+ private:
+  /// Adds \p P to the pipeline managed by this pass manager.
+  void addPass(std::unique_ptr<Pass> P);
 
-      F->dump(llvh::dbgs());
-      lastPass = newPass;
-    };
-
-    // For each pass:
-    for (auto *P : pipeline) {
-      dumpLastPass(P);
-
-      auto *FP = llvh::dyn_cast<FunctionPass>(P);
-      assert(FP && "Invalid pass kind");
-      LLVM_DEBUG(llvh::dbgs() << "Running the pass " << FP->getName() << "\n");
-      LLVM_DEBUG(
-          llvh::dbgs() << "Optimizing the function " << F->getInternalNameStr()
-                       << "\n");
-      FP->runOnFunction(F);
-    }
-    dumpLastPass(nullptr);
-  }
-
-  void run(Module *M) {
-    llvh::SmallVector<Timer, 32> timers;
-    std::unique_ptr<TimerGroup> timerGroup{nullptr};
-    if (AreStatisticsEnabled()) {
-      timerGroup.reset(new TimerGroup("", "PassManager Timers"));
-    }
-
-    // Optionally dump the IR after every pass if the flag is set.
-    Pass *lastPass = nullptr;
-    auto dumpLastPass = [&lastPass, M](Pass *newPass) {
-      if (!M->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-        return;
-
-      if (!lastPass) {
-        llvh::dbgs() << "*** INITIAL STATE\n\n";
-      } else {
-        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-      }
-
-      M->dump(llvh::dbgs());
-      lastPass = newPass;
-    };
-
-    // For each pass:
-    for (auto *P : pipeline) {
-      dumpLastPass(P);
-
-      TimeRegion timeRegion(
-          timerGroup ? timers.emplace_back("", P->getName(), *timerGroup),
-          &timers.back()
-                     : nullptr);
-
-      /// Handle function passes:
-      if (auto *FP = llvh::dyn_cast<FunctionPass>(P)) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Running the function pass " << FP->getName()
-                         << "\n");
-
-        for (auto &I : *M) {
-          Function *F = &I;
-          if (F->isLazy())
-            continue;
-          LLVM_DEBUG(
-              llvh::dbgs() << "Optimizing the function "
-                           << F->getInternalNameStr() << "\n");
-          FP->runOnFunction(F);
-        }
-
-        // Move to the next pass.
-        continue;
-      }
-
-      /// Handle module passes:
-      if (auto *MP = llvh::dyn_cast<ModulePass>(P)) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Running the module pass " << MP->getName()
-                         << "\n");
-        MP->runOnModule(M);
-        // Move to the next pass.
-        continue;
-      }
-
-      llvm_unreachable("Unknown pass kind");
-    }
-    dumpLastPass(nullptr);
-  }
+  /// \return A pass that dumps the IR before/after \p pass runs. The options
+  /// controlling the IR dump live in CodeGenSettings.
+  std::unique_ptr<Pass> makeDumpPass(std::unique_ptr<Pass> pass);
 };
 } // namespace hermes
-#undef DEBUG_TYPE
+
 #endif // HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H

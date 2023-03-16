@@ -205,8 +205,8 @@ bool TDZDedup::runOnFunction(Function *F) {
   return CCtx.run();
 }
 
-Pass *createTDZDedup() {
-  return new TDZDedup();
+std::unique_ptr<Pass> createTDZDedup() {
+  return std::make_unique<TDZDedup>();
 }
 
 } // namespace hermes

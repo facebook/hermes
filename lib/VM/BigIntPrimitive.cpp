@@ -64,8 +64,9 @@ CallResult<HermesValue> BigIntPrimitive::fromDouble(
 
 CallResult<HermesValue> BigIntPrimitive::toString(
     Runtime &runtime,
-    uint8_t radix) const {
-  std::string result = bigint::toString(this->getImmutableRef(runtime), radix);
+    PseudoHandle<BigIntPrimitive> self,
+    uint8_t radix) {
+  std::string result = bigint::toString(self->getImmutableRef(runtime), radix);
   return StringPrimitive::createEfficient(
       runtime, createASCIIRef(result.c_str()));
 }
@@ -314,6 +315,17 @@ CallResult<HermesValue> BigIntPrimitive::dec(
   const size_t numDigits =
       bigint::subtractSignedResultSize(src->getImmutableRef(runtime), 1);
   return unaryOp(runtime, decAdapter, src, numDigits);
+}
+
+CallResult<double> BigIntPrimitive::toDouble(Runtime &runtime) const {
+  double val;
+  ExecutionStatus res = raiseOnError(
+      runtime, bigint::toDouble(val, this->getImmutableRefUnsafe()));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return val;
 }
 
 } // namespace vm

@@ -17,6 +17,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
+#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Format.h"
 
@@ -33,6 +34,7 @@ namespace hbc {
 
 /// The file name, line and column associated with a bytecode address.
 struct DebugSourceLocation {
+  static constexpr uint32_t NO_REG = UINT32_MAX;
   // The bytecode offset of this debug info.
   uint32_t address{0};
   // The filename index in the filename table.
@@ -48,6 +50,12 @@ struct DebugSourceLocation {
   // Initialized to 0, to show that no statements have been generated yet.
   // Thus, we can see which instructions aren't part of any user-written code.
   uint32_t statement{0};
+  // The offset source-level scope descriptor that is "active" for this
+  // location. May temporarily hold a relocation that's resolved right
+  // before the source location is serialized.
+  uint32_t scopeAddress{0};
+  // The register holding the Environment with the active scope.
+  uint32_t envReg{NO_REG};
 
   DebugSourceLocation() {}
 
@@ -56,21 +64,67 @@ struct DebugSourceLocation {
       uint32_t filenameId,
       uint32_t line,
       uint32_t column,
-      uint32_t statement)
+      uint32_t statement,
+      uint32_t scopeAddress,
+      uint32_t envReg)
       : address(address),
         filenameId(filenameId),
         line(line),
         column(column),
-        statement(statement) {}
+        statement(statement),
+        scopeAddress(scopeAddress),
+        envReg(envReg) {}
 
   bool operator==(const DebugSourceLocation &rhs) const {
     return address == rhs.address && filenameId == rhs.filenameId &&
-        line == rhs.line && column == rhs.column && statement == rhs.statement;
+        line == rhs.line && column == rhs.column &&
+        statement == rhs.statement && scopeAddress == rhs.scopeAddress &&
+        envReg == rhs.envReg;
   }
 
   bool operator!=(const DebugSourceLocation &rhs) const {
     return !(*this == rhs);
   }
+};
+
+/// A deserialized scope descriptor.
+struct DebugScopeDescriptor {
+  /// Various flags about this scope descriptor. See the Bits enum below for a
+  /// description of each flag.
+  struct Flags {
+    /// Constructs a new Flags object with the given \p bits.
+    explicit Flags(uint32_t bits = 0);
+
+    /// Serializes this Flags object.
+    uint32_t toUint32() const;
+
+    /// This scope descriptor is an inner scope (i.e., a scope that's a child of
+    /// a Function outermost scope).
+    bool isInnerScope;
+
+   private:
+    enum class Bits {
+      InnerScope,
+    };
+  };
+
+  /// The offset into the scope descriptor debug info where the descriptor for
+  /// this scope's parents is.
+  OptValue<unsigned> parentOffset;
+
+  Flags flags;
+
+  /// The names for the variables in this scope.
+  llvh::SmallVector<llvh::StringRef, 4> names;
+};
+
+/// The string representing a textual name for a call instruction's callee
+/// argument.
+struct DebugTextifiedCallee {
+  // The bytecode offset of this debug info.
+  uint32_t address{0};
+  // A textual name for the function being called. Must be a valid UTF8 string.
+  Identifier textifiedCallee;
 };
 
 /// A type wrapping up the offsets into debugging data.
@@ -79,16 +133,21 @@ struct DebugOffsets {
   /// (DebugSourceLocation).
   uint32_t sourceLocations = NO_OFFSET;
 
-  /// Offset into the lexical data section of the debugging data.
-  uint32_t lexicalData = NO_OFFSET;
+  /// Offset into the scope descriptor data section of the debugging data.
+  uint32_t scopeDescData = NO_OFFSET;
+
+  /// Offset into the textified callee data section of the debugging data.
+  uint32_t textifiedCallees = NO_OFFSET;
 
   /// Sentinel value indicating no offset.
   static constexpr uint32_t NO_OFFSET = UINT32_MAX;
 
   /// Constructors.
   DebugOffsets() = default;
-  DebugOffsets(uint32_t src, uint32_t lex)
-      : sourceLocations(src), lexicalData(lex) {}
+  DebugOffsets(uint32_t src, uint32_t scopeDesc, uint32_t tCallee)
+      : sourceLocations(src),
+        scopeDescData(scopeDesc),
+        textifiedCallees(tCallee) {}
 };
 
 /// A result of a search for a bytecode offset for where a line/column fall.
@@ -132,11 +191,19 @@ class DebugInfo {
   std::vector<unsigned char> filenameStorage_{};
 
   DebugFileRegionList files_{};
-  uint32_t lexicalDataOffset_ = 0;
+  uint32_t scopeDescDataOffset_ = 0;
+  uint32_t textifiedCalleeOffset_ = 0;
+  uint32_t stringTableOffset_ = 0;
   StreamVector<uint8_t> data_{};
 
   /// Get source filename as string id.
   OptValue<uint32_t> getFilenameForAddress(uint32_t debugOffset) const;
+
+  /// Decodes a string at offset \p offset in \p data, updating offset in-place.
+  /// \return the decoded string.
+  llvh::StringRef decodeString(
+      uint32_t *inoutOffset,
+      llvh::ArrayRef<uint8_t> data) const;
 
  public:
   explicit DebugInfo() = default;
@@ -145,24 +212,32 @@ class DebugInfo {
   explicit DebugInfo(
       ConsecutiveStringStorage &&filenameStrings,
       DebugFileRegionList &&files,
-      uint32_t lexicalDataOffset,
+      uint32_t scopeDescDataOffset,
+      uint32_t textifiedCalleeOffset,
+      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(filenameStrings.acquireStringTable()),
         filenameStorage_(filenameStrings.acquireStringStorage()),
         files_(std::move(files)),
-        lexicalDataOffset_(lexicalDataOffset),
+        scopeDescDataOffset_(scopeDescDataOffset),
+        textifiedCalleeOffset_(textifiedCalleeOffset),
+        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   explicit DebugInfo(
       std::vector<StringTableEntry> &&filenameStrings,
       std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
-      uint32_t lexicalDataOffset,
+      uint32_t scopeDescDataOffset,
+      uint32_t textifiedCalleeOffset,
+      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(std::move(filenameStrings)),
         filenameStorage_(std::move(filenameStorage)),
         files_(std::move(files)),
-        lexicalDataOffset_(lexicalDataOffset),
+        scopeDescDataOffset_(scopeDescDataOffset),
+        textifiedCalleeOffset_(textifiedCalleeOffset),
+        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   DebugInfo &operator=(DebugInfo &&that) = default;
@@ -188,13 +263,27 @@ class DebugInfo {
         .str();
   }
 
-  uint32_t lexicalDataOffset() const {
-    return lexicalDataOffset_;
+  uint32_t scopeDescDataOffset() const {
+    return scopeDescDataOffset_;
+  }
+
+  uint32_t textifiedCalleeOffset() const {
+    return textifiedCalleeOffset_;
+  }
+
+  uint32_t stringTableOffset() const {
+    return stringTableOffset_;
   }
 
   /// Get the location of \p offsetInFunction, given the function's debug
   /// offset.
   OptValue<DebugSourceLocation> getLocationForAddress(
+      uint32_t debugOffset,
+      uint32_t offsetInFunction) const;
+
+  /// \return the name of the textified callee for the function called in the
+  /// given \p offsetInFunction. Encoding is UTF8.
+  OptValue<llvh::StringRef> getTextifiedCalleeUTF8(
       uint32_t debugOffset,
       uint32_t offsetInFunction) const;
 
@@ -207,39 +296,79 @@ class DebugInfo {
       uint32_t targetLine,
       OptValue<uint32_t> targetColumn) const;
 
-  /// Read variable names at \p offset into the lexical data section
+  /// Read the variable names at \p offset into the scope descriptor section
   /// of the debug info. \return the list of variable names.
-  llvh::SmallVector<llvh::StringRef, 4> getVariableNames(uint32_t offset) const;
+  DebugScopeDescriptor getScopeDescriptor(uint32_t offset) const;
 
   /// Reads out the parent function ID of the function whose lexical debug data
   /// starts at \p offset. \return the ID of the parent function, or None if
   /// none.
   OptValue<uint32_t> getParentFunctionId(uint32_t offset) const;
 
+  /// \return the size in bytes of the source locations data.
+  uint32_t getSourceLocationsDataSizeBytes() const {
+    return scopeDescDataOffset_ - 0;
+  }
+
+  /// \return the size in bytes of the scope desc table data.
+  uint32_t getScopeDescDataSizeBytes() const {
+    return textifiedCalleeOffset_ - scopeDescDataOffset_;
+  }
+
+  /// \return the size in bytes of the textified callee data.
+  uint32_t getTextifiedCalleesDataSizeBytes() const {
+    return stringTableOffset_ - textifiedCalleeOffset_;
+  }
+
+  /// \return the size in bytes of the string table data.
+  uint32_t getStringTableSizeBytes() const {
+    return data_.size() - stringTableOffset_;
+  }
+
  private:
+  // clang-format off
   /// Accessors for portions of data_, which looks like this:
-  /// [sourceLocations][lexicalData]
-  ///                  ^ lexicalDataOffset_
+  /// [sourceLocations][scopeDescData][textifiedCallee][stringTable]
+  ///                  |              |                ^ stringTableOffset_
+  ///                  |              ^ textifiedCalleeOffset_
+  ///                  ^ scopeDescDataOffset_
+  // clang-format on
 
   /// \return the slice of data_ reflecting the source locations.
   llvh::ArrayRef<uint8_t> sourceLocationsData() const {
-    return data_.getData().slice(0, lexicalDataOffset_);
+    return data_.getData().slice(0, getSourceLocationsDataSizeBytes());
   }
 
-  /// \return the slice of data_ reflecting the lexical data.
-  llvh::ArrayRef<uint8_t> lexicalData() const {
-    return data_.getData().slice(lexicalDataOffset_);
+  /// \return the slice of data_ reflecting the scope desc data
+  llvh::ArrayRef<uint8_t> scopeDescData() const {
+    return data_.getData().slice(
+        scopeDescDataOffset_, getScopeDescDataSizeBytes());
+  }
+
+  /// \return the slice of data_ reflecting the textified callee table.
+  llvh::ArrayRef<uint8_t> textifiedCalleeData() const {
+    return data_.getData().slice(
+        textifiedCalleeOffset_, getTextifiedCalleesDataSizeBytes());
+  }
+
+  /// \return the slice of data_ reflecting the string table data.
+  llvh::ArrayRef<uint8_t> stringTableData() const {
+    return data_.getData().slice(stringTableOffset_);
   }
 
   void disassembleFilenames(llvh::raw_ostream &OS) const;
   void disassembleFilesAndOffsets(llvh::raw_ostream &OS) const;
-  void disassembleLexicalData(llvh::raw_ostream &OS) const;
+  void disassembleScopeDescData(llvh::raw_ostream &OS) const;
+  void disassembleTextifiedCallee(llvh::raw_ostream &OS) const;
+  void disassembleStringTable(llvh::raw_ostream &OS) const;
 
  public:
   void disassemble(llvh::raw_ostream &OS) const {
     disassembleFilenames(OS);
     disassembleFilesAndOffsets(OS);
-    disassembleLexicalData(OS);
+    disassembleScopeDescData(OS);
+    disassembleTextifiedCallee(OS);
+    disassembleStringTable(OS);
   }
 
 #ifndef HERMESVM_LEAN
@@ -257,16 +386,17 @@ class DebugInfo {
 
 class DebugInfoGenerator {
  private:
-  /// An offset into Debug Lexical Table pointing to a special entry,
-  /// representing the most common value in the Debug Lexical Table
-  /// (vars count: 0, lexical parent: none). When compiled without -g,
-  /// this common value applies to all functions without local variables.
-  /// This optimization reduces hbc bundle size.
+  /// A special offset for representing the most common entry in its table.
   ///
-  /// When compiled with -g, the lexical parent is none for the global
-  /// function, but not any other functions. As a result, this optimization
-  /// does not provide value.
-  static constexpr uint32_t kEmptyLexicalDataOffset = 0;
+  /// For Scope Desc Table, it represents the most common info (vars count: 0,
+  /// lexical parent: none). When compiled without -g, this common value applies
+  /// to all functions without local variables. This optimization reduces hbc
+  /// bundle size; When compiled with -g, the lexical parent is none for the
+  /// global function, but not any other functions. As a result, this
+  /// optimization does not provide value.
+  ///
+  /// For textified callee table, it represents an empty table.
+  static constexpr uint32_t kMostCommonEntryOffset = 0;
 
   bool validData{true};
 
@@ -280,9 +410,19 @@ class DebugInfoGenerator {
   /// List of files mapping file ID to source location offsets.
   DebugInfo::DebugFileRegionList files_{};
 
-  /// Serialized lexical data, which contains information about the variables
-  /// associated with each code block.
-  std::vector<uint8_t> lexicalData_;
+  /// Serialized scope descriptors.
+  std::vector<uint8_t> scopeDescData_;
+
+  /// Serialized textified callee table.
+  std::vector<uint8_t> textifiedCallees_;
+
+  /// The debug info string table. All string entries in the debug info records
+  /// point to an entry in this table. Strings are encoded as size-prefixed,
+  /// UTF8-encoded payloads.
+  std::vector<uint8_t> stringTable_;
+
+  /// An index for strings in stringTable_.
+  llvh::DenseMap<UniqueString *, uint32_t> stringTableIndex_;
 
   int32_t delta(uint32_t to, uint32_t from) {
     int64_t diff = (int64_t)to - from;
@@ -294,12 +434,9 @@ class DebugInfoGenerator {
     return (int32_t)diff;
   }
 
-  /// Appends a string \p str to the given \p data.
-  /// This first appends the string's length, followed by the string bytes.
-  static void appendString(std::vector<uint8_t> &data, llvh::StringRef str) {
-    appendSignedLEB128(data, int64_t(str.size()));
-    data.insert(data.end(), str.begin(), str.end());
-  }
+  /// Appends \p str to stringTable_ if not already present, then
+  /// appends \p str's offset in stringTable_ to the given \p data.
+  void appendString(std::vector<uint8_t> &data, Identifier str);
 
   /// No copy constructor or copy assignment operator.
   /// Note that filenameStrings_ is of type ConsecutiveStringStorage, which
@@ -317,12 +454,24 @@ class DebugInfoGenerator {
       uint32_t functionIndex,
       llvh::ArrayRef<DebugSourceLocation> offsets);
 
-  /// Append lexical data including parent function \p parentFunctionIndex and
-  /// list of variable names \p names to the debug data. \return the offset in
-  /// the lexical section of the debug data.
-  uint32_t appendLexicalData(
-      OptValue<uint32_t> parentFunctionIndex,
+  /// Appends a scope descriptor with the given \p parentScopeID and
+  /// \p names to the scope descriptor table.
+  ///
+  /// \p names is the list of variables that live in the scope.
+  ///
+  /// \p isInnerScope indicates whether this is an inner scope in the
+  /// function.
+  ///
+  /// \returns the offset of the new scope descriptor in the table.
+  uint32_t appendScopeDesc(
+      OptValue<uint32_t> parentScopeID,
+      bool isInnerScope,
       llvh::ArrayRef<Identifier> names);
+
+  /// Append the textified callee data to the debug data. \return the offset in
+  /// the textified callee table of the debug data.
+  uint32_t appendTextifiedCalleeData(
+      llvh::ArrayRef<DebugTextifiedCallee> textifiedCallees);
 
   // Destructively move memory to a DebugInfo.
   DebugInfo serializeWithMove();

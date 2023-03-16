@@ -63,9 +63,11 @@ class DependencyExtractor {
   /// literals.
   std::vector<uint8_t> graphqlQueryRegexBytecode_;
 
+#if HERMES_PARSE_JSX
   /// Set to true when we have already found an registered a JSX dependency
   /// for this file.
   bool foundJSX_{false};
+#endif // HERMES_PARSE_JSX
 
  public:
   DependencyExtractor(Context &astContext)
@@ -221,6 +223,7 @@ class DependencyExtractor {
     visitESTreeChildren(*this, node);
   }
 
+#if HERMES_PARSE_JSX
   void visit(JSXElementNode *node) {
     registerJSXDependencies();
     visitESTreeChildren(*this, node);
@@ -230,6 +233,7 @@ class DependencyExtractor {
     registerJSXDependencies();
     visitESTreeChildren(*this, node);
   }
+#endif // HERMES_PARSE_JSX
 
  private:
   /// Perform any postprocessing on \p name (e.g. removing "m#" at the start)
@@ -280,6 +284,7 @@ class DependencyExtractor {
         });
   }
 
+#if HERMES_PARSE_JSX
   /// If we have not seen JSX before, add the relevant JSX dependencies to the
   /// dependency list, and set foundJSX_ so we don't duplicate entries.
   void registerJSXDependencies() {
@@ -289,6 +294,7 @@ class DependencyExtractor {
     addDependency("react/jsx-runtime", DependencyKind::ESM);
     addDependency("react/jsx-dev-runtime", DependencyKind::ESM);
   }
+#endif // HERMES_PARSE_JSX
 };
 
 } // namespace

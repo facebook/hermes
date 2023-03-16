@@ -55,6 +55,22 @@ void BytecodeFunctionGenerator::addExceptionHandler(
   exceptionHandlers_.push_back(info);
 }
 
+void BytecodeFunctionGenerator::patchDebugSourceLocations(
+    const llvh::DenseMap<unsigned, unsigned> &scopeDescOffsetMap) {
+  if (debugLocations_.empty()) {
+    return;
+  }
+
+  auto offset = scopeDescOffsetMap.find(sourceLocation_.scopeAddress);
+  assert(offset != scopeDescOffsetMap.end());
+  sourceLocation_.scopeAddress = offset->second;
+  for (DebugSourceLocation &dl : debugLocations_) {
+    offset = scopeDescOffsetMap.find(dl.scopeAddress);
+    assert(offset != scopeDescOffsetMap.end());
+    dl.scopeAddress = offset->second;
+  }
+}
+
 void BytecodeFunctionGenerator::addDebugSourceLocation(
     const DebugSourceLocation &info) {
   assert(
@@ -78,18 +94,6 @@ void BytecodeFunctionGenerator::setJumpTable(
   assert(!jumpTable.empty() && "invoked with no jump table");
 
   jumpTable_ = std::move(jumpTable);
-}
-
-uint32_t BytecodeModuleGenerator::addArrayBuffer(ArrayRef<Literal *> elements) {
-  return literalGenerator_.serializeBuffer(elements, arrayBuffer_, false);
-}
-
-std::pair<uint32_t, uint32_t> BytecodeModuleGenerator::addObjectBuffer(
-    ArrayRef<Literal *> keys,
-    ArrayRef<Literal *> vals) {
-  return std::pair<uint32_t, uint32_t>{
-      literalGenerator_.serializeBuffer(keys, objKeyBuffer_, true),
-      literalGenerator_.serializeBuffer(vals, objValBuffer_, false)};
 }
 
 std::unique_ptr<BytecodeFunction>
@@ -149,6 +153,10 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
 
 unsigned BytecodeFunctionGenerator::getFunctionID(Function *F) {
   return BMGen_.addFunction(F);
+}
+
+unsigned BytecodeFunctionGenerator::getScopeDescID(ScopeDesc *S) {
+  return BMGen_.addScopeDesc(S);
 }
 
 void BytecodeFunctionGenerator::shrinkJump(offset_t loc) {
@@ -211,6 +219,84 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   return functionIDMap_.allocate(F);
 }
 
+unsigned BytecodeModuleGenerator::addScopeDesc(ScopeDesc *S) {
+  if (S && S->hasFunction() &&
+      S->getFunction()->getContext().getDebugInfoSetting() !=
+          DebugInfoSetting::ALL) {
+    // short-circuit S to be nullptr when not emitting the debug information,
+    // which effectively causes all scopes to use the same (empty) descriptor.
+    S = nullptr;
+  }
+
+  newScopeDescs_.insert(S);
+  return scopeDescIDMap_.allocate(S);
+}
+
+namespace {
+/// \return the UTF8 encoding for \p name, replacing surrogates if any is
+/// present.
+static Identifier ensureUTF8Identifer(
+    StringTable &st,
+    Identifier name,
+    std::string &nameUTF8Buffer) {
+  // Check if name has any surrogates. If it doesn't, then it already is a valid
+  // UTF8 string, and as such can be written to the debug info.
+  bool hasSurrogate = false;
+  const char *it = name.str().begin();
+  const char *nameEnd = name.str().end();
+  while (it < nameEnd && !hasSurrogate) {
+    constexpr bool allowSurrogates = false;
+    decodeUTF8<allowSurrogates>(
+        it, [&hasSurrogate](const llvh::Twine &) { hasSurrogate = true; });
+  }
+
+  if (hasSurrogate) {
+    nameUTF8Buffer.clear();
+
+    // name has surrogates, meaning it is not a valid UTF8 string (these strings
+    // are still valid within Hermes itself).
+    convertUTF8WithSurrogatesToUTF8WithReplacements(nameUTF8Buffer, name.str());
+    name = st.getIdentifier(nameUTF8Buffer);
+  }
+
+  return name;
+}
+} // namespace
+
+unsigned BytecodeModuleGenerator::serializeScopeChain(
+    StringTable &st,
+    DebugInfoGenerator &debugInfoGen,
+    ScopeDesc *S) {
+  unsigned ID = addScopeDesc(S);
+  auto it = scopeDescIDAddr_.find(ID);
+  if (it != scopeDescIDAddr_.end()) {
+    return it->second;
+  }
+
+  OptValue<unsigned> parentScopeOffset;
+  bool isInnerScope{false};
+  llvh::SmallVector<Identifier, 4> names;
+  if (S) {
+    if (S->getParent() && S->getParent()->hasFunction()) {
+      parentScopeOffset = serializeScopeChain(st, debugInfoGen, S->getParent());
+    }
+    isInnerScope =
+        S->hasFunction() && S->getFunction()->getFunctionScopeDesc() != S;
+
+    std::string nameUTF8Buffer;
+    for (Variable *V : S->getVariables()) {
+      Identifier nameUTF8 =
+          ensureUTF8Identifer(st, V->getName(), nameUTF8Buffer);
+      names.push_back(nameUTF8);
+    }
+  }
+
+  unsigned offset =
+      debugInfoGen.appendScopeDesc(parentScopeOffset, isInnerScope, names);
+  scopeDescIDAddr_[ID] = offset;
+  return offset;
+}
+
 void BytecodeModuleGenerator::setFunctionGenerator(
     Function *F,
     unique_ptr<BytecodeFunctionGenerator> BFG) {
@@ -238,6 +324,20 @@ void BytecodeModuleGenerator::initializeStringTable(
 
 uint32_t BytecodeModuleGenerator::addBigInt(bigint::ParsedBigInt bigint) {
   return bigIntTable_.addBigInt(std::move(bigint));
+}
+
+void BytecodeModuleGenerator::initializeSerializedLiterals(
+    std::vector<unsigned char> &&arrayBuffer,
+    std::vector<unsigned char> &&keyBuffer,
+    std::vector<unsigned char> &&valBuffer,
+    hermes::hbc::BytecodeModuleGenerator::LiteralOffsetMapTy &&offsetMap) {
+  assert(
+      arrayBuffer_.empty() && objKeyBuffer_.empty() && objValBuffer_.empty() &&
+      literalOffsetMap_.empty() && "serialized literals already initialized");
+  arrayBuffer_ = std::move(arrayBuffer);
+  objKeyBuffer_ = std::move(keyBuffer);
+  objValBuffer_ = std::move(valBuffer);
+  literalOffsetMap_ = std::move(offsetMap);
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp *regexp) {
@@ -346,12 +446,37 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
     }
 
     if (BFG.hasDebugInfo()) {
+      // Only serialize the scopes if any debug info has been output. Note that
+      // using a for each construct is wrong as serializeScopeChain may add
+      // entries to newScopeDescs_ (via addScopeDesc) which may in turn
+      // re-allocate the vector being iterated on.
+      for (uint32_t s = 0, end = newScopeDescs_.size(); s < end; ++s) {
+        serializeScopeChain(
+            F->getContext().getStringTable(), debugInfoGen, newScopeDescs_[s]);
+      }
+
+      // All scopes in newScopeDesc_ have already been serialized, thus
+      // newScopeDescs_ can be cleared.
+      newScopeDescs_.clear();
+
+      // The scope descriptor table is serialized, thus it can be used to patch
+      // any references to it in the current function's debug data.
+      BFG.patchDebugSourceLocations(scopeDescIDAddr_);
+
       uint32_t sourceLocOffset = debugInfoGen.appendSourceLocations(
           BFG.getSourceLocation(), i, BFG.getDebugLocations());
-      uint32_t lexicalDataOffset = debugInfoGen.appendLexicalData(
-          BFG.getLexicalParentID(), BFG.getDebugVariableNames());
-      func->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
+      uint32_t topLevelScopeDescDataOffset = serializeScopeChain(
+          F->getContext().getStringTable(),
+          debugInfoGen,
+          F->getFunctionScopeDesc());
+      uint32_t textifiedCalleesOffset =
+          debugInfoGen.appendTextifiedCalleeData(BFG.getTextifiedCallees());
+      func->setDebugOffsets(
+          {sourceLocOffset,
+           topLevelScopeDescDataOffset,
+           textifiedCalleesOffset});
     }
+
     BM->setFunction(i, std::move(func));
   }
 

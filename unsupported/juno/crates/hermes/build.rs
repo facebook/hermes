@@ -31,6 +31,7 @@ fn main() {
         "cargo:rustc-link-search={}/build/lib/Support",
         dst.display()
     );
+    println!("cargo:rustc-link-search={}/build/lib/Regex", dst.display());
     println!(
         "cargo:rustc-link-search={}/build/external/dtoa",
         dst.display()
@@ -42,6 +43,7 @@ fn main() {
 
     println!("cargo:rustc-link-lib=hermesSourceMap");
     println!("cargo:rustc-link-lib=hermesParser");
+    println!("cargo:rustc-link-lib=hermesRegex");
     println!("cargo:rustc-link-lib=hermesPlatformUnicode");
     println!("cargo:rustc-link-lib=hermesSupport");
     println!("cargo:rustc-link-lib=LLVHSupport");

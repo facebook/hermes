@@ -127,7 +127,7 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
-if(APPLE OR WIN32)
+if(APPLE)
     set(DEFAULT_CONTIGUOUS_HEAP OFF)
 else()
     set(DEFAULT_CONTIGUOUS_HEAP ON)

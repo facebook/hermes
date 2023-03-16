@@ -78,6 +78,8 @@ print(ReferenceError.__proto__ === Error);
 //CHECK-NEXT: true
 print(EvalError.__proto__ === Error);
 //CHECK-NEXT: true
+print(AggregateError.__proto__ === Error);
+//CHECK-NEXT: true
 
 e = new Error();
 e.name = 12345;

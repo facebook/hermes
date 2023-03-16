@@ -79,7 +79,7 @@ ExecutionStatus Interpreter::caseDirectEval(
   // (as per the spec for strict callers, which is the only thing we support).
 
   ScopeChain scopeChain{};
-  scopeChain.functions.emplace_back();
+  scopeChain.scopes.emplace_back();
 
   auto cr = vm::directEval(
       runtime, Handle<StringPrimitive>::vmcast(input), scopeChain, false);
@@ -330,6 +330,58 @@ ExecutionStatus Interpreter::implCallBuiltin(
   SLOW_DEBUG(
       llvh::dbgs() << "native return value r" << (unsigned)ip->iCallBuiltin.op1
                    << "=" << DumpHermesValue(O1REG(CallBuiltin)) << "\n");
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::declareGlobalVarImpl(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  GCScopeMarkerRAII mark{runtime};
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.configurable = 0;
+  // Do not overwrite existing globals with undefined.
+  dpf.setValue = 0;
+
+  CallResult<bool> res = JSObject::defineOwnProperty(
+      runtime.getGlobal(),
+      runtime,
+      ID(ip->iDeclareGlobalVar.op1),
+      dpf,
+      Runtime::getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    assert(
+        !runtime.getGlobal()->isProxyObject() &&
+        "global can't be a proxy object");
+    // If the property already exists, this should be a noop.
+    // Instead of incurring the cost to check every time, do it
+    // only if an exception is thrown, and swallow the exception
+    // if it exists, since we didn't want to make the call,
+    // anyway.  This most likely means the property is
+    // non-configurable.
+    NamedPropertyDescriptor desc;
+    if (!JSObject::getOwnNamedDescriptor(
+            runtime.getGlobal(),
+            runtime,
+            ID(ip->iDeclareGlobalVar.op1),
+            desc)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    runtime.clearThrownValue();
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::throwIfHasRestrictedGlobalPropertyImpl(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  GCScopeMarkerRAII mark{runtime};
+  if (LLVM_UNLIKELY(hasRestrictedGlobalProperty(
+          runtime, ID(ip->iThrowIfHasRestrictedGlobalProperty.op1)))) {
+    return runtime.raiseSyntaxError("Name is a restricted global identifier");
+  }
   return ExecutionStatus::RETURNED;
 }
 

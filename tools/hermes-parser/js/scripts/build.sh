@@ -8,7 +8,7 @@ set -xe -o pipefail
 
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PACKAGES=(hermes-estree hermes-parser hermes-eslint hermes-transform hermes-translate)
+PACKAGES=(hermes-estree hermes-parser hermes-eslint hermes-transform flow-api-translator)
 
 # Yarn install all packages
 yarn install
@@ -41,7 +41,7 @@ yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
 # Generate source code, written into package src directories
 yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
 yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
-yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genESTreeVisitorKeys.js"
 yarn babel-node "$THIS_DIR/genPredicateFunctions.js"
 yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
 

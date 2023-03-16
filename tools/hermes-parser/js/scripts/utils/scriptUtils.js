@@ -81,7 +81,7 @@ function HEADER(flow: FlowStyle): string {
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -92,7 +92,8 @@ type Package =
   | 'hermes-eslint'
   | 'hermes-estree'
   | 'hermes-parser'
-  | 'hermes-transform';
+  | 'hermes-transform'
+  | 'flow-api-translator';
 
 type ArtifactOptions = $ReadOnly<{
   code: string,

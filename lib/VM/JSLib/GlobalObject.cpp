@@ -341,7 +341,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       JSObject::create(                                               \
           runtime, Handle<JSObject>::vmcast(&runtime.ErrorPrototype)) \
           .getHermesValue();
-#include "hermes/VM/NativeErrorTypes.def"
+#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
   // "Forward declaration" of the internal CallSite prototype. Its properties
   // will be populated later.
@@ -571,10 +572,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.errorConstructor = createErrorConstructor(runtime).getHermesValue();
 
 // All Native Error constructors.
-#define NATIVE_ERROR_TYPE(name)       \
-  create##name##Constructor(runtime); \
+#define NATIVE_ERROR_TYPE(name)                            \
+  runtime.name##Constructor =                              \
+      create##name##Constructor(runtime).getHermesValue(); \
   gcScope.clearAllHandles();
-#include "hermes/VM/NativeErrorTypes.def"
+#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
+#include "hermes/FrontEndDefs/NativeErrorTypes.def"
 
   // Populate the internal CallSite prototype.
   populateCallSitePrototype(runtime);
@@ -778,8 +781,10 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           Runtime::makeNullHandle<JSObject>())
           .getHermesValue();
 
-  // Define the 'gc' function.
-  defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+  if (jsLibFlags.enableHermesInternal) {
+    // Define the 'gc' function.
+    defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+  }
 
 #ifdef HERMES_ENABLE_IR_INSTRUMENTATION
   // Define the global __instrument object

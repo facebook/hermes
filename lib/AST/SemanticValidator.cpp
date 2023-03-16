@@ -7,7 +7,7 @@
 
 #include "SemanticValidator.h"
 
-#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Regex/RegexSerialization.h"
 
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SmallSet.h"

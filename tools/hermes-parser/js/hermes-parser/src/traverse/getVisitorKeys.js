@@ -4,15 +4,16 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict-local
+ * @flow strict
  * @format
  */
 
 'use strict';
 
 import type {ESNode} from 'hermes-estree';
+import type {VisitorKeys as VisitorKeysType} from '../generated/ESTreeVisitorKeys';
 
-import {VisitorKeys as FlowVisitorKeys} from 'hermes-eslint';
+import FlowVisitorKeys from '../generated/ESTreeVisitorKeys';
 
 export function isNode(thing: mixed): boolean %checks {
   return (
@@ -20,7 +21,7 @@ export function isNode(thing: mixed): boolean %checks {
   );
 }
 
-export type VisitorKeysType = $ReadOnly<{[string]: $ReadOnlyArray<string>}>;
+export type {VisitorKeysType};
 export function getVisitorKeys<T: ESNode>(
   node: T,
   visitorKeys?: ?VisitorKeysType,

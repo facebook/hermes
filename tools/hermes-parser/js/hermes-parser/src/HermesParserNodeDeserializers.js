@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -609,6 +609,7 @@ function deserializeClassProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -623,6 +624,7 @@ function deserializeClassPrivateProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -1662,6 +1664,14 @@ function deserializeTSCallSignatureDeclaration() {
     returnType: this.deserializeNode(),
   };
 }
+function deserializeTSModifiers() {
+  return {
+    type: 'TSModifiers',
+    loc: this.addEmptyLoc(),
+    accessibility: this.deserializeString(),
+    readonly: this.deserializeBoolean(),
+  };
+}
 function deserializeCoverFirst() {
   throw new Error('Cover' + ' should not appear in program buffer');
 }
@@ -1929,6 +1939,7 @@ module.exports = [
   deserializeTSMethodSignature,
   deserializeTSIndexSignature,
   deserializeTSCallSignatureDeclaration,
+  deserializeTSModifiers,
   deserializeCoverFirst,
   deserializeCoverEmptyArgs,
   deserializeCoverTrailingComma,

@@ -14,8 +14,10 @@
 #include "llvh/ADT/bit.h"
 #include "llvh/Support/Endian.h"
 #include "llvh/Support/MathExtras.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cmath>
+#include <limits>
 #include <string>
 
 namespace hermes {
@@ -184,15 +186,294 @@ OperationStatus fromDouble(MutableBigIntRef dst, double src) {
   return initWithBytes(dst, dropExtraSignBits(bytesRef));
 }
 
-double toDouble(ImmutableBigIntRef src) {
-  if (src.numDigits == 0) {
-    return 0.0;
+namespace {
+/// Helper adapter for calling getSignExtValue with *BigIntRefs.
+template <typename AnyBigIntRef>
+BigIntDigitType getBigIntRefSignExtValue(const AnyBigIntRef &src) {
+  return src.numDigits == 0
+      ? static_cast<BigIntDigitType>(0)
+      : getSignExtValue<BigIntDigitType>(src.digits[src.numDigits - 1]);
+}
+
+/// Copies \p src's digits to \p dst's, which must have at least
+/// as many digits as \p src. Sign-extends dst to fill \p dst.numDigits.
+OperationStatus initNonCanonicalWithReadOnlyBigInt(
+    MutableBigIntRef &dst,
+    const ImmutableBigIntRef &src) {
+  // ensure dst is large enough
+  if (dst.numDigits < src.numDigits) {
+    return OperationStatus::DEST_TOO_SMALL;
   }
 
-  const uint32_t numBits = src.numDigits * BigIntDigitSizeInBits;
-  llvh::APInt tmp(numBits, llvh::makeArrayRef(src.digits, src.numDigits));
-  constexpr bool kSigned = true;
-  return tmp.roundToDouble(kSigned);
+  // now copy src digits to dst.
+  const uint32_t digitsToCopy = src.numDigits;
+  const uint32_t bytesToCopy = digitsToCopy * BigIntDigitSizeInBytes;
+  memcpy(dst.digits, src.digits, bytesToCopy);
+
+  // and finally size-extend dst to its size.
+  const uint32_t digitsToSet = dst.numDigits - digitsToCopy;
+  const uint32_t bytesToSet = digitsToSet * BigIntDigitSizeInBytes;
+  const BigIntDigitType signExtValue = getBigIntRefSignExtValue(src);
+  memset(dst.digits + digitsToCopy, signExtValue, bytesToSet);
+
+  return OperationStatus::RETURNED;
+}
+
+/// \return dst = -src without worrying about negative integer negation
+/// overflow.
+std::tuple<OperationStatus, ImmutableBigIntRef> copyAndNegate(
+    MutableBigIntRef dst,
+    ImmutableBigIntRef src) {
+  auto res = initNonCanonicalWithReadOnlyBigInt(dst, src);
+  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+    return std::make_tuple(res, ImmutableBigIntRef{});
+  }
+
+  // Can't call unaryMinus directly as that API checks for negation overflow.
+  llvh::APInt::tcNegate(dst.digits, dst.numDigits);
+
+  // Still return a canonical bigint.
+  ensureCanonicalResult(dst);
+
+  // N.B.: numDigits could have been modified in ensureCanonicalResult.
+  return std::make_tuple(
+      OperationStatus::RETURNED, ImmutableBigIntRef{dst.digits, dst.numDigits});
+}
+
+/// \return whether the given \p mantissa needs to be rounded up or not. \p
+/// firstDigit is the least significant digit in the bigint, \p currDigit is the
+/// current digit being tested. \p bottomUnsetMantissaBits is non-zero if
+/// mantissa has low-order bits that were not populated from the bigint.
+/// \p numUnusedBitsInCurrDigit represents how many bits in \p *currDigit are
+/// not part of the mantissa. For more information about these parameters, look
+/// at their definitions in toDouble below.
+bool roundMantissaUp(
+    uint64_t mantissa,
+    const BigIntDigitType *firstDigit,
+    const BigIntDigitType *currDigit,
+    uint32_t bottomUnsetMantissaBits,
+    uint32_t numUnusedBitsInCurrDigit) {
+  if (bottomUnsetMantissaBits != 0) {
+    // There were not enough bits in the BigInt for completelly populating the
+    // mantissa, so no need to round the number up.
+    return false;
+  }
+
+  if (numUnusedBitsInCurrDigit == 0) {
+    // All bits in currDigit are part of the mantissa. So we need to inspect the
+    // next digit.
+    if (firstDigit == currDigit) {
+      // But when there's no next digit, the next bit is zero, thus round the
+      // number down.
+      return false;
+    }
+
+    // None of the BigIntDigitSizeInBits bits in currDigit are in the mantissa.
+    --currDigit;
+    numUnusedBitsInCurrDigit = BigIntDigitSizeInBits;
+  }
+
+  assert(currDigit >= firstDigit && "can't access currDigit");
+
+  // Bit mask for testing the most significant bit not in the mantissa.
+  const BigIntDigitType mostSignificantUnusedBit = 1ull
+      << (numUnusedBitsInCurrDigit - 1);
+
+  // If the most significant bit not in the mantissa is zero, round down.
+  if (!(*currDigit & mostSignificantUnusedBit)) {
+    return false;
+  }
+
+  // The most significant bit not in the mantissa is one. If any leftover digits
+  // in currDigit are one, round up.
+  if (*currDigit & (mostSignificantUnusedBit - 1)) {
+    return true;
+  }
+
+  // currDigit is in the format |mmm|M|nnn|, where |mmm| is part of the
+  // mantissa, |M| (the most significative bit not in the mantissa) is 1, and
+  // and |nnn| is zero. Thus if any digit in [firstDigit, currDigit) are
+  // non-zero, round up.
+  while (currDigit > firstDigit) {
+    if (*(--currDigit)) {
+      return true;
+    }
+  }
+
+  //                           |mantissa|M|nnnnnnnnnnnnnnnnnnnn...n|
+  // The number has the format |mmmmmmmm|1|00000000000000000000...0|. Thus round
+  // it up if the mantissa's least significative bit is 1.
+  return mantissa & 1;
+}
+} // namespace
+
+OperationStatus toDouble(double &dst, ImmutableBigIntRef src) {
+  if (src.numDigits == 0) {
+    dst = 0.0;
+    return OperationStatus::RETURNED;
+  }
+
+  const bool isSrcNegative = isNegative(src);
+  uint32_t tmpStorageSize = isSrcNegative ? src.numDigits : 0;
+
+  // temporary storage used to negate negative operands.
+  TmpStorage tmpStorage(tmpStorageSize);
+
+  if (isSrcNegative) {
+    MutableBigIntRef tmp{
+        tmpStorage.requestNumDigits(tmpStorageSize), tmpStorageSize};
+    auto [res, newSrc] = copyAndNegate(tmp, src);
+    if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
+      return res;
+    }
+    src = newSrc;
+  }
+
+  assert(src.numDigits > 0 && "empty src");
+
+  // src's most significant digit may be zero in case zero-extension was needed
+  // to preserve the bigint's sign.
+  const BigIntDigitType *currDigit = src.digits + src.numDigits - 1;
+  if (!*currDigit) {
+    --currDigit;
+  }
+
+  // Even if currDigit is not the most significant digit, there should be at
+  // least 1 digit in src -- otherwise, src == 0n, and that has already been
+  // handled.
+  assert(currDigit >= src.digits && *currDigit && "non-canonical BigInt found");
+
+  // src's layout is
+  //
+  //                                         numBits
+  //                          <----------------------------------------->
+  //             sign               mantissa          low-order-bits
+  //  <----------------------><-----------------> <--------------------->
+  // |0000000000000000|00000001mm...mmm|mmm...mmmMnnnnnn|nnnnnnnn...nnnnn|
+  //                                   ^         ^                       ^
+  //                                currDigit  MSBNITM               firstDigit
+  //
+  // and it needs to be converted to the double |s|exp|mantissa|. The challenge
+  // are:
+  //
+  // 1. Properly assembling a mantissa numeric_limits<double>::digits bits.
+  //
+  // 2. Computing the exponent to be used in the double
+  //
+  // 3. Deciding whether to round the mantissa.
+
+  // Compute the number of leading zeros in currDigit. currDigit is never zero,
+  // so clearBitsInMSD is in [0, 64).
+  const uint32_t clearBitsInMSD =
+      llvh::countLeadingZeros(*currDigit, llvh::ZeroBehavior::ZB_Width);
+  assert(clearBitsInMSD < BigIntDigitSizeInBits);
+
+  // numBits represents how many bits in src can pontentially be part of the
+  // mantissa. This number is essentially the total number of bits in src minus
+  // the number of upper zero bits.
+  const uint32_t numBits =
+      (currDigit - src.digits + 1) * BigIntDigitSizeInBits - clearBitsInMSD;
+
+  // The exponent needs to account the fact that numBits include the most
+  // significant non-zero bit in src. ieee 754 always drops that bit (as it is
+  // implicitly one).
+  uint32_t exp = numBits - 1;
+  static_assert(std::numeric_limits<double>::max_exponent == 1024, "");
+  if (exp > std::numeric_limits<double>::max_exponent - 1) {
+    // The exponent is too large to represent in a double, thus return Inf or
+    // (if src is negative), -Inf.
+    dst = isSrcNegative ? -std::numeric_limits<double>::infinity()
+                        : std::numeric_limits<double>::infinity();
+    return OperationStatus::RETURNED;
+  }
+
+  // Number of bits in the mantissa of an ieee 754 double.
+  constexpr uint32_t mantissaSizeInBits = 52;
+
+  constexpr uint32_t numBitsSignExp =
+      static_cast<uint32_t>(sizeof(double)) * 8 - mantissaSizeInBits;
+
+  // Start assembling the mantissa. The idea is to shift the most significant
+  // digit left enough times to ensure that all leading zeros in src, as well as
+  // the most significant non-zero bit are dropped from the mantissa. Note that
+  // msdShift may be 64 in case the most significant digit in src is 1 -- in
+  // this case none of the bits in currDigit will be part of the mantissa.
+  const uint32_t msdShift = clearBitsInMSD + 1;
+  assert(0 <= msdShift && msdShift <= 64);
+  uint64_t mantissa =
+      msdShift == BigIntDigitSizeInBits ? 0 : (*currDigit << msdShift);
+  // And now shift the mantissa right to make space for the sign and the
+  // exponent in the final result.
+  mantissa >>= numBitsSignExp;
+  // Number of bits in the mantissa that need to be filled with with the most
+  // significant bits of src's previous digit.
+  uint32_t bottomUnsetMantissaBits =
+      msdShift < numBitsSignExp ? 0 : msdShift - numBitsSignExp;
+
+  // Number of bits in currDigit that are not part of the mantissa.
+  uint32_t numUnusedBitsInCurrDigit =
+      numBitsSignExp < msdShift ? 0 : numBitsSignExp - msdShift;
+  if (bottomUnsetMantissaBits != 0 && currDigit > src.digits) {
+    // The mantissa still has bottomUnsetMantissaBits unset bits. Extract those
+    // from currDigit.
+    --currDigit;
+
+    // Copy the upper bottomUnsetMantissaBits bits from currDigit to the lower
+    // bottomUnsetMantissaBits bits in the mantissa.
+    mantissa |= *currDigit >> (BigIntDigitSizeInBits - bottomUnsetMantissaBits);
+
+    // There are still left-over bits in currDigit, and those should be used for
+    // rounding.
+    numUnusedBitsInCurrDigit = BigIntDigitSizeInBits - bottomUnsetMantissaBits;
+
+    // No more unset bits in the mantissa.
+    bottomUnsetMantissaBits = 0;
+  }
+
+  // The mantissa is built, now we round it up if needed. The idea is to round
+  // the number mmmm...mmmm * (2 ** exp) according to M and nnnn...nnnn. Thus,
+  // rounding up is needed if he most significant bit not in the mantissa
+  // (MSBNITM) is 1 and
+  //
+  //   1. the low-order-bits are not zero; or
+  //   2. the mantissa's least significant digit is one.
+  //
+  // This is equivalent to rounding,
+  //   a. 155.4 to 155;
+  //   b. 155.6 to 156; and
+  //   c. 155.5 to 156.
+  if (roundMantissaUp(
+          mantissa,
+          src.digits,
+          currDigit,
+          bottomUnsetMantissaBits,
+          numUnusedBitsInCurrDigit)) {
+    // Rounding the result up means incrementing the mantissa by 1.
+    if (++mantissa == 1ull << 52) {
+      // The incremented mantissa is too large, so we need to increment the
+      // exponent for the number.
+      mantissa = 0;
+      if (++exp > std::numeric_limits<double>::max_exponent - 1) {
+        // Incrementing the exponent can cause an overflow, meaning the bigint
+        // should be converted to (-)Inf
+        dst = isSrcNegative ? -std::numeric_limits<double>::infinity()
+                            : std::numeric_limits<double>::infinity();
+        return OperationStatus::RETURNED;
+      }
+    }
+  }
+
+  // Now construct the resulting floating point value.
+  // Sign is the left-most bit.
+  const uint64_t sign =
+      isSrcNegative ? (1ull << (sizeof(double) * 8 - 1)) : 0ull;
+  // Exponent is 1023-biased, and shifted left of the mantissa.
+  static constexpr uint64_t bias = 0x3FFull;
+  const uint64_t exponent = (exp + bias) << mantissaSizeInBits;
+  const uint64_t number = sign | exponent | mantissa;
+  dst = llvh::bit_cast<double>(number);
+  assert(!std::isnan(dst) && "BigInt to number should return a number!");
+  return OperationStatus::RETURNED;
 }
 
 namespace {
@@ -902,40 +1183,6 @@ bool isSingleDigitTruncationLossless(
       (src.numDigits == 2 && src.digits[1] == 0);
 }
 
-namespace {
-/// Helper adapter for calling getSignExtValue with *BigIntRefs.
-template <typename AnyBigIntRef>
-BigIntDigitType getBigIntRefSignExtValue(const AnyBigIntRef &src) {
-  return src.numDigits == 0
-      ? static_cast<BigIntDigitType>(0)
-      : getSignExtValue<BigIntDigitType>(src.digits[src.numDigits - 1]);
-}
-
-/// Copies \p src's digits to \p dst's, which must have at least
-/// as many digits as \p src. Sign-extends dst to fill \p dst.numDigits.
-OperationStatus initNonCanonicalWithReadOnlyBigInt(
-    MutableBigIntRef &dst,
-    const ImmutableBigIntRef &src) {
-  // ensure dst is large enough
-  if (dst.numDigits < src.numDigits) {
-    return OperationStatus::DEST_TOO_SMALL;
-  }
-
-  // now copy src digits to dst.
-  const uint32_t digitsToCopy = src.numDigits;
-  const uint32_t bytesToCopy = digitsToCopy * BigIntDigitSizeInBytes;
-  memcpy(dst.digits, src.digits, bytesToCopy);
-
-  // and finally size-extend dst to its size.
-  const uint32_t digitsToSet = dst.numDigits - digitsToCopy;
-  const uint32_t bytesToSet = digitsToSet * BigIntDigitSizeInBytes;
-  const BigIntDigitType signExtValue = getBigIntRefSignExtValue(src);
-  memset(dst.digits + digitsToCopy, signExtValue, bytesToSet);
-
-  return OperationStatus::RETURNED;
-}
-} // namespace
-
 OperationStatus
 asUintNResultSize(uint64_t n, ImmutableBigIntRef src, uint32_t &resultSize) {
   static_assert(
@@ -1406,29 +1653,6 @@ uint32_t multiplyResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
   return (!lhs.numDigits || !rhs.numDigits) ? 0
                                             : lhs.numDigits + rhs.numDigits + 1;
 }
-
-namespace {
-/// \return dst = -src without worrying about negative integer negation
-/// overflow.
-std::tuple<OperationStatus, ImmutableBigIntRef> copyAndNegate(
-    MutableBigIntRef dst,
-    ImmutableBigIntRef src) {
-  auto res = initNonCanonicalWithReadOnlyBigInt(dst, src);
-  if (LLVM_UNLIKELY(res != OperationStatus::RETURNED)) {
-    return std::make_tuple(res, ImmutableBigIntRef{});
-  }
-
-  // Can't call unaryMinus directly as that API checks for negation overflow.
-  llvh::APInt::tcNegate(dst.digits, dst.numDigits);
-
-  // Still return a canonical bigint.
-  ensureCanonicalResult(dst);
-
-  // N.B.: numDigits could have been modified in ensureCanonicalResult.
-  return std::make_tuple(
-      OperationStatus::RETURNED, ImmutableBigIntRef{dst.digits, dst.numDigits});
-}
-} // namespace
 
 OperationStatus
 multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
@@ -2015,7 +2239,8 @@ static std::tuple<uint32_t, bool> getShiftAmountAndSign(
     // shiftAmnt is outside of the
     // [MinNegativeShiftAmountInBits, MaxPositiveShiftAmountInBits]; thus return
     // a really large shift amount.
-    return std::make_tuple(reallyLargeShiftAmount, shiftAmntIsNeg);
+    return std::make_tuple(
+        static_cast<uint32_t>(reallyLargeShiftAmount), shiftAmntIsNeg);
   }
 
   const SignedBigIntDigitType sa = (shiftAmnt.numDigits == 0)
@@ -2026,7 +2251,8 @@ static std::tuple<uint32_t, bool> getShiftAmountAndSign(
        shiftAmnt.digits[0] != std::numeric_limits<BigIntDigitType>::min()) &&
       "shiftAmnt is MIN_INT, hence -signedShiftAmnt is MIN_INT");
   // Always return a positive result -- thus negate sa if shiftAmnt is negative.
-  return std::make_tuple(shiftAmntIsNeg ? -sa : sa, shiftAmntIsNeg);
+  return std::make_tuple(
+      static_cast<uint32_t>(shiftAmntIsNeg ? -sa : sa), shiftAmntIsNeg);
 }
 
 } // namespace

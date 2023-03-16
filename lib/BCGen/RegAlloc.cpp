@@ -16,6 +16,7 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <queue>
 
 #define DEBUG_TYPE "regalloc"
@@ -378,6 +379,28 @@ void RegisterAllocator::calculateGlobalLiveness(ArrayRef<BasicBlock *> order) {
 Interval &RegisterAllocator::getInstructionInterval(Instruction *I) {
   auto idx = getInstructionNumber(I);
   return instructionInterval_[idx];
+}
+
+Register RegisterAllocator::getRegisterForInstructionAt(
+    Instruction *Value,
+    Instruction *At) {
+  if (hasInstructionNumber(Value) && hasInstructionNumber(At)) {
+    Register valueReg = getRegister(Value);
+    unsigned loc = getInstructionNumber(At);
+    if (valueReg.isValid()) {
+      // Check all of valueReg's intervals, and see if any of those contain loc.
+      const Interval &i = getInstructionInterval(Value);
+      auto itBegin = i.segments_.begin(), itEnd = i.segments_.end();
+      if (std::find_if(itBegin, itEnd, [loc](const Segment &s) {
+            return s.contains(loc);
+          })) {
+        return valueReg;
+      }
+    }
+  }
+
+  // Value is not available at At; return an invalid register.
+  return Register{};
 }
 
 bool RegisterAllocator::isManuallyAllocatedInterval(Instruction *I) {
@@ -924,6 +947,90 @@ unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
 
 bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
   return LHS.getIndex() == RHS.getIndex();
+}
+
+namespace {
+static bool preallocateScopeRegisters(const Context &c) {
+  return c.getDebugInfoSetting() == DebugInfoSetting::ALL;
+}
+} // namespace
+
+ScopeRegisterAnalysis::ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA)
+    : RA_(RA) {
+  // Initialize the ScopeDesc -> ScopeCreationInst map; if emitting full debug
+  // info, scopeCreationInsts will be used to reserve/pre-allocate the
+  // environment registers for scopes in F.
+  llvh::SmallVector<Value *, 4> scopeCreationInsts;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (llvh::isa<HBCResolveEnvironment>(I)) {
+        // HBCResolveEnvironment instructions are used to fetch an environment
+        // outside of F. The debugger doesn't need access to these "resolved"
+        // environment.
+        continue;
+      } else if (auto *SCI = llvh::dyn_cast<ScopeCreationInst>(&I)) {
+        assert(
+            SCI->getCreatedScopeDesc()->getFunction() == F &&
+            "ScopeCreationInst that is creating a scope of another function");
+        scopeCreationInsts_[SCI->getCreatedScopeDesc()] = SCI;
+        if (preallocateScopeRegisters(F->getContext())) {
+          LLVM_DEBUG(
+              llvh::dbgs() << "Reserving register for ScopeCreationInst in "
+                           << F->getOriginalOrInferredName() << "\n");
+          scopeCreationInsts.push_back(SCI);
+        }
+      }
+    }
+  }
+
+  if (!scopeCreationInsts.empty()) {
+    RA_.reserve(scopeCreationInsts);
+  }
+}
+
+std::pair<Register, ScopeDesc *> ScopeRegisterAnalysis::registerAndScopeAt(
+    Instruction *Value,
+    ScopeCreationInst *SCI) {
+  // If SCI's value is available in a register, ensure that the register is
+  // holding SCI's result at loc.
+  Register sciReg = RA_.getRegisterForInstructionAt(Value, SCI);
+  if (sciReg.isValid()) {
+    return std::make_pair(sciReg, SCI->getCreatedScopeDesc());
+  }
+
+  // sciReg is not alive at Value, so try to see if SCI's parent scope is.
+  auto parentIt =
+      scopeCreationInsts_.find(SCI->getCreatedScopeDesc()->getParent());
+  if (parentIt == scopeCreationInsts_.end()) {
+    // SCI's Parent scope is not available in any register.
+    return std::make_pair(Register{}, nullptr);
+  }
+
+  // Try again, this time on SCI's parent Environment.
+  return registerAndScopeAt(Value, parentIt->second);
+}
+
+std::pair<Register, ScopeDesc *>
+ScopeRegisterAnalysis::registerAndScopeForInstruction(Instruction *Inst) {
+  if (ScopeDesc *originalScope = Inst->getSourceLevelScope()) {
+    auto sciIt = scopeCreationInsts_.find(originalScope);
+    if (sciIt != scopeCreationInsts_.end()) {
+      ScopeCreationInst *originalScopeCreation = sciIt->second;
+      if (!preallocateScopeRegisters(Inst->getContext())) {
+        return registerAndScopeAt(Inst, originalScopeCreation);
+      }
+      // Use the pre-allocated registers. This is needed because RA_ could have
+      // decided to use fast allocation, in which case instructions won't be
+      // numbered (and intervals won't be computed), meaning registerAndScopeAt
+      // above will not find the scope register.
+      assert(RA_.isAllocated(originalScopeCreation) && "should be allocated");
+      Register sciReg = RA_.getRegister(originalScopeCreation);
+      assert(sciReg.isValid() && "scope register should be valid.");
+      return std::make_pair(sciReg, originalScope);
+    }
+  }
+
+  return std::make_pair(Register{}, nullptr);
 }
 
 #undef DEBUG_TYPE

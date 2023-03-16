@@ -206,7 +206,7 @@ class JSError final : public JSObject {
   ///    JSError.
   /// 2. Otherwise, return \t targetHandle cast to JSError.
   /// Throws if any cast or property access fails.
-  static CallResult<Handle<JSError>> getErrorFromStackTarget_RJS(
+  static CallResult<Handle<JSError>> getErrorFromStackTarget(
       Runtime &runtime,
       Handle<JSObject> targetHandle);
 };

@@ -8,7 +8,7 @@
  */
 
 import React, {Suspense, lazy, useRef, useEffect, useCallback} from 'react';
-import useThemeContext from '@theme/hooks/useThemeContext';
+import { useColorMode } from '@docusaurus/theme-common';
 import Spinner from '../Spinner';
 import styles from './styles.module.css';
 
@@ -40,7 +40,7 @@ const Placeholder = () => (
 );
 
 function Code(props) {
-  const {isDarkTheme} = useThemeContext();
+  const isDarkTheme = useColorMode().colorMode === "dark";
   const editorRef = useRef(null);
 
   useEffect(() => {
