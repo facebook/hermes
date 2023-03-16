@@ -93,7 +93,15 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
           "add an explicit constructor");
     }
     Function *func;
-    {
+
+    // Use the compiledEntities_ cache even though we're not enqueuing a
+    // function compilation (because the function is trivial).
+    // This way we avoid making multiple implicit constructors for the same
+    // classType, allowing us to populate the target operand of ConstructInsts.
+    if (Value *found =
+            findCompiledEntity(node, ExtraKey::ImplicitClassConstructor)) {
+      func = llvh::cast<Function>(found);
+    } else {
       IRBuilder::SaveRestore saveState{Builder};
       func = Builder.createFunction(
           consName,
@@ -104,7 +112,10 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
               .alwaysInline = false});
       Builder.setInsertionBlock(Builder.createBasicBlock(func));
       Builder.createReturnInst(Builder.getLiteralUndefined());
+      CompiledMapKey key(node, (unsigned)ExtraKey::ImplicitClassConstructor);
+      compiledEntities_[key] = func;
     }
+
     consFunction = Builder.createCreateFunctionInst(func);
   }
   emitStore(Builder, consFunction, getDeclData(decl), true);

@@ -401,6 +401,7 @@ class ESTreeIRGen {
     Normal,
     GeneratorOuter,
     AsyncOuter,
+    ImplicitClassConstructor,
   };
 
   /// Map from an AST node to a "compiled entity", which is usually a Function.
