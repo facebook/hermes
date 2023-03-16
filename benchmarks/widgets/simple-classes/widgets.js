@@ -258,6 +258,7 @@ class ComponentPair {
   value: Component;
 
   constructor(key: number, value: Component) {
+    'inline'
     this.key = key;
     this.value = value;
   }
@@ -281,6 +282,7 @@ class SceneDiff {
     createdComponents: ComponentPair[],
     deletedComponents: ComponentPair[],
   ) {
+    'inline'
     this.createdEntities = createdEntities;
     this.deletedEntities = deletedEntities;
     this.createdComponents = createdComponents;
@@ -431,6 +433,7 @@ function runTest(includeTreeSerialization: boolean): ?SceneDiff {
 class NumberComponent {
   x: number;
   constructor(x: number) {
+    'inline'
     this.x = x;
   }
 }
@@ -438,6 +441,7 @@ class NumberComponent {
 class StringComponent {
   x: string;
   constructor(x: string) {
+    'inline'
     this.x = x;
   }
 }
@@ -461,6 +465,7 @@ class Context {
   childCounter: number;
 
   constructor(key: string) {
+    'inline'
     this.key = key;
     this.childCounter = 0;
   }
@@ -474,6 +479,7 @@ class VirtualEntity {
   value: Component[];
 
   constructor(key: number, value: Component[]) {
+    'inline'
     this.key = key;
     this.value = value;
   }
@@ -506,6 +512,7 @@ class RenderNode {
     components: Component[],
     children: ?(RenderNode[]),
   ) {
+    'inline'
     this.key = key;
     this.id = id;
     this.components = components;
@@ -536,6 +543,7 @@ class RenderData {
   buttonSize: number;
 
   constructor(modelPath: string, buttonSize: number) {
+    'inline'
     this.modelPath = modelPath;
     this.buttonSize = buttonSize;
   }
