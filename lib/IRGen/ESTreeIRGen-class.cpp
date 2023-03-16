@@ -62,15 +62,27 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     if (node->_superClass) {
       // Attempt to extract the super() call from the first statement of the
       // block.
-      ESTree::CallExpressionNode *superCall =
-          llvh::dyn_cast_or_null<ESTree::CallExpressionNode>(
-              llvh::dyn_cast<ESTree::ExpressionStatementNode>(
-                  &llvh::cast<ESTree::BlockStatementNode>(
-                       llvh::cast<ESTree::FunctionExpressionNode>(
-                           consMethod->_value)
-                           ->_body)
-                       ->_body.front())
-                  ->_expression);
+      ESTree::NodeList &blockStmtBody =
+          llvh::cast<ESTree::BlockStatementNode>(
+              llvh::cast<ESTree::FunctionExpressionNode>(consMethod->_value)
+                  ->_body)
+              ->_body;
+      ESTree::Node *firstStatement = nullptr;
+      for (ESTree::Node &it : blockStmtBody) {
+        firstStatement = &it;
+        auto *exprSt = llvh::dyn_cast<ESTree::ExpressionStatementNode>(&it);
+        // Skip directives.
+        if (!exprSt || !exprSt->_directive) {
+          break;
+        }
+      }
+      ESTree::ExpressionStatementNode *exprStatement =
+          llvh::dyn_cast_or_null<ESTree::ExpressionStatementNode>(
+              firstStatement);
+      ESTree::CallExpressionNode *superCall = exprStatement
+          ? llvh::dyn_cast<ESTree::CallExpressionNode>(
+                exprStatement->_expression)
+          : nullptr;
       if (!superCall || !llvh::isa<ESTree::SuperNode>(superCall->_callee)) {
         Mod->getContext().getSourceErrorManager().error(
             node->getSourceRange(),

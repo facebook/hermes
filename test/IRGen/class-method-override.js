@@ -17,6 +17,7 @@ class C {
 
 class D extends C {
   constructor() {
+    'use strict'
     super();
   }
   override(): number {
