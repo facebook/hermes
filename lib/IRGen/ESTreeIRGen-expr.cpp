@@ -1926,7 +1926,21 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
       for (auto &arg : N->_arguments)
         args.push_back(genExpression(&arg));
 
-      Builder.createConstructInst(callee, newInst, args);
+      // If we know the ClassType but it hasn't been populated in
+      // classConstructors_ yet, then it must occur later in the same function.
+      // If it was created in a surrounding function and captured, the function
+      // queueing mechanism would result in compiling this ConstructInst after
+      // it anyway.
+      // So populate the target when we've already made the Function for the
+      // corresponding ClassType.
+      auto it = classConstructors_.find(classType);
+      if (it != classConstructors_.end()) {
+        Value *target = it->second;
+        Builder.createConstructInst(
+            callee, target, Builder.getEmptySentinel(), newInst, args);
+      } else {
+        Builder.createConstructInst(callee, newInst, args);
+      }
     }
     return newInst;
   }

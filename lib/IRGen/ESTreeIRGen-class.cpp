@@ -120,6 +120,16 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   }
   emitStore(Builder, consFunction, getDeclData(decl), true);
 
+  if (auto *createCallable =
+          llvh::dyn_cast<BaseCreateCallableInst>(consFunction)) {
+    auto [it, inserted] = classConstructors_.try_emplace(
+        classType, createCallable->getFunctionCode());
+    (void)it;
+    assert(
+        it->second == createCallable->getFunctionCode() &&
+        "redefinition of constructor function");
+  }
+
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
   auto *homeObject = emitClassAllocation(

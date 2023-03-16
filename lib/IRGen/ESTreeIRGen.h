@@ -417,6 +417,10 @@ class ESTreeIRGen {
   /// so it is eventually compiled.
   llvh::DenseMap<CompiledMapKey, Value *> compiledEntities_{};
 
+  /// Map from a class type to the constructor function for it.
+  /// Used for populating Construct targets.
+  llvh::DenseMap<flow::ClassType *, Function *> classConstructors_{};
+
   /// A queue of "entities" that have been forward declared and mapped in
   /// \c compiledEntities_, but need to be actually compiled. This makes the
   /// compiler non-recursive.
