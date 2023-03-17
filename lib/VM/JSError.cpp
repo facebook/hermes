@@ -738,6 +738,8 @@ static const CodeBlock *getLeafCodeBlock(
     }
     if (auto *asBoundFunction = dyn_vmcast<const BoundFunction>(callable)) {
       callable = asBoundFunction->getTarget(runtime);
+    } else {
+      break;
     }
   }
 
@@ -750,13 +752,13 @@ void JSError::popFramesUntilInclusive(
     Handle<Callable> callableHandle) {
   assert(
       selfHandle->stacktrace_ && "Cannot pop frames when stacktrace_ is null");
+  // By default, assume we won't encounter the sentinel function and skip the
+  // entire stack.
+  selfHandle->firstExposedFrameIndex_ = selfHandle->stacktrace_->size();
   auto codeBlock = getLeafCodeBlock(callableHandle, runtime);
   if (!codeBlock) {
     return;
   }
-  // By default, assume we won't encounter the sentinel function and skip the
-  // entire stack.
-  selfHandle->firstExposedFrameIndex_ = selfHandle->stacktrace_->size();
   for (size_t index = 0, max = selfHandle->stacktrace_->size(); index < max;
        index++) {
     const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
