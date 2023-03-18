@@ -57,6 +57,7 @@ OutputFormatKind toOutputFormatKind(OutputLevelKind level) {
     case OutputLevelKind::C:
     case OutputLevelKind::Asm:
     case OutputLevelKind::Obj:
+    case OutputLevelKind::SharedObj:
     case OutputLevelKind::Executable:
     case OutputLevelKind::Run:
       return OutputFormatKind::DumpBytecode;

@@ -17,6 +17,8 @@
 #include "llvh/Support/Program.h"
 #include "llvh/Support/Signals.h"
 
+#include <dlfcn.h>
+
 #define DEBUG_TYPE "shermesc"
 
 using namespace hermes;
@@ -206,6 +208,14 @@ bool invokeCC(
     case OutputLevelKind::Obj:
       args.emplace_back("-c");
       break;
+    case OutputLevelKind::SharedObj:
+      args.emplace_back("-fPIC");
+#ifdef __APPLE__
+      args.emplace_back("-dynamiclib");
+#else
+      args.emplace_back("-shared");
+#endif
+      break;
     case OutputLevelKind::Executable:
       break;
     default:
@@ -249,7 +259,8 @@ bool invokeCC(
   }
 
   // Append the library paths and library.
-  if (outputLevel == OutputLevelKind::Executable) {
+  if (outputLevel == OutputLevelKind::Executable ||
+      outputLevel == OutputLevelKind::SharedObj) {
     if (cfg.ldflags.empty()) {
       for (const auto &s : cfg.hermesLibPath)
         args.push_back("-L" + s);
@@ -334,7 +345,8 @@ bool compileFromC(
   // If an output file name is not specified, derive it from the input.
   llvh::SmallString<32> outputPathBuf{};
   if (outputFilename.empty()) {
-    if (outputLevel == OutputLevelKind::Executable) {
+    if (outputLevel == OutputLevelKind::Executable ||
+        outputLevel == OutputLevelKind::SharedObj) {
       outputFilename = "a.out";
     } else {
       assert(
@@ -409,36 +421,37 @@ bool execute(
     ::remove(tmpPath.c_str());
   });
 
+  // Produce a shared library that still contains the main function.
   if (!compileFromC(
           context,
           M,
           params,
-          OutputLevelKind::Executable,
+          OutputLevelKind::SharedObj,
           inputFilename,
           tmpPath)) {
     return false;
   }
 
-  llvh::SmallVector<llvh::StringRef, 1> args{};
-  args.emplace_back(tmpPath);
-  for (const auto &s : execArgs)
-    args.emplace_back(s);
+  llvh::SmallVector<const char *, 1> args{};
+  // Add the library at the start as a dummy argument, since the argument parser
+  // will ignore the first argument.
+  args.emplace_back(tmpPath.c_str());
+  for (auto &s : execArgs)
+    args.emplace_back(s.c_str());
 
   if (params.verbosity) {
+    llvh::errs() << "Running library with args:";
     for (size_t i = 0; i != args.size(); ++i)
-      llvh::errs() << (i ? " " : "") << args[i];
+      llvh::errs() << " " << args[i];
     llvh::errs() << "\n";
   }
 
-  std::string errMsg;
-  if (llvh::sys::ExecuteAndWait(
-          tmpPath, args, llvh::None, {}, 0, 0, &errMsg, nullptr) == 0) {
-    return true;
-  }
-
-  if (!errMsg.empty())
-    llvh::errs() << errMsg << "\n";
-  return false;
+  // Open the produced shared library and invoke main with args.
+  void *handle = dlopen(tmpPath.c_str(), RTLD_LAZY);
+  // Note that main technically takes a non-const char**, but we know it is
+  // never modified.
+  auto *main = (int (*)(int, const char **))dlsym(handle, "main");
+  return !main(args.size(), args.data());
 }
 
 } // namespace

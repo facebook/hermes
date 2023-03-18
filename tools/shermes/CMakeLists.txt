@@ -21,7 +21,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
 add_hermes_tool(shermes
   shermes.cpp
   compile.cpp compile.h
-  LINK_LIBS hermescompiler)
+  LINK_LIBS hermescompiler dl)
 
 # The compiler is used as part of the build of the VM.
 # During cross-compilation, the compiler needs to be built for the host system,

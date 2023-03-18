@@ -26,6 +26,7 @@ enum class OutputLevelKind {
   C,
   Asm,
   Obj,
+  SharedObj,
   Executable,
   Run,
 };
