@@ -140,6 +140,7 @@ void analyzeFunctionCallsites(Function *F) {
 
     if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
       // Ignore uses as call target.
+      (void)call;
       assert(
           call->getTarget() == F &&
           "invalid use of Function as operand of call");

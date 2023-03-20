@@ -45,6 +45,7 @@ static llvh::SmallSetVector<BasicBlock *, 4> orderDFS(Function *F) {
 static bool hasKnownCallsites(Function *F) {
   for (Instruction *user : F->getUsers()) {
     if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
+      (void)call;
       assert(
           call->getTarget() == F &&
           "invalid usage of Function as operand of BaseCallInst");

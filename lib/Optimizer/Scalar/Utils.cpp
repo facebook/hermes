@@ -95,6 +95,7 @@ bool hermes::isConstructionSetup(Value *V, Value *closure) {
           return true;
 
   if (auto *CTI = llvh::dyn_cast<CreateThisInst>(V)) {
+    (void)CTI;
     assert(
         CTI->getClosure() == closure &&
         "Closure must be closure argument to CreateThisInst");
