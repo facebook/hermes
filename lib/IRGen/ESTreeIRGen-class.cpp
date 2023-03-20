@@ -121,7 +121,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
           true,
           CustomDirectives{
               .sourceVisibility = SourceVisibility::Default,
-              .alwaysInline = false});
+              .alwaysInline = true});
       Builder.setInsertionBlock(Builder.createBasicBlock(func));
       Builder.createReturnInst(Builder.getLiteralUndefined());
       CompiledMapKey key(node, (unsigned)ExtraKey::ImplicitClassConstructor);

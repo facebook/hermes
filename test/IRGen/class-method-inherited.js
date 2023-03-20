@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -typed -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -fno-inline -typed -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 'use strict';
 
