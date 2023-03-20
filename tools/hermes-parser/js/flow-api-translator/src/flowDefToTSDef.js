@@ -466,56 +466,51 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             // only Identifiers can be handled here.
             if (referencedId.type === 'Identifier') {
               const exportedVar = topScope.set.get(referencedId.name);
-              if (exportedVar == null || exportedVar.defs.length !== 1) {
-                throw unexpectedTranslationError(
-                  referencedId,
-                  `Unable to find exported variable ${referencedId.name}`,
-                );
-              }
+              if (exportedVar != null && exportedVar.defs.length === 1) {
+                const def = exportedVar.defs[0];
+                switch (def.type) {
+                  case 'ImportBinding': {
+                    // `import type { Wut } from 'mod'; declare export default Wut;`
+                    // `import { type Wut } from 'mod'; declare export default Wut;`
+                    // these cases should be wrapped in a variable because they're exporting a type, not a value
+                    const specifier = def.node;
+                    if (
+                      specifier.importKind === 'type' ||
+                      specifier.parent.importKind === 'type'
+                    ) {
+                      // fallthrough to the "default" handling
+                      break;
+                    }
 
-              const def = exportedVar.defs[0];
-              switch (def.type) {
-                case 'ImportBinding': {
-                  // `import type { Wut } from 'mod'; declare export default Wut;`
-                  // `import { type Wut } from 'mod'; declare export default Wut;`
-                  // these cases should be wrapped in a variable because they're exporting a type, not a value
-                  const specifier = def.node;
-                  if (
-                    specifier.importKind === 'type' ||
-                    specifier.parent.importKind === 'type'
-                  ) {
+                    // intentional fallthrough to the "value" handling
+                  }
+                  case 'ClassName':
+                  case 'Enum':
+                  case 'FunctionName':
+                  case 'ImplicitGlobalVariable':
+                  case 'Variable':
+                    // there's already a variable defined to hold the type
+                    return {
+                      type: 'ExportDefaultDeclaration',
+                      declaration: {
+                        type: 'Identifier',
+                        name: referencedId.name,
+                      },
+                      exportKind: 'value',
+                    };
+
+                  case 'CatchClause':
+                  case 'Parameter':
+                  case 'TypeParameter':
+                    throw translationError(
+                      def.node,
+                      `Unexpected variable def type: ${def.type}`,
+                    );
+
+                  case 'Type':
                     // fallthrough to the "default" handling
                     break;
-                  }
-
-                  // intentional fallthrough to the "value" handling
                 }
-                case 'ClassName':
-                case 'Enum':
-                case 'FunctionName':
-                case 'ImplicitGlobalVariable':
-                case 'Variable':
-                  // there's already a variable defined to hold the type
-                  return {
-                    type: 'ExportDefaultDeclaration',
-                    declaration: {
-                      type: 'Identifier',
-                      name: referencedId.name,
-                    },
-                    exportKind: 'value',
-                  };
-
-                case 'CatchClause':
-                case 'Parameter':
-                case 'TypeParameter':
-                  throw translationError(
-                    def.node,
-                    `Unexpected variable def type: ${def.type}`,
-                  );
-
-                case 'Type':
-                  // fallthrough to the "default" handling
-                  break;
               }
             }
 
