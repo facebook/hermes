@@ -328,7 +328,8 @@ static Value *inlineFunction(
 
   // Translate all operands of the passed instruction and store them into
   // translatedOperands[].
-  auto translateOperands = [&](Instruction *I) {
+  auto translateOperands = [&translatedOperands,
+                            &translateOperand](Instruction *I) {
     assert(!llvh::isa<PhiInst>(I) && "phi must be handled specially");
     translatedOperands.clear();
 
