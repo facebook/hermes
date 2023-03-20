@@ -220,23 +220,29 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
     // To find the scope data of a function, we try to locate the
     // CreateFunctionInst that creates this function. The scope of F
     // will be 1 more than the scope depth of the CreateFunctionInst.
-    const BaseCreateLexicalChildInst *Inst = nullptr;
-    for (auto *user : F->getUsers()) {
+    Function *Parent = nullptr;
+    for (Instruction *user : F->getUsers()) {
       if (llvh::isa<BaseCreateLexicalChildInst>(user)) {
-        assert(Inst == nullptr && "Function has multiple create instructions");
-        Inst = llvh::cast<BaseCreateLexicalChildInst>(user);
+        // Found the CreateFunctionInst.
+        // It's possible there are more CreateFunctionInsts for F,
+        // but all instances would occur at the same scope depth
+        // and use the same variables, so it's safe to use the first one here.
+        assert(
+            !Parent ||
+            Parent == user->getParent()->getParent() &&
+                "different parent functions for same Function");
+        Parent = user->getParent()->getParent();
       }
     }
     // Because the calculation is done lazily, any function requested
     // must have a CreateFunctionInst.
-    if (Inst == nullptr) {
+    if (Parent == nullptr) {
       LLVM_DEBUG(
           dbgs() << "Function \"" << F->getInternalName()
                  << "\" has no CreateFunctionInst\n");
       lexicalScopeMap_[F] = ScopeData::orphan();
       return lexicalScopeMap_[F];
     }
-    Function *Parent = Inst->getParent()->getParent();
     ScopeData parentData = calculateFunctionScopeData(Parent);
     if (!parentData.orphaned) {
       lexicalScopeMap_[F] = ScopeData(Parent, parentData.depth + 1);
