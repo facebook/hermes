@@ -9,19 +9,12 @@
 #define HERMES_BCGEN_SHREGALLOC_H
 
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
-#include "hermes/IR/IR.h"
+#include "hermes/IR/Instrs.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
-
-namespace hermes {
-class Function;
-class Instruction;
-class PhiInst;
-class BaseCallInst;
-} // namespace hermes
 
 namespace hermes::sh {
 

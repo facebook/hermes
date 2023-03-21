@@ -8,9 +8,7 @@
 #include "SHRegAlloc.h"
 
 #include "hermes/IR/CFG.h"
-#include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
-#include "hermes/IR/Instrs.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Utils/Dumper.h"
 
