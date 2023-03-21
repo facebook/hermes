@@ -414,11 +414,16 @@ bool execute(
                  << '\n';
     return false;
   }
+
+  bool keepTemp = params.keepTemp == ShermesCompileParams::KeepTemp::on;
   // Don't forget to delete the temporary on exit.
-  llvh::sys::RemoveFileOnSignal(tmpPath);
-  auto removeOnExit = llvh::make_scope_exit([&tmpPath]() {
-    llvh::sys::DontRemoveFileOnSignal(tmpPath);
-    ::remove(tmpPath.c_str());
+  if (!keepTemp)
+    llvh::sys::RemoveFileOnSignal(tmpPath);
+  auto removeOnExit = llvh::make_scope_exit([&tmpPath, keepTemp]() {
+    if (!keepTemp) {
+      llvh::sys::DontRemoveFileOnSignal(tmpPath);
+      ::remove(tmpPath.c_str());
+    }
   });
 
   // Produce a shared library that still contains the main function.
