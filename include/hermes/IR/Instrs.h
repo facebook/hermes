@@ -761,6 +761,9 @@ class BaseCallInst : public Instruction {
   Value *getCallee() const {
     return getOperand(CalleeIdx);
   }
+  void setCallee(Value *v) {
+    setOperand(v, CalleeIdx);
+  }
   /// \return the IR Function that the instruction is calling,
   ///   or EmptySentinel if it's not known at this time.
   Value *getTarget() const {
