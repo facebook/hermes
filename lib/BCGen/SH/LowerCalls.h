@@ -49,10 +49,10 @@ class LowerCalls : public FunctionPass {
           if (llvh::isa<HBCCallNInst>(call) ||
               (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
             auto *imov = builder.createImplicitMovInst(arg);
-            RA_.updateRegister(imov, Register(reg));
+            RA_.updateRegister(imov, Register(RegClass::Local, reg));
           } else {
             auto *mov = builder.createMovInst(arg);
-            RA_.updateRegister(mov, Register(reg));
+            RA_.updateRegister(mov, Register(RegClass::Local, reg));
             call->setArgument(mov, i);
           }
         }

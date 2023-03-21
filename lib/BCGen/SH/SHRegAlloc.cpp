@@ -13,6 +13,8 @@
 #include "hermes/Utils/Dumper.h"
 
 #include "llvh/Support/Debug.h"
+#include "llvh/Support/FormatAdapters.h"
+#include "llvh/Support/FormatVariadic.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <queue>
@@ -55,7 +57,7 @@ Register RegisterFile::allocateRegister() {
     // If all bits are set, create a new register and return it.
     unsigned numRegs = registers.size();
     registers.resize(numRegs + 1, false);
-    Register R = Register(numRegs);
+    Register R = Register(RegClass::Local, numRegs);
     assert(isUsed(R) && "Error allocating a new register.");
     LLVM_DEBUG(llvh::dbgs() << "-- Creating the new register " << R << "\n");
     return R;
@@ -64,7 +66,7 @@ Register RegisterFile::allocateRegister() {
   // Search for a free register to use.
   int i = registers.find_first();
   assert(i >= 0 && "Unexpected failure to allocate a register");
-  Register R(i);
+  Register R(RegClass::Local, (RegIndex)i);
   LLVM_DEBUG(llvh::dbgs() << "-- Assigning the free register " << R << "\n");
   assert(isFree(R) && "Error finding a free register");
   registers.reset(i);
@@ -92,8 +94,9 @@ Register RegisterFile::tailAllocateConsecutive(unsigned n) {
 
   LLVM_DEBUG(
       llvh::dbgs() << "-- Allocated tail consecutive registers of length " << n
-                   << ", starting at " << Register(firstClear) << "\n");
-  return Register(firstClear);
+                   << ", starting at " << Register(RegClass::Local, firstClear)
+                   << "\n");
+  return Register(RegClass::Local, firstClear);
 }
 
 /// \returns true if the PHI node has an external user (that requires a
@@ -814,9 +817,12 @@ struct LivenessRegAllocIRPrinter : IRPrinter {
     auto codeGenOpts = I->getContext().getCodeGenerationSettings();
 
     if (!allocator.isAllocated(I)) {
-      os << "$???";
+      os << llvh::formatv(
+          "{0}", llvh::fmt_align("", llvh::AlignStyle::Left, 9 + 1));
     } else {
-      os << "$" << allocator.getRegister(I);
+      os << llvh::formatv(
+          "${0}",
+          llvh::fmt_align(allocator.getRegister(I), llvh::AlignStyle::Left, 9));
     }
 
     if (!codeGenOpts.dumpOperandRegisters) {
@@ -910,11 +916,17 @@ void SHRegisterAllocator::allocateCallInst(BaseCallInst *I) {
   allocateParameterCount(I->getNumArguments() + CALL_EXTRA_REGISTERS);
 }
 
-llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, const Register &reg) {
+llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
   if (!reg.isValid()) {
-    OS << "Null";
+    OS << "invalid";
   } else {
-    OS << "Reg" << reg.getIndex();
+    switch (reg.getClass()) {
+      case RegClass::Local:
+        OS << "loc" << reg.getIndex();
+        break;
+      case RegClass::_last:
+        llvm_unreachable("invalid register class");
+    }
   }
 
   return OS;

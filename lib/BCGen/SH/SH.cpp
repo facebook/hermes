@@ -288,10 +288,13 @@ class InstrGen {
       for (auto &BB : F_) {
         for (auto &I : BB) {
           if (ra_.isAllocated(&I) && I.hasOutput()) {
+            sh::Register reg = ra_.getRegister(&I);
+            if (reg.getClass() != hermes::sh::RegClass::Local)
+              continue;
             if (!I.getType().isNonPtr()) {
               // Set the bit if I sets the register to a pointer type.
               // Numbers might be pointers, but the stack doesn't use HV32.
-              registerIsPointer_.set(ra_.getRegister(&I).getIndex());
+              registerIsPointer_.set(reg.getIndex());
             }
           }
         }
