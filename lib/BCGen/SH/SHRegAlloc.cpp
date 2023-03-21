@@ -903,19 +903,6 @@ unsigned RegisterAllocator::getInstructionNumber(Instruction *I) {
   return newIdx;
 }
 
-void SHRegisterAllocator::handleInstruction(Instruction *I) {
-  if (auto *CI = llvh::dyn_cast<BaseCallInst>(I))
-    return allocateCallInst(CI);
-}
-
-bool SHRegisterAllocator::hasTargetSpecificLowering(Instruction *I) {
-  return llvh::isa<BaseCallInst>(I);
-}
-
-void SHRegisterAllocator::allocateCallInst(BaseCallInst *I) {
-  allocateParameterCount(I->getNumArguments() + CALL_EXTRA_REGISTERS);
-}
-
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
   if (!reg.isValid()) {
     OS << "invalid";
@@ -923,6 +910,9 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, Register reg) {
     switch (reg.getClass()) {
       case RegClass::Local:
         OS << "loc" << reg.getIndex();
+        break;
+      case RegClass::RegStack:
+        OS << "stack[" << reg.getIndex() << ']';
         break;
       case RegClass::_last:
         llvm_unreachable("invalid register class");

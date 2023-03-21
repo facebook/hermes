@@ -9,7 +9,6 @@
 #define HERMES_BCGEN_SH_LOWERCALLS_H
 
 #include "SHRegAlloc.h"
-#include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
 
@@ -26,6 +25,13 @@ class LowerCalls : public FunctionPass {
     IRBuilder builder(F);
     bool changed = false;
 
+    uint32_t maxArgsRegs = RA_.getMaxArgumentRegisters();
+
+    auto stackReg = [maxArgsRegs](int32_t index) {
+      return sh::Register(
+          RegClass::RegStack, (RegIndex)((int32_t)maxArgsRegs + index));
+    };
+
     for (auto &BB : *F) {
       for (auto &I : BB) {
         auto *call = llvh::dyn_cast<BaseCallInst>(&I);
@@ -35,24 +41,48 @@ class LowerCalls : public FunctionPass {
         builder.setInsertionPoint(call);
         changed = true;
 
-        auto reg = RA_.getLastRegister().getIndex() -
-            hbc::HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
+        if (llvh::isa<ConstructInst>(call)) {
+          // If this is a constructor call, setup new.target.
+          RA_.updateRegister(
+              builder.createMovInst(call->getCallee()),
+              stackReg(hbc::StackFrameLayout::NewTarget));
+        } else if (llvh::isa<CallInst>(call)) {
+          // If this is a normal call, invalidate new.target.
+          RA_.updateRegister(
+              builder.createImplicitMovInst(builder.getLiteralUndefined()),
+              stackReg(hbc::StackFrameLayout::NewTarget));
+        } else if (llvh::isa<CallBuiltinInst>(call)) {
+          // If this is a CallBuiltin, invalidate new.target and the callee.
+          RA_.updateRegister(
+              builder.createImplicitMovInst(builder.getLiteralUndefined()),
+              stackReg(hbc::StackFrameLayout::NewTarget));
+          RA_.updateRegister(
+              builder.createImplicitMovInst(builder.getLiteralEmpty()),
+              stackReg(hbc::StackFrameLayout::CalleeClosureOrCB));
+        }
 
-        for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
+        // If this is a normal or constructor call, populate the callee.
+        if (llvh::isa<ConstructInst>(call) || llvh::isa<CallInst>(call)) {
+          auto *mov = builder.createMovInst(call->getCallee());
+          RA_.updateRegister(
+              mov, stackReg(hbc::StackFrameLayout::CalleeClosureOrCB));
+          call->setCallee(mov);
+        }
+
+        RegIndex reg = maxArgsRegs + hbc::StackFrameLayout::ThisArg;
+
+        for (unsigned i = 0, e = call->getNumArguments(); i < e; ++i, --reg) {
           // If this is a Call instruction, emit explicit Movs to the argument
-          // registers. If this is a CallN instruction, emit ImplicitMovs
-          // instead, to express that these registers get written to by the
-          // CallN, even though they are not the destination. Lastly, if this is
-          // argument 0 of CallBuiltinInst emit ImplicitMov to encode that the
-          // "this" register is implicitly set to undefined.
+          // registers.
           Value *arg = call->getArgument(i);
-          if (llvh::isa<HBCCallNInst>(call) ||
-              (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
+          if (i == 0 && llvh::isa<CallBuiltinInst>(call)) {
+            // If this is argument 0 of CallBuiltinInst, emit ImplicitMov to
+            // encode that the "this" register is implicitly set to undefined.
             auto *imov = builder.createImplicitMovInst(arg);
-            RA_.updateRegister(imov, Register(RegClass::Local, reg));
+            RA_.updateRegister(imov, Register(RegClass::RegStack, reg));
           } else {
             auto *mov = builder.createMovInst(arg);
-            RA_.updateRegister(mov, Register(RegClass::Local, reg));
+            RA_.updateRegister(mov, Register(RegClass::RegStack, reg));
             call->setArgument(mov, i);
           }
         }

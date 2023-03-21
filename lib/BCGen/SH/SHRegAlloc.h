@@ -22,6 +22,8 @@ namespace hermes::sh {
 enum class RegClass : uint8_t {
   /// A native local.
   Local,
+  /// An entry in the VM register stack.
+  RegStack,
   /// The last entry.
   _last,
 };
@@ -464,52 +466,47 @@ class RegisterAllocator {
   }
 };
 
+/// Record the number of outgoing register stack entries needed for calls.
 class SHRegisterAllocator : public RegisterAllocator {
- private:
-  unsigned max_parameter_count_ = 0;
-  unsigned spill_count_ = 0;
-
- protected:
-  void handleInstruction(Instruction *I) override;
-  void allocateCallInst(BaseCallInst *I);
-  bool hasTargetSpecificLowering(Instruction *I) override;
+  /// Record the maximum number of register stack entries need to perform a
+  /// legacy call using the register stack. This includes the number of
+  /// arguments plus the CALL_EXTRA_REGISTERS. It is 0 if no calls are made.
+  ///
+  /// Note that nested calls are linearized, in other words,
+  /// \code
+  ///   a(p1, b(p4, p5), p3)
+  /// \endcode
+  /// is lowered as
+  /// \code
+  ///   tmp = b(p4, p5)
+  ///   a(p1, tmp, p3)
+  /// \endcode
+  RegIndex maxArgumentRegisters_ = 0;
 
  public:
   using RegisterType = Register;
+  using RegisterAllocator::RegisterAllocator;
 
-  /// Number of additional registers that must be allocated to the call
-  /// instruction, after the argument registers, for internal VM usage (the VM
-  /// builds the call frame in those additional register slots).
-  static constexpr unsigned CALL_EXTRA_REGISTERS =
-      hbc::StackFrameLayout::CallerExtraRegistersAtEnd;
-
-  explicit SHRegisterAllocator(Function *func) : RegisterAllocator(func) {}
-
-  Register getLastRegister() {
-    return Register(RegClass::Local, getMaxRegisterUsage() - 1);
+  /// Return the number of register stack entries that need to be reserved
+  /// for outgoing call arguments.
+  uint32_t getMaxArgumentRegisters() const {
+    return maxArgumentRegisters_;
   }
 
-  /// Get the maximum number of registers used.
-  unsigned getMaxRegisterUsage() override {
-    return getMaxInstructionRegister() + spill_count_ + max_parameter_count_;
+ protected:
+  bool hasTargetSpecificLowering(Instruction *I) override {
+    return llvh::isa<BaseCallInst>(I);
   }
-
-  /// Get the maximum register allocated to regular instructions
-  /// (i.e. not including parameter lists or spilling).
-  unsigned getMaxInstructionRegister() {
-    return RegisterAllocator::getMaxRegisterUsage();
-  }
-
-  void allocateParameterCount(unsigned count) {
-    if (max_parameter_count_ < count) {
-      max_parameter_count_ = count;
+  void handleInstruction(Instruction *I) override {
+    if (auto *CI = llvh::dyn_cast<BaseCallInst>(I)) {
+      // For calls, we need to record the maximum number of register stack
+      // entries needed.
+      static_assert(sizeof(RegIndex) == sizeof(unsigned));
+      unsigned num = CI->getNumArguments() +
+          hbc::StackFrameLayout::CallerExtraRegistersAtEnd;
+      if (num > maxArgumentRegisters_)
+        maxArgumentRegisters_ = num;
     }
-  }
-  void allocateSpillTempCount(unsigned count) {
-    spill_count_ = count;
-  }
-  unsigned getSpillOffset() {
-    return RegisterAllocator::getMaxRegisterUsage();
   }
 };
 

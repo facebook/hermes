@@ -368,10 +368,14 @@ class InstrGen {
 
   /// Helper to generate a value in a register,
   void generateRegister(sh::Register reg) {
-    if (registerIsPointer(reg.getIndex())) {
-      os_ << "locals.t" << reg.getIndex();
+    if (reg.getClass() == sh::RegClass::Local) {
+      if (registerIsPointer(reg.getIndex()))
+        os_ << "locals.t" << reg.getIndex();
+      else
+        os_ << "r" << reg.getIndex();
     } else {
-      os_ << "r" << reg.getIndex();
+      os_ << "frame[" << (hbc::StackFrameLayout::FirstLocal + reg.getIndex())
+          << ']';
     }
   }
 
@@ -1158,7 +1162,8 @@ class InstrGen {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_catch(shr, (SHLocals*)&locals, frame, "
-        << ra_.getMaxRegisterUsage() << ");\n";
+        << (ra_.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
+        << ");\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
     unimplemented(inst);
@@ -1468,33 +1473,7 @@ class InstrGen {
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     unimplemented(inst);
   }
-  void setupCallStack(BaseCallInst &inst, bool populateCallee = true) {
-    // Populate the outgoing registers that will not be set by _sh_ljs_call or
-    // _sh_ljs_construct.
-    if (populateCallee) {
-      auto closureRegIdx =
-          ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::CalleeClosureOrCB;
-      os_ << "  frame[" << closureRegIdx << "] = ";
-      generateValue(*inst.getCallee());
-      os_ << ";\n";
-    }
-    // Populate the arguments. In Hermes, where arguments and locals are on the
-    // same stack, the arguments would already be in the right positions,
-    // however, since we store locals in a separate structure, they need to be
-    // copied to the interpreter's register stack for the call. At the moment,
-    // the index of the local and the register would be the same, but this is an
-    // artefact of a shortcut in the implementation, so we deliberately
-    // re-calculate the register indices based on the parameter index.
-    auto thisRegIdx =
-        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::ThisArg;
-    for (size_t i = 0; i < inst.getNumArguments(); ++i) {
-      os_ << "  frame[" << thisRegIdx - i << "] = ";
-      generateValue(*inst.getArgument(i));
-      os_ << ";\n";
-    }
-  }
   void generateCallInst(CallInst &inst) {
-    setupCallStack(inst);
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_call(shr, frame, " << inst.getNumArguments() - 1
@@ -1518,20 +1497,12 @@ class InstrGen {
         return;
       }
     }
-    setupCallStack(inst, false);
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_call_builtin(shr, frame, " << inst.getNumArguments() - 1
         << ", " << (uint32_t)inst.getBuiltinIndex() << ");\n";
   }
   void generateConstructInst(ConstructInst &inst) {
-    // Populate the newTarget register, which is not set by setupCallStack.
-    auto newTargetRegIdx =
-        ra_.getMaxRegisterUsage() + hbc::StackFrameLayout::NewTarget;
-    os_ << "  frame[" << newTargetRegIdx << "] = ";
-    generateValue(*inst.getCallee());
-    os_ << ";\n";
-    setupCallStack(inst);
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_construct(shr, frame, " << inst.getNumArguments() - 1
@@ -1765,8 +1736,9 @@ void generateFunction(
   }
 
   OS << "  } locals;\n"
-     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head,"
-     << RA.getMaxRegisterUsage() << ");\n"
+     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head, "
+     << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
+     << ");\n"
      << "  locals.head.count =" << localsSize << ";\n";
 
   // Initialize all registers to undefined.

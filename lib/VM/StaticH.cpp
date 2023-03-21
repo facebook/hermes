@@ -61,9 +61,8 @@ _sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
   PinnedHermesValue *frame = runtime.getStackPointer();
   runtime.setCurrentFrame(StackFramePtr(frame));
 
-  // Allocate the registers for the new frame, but only if stack != 0.
-  if (stackSize &&
-      LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+  // Allocate the registers for the new frame.
+  if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
           stackSize, HermesValue::encodeUndefinedValue()))) {
     (void)runtime.raiseStackOverflow(
         Runtime::StackOverflowKind::JSRegisterStack);
