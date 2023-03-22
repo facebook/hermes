@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`flowDefToTSDef types/react 1`] = `
+exports[`flowDefToTSDef types/react/import 1`] = `
 "/**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -15,10 +15,14 @@ import * as React from 'react';
 type T1 = React.ReactNode;
 type T2 = JSX.Element;
 type T3 = React.ReactElement<typeof Component>;
-type T4 = React.ForwardRefExoticComponent<Props>;
-type T4 = React.ForwardRefExoticComponent<
+type T4 = React.ElementRef<typeof Component>;
+type T5 = React.ForwardRefExoticComponent<Props & React.RefAttributes<unknown>>;
+type T6 = React.ForwardRefExoticComponent<
   Props & React.RefAttributes<HTMLElement>
 >;
+type T7 = React.Context<Foo>;
+type T8 = React.ForwardRefExoticComponent<Props & React.RefAttributes<unknown>>;
+type T9 = React.Fragment;
 type Props = {A: string};
 declare function Component(props: Props): React.ReactNode;
 "
