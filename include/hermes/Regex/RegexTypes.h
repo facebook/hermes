@@ -220,7 +220,8 @@ class SyntaxFlags {
     MULTILINE = 1 << 2,
     UCODE = 1 << 3,
     DOTALL = 1 << 4,
-    STICKY = 1 << 5
+    STICKY = 1 << 5,
+    INDICES = 1 << 6,
   };
 
  public:
@@ -233,6 +234,7 @@ class SyntaxFlags {
   uint8_t unicode : 1;
   uint8_t dotAll : 1;
   uint8_t sticky : 1;
+  uint8_t hasIndices : 1;
 
   /// \return a byte representing the flags. Bits are set based on the offsets
   /// specified above. This is used for serialising the flags to bytecode.
@@ -250,6 +252,8 @@ class SyntaxFlags {
       ret |= STICKY;
     if (dotAll)
       ret |= DOTALL;
+    if (hasIndices)
+      ret |= INDICES;
     return ret;
   }
 
@@ -270,6 +274,8 @@ class SyntaxFlags {
       ret.sticky = 1;
     if (byte & DOTALL)
       ret.dotAll = 1;
+    if (byte & INDICES)
+      ret.hasIndices = 1;
     return ret;
   }
 
@@ -279,6 +285,8 @@ class SyntaxFlags {
   /// Note this may differ in order from the string passed in construction
   llvh::SmallString<6> toString() const {
     llvh::SmallString<6> result;
+    if (hasIndices)
+      result.push_back('d');
     if (global)
       result.push_back('g');
     if (ignoreCase)
@@ -333,6 +341,11 @@ class SyntaxFlags {
           if (ret.dotAll)
             return error;
           ret.dotAll = 1;
+          break;
+        case u'd':
+          if (ret.hasIndices)
+            return error;
+          ret.hasIndices = 1;
           break;
         default:
           return error;

@@ -120,6 +120,7 @@ Handle<JSObject> createRegExpConstructor(Runtime &runtime) {
   defineGetter(proto, Predefined::unicode, regExpFlagPropertyGetter, 'u');
   defineGetter(proto, Predefined::sticky, regExpFlagPropertyGetter, 'y');
   defineGetter(proto, Predefined::dotAll, regExpFlagPropertyGetter, 's');
+  defineGetter(proto, Predefined::hasIndices, regExpFlagPropertyGetter, 'd');
 
   defineGetter(cons, Predefined::dollar1, regExpDollarNumberGetter, 1);
   defineGetter(cons, Predefined::dollar2, regExpDollarNumberGetter, 2);
@@ -833,6 +834,8 @@ regExpFlagPropertyGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       return HermesValue::encodeBoolValue(syntaxFlags.sticky);
     case 's':
       return HermesValue::encodeBoolValue(syntaxFlags.dotAll);
+    case 'd':
+      return HermesValue::encodeBoolValue(syntaxFlags.hasIndices);
     default:
       llvm_unreachable("Invalid flag passed to regExpFlagPropertyGetter");
       return HermesValue::encodeEmptyValue();
@@ -2090,6 +2093,7 @@ regExpFlagsGetter(void *ctx, Runtime &runtime, NativeArgs args) {
     char flagChar;
     Predefined::Str name;
   } flagProps[] = {
+      {'d', Predefined::hasIndices},
       {'g', Predefined::global},
       {'i', Predefined::ignoreCase},
       {'m', Predefined::multiline},
