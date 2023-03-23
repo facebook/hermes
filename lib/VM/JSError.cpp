@@ -16,6 +16,7 @@
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
 #include "llvh/ADT/ScopeExit.h"
@@ -138,7 +139,7 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
     }
     stackTraceFormatted = std::move(*prepareRes);
   } else {
-    if (JSError::constructStackTraceString(
+    if (JSError::constructStackTraceString_RJS(
             runtime, errorHandle, targetHandle, stack) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -272,6 +273,86 @@ ExecutionStatus JSError::setupStack(
   }
 
   return ExecutionStatus::RETURNED;
+}
+
+CallResult<Handle<StringPrimitive>> JSError::toString(
+    Handle<JSObject> O,
+    Runtime &runtime) {
+  // 20.5.3.4 Error.prototype.toString ( )
+
+  // 1. and 2. don't apply -- O is already an Object.
+
+  // 3. Let name be ? Get(O, "name").
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::name), PropOpFlags());
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> name = runtime.makeHandle(std::move(*propRes));
+
+  // 4. If name is undefined, set name to "Error"; otherwise set name to ?
+  // ToString(name).
+  MutableHandle<StringPrimitive> nameStr{runtime};
+  if (name->isUndefined()) {
+    nameStr = runtime.getPredefinedString(Predefined::Error);
+  } else {
+    auto strRes = toString_RJS(runtime, name);
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    nameStr = strRes->get();
+  }
+
+  // 5. Let msg be ? Get(O, "message").
+  if (LLVM_UNLIKELY(
+          (propRes = JSObject::getNamed_RJS(
+               O,
+               runtime,
+               Predefined::getSymbolID(Predefined::message),
+               PropOpFlags())) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> msg = runtime.makeHandle(std::move(*propRes));
+
+  // 6. If msg is undefined, set msg to the empty String;
+  //    otherwise set msg to ? ToString(msg).
+  MutableHandle<StringPrimitive> msgStr{runtime};
+  if (msg->isUndefined()) {
+    // If msg is undefined, then let msg be the empty String.
+    msgStr = runtime.getPredefinedString(Predefined::emptyString);
+  } else {
+    auto strRes = toString_RJS(runtime, msg);
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    msgStr = strRes->get();
+  }
+
+  // 7. If name is the empty String, return msg.
+  if (nameStr->getStringLength() == 0) {
+    return msgStr;
+  }
+
+  // 8. If msg is the empty String, return name.
+  if (msgStr->getStringLength() == 0) {
+    return nameStr;
+  }
+
+  // 9. Return the string-concatenation of name, the code unit 0x003A (COLON),
+  // the code unit 0x0020 (SPACE), and msg.
+  SafeUInt32 length{nameStr->getStringLength()};
+  length.add(2);
+  length.add(msgStr->getStringLength());
+  CallResult<StringBuilder> builderRes =
+      StringBuilder::createStringBuilder(runtime, length);
+  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto builder = std::move(*builderRes);
+  builder.appendStringPrim(nameStr);
+  builder.appendASCIIRef({": ", 2});
+  builder.appendStringPrim(msgStr);
+  return builder.getStringPrimitive();
 }
 
 ExecutionStatus JSError::setMessage(
@@ -531,27 +612,62 @@ bool JSError::appendFunctionNameAtIndex(
   return true;
 }
 
-ExecutionStatus JSError::constructStackTraceString(
+ExecutionStatus JSError::constructStackTraceString_RJS(
     Runtime &runtime,
     Handle<JSError> selfHandle,
     Handle<JSObject> targetHandle,
     SmallU16String<32> &stack) {
+  // This method potentially runs javascript, so we need to protect it agains
+  // stack overflow.
+  ScopedNativeDepthTracker depthTracker(runtime);
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
   GCScope gcScope(runtime);
-  // First of all, the stacktrace string starts with target.toString.
-  auto res = toString_RJS(runtime, targetHandle);
+  // First of all, the stacktrace string starts with
+  // %Error.prototype.toString%(target).
+  CallResult<Handle<StringPrimitive>> res =
+      JSError::toString(targetHandle, runtime);
+  // Keep track whether targetHandle.toString() threw. If it did, the error
+  // message will contain a string letting the user know that something went
+  // awry.
+  const bool targetHandleToStringThrew = res == ExecutionStatus::EXCEPTION;
+
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // target.toString() threw an exception; if it is a catchable error try to
+    // toString() it so the user has some indication of what went wrong.
+    if (!isUncatchableError(runtime.getThrownValue())) {
+      HermesValue thrownValue = runtime.getThrownValue();
+      if (thrownValue.isObject()) {
+        // Clear the pending exception, and try to convert thrownValue to string
+        // with %Error.prototype.toString%(thrownValue).
+        runtime.clearThrownValue();
+        res = JSError::toString(
+            runtime.makeHandle<JSObject>(thrownValue), runtime);
+      }
+    }
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // An exception happened while trying to get the description for the error.
     if (isUncatchableError(runtime.getThrownValue())) {
-      // If toString throws an uncatchable exception, propagate it up.
+      // If JSError::toString throws an uncatchable exception, bubble it up.
       return ExecutionStatus::EXCEPTION;
     }
-    // If toString throws an exception, we just use <error>.
-    stack.append(u"<error>");
-    // There is not much we can do if exception thrown when trying to
-    // get the stacktrace. We just name it <error>, and it should be
-    // sufficient to tell what happened here.
+    // Clear the pending exception so the caller doesn't observe this side
+    // effect.
     runtime.clearThrownValue();
+    // Append a generic <error> string and move on.
+    stack.append(u"<error>");
   } else {
+    if (targetHandleToStringThrew) {
+      stack.append(u"<while converting error to string: ");
+    }
     res->get()->appendUTF16String(stack);
+    if (targetHandleToStringThrew) {
+      stack.append(u">");
+    }
   }
 
   // Virtual offsets are computed by walking the list of bytecode functions. If
