@@ -89,6 +89,11 @@ class JSError final : public JSObject {
       Handle<JSObject> selfHandle,
       Runtime &runtime);
 
+  /// Implements steps 3 through 9 for ES2023 20.5.3.4 Error.prototype.toString.
+  static CallResult<Handle<StringPrimitive>> toString(
+      Handle<JSObject> O,
+      Runtime &runtime);
+
   /// Set the message property.
   static ExecutionStatus
   setMessage(Handle<JSError> selfHandle, Runtime &runtime, Handle<> message);
@@ -182,7 +187,7 @@ class JSError final : public JSObject {
   /// refer to the same object.
   /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
   /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
-  static ExecutionStatus constructStackTraceString(
+  static ExecutionStatus constructStackTraceString_RJS(
       Runtime &runtime,
       Handle<JSError> selfHandle,
       Handle<JSObject> targetHandle,
