@@ -1436,12 +1436,9 @@ objectPrototypeDefineGetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("__defineGetter__ getter not callable");
   }
 
-  auto crtRes = PropertyAccessor::create(
+  HermesValue crtRes = PropertyAccessor::create(
       runtime, getter, Runtime::makeNullHandle<Callable>());
-  if (crtRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*crtRes);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(crtRes);
 
   DefinePropertyFlags dpf;
   dpf.setEnumerable = 1;
@@ -1477,12 +1474,9 @@ objectPrototypeDefineSetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("__defineSetter__ setter not callable");
   }
 
-  auto crtRes = PropertyAccessor::create(
+  HermesValue crtRes = PropertyAccessor::create(
       runtime, Runtime::makeNullHandle<Callable>(), setter);
-  if (crtRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*crtRes);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(crtRes);
 
   DefinePropertyFlags dpf;
   dpf.setEnumerable = 1;

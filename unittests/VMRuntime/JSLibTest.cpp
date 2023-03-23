@@ -480,7 +480,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
         runtime.makeNullHandle<Environment>(),
         codeBlock));
     auto accessor = runtime.makeHandle<PropertyAccessor>(
-        *PropertyAccessor::create(runtime, getter, setter));
+        PropertyAccessor::create(runtime, getter, setter));
     ASSERT_TRUE(
         JSObject::defineOwnProperty(obj, runtime, *prop1ID, dpf, accessor) !=
         ExecutionStatus::EXCEPTION);

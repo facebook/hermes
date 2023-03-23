@@ -21,7 +21,7 @@ void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("setter", &self->setter);
 }
 
-CallResult<HermesValue> PropertyAccessor::create(
+HermesValue PropertyAccessor::create(
     Runtime &runtime,
     Handle<Callable> getter,
     Handle<Callable> setter) {

@@ -129,11 +129,8 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
       (dpFlags.setSetter || dpFlags.setGetter) &&
       "No accessor set in PutOwnGetterSetterByVal");
 
-  auto res = PropertyAccessor::create(runtime, getter, setter);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*res);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(
+      PropertyAccessor::create(runtime, getter, setter));
 
   return JSObject::defineOwnComputed(
              Handle<JSObject>::vmcast(&O1REG(PutOwnGetterSetterByVal)),

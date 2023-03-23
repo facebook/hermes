@@ -2115,11 +2115,7 @@ ExecutionStatus toPropertyDescriptor(
       return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and writable.");
     }
-    auto crtRes = PropertyAccessor::create(runtime, getterPtr, setterPtr);
-    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    valueOrAccessor = *crtRes;
+    valueOrAccessor = PropertyAccessor::create(runtime, getterPtr, setterPtr);
   }
 
   return ExecutionStatus::RETURNED;

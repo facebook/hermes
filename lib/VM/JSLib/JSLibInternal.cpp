@@ -205,9 +205,8 @@ void defineAccessor(
     setter = funcRes.get();
   }
 
-  auto crtRes = PropertyAccessor::create(runtime, getter, setter);
-  assert(crtRes != ExecutionStatus::EXCEPTION && "unable to define accessor");
-  auto accessor = runtime.makeHandle<PropertyAccessor>(*crtRes);
+  auto accessor = runtime.makeHandle<PropertyAccessor>(
+      PropertyAccessor::create(runtime, getter, setter));
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
