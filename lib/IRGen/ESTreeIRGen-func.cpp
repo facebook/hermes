@@ -75,7 +75,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
 
-  emitStore(Builder, newClosure, funcStorage, true);
+  emitStore(newClosure, funcStorage, true);
 }
 
 Value *ESTreeIRGen::genFunctionExpression(
@@ -102,7 +102,7 @@ Value *ESTreeIRGen::genFunctionExpression(
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
   if (id)
-    emitStore(Builder, closure, resolveIdentifier(id), true);
+    emitStore(closure, resolveIdentifier(id), true);
 
   return closure;
 }
@@ -399,7 +399,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   auto *th = Builder.createVariable(
       scope, genAnonymousLabelName("this"), Type::createAnyType());
   curFunction()->capturedThis = th;
-  emitStore(Builder, curFunction()->jsParams[0], th, true);
+  emitStore(curFunction()->jsParams[0], th, true);
 
   // "new.target".
   curFunction()->capturedNewTarget = Builder.createVariable(
@@ -407,7 +407,6 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
       genAnonymousLabelName("new.target"),
       curFunction()->function->getNewTargetParam()->getType());
   emitStore(
-      Builder,
       Builder.createGetNewTargetInst(
           curFunction()->function->getNewTargetParam()),
       curFunction()->capturedNewTarget,
@@ -418,7 +417,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
     auto *args = Builder.createVariable(
         scope, genAnonymousLabelName("arguments"), Type::createObject());
     curFunction()->capturedArguments = args;
-    emitStore(Builder, curFunction()->createArgumentsInst, args, true);
+    emitStore(curFunction()->createArgumentsInst, args, true);
   }
 }
 
@@ -715,9 +714,9 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
     Identifier originalName,
     SMRange sourceRange,
     llvh::StringRef error) {
-  IRBuilder builder{M};
+  IRBuilder::SaveRestore saveRestore(Builder);
 
-  Function *function = builder.createFunction(
+  Function *function = Builder.createFunction(
       originalName,
       Function::DefinitionKind::ES5Function,
       true,
@@ -728,14 +727,13 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
       sourceRange);
 
   function->addJSThisParam();
-  BasicBlock *firstBlock = builder.createBasicBlock(function);
-  builder.setInsertionBlock(firstBlock);
+  BasicBlock *firstBlock = Builder.createBasicBlock(function);
+  Builder.setInsertionBlock(firstBlock);
 
-  builder.createThrowInst(builder.createCallInst(
-      emitLoad(
-          builder, builder.createGlobalObjectProperty("SyntaxError", false)),
-      builder.getLiteralUndefined(),
-      builder.getLiteralString(error)));
+  Builder.createThrowInst(Builder.createCallInst(
+      emitLoad(Builder.createGlobalObjectProperty("SyntaxError", false), false),
+      Builder.getLiteralUndefined(),
+      Builder.getLiteralString(error)));
 
   return function;
 }

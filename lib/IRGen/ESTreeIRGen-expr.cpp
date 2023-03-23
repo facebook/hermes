@@ -1862,7 +1862,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
                    << "\"\n");
 
   // Typeof <variable> does not throw.
-  return emitLoad(Builder, Var, afterTypeOf);
+  return emitLoad(Var, afterTypeOf);
 }
 
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {

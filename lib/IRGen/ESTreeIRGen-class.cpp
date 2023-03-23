@@ -130,7 +130,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
     consFunction = Builder.createCreateFunctionInst(func);
   }
-  emitStore(Builder, consFunction, getDeclData(decl), true);
+  emitStore(consFunction, getDeclData(decl), true);
 
   if (auto *createCallable =
           llvh::dyn_cast<BaseCreateCallableInst>(consFunction)) {

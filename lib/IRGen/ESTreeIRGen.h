@@ -34,24 +34,6 @@ class ESTreeIRGen;
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
 
-/// Emit an instruction to load a value from a specified location.
-/// \param from location to load from, either a Variable or
-/// GlobalObjectProperty. \param inhibitThrow  if true, do not throw when
-/// loading from mmissing global properties. \return the instruction performing
-/// the load.
-Instruction *
-emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow = false);
-
-/// Emit an instruction to a store a value into the specified location.
-/// \param storedValue value to store
-/// \param ptr location to store into, either a Variable or
-///     GlobalObjectProperty.
-/// \param declInit whether this is a declaration initializer, so the TDZ check
-///     should be skipped.
-/// \return the instruction performing the store.
-Instruction *
-emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit);
-
 /// Return the name field from ID nodes.
 inline Identifier getNameFieldFromID(const ESTree::Node *ID) {
   return Identifier::getFromPointer(cast<ESTree::IdentifierNode>(ID)->_name);
@@ -481,7 +463,7 @@ class ESTreeIRGen {
 
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
-  static Function *genSyntaxErrorFunction(
+  Function *genSyntaxErrorFunction(
       Module *M,
       Identifier originalName,
       SMRange sourceRange,
@@ -1128,6 +1110,24 @@ class ESTreeIRGen {
       Value *value,
       ESTree::Node *init,
       Identifier nameHint);
+
+  /// Emit an instruction to load a value from a specified location.
+  /// \param from location to load from, either a Variable or
+  ///     GlobalObjectProperty.
+  /// \param inhibitThrow  if true, do not throw when loading from missing
+  ///     global properties.
+  /// \return the instruction performing the load.
+  Instruction *emitLoad(Value *from, bool inhibitThrow);
+
+  /// Emit an instruction to a store a value into the specified location.
+  /// \param storedValue value to store
+  /// \param ptr location to store into, either a Variable or
+  ///     GlobalObjectProperty.
+  /// \param declInit whether this is a declaration initializer, so the TDZ
+  /// check
+  ///     should be skipped.
+  /// \return the instruction performing the store.
+  Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 
  private:
   /// Search for the specified AST node in \c compiledEntities_ and return the

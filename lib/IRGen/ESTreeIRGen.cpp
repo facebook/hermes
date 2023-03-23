@@ -17,42 +17,6 @@ namespace irgen {
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
 
-Instruction *emitLoad(IRBuilder &builder, Value *from, bool inhibitThrow) {
-  if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    Instruction *res = builder.createLoadFrameInst(var);
-    if (var->getObeysTDZ())
-      res = builder.createThrowIfEmptyInst(res);
-    return res;
-  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
-    if (globalProp->isDeclared() || inhibitThrow)
-      return builder.createLoadPropertyInst(
-          builder.getGlobalObject(), globalProp->getName());
-    else
-      return builder.createTryLoadGlobalPropertyInst(globalProp);
-  } else {
-    llvm_unreachable("invalid value to load from");
-  }
-}
-
-Instruction *
-emitStore(IRBuilder &builder, Value *storedValue, Value *ptr, bool declInit) {
-  if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && var->getObeysTDZ()) {
-      // Must verify whether the variable is initialized.
-      builder.createThrowIfEmptyInst(builder.createLoadFrameInst(var));
-    }
-    return builder.createStoreFrameInst(storedValue, var);
-  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
-    if (globalProp->isDeclared() || !builder.getFunction()->isStrictMode())
-      return builder.createStorePropertyInst(
-          storedValue, builder.getGlobalObject(), globalProp->getName());
-    else
-      return builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
-  } else {
-    llvm_unreachable("invalid value to load from");
-  }
-}
-
 /// \returns true if \p node is a constant expression.
 bool isConstantExpr(ESTree::Node *node) {
   // TODO: a little more aggressive constant folding.
@@ -88,7 +52,7 @@ Value *LReference::emitLoad() {
               llvh::cast<ESTree::MemberExpressionNode>(ast_), base_, property_)
           .result;
     case Kind::VarOrGlobal:
-      return irgen::emitLoad(builder, base_);
+      return irgen_->emitLoad(base_, false);
     case Kind::Destructuring:
       assert(false && "destructuring cannot be loaded");
       return builder.getLiteralUndefined();
@@ -100,8 +64,6 @@ Value *LReference::emitLoad() {
 }
 
 void LReference::emitStore(Value *value) {
-  auto &builder = getBuilder();
-
   switch (kind_) {
     case Kind::Empty:
       return;
@@ -112,7 +74,7 @@ void LReference::emitStore(Value *value) {
           base_,
           property_);
     case Kind::VarOrGlobal:
-      irgen::emitStore(builder, value, base_, declInit_);
+      irgen_->emitStore(value, base_, declInit_);
       return;
     case Kind::Error:
       return;
@@ -915,6 +877,42 @@ Value *ESTreeIRGen::emitOptionalInitialization(
   Builder.setInsertionBlock(storeBlock);
   return Builder.createPhiInst(
       {value, defaultValue}, {currentBlock, defaultResultBlock});
+}
+
+Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
+  if (auto *var = llvh::dyn_cast<Variable>(from)) {
+    Instruction *res = Builder.createLoadFrameInst(var);
+    if (var->getObeysTDZ())
+      res = Builder.createThrowIfEmptyInst(res);
+    return res;
+  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
+    if (globalProp->isDeclared() || inhibitThrow)
+      return Builder.createLoadPropertyInst(
+          Builder.getGlobalObject(), globalProp->getName());
+    else
+      return Builder.createTryLoadGlobalPropertyInst(globalProp);
+  } else {
+    llvm_unreachable("invalid value to load from");
+  }
+}
+
+Instruction *
+ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
+  if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
+    if (!declInit && var->getObeysTDZ()) {
+      // Must verify whether the variable is initialized.
+      Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+    }
+    return Builder.createStoreFrameInst(storedValue, var);
+  } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
+    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode())
+      return Builder.createStorePropertyInst(
+          storedValue, Builder.getGlobalObject(), globalProp->getName());
+    else
+      return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+  } else {
+    llvm_unreachable("invalid value to load from");
+  }
 }
 
 void ESTreeIRGen::drainCompilationQueue() {
