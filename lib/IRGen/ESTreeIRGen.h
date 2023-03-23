@@ -157,6 +157,16 @@ class FunctionContext {
   /// when arrow functions need to access it.
   Variable *capturedArguments{};
 
+  /// The set of TDZ variables whose declaration initialization has completed.
+  /// If a TDZ variable is accessed in its own function before it is
+  /// initialized (not present in the set), we can directly throw. If a variable
+  /// is accessed in its own function after it is initialized (present in the
+  /// set), there is no need for a check.
+  ///
+  /// In short, this set eliminates all TDZ checks when accessing variables in
+  /// their declaring function.
+  llvh::DenseSet<Variable *> initializedTDZVars{};
+
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.

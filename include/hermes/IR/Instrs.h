@@ -2813,9 +2813,6 @@ class ThrowIfEmptyInst : public Instruction {
   /// needs to be called externally (by IRGen) if the operand type wasn't
   /// correct during construction and was changed afterwards.
   void updateSavedResultType() {
-    assert(
-        !getType().isNoType() && !getType().canBeEmpty() &&
-        "savedResultType cannot be NoType or contain EmptyType");
     savedResultType_ = getType();
   }
 

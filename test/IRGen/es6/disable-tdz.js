@@ -9,9 +9,14 @@
 // RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKDIS %s
 
 function check1() {
+    glob = function inner() {
+        ++x;
+        return y;
+    }
     return x + y;
     let x = 10;
     const y = 1;
+    return x + y;
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -29,20 +34,42 @@ function check1() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check1(): any
-// CHECK-NEXT:frame = [x: any|empty, y: any|empty]
+// CHECK-NEXT:frame = [x: any|empty, y: any|empty, inner: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any|empty
-// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %3 = ThrowIfEmptyInst (:any) %2: any|empty
-// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) [y]: any|empty
-// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) %4: any|empty
-// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: any, %5: any
-// CHECK-NEXT:  %7 = ReturnInst %6: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %2: closure, globalObject: object, "glob": string
+// CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) empty: empty
+// CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) empty: empty
+// CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = StoreFrameInst 10: number, [x]: any|empty
-// CHECK-NEXT:  %9 = StoreFrameInst 1: number, [y]: any|empty
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = StoreFrameInst 10: number, [x]: any|empty
+// CHECK-NEXT:  %10 = StoreFrameInst 1: number, [y]: any|empty
+// CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %12 = LoadFrameInst (:any|empty) [y]: any|empty
+// CHECK-NEXT:  %13 = BinaryAddInst (:any) %11: any|empty, %12: any|empty
+// CHECK-NEXT:  %14 = ReturnInst %13: any
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function inner(): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadFrameInst (:any|empty) [x@check1]: any|empty
+// CHECK-NEXT:  %1 = ThrowIfEmptyInst (:any) %0: any|empty
+// CHECK-NEXT:  %2 = UnaryIncInst (:any) %1: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any|empty) [x@check1]: any|empty
+// CHECK-NEXT:  %4 = ThrowIfEmptyInst (:any) %3: any|empty
+// CHECK-NEXT:  %5 = StoreFrameInst %2: any, [x@check1]: any|empty
+// CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [y@check1]: any|empty
+// CHECK-NEXT:  %7 = ThrowIfEmptyInst (:any) %6: any|empty
+// CHECK-NEXT:  %8 = ReturnInst %7: any
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHKDIS:function global(): any
@@ -58,16 +85,36 @@ function check1() {
 // CHKDIS-NEXT:function_end
 
 // CHKDIS:function check1(): any
-// CHKDIS-NEXT:frame = [x: any, y: any]
+// CHKDIS-NEXT:frame = [x: any, y: any, inner: any]
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = StoreFrameInst undefined: undefined, [x]: any
 // CHKDIS-NEXT:  %1 = StoreFrameInst undefined: undefined, [y]: any
-// CHKDIS-NEXT:  %2 = LoadFrameInst (:any) [x]: any
-// CHKDIS-NEXT:  %3 = LoadFrameInst (:any) [y]: any
-// CHKDIS-NEXT:  %4 = BinaryAddInst (:any) %2: any, %3: any
-// CHKDIS-NEXT:  %5 = ReturnInst %4: any
+// CHKDIS-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
+// CHKDIS-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
+// CHKDIS-NEXT:  %4 = StorePropertyLooseInst %2: closure, globalObject: object, "glob": string
+// CHKDIS-NEXT:  %5 = LoadFrameInst (:any) [x]: any
+// CHKDIS-NEXT:  %6 = LoadFrameInst (:any) [y]: any
+// CHKDIS-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
+// CHKDIS-NEXT:  %8 = ReturnInst %7: any
 // CHKDIS-NEXT:%BB1:
-// CHKDIS-NEXT:  %6 = StoreFrameInst 10: number, [x]: any
-// CHKDIS-NEXT:  %7 = StoreFrameInst 1: number, [y]: any
-// CHKDIS-NEXT:  %8 = ReturnInst undefined: undefined
+// CHKDIS-NEXT:  %9 = StoreFrameInst 10: number, [x]: any
+// CHKDIS-NEXT:  %10 = StoreFrameInst 1: number, [y]: any
+// CHKDIS-NEXT:  %11 = LoadFrameInst (:any) [x]: any
+// CHKDIS-NEXT:  %12 = LoadFrameInst (:any) [y]: any
+// CHKDIS-NEXT:  %13 = BinaryAddInst (:any) %11: any, %12: any
+// CHKDIS-NEXT:  %14 = ReturnInst %13: any
+// CHKDIS-NEXT:%BB2:
+// CHKDIS-NEXT:  %15 = ReturnInst undefined: undefined
+// CHKDIS-NEXT:function_end
+
+// CHKDIS:function inner(): any
+// CHKDIS-NEXT:frame = []
+// CHKDIS-NEXT:%BB0:
+// CHKDIS-NEXT:  %0 = LoadFrameInst (:any) [x@check1]: any
+// CHKDIS-NEXT:  %1 = UnaryIncInst (:any) %0: any
+// CHKDIS-NEXT:  %2 = StoreFrameInst %1: any, [x@check1]: any
+// CHKDIS-NEXT:  %3 = LoadFrameInst (:any) [y@check1]: any
+// CHKDIS-NEXT:  %4 = ReturnInst %3: any
+// CHKDIS-NEXT:%BB1:
+// CHKDIS-NEXT:  %5 = ReturnInst undefined: undefined
 // CHKDIS-NEXT:function_end

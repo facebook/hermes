@@ -881,16 +881,38 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 
 Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    Instruction *res = Builder.createLoadFrameInst(var);
-    if (var->getObeysTDZ())
-      res = Builder.createThrowIfEmptyInst(res);
+    Instruction *res;
+    if (var->getObeysTDZ()) {
+      // We don't need to perform a runtime check for TDZ when in the
+      // variable's function, since we know whether it has been initialized.
+      if (var->getParent()->getFunction() == curFunction()->function) {
+        // If not initialized, throw.
+        if (curFunction()->initializedTDZVars.count(var) == 0) {
+          auto *thr = Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
+          // Pretend that the instruction, which always throws, returns a
+          // value with the correct type.
+          thr->setType(Type::subtractTy(var->getType(), Type::createEmpty()));
+          thr->updateSavedResultType();
+          res = thr;
+        } else {
+          res = Builder.createLoadFrameInst(var);
+          // TODO: cast the empty type away.
+        }
+      } else {
+        res = Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+      }
+    } else {
+      res = Builder.createLoadFrameInst(var);
+    }
+
     return res;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
-    if (globalProp->isDeclared() || inhibitThrow)
+    if (globalProp->isDeclared() || inhibitThrow) {
       return Builder.createLoadPropertyInst(
           Builder.getGlobalObject(), globalProp->getName());
-    else
+    } else {
       return Builder.createTryLoadGlobalPropertyInst(globalProp);
+    }
   } else {
     llvm_unreachable("invalid value to load from");
   }
@@ -899,17 +921,43 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
 Instruction *
 ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && var->getObeysTDZ()) {
-      // Must verify whether the variable is initialized.
-      Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+    if (declInit) {
+      assert(
+          var->getParent()->getFunction() == curFunction()->function &&
+          "variable must be initialized in its own function");
+
+      // If this is a TDZ variable, record that it has been initialized.
+      if (var->getObeysTDZ()) {
+        auto [_, inserted] = curFunction()->initializedTDZVars.insert(var);
+        assert(inserted && "variable cannot be decl-inited more than once");
+        (void)inserted;
+      }
+    } else {
+      if (var->getObeysTDZ()) {
+        // We don't need to perform a runtime check for TDZ when in the
+        // variable's function, since we know whether it has been initialized.
+        if (var->getParent()->getFunction() == curFunction()->function) {
+          if (curFunction()->initializedTDZVars.count(var) == 0) {
+            auto thr =
+                Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
+            thr->setType(Type::createUndefined());
+            thr->updateSavedResultType();
+          }
+        } else {
+          // Must verify whether the variable is initialized.
+          Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));
+        }
+      }
     }
+
     return Builder.createStoreFrameInst(storedValue, var);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
-    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode())
+    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode()) {
       return Builder.createStorePropertyInst(
           storedValue, Builder.getGlobalObject(), globalProp->getName());
-    else
+    } else {
       return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+    }
   } else {
     llvm_unreachable("invalid value to load from");
   }
