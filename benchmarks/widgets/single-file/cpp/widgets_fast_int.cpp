@@ -5,64 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <chrono>
-#include <cmath>
 #include <cstdio>
-#include <cstring>
-#include <functional>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-template <typename A, typename B>
-__attribute__((noinline)) std::vector<B>
-    *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
-  auto *res = new std::vector<B>();
-  for (double i = 0, e = in->size(); i < e; ++i)
-    res->push_back(cb(in->at(i), i));
-  return res;
-}
-
-template <typename T>
-__attribute__((noinline)) std::vector<T>
-    *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
-  auto *res = new std::vector<T>();
-  for (double i = 0, e = in->size(); i < e; ++i) {
-    T el = in->at(i);
-    if (cb(el))
-      res->push_back(el);
-  }
-  return res;
-}
-
-template <typename T>
-__attribute__((noinline)) bool arrayIncludes(std::vector<T> *in, T t) {
-  for (double i = 0, e = in->size(); i < e; ++i)
-    if (in->at(i) == t)
-      return true;
-  return false;
-}
-
-template <typename T>
-__attribute__((noinline)) void arrayForEach(
-    std::vector<T> *in,
-    std::function<void(T)> cb) {
-  for (double i = 0, e = in->size(); i < e; ++i)
-    cb(in->at(i));
-}
-
-template <typename T>
-__attribute__((noinline)) std::vector<T>
-    *arrayConcat(std::vector<T> *arr1, std::vector<T> *arr2) {
-  auto *result = new std::vector<T>();
-  for (double i = 0, e = arr1->size(); i < e; ++i)
-    result->push_back(arr1->at(i));
-  for (double i = 0, e = arr2->size(); i < e; ++i)
-    result->push_back(arr2->at(i));
-  return result;
-}
 
 class Component {
   virtual void rtti() {}
@@ -70,9 +18,9 @@ class Component {
 
 class NumberComponent : public Component {
  public:
-  double x;
+  int x;
 
-  explicit NumberComponent(double x) : x(x) {}
+  explicit NumberComponent(int x) : x(x) {}
 };
 
 class StringComponent : public Component {
@@ -100,7 +48,7 @@ class Widget {
 class Context {
  public:
   const char *key;
-  double childCounter = 0;
+  int childCounter = 0;
 
   explicit Context(const char *key) : key(key) {}
 
@@ -124,19 +72,19 @@ class Context {
   }
 };
 
-using VirtualEntity = std::pair<double, std::vector<Component *> *>;
+using VirtualEntity = std::pair<int, std::vector<Component *> *>;
 
 class RenderNode {
  public:
   const char *key;
-  double id;
+  int id;
   std::vector<Component *> *components;
   std::vector<RenderNode *> *children;
-  inline static double idCounter = 0;
+  inline static int idCounter = 0;
 
   explicit RenderNode(
       const char *key,
-      double id,
+      int id,
       std::vector<Component *> *components,
       std::optional<std::vector<RenderNode *> *> children)
       : key(key),
@@ -145,13 +93,12 @@ class RenderNode {
         children(children ? *children : new std::vector<RenderNode *>()) {}
 
   std::vector<VirtualEntity *> *reduce() {
-    auto *flat = new std::vector<VirtualEntity *>();
+    auto *res = new std::vector<VirtualEntity *>();
+    res->push_back(new VirtualEntity{id, components});
     for (auto *child : *children)
       for (auto *v : *child->reduce())
-        flat->push_back(v);
-    return arrayConcat(
-        new std::vector<VirtualEntity *>{new VirtualEntity{id, components}},
-        flat);
+        res->push_back(v);
+    return res;
   }
 
   static RenderNode *create(
@@ -179,9 +126,9 @@ class ComposedWidget : public Widget {
 
 class Button : public Widget {
  public:
-  double num;
+  int num;
 
-  explicit Button(double num) : num(num) {}
+  explicit Button(int num) : num(num) {}
 
   RenderNode *reduce(Context *ctx) override {
     auto *component = new NumberComponent(num);
@@ -193,9 +140,9 @@ class Button : public Widget {
 
 class Floater : public Widget {
  public:
-  double num;
+  int num;
 
-  explicit Floater(double num) : num(num) {}
+  explicit Floater(int num) : num(num) {}
 
   RenderNode *reduce(Context *ctx) override {
     auto *component = new NumberComponent(num);
@@ -227,10 +174,9 @@ class Container : public Widget {
 
   RenderNode *reduce(Context *ctx) override {
     auto *component = new NumberComponent(13);
-    auto *mappedChildren = arrayMap<Widget *, RenderNode *>(
-        children, [ctx](Widget *child, double) {
-          return RenderNode::createForChild(ctx, child);
-        });
+    auto *mappedChildren = new std::vector<RenderNode *>();
+    for (auto *child : *children)
+      mappedChildren->push_back(RenderNode::createForChild(ctx, child));
     auto *components = new std::vector<Component *>();
     components->push_back(component);
     return RenderNode::create(ctx, components, mappedChildren);
@@ -239,7 +185,7 @@ class Container : public Widget {
 
 struct RenderData {
   const char *modelPath;
-  double buttonSize;
+  int buttonSize;
 };
 
 class ButtonAndModel : public ComposedWidget {
@@ -258,7 +204,7 @@ class ButtonAndModel : public ComposedWidget {
   }
 };
 
-static std::vector<double> SIZES_SMALL({64, 8, 8, 18, 7, 24, 84, 4, 29, 58});
+static std::vector<int> SIZES_SMALL({64, 8, 8, 18, 7, 24, 84, 4, 29, 58});
 static std::vector<const char *> MODELS_SMALL(
     {"sazGTSGrfY",
      "uEQjieLDUq",
@@ -271,9 +217,9 @@ static std::vector<const char *> MODELS_SMALL(
      "NBMEpcDimq",
      "wMCIoQQbNg"});
 
-static std::vector<double> SIZES_LARGE({64, 8,  8,  18, 7,  99, 9,  61, 27,
-                                        58, 30, 27, 95, 49, 37, 28, 87, 60,
-                                        95, 1,  58, 14, 90, 9,  57});
+static std::vector<int> SIZES_LARGE({64, 8,  8,  18, 7,  99, 9,  61, 27,
+                                     58, 30, 27, 95, 49, 37, 28, 87, 60,
+                                     95, 1,  58, 14, 90, 9,  57});
 static std::vector<const char *> MODELS_LARGE(
     {"sazGTSGrfY", "uEQjieLDUq", "jQKzwhnzYa", "buIwVjnNDI", "goBJPxAkFf",
      "oCtHzjLczM", "GJVcmhfddz", "nbpEAplbzQ", "yNXDBUcDys", "IZZQpqwiXa",
@@ -288,21 +234,22 @@ class TestApp : public ComposedWidget {
   explicit TestApp(bool renderLarge) : renderLarge(renderLarge) {}
 
   std::vector<Widget *> *getWidgets(
-      std::vector<double> *sizes,
+      std::vector<int> *sizes,
       std::vector<const char *> *models) {
     if (sizes->size() != models->size())
       throw 11;
 
-    return arrayMap<
-        const char *,
-        Widget *>(models, [sizes](const char *modelPath, double i) {
-      double buttonSize = sizes->at(i);
+    auto *ret = new std::vector<Widget *>();
+    for (size_t i = 0; i < models->size(); i++) {
+      int buttonSize = (*sizes)[i];
+      const char *modelPath = (*models)[i];
       auto *widget = new ButtonAndModel(new RenderData{modelPath, buttonSize});
       char *key = (char *)malloc(strlen(modelPath) + 12);
       sprintf(key, "%s_%d", modelPath, buttonSize);
       widget->key = key;
-      return widget;
-    });
+      ret->push_back(widget);
+    }
+    return ret;
   }
 
   std::vector<Widget *> *getChildren() {
@@ -317,10 +264,10 @@ class TestApp : public ComposedWidget {
   }
 };
 
-using ComponentPair = std::pair<double, Component *>;
+using ComponentPair = std::pair<int, Component *>;
 struct SceneDiff {
-  std::vector<double> *createdEntities;
-  std::vector<double> *deletedEntities;
+  std::vector<int> *createdEntities;
+  std::vector<int> *deletedEntities;
   std::vector<ComponentPair *> *createdComponents;
   std::vector<ComponentPair *> *deletedComponents;
 };
@@ -342,41 +289,29 @@ std::vector<RenderNode *> *reconcileChildren(
     std::vector<RenderNode *> *oldChildren) {
   auto *outChildren = new std::vector<RenderNode *>();
   std::unordered_map<std::string_view, RenderNode *> oldChildrenByKey;
-  arrayForEach<RenderNode *>(
-      oldChildren, [&oldChildrenByKey](RenderNode *child) {
-        oldChildrenByKey.emplace(child->key, child);
-      });
-
-  arrayForEach<RenderNode *>(
-      newChildren, [&oldChildrenByKey, outChildren](RenderNode *child) {
-        const char *newKey = child->key;
-        auto it = oldChildrenByKey.find(newKey);
-        if (it != oldChildrenByKey.end())
-          outChildren->push_back(reconcileRenderNode(child, it->second));
-        else
-          outChildren->push_back(child);
-      });
+  for (auto *child : *oldChildren) {
+    oldChildrenByKey.emplace(child->key, child);
+  }
+  for (auto *child : *newChildren) {
+    const char *newKey = child->key;
+    auto it = oldChildrenByKey.find(newKey);
+    if (it != oldChildrenByKey.end())
+      outChildren->push_back(reconcileRenderNode(child, it->second));
+    else
+      outChildren->push_back(child);
+  }
   return outChildren;
 }
 
 struct MapVector {
-  std::unordered_map<double, std::vector<Component *> *> map;
-  std::vector<std::pair<const double, std::vector<Component *> *> *> vec;
+  std::unordered_map<int, std::vector<Component *> *> map;
+  std::vector<std::pair<const int, std::vector<Component *> *> *> vec;
 };
-
-__attribute__((noinline)) void mapVectorForEach(
-    MapVector *mv,
-    std::function<void(double, std::vector<Component *> *)> cb) {
-  for (double i = 0, e = mv->vec.size(); i < e; ++i) {
-    auto [k, v] = *mv->vec.at(i);
-    cb(k, v);
-  }
-}
 
 MapVector *mapEntitiesToComponents(std::vector<VirtualEntity *> *entities) {
   auto *map = new MapVector();
-  arrayForEach<VirtualEntity *>(entities, [map](VirtualEntity *entity) {
-    double key = entity->first;
+  for (auto *entity : *entities) {
+    int key = entity->first;
     auto *value = entity->second;
 
     auto it = map->map.find(key);
@@ -390,7 +325,7 @@ MapVector *mapEntitiesToComponents(std::vector<VirtualEntity *> *entities) {
 
     for (auto *v : *value)
       components->push_back(v);
-  });
+  }
 
   return map;
 }
@@ -401,65 +336,70 @@ SceneDiff *diffTrees(
   auto *createdComponents = new std::vector<ComponentPair *>();
   auto *deletedComponents = new std::vector<ComponentPair *>();
 
-  auto *oldEntityIds = arrayMap<VirtualEntity *, double>(
-      oldEntities, [](VirtualEntity *entity, double) { return entity->first; });
-  auto *newEntityIds = arrayMap<VirtualEntity *, double>(
-      newEntities, [](VirtualEntity *entity, double) { return entity->first; });
+  auto *oldEntityIds = new std::vector<int>();
+  for (auto *entity : *oldEntities)
+    oldEntityIds->push_back(entity->first);
+  auto *newEntityIds = new std::vector<int>();
+  for (auto *entity : *newEntities)
+    newEntityIds->push_back(entity->first);
 
-  auto *createdEntities = arrayFilter<double>(
-      newEntityIds,
-      [oldEntityIds](double id) { return !arrayIncludes(oldEntityIds, id); });
-  auto *deletedEntities = arrayFilter<double>(
-      oldEntityIds,
-      [newEntityIds](double id) { return !arrayIncludes(newEntityIds, id); });
+  auto *createdEntities = new std::vector<int>();
+  for (int id : *newEntityIds)
+    if (std::find(oldEntityIds->begin(), oldEntityIds->end(), id) ==
+        oldEntityIds->end())
+      createdEntities->push_back(id);
+
+  auto *deletedEntities = new std::vector<int>();
+  for (int id : *oldEntityIds)
+    if (std::find(newEntityIds->begin(), newEntityIds->end(), id) ==
+        newEntityIds->end())
+      deletedEntities->push_back(id);
 
   auto *oldComponents = mapEntitiesToComponents(oldEntities);
   auto *newComponents = mapEntitiesToComponents(newEntities);
 
-  arrayForEach<double>(
-      createdEntities, [newComponents, createdComponents](double entityId) {
-        auto it = newComponents->map.find(entityId);
-        if (it == newComponents->map.end())
-          return;
-        auto *components = arrayMap<Component *, ComponentPair *>(
-            it->second, [entityId](Component *component, double) {
-              return new ComponentPair{entityId, component};
-            });
-        for (double i = 0, e = components->size(); i < e; ++i)
-          createdComponents->push_back(components->at(i));
-      });
+  for (int entityId : *createdEntities) {
+    auto it = newComponents->map.find(entityId);
+    if (it == newComponents->map.end())
+      continue;
+    for (Component *component : *it->second)
+      createdComponents->push_back(new ComponentPair{entityId, component});
+  }
 
-  mapVectorForEach(
-      newComponents,
-      [oldComponents, createdComponents, deletedComponents](
-          double key, auto *value) {
-        if (!oldComponents->map.count(key))
-          return;
+  for (auto *kv : newComponents->vec) {
+    auto [key, value] = *kv;
 
-        auto it = oldComponents->map.find(key);
-        auto *oldComponentsForKey = it != oldComponents->map.end()
-            ? it->second
-            : new std::vector<Component *>();
-        auto *newComponentsForKey = value;
+    if (!oldComponents->map.count(key))
+      continue;
 
-        auto *deleted = arrayFilter<Component *>(
-            oldComponentsForKey, [newComponentsForKey](Component *component) {
-              return !arrayIncludes(newComponentsForKey, component);
-            });
-        auto *created = arrayFilter<Component *>(
-            newComponentsForKey, [oldComponentsForKey](Component *component) {
-              return !arrayIncludes(oldComponentsForKey, component);
-            });
+    auto it = oldComponents->map.find(key);
+    auto *oldComponentsForKey = it != oldComponents->map.end()
+        ? it->second
+        : new std::vector<Component *>();
+    auto *newComponentsForKey = value;
 
-        arrayForEach<Component *>(
-            deleted, [key, deletedComponents](Component *component) {
-              deletedComponents->push_back(new ComponentPair{key, component});
-            });
-        arrayForEach<Component *>(
-            created, [key, createdComponents](Component *component) {
-              createdComponents->push_back(new ComponentPair{key, component});
-            });
-      });
+    auto *deleted = new std::vector<Component *>();
+    for (auto *component : *oldComponentsForKey)
+      if (std::find(
+              newComponentsForKey->begin(),
+              newComponentsForKey->end(),
+              component) == newComponentsForKey->end())
+        deleted->push_back(component);
+
+    auto *created = new std::vector<Component *>();
+    for (auto *component : *newComponentsForKey)
+      if (std::find(
+              oldComponentsForKey->begin(),
+              oldComponentsForKey->end(),
+              component) == oldComponentsForKey->end())
+        created->push_back(component);
+
+    for (auto *component : *deleted)
+      deletedComponents->push_back(new ComponentPair{key, component});
+
+    for (auto *component : *created)
+      createdComponents->push_back(new ComponentPair{key, component});
+  }
   return new SceneDiff{
       createdEntities, deletedEntities, createdComponents, deletedComponents};
 }
@@ -487,9 +427,9 @@ std::optional<SceneDiff *> runTest(bool includeTreeSerialization) {
 
 static constexpr bool printDiff = false;
 
-void printEntities(std::vector<double> *entities) {
+void printEntities(std::vector<int> *entities) {
   std::cout << "[";
-  for (double d : *entities)
+  for (int d : *entities)
     std::cout << d << ", ";
   std::cout << "]";
 }
@@ -521,7 +461,7 @@ int main() {
     printComponents(res->deletedComponents);
     std::cout << "\n}";
   } else {
-    double i;
+    int i;
     for (i = 0; i < 50; ++i)
       runTest(false);
     // The actual execution.

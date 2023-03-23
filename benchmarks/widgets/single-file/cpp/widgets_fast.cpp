@@ -5,64 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <chrono>
-#include <cmath>
 #include <cstdio>
-#include <cstring>
-#include <functional>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-template <typename A, typename B>
-__attribute__((noinline)) std::vector<B>
-    *arrayMap(std::vector<A> *in, std::function<B(A, double)> cb) {
-  auto *res = new std::vector<B>();
-  for (double i = 0, e = in->size(); i < e; ++i)
-    res->push_back(cb(in->at(i), i));
-  return res;
-}
-
-template <typename T>
-__attribute__((noinline)) std::vector<T>
-    *arrayFilter(std::vector<T> *in, std::function<bool(T)> cb) {
-  auto *res = new std::vector<T>();
-  for (double i = 0, e = in->size(); i < e; ++i) {
-    T el = in->at(i);
-    if (cb(el))
-      res->push_back(el);
-  }
-  return res;
-}
-
-template <typename T>
-__attribute__((noinline)) bool arrayIncludes(std::vector<T> *in, T t) {
-  for (double i = 0, e = in->size(); i < e; ++i)
-    if (in->at(i) == t)
-      return true;
-  return false;
-}
-
-template <typename T>
-__attribute__((noinline)) void arrayForEach(
-    std::vector<T> *in,
-    std::function<void(T)> cb) {
-  for (double i = 0, e = in->size(); i < e; ++i)
-    cb(in->at(i));
-}
-
-template <typename T>
-__attribute__((noinline)) std::vector<T>
-    *arrayConcat(std::vector<T> *arr1, std::vector<T> *arr2) {
-  auto *result = new std::vector<T>();
-  for (double i = 0, e = arr1->size(); i < e; ++i)
-    result->push_back(arr1->at(i));
-  for (double i = 0, e = arr2->size(); i < e; ++i)
-    result->push_back(arr2->at(i));
-  return result;
-}
 
 class Component {
   virtual void rtti() {}
@@ -145,13 +93,12 @@ class RenderNode {
         children(children ? *children : new std::vector<RenderNode *>()) {}
 
   std::vector<VirtualEntity *> *reduce() {
-    auto *flat = new std::vector<VirtualEntity *>();
+    auto *res = new std::vector<VirtualEntity *>();
+    res->push_back(new VirtualEntity{id, components});
     for (auto *child : *children)
       for (auto *v : *child->reduce())
-        flat->push_back(v);
-    return arrayConcat(
-        new std::vector<VirtualEntity *>{new VirtualEntity{id, components}},
-        flat);
+        res->push_back(v);
+    return res;
   }
 
   static RenderNode *create(
@@ -227,10 +174,9 @@ class Container : public Widget {
 
   RenderNode *reduce(Context *ctx) override {
     auto *component = new NumberComponent(13);
-    auto *mappedChildren = arrayMap<Widget *, RenderNode *>(
-        children, [ctx](Widget *child, double) {
-          return RenderNode::createForChild(ctx, child);
-        });
+    auto *mappedChildren = new std::vector<RenderNode *>();
+    for (auto *child : *children)
+      mappedChildren->push_back(RenderNode::createForChild(ctx, child));
     auto *components = new std::vector<Component *>();
     components->push_back(component);
     return RenderNode::create(ctx, components, mappedChildren);
@@ -293,16 +239,17 @@ class TestApp : public ComposedWidget {
     if (sizes->size() != models->size())
       throw 11;
 
-    return arrayMap<
-        const char *,
-        Widget *>(models, [sizes](const char *modelPath, double i) {
-      double buttonSize = sizes->at(i);
+    auto *ret = new std::vector<Widget *>();
+    for (size_t i = 0; i < models->size(); i++) {
+      double buttonSize = (*sizes)[i];
+      const char *modelPath = (*models)[i];
       auto *widget = new ButtonAndModel(new RenderData{modelPath, buttonSize});
       char *key = (char *)malloc(strlen(modelPath) + 12);
       sprintf(key, "%s_%d", modelPath, buttonSize);
       widget->key = key;
-      return widget;
-    });
+      ret->push_back(widget);
+    }
+    return ret;
   }
 
   std::vector<Widget *> *getChildren() {
@@ -342,20 +289,17 @@ std::vector<RenderNode *> *reconcileChildren(
     std::vector<RenderNode *> *oldChildren) {
   auto *outChildren = new std::vector<RenderNode *>();
   std::unordered_map<std::string_view, RenderNode *> oldChildrenByKey;
-  arrayForEach<RenderNode *>(
-      oldChildren, [&oldChildrenByKey](RenderNode *child) {
-        oldChildrenByKey.emplace(child->key, child);
-      });
-
-  arrayForEach<RenderNode *>(
-      newChildren, [&oldChildrenByKey, outChildren](RenderNode *child) {
-        const char *newKey = child->key;
-        auto it = oldChildrenByKey.find(newKey);
-        if (it != oldChildrenByKey.end())
-          outChildren->push_back(reconcileRenderNode(child, it->second));
-        else
-          outChildren->push_back(child);
-      });
+  for (auto *child : *oldChildren) {
+    oldChildrenByKey.emplace(child->key, child);
+  }
+  for (auto *child : *newChildren) {
+    const char *newKey = child->key;
+    auto it = oldChildrenByKey.find(newKey);
+    if (it != oldChildrenByKey.end())
+      outChildren->push_back(reconcileRenderNode(child, it->second));
+    else
+      outChildren->push_back(child);
+  }
   return outChildren;
 }
 
@@ -364,18 +308,9 @@ struct MapVector {
   std::vector<std::pair<const double, std::vector<Component *> *> *> vec;
 };
 
-__attribute__((noinline)) void mapVectorForEach(
-    MapVector *mv,
-    std::function<void(double, std::vector<Component *> *)> cb) {
-  for (double i = 0, e = mv->vec.size(); i < e; ++i) {
-    auto [k, v] = *mv->vec.at(i);
-    cb(k, v);
-  }
-}
-
 MapVector *mapEntitiesToComponents(std::vector<VirtualEntity *> *entities) {
   auto *map = new MapVector();
-  arrayForEach<VirtualEntity *>(entities, [map](VirtualEntity *entity) {
+  for (auto *entity : *entities) {
     double key = entity->first;
     auto *value = entity->second;
 
@@ -390,7 +325,7 @@ MapVector *mapEntitiesToComponents(std::vector<VirtualEntity *> *entities) {
 
     for (auto *v : *value)
       components->push_back(v);
-  });
+  }
 
   return map;
 }
@@ -401,65 +336,70 @@ SceneDiff *diffTrees(
   auto *createdComponents = new std::vector<ComponentPair *>();
   auto *deletedComponents = new std::vector<ComponentPair *>();
 
-  auto *oldEntityIds = arrayMap<VirtualEntity *, double>(
-      oldEntities, [](VirtualEntity *entity, double) { return entity->first; });
-  auto *newEntityIds = arrayMap<VirtualEntity *, double>(
-      newEntities, [](VirtualEntity *entity, double) { return entity->first; });
+  auto *oldEntityIds = new std::vector<double>();
+  for (auto *entity : *oldEntities)
+    oldEntityIds->push_back(entity->first);
+  auto *newEntityIds = new std::vector<double>();
+  for (auto *entity : *newEntities)
+    newEntityIds->push_back(entity->first);
 
-  auto *createdEntities = arrayFilter<double>(
-      newEntityIds,
-      [oldEntityIds](double id) { return !arrayIncludes(oldEntityIds, id); });
-  auto *deletedEntities = arrayFilter<double>(
-      oldEntityIds,
-      [newEntityIds](double id) { return !arrayIncludes(newEntityIds, id); });
+  auto *createdEntities = new std::vector<double>();
+  for (double id : *newEntityIds)
+    if (std::find(oldEntityIds->begin(), oldEntityIds->end(), id) ==
+        oldEntityIds->end())
+      createdEntities->push_back(id);
+
+  auto *deletedEntities = new std::vector<double>();
+  for (double id : *oldEntityIds)
+    if (std::find(newEntityIds->begin(), newEntityIds->end(), id) ==
+        newEntityIds->end())
+      deletedEntities->push_back(id);
 
   auto *oldComponents = mapEntitiesToComponents(oldEntities);
   auto *newComponents = mapEntitiesToComponents(newEntities);
 
-  arrayForEach<double>(
-      createdEntities, [newComponents, createdComponents](double entityId) {
-        auto it = newComponents->map.find(entityId);
-        if (it == newComponents->map.end())
-          return;
-        auto *components = arrayMap<Component *, ComponentPair *>(
-            it->second, [entityId](Component *component, double) {
-              return new ComponentPair{entityId, component};
-            });
-        for (double i = 0, e = components->size(); i < e; ++i)
-          createdComponents->push_back(components->at(i));
-      });
+  for (double entityId : *createdEntities) {
+    auto it = newComponents->map.find(entityId);
+    if (it == newComponents->map.end())
+      continue;
+    for (Component *component : *it->second)
+      createdComponents->push_back(new ComponentPair{entityId, component});
+  }
 
-  mapVectorForEach(
-      newComponents,
-      [oldComponents, createdComponents, deletedComponents](
-          double key, auto *value) {
-        if (!oldComponents->map.count(key))
-          return;
+  for (auto *kv : newComponents->vec) {
+    auto [key, value] = *kv;
 
-        auto it = oldComponents->map.find(key);
-        auto *oldComponentsForKey = it != oldComponents->map.end()
-            ? it->second
-            : new std::vector<Component *>();
-        auto *newComponentsForKey = value;
+    if (!oldComponents->map.count(key))
+      continue;
 
-        auto *deleted = arrayFilter<Component *>(
-            oldComponentsForKey, [newComponentsForKey](Component *component) {
-              return !arrayIncludes(newComponentsForKey, component);
-            });
-        auto *created = arrayFilter<Component *>(
-            newComponentsForKey, [oldComponentsForKey](Component *component) {
-              return !arrayIncludes(oldComponentsForKey, component);
-            });
+    auto it = oldComponents->map.find(key);
+    auto *oldComponentsForKey = it != oldComponents->map.end()
+        ? it->second
+        : new std::vector<Component *>();
+    auto *newComponentsForKey = value;
 
-        arrayForEach<Component *>(
-            deleted, [key, deletedComponents](Component *component) {
-              deletedComponents->push_back(new ComponentPair{key, component});
-            });
-        arrayForEach<Component *>(
-            created, [key, createdComponents](Component *component) {
-              createdComponents->push_back(new ComponentPair{key, component});
-            });
-      });
+    auto *deleted = new std::vector<Component *>();
+    for (auto *component : *oldComponentsForKey)
+      if (std::find(
+              newComponentsForKey->begin(),
+              newComponentsForKey->end(),
+              component) == newComponentsForKey->end())
+        deleted->push_back(component);
+
+    auto *created = new std::vector<Component *>();
+    for (auto *component : *newComponentsForKey)
+      if (std::find(
+              oldComponentsForKey->begin(),
+              oldComponentsForKey->end(),
+              component) == oldComponentsForKey->end())
+        created->push_back(component);
+
+    for (auto *component : *deleted)
+      deletedComponents->push_back(new ComponentPair{key, component});
+
+    for (auto *component : *created)
+      createdComponents->push_back(new ComponentPair{key, component});
+  }
   return new SceneDiff{
       createdEntities, deletedEntities, createdComponents, deletedComponents};
 }
