@@ -132,7 +132,7 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 # - HEAP_HV_BOXED: the encoding is either 32 or 64-bit depending on the system,
 #       but always box doubles. This is used for testing that all paths can deal
 #       with potential allocation of boxed doubles.
-set(HERMESVM_HEAP_HV_MODE HEAP_HV_PREFER32 CACHE STRING
+set(HERMESVM_HEAP_HV_MODE HEAP_HV_64 CACHE STRING
   "Heap HV mode: HEAP_HV_64, HEAP_HV_PREFER32, HEAP_HV_BOXED")
 
 if(APPLE OR WIN32)
@@ -221,7 +221,7 @@ set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
-set(HERMES_ENABLE_DEBUGGER ON CACHE BOOL
+set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
   "Build with debugger support")
 
 set(HERMES_MEMORY_INSTRUMENTATION ${HERMES_ENABLE_DEBUGGER} CACHE BOOL
