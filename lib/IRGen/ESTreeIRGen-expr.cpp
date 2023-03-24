@@ -186,6 +186,11 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genExpression(ICK->_argument, nameHint);
   }
 
+  if (auto *TC = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(expr)) {
+    // FIXME: emit something.
+    return genExpression(TC->_expression, nameHint);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));
   return Builder.getLiteralUndefined();

@@ -561,6 +561,28 @@ class FlowChecker::ExprVisitor {
       visitESTreeNode(*this, node->_property, node);
   }
 
+  void visit(ESTree::TypeCastExpressionNode *node) {
+    auto *resTy = outer_.parseTypeAnnotation(
+        llvh::cast<ESTree::TypeAnnotationNode>(node->_typeAnnotation)
+            ->_typeAnnotation,
+        nullptr,
+        nullptr);
+    // Populate the type of this node before visiting the expression, since it
+    // is already known. This also allows the result type to be used as context
+    // while we are visiting the expression being cast. For instance, if we are
+    // casting an empty array literal, the resulting type of the cast can be
+    // used to set the element type of the array.
+    outer_.setNodeType(node, resTy);
+    visitESTreeNode(*this, node->_expression, node);
+
+    auto *expTy = outer_.getNodeTypeOrAny(node->_expression);
+    auto cf = canAFlowIntoB(expTy, resTy);
+    if (!cf.canFlow) {
+      outer_.sm_.error(
+          node->getSourceRange(), "ft: cast from incompatible type");
+    }
+  }
+
   void visit(ESTree::NullLiteralNode *node) {
     outer_.setNodeType(node, outer_.flowContext_.getNull());
   }

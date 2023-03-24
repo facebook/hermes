@@ -895,6 +895,11 @@ void SemanticResolver::visit(CoverTypedIdentifierNode *node) {
 void SemanticResolver::visit(TypeAliasNode *node) {
   // Do nothing.
 }
+
+void SemanticResolver::visit(TypeCastExpressionNode *node) {
+  // Visit the expression, but not the type annotation.
+  visitESTreeNode(*this, node->_expression, node);
+}
 #endif
 
 void SemanticResolver::visitFunctionLike(
