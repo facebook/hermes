@@ -199,7 +199,7 @@ class Button extends Widget {
   }
 
   reduce(ctx: Context): RenderNode {
-    const component: NumberComponent = new NumberComponent(this.num);
+    const component: Component = new NumberComponent(this.num);
     return RenderNode_create(ctx, [component], null);
   }
 }
@@ -213,7 +213,7 @@ class Floater extends Widget {
   }
 
   reduce(ctx: Context): RenderNode {
-    const component: NumberComponent = new NumberComponent(this.num);
+    const component: Component = new NumberComponent(this.num);
     return RenderNode_create(ctx, [component], null);
   }
 }
@@ -227,7 +227,7 @@ class Gltf extends Widget {
   }
 
   reduce(ctx: Context): RenderNode {
-    const component: StringComponent = new StringComponent(this.path);
+    const component: Component = new StringComponent(this.path);
     return RenderNode_create(ctx, [component], null);
   }
 }
@@ -241,7 +241,7 @@ class Container extends Widget {
   }
 
   reduce(ctx: Context): RenderNode {
-    const component: NumberComponent = new NumberComponent(13);
+    const component: Component = new NumberComponent(13);
     const children: RenderNode[] = arrayPrototypeMap_Widget(
       this.children,
       child => RenderNode_createForChild(ctx, child),
@@ -331,7 +331,7 @@ function mapEntitiesToComponents(
     const key: number = entity.key;
     const value: Component[] = entity.value;
     if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
-      $SHBuiltin.call(mapPrototypeSet, map, key, []);
+      $SHBuiltin.call(mapPrototypeSet, map, key, ([]: Component[]));
     }
 
     const components: Component[] = $SHBuiltin.call(mapPrototypeGet, map, key);
@@ -366,7 +366,7 @@ function diffTrees(
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
   arrayPrototypeForEach_number(createdEntities, (entityId: number) => {
-    const components = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || [],
+    const components = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
       (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
@@ -377,7 +377,7 @@ function diffTrees(
       return;
     }
 
-    const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || [];
+    const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || ([]: Component[]);
     const newComponentsForKey: Component[] = value;
 
     const deleted: Component[] = arrayPrototypeFilter_Component(
@@ -516,7 +516,7 @@ class RenderNode {
     this.key = key;
     this.id = id;
     this.components = components;
-    this.children = children || [];
+    this.children = children || ([]: RenderNode[]);
   }
 
   reduce(): VirtualEntity[] {
@@ -558,7 +558,7 @@ class ButtonAndModel extends ComposedWidget {
   }
 
   render(): Widget {
-    const children = [
+    const children: Widget[] = [
       new Button(this.data.buttonSize),
       new Gltf(this.data.modelPath),
       new Floater(Math.sqrt(this.data.buttonSize)),
