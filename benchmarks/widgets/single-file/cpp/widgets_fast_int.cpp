@@ -5,7 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <chrono>
+#include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <string>
