@@ -5,6 +5,7 @@ orbs:
   android: circleci/android@2.0.3
   node: circleci/node@4.7.0
 
+## WORKFLOWS ##
 workflows:
   version: 2
   build:
@@ -34,6 +35,10 @@ workflows:
       - test-e2e
       - test-e2e-intl
       - test-macos-test262
+      - test-ios-e2e:
+          matrix:
+            parameters:
+              architecture: [ "OldArch", "NewArch" ]
 
 # Default settings for Apple jobs (apple-runtime, test-apple-runtime)
 apple_defaults: &apple_defaults
@@ -48,6 +53,7 @@ apple_defaults: &apple_defaults
     # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
     - HOMEBREW_NO_AUTO_UPDATE: 1
 
+## REUSABLE JOBS ##
 jobs:
   android:
     executor:
@@ -612,3 +618,45 @@ jobs:
             cmake --build ./build
             cmake --build ./build --target check-hermes
             python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
+
+  test-ios-e2e:
+    macos:
+      xcode: 14.2.0
+    parameters:
+      architecture:
+        description: The React Native Architecture we would like to build
+        default: OldArch
+        type: enum
+        enum: ["OldArch", "NewArch"]
+    steps:
+      - run:
+          name: Checkout React Native
+          command: git clone https://github.com/facebook/react-native.git
+      - run:
+          name: Install CMake
+          command: brew install cmake
+      - run:
+          name: Run Yarn on React Native
+          command: cd react-native && yarn
+      - run:
+          name: Prepare RNTester (Old Arch, RN Main and Hermes Main)
+          command: |
+            cd react-native/packages/rn-tester
+            yarn
+            bundle install
+
+            # if not in `main`, pick the Hermes commit that corresponds to this PR.
+            if [[ "$CIRCLE_BRANCH" != "main" ]]; then
+              export HERMES_COMMIT="$CIRCLE_SHA1"
+            fi
+
+            if [[ "New" == << parameters.architecture >> ]]; then
+              export RCT_NEW_ARCH_ENABLED=1
+            fi
+
+            bundle exec pod install
+      - run:
+          name: Run E2E Tests on RNTester
+          command: |
+            cd react-native
+            yarn test-ios
