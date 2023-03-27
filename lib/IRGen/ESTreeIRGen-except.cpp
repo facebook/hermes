@@ -9,6 +9,8 @@
 
 #include "llvh/Support/SaveAndRestore.h"
 
+#include <variant>
+
 namespace hermes {
 namespace irgen {
 
@@ -60,8 +62,21 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               llvh::dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
 
           // Catch takes a exception variable, hence we need to create a new
-          // scope for it.
-          NameTableScopeTy newScope(nameTable_);
+          // scope for it. The --block-scoping flag controls how the catch
+          // variable will be created. N.B.: newScope isn't used directly after
+          // its contents are emplaced, but the constructors/destructors of its
+          // payload have important side-effects (named, pushing/popping the
+          // scope information from the IR generation).
+          std::variant<std::monostate, NameTableScopeTy, EnterBlockScope>
+              newScope;
+
+          if (!Mod->getContext()
+                   .getCodeGenerationSettings()
+                   .enableBlockScoping) {
+            newScope.emplace<NameTableScopeTy>(nameTable_);
+          } else {
+            newScope.emplace<EnterBlockScope>(curFunction());
+          }
 
           Builder.setLocation(tryStmt->_handler->getDebugLoc());
           prepareCatch(catchClauseNode->_param);
@@ -90,6 +105,16 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
   auto *catchInst = Builder.createCatchInst();
 
+  if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    // Create the catch scope after the Catch instruction so it is part of the
+    // Catch handler range in the exception tables.
+    ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
+    blockScopeDesc->setFunction(curFunction()->function);
+    currentIRScopeDesc_ = blockScopeDesc;
+    currentIRScope_ =
+        Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+  }
+
   if (!catchParam) {
     // Optional catch binding allows us to emit no extra code for the catch.
     return catchInst;
@@ -102,27 +127,42 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
     return nullptr;
   }
 
-  auto catchVariableName =
-      getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
+  Variable *errorVar{};
 
-  // Generate a unique catch variable name and use this name for IRGen purpose
-  // only. The variable lookup in the catch clause will continue to be done
-  // using the declared name.
-  auto uniquedCatchVariableName =
-      genAnonymousLabelName(catchVariableName.str());
+  if (!Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    auto catchVariableName =
+        getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
 
-  auto errorVar = Builder.createVariable(
-      curFunction()->function->getFunctionScopeDesc(),
-      Variable::DeclKind::Var,
-      uniquedCatchVariableName);
+    // Generate a unique catch variable name and use this name for IRGen purpose
+    // only. The variable lookup in the catch clause will continue to be done
+    // using the declared name.
+    auto uniquedCatchVariableName =
+        genAnonymousLabelName(catchVariableName.str());
 
-  /// Insert the synthesized variable into the function name table, so it can
-  /// be looked up internally.
-  nameTable_.insertIntoScope(
-      curFunction()->functionScope, errorVar->getName(), errorVar);
+    errorVar = Builder.createVariable(
+        curFunction()->function->getFunctionScopeDesc(),
+        Variable::DeclKind::Var,
+        uniquedCatchVariableName);
 
-  // Alias the lexical name to the synthesized variable.
-  nameTable_.insert(catchVariableName, errorVar);
+    /// Insert the synthesized variable into the function name table, so it can
+    /// be looked up internally.
+    nameTable_.insertIntoScope(
+        curFunction()->functionScope, errorVar->getName(), errorVar);
+
+    // Alias the lexical name to the synthesized variable.
+    nameTable_.insert(catchVariableName, errorVar);
+  } else {
+    auto catchVariableName =
+        getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
+
+    errorVar = Builder.createVariable(
+        currentIRScopeDesc_, Variable::DeclKind::Var, catchVariableName);
+
+    /// Insert the synthesized variable into the function name table, so it can
+    /// be looked up internally.
+    nameTable_.insertIntoScope(
+        curFunction()->blockScope, errorVar->getName(), errorVar);
+  }
 
   emitStore(catchInst, errorVar, true);
   return catchInst;

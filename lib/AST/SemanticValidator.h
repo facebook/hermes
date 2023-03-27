@@ -303,6 +303,10 @@ class SemanticValidator {
   /// \p body if it is a BlockStatementNode
   void visitBody(Node *body, FunctionLikeNode *func);
 
+  /// Visits a handler in a try statement. It exists so a scope can be created
+  /// for both the catch parameter as well as the handler body.
+  void visitTryHandler(TryStatementNode *tryStatement);
+
   /// We call this when we exceed the maximum recursion depth.
   void recursionDepthExceeded(Node *n);
 
@@ -352,7 +356,13 @@ class BlockContext {
   /// var-declared names that are also block-scoped names. See
   /// * ES2023 14.2.1 SS: Early Erros
   /// * ES2023 15.2.1 SS: Early Erros
-  void ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody);
+  ///
+  /// \p catchParam is an optional parameter that, if not null is supposed to
+  /// be a catch parameter (in which case, it is an error for \p catchParam to
+  /// be in the scope's lexically declared names -- see ES2023 B.3.4)
+  void ensureScopedNamesAreUnique(
+      IsFunctionBody isFunctionBody,
+      IdentifierNode *catchParam = nullptr);
 
  private:
   /// Stops hoisting any functions named \p id. This is used to implement

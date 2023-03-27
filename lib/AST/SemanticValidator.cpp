@@ -385,8 +385,42 @@ void SemanticValidator::visit(TryStatementNode *tryStatement) {
   }
 
   visitESTreeNode(*this, tryStatement->_block, tryStatement);
-  visitESTreeNode(*this, tryStatement->_handler, tryStatement);
+  if (!blockScopingEnabled()) {
+    visitESTreeNode(*this, tryStatement->_handler, tryStatement);
+  } else {
+    visitTryHandler(tryStatement);
+  }
+
   visitESTreeNode(*this, tryStatement->_finalizer, tryStatement);
+}
+
+void SemanticValidator::visitTryHandler(TryStatementNode *tryStatement) {
+  if (auto *handler =
+          llvh::dyn_cast_or_null<CatchClauseNode>(tryStatement->_handler)) {
+    auto *param = llvh::dyn_cast_or_null<IdentifierNode>(handler->_param);
+
+    BlockContext blockScope(this, curFunction(), handler);
+
+    if (auto *block = llvh::dyn_cast<BlockStatementNode>(handler->_body)) {
+      for (auto &stmt : block->_body) {
+        visitESTreeNode(*this, &stmt, block);
+      }
+    } else {
+      visitESTreeNode(*this, tryStatement->_handler, tryStatement);
+    }
+
+    blockScope.ensureScopedNamesAreUnique(
+        BlockContext::IsFunctionBody::No, param);
+
+    // Delay adding the catch param until now to prevent Syntax Errors if the
+    // handler has a var that with the same ID as the catch param (as specified
+    // in ES2023 B.3.4).
+    validateDeclarationNames(
+        FunctionInfo::VarDecl::Kind::Let,
+        param,
+        curFunction()->varDecls,
+        curFunction()->scopedDecls);
+  }
 }
 
 void SemanticValidator::visit(BlockStatementNode *block) {
@@ -1160,7 +1194,9 @@ void BlockContext::stopHoisting(IdentifierNode *id) {
   }
 }
 
-void BlockContext::ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody) {
+void BlockContext::ensureScopedNamesAreUnique(
+    IsFunctionBody isFunctionBody,
+    IdentifierNode *catchParam) {
   if (!validator_->blockScopingEnabled()) {
     return;
   }
@@ -1248,6 +1284,14 @@ void BlockContext::ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody) {
     if (!res.second) {
       validator_->reportRedeclaredIdentifier(
           *res.first->second, *scopedDecl.identifier);
+      return;
+    }
+  }
+
+  if (catchParam) {
+    auto it = lexicallyDeclaredNames.find(catchParam->_name);
+    if (it != lexicallyDeclaredNames.end()) {
+      validator_->reportRedeclaredIdentifier(*it->second, *catchParam);
       return;
     }
   }
