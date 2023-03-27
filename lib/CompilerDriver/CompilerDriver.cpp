@@ -285,6 +285,18 @@ opt<bool> BasicBlockProfiling(
     init(false),
     desc("Enable basic block profiling (HBC only)"));
 
+opt<bool> EnableBlockScoping(
+    "block-scoping",
+    desc("Enables block scoping support."),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+static llvh::cl::alias _EnableBlockScoping(
+    "bs",
+    desc("Alias for --block-scoping"),
+    Hidden,
+    llvh::cl::aliasopt(EnableBlockScoping));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -1103,6 +1115,7 @@ std::shared_ptr<Context> createContext(
     codeGenOpts.unlimitedRegisters = false;
   }
   codeGenOpts.instrumentIR = cl::InstrumentIR;
+  codeGenOpts.enableBlockScoping = cl::EnableBlockScoping;
 
   OptimizationSettings optimizationOpts;
 

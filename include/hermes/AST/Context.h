@@ -56,6 +56,8 @@ struct CodeGenerationSettings {
   bool instrumentIR{false};
   /// Instructs IR Generation to use synthetic names for unnamed functions.
   bool generateNameForUnnamedFunctions{false};
+  /// Whether block scoping is enabled.
+  bool enableBlockScoping{false};
 
   /// Dump IR before each pass (if holds boolean), or the given passes (if holds
   /// DensetSet).

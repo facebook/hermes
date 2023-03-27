@@ -44,6 +44,7 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.includeLibHermes = false;
   compileFlags.verifyIR = runtime.verifyEvalIR;
   compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
+  compileFlags.enableBlockScoping = runtime.enableBlockScopingInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
 #ifdef HERMES_ENABLE_DEBUGGER
