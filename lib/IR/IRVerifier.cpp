@@ -310,6 +310,9 @@ static bool isTerminator(const Instruction *Inst) {
 
 void Verifier::visitScopeCreationInst(const ScopeCreationInst &Inst) {}
 
+void Verifier::visitNestedScopeCreationInst(
+    const NestedScopeCreationInst &Inst) {}
+
 void Verifier::visitSingleOperandInst(const SingleOperandInst &Inst) {}
 
 void Verifier::visitReturnInst(const ReturnInst &Inst) {
@@ -474,6 +477,13 @@ void Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
       functionState->function.getFunctionScopeDesc() ==
           Inst.getCreatedScopeDesc(),
       "CreateScopeInst is materializing the wrong scope desc");
+}
+
+void Verifier::visitCreateInnerScopeInst(const CreateInnerScopeInst &Inst) {
+  Assert(functionState, "function state cannot be null");
+  Assert(
+      &functionState->function == Inst.getCreatedScopeDesc()->getFunction(),
+      "Creatting inner scope from another function");
 }
 
 void Verifier::visitCreateFunctionInst(const CreateFunctionInst &Inst) {
@@ -802,6 +812,14 @@ void Verifier::visitHBCCreateEnvironmentInst(
       functionState->function.getFunctionScopeDesc() ==
           Inst.getCreatedScopeDesc(),
       "HBCCreateEnvironmentInst is materializing the wrong scope desc");
+}
+
+void Verifier::visitHBCCreateInnerEnvironmentInst(
+    const HBCCreateInnerEnvironmentInst &Inst) {
+  Assert(functionState, "function state cannot be null");
+  Assert(
+      &functionState->function == Inst.getCreatedScopeDesc()->getFunction(),
+      "Creatting inner scope from another function");
 }
 
 void Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {

@@ -295,6 +295,10 @@ class IRBuilder {
 
   CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
 
+  CreateInnerScopeInst *createCreateInnerScopeInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc);
+
   CreateFunctionInst *createCreateFunctionInst(
       Function *code,
       ScopeCreationInst *environment);
@@ -518,6 +522,10 @@ class IRBuilder {
   HBCLoadParamInst *createHBCLoadParamInst(LiteralNumber *value);
 
   HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst(
+      ScopeDesc *scopeDesc);
+
+  HBCCreateInnerEnvironmentInst *createHBCCreateInnerEnvironmentInst(
+      ScopeCreationInst *parentScope,
       ScopeDesc *scopeDesc);
 
   HBCGetThisNSInst *createHBCGetThisNSInst();

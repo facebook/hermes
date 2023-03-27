@@ -32,6 +32,13 @@ DEF_VALUE(CreateScopeInst, ScopeCreationInst)
 DEF_VALUE(HBCCreateEnvironmentInst, ScopeCreationInst)
 DEF_VALUE(HBCResolveEnvironment, ScopeCreationInst)
 #endif
+MARK_FIRST(NestedScopeCreationInst)
+DEF_VALUE(NestedScopeCreationInst, ScopeCreationInst)
+DEF_VALUE(CreateInnerScopeInst, NestedScopeCreationInst)
+#ifdef INCLUDE_HBC_BACKEND
+DEF_VALUE(HBCCreateInnerEnvironmentInst, NestedScopeCreationInst)
+#endif
+MARK_LAST(NestedScopeCreationInst)
 MARK_LAST(ScopeCreationInst)
 
 MARK_FIRST(SingleOperandInst)

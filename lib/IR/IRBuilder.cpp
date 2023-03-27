@@ -356,6 +356,14 @@ CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
   return CII;
 }
 
+CreateInnerScopeInst *IRBuilder::createCreateInnerScopeInst(
+    ScopeCreationInst *parentScope,
+    ScopeDesc *scopeDesc) {
+  auto CISI = new CreateInnerScopeInst(parentScope, scopeDesc);
+  insert(CISI);
+  return CISI;
+}
+
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
     Function *code,
     ScopeCreationInst *environment) {
@@ -832,6 +840,14 @@ HBCLoadParamInst *IRBuilder::createHBCLoadParamInst(LiteralNumber *value) {
 HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst(
     ScopeDesc *scopeDesc) {
   auto inst = new HBCCreateEnvironmentInst(scopeDesc);
+  insert(inst);
+  return inst;
+}
+
+HBCCreateInnerEnvironmentInst *IRBuilder::createHBCCreateInnerEnvironmentInst(
+    ScopeCreationInst *parentScope,
+    ScopeDesc *scopeDesc) {
+  auto inst = new HBCCreateInnerEnvironmentInst(parentScope, scopeDesc);
   insert(inst);
   return inst;
 }

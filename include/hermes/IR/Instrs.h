@@ -115,6 +115,49 @@ class ScopeCreationInst : public Instruction {
   }
 };
 
+class NestedScopeCreationInst : public ScopeCreationInst {
+  NestedScopeCreationInst(const NestedScopeCreationInst &) = delete;
+  void operator=(const NestedScopeCreationInst &) = delete;
+
+ public:
+  enum { ParentScopeIdx = ScopeCreationInst::FirstAvailableIdx };
+
+  explicit NestedScopeCreationInst(
+      ValueKind kind,
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : ScopeCreationInst(kind, scopeDesc) {
+    pushOperand<ParentScopeIdx>(parentScope);
+  }
+
+  explicit NestedScopeCreationInst(
+      const NestedScopeCreationInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : ScopeCreationInst(src, operands) {}
+
+  ScopeCreationInst *getParentScope() const {
+    return llvh::cast<ScopeCreationInst>(getOperand(ParentScopeIdx));
+  }
+
+  // Should be used late in the compilation pipeline after MovSpill runs -- the
+  // scope register may not be a fast register, and thus the cast would fail.
+  Value *getParentScopeNoCast() const {
+    return getOperand(ParentScopeIdx);
+  }
+
+  SideEffectKind getSideEffect() {
+    llvm_unreachable("NestedScopeCreationInst must be inherited.");
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    llvm_unreachable("NestedScopeCreationInst must be inherited.");
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::NestedScopeCreationInstKind);
+  }
+};
+
 /// Base class for instructions that have exactly one operand. It guarantees
 /// that only one operand is pushed and it provides getSingleOperand().
 class SingleOperandInst : public Instruction {
@@ -676,6 +719,39 @@ class CreateScopeInst : public ScopeCreationInst {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::CreateScopeInstKind);
+  }
+};
+
+class CreateInnerScopeInst : public NestedScopeCreationInst {
+  CreateInnerScopeInst(const CreateInnerScopeInst &) = delete;
+  void operator=(const CreateInnerScopeInst &) = delete;
+
+ public:
+  enum { ParentScopeIdx = FirstAvailableIdx };
+
+  explicit CreateInnerScopeInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : NestedScopeCreationInst(
+            ValueKind::CreateInnerScopeInstKind,
+            parentScope,
+            scopeDesc) {}
+
+  explicit CreateInnerScopeInst(
+      const CreateInnerScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : NestedScopeCreationInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CreateInnerScopeInstKind);
   }
 };
 
@@ -2793,6 +2869,37 @@ class HBCCreateEnvironmentInst : public ScopeCreationInst {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateEnvironmentInstKind);
+  }
+};
+
+class HBCCreateInnerEnvironmentInst : public NestedScopeCreationInst {
+ public:
+  HBCCreateInnerEnvironmentInst(const HBCCreateInnerEnvironmentInst &) = delete;
+  void operator=(const HBCCreateInnerEnvironmentInst &) = delete;
+
+  explicit HBCCreateInnerEnvironmentInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : NestedScopeCreationInst(
+            ValueKind::HBCCreateInnerEnvironmentInstKind,
+            parentScope,
+            scopeDesc) {}
+
+  explicit HBCCreateInnerEnvironmentInst(
+      const HBCCreateInnerEnvironmentInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : NestedScopeCreationInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::HBCCreateInnerEnvironmentInstKind);
   }
 };
 

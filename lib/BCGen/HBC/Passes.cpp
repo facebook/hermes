@@ -331,6 +331,17 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
         Inst->replaceAllUsesWith(llInst);
         Inst->eraseFromParent();
         changed = true;
+      } else if (auto cisi = llvh::dyn_cast<CreateInnerScopeInst>(Inst)) {
+        builder.setInsertionPoint(cisi);
+        assert(
+            llvh::isa<HBCCreateEnvironmentInst>(cisi->getParentScope()) ||
+            llvh::isa<HBCCreateInnerEnvironmentInst>(cisi->getParentScope()));
+
+        Instruction *llInst = builder.createHBCCreateInnerEnvironmentInst(
+            cisi->getParentScope(), cisi->getCreatedScopeDesc());
+        Inst->replaceAllUsesWith(llInst);
+        Inst->eraseFromParent();
+        changed = true;
       }
     }
   }

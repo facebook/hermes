@@ -311,6 +311,12 @@ void HBCISel::generateScopeCreationInst(
   llvm_unreachable("This is not a concrete instruction");
 }
 
+void HBCISel::generateNestedScopeCreationInst(
+    NestedScopeCreationInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("This is not a concrete instruction");
+}
+
 void HBCISel::generateSingleOperandInst(
     SingleOperandInst *Inst,
     BasicBlock *next) {
@@ -819,6 +825,12 @@ void HBCISel::generateCreateFunctionInst(
 void HBCISel::generateCreateScopeInst(CreateScopeInst *Inst, BasicBlock *next) {
   llvm_unreachable("CreateScopeInst should have been lowered.");
 }
+void HBCISel::generateCreateInnerScopeInst(
+    CreateInnerScopeInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("CreateInnerScopeInst should have been lowered.");
+}
+
 void HBCISel::generateHBCCreateFunctionInst(
     HBCCreateFunctionInst *Inst,
     BasicBlock *) {
@@ -1479,6 +1491,15 @@ void HBCISel::generateHBCCreateEnvironmentInst(
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   BCFGen_->emitCreateEnvironment(dstReg);
+}
+
+void HBCISel::generateHBCCreateInnerEnvironmentInst(
+    hermes::HBCCreateInnerEnvironmentInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dstReg = encodeValue(Inst);
+  auto srcReg = encodeValue(Inst->getParentScopeNoCast());
+  BCFGen_->emitCreateInnerEnvironment(
+      dstReg, srcReg, Inst->getCreatedScopeDesc()->getVariables().size());
 }
 
 void HBCISel::generateHBCProfilePointInst(
