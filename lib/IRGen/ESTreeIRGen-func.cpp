@@ -667,6 +667,22 @@ void ESTreeIRGen::createScopeBindings(
                        << " in scope " << scopeDesc << "\n");
       createNewBinding(
           scopeDesc, decl.kind, decl.identifier, decl.needsInitializer);
+      if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+        if (decl.kind != VarDecl::Kind::Var && scopeDesc->isGlobalScope() &&
+            llvh::isa<ESTree::ProgramNode>(containingNode)) {
+          // The newly created Variable is a const/let declaration, so the
+          // running program must check whether it is a valid name. For example,
+          //
+          // let undefined;
+          //
+          // is an invalid global let declaration because undefined is a
+          // restricted global name.
+          IRBuilder::ScopedLocationChange slc(
+              Builder, decl.identifier->getSourceRange().Start);
+          Builder.createThrowIfHasRestrictedGlobalPropertyInst(
+              decl.identifier->_name->str());
+        }
+      }
     }
   }
 }

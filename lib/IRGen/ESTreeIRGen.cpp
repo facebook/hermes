@@ -477,8 +477,20 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
       assert(
           llvh::isa<GlobalObjectProperty>(found) &&
           "Invalid value found in name table");
-      if (inScope->isGlobalScope())
+      if (inScope->isGlobalScope() &&
+          (declKind == VarDecl::Kind::Var ||
+           !Mod->getContext().getCodeGenerationSettings().enableBlockScoping)) {
+        // Only return the global property that was found if this is the global
+        // scope and the JS source is declaring a "var" global (i.e., a
+        // GlobalObjectProperty). This causes code like
+        //
+        // let undefined;
+        //
+        // to define a global variable, which will then, at runtime, be checked
+        // with ThrowIfHasRestrictedGlobalProperty to ensure it is a valid
+        // lexically scoped name for the given program.
         return {found, false};
+      }
     }
   }
 
