@@ -1064,15 +1064,6 @@ SKIP_LIST = [
     "test262/test/language/expressions/array/spread-obj-spread-order.js",
     "test262/test/language/expressions/call/spread-obj-spread-order.js",
     "test262/test/language/expressions/new/spread-obj-spread-order.js",
-    # T42569352 TDZ for parameters used in initializer expressions.
-    "test262/test/language/expressions/function/dflt-params-ref-later.js",
-    "test262/test/language/expressions/function/dflt-params-ref-self.js",
-    "test262/test/language/expressions/generators/dflt-params-ref-later.js",
-    "test262/test/language/expressions/generators/dflt-params-ref-self.js",
-    "test262/test/language/statements/function/dflt-params-ref-later.js",
-    "test262/test/language/statements/function/dflt-params-ref-self.js",
-    "test262/test/language/statements/generators/dflt-params-ref-later.js",
-    "test262/test/language/statements/generators/dflt-params-ref-self.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706

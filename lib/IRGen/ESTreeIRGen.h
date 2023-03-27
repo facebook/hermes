@@ -930,7 +930,15 @@ class ESTreeIRGen {
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
-  void emitParameters(ESTree::FunctionLikeNode *funcNode);
+  /// \param hasParamExpressions indicates that \p funcNode has parameter
+  ///   experssions; if this is true, parameters are lowered to tdz locals to
+  ///   prevent using parameters before they are initialized, e.g.
+  ///   \code
+  ///   function f(a = b, b = 10) { ... }
+  ///   \endcode
+  void emitParameters(
+      ESTree::FunctionLikeNode *funcNode,
+      bool hasParamExpressions);
 
   /// Count number of expected arguments, including "this".
   /// Only parameters up to the first parameter with an initializer are counted.

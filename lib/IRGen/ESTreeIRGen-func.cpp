@@ -670,7 +670,7 @@ void ESTreeIRGen::emitTopLevelDeclarations(
   if (doEmitParameters != DoEmitParameters::No) {
     // Create function parameters, register them in the scope, and initialize
     // them with their income values.
-    emitParameters(funcNode);
+    emitParameters(funcNode, hasParamExpressions);
   } else {
     curFunction()->function->setExpectedParamCountIncludingThis(
         countExpectedArgumentsIncludingThis(funcNode));
@@ -839,22 +839,42 @@ void ESTreeIRGen::createNewBinding(
   Builder.createStoreFrameInst(init, var, currentIRScope_);
 }
 
-void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
+void ESTreeIRGen::emitParameters(
+    ESTree::FunctionLikeNode *funcNode,
+    bool hasParamExpressions) {
   auto *newFunc = curFunction()->function;
 
   LLVM_DEBUG(llvh::dbgs() << "IRGen function parameters.\n");
 
+  if (!Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    // Disable parameter TDZ if block scoping support is disabled.
+    hasParamExpressions = false;
+  }
+
+  llvh::SmallVector<Variable *, 4> tdzParams;
+
   // Create a variable for every parameter.
+  Value *empty = Builder.getLiteralEmpty();
+  Variable::DeclKind paramKind =
+      hasParamExpressions ? Variable::DeclKind::Let : Variable::DeclKind::Var;
   for (auto paramDecl : funcNode->getSemInfo()->paramNames) {
     Identifier paramName = getNameFieldFromID(paramDecl.identifier);
     LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << paramName << "\n");
     auto *paramStorage = Builder.createVariable(
-        newFunc->getFunctionScopeDesc(), Variable::DeclKind::Var, paramName);
+        newFunc->getFunctionScopeDesc(), paramKind, paramName);
+    if (hasParamExpressions) {
+      // funcNode has parameter expressions, thus the parameters are first
+      // copied to tdz variables which need to be initialized to empty.
+      Builder.createStoreFrameInst(empty, paramStorage, currentIRScope_);
+
+      // Also keep track of all created Variables to copy them into regular Var
+      // declarations.
+      tdzParams.push_back(paramStorage);
+    }
     // Register the storage for the parameter.
     nameTable_.insert(paramName, paramStorage);
   }
 
-  // FIXME: T42569352 TDZ for parameters used in initializer expressions.
   uint32_t paramIndex = uint32_t{0} - 1;
   for (auto &elem : ESTree::getParams(funcNode)) {
     ESTree::Node *param = &elem;
@@ -883,6 +903,22 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     createLRef(param, true)
         .emitStore(
             emitOptionalInitialization(formalParam, init, formalParamName));
+  }
+
+  // Now copy the TDZ parameters to Var declarations. This improves codegen by
+  // removing tdz checks when accessing the parameters.
+  assert(
+      (tdzParams.empty() || hasParamExpressions) &&
+      "funcNode does not have param expressions, so it doesn't"
+      " need tdz params.");
+  for (Variable *oldParamStorage : tdzParams) {
+    auto *paramStorage = Builder.createVariable(
+        newFunc->getFunctionScopeDesc(),
+        Variable::DeclKind::Let,
+        oldParamStorage->getName());
+    constexpr bool declInit = true;
+    emitStore(emitLoad(oldParamStorage), paramStorage, declInit);
+    nameTable_.setInCurrentScope(oldParamStorage->getName(), paramStorage);
   }
 
   newFunc->setExpectedParamCountIncludingThis(
