@@ -63,6 +63,7 @@ class Keywords {
 
 /// Class the performs all semantic validation
 class SemanticValidator {
+  friend class BlockContext;
   friend class FunctionContext;
 
   Context &astContext_;
@@ -179,6 +180,7 @@ class SemanticValidator {
 
   void visit(TryStatementNode *tryStatement);
 
+  void visit(BlockStatementNode *block);
   void visit(DoWhileStatementNode *loop);
   void visit(ForStatementNode *loop);
   void visit(WhileStatementNode *loop);
@@ -261,11 +263,15 @@ class SemanticValidator {
   /// Ensure that the declared identifier(s) is valid to be used in a
   /// declaration and append them to the specified list.
   /// \param node is one of nullptr, EmptyNode, IdentifierNode, PatternNode.
-  /// \param idents if not-null, all identifiers are appended there.
+  /// \param varIdents if not-null, all var-scoped identifiers are appended
+  /// there.
+  /// \param scopedIdents if not-null, all block scoped identifiers are appended
+  /// there.
   void validateDeclarationNames(
       FunctionInfo::VarDecl::Kind declKind,
       Node *node,
-      llvh::SmallVectorImpl<FunctionInfo::VarDecl> *idents);
+      FunctionInfo::BlockDecls *varIdents,
+      FunctionInfo::BlockDecls *scopedIdents);
 
   /// Ensure that the specified node is a valid target for an assignment, in
   /// other words it is an l-value, a Pattern (checked recursively) or an Empty
@@ -289,8 +295,60 @@ class SemanticValidator {
   /// correctly.
   void visitParamsAndBody(FunctionLikeNode *node);
 
+  /// Visits a function body. It exists so that no new scope is created for
+  /// \p body if it is a BlockStatementNode
+  void visitBody(Node *body, FunctionLikeNode *func);
+
   /// We call this when we exceed the maximum recursion depth.
   void recursionDepthExceeded(Node *n);
+
+  /// Reports that \p id2 redeclares \p id1 (if the latter appears later in the
+  /// source code), or that \p id1 redeclares \p id2 (otherwise).
+  void reportRedeclaredIdentifier(
+      const IdentifierNode &id1,
+      const IdentifierNode &id2);
+
+  /// \return Whether block scoping is enabled.
+  bool blockScopingEnabled() const {
+    return astContext_.getCodeGenerationSettings().enableBlockScoping;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// BlockContext
+
+/// Holds the per-scope state -- i.e., list of var-declared and scope-declared
+/// items.
+class BlockContext {
+  BlockContext(const BlockContext &) = delete;
+  void operator=(const BlockContext &) = delete;
+
+  SemanticValidator *validator_;
+  FunctionContext *curFunction_;
+  FunctionInfo::BlockDecls *previousScopedDecls_;
+  FunctionInfo::BlockClosures *previousScopedClosures_;
+
+  // Pointer into the var-scoped declarations array where the var-scoped
+  // declarations for this block context start. All declarations starting from
+  // this position until the end of the array occur within the scope represented
+  // by this block context, and thus those need to be checked in
+  // ensureScopedNamesAreUnique for names clashing with the lexically-scoped
+  // declarations.
+  size_t varDeclaredBegin_;
+
+ public:
+  explicit BlockContext(
+      SemanticValidator *validator,
+      FunctionContext *curFunction,
+      Node *nextScopeNode);
+  ~BlockContext();
+
+  enum class IsFunctionBody { No, Yes };
+  /// Performs the early-error reporting for duplicate block-scoped names, or
+  /// var-declared names that are also block-scoped names. See
+  /// * ES2023 14.2.1 SS: Early Erros
+  /// * ES2023 15.2.1 SS: Early Erros
+  void ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -315,8 +373,23 @@ class FunctionContext {
   /// The AST node for the function.
   FunctionLikeNode *node;
 
+  /// The AST node for the function's body. This is the AST node that defines
+  /// the function's top-devel scope.
+  Node *body;
+
   /// The associated seminfo object
   sem::FunctionInfo *const semInfo;
+
+  /// This function's var-scoped declarations.
+  FunctionInfo::BlockDecls *varDecls{};
+
+  /// const/let declarations in the scope currently being validated within the
+  /// function.
+  FunctionInfo::BlockDecls *scopedDecls{};
+
+  /// Nested function declarations in the scope currently being validated within
+  /// the function.
+  FunctionInfo::BlockClosures *scopedClosures{};
 
   /// The most nested active loop statement.
   LoopStatementNode *activeLoop = nullptr;
@@ -334,6 +407,7 @@ class FunctionContext {
       SemanticValidator *validator,
       bool strictMode,
       FunctionLikeNode *node,
+      Node *body,
       SourceVisibility sourceVisibility = SourceVisibility::Default);
 
   ~FunctionContext();
@@ -348,6 +422,10 @@ class FunctionContext {
   unsigned allocateLabel() {
     return semInfo->allocateLabel();
   }
+
+ private:
+  // The block context for the function level scope.
+  BlockContext functionScope_;
 };
 
 } // namespace sem

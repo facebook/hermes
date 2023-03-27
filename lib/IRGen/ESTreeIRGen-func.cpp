@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/AST/ESTree.h"
 #include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "llvh/ADT/SmallString.h"
 
@@ -493,10 +494,6 @@ void ESTreeIRGen::emitFunctionPrologue(
     DoEmitParameters doEmitParameters) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
-  LLVM_DEBUG(
-      llvh::dbgs() << "Hoisting "
-                   << (semInfo->varDecls.size() + semInfo->closures.size())
-                   << " variable decls.\n");
 
   Builder.setLocation(newFunc->getSourceRange().Start);
   Builder.setCurrentSourceLevelScope(nullptr);
@@ -538,37 +535,57 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
-  for (auto decl : semInfo->varDecls) {
-    auto res = declareVariableOrGlobalProperty(
-        newFunc, decl.kind, getNameFieldFromID(decl.identifier));
-    // If this is not a frame variable or it was already declared, skip.
-    auto *var = llvh::dyn_cast<Variable>(res.first);
-    if (!var || !res.second)
-      continue;
-
-    // Otherwise, initialize it to undefined or empty, depending on TDZ.
-    Builder.createStoreFrameInst(
-        var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
-                           : (Literal *)Builder.getLiteralUndefined(),
-        var,
-        currentIRScope_);
+  for (const sem::FunctionInfo::VarDecl &decl : semInfo->varScoped) {
+    createNewBinding(newFunc, decl.kind, decl.identifier);
   }
-  for (auto *fd : semInfo->closures) {
-    declareVariableOrGlobalProperty(
-        newFunc, VarDecl::Kind::Var, getNameFieldFromID(fd->_id));
+  for (const auto &it : semInfo->lexicallyScoped) {
+    assert(
+        (it.second->empty() ||
+         Mod->getContext().getCodeGenerationSettings().enableBlockScoping) &&
+        "lexically-scoped declarations should be empty when block scoping is disabled.");
+    for (const sem::FunctionInfo::VarDecl &decl : *it.second) {
+      createNewBinding(newFunc, decl.kind, decl.identifier);
+    }
+  }
+  for (const auto &elem : semInfo->closures) {
+    for (ESTree::FunctionDeclarationNode *fd : *elem.second) {
+      declareVariableOrGlobalProperty(
+          newFunc, VarDecl::Kind::Var, getNameFieldFromID(fd->_id));
+    }
   }
 
   // Generate the code for import declarations before generating the rest of the
   // body.
-  for (auto importDecl : semInfo->imports) {
+  for (ESTree::ImportDeclarationNode *importDecl : semInfo->imports) {
     genImportDeclaration(importDecl);
   }
 
   // Generate and initialize the code for the hoisted function declarations
   // before generating the rest of the body.
-  for (auto funcDecl : semInfo->closures) {
-    genFunctionDeclaration(funcDecl);
+  for (const auto &elem : semInfo->closures) {
+    for (ESTree::FunctionDeclarationNode *funcDecl : *elem.second) {
+      genFunctionDeclaration(funcDecl);
+    }
   }
+}
+
+void ESTreeIRGen::createNewBinding(
+    Function *function,
+    VarDecl::Kind kind,
+    ESTree::Node *id) {
+  auto res =
+      declareVariableOrGlobalProperty(function, kind, getNameFieldFromID(id));
+  // If this is not a frame variable or it was already declared, skip.
+  auto *var = llvh::dyn_cast<Variable>(res.first);
+  if (!var || !res.second)
+    return;
+
+  // Otherwise, initialize it to undefined or empty, depending on TDZ.
+  Builder.createStoreFrameInst(
+      var->getObeysTDZ() ? (Literal *)Builder.getLiteralEmpty()
+                         : (Literal *)Builder.getLiteralUndefined(),
+      var,
+      currentIRScope_);
 }
 
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {

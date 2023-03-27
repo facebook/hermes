@@ -28,15 +28,20 @@ class FunctionInfo {
     ESTree::IdentifierNode *identifier;
   };
 
+  using BlockDecls = llvh::SmallVector<VarDecl, 4>;
+
   /// Parameter names.
-  llvh::SmallVector<VarDecl, 4> paramNames{};
+  BlockDecls paramNames{};
 
-  /// The list of hoisted variable declarations.
-  llvh::SmallVector<VarDecl, 4> varDecls{};
+  /// This function's "var" declarations.
+  BlockDecls varScoped;
 
-  /// A list of functions that need to be hoisted and materialized before we
-  /// can generate the rest of the function.
-  llvh::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
+  /// Map from AST Node to its lexical (let/const) declarations.
+  llvh::DenseMap<ESTree::Node *, std::unique_ptr<BlockDecls>> lexicallyScoped{};
+
+  using BlockClosures = llvh::SmallVector<ESTree::FunctionDeclarationNode *, 2>;
+  /// Map from AST Node to the functions defined in it.
+  llvh::DenseMap<ESTree::Node *, std::unique_ptr<BlockClosures>> closures{};
 
   /// A list of imports that need to be hoisted and materialized before we
   /// can generate the rest of the function.
