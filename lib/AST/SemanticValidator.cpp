@@ -1342,8 +1342,8 @@ void FunctionContext::finalizeHoisting() {
        semInfo->closures.size() <= 1) &&
       "All closures should be added to the same container when block scoping "
       "is disabled");
-  for (auto &[containingNode, closures] : semInfo->closures) {
-    if (closures->empty()) {
+  for (auto &[containingNode, containingNodeClosures] : semInfo->closures) {
+    if (containingNodeClosures->empty()) {
       continue;
     }
 
@@ -1360,7 +1360,10 @@ void FunctionContext::finalizeHoisting() {
         ? &semInfo->varScoped
         : semInfo->lexicallyScoped[containingNode].get();
 
-    for (auto it = closures->begin(), end = closures->end(); it < end; ++it) {
+    for (auto it = containingNodeClosures->begin(),
+              end = containingNodeClosures->end();
+         it < end;
+         ++it) {
       if (!(*it)->getSemInfo()->hoisted) {
         decls->emplace_back(FunctionInfo::VarDecl::withoutInitializer(
             FunctionInfo::VarDecl::Kind::Var,

@@ -18,6 +18,9 @@ namespace sem {
 
 using namespace hermes::ESTree;
 
+/// Transforms \p root in-place to simplify block scoping compilation.
+void canonicalizeForBlockScoping(Context &astContext, Node *root);
+
 // Forward declarations
 class FunctionContext;
 class SemanticValidator;
