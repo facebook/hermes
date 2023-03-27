@@ -7,9 +7,6 @@
 
 #include "ESTreeIRGen.h"
 
-#include "hermes/AST/ESTree.h"
-#include "hermes/AST/SemValidate.h"
-#include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "llvh/ADT/SmallString.h"
 
 #include <variant>
@@ -819,14 +816,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
   builder.setInsertionBlock(firstBlock);
   builder.createCreateScopeInst(scopeDesc);
 
-  builder.createThrowInst(builder.createCallInst(
-      CallInst::kNoTextifiedCallee,
-      builder.createCallBuiltinInst(
-          BuiltinMethod::HermesBuiltin_getOriginalNativeErrorConstructor,
-          builder.getLiteralNumber(
-              static_cast<unsigned>(NativeErrorTypes::SyntaxError))),
-      builder.getLiteralUndefined(),
-      builder.getLiteralString(error)));
+  genRaiseNativeError(builder, NativeErrorTypes::SyntaxError, error);
 
   return function;
 }

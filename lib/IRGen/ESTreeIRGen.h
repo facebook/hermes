@@ -11,6 +11,7 @@
 #include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/SemValidate.h"
+#include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/InternalIdentifierMaker.h"
@@ -426,6 +427,24 @@ class ESTreeIRGen {
   /// \return the newly allocated generated Function IR and lexical root
   std::pair<Function *, Function *> doLazyFunction(
       hbc::LazyCompilationData *lazyData);
+
+  /// Emits code to raises the given native error (ES2023 20.5.5) \p id with the
+  /// given \p msg. This generated instruction sequence is immune to changes to
+  /// the global object. This is used in cases like
+  ///
+  /// \code
+  /// const c = "you";
+  /// globalThis.SyntaxError = function() {}
+  /// c = "shall not pass!"
+  /// \endcode
+  ///
+  /// where the assignment to c should raise a %SyntaxError% (i.e., the original
+  /// SyntaxError constructor), and not a SyntaxError (i.e., the current value
+  /// of the identifier SyntaxError).
+  static Instruction *genRaiseNativeError(
+      IRBuilder &builder,
+      NativeErrorTypes id,
+      llvh::StringRef msg);
 
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.

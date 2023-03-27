@@ -1354,6 +1354,22 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       // Must verify whether the variable is initialized.
       Builder.createThrowIfEmptyInst(
           Builder.createLoadFrameInst(var, currentIRScope_));
+      if (var->getDeclKind() == Variable::DeclKind::Const) {
+        // Assignment to const-declared variables should result in a runtime
+        // TypeError exception, so raise it here.
+        Builder.getModule()->getContext().getSourceErrorManager().warning(
+            Builder.getLocation(), "Assignment to constant variable");
+        genRaiseNativeError(
+            Builder, NativeErrorTypes::TypeError, "can't modify const value");
+        // genRaiseNativeError emits a ThrowInst, which is itself a terminator;
+        // thus we can't append more instructions to the current basic block.
+        // Create another basic block, and set it as the insertion pointer. The
+        // newly-created basic block is unreachable, and will thus be removed
+        // during optimization.
+        BasicBlock *unlinked =
+            Builder.createBasicBlock(curFunction()->function);
+        Builder.setInsertionBlock(unlinked);
+      }
     }
     return Builder.createStoreFrameInst(storedValue, var, currentIRScope_);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
@@ -1382,5 +1398,19 @@ void ESTreeIRGen::blockDeclarationInstantiation(ESTree::Node *containingNode) {
   genFunctionDeclarations(containingNode);
   hoistCreateFunctions(containingNode);
 }
+
+Instruction *ESTreeIRGen::genRaiseNativeError(
+    IRBuilder &builder,
+    NativeErrorTypes id,
+    llvh::StringRef msg) {
+  return builder.createThrowInst(builder.createCallInst(
+      CallInst::kNoTextifiedCallee,
+      builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_getOriginalNativeErrorConstructor,
+          builder.getLiteralNumber(static_cast<unsigned>(id))),
+      builder.getLiteralUndefined(),
+      builder.getLiteralString(msg)));
+}
+
 } // namespace irgen
 } // namespace hermes
