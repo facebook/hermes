@@ -117,6 +117,14 @@ bool hasSimpleParams(FunctionLikeNode *node) {
   return true;
 }
 
+bool hasParamExpressions(FunctionLikeNode *node) {
+  for (Node &param : getParams(node)) {
+    if (isa<AssignmentPatternNode>(param))
+      return true;
+  }
+  return false;
+}
+
 bool isGenerator(FunctionLikeNode *node) {
   switch (node->getKind()) {
     default:

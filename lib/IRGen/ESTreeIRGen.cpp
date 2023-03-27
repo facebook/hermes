@@ -336,12 +336,9 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  emitFunctionPrologue(
-      Program,
-      Program,
-      Builder.createBasicBlock(topLevelFunction),
-      InitES5CaptureState::Yes,
-      DoEmitParameters::Yes);
+  emitFunctionPreamble(Builder.createBasicBlock(topLevelFunction));
+  initCaptureStateInES5Function();
+  emitTopLevelDeclarations(Program, Program, DoEmitParameters::Yes);
 
   Value *retVal;
   {

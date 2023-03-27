@@ -1008,6 +1008,9 @@ NodeList &getArguments(CallExpressionLikeNode *node);
 /// initializers.
 bool hasSimpleParams(FunctionLikeNode *node);
 
+/// \return true when \p node has parameter expressions.
+bool hasParamExpressions(FunctionLikeNode *node);
+
 /// \return true when \p node is a generator function.
 bool isGenerator(FunctionLikeNode *node);
 
