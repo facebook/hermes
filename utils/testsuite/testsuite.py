@@ -293,7 +293,6 @@ evalMatcher = re.compile(r"\beval\s*\(")
 indirectEvalMatcher = re.compile(r"\(.*,\s*eval\)\s*\(")
 assignEvalMatcher = re.compile(r"=\s*eval\s*;")
 withMatcher = re.compile(r"\bwith\s*\(")
-constMatcher = re.compile(r"\bconst\b")
 negativeMatcher = re.compile(
     r"""
     /\*---.*
@@ -361,11 +360,11 @@ def showStatus(filename):
         print("Testing " + filename)
 
 
-es6_args = ["-Xes6-promise", "-Xes6-proxy"]
+es6_args = ["-bs", "-Xes6-promise", "-Xes6-proxy"]
 extra_run_args = ["-Xhermes-internal-test-methods"]
 useMicrotasksFlag = ["-Xmicrotask-queue"]
 
-extra_compile_flags = ["-fno-static-builtins"]
+extra_compile_flags = ["-bs", "-fno-static-builtins"]
 
 
 def fileInSkiplist(filename, skiplist):
@@ -456,10 +455,6 @@ def testShouldRun(filename, content):
         if withMatcher.search(content):
             return TestContentParameters(
                 False, "Skipping test with with()", True, flags, strictModes
-            )
-        if constMatcher.search(content):
-            return TestContentParameters(
-                False, "Skipping test with 'const'", False, flags, strictModes
             )
 
     if suite and "test262" in suite:
