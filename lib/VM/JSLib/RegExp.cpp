@@ -489,10 +489,13 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   // If flags contains "g", let global be true, else let global be false
   // If flags contains "y", let sticky be true, else let sticky be false.
+  // If flags contains "d", let hasIndices be true, else let hasIndices be
+  // false.
   // If flags contains "u", let fullUnicode be true, else let fullUnicode be
   // false.
   const bool global = flags.global;
   const bool sticky = flags.sticky;
+  const bool hasIndices = flags.hasIndices;
   const bool fullUnicode = flags.unicode;
 
   // If global is false and sticky is false, set lastIndex to 0.
@@ -596,6 +599,13 @@ CallResult<Handle<JSArray>> directRegExpExec(
   auto inputSHV = SmallHermesValue::encodeStringValue(*S, runtime);
   JSObject::setNamedSlotValueUnsafe(*A, runtime, inputDesc, inputSHV);
 
+  // Create indices array.
+  auto indices = JSArray::create(runtime, match.size(), match.size());
+  if (LLVM_UNLIKELY(indices == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSArray> indicesArray = runtime.makeHandle<JSArray>(*indices);
+
   // Set capture groups (including the initial full match)
   size_t idx = 0;
   auto marker = gcScope.createMarker();
@@ -617,8 +627,47 @@ CallResult<Handle<JSArray>> directRegExpExec(
       JSArray::setElementAt(
           A, runtime, idx, runtime.makeHandle<StringPrimitive>(*strRes));
     }
+
+    // Add the indices for the current capture group in the indicesArray.
+    if (hasIndices) {
+      auto subarrayRes = JSArray::create(runtime, 2, 2);
+      if (LLVM_UNLIKELY(subarrayRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      Handle<JSArray> subarray = runtime.makeHandle<JSArray>(*subarrayRes);
+
+      JSArray::setElementAt(
+          subarray,
+          runtime,
+          0,
+          runtime.makeHandle(
+              HermesValue::encodeNumberValue(mg ? mg->location : 0)));
+      JSArray::setElementAt(
+          subarray,
+          runtime,
+          1,
+          runtime.makeHandle(HermesValue::encodeNumberValue(
+              mg ? mg->location + mg->length : 0)));
+
+      JSArray::setElementAt(indicesArray, runtime, idx, subarray);
+    }
+
     idx++;
   }
+
+  // Add indices property to result.
+  if (hasIndices) {
+    if (LLVM_UNLIKELY(
+            JSObject::defineNewOwnProperty(
+                A,
+                runtime,
+                Predefined::getSymbolID(Predefined::indices),
+                PropertyFlags::defaultNewNamedPropertyFlags(),
+                indicesArray) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
   createGroupsObject(runtime, A, regexp->getGroupNameMappings(runtime));
   return A;
 }
