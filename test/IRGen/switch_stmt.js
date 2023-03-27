@@ -79,7 +79,8 @@ function fallthrough(b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [days_of_the_week, simple_xor, simple_xor2, simple_test0, simple_test1, fallthrough]
+// CHECK-NEXT:globals = [days_of_the_week, simple_xor, simple_xor2, simple_test0, simple_test1, fallthrough]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %days_of_the_week#0#1()#2, %0
@@ -101,7 +102,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function days_of_the_week#0#1(day, x)#2
-// CHECK-NEXT:frame = [day#2, x#2]
+// CHECK-NEXT:S{days_of_the_week#0#1()#2} = [day#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{days_of_the_week#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %day, [day#2], %0
@@ -174,7 +175,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor#0#1(b)#3
-// CHECK-NEXT:frame = [b#3]
+// CHECK-NEXT:S{simple_xor#0#1()#3} = [b#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_xor#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %b, [b#3], %0
@@ -195,7 +196,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_xor2#0#1(b)#4
-// CHECK-NEXT:frame = [b#4]
+// CHECK-NEXT:S{simple_xor2#0#1()#4} = [b#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_xor2#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %b, [b#4], %0
@@ -218,7 +219,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test0#0#1(b)#5
-// CHECK-NEXT:frame = [b#5]
+// CHECK-NEXT:S{simple_test0#0#1()#5} = [b#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test0#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %b, [b#5], %0
@@ -252,7 +253,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_test1#0#1(b)#6
-// CHECK-NEXT:frame = [b#6]
+// CHECK-NEXT:S{simple_test1#0#1()#6} = [b#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test1#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %b, [b#6], %0
@@ -285,7 +286,7 @@ function fallthrough(b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function fallthrough#0#1(b)#7
-// CHECK-NEXT:frame = [b#7]
+// CHECK-NEXT:S{fallthrough#0#1()#7} = [b#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{fallthrough#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %b, [b#7], %0

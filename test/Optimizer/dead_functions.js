@@ -9,7 +9,8 @@
 
 
 //CHECK-LABEL:function global#0()#1 : undefined
-//CHECK-NEXT:frame = [], globals = [main]
+//CHECK-NEXT:globals = [main]
+//CHECK-NEXT:S{global#0()#1} = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 //CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : undefined, %0
@@ -18,7 +19,7 @@
 //CHECK-NEXT:function_end
 
 //CHECK-LABEL:function main#0#1()#2 : undefined
-//CHECK-NEXT:frame = []
+//CHECK-NEXT:S{main#0#1()#2} = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 //CHECK-NEXT:  %1 = ReturnInst undefined : undefined

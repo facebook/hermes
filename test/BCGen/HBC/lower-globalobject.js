@@ -17,7 +17,8 @@ function foo() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHKRA:function global#0()#1 : undefined
-// CHKRA-NEXT:frame = [], globals = [x, foo]
+// CHKRA-NEXT:globals = [x, foo]
+// CHKRA-NEXT:S{global#0()#1} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2, %0
@@ -28,7 +29,7 @@ function foo() {
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo#0#1()#2
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{foo#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  $Reg0 @1 [2...3) 	%1 = LoadPropertyInst %0 : object, "x" : string

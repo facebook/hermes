@@ -25,7 +25,8 @@ function foo5(f) { f(1, 2, 3, 4); }
 // Auto-generated content below. Please do not modify manually.
 
 // LRA:function global#0()#1 : undefined
-// LRA-NEXT:frame = [], globals = [foo1, foo2, foo3, foo4, foo5]
+// LRA-NEXT:globals = [foo1, foo2, foo3, foo4, foo5]
+// LRA-NEXT:S{global#0()#1} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // LRA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo1#0#1()#2 : undefined, %0
@@ -44,7 +45,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo1#0#1(f)#2 : undefined
-// LRA-NEXT:frame = []
+// LRA-NEXT:S{foo1#0#1()#2} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
 // LRA-NEXT:  $Reg0 @1 [2...4) 	%1 = HBCLoadConstInst undefined : undefined
@@ -54,7 +55,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo2#0#1(f)#2 : undefined
-// LRA-NEXT:frame = []
+// LRA-NEXT:S{foo2#0#1()#2} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg2 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number
 // LRA-NEXT:  $Reg0 @1 [2...5) 	%1 = HBCLoadConstInst undefined : undefined
@@ -66,7 +67,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo3#0#1(f)#2 : undefined
-// LRA-NEXT:frame = []
+// LRA-NEXT:S{foo3#0#1()#2} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg3 @0 [1...5) 	%0 = HBCLoadParamInst 1 : number
 // LRA-NEXT:  $Reg0 @1 [2...6) 	%1 = HBCLoadConstInst undefined : undefined
@@ -80,7 +81,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo4#0#1(f)#2 : undefined
-// LRA-NEXT:frame = []
+// LRA-NEXT:S{foo4#0#1()#2} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg4 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
 // LRA-NEXT:  $Reg0 @1 [2...7) 	%1 = HBCLoadConstInst undefined : undefined
@@ -96,7 +97,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:function_end
 
 // LRA:function foo5#0#1(f)#2 : undefined
-// LRA-NEXT:frame = []
+// LRA-NEXT:S{foo5#0#1()#2} = []
 // LRA-NEXT:%BB0:
 // LRA-NEXT:  $Reg5 @0 [1...7) 	%0 = HBCLoadParamInst 1 : number
 // LRA-NEXT:  $Reg0 @1 [2...8) 	%1 = HBCLoadConstInst undefined : undefined

@@ -21,7 +21,8 @@ function main()  {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:globals = [main]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : undefined, %0
@@ -30,7 +31,7 @@ function main()  {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{main#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : string, %0
@@ -39,7 +40,7 @@ function main()  {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2(p1 : number)#3 : string
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '+', "value" : string, 2 : number

@@ -18,7 +18,8 @@ function g14(z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [g14]
+// CHECK-NEXT:globals = [g14]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %g14#0#1()#2 : undefined|object, %0
@@ -27,7 +28,7 @@ function g14(z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function g14#0#1(z)#2 : undefined|object
-// CHECK-NEXT:frame = [w#2 : closure]
+// CHECK-NEXT:S{g14#0#1()#2} = [w#2 : closure]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{g14#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
@@ -49,7 +50,7 @@ function g14(z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function w#1#2()#3 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{w#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{w#1#2()#3}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "k" : string
@@ -58,7 +59,7 @@ function g14(z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function m#1#2()#4 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{m#1#2()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{m#1#2()#4}
 // CHECK-NEXT:  %1 = CreateFunctionInst %"w 1#"#2#4()#5 : boolean, %0
@@ -67,7 +68,7 @@ function g14(z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "w 1#"#2#4()#5 : boolean
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"w 1#"#2#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"w 1#"#2#4()#5}
 // CHECK-NEXT:  %1 = ReturnInst false : boolean

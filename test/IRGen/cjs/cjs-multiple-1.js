@@ -12,7 +12,7 @@ print('done 1');
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -22,7 +22,7 @@ print('done 1');
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module#0#1(exports, require, module)#2
-// CHECK-NEXT:frame = [exports#2, require#2, module#2]
+// CHECK-NEXT:S{cjs_module#0#1()#2} = [exports#2, require#2, module#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cjs_module#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %exports, [exports#2], %0
@@ -34,7 +34,7 @@ print('done 1');
 // CHECK-NEXT:function_end
 
 // CHECK:function "cjs_module 1#"#0#1(exports, require, module)#3
-// CHECK-NEXT:frame = [exports#3, require#3, module#3]
+// CHECK-NEXT:S{"cjs_module 1#"#0#1()#3} = [exports#3, require#3, module#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"cjs_module 1#"#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %exports, [exports#3], %0

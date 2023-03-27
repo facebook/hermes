@@ -7,6 +7,8 @@
 
 #include "ESTreeIRGen.h"
 
+#include <optional>
+
 namespace hermes {
 namespace irgen {
 
@@ -17,6 +19,42 @@ void ESTreeIRGen::genBody(ESTree::NodeList &Body) {
   for (auto &Node : Body) {
     LLVM_DEBUG(
         llvh::dbgs() << "IRGen node of type " << Node.getNodeName() << ".\n");
+    genStatement(&Node);
+  }
+}
+
+void ESTreeIRGen::genScopelessBlockOrStatement(ESTree::Node *stmt) {
+  // IRGen the content of the block.
+  if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
+    for (auto &Node : BS->_body) {
+      genStatement(&Node);
+    }
+
+    return;
+  }
+
+  genStatement(stmt);
+}
+
+void ESTreeIRGen::genFunctionBody(ESTree::Node *stmt) {
+  genScopelessBlockOrStatement(stmt);
+}
+
+void ESTreeIRGen::genCatchHandler(ESTree::Node *stmt) {
+  genScopelessBlockOrStatement(stmt);
+}
+
+void ESTreeIRGen::genBlockStatement(ESTree::BlockStatementNode *BS) {
+  // enterBlockScope should be created on the stack, but it is only
+  // supposed to be created if block scoping is enabled.
+  std::optional<EnterBlockScope> enterBlockScope;
+
+  if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    enterBlockScope.emplace(curFunction());
+    blockDeclarationInstantiation(BS);
+  }
+
+  for (auto &Node : BS->_body) {
     genStatement(&Node);
   }
 }
@@ -74,12 +112,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
-    hoistCreateFunctions(BS);
-
-    for (auto &Node : BS->_body) {
-      genStatement(&Node);
-    }
-
+    genBlockStatement(BS);
     return;
   }
 
@@ -611,6 +644,12 @@ void ESTreeIRGen::genSwitchStatement(ESTree::SwitchStatementNode *switchStmt) {
   // The discriminator expression.
   Value *discr = genExpression(switchStmt->_discriminant);
 
+  std::optional<EnterBlockScope> enterBlockScope;
+  if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    enterBlockScope.emplace(curFunction());
+    blockDeclarationInstantiation(switchStmt);
+  }
+
   // Sequentially allocate a basic block for each case, compare the discriminant
   // against the case value and conditionally jump to the basic block.
   int caseIndex = -1; // running index of the case's basic block.
@@ -672,6 +711,13 @@ void ESTreeIRGen::genConstSwitchStmt(
 
   // The discriminator expression.
   Value *discr = genExpression(switchStmt->_discriminant);
+
+  std::optional<EnterBlockScope> enterBlockScope;
+  if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    enterBlockScope.emplace(curFunction());
+    blockDeclarationInstantiation(switchStmt);
+  }
+
   // Save the block where we will insert the switch instruction.
   auto *startBlock = Builder.getInsertionBlock();
 

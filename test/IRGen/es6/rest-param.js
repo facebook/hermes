@@ -12,7 +12,8 @@ function f1(a, ...b) {}
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [f1]
+// CHECK-NEXT:globals = [f1]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
@@ -24,7 +25,7 @@ function f1(a, ...b) {}
 // CHECK-NEXT:function_end
 
 // CHECK:function f1#0#1(a)#2
-// CHECK-NEXT:frame = [a#2, b#2]
+// CHECK-NEXT:S{f1#0#1()#2} = [a#2, b#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0

@@ -16,7 +16,8 @@ function foo(param = a || b) {}
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [a, b, foo]
+// CHECK-NEXT:globals = [a, b, foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -28,7 +29,7 @@ function foo(param = a || b) {}
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(param)#2
-// CHECK-NEXT:frame = [param#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [param#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '!==', %param, undefined : undefined

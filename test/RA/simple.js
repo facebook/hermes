@@ -20,7 +20,8 @@ function main(x, y, z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:globals = [main]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %main#0#1()#2 : string|number|bigint, %0
@@ -31,7 +32,7 @@ function main(x, y, z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1(x, y, z)#2 : string|number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{main#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg5 @0 [1...18) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg4 @1 [2...18) 	%1 = HBCLoadParamInst 2 : number

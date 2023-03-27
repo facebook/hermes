@@ -20,7 +20,8 @@ function foo (a, b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2 : undefined, %0 @ $Reg0
@@ -31,7 +32,7 @@ function foo (a, b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(a, b)#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg0 @1 [2...4) 	%1 = HBCLoadParamInst 2 : number

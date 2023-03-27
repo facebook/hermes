@@ -38,7 +38,8 @@ function func4() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [func1, func2, func3, func4]
+// CHECK-NEXT:globals = [func1, func2, func3, func4]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %func1#0#1()#2, %0
@@ -56,7 +57,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func1#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{func1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func1#0#1()#2}
 // CHECK-NEXT:  %1 = GetNewTargetInst
@@ -66,7 +67,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func2#0#1(a)#3
-// CHECK-NEXT:frame = [a#3]
+// CHECK-NEXT:S{func2#0#1()#3} = [a#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func2#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#3], %0
@@ -88,7 +89,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func3#0#1()#4
-// CHECK-NEXT:frame = [?anon_0_this#4, ?anon_1_new.target#4, innerArrow1#4, innerFunction#4]
+// CHECK-NEXT:S{func3#0#1()#4} = [?anon_0_this#4, ?anon_1_new.target#4, innerArrow1#4, innerFunction#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func3#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this#4], %0
@@ -114,7 +115,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function innerFunction#1#4()#5
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{innerFunction#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{innerFunction#1#4()#5}
 // CHECK-NEXT:  %1 = GetNewTargetInst
@@ -124,7 +125,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1#1#4()#6
-// CHECK-NEXT:frame = [innerArrow2#6]
+// CHECK-NEXT:S{innerArrow1#1#4()#6} = [innerArrow2#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{innerArrow1#1#4()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [innerArrow2#6], %0
@@ -142,7 +143,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow2#4#6()#7
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{innerArrow2#4#6()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{innerArrow2#4#6()#7}
 // CHECK-NEXT:  %1 = LoadFrameInst [?anon_1_new.target#4@func3], %0
@@ -152,7 +153,7 @@ function func4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func4#0#1()#8
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{func4#0#1()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func4#0#1()#8}
 // CHECK-NEXT:  %1 = GetNewTargetInst

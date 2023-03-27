@@ -42,7 +42,8 @@ var initializer = function*(x = foo()) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simple2, yieldStar, destr, initializer, simple, useResult, loop]
+// CHECK-NEXT:globals = [simple2, yieldStar, destr, initializer, simple, useResult, loop]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple#0#1()#2, %0
@@ -66,7 +67,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{simple#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple#0#1()#2}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_simple#1#2()#3, %0
@@ -74,7 +75,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simple#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_simple#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simple#1#2()#3}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -98,7 +99,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function useResult#0#1()#4
-// CHECK-NEXT:frame = [x#4]
+// CHECK-NEXT:S{useResult#0#1()#4} = [x#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{useResult#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#4], %0
@@ -107,7 +108,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_useResult#1#4()#5
-// CHECK-NEXT:frame = [x#5]
+// CHECK-NEXT:S{?anon_0_useResult#1#4()#5} = [x#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_useResult#1#4()#5}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -133,7 +134,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function loop#0#1()#6
-// CHECK-NEXT:frame = [i#6]
+// CHECK-NEXT:S{loop#0#1()#6} = [i#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{loop#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#6], %0
@@ -142,7 +143,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_loop#1#6(x)#7
-// CHECK-NEXT:frame = [x#7, i#7]
+// CHECK-NEXT:S{?anon_0_loop#1#6()#7} = [x#7, i#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_loop#1#6()#7}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -185,7 +186,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple2#0#1()#8
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{simple2#0#1()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple2#0#1()#8}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_simple2#1#8()#9, %0
@@ -193,7 +194,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_simple2#1#8()#9
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_simple2#1#8()#9} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simple2#1#8()#9}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -217,7 +218,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function yieldStar#0#1()#10
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{yieldStar#0#1()#10} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{yieldStar#0#1()#10}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_yieldStar#1#10()#11, %0
@@ -225,7 +226,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_yieldStar#1#10()#11
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{?anon_0_yieldStar#1#10()#11} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_yieldStar#1#10()#11}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -324,7 +325,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function destr#0#1()#12
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{destr#0#1()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{destr#0#1()#12}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_destr#1#12()#13, %0
@@ -334,7 +335,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_destr#1#12(?anon_2_param)#13
-// CHECK-NEXT:frame = [x#13]
+// CHECK-NEXT:S{?anon_0_destr#1#12()#13} = [x#13]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_destr#1#12()#13}
 // CHECK-NEXT:  %1 = StartGeneratorInst
@@ -396,7 +397,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function initializer#0#1()#14
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{initializer#0#1()#14} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{initializer#0#1()#14}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_initializer#1#14()#15, %0
@@ -406,7 +407,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ?anon_0_initializer#1#14(x)#15
-// CHECK-NEXT:frame = [x#15]
+// CHECK-NEXT:S{?anon_0_initializer#1#14()#15} = [x#15]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_initializer#1#14()#15}
 // CHECK-NEXT:  %1 = StartGeneratorInst

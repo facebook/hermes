@@ -22,7 +22,8 @@ function baz() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, bar, baz]
+// CHECK-NEXT:globals = [foo, bar, baz]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -38,7 +39,7 @@ function baz() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = DirectEvalInst "1 + 1" : string
@@ -48,7 +49,7 @@ function baz() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
@@ -61,7 +62,7 @@ function baz() {
 // CHECK-NEXT:function_end
 
 // CHECK:function baz#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{baz#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{baz#0#1()#4}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined

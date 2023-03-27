@@ -28,7 +28,8 @@ function test_three(x, one, two) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [test_one, test_two, test_three]
+// CHECK-NEXT:globals = [test_one, test_two, test_three]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test_one#0#1()#2, %0
@@ -44,7 +45,7 @@ function test_three(x, one, two) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one#0#1(x, y, z)#2
-// CHECK-NEXT:frame = [x#2, y#2, z#2]
+// CHECK-NEXT:S{test_one#0#1()#2} = [x#2, y#2, z#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_one#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -66,7 +67,7 @@ function test_three(x, one, two) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_two#0#1()#3
-// CHECK-NEXT:frame = [stop#3, age#3]
+// CHECK-NEXT:S{test_two#0#1()#3} = [stop#3, age#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_two#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [stop#3], %0
@@ -90,7 +91,7 @@ function test_three(x, one, two) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_three#0#1(x, one, two)#4
-// CHECK-NEXT:frame = [x#4, one#4, two#4]
+// CHECK-NEXT:S{test_three#0#1()#4} = [x#4, one#4, two#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_three#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0

@@ -20,7 +20,8 @@ function foo(a,b) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:18:2)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1
@@ -40,7 +41,7 @@ function foo(a,b) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(a, b)#2
-// CHECK-NEXT:frame = [a#2, b#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [a#2, b#2]
 // CHECK-NEXT:source location: [<stdin>:10:1 ... <stdin>:18:2)
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:; <stdin>:10:1

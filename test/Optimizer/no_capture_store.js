@@ -45,7 +45,8 @@ function outer() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [bar, main, outer]
+// CHECK-NEXT:globals = [bar, main, outer]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %bar#0#1()#2 : undefined, %0
@@ -58,14 +59,14 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1(p)#3 : closure
-// CHECK-NEXT:frame = [k1#3, k2#3, k3#3]
+// CHECK-NEXT:S{main#0#1()#3} = [k1#3, k2#3, k3#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#3}
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "bar" : string
@@ -82,7 +83,7 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#1#3()#4 : string|number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#1#3()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#3()#4}
 // CHECK-NEXT:  %1 = LoadFrameInst [k1#3@main], %0
@@ -94,7 +95,7 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function outer#0#1()#5 : object
-// CHECK-NEXT:frame = [envVar#5]
+// CHECK-NEXT:S{outer#0#1()#5} = [envVar#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{outer#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [envVar#5], %0
@@ -109,7 +110,7 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function setValue#1#5(v)#6 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{setValue#1#5()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{setValue#1#5()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %v, [envVar#5@outer], %0
@@ -117,7 +118,7 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test1#1#5()#7 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test1#1#5()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#1#5()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst 87 : number, [envVar#5@outer], %0
@@ -125,7 +126,7 @@ function outer() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#1#5(o)#8 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test2#1#5()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#1#5()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst 42 : number, [envVar#5@outer], %0

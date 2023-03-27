@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -Xenable-tdz -Xflow-parser -dump-ir -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -Xenable-tdz -Xflow-parser -dump-ir -O0 %s | %FileCheckOrRegen --match-full-lines %s
 // REQUIRES: flowparser
 
 function foo() {
@@ -15,7 +15,7 @@ function foo() {
 }
 
 //CHECK-LABEL:function foo#0#1()#2
-//CHECK-NEXT:frame = [x#2, y#2]
+//CHECK-NEXT:S{foo#0#1()#2} = [x#2, y#2]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 //CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#2], %0

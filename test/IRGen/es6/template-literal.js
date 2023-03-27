@@ -30,7 +30,8 @@ function f5(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHKIR:function global#0()#1 : undefined
-// CHKIR-NEXT:frame = [], globals = [f1, f2, f3, f4, f5]
+// CHKIR-NEXT:globals = [f1, f2, f3, f4, f5]
+// CHKIR-NEXT:S{global#0()#1} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHKIR-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
@@ -47,7 +48,7 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f1#0#1()#2
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{f1#0#1()#2} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
@@ -57,21 +58,21 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f2#0#1()#3 : string
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{f2#0#1()#3} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
 // CHKIR-NEXT:  %1 = ReturnInst "world" : string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f3#0#1()#4 : string
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{f3#0#1()#4} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f3#0#1()#4}
 // CHKIR-NEXT:  %1 = ReturnInst "" : string
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f4#0#1()#5
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{f4#0#1()#5} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f4#0#1()#5}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
@@ -81,7 +82,7 @@ function f5(x) {
 // CHKIR-NEXT:function_end
 
 // CHKIR:function f5#0#1(x)#6
-// CHKIR-NEXT:frame = []
+// CHKIR-NEXT:S{f5#0#1()#6} = []
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f5#0#1()#6}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string

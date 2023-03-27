@@ -444,6 +444,19 @@ class ESTreeIRGen {
   /// the top-level of a program.
   void genBody(ESTree::NodeList &Body);
 
+  /// Generate code for the statement \p stmt, which is a function body.
+  void genFunctionBody(ESTree::Node *stmt);
+
+  /// Generate code for the statement \p stmt, which is a catch handler.
+  void genCatchHandler(ESTree::Node *stmt);
+
+  /// Generate code for the statement \p stmt without creating a new scope if \p
+  /// stmt is a BlockStatementNode.
+  void genScopelessBlockOrStatement(ESTree::Node *stmt);
+
+  /// Generates code for the block statement \p BS.
+  void genBlockStatement(ESTree::BlockStatementNode *BS);
+
   /// Generate code for the statement \p Stmt.
   void genStatement(ESTree::Node *stmt);
 
@@ -690,7 +703,7 @@ class ESTreeIRGen {
   /// \param catchParam is not null, create the required variable binding
   ///     for the catch parameter and emit the store.
   /// \return the CatchInst.
-  CatchInst *prepareCatch(ESTree::NodePtr catchParam);
+  CatchInst *prepareCatch(ESTree::CatchClauseNode *catchHandler);
 
   /// When we see a control change such as return, break, continue,
   /// we need to make sure to generate code for finally block if
@@ -825,14 +838,22 @@ class ESTreeIRGen {
       InitES5CaptureState doInitES5CaptureState,
       DoEmitParameters doEmitParameters);
 
-  /// Creates a new binding \p id of kind \p kind in \p function. \p
-  /// needsInitializer indicates whether newly created bindings should be
+  /// Creates a new binding \p id of kind \p kind in the given \p scopeDesc.
+  /// \p needsInitializer indicates whether newly created bindings should be
   /// default-initialized.
   void createNewBinding(
-      Function *function,
+      ScopeDesc *scopeDesc,
       VarDecl::Kind kind,
       ESTree::Node *id,
       bool needsInitializer);
+
+  /// Creates all bindings (variables and functions) for \p containingNode in
+  /// \p scopeDesc.
+  void createScopeBindings(ScopeDesc *scopeDesc, ESTree::Node *containingNode);
+
+  /// Generates all closures declares in \p containingNode in the current IR
+  /// ScopeDesc.
+  void genFunctionDeclarations(ESTree::Node *containingNode);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
@@ -869,7 +890,7 @@ class ESTreeIRGen {
   /// \return A pair. pair.first is the variable, and pair.second is set to true
   ///   if it was declared, false if it already existed.
   std::pair<Value *, bool> declareVariableOrGlobalProperty(
-      Function *inFunc,
+      ScopeDesc *inScope,
       VarDecl::Kind declKind,
       Identifier name);
 
@@ -1148,6 +1169,24 @@ class ESTreeIRGen {
   ///     check should be skipped.
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
+
+  /// Creates a new, empty declarative environment, and make it the current
+  /// environment for IRGen. Caller is supposed to have creates an appropriate
+  /// EnterBlockScope object. This implements
+  /// ES2023 9.1.2.2 NewDeclarativeEnvironment ( E ),
+  /// with E being currentIRScope_.
+  void newDeclarativeEnvironment();
+
+  /// Sets up a new scope by
+  ///
+  /// 1. Creating a new declarative environment;
+  /// 2. Creates all let/const declarations in \p containingNode;
+  /// 3. Codegens all functions definitions in \p containingNode; and
+  /// 4. Emit all CreateFunctions for function definitions in \p containingNode.
+  ///
+  /// 2. through 4. implement
+  /// ES2023 14.2.3 BlockDeclarationInstantiation ( code, env ).
+  void blockDeclarationInstantiation(ESTree::Node *containingNode);
 };
 
 template <typename EB, typename EF, typename EH>

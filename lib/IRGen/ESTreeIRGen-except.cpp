@@ -79,9 +79,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
           }
 
           Builder.setLocation(tryStmt->_handler->getDebugLoc());
-          prepareCatch(catchClauseNode->_param);
+          prepareCatch(catchClauseNode);
 
-          genStatement(catchClauseNode->_body);
+          genCatchHandler(catchClauseNode->_body);
 
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_handler->getSourceRange()));
@@ -102,19 +102,16 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
   Builder.setInsertionBlock(nextBlock);
 }
 
-CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
+CatchInst *ESTreeIRGen::prepareCatch(ESTree::CatchClauseNode *catchHandler) {
   auto *catchInst = Builder.createCatchInst();
 
   if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
     // Create the catch scope after the Catch instruction so it is part of the
     // Catch handler range in the exception tables.
-    ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
-    blockScopeDesc->setFunction(curFunction()->function);
-    currentIRScopeDesc_ = blockScopeDesc;
-    currentIRScope_ =
-        Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+    blockDeclarationInstantiation(catchHandler);
   }
 
+  ESTree::NodePtr catchParam = catchHandler->_param;
   if (!catchParam) {
     // Optional catch binding allows us to emit no extra code for the catch.
     return catchInst;

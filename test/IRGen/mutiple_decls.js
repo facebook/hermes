@@ -24,7 +24,8 @@ foo(); // This is still a valid call.
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [a, foo]
+// CHECK-NEXT:globals = [a, foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -39,7 +40,7 @@ foo(); // This is still a valid call.
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1()#2
-// CHECK-NEXT:frame = [b#2, a#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [b#2, a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [b#2], %0

@@ -35,7 +35,8 @@ function f5(o) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [f1, f2, f3, f4, f5]
+// CHECK-NEXT:globals = [f1, f2, f3, f4, f5]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
@@ -55,7 +56,7 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f1#0#1(t)#2
-// CHECK-NEXT:frame = [t#2, a#2]
+// CHECK-NEXT:S{f1#0#1()#2} = [t#2, a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %t, [t#2], %0
@@ -77,7 +78,7 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f2#0#1(t)#3
-// CHECK-NEXT:frame = [t#3, a#3, b#3, rest#3]
+// CHECK-NEXT:S{f2#0#1()#3} = [t#3, a#3, b#3, rest#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %t, [t#3], %0
@@ -100,7 +101,7 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f3#0#1(t)#4
-// CHECK-NEXT:frame = [t#4, a#4, rest#4]
+// CHECK-NEXT:S{f3#0#1()#4} = [t#4, a#4, rest#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f3#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %t, [t#4], %0
@@ -117,7 +118,7 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f4#0#1(o, t)#5
-// CHECK-NEXT:frame = [o#5, t#5, a#5]
+// CHECK-NEXT:S{f4#0#1()#5} = [o#5, t#5, a#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f4#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#5], %0
@@ -135,7 +136,7 @@ function f5(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function f5#0#1(o)#6
-// CHECK-NEXT:frame = [o#6, a#6, rest#6]
+// CHECK-NEXT:S{f5#0#1()#6} = [o#6, a#6, rest#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f5#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#6], %0

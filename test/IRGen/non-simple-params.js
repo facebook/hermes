@@ -22,7 +22,8 @@ function baz({a, b}) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo, bar, baz]
+// CHECK-NEXT:globals = [foo, bar, baz]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -38,7 +39,7 @@ function baz({a, b}) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(a, b)#2
-// CHECK-NEXT:frame = [a#2, b#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [a#2, b#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -59,7 +60,7 @@ function baz({a, b}) {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1(a, b)#3
-// CHECK-NEXT:frame = [a#3, b#3]
+// CHECK-NEXT:S{bar#0#1()#3} = [a#3, b#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#3}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '!==', %a, undefined : undefined
@@ -86,7 +87,7 @@ function baz({a, b}) {
 // CHECK-NEXT:function_end
 
 // CHECK:function baz#0#1(?anon_0_param)#4
-// CHECK-NEXT:frame = [a#4, b#4]
+// CHECK-NEXT:S{baz#0#1()#4} = [a#4, b#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{baz#0#1()#4}
 // CHECK-NEXT:  %1 = LoadPropertyInst %?anon_0_param, "a" : string

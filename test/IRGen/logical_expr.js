@@ -19,7 +19,8 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [logical_and, logical_or, logical_and_and, logical_and_or]
+// CHECK-NEXT:globals = [logical_and, logical_or, logical_and_and, logical_and_or]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %logical_and#0#1()#2, %0
@@ -37,7 +38,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and#0#1(y, x)#2
-// CHECK-NEXT:frame = [y#2, x#2]
+// CHECK-NEXT:S{logical_and#0#1()#2} = [y#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %y, [y#2], %0
@@ -58,7 +59,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_or#0#1(y, x)#3
-// CHECK-NEXT:frame = [y#3, x#3]
+// CHECK-NEXT:S{logical_or#0#1()#3} = [y#3, x#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{logical_or#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %y, [y#3], %0
@@ -79,7 +80,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and_and#0#1(y, x, z)#4
-// CHECK-NEXT:frame = [y#4, x#4, z#4]
+// CHECK-NEXT:S{logical_and_and#0#1()#4} = [y#4, x#4, z#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and_and#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %y, [y#4], %0
@@ -110,7 +111,7 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:function_end
 
 // CHECK:function logical_and_or#0#1(y, x, z)#5
-// CHECK-NEXT:frame = [y#5, x#5, z#5]
+// CHECK-NEXT:S{logical_and_or#0#1()#5} = [y#5, x#5, z#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and_or#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %y, [y#5], %0

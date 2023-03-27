@@ -29,7 +29,8 @@ function foo(o) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : closure, %0
@@ -38,7 +39,7 @@ function foo(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(o)#2 : closure
-// CHECK-NEXT:frame = [cnt#2 : number|bigint, flag#2, flag1#2, flag2#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [cnt#2 : number|bigint, flag#2, flag1#2, flag2#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [flag#2], %0
@@ -51,7 +52,7 @@ function foo(o) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#1#2()#3 : number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#2()#3}
 // CHECK-NEXT:  %1 = LoadFrameInst [flag#2@foo], %0
@@ -82,7 +83,8 @@ function foo(o) {
 // CHECK-NEXT:function_end
 
 // CHKLIR:function global#0()#1 : undefined
-// CHKLIR-NEXT:frame = [], globals = [foo]
+// CHKLIR-NEXT:globals = [foo]
+// CHKLIR-NEXT:S{global#0()#1} = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHKLIR-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2 : closure, %0
@@ -93,7 +95,7 @@ function foo(o) {
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function foo#0#1(o)#2 : closure
-// CHKLIR-NEXT:frame = [cnt#2 : number|bigint, flag#2, flag1#2, flag2#2]
+// CHKLIR-NEXT:S{foo#0#1()#2} = [cnt#2 : number|bigint, flag#2, flag1#2, flag2#2]
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst 0 : number
@@ -107,7 +109,7 @@ function foo(o) {
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function ""#1#2()#3 : number|bigint
-// CHKLIR-NEXT:frame = []
+// CHKLIR-NEXT:S{""#1#2()#3} = []
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCLoadConstInst true : boolean
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst 1 : number

@@ -78,6 +78,7 @@ struct IRPrinter : public IRVisitor<IRPrinter, void> {
   virtual void printSourceLocation(SMLoc loc);
   virtual void printSourceLocation(SMRange rng);
 
+  void printScopeLabel(ScopeDesc *S);
   void printScope(ScopeDesc *S);
   void printScopeRange(ScopeDesc *Start, ScopeDesc *End);
   void printScopeChain(ScopeDesc *S);

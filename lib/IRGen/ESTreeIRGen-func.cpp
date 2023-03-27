@@ -8,6 +8,7 @@
 #include "ESTreeIRGen.h"
 
 #include "hermes/AST/ESTree.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "llvh/ADT/SmallString.h"
 
@@ -157,12 +158,7 @@ Value *ESTreeIRGen::genFunctionExpression(
     newScope.emplace<NameTableScopeTy>(nameTable_);
   } else {
     newScope.emplace<EnterBlockScope>(curFunction());
-
-    ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
-    blockScopeDesc->setFunction(curFunction()->function);
-    currentIRScopeDesc_ = blockScopeDesc;
-    currentIRScope_ =
-        Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+    newDeclarativeEnvironment();
   }
   Variable *tempClosureVar = nullptr;
 
@@ -251,7 +247,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
         InitES5CaptureState::No,
         DoEmitParameters::Yes);
 
-    genStatement(AF->_body);
+    genFunctionBody(AF->_body);
     emitFunctionEpilogue(Builder.getLiteralUndefined());
   }
 
@@ -370,7 +366,7 @@ Function *ESTreeIRGen::genES5Function(
         DoEmitParameters::Yes);
   }
 
-  genStatement(body);
+  genFunctionBody(body);
   emitFunctionEpilogue(Builder.getLiteralUndefined());
 
   return curFunction()->function;
@@ -622,14 +618,15 @@ void ESTreeIRGen::emitFunctionPrologue(
   // functions. Initialize only the variables to undefined.
   for (const sem::FunctionInfo::VarDecl &decl : semInfo->varScoped) {
     createNewBinding(
-        newFunc, decl.kind, decl.identifier, decl.needsInitializer);
+        newFunc->getFunctionScopeDesc(),
+        decl.kind,
+        decl.identifier,
+        decl.needsInitializer);
   }
-  for (const auto &it : semInfo->lexicallyScoped) {
-    for (const sem::FunctionInfo::VarDecl &decl : *it.second) {
-      createNewBinding(
-          newFunc, decl.kind, decl.identifier, decl.needsInitializer);
-    }
-  }
+
+  // Now create variable declarations for each scoped variable/function in body.
+  // let/const bindings are initialized to empty, and functions to undefined.
+  createScopeBindings(newFunc->getFunctionScopeDesc(), body);
 
   // Generate the code for import declarations before generating the rest of the
   // body.
@@ -637,26 +634,50 @@ void ESTreeIRGen::emitFunctionPrologue(
     genImportDeclaration(importDecl);
   }
 
-  // Generate and initialize the code for the hoisted function declarations
-  // before generating the rest of the body.
-  for (const auto &elem : semInfo->closures) {
-    for (ESTree::FunctionDeclarationNode *funcDecl : *elem.second) {
-      genFunctionDeclaration(funcDecl);
-    }
-  }
+  // Generate all closures declared in body. Any hoisted
+  // functions from inner scopes have already been declared.
+  genFunctionDeclarations(body);
 
   // Pre-hoists all functions that are defined within body (but not in
   // BlockStatments in it).
   hoistCreateFunctions(body);
 }
 
+void ESTreeIRGen::genFunctionDeclarations(ESTree::Node *containingNode) {
+  auto *semInfo = curFunction()->getSemInfo();
+
+  auto it = semInfo->closures.find(containingNode);
+  if (it != semInfo->closures.end()) {
+    for (ESTree::FunctionDeclarationNode *fd : *it->second) {
+      genFunctionDeclaration(fd);
+    }
+  }
+}
+
+void ESTreeIRGen::createScopeBindings(
+    ScopeDesc *scopeDesc,
+    ESTree::Node *containingNode) {
+  auto *semInfo = curFunction()->getSemInfo();
+
+  auto it = semInfo->lexicallyScoped.find(containingNode);
+  if (it != semInfo->lexicallyScoped.end()) {
+    for (const sem::FunctionInfo::VarDecl &decl : *it->second) {
+      LLVM_DEBUG(
+          llvh::dbgs() << "creating binding " << decl.identifier->_name
+                       << " in scope " << scopeDesc << "\n");
+      createNewBinding(
+          scopeDesc, decl.kind, decl.identifier, decl.needsInitializer);
+    }
+  }
+}
+
 void ESTreeIRGen::createNewBinding(
-    Function *function,
+    ScopeDesc *scopeDesc,
     VarDecl::Kind kind,
     ESTree::Node *id,
     bool needsInitializer) {
-  auto res =
-      declareVariableOrGlobalProperty(function, kind, getNameFieldFromID(id));
+  Identifier name = getNameFieldFromID(id);
+  auto res = declareVariableOrGlobalProperty(scopeDesc, kind, name);
   // If this is not a frame variable or it was already declared, skip.
   auto *var = llvh::dyn_cast<Variable>(res.first);
   if (!needsInitializer || !var || !res.second)

@@ -16,7 +16,8 @@ function three() { return z; return z;}
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [one, two, three]
+// CHECK-NEXT:globals = [one, two, three]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %one#0#1()#2, %0
@@ -32,7 +33,7 @@ function three() { return z; return z;}
 // CHECK-NEXT:function_end
 
 // CHECK:function one#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{one#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{one#0#1()#2}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
@@ -45,7 +46,7 @@ function three() { return z; return z;}
 // CHECK-NEXT:function_end
 
 // CHECK:function two#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{two#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{two#0#1()#3}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
@@ -58,7 +59,7 @@ function three() { return z; return z;}
 // CHECK-NEXT:function_end
 
 // CHECK:function three#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{three#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{three#0#1()#4}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "z" : string

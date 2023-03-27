@@ -16,7 +16,8 @@ function foo(fn, x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -28,7 +29,7 @@ function foo(fn, x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(fn, x)#2
-// CHECK-NEXT:frame = [fn#2, x#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [fn#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %fn, [fn#2], %0
@@ -55,7 +56,8 @@ function foo(fn, x) {
 // CHECK-NEXT:function_end
 
 // OPT:function global#0()#1 : undefined
-// OPT-NEXT:frame = [], globals = [foo]
+// OPT-NEXT:globals = [foo]
+// OPT-NEXT:S{global#0()#1} = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // OPT-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : undefined, %0
@@ -64,7 +66,7 @@ function foo(fn, x) {
 // OPT-NEXT:function_end
 
 // OPT:function foo#0#1(fn, x)#2 : undefined
-// OPT-NEXT:frame = []
+// OPT-NEXT:S{foo#0#1()#2} = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // OPT-NEXT:  %1 = AllocArrayInst 0 : number

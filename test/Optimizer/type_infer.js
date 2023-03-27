@@ -49,7 +49,8 @@ function test_unary(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [sink, test_one, test_unary]
+// CHECK-NEXT:globals = [sink, test_one, test_unary]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2 : undefined, %0
@@ -62,14 +63,14 @@ function test_unary(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{sink#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_one#0#1(x, y)#3 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_one#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_one#0#1()#3}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '+', %x, 2 : number
@@ -98,7 +99,7 @@ function test_unary(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_unary#0#1(x)#4 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test_unary#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_unary#0#1()#4}
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "sink" : string

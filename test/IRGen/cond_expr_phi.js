@@ -15,7 +15,8 @@ function condExpr(a,b,c,d) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [condExpr]
+// CHECK-NEXT:globals = [condExpr]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %condExpr#0#1()#2, %0
@@ -27,7 +28,7 @@ function condExpr(a,b,c,d) {
 // CHECK-NEXT:function_end
 
 // CHECK:function condExpr#0#1(a, b, c, d)#2
-// CHECK-NEXT:frame = [a#2, b#2, c#2, d#2]
+// CHECK-NEXT:S{condExpr#0#1()#2} = [a#2, b#2, c#2, d#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{condExpr#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0

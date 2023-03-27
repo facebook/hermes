@@ -15,7 +15,8 @@ function func() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [func]
+// CHECK-NEXT:globals = [func]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %func#0#1()#2, %0
@@ -27,7 +28,7 @@ function func() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func#0#1()#2
-// CHECK-NEXT:frame = [foo#2]
+// CHECK-NEXT:S{func#0#1()#2} = [foo#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo#2], %0

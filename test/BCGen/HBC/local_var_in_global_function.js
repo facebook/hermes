@@ -28,7 +28,8 @@ print(e);
 // Auto-generated content below. Please do not modify manually.
 
 // RA:function global#0()#1
-// RA-NEXT:frame = [?anon_1_e#1], globals = [inner, e]
+// RA-NEXT:globals = [inner, e]
+// RA-NEXT:S{global#0()#1} = [?anon_1_e#1]
 // RA-NEXT:%BB0:
 // RA-NEXT:  $Reg1 @0 [1...10) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // RA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCLoadConstInst "global" : string
@@ -55,7 +56,7 @@ print(e);
 // RA-NEXT:function_end
 
 // RA:function local#0#1()#2
-// RA-NEXT:frame = []
+// RA-NEXT:S{local#0#1()#2} = []
 // RA-NEXT:%BB0:
 // RA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCResolveEnvironment %S{global#0()#1}, %S{local#0#1()#2}
 // RA-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadFromEnvironmentInst %0, [?anon_1_e#1@global]

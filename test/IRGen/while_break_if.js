@@ -40,7 +40,8 @@ fail2:
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [bar, continue_test, break_test, break_label, continue_label, nested_label]
+// CHECK-NEXT:globals = [bar, continue_test, break_test, break_label, continue_label, nested_label]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %bar#0#1()#2, %0
@@ -62,7 +63,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst 1 : number
@@ -71,7 +72,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_test#0#1(cond)#3
-// CHECK-NEXT:frame = [cond#3]
+// CHECK-NEXT:S{continue_test#0#1()#3} = [cond#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{continue_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#3], %0
@@ -93,7 +94,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function break_test#0#1(cond)#4
-// CHECK-NEXT:frame = [cond#4]
+// CHECK-NEXT:S{break_test#0#1()#4} = [cond#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{break_test#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#4], %0
@@ -115,7 +116,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function break_label#0#1(cond)#5
-// CHECK-NEXT:frame = [cond#5]
+// CHECK-NEXT:S{break_label#0#1()#5} = [cond#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{break_label#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#5], %0
@@ -139,7 +140,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function continue_label#0#1(cond)#6
-// CHECK-NEXT:frame = [cond#6]
+// CHECK-NEXT:S{continue_label#0#1()#6} = [cond#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{continue_label#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#6], %0
@@ -163,7 +164,7 @@ fail2:
 // CHECK-NEXT:function_end
 
 // CHECK:function nested_label#0#1(cond)#7
-// CHECK-NEXT:frame = [cond#7]
+// CHECK-NEXT:S{nested_label#0#1()#7} = [cond#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{nested_label#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#7], %0

@@ -29,7 +29,8 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // Auto-generated content below. Please do not modify manually.
 
 // CHKRA:function global#0()#1
-// CHKRA-NEXT:frame = [], globals = [foo, shadows, checkNonStaticBuiltin]
+// CHKRA-NEXT:globals = [foo, shadows, checkNonStaticBuiltin]
+// CHKRA-NEXT:S{global#0()#1} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2, %0
@@ -53,7 +54,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo#0#1(x)#2
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{foo#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCLoadParamInst 1 : number
 // CHKRA-NEXT:  %1 = ImplicitMovInst undefined : undefined
@@ -62,7 +63,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function shadows#0#1()#2 : undefined
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{shadows#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "print" : string
@@ -78,7 +79,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:function_end
 
 // CHKRA:function checkNonStaticBuiltin#0#1()#2 : undefined
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{checkNonStaticBuiltin#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "HermesInternal" : string

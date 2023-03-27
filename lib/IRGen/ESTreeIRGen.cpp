@@ -462,7 +462,7 @@ std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
-    Function *inFunc,
+    ScopeDesc *inScope,
     VarDecl::Kind declKind,
     Identifier name) {
   Value *found = nameTable_.lookup(name);
@@ -471,13 +471,13 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   // second instance.
   if (found) {
     if (auto *var = llvh::dyn_cast<Variable>(found)) {
-      if (var->getParent()->getFunction() == inFunc)
+      if (var->getParent() == inScope)
         return {found, false};
     } else {
       assert(
           llvh::isa<GlobalObjectProperty>(found) &&
           "Invalid value found in name table");
-      if (inFunc->isGlobalScope())
+      if (inScope->isGlobalScope())
         return {found, false};
     }
   }
@@ -485,7 +485,7 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   // Create a property if global scope, variable otherwise.
   Value *res;
   NameTableScopeTy *nameTableScope;
-  if (inFunc->isGlobalScope() && declKind == VarDecl::Kind::Var) {
+  if (inScope->isGlobalScope() && declKind == VarDecl::Kind::Var) {
     nameTableScope = topLevelContext->functionScope;
     res = Builder.createGlobalObjectProperty(name, true);
   } else {
@@ -495,8 +495,7 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
     }
 
     nameTableScope = curFunction()->blockScope;
-    res =
-        Builder.createVariable(inFunc->getFunctionScopeDesc(), declKind, name);
+    res = Builder.createVariable(inScope, declKind, name);
   }
 
   // Register the variable in the scoped hash table.
@@ -1354,6 +1353,22 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   } else {
     llvm_unreachable("unvalid value to load from");
   }
+}
+
+void ESTreeIRGen::newDeclarativeEnvironment() {
+  ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
+  blockScopeDesc->setFunction(curFunction()->function);
+  currentIRScopeDesc_ = blockScopeDesc;
+  currentIRScope_ =
+      Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+  Builder.setCurrentSourceLevelScope(currentIRScopeDesc_);
+}
+
+void ESTreeIRGen::blockDeclarationInstantiation(ESTree::Node *containingNode) {
+  newDeclarativeEnvironment();
+  createScopeBindings(currentIRScopeDesc_, containingNode);
+  genFunctionDeclarations(containingNode);
+  hoistCreateFunctions(containingNode);
 }
 } // namespace irgen
 } // namespace hermes

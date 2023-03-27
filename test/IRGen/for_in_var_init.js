@@ -18,7 +18,8 @@ function foo(obj) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -30,7 +31,7 @@ function foo(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(obj)#2
-// CHECK-NEXT:frame = [obj#2, x#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [obj#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#2], %0

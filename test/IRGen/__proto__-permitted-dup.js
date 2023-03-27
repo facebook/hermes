@@ -42,7 +42,8 @@ function protoDupAccessor3(func) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [protoDupComputed, protoDupMethod1, protoDupMethod2, protoDupAccessor1, protoDupAccessor2, protoDupAccessor3]
+// CHECK-NEXT:globals = [protoDupComputed, protoDupMethod1, protoDupMethod2, protoDupAccessor1, protoDupAccessor2, protoDupAccessor3]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %protoDupComputed#0#1()#2, %0
@@ -64,7 +65,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupComputed#0#1(func)#2
-// CHECK-NEXT:frame = [func#2]
+// CHECK-NEXT:S{protoDupComputed#0#1()#2} = [func#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupComputed#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
@@ -79,7 +80,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupMethod1#0#1(func)#3
-// CHECK-NEXT:frame = [func#3]
+// CHECK-NEXT:S{protoDupMethod1#0#1()#3} = [func#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupMethod1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#3], %0
@@ -95,7 +96,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function __proto__#1#3(x, y)#4
-// CHECK-NEXT:frame = [x#4, y#4]
+// CHECK-NEXT:S{__proto__#1#3()#4} = [x#4, y#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{__proto__#1#3()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
@@ -109,7 +110,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupMethod2#0#1(func)#5
-// CHECK-NEXT:frame = [func#5]
+// CHECK-NEXT:S{protoDupMethod2#0#1()#5} = [func#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupMethod2#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#5], %0
@@ -126,7 +127,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "__proto__ 1#"#1#5(x, y)#6
-// CHECK-NEXT:frame = [x#6, y#6]
+// CHECK-NEXT:S{"__proto__ 1#"#1#5()#6} = [x#6, y#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"__proto__ 1#"#1#5()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
@@ -140,7 +141,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor1#0#1(func)#7
-// CHECK-NEXT:frame = [func#7]
+// CHECK-NEXT:S{protoDupAccessor1#0#1()#7} = [func#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupAccessor1#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#7], %0
@@ -155,7 +156,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "get __proto__"#1#7()#8
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"get __proto__"#1#7()#8} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"get __proto__"#1#7()#8}
 // CHECK-NEXT:  %1 = ReturnInst 33 : number
@@ -164,7 +165,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor2#0#1(func)#9
-// CHECK-NEXT:frame = [func#9]
+// CHECK-NEXT:S{protoDupAccessor2#0#1()#9} = [func#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupAccessor2#0#1()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#9], %0
@@ -179,7 +180,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "set __proto__"#1#9(_)#10
-// CHECK-NEXT:frame = [_#10]
+// CHECK-NEXT:S{"set __proto__"#1#9()#10} = [_#10]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"set __proto__"#1#9()#10}
 // CHECK-NEXT:  %1 = StoreFrameInst %_, [_#10], %0
@@ -189,7 +190,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoDupAccessor3#0#1(func)#11
-// CHECK-NEXT:frame = [func#11]
+// CHECK-NEXT:S{protoDupAccessor3#0#1()#11} = [func#11]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupAccessor3#0#1()#11}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#11], %0
@@ -206,7 +207,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "get __proto__ 1#"#1#11()#12
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"get __proto__ 1#"#1#11()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"get __proto__ 1#"#1#11()#12}
 // CHECK-NEXT:  %1 = ReturnInst 33 : number
@@ -215,7 +216,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "set __proto__ 1#"#1#11(_)#13
-// CHECK-NEXT:frame = [_#13]
+// CHECK-NEXT:S{"set __proto__ 1#"#1#11()#13} = [_#13]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"set __proto__ 1#"#1#11()#13}
 // CHECK-NEXT:  %1 = StoreFrameInst %_, [_#13], %0

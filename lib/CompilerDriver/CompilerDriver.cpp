@@ -1098,7 +1098,7 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.enableTDZ = cl::EnableTDZ;
+  codeGenOpts.enableTDZ = cl::EnableTDZ || cl::EnableBlockScoping;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
   codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;

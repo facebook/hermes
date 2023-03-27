@@ -69,7 +69,8 @@ var obj4 = {
 // Auto-generated content below. Please do not modify manually.
 
 // IRGEN:function global#0()#1 : undefined
-// IRGEN-NEXT:frame = [], globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:S{global#0()#1} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst undefined : undefined
@@ -110,7 +111,7 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // IRGEN:function f#0#1()#2 : undefined
-// IRGEN-NEXT:frame = []
+// IRGEN-NEXT:S{f#0#1()#2} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCLoadConstInst undefined : undefined
 // IRGEN-NEXT:  %1 = ReturnInst %0 : undefined

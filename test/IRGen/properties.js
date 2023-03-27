@@ -21,7 +21,8 @@ function sink(x, y) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [y, sink]
+// CHECK-NEXT:globals = [y, sink]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
@@ -41,7 +42,7 @@ function sink(x, y) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(x, y)#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{sink#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0

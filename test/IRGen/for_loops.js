@@ -50,7 +50,8 @@ function test_init_update_exprs(param1) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [sink, simple_for_loop, simple_for_loop_break, simple_for_loop_break_label, simple_for_loop_continue, simple_for_loop_continue_label, for_loop_match, naked_for_loop, test_init_update_exprs]
+// CHECK-NEXT:globals = [sink, simple_for_loop, simple_for_loop_break, simple_for_loop_break_label, simple_for_loop_continue, simple_for_loop_continue_label, for_loop_match, naked_for_loop, test_init_update_exprs]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
@@ -78,7 +79,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(a)#2
-// CHECK-NEXT:frame = [a#2]
+// CHECK-NEXT:S{sink#0#1()#2} = [a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
@@ -86,7 +87,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop#0#1()#3
-// CHECK-NEXT:frame = [i#3]
+// CHECK-NEXT:S{simple_for_loop#0#1()#3} = [i#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#3], %0
@@ -115,7 +116,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_break#0#1()#4
-// CHECK-NEXT:frame = [i#4]
+// CHECK-NEXT:S{simple_for_loop_break#0#1()#4} = [i#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_break#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#4], %0
@@ -143,7 +144,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_break_label#0#1()#5
-// CHECK-NEXT:frame = [i#5]
+// CHECK-NEXT:S{simple_for_loop_break_label#0#1()#5} = [i#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_break_label#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#5], %0
@@ -173,7 +174,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue#0#1()#6
-// CHECK-NEXT:frame = [i#6]
+// CHECK-NEXT:S{simple_for_loop_continue#0#1()#6} = [i#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_continue#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#6], %0
@@ -201,7 +202,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_for_loop_continue_label#0#1()#7
-// CHECK-NEXT:frame = [i#7]
+// CHECK-NEXT:S{simple_for_loop_continue_label#0#1()#7} = [i#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_continue_label#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#7], %0
@@ -231,7 +232,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_loop_match#0#1(a, b, c, d, e, f)#8
-// CHECK-NEXT:frame = [a#8, b#8, c#8, d#8, e#8, f#8]
+// CHECK-NEXT:S{for_loop_match#0#1()#8} = [a#8, b#8, c#8, d#8, e#8, f#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{for_loop_match#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#8], %0
@@ -268,7 +269,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function naked_for_loop#0#1()#9
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{naked_for_loop#0#1()#9} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{naked_for_loop#0#1()#9}
 // CHECK-NEXT:  %1 = BranchInst %BB1
@@ -285,7 +286,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_init_update_exprs#0#1(param1)#10
-// CHECK-NEXT:frame = [param1#10, i#10]
+// CHECK-NEXT:S{test_init_update_exprs#0#1()#10} = [param1#10, i#10]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_init_update_exprs#0#1()#10}
 // CHECK-NEXT:  %1 = StoreFrameInst %param1, [param1#10], %0

@@ -41,7 +41,8 @@ function forof_continue(seq) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [forof_normal, forof_update, forof_break, forof_continue]
+// CHECK-NEXT:globals = [forof_normal, forof_update, forof_break, forof_continue]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %forof_normal#0#1()#2, %0
@@ -59,7 +60,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_normal#0#1(seq, cb)#2
-// CHECK-NEXT:frame = [seq#2, cb#2, i#2]
+// CHECK-NEXT:S{forof_normal#0#1()#2} = [seq#2, cb#2, i#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{forof_normal#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %seq, [seq#2], %0
@@ -97,7 +98,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_update#0#1(seq)#3
-// CHECK-NEXT:frame = [seq#3, i#3, ar#3]
+// CHECK-NEXT:S{forof_update#0#1()#3} = [seq#3, i#3, ar#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{forof_update#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %seq, [seq#3], %0
@@ -143,7 +144,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_break#0#1(seq)#4
-// CHECK-NEXT:frame = [seq#4, sum#4, i#4]
+// CHECK-NEXT:S{forof_break#0#1()#4} = [seq#4, sum#4, i#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{forof_break#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %seq, [seq#4], %0
@@ -200,7 +201,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:function_end
 
 // CHECK:function forof_continue#0#1(seq)#5
-// CHECK-NEXT:frame = [seq#5, sum#5, i#5]
+// CHECK-NEXT:S{forof_continue#0#1()#5} = [seq#5, sum#5, i#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{forof_continue#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %seq, [seq#5], %0

@@ -17,7 +17,8 @@ function check1() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [check1]
+// CHECK-NEXT:globals = [check1]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %check1#0#1()#2, %0
@@ -29,7 +30,7 @@ function check1() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check1#0#1()#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{check1#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#2], %0
@@ -47,7 +48,8 @@ function check1() {
 // CHECK-NEXT:function_end
 
 // CHKDIS:function global#0()#1
-// CHKDIS-NEXT:frame = [], globals = [check1]
+// CHKDIS-NEXT:globals = [check1]
+// CHKDIS-NEXT:S{global#0()#1} = []
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHKDIS-NEXT:  %1 = CreateFunctionInst %check1#0#1()#2, %0
@@ -59,7 +61,7 @@ function check1() {
 // CHKDIS-NEXT:function_end
 
 // CHKDIS:function check1#0#1()#2
-// CHKDIS-NEXT:frame = [x#2, y#2]
+// CHKDIS-NEXT:S{check1#0#1()#2} = [x#2, y#2]
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = CreateScopeInst %S{check1#0#1()#2}
 // CHKDIS-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#2], %0

@@ -28,7 +28,8 @@ delete_test()
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [unary_operator_test, delete_test]
+// CHECK-NEXT:globals = [unary_operator_test, delete_test]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %unary_operator_test#0#1()#2, %0
@@ -48,7 +49,7 @@ delete_test()
 // CHECK-NEXT:function_end
 
 // CHECK:function unary_operator_test#0#1(x)#2
-// CHECK-NEXT:frame = [x#2]
+// CHECK-NEXT:S{unary_operator_test#0#1()#2} = [x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{unary_operator_test#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -76,7 +77,7 @@ delete_test()
 // CHECK-NEXT:function_end
 
 // CHECK:function delete_test#0#1(o)#3
-// CHECK-NEXT:frame = [o#3]
+// CHECK-NEXT:S{delete_test#0#1()#3} = [o#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{delete_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#3], %0

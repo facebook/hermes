@@ -25,7 +25,8 @@ function main(p) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:globals = [main]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : closure, %0
@@ -34,7 +35,7 @@ function main(p) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1(p)#2 : closure
-// CHECK-NEXT:frame = [p#2, k#2]
+// CHECK-NEXT:S{main#0#1()#2} = [p#2, k#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %p, [p#2], %0
@@ -46,7 +47,7 @@ function main(p) {
 // CHECK-NEXT:function_end
 
 // CHECK:function bar#1#2()#3 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bar#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#1#2()#3}
 // CHECK-NEXT:  %1 = LoadFrameInst [p#2@main], %0

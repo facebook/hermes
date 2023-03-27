@@ -20,7 +20,8 @@ function main() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:globals = [main]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2, %0
@@ -35,7 +36,7 @@ function main() {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1()#2
-// CHECK-NEXT:frame = [capture_me#2, foo#2]
+// CHECK-NEXT:S{main#0#1()#2} = [capture_me#2, foo#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [capture_me#2], %0
@@ -45,7 +46,7 @@ function main() {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2(x)#3
-// CHECK-NEXT:frame = [x#3]
+// CHECK-NEXT:S{foo#1#2()#3} = [x#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0

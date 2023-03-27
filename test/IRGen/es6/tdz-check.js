@@ -36,7 +36,8 @@ function check4() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [check1, check2, check3, check4]
+// CHECK-NEXT:globals = [check1, check2, check3, check4]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %check1#0#1()#2, %0
@@ -54,7 +55,7 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check1#0#1()#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{check1#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#2], %0
@@ -72,7 +73,7 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check2#0#1(p)#3
-// CHECK-NEXT:frame = [p#3, b#3, a#3]
+// CHECK-NEXT:S{check2#0#1()#3} = [p#3, b#3, a#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check2#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %p, [p#3], %0
@@ -92,7 +93,7 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check3#0#1()#4
-// CHECK-NEXT:frame = [x#4, check3_inner#4]
+// CHECK-NEXT:S{check3#0#1()#4} = [x#4, check3_inner#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check3#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#4], %0
@@ -109,7 +110,7 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check3_inner#1#4()#5
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{check3_inner#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check3_inner#1#4()#5}
 // CHECK-NEXT:  %1 = LoadFrameInst [x#4@check3], %0
@@ -121,7 +122,7 @@ function check4() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check4#0#1()#6
-// CHECK-NEXT:frame = [x#6]
+// CHECK-NEXT:S{check4#0#1()#6} = [x#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check4#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#6], %0

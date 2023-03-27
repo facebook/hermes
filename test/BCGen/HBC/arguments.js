@@ -33,7 +33,8 @@ function check_phi_handling(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [count, select, build, buffalobuffalo, check_phi_handling]
+// CHECK-NEXT:globals = [count, select, build, buffalobuffalo, check_phi_handling]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %count#0#1()#2, %0
@@ -52,7 +53,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function count#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{count#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...4) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
@@ -62,7 +63,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function select#0#1(x)#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{select#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg1 @0 [1...7) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
@@ -75,7 +76,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function build#0#1()#2 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{build#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
@@ -86,7 +87,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function buffalobuffalo#0#1()#2 : string|number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{buffalobuffalo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...5) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined
@@ -98,7 +99,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_phi_handling#0#1(x)#2 : object
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{check_phi_handling#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...7) 	%0 = AllocStackInst $arguments
 // CHECK-NEXT:  $Reg1 @1 [2...3) 	%1 = HBCLoadConstInst undefined : undefined

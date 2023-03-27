@@ -20,7 +20,8 @@ f();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [f]
+// CHECK-NEXT:globals = [f]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f#0#1()#2 : undefined, %0
@@ -31,7 +32,7 @@ f();
 // CHECK-NEXT:function_end
 
 // CHECK:function f#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{f#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined

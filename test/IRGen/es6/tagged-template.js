@@ -61,7 +61,8 @@ function helloWorld() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [dummy, emptyString, oneString, oneSub, dup, notDup, memberExpr, callExpr, dup2, dup3, helloWorld]
+// CHECK-NEXT:globals = [dummy, emptyString, oneString, oneSub, dup, notDup, memberExpr, callExpr, dup2, dup3, helloWorld]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %dummy#0#1()#2, %0
@@ -93,7 +94,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function dummy#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{dummy#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dummy#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
@@ -102,7 +103,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyString#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{emptyString#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{emptyString#0#1()#3}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 0 : number, true : boolean, "" : string
@@ -114,7 +115,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function oneString#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{oneString#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{oneString#0#1()#4}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 1 : number, true : boolean, "hello" : string
@@ -126,7 +127,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function oneSub#0#1()#5
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{oneSub#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{oneSub#0#1()#5}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 2 : number, true : boolean, "" : string, "" : string
@@ -138,7 +139,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function dup#0#1()#6
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{dup#0#1()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup#0#1()#6}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
@@ -151,7 +152,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function notDup#0#1()#7
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{notDup#0#1()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{notDup#0#1()#7}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 4 : number, false : boolean, "hello\\\\nworld" : string, "!!!" : string, "hello\\nworld" : string, "!!!" : string
@@ -164,7 +165,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function memberExpr#0#1()#8
-// CHECK-NEXT:frame = [obj#8]
+// CHECK-NEXT:S{memberExpr#0#1()#8} = [obj#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{memberExpr#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj#8], %0
@@ -181,7 +182,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function callExpr#0#1()#9
-// CHECK-NEXT:frame = [func#9]
+// CHECK-NEXT:S{callExpr#0#1()#9} = [func#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{callExpr#0#1()#9}
 // CHECK-NEXT:  %1 = CreateFunctionInst %func#1#9()#10, %0
@@ -196,7 +197,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function func#1#9()#10
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{func#1#9()#10} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{func#1#9()#10}
 // CHECK-NEXT:  %1 = CreateFunctionInst %""#9#10()#11, %0
@@ -206,7 +207,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#9#10()#11
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#9#10()#11} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#9#10()#11}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined
@@ -215,7 +216,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function dup2#0#1()#12
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{dup2#0#1()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup2#0#1()#12}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
@@ -228,7 +229,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function dup3#0#1()#13
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{dup3#0#1()#13} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup3#0#1()#13}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
@@ -240,7 +241,7 @@ function helloWorld() {
 // CHECK-NEXT:function_end
 
 // CHECK:function helloWorld#0#1()#14
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{helloWorld#0#1()#14} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{helloWorld#0#1()#14}
 // CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 6 : number, true : boolean, "hello" : string, " world!!!" : string
