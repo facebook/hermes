@@ -1471,6 +1471,19 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   Variable *lazyClosureAlias_{};
 #endif
 
+  template <typename H>
+  void forEachScopeImpl(Function *F, ScopeDesc *scopeDesc, H handler) {
+    if (scopeDesc->getFunction() != F) {
+      return;
+    }
+
+    handler(scopeDesc);
+
+    for (ScopeDesc *inner : scopeDesc->getInnerScopes()) {
+      forEachScopeImpl(F, inner, handler);
+    }
+  }
+
  protected:
   explicit Function(
       ValueKind kind,
@@ -1738,6 +1751,12 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   void viewGraph();
+
+  /// Invokes \p handler for each scope belonging to this function.
+  template <typename H>
+  void forEachScope(H handler) {
+    forEachScopeImpl(this, this->getFunctionScopeDesc(), handler);
+  }
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::FunctionKind);
