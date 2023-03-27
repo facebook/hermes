@@ -11,6 +11,8 @@
 #include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "llvh/ADT/SmallString.h"
 
+#include <variant>
+
 namespace hermes {
 namespace irgen {
 
@@ -149,27 +151,52 @@ Value *ESTreeIRGen::genFunctionExpression(
       << "Creating anonymous closure. "
       << Builder.getInsertionBlock()->getParent()->getInternalName() << ".\n");
 
-  NameTableScopeTy newScope(nameTable_);
+  std::variant<std::monostate, NameTableScopeTy, EnterBlockScope> newScope;
+
+  if (!Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+    newScope.emplace<NameTableScopeTy>(nameTable_);
+  } else {
+    newScope.emplace<EnterBlockScope>(curFunction());
+
+    ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
+    blockScopeDesc->setFunction(curFunction()->function);
+    currentIRScopeDesc_ = blockScopeDesc;
+    currentIRScope_ =
+        Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
+  }
   Variable *tempClosureVar = nullptr;
 
   Identifier originalNameIden = nameHint;
   if (FE->_id) {
-    auto closureName = genAnonymousLabelName("closure");
-    tempClosureVar = Builder.createVariable(
-        curFunction()->function->getFunctionScopeDesc(),
-        Variable::DeclKind::Var,
-        closureName);
+    if (!Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
+      auto closureName = genAnonymousLabelName("closure");
+      tempClosureVar = Builder.createVariable(
+          curFunction()->function->getFunctionScopeDesc(),
+          Variable::DeclKind::Var,
+          closureName);
 
-    // Insert the synthesized variable into the name table, so it can be
-    // looked up internally as well.
-    nameTable_.insertIntoScope(
-        curFunction()->functionScope,
-        tempClosureVar->getName(),
-        tempClosureVar);
+      // Insert the synthesized variable into the name table, so it can be
+      // looked up internally as well.
+      nameTable_.insertIntoScope(
+          curFunction()->functionScope,
+          tempClosureVar->getName(),
+          tempClosureVar);
 
-    // Alias the lexical name to the synthesized variable.
-    originalNameIden = getNameFieldFromID(FE->_id);
-    nameTable_.insert(originalNameIden, tempClosureVar);
+      // Alias the lexical name to the synthesized variable.
+      originalNameIden = getNameFieldFromID(FE->_id);
+      nameTable_.insert(originalNameIden, tempClosureVar);
+    } else {
+      // Use the expression's ID for its closure name, as well as its variable
+      // name -- which is OK because we're in a new scope.
+      originalNameIden = getNameFieldFromID(FE->_id);
+
+      auto closureName = genAnonymousLabelName(originalNameIden.str());
+      tempClosureVar = Builder.createVariable(
+          currentIRScopeDesc_, Variable::DeclKind::Var, closureName);
+
+      nameTable_.insertIntoScope(
+          curFunction()->blockScope, originalNameIden, tempClosureVar);
+    }
   }
 
   Function *newFunc = FE->_async
