@@ -400,6 +400,7 @@ class SerializedScope {
   struct Declaration {
     Identifier name;
     JavaScriptDeclKind declKind;
+    bool strictImmutableBinding;
   };
   /// Parent scope, if any.
   Ptr parentScope;
@@ -1000,6 +1001,14 @@ class Variable : public Value {
   /// The scope that owns the variable.
   ScopeDesc *parent;
 
+  /// If true, this Variable represents a strict immutable binding as created by
+  ///
+  ///   ES2023 9.1.1.1.3 CreateImmutableBinding ( N, S )
+  ///
+  /// when S is true. By default, all DeclKind::Const Variables are strict
+  /// immutable bindings.
+  bool strictImmutableBinding_{};
+
  protected:
   explicit Variable(
       ValueKind k,
@@ -1026,6 +1035,16 @@ class Variable : public Value {
 
   bool getObeysTDZ() const {
     return declKind != DeclKind::Var;
+  }
+
+  bool getStrictImmutableBinding() const {
+    return strictImmutableBinding_;
+  }
+  void setStrictImmutableBinding(bool value) {
+    assert(
+        declKind == DeclKind::Const &&
+        "strict immutable binding is only meaningful for const Variables.");
+    strictImmutableBinding_ = value;
   }
 
   /// Return the index of this variable in the function's variable list.

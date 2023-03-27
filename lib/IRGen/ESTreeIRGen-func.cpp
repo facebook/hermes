@@ -189,7 +189,11 @@ Value *ESTreeIRGen::genFunctionExpression(
 
       auto closureName = genAnonymousLabelName(originalNameIden.str());
       tempClosureVar = Builder.createVariable(
-          currentIRScopeDesc_, Variable::DeclKind::Var, closureName);
+          currentIRScopeDesc_, Variable::DeclKind::Const, closureName);
+
+      // ES2023 dictates that function expression's ID are non-strict immutable
+      // bindings.
+      tempClosureVar->setStrictImmutableBinding(false);
 
       nameTable_.insertIntoScope(
           curFunction()->blockScope, originalNameIden, tempClosureVar);

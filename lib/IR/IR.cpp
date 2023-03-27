@@ -460,7 +460,11 @@ Variable::Variable(
     ScopeDesc *scope,
     DeclKind declKind,
     Identifier txt)
-    : Value(k), declKind(declKind), text(txt), parent(scope) {
+    : Value(k),
+      declKind(declKind),
+      text(txt),
+      parent(scope),
+      strictImmutableBinding_(declKind == DeclKind::Const) {
   scope->addVariable(this);
 }
 

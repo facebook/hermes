@@ -61,7 +61,10 @@ static void populateScopeFromChainLink(
     ScopeDesc *scope,
     const SerializedScope &chainLink) {
   for (const auto &var : chainLink.variables) {
-    builder.createVariable(scope, var.declKind, var.name);
+    Variable *V = builder.createVariable(scope, var.declKind, var.name);
+    if (var.declKind == Variable::DeclKind::Const) {
+      V->setStrictImmutableBinding(var.strictImmutableBinding);
+    }
   }
 }
 
@@ -1295,8 +1298,11 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     auto next = std::make_shared<SerializedScope>();
     next->variables.reserve(it->variables.size());
     for (auto var : it->variables) {
+      constexpr bool immutableBinding = false;
       next->variables.push_back(SerializedScope::Declaration{
-          Builder.createIdentifier(var), Variable::DeclKind::Var});
+          Builder.createIdentifier(var),
+          Variable::DeclKind::Var,
+          immutableBinding});
     }
     next->parentScope = current;
     current = next;
@@ -1324,8 +1330,8 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
     }
   }
   for (auto *var : S->getVariables()) {
-    scope->variables.push_back(
-        SerializedScope::Declaration{var->getName(), var->getDeclKind()});
+    scope->variables.push_back(SerializedScope::Declaration{
+        var->getName(), var->getDeclKind(), var->getStrictImmutableBinding()});
   }
   scope->parentScope = serializeScope(S->getParent(), false);
   return scope;
@@ -1352,6 +1358,12 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       Builder.createThrowIfEmptyInst(
           Builder.createLoadFrameInst(var, currentIRScope_));
       if (var->getDeclKind() == Variable::DeclKind::Const) {
+        if (!var->getStrictImmutableBinding() &&
+            !curFunction()->function->isStrictMode()) {
+          // Ignore stores to non-strict immutable bindings in non-strict mode.
+          return nullptr;
+        }
+
         // Assignment to const-declared variables should result in a runtime
         // TypeError exception, so raise it here.
         Builder.getModule()->getContext().getSourceErrorManager().warning(
