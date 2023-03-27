@@ -228,7 +228,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:  0x005e  end of debug source table
 
 // BCGEN:Debug scope descriptor table:
-// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // BCGEN-NEXT:  0x0003  end of debug scope descriptor table
 
 // BCGEN:Textified callees table:

@@ -147,7 +147,7 @@ exports.bar = bar;
 // CHKOPT-NEXT:  0x0075  end of debug source table
 
 // CHKOPT:Debug scope descriptor table:
-// CHKOPT-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKOPT-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHKOPT-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKOPT:Textified callees table:
@@ -327,7 +327,7 @@ exports.bar = bar;
 // CHKDBG-NEXT:  0x008d  end of debug source table
 
 // CHKDBG:Debug scope descriptor table:
-// CHKDBG-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKDBG-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHKDBG-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKDBG:Textified callees table:

@@ -274,15 +274,18 @@ unsigned BytecodeModuleGenerator::serializeScopeChain(
   }
 
   OptValue<unsigned> parentScopeOffset;
-  bool isInnerScope{false};
+  DebugScopeDescriptor::Flags flags;
   llvh::SmallVector<Identifier, 4> names;
   if (S) {
     if (S->getParent() && S->getParent()->hasFunction()) {
       parentScopeOffset = serializeScopeChain(st, debugInfoGen, S->getParent());
     }
-    isInnerScope =
+    flags.isInnerScope =
         S->hasFunction() && S->getFunction()->getFunctionScopeDesc() != S;
 
+    flags.isDynamic = S->getDynamic();
+
+    // All names in the scope are accessible from S, ...
     std::string nameUTF8Buffer;
     for (Variable *V : S->getVariables()) {
       Identifier nameUTF8 =
@@ -292,7 +295,7 @@ unsigned BytecodeModuleGenerator::serializeScopeChain(
   }
 
   unsigned offset =
-      debugInfoGen.appendScopeDesc(parentScopeOffset, isInnerScope, names);
+      debugInfoGen.appendScopeDesc(parentScopeOffset, flags, names);
   scopeDescIDAddr_[ID] = offset;
   return offset;
 }

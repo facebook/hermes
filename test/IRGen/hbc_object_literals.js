@@ -283,7 +283,7 @@ var obj4 = {
 // BCGEN-NEXT:  0x0086  end of debug source table
 
 // BCGEN:Debug scope descriptor table:
-// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // BCGEN-NEXT:  0x0003  end of debug scope descriptor table
 
 // BCGEN:Textified callees table:

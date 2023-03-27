@@ -503,11 +503,13 @@ class ESTreeIRGen {
   /// stmt is a BlockStatementNode.
   void genScopelessBlockOrStatement(ESTree::Node *stmt);
 
+  enum class IsLoopBody { No, Yes };
+
   /// Generates code for the block statement \p BS.
-  void genBlockStatement(ESTree::BlockStatementNode *BS);
+  void genBlockStatement(ESTree::BlockStatementNode *BS, IsLoopBody isLoopBody);
 
   /// Generate code for the statement \p Stmt.
-  void genStatement(ESTree::Node *stmt);
+  void genStatement(ESTree::Node *stmt, IsLoopBody isLoopBody);
 
   /// Wrapper of genExpression. If curFunction()->globalReturnRegister is
   /// set, stores the expression value into it.

@@ -352,58 +352,58 @@ function StrictHasParamExprs() {
 // BS-NEXT:  0x01ac  end of debug source table
 
 // BS:Debug scope descriptor table:
-// BS-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
-// BS-NEXT:  0x0003  lexical parent: 0x0000, flags:   , variable count: 1
+// BS-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
+// BS-NEXT:  0x0003  lexical parent: 0x0000, flags:    , variable count: 1
 // BS-NEXT:    "testNotStrictNoParamExprs"
-// BS-NEXT:  0x0007  lexical parent: 0x0003, flags: Is, variable count: 0
-// BS-NEXT:  0x000a  lexical parent: 0x0007, flags:   , variable count: 2
+// BS-NEXT:  0x0007  lexical parent: 0x0003, flags: Is , variable count: 0
+// BS-NEXT:  0x000a  lexical parent: 0x0007, flags:    , variable count: 2
 // BS-NEXT:    "funcParam"
 // BS-NEXT:    "funcVar"
-// BS-NEXT:  0x000f  lexical parent: 0x000a, flags: Is, variable count: 1
+// BS-NEXT:  0x000f  lexical parent: 0x000a, flags: Is , variable count: 1
 // BS-NEXT:    "funcLet"
-// BS-NEXT:  0x0013  lexical parent: 0x0000, flags:   , variable count: 1
+// BS-NEXT:  0x0013  lexical parent: 0x0000, flags:    , variable count: 1
 // BS-NEXT:    "testNotStrictHasParamExprs"
-// BS-NEXT:  0x0017  lexical parent: 0x0013, flags: Is, variable count: 0
-// BS-NEXT:  0x001a  lexical parent: 0x0017, flags:   , variable count: 1
+// BS-NEXT:  0x0017  lexical parent: 0x0013, flags: Is , variable count: 0
+// BS-NEXT:  0x001a  lexical parent: 0x0017, flags:    , variable count: 1
 // BS-NEXT:    "funcParam"
-// BS-NEXT:  0x001e  lexical parent: 0x001a, flags: Is, variable count: 0
-// BS-NEXT:  0x0021  lexical parent: 0x001e, flags: Is, variable count: 1
+// BS-NEXT:  0x001e  lexical parent: 0x001a, flags: Is , variable count: 0
+// BS-NEXT:  0x0021  lexical parent: 0x001e, flags: Is , variable count: 1
 // BS-NEXT:    "?anon_0_funcParamInit"
-// BS-NEXT:  0x0026  lexical parent: 0x001e, flags: Is, variable count: 1
+// BS-NEXT:  0x0026  lexical parent: 0x001e, flags: Is , variable count: 1
 // BS-NEXT:    "?anon_1_funcParamInit2"
-// BS-NEXT:  0x002b  lexical parent: 0x001e, flags: Is, variable count: 1
+// BS-NEXT:  0x002b  lexical parent: 0x001e, flags: Is , variable count: 1
 // BS-NEXT:    "funcVar"
-// BS-NEXT:  0x002f  lexical parent: 0x002b, flags: Is, variable count: 1
+// BS-NEXT:  0x002f  lexical parent: 0x002b, flags: Is , variable count: 1
 // BS-NEXT:    "funcLet"
-// BS-NEXT:  0x0033  lexical parent: 0x0021, flags:   , variable count: 2
+// BS-NEXT:  0x0033  lexical parent: 0x0021, flags:    , variable count: 2
 // BS-NEXT:    "funcParamInitParam"
 // BS-NEXT:    "paramInitVar"
-// BS-NEXT:  0x003a  lexical parent: 0x0033, flags: Is, variable count: 1
+// BS-NEXT:  0x003a  lexical parent: 0x0033, flags: Is , variable count: 1
 // BS-NEXT:    "paramInitLet"
-// BS-NEXT:  0x003f  lexical parent: 0x0026, flags:   , variable count: 0
-// BS-NEXT:  0x0042  lexical parent: 0x003f, flags: Is, variable count: 0
-// BS-NEXT:  0x0045  lexical parent: 0x0000, flags:   , variable count: 1
+// BS-NEXT:  0x003f  lexical parent: 0x0026, flags:    , variable count: 0
+// BS-NEXT:  0x0042  lexical parent: 0x003f, flags: Is , variable count: 0
+// BS-NEXT:  0x0045  lexical parent: 0x0000, flags:    , variable count: 1
 // BS-NEXT:    "testStrictNoParamExprs"
-// BS-NEXT:  0x004a  lexical parent: 0x0045, flags:   , variable count: 3
+// BS-NEXT:  0x004a  lexical parent: 0x0045, flags:    , variable count: 3
 // BS-NEXT:    "funcParam"
 // BS-NEXT:    "funcVar"
 // BS-NEXT:    "funcLet"
-// BS-NEXT:  0x0051  lexical parent: 0x0000, flags:   , variable count: 1
+// BS-NEXT:  0x0051  lexical parent: 0x0000, flags:    , variable count: 1
 // BS-NEXT:    "testStrictHasParamExprs"
-// BS-NEXT:  0x0056  lexical parent: 0x0051, flags:   , variable count: 1
+// BS-NEXT:  0x0056  lexical parent: 0x0051, flags:    , variable count: 1
 // BS-NEXT:    "funcParam"
-// BS-NEXT:  0x005b  lexical parent: 0x0056, flags: Is, variable count: 1
+// BS-NEXT:  0x005b  lexical parent: 0x0056, flags: Is , variable count: 1
 // BS-NEXT:    "?anon_0_funcParamInit"
-// BS-NEXT:  0x0061  lexical parent: 0x0056, flags: Is, variable count: 1
+// BS-NEXT:  0x0061  lexical parent: 0x0056, flags: Is , variable count: 1
 // BS-NEXT:    "?anon_1_funcParamInit2"
-// BS-NEXT:  0x0067  lexical parent: 0x0056, flags: Is, variable count: 2
+// BS-NEXT:  0x0067  lexical parent: 0x0056, flags: Is , variable count: 2
 // BS-NEXT:    "funcVar"
 // BS-NEXT:    "funcLet"
-// BS-NEXT:  0x006d  lexical parent: 0x005b, flags:   , variable count: 3
+// BS-NEXT:  0x006d  lexical parent: 0x005b, flags:    , variable count: 3
 // BS-NEXT:    "funcParamInitParam"
 // BS-NEXT:    "paramInitVar"
 // BS-NEXT:    "paramInitLet"
-// BS-NEXT:  0x0077  lexical parent: 0x0061, flags:   , variable count: 0
+// BS-NEXT:  0x0077  lexical parent: 0x0061, flags:    , variable count: 0
 // BS-NEXT:  0x007b  end of debug scope descriptor table
 
 // BS:Textified callees table:
@@ -706,45 +706,45 @@ function StrictHasParamExprs() {
 // NOBS-NEXT:  0x0195  end of debug source table
 
 // NOBS:Debug scope descriptor table:
-// NOBS-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
-// NOBS-NEXT:  0x0003  lexical parent: 0x0000, flags:   , variable count: 1
+// NOBS-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
+// NOBS-NEXT:  0x0003  lexical parent: 0x0000, flags:    , variable count: 1
 // NOBS-NEXT:    "testNotStrictNoParamExprs"
-// NOBS-NEXT:  0x0007  lexical parent: 0x0003, flags:   , variable count: 3
+// NOBS-NEXT:  0x0007  lexical parent: 0x0003, flags:    , variable count: 3
 // NOBS-NEXT:    "funcParam"
 // NOBS-NEXT:    "funcVar"
 // NOBS-NEXT:    "funcLet"
-// NOBS-NEXT:  0x000d  lexical parent: 0x0000, flags:   , variable count: 1
+// NOBS-NEXT:  0x000d  lexical parent: 0x0000, flags:    , variable count: 1
 // NOBS-NEXT:    "testNotStrictHasParamExprs"
-// NOBS-NEXT:  0x0011  lexical parent: 0x000d, flags:   , variable count: 5
+// NOBS-NEXT:  0x0011  lexical parent: 0x000d, flags:    , variable count: 5
 // NOBS-NEXT:    "funcParam"
 // NOBS-NEXT:    "?anon_0_closure"
 // NOBS-NEXT:    "?anon_1_closure"
 // NOBS-NEXT:    "funcVar"
 // NOBS-NEXT:    "funcLet"
-// NOBS-NEXT:  0x001b  lexical parent: 0x0011, flags:   , variable count: 3
+// NOBS-NEXT:  0x001b  lexical parent: 0x0011, flags:    , variable count: 3
 // NOBS-NEXT:    "funcParamInitParam"
 // NOBS-NEXT:    "paramInitVar"
 // NOBS-NEXT:    "paramInitLet"
-// NOBS-NEXT:  0x0024  lexical parent: 0x0011, flags:   , variable count: 0
-// NOBS-NEXT:  0x0027  lexical parent: 0x0000, flags:   , variable count: 1
+// NOBS-NEXT:  0x0024  lexical parent: 0x0011, flags:    , variable count: 0
+// NOBS-NEXT:  0x0027  lexical parent: 0x0000, flags:    , variable count: 1
 // NOBS-NEXT:    "testStrictNoParamExprs"
-// NOBS-NEXT:  0x002c  lexical parent: 0x0027, flags:   , variable count: 3
+// NOBS-NEXT:  0x002c  lexical parent: 0x0027, flags:    , variable count: 3
 // NOBS-NEXT:    "funcParam"
 // NOBS-NEXT:    "funcVar"
 // NOBS-NEXT:    "funcLet"
-// NOBS-NEXT:  0x0032  lexical parent: 0x0000, flags:   , variable count: 1
+// NOBS-NEXT:  0x0032  lexical parent: 0x0000, flags:    , variable count: 1
 // NOBS-NEXT:    "testStrictHasParamExprs"
-// NOBS-NEXT:  0x0037  lexical parent: 0x0032, flags:   , variable count: 5
+// NOBS-NEXT:  0x0037  lexical parent: 0x0032, flags:    , variable count: 5
 // NOBS-NEXT:    "funcParam"
 // NOBS-NEXT:    "?anon_0_closure"
 // NOBS-NEXT:    "?anon_1_closure"
 // NOBS-NEXT:    "funcVar"
 // NOBS-NEXT:    "funcLet"
-// NOBS-NEXT:  0x0041  lexical parent: 0x0037, flags:   , variable count: 3
+// NOBS-NEXT:  0x0041  lexical parent: 0x0037, flags:    , variable count: 3
 // NOBS-NEXT:    "funcParamInitParam"
 // NOBS-NEXT:    "paramInitVar"
 // NOBS-NEXT:    "paramInitLet"
-// NOBS-NEXT:  0x004a  lexical parent: 0x0037, flags:   , variable count: 0
+// NOBS-NEXT:  0x004a  lexical parent: 0x0037, flags:    , variable count: 0
 // NOBS-NEXT:  0x004d  end of debug scope descriptor table
 
 // NOBS:Textified callees table:

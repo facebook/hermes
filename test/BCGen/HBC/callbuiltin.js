@@ -211,7 +211,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  0x007b  end of debug source table
 
 // CHKBC:Debug scope descriptor table:
-// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHKBC-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKBC:Textified callees table:

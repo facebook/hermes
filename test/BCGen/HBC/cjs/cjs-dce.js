@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s -DS=r3
-// RUN: %hermes -bs -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s --check-prefixes CHECK,CHKBS
+// RUN: %hermes -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -bs -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 var x = encodeURIComponent('asdf');
 function foo() {
@@ -40,8 +40,7 @@ foo();
 //CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
 //CHECK-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 //CHECK-NEXT:    CreateEnvironment r3
-//CHKBS-NEXT:    CreateInnerEnvironment [[S:r[0-9]+]], r3, 0
-//CHECK-NEXT:    CreateClosure     r1, [[S]], Function<foo>
+//CHECK-NEXT:    CreateClosure     r1, r3, Function<foo>
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    TryGetById        r4, r0, 1, "encodeURIComponen"...
 //CHECK-NEXT:    LoadConstUndefined r0

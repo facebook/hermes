@@ -88,7 +88,7 @@ function foo() {
 // CHKBC-NEXT:  0x0016  end of debug source table
 
 // CHKBC:Debug scope descriptor table:
-// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHKBC-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKBC:Textified callees table:

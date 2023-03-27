@@ -356,7 +356,7 @@
 // CHK-BCDEFAULT-NEXT:  0x0267  end of debug source table
 
 // CHK-BCDEFAULT:Debug scope descriptor table:
-// CHK-BCDEFAULT-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHK-BCDEFAULT-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHK-BCDEFAULT-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHK-BCDEFAULT:Textified callees table:

@@ -102,9 +102,13 @@ struct DebugScopeDescriptor {
     /// a Function outermost scope).
     bool isInnerScope;
 
+    /// This scope descriptor is dynamic (i.e., it is a loop's top level scope).
+    bool isDynamic;
+
    private:
     enum class Bits {
       InnerScope,
+      Dynamic,
     };
   };
 
@@ -459,13 +463,12 @@ class DebugInfoGenerator {
   ///
   /// \p names is the list of variables that live in the scope.
   ///
-  /// \p isInnerScope indicates whether this is an inner scope in the
-  /// function.
+  /// \p flags contains the flags for \p names. See DebugScopeDescriptor::Flags.
   ///
   /// \returns the offset of the new scope descriptor in the table.
   uint32_t appendScopeDesc(
       OptValue<uint32_t> parentScopeID,
-      bool isInnerScope,
+      DebugScopeDescriptor::Flags flags,
       llvh::ArrayRef<Identifier> names);
 
   /// Append the textified callee data to the debug data. \return the offset in

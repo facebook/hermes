@@ -35,13 +35,15 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               tryStmt,
               tryStmt->_finalizer->getDebugLoc(),
               [this](ESTree::Node *node, ControlFlowChange, BasicBlock *) {
-                genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
+                genStatement(
+                    cast<ESTree::TryStatementNode>(node)->_finalizer,
+                    IsLoopBody::No);
               });
         } else {
           thisTry.emplace(curFunction(), tryStmt);
         }
 
-        genStatement(tryStmt->_block);
+        genStatement(tryStmt->_block, IsLoopBody::No);
 
         Builder.setLocation(SourceErrorManager::convertEndToLocation(
             tryStmt->_block->getSourceRange()));
@@ -49,7 +51,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
       // emitNormalCleanup.
       [this, tryStmt]() {
         if (tryStmt->_finalizer) {
-          genStatement(tryStmt->_finalizer);
+          genStatement(tryStmt->_finalizer, IsLoopBody::No);
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_finalizer->getSourceRange()));
         }
@@ -91,7 +93,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
           Builder.setLocation(tryStmt->_finalizer->getDebugLoc());
           auto *catchReg = Builder.createCatchInst();
 
-          genStatement(tryStmt->_finalizer);
+          genStatement(tryStmt->_finalizer, IsLoopBody::No);
 
           Builder.setLocation(SourceErrorManager::convertEndToLocation(
               tryStmt->_finalizer->getSourceRange()));

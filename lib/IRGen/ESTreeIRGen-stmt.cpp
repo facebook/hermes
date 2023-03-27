@@ -19,7 +19,7 @@ void ESTreeIRGen::genBody(ESTree::NodeList &Body) {
   for (auto &Node : Body) {
     LLVM_DEBUG(
         llvh::dbgs() << "IRGen node of type " << Node.getNodeName() << ".\n");
-    genStatement(&Node);
+    genStatement(&Node, IsLoopBody::No);
   }
 }
 
@@ -27,13 +27,13 @@ void ESTreeIRGen::genScopelessBlockOrStatement(ESTree::Node *stmt) {
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
     for (auto &Node : BS->_body) {
-      genStatement(&Node);
+      genStatement(&Node, IsLoopBody::No);
     }
 
     return;
   }
 
-  genStatement(stmt);
+  genStatement(stmt, IsLoopBody::No);
 }
 
 void ESTreeIRGen::genFunctionBody(ESTree::Node *stmt) {
@@ -44,7 +44,9 @@ void ESTreeIRGen::genCatchHandler(ESTree::Node *stmt) {
   genScopelessBlockOrStatement(stmt);
 }
 
-void ESTreeIRGen::genBlockStatement(ESTree::BlockStatementNode *BS) {
+void ESTreeIRGen::genBlockStatement(
+    ESTree::BlockStatementNode *BS,
+    IsLoopBody isLoopBody) {
   // enterBlockScope should be created on the stack, but it is only
   // supposed to be created if block scoping is enabled.
   std::optional<EnterBlockScope> enterBlockScope;
@@ -52,14 +54,17 @@ void ESTreeIRGen::genBlockStatement(ESTree::BlockStatementNode *BS) {
   if (Mod->getContext().getCodeGenerationSettings().enableBlockScoping) {
     enterBlockScope.emplace(curFunction());
     blockDeclarationInstantiation(BS);
+    // The newly created ScopeDesc is dynamic if BS is a loop body. This is to
+    // let the optimizer know it should be very careful when merging this scope.
+    currentIRScopeDesc_->setDynamic(isLoopBody != IsLoopBody::No);
   }
 
   for (auto &Node : BS->_body) {
-    genStatement(&Node);
+    genStatement(&Node, IsLoopBody::No);
   }
 }
 
-void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
+void ESTreeIRGen::genStatement(ESTree::Node *stmt, IsLoopBody isLoopBody) {
   LLVM_DEBUG(
       llvh::dbgs() << "IRGen statement of type " << stmt->getNodeName()
                    << "\n");
@@ -112,7 +117,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
-    genBlockStatement(BS);
+    genBlockStatement(BS, isLoopBody);
     return;
   }
 
@@ -125,7 +130,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     curFunction()->initLabel(Label, next, nullptr);
 
     // Now, generate the IR for the statement that the label is annotating.
-    genStatement(Label->_body);
+    genStatement(Label->_body, isLoopBody);
 
     // End the current basic block with a jump to the new basic block.
     Builder.createBranchInst(next);
@@ -293,13 +298,13 @@ void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
 
   // IRGen the Then:
   Builder.setInsertionBlock(ThenBlock);
-  genStatement(IfStmt->_consequent);
+  genStatement(IfStmt->_consequent, IsLoopBody::No);
   Builder.createBranchInst(ContinueBlock);
 
   // IRGen the Else, if it exists:
   Builder.setInsertionBlock(ElseBlock);
   if (IfStmt->_alternate) {
-    genStatement(IfStmt->_alternate);
+    genStatement(IfStmt->_alternate, IsLoopBody::No);
   }
 
   Builder.createBranchInst(ContinueBlock);
@@ -347,7 +352,7 @@ void ESTreeIRGen::genForWhileLoops(
   // https://github.com/estree/estree/blob/master/spec.md#forstatement
   if (init) {
     if (llvh::isa<ESTree::VariableDeclarationNode>(init)) {
-      genStatement(init);
+      genStatement(init, IsLoopBody::No);
     } else {
       genExpression(init);
     }
@@ -383,7 +388,7 @@ void ESTreeIRGen::genForWhileLoops(
   // Do this last so that the test and update blocks are associated with the
   // loop statement, and not the body statement.
   Builder.setInsertionBlock(bodyBlock);
-  genStatement(body);
+  genStatement(body, IsLoopBody::Yes);
   Builder.createBranchInst(updateBlock);
 
   // Following statements are inserted to the exit block.
@@ -493,7 +498,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   LReference lref = createLRef(ForInStmt->_left, false);
   lref.emitStore(propertyStringRepr);
 
-  genStatement(ForInStmt->_body);
+  genStatement(ForInStmt->_body, IsLoopBody::Yes);
 
   Builder.createBranchInst(getNextBlock);
 
@@ -550,7 +555,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         // Note: obtaining the value is not protected, but storing it is.
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
-        genStatement(forOfStmt->_body);
+        genStatement(forOfStmt->_body, IsLoopBody::Yes);
         Builder.setLocation(SourceErrorManager::convertEndToLocation(
             forOfStmt->_body->getSourceRange()));
       },

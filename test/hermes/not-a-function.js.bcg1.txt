@@ -356,7 +356,7 @@
 // CHK-BCG1-NEXT:  0x0267  end of debug source table
 
 // CHK-BCG1:Debug scope descriptor table:
-// CHK-BCG1-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHK-BCG1-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHK-BCG1-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHK-BCG1:Textified callees table:

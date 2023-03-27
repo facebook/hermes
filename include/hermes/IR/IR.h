@@ -586,6 +586,17 @@ class ScopeDesc : public Value {
     return parent_;
   }
 
+  void relocateTo(ScopeDesc *newParent) {
+    assert(
+        newParent == parent_->getParent() &&
+        "multi-level scope nesting change");
+    parent_ = newParent;
+  }
+
+  ScopeListTy &getMutableInnerScopes() {
+    return innerScopes_;
+  }
+
   const ScopeListTy &getInnerScopes() const {
     return innerScopes_;
   }
@@ -622,6 +633,14 @@ class ScopeDesc : public Value {
     return serializedScope_;
   }
 
+  void setDynamic(bool v) {
+    dynamic_ = v;
+  }
+
+  bool getDynamic() const {
+    return dynamic_;
+  }
+
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ScopeDescKind;
   }
@@ -635,6 +654,8 @@ class ScopeDesc : public Value {
   Function *function_{};
 
   VariableListType variables_;
+
+  bool dynamic_{};
 };
 
 /// This represents a function parameter.
@@ -1031,6 +1052,11 @@ class Variable : public Value {
   }
   ScopeDesc *getParent() const {
     return parent;
+  }
+
+  void setParent(ScopeDesc *S) {
+    assert(parent->getParent() == S && "multi-level re-home not expected.");
+    parent = S;
   }
 
   bool getObeysTDZ() const {
