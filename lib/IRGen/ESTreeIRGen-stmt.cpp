@@ -29,10 +29,11 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   Builder.getFunction()->incrementStatementCount();
 
-  if (/* auto *FD = */ llvh::dyn_cast<ESTree::FunctionDeclarationNode>(stmt)) {
-    // It has already been hoisted. Do nothing.  But, keep this to
-    // match the AST structure, and we may want to do something in the
-    // future.
+  if (auto *FD = llvh::dyn_cast<ESTree::FunctionDeclarationNode>(stmt)) {
+    // In the general case the function declaration has already been hoisted,
+    // but if the function was defined outside of a BlockStatement (and outside
+    // of the global scope), then its CreateFunctionInst should be emitted now.
+    emitCreateFunction(FD);
     return;
   }
 
@@ -73,6 +74,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
+    hoistCreateFunctions(BS);
+
     for (auto &Node : BS->_body) {
       genStatement(&Node);
     }

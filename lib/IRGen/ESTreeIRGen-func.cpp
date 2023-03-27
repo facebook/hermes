@@ -75,19 +75,47 @@ void ESTreeIRGen::genFunctionDeclaration(
   Identifier functionName = getNameFieldFromID(func->_id);
   LLVM_DEBUG(llvh::dbgs() << "IRGen function \"" << functionName << "\".\n");
 
-  auto *funcStorage = nameTable_.lookup(functionName);
-  assert(
-      funcStorage && "function declaration variable should have been hoisted");
-
   Function *newFunc = func->_async
       ? genAsyncFunction(functionName, nullptr, func)
       : func->_generator ? genGeneratorFunction(functionName, nullptr, func)
                          : genES5Function(functionName, nullptr, func);
 
+  functionForDecl[func] = {newFunc, AlreadyEmitted::No};
+}
+
+void ESTreeIRGen::emitCreateFunction(ESTree::FunctionDeclarationNode *func) {
+  Identifier functionName = getNameFieldFromID(func->_id);
+
+  auto it = functionForDecl.find(func);
+  assert(it != functionForDecl.end() && "all inner functions should be known");
+
+  if (it->second.second == AlreadyEmitted::Yes) {
+    return;
+  }
+
+  it->second.second = AlreadyEmitted::Yes;
+
+  auto *funcStorage = nameTable_.lookup(functionName);
+  assert(
+      funcStorage && "function declaration variable should have been hoisted");
+
   // Store the newly created closure into a frame variable with the same name.
-  auto *newClosure = Builder.createCreateFunctionInst(newFunc, currentIRScope_);
+  auto *newClosure =
+      Builder.createCreateFunctionInst(it->second.first, currentIRScope_);
 
   emitStore(newClosure, funcStorage, true);
+}
+
+void ESTreeIRGen::hoistCreateFunctions(ESTree::Node *containingNode) {
+  const auto &closures = curFunction()->getSemInfo()->closures;
+  auto it = closures.find(containingNode);
+  if (it == closures.end()) {
+    return;
+  }
+
+  for (ESTree::FunctionDeclarationNode *funcDecl : *it->second) {
+    emitCreateFunction(funcDecl);
+  }
 }
 
 Value *ESTreeIRGen::genFunctionExpression(
@@ -172,6 +200,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 
     emitFunctionPrologue(
         AF,
+        AF->_body,
         Builder.createBasicBlock(newFunc),
         InitES5CaptureState::No,
         DoEmitParameters::Yes);
@@ -256,6 +285,7 @@ Function *ESTreeIRGen::genES5Function(
       Builder.setInsertionBlock(prologueBB);
       emitFunctionPrologue(
           functionNode,
+          body,
           prologueBB,
           InitES5CaptureState::Yes,
           DoEmitParameters::Yes);
@@ -271,6 +301,7 @@ Function *ESTreeIRGen::genES5Function(
       Builder.setInsertionBlock(prologueBB);
       emitFunctionPrologue(
           functionNode,
+          body,
           prologueBB,
           InitES5CaptureState::Yes,
           DoEmitParameters::Yes);
@@ -287,6 +318,7 @@ Function *ESTreeIRGen::genES5Function(
   } else {
     emitFunctionPrologue(
         functionNode,
+        body,
         Builder.createBasicBlock(newFunction),
         InitES5CaptureState::Yes,
         DoEmitParameters::Yes);
@@ -342,6 +374,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
     emitFunctionPrologue(
         functionNode,
+        ESTree::getBlockStatement(functionNode),
         Builder.createBasicBlock(outerFn),
         InitES5CaptureState::Yes,
         DoEmitParameters::No);
@@ -433,6 +466,7 @@ Function *ESTreeIRGen::genAsyncFunction(
     // This avoid emitting code e.g. destructuring parameters twice.
     emitFunctionPrologue(
         functionNode,
+        ESTree::getBlockStatement(functionNode),
         Builder.createBasicBlock(asyncFn),
         InitES5CaptureState::Yes,
         DoEmitParameters::No);
@@ -489,6 +523,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 
 void ESTreeIRGen::emitFunctionPrologue(
     ESTree::FunctionLikeNode *funcNode,
+    ESTree::Node *body,
     BasicBlock *entry,
     InitES5CaptureState doInitES5CaptureState,
     DoEmitParameters doEmitParameters) {
@@ -559,6 +594,10 @@ void ESTreeIRGen::emitFunctionPrologue(
       genFunctionDeclaration(funcDecl);
     }
   }
+
+  // Pre-hoists all functions that are defined within body (but not in
+  // BlockStatments in it).
+  hoistCreateFunctions(body);
 }
 
 void ESTreeIRGen::createNewBinding(

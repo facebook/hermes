@@ -338,6 +338,7 @@ void ESTreeIRGen::doIt() {
 
   emitFunctionPrologue(
       Program,
+      Program,
       Builder.createBasicBlock(topLevelFunction),
       InitES5CaptureState::Yes,
       DoEmitParameters::Yes);
@@ -349,6 +350,9 @@ void ESTreeIRGen::doIt() {
         Builder.createAllocStackInst(genAnonymousLabelName("ret"));
     Builder.createStoreStackInst(
         Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+
+    // Emit all CreateFunctionInsts for all global functions.
+    hoistCreateFunctions(Program);
 
     genBody(Program->_body);
 

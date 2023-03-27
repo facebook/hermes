@@ -786,6 +786,8 @@ class ESTreeIRGen {
   /// - create "this" parameter
   /// - create all explicit parameters and store them in variables
   /// \param entry the unpopulated entry block for the function
+  /// \param body the AST node for the function body; or the Program node when
+  /// generating the global function
   /// \param doInitES5CaptureState initialize the capture state for ES5
   ///     functions.
   /// \param doEmitParameters run code to initialize parameters in the function.
@@ -793,6 +795,7 @@ class ESTreeIRGen {
   ///     Used for the outer function of generator functions, e.g.
   void emitFunctionPrologue(
       ESTree::FunctionLikeNode *funcNode,
+      ESTree::Node *body,
       BasicBlock *entry,
       InitES5CaptureState doInitES5CaptureState,
       DoEmitParameters doEmitParameters);
@@ -1080,6 +1083,29 @@ class ESTreeIRGen {
         std::string("anonFunc@") +
         curFunction()->function->getOriginalOrInferredName().c_str());
   }
+
+  enum class AlreadyEmitted { No, Yes };
+  llvh::DenseMap<
+      ESTree::FunctionDeclarationNode *,
+      std::pair<Function *, AlreadyEmitted>>
+      functionForDecl;
+
+  /// Emits a CreateFunction instruction for \p func in the current location if
+  /// \p func hasn't been created yet (it may have been created due to function
+  /// hoisting, in which case this method won't do anything).
+  void emitCreateFunction(ESTree::FunctionDeclarationNode *func);
+
+  /// Emits CreateFunction instructions for all functions defined immediately
+  /// within \p containingNode. This implements the semantics of
+  /// ES2023 14.2.2 Runtime Semantics: Evaluation
+  ///   [...]
+  ///   Block : { StatementList }
+  ///     [...]
+  ///     3. Perform BlockDeclarationInstantiation(StatementList, blockEnv).
+  ///
+  /// Specifically, this implements 14.2.3 BlockDeclarationInstantiation,
+  /// 14.2.3.3.b.i, 14.2.3.3.b.ii, and 14.2.3.3.b.iii.
+  void hoistCreateFunctions(ESTree::Node *containingNode);
 
   /// Emit an instruction to load a value from a specified location.
   /// \param from location to load from, either a Variable or
