@@ -119,7 +119,7 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
   /// Insert the synthesized variable into the function name table, so it can
   /// be looked up internally.
   nameTable_.insertIntoScope(
-      &curFunction()->scope, errorVar->getName(), errorVar);
+      curFunction()->functionScope, errorVar->getName(), errorVar);
 
   // Alias the lexical name to the synthesized variable.
   nameTable_.insert(catchVariableName, errorVar);

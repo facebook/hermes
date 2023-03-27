@@ -24,12 +24,12 @@ FunctionContext::FunctionContext(
     : irGen_(irGen),
       semInfo_(semInfo),
       oldContext_(irGen->functionContext_),
-      oldIRScopeDesc_(irGen->currentIRScopeDesc_),
-      oldIRScope_(irGen->currentIRScope_),
       builderSaveState_(irGen->Builder),
       function(function),
-      scope(irGen->nameTable_),
-      anonymousIDs_(function->getContext().getStringTable()) {
+      anonymousIDs_(function->getContext().getStringTable()),
+      enterFunctionScope(this) {
+  functionScope = &enterFunctionScope.blockScope_;
+  blockScope = functionScope;
   irGen->functionContext_ = this;
   irGen->currentIRScopeDesc_ = function->getFunctionScopeDesc();
 
@@ -50,14 +50,31 @@ FunctionContext::FunctionContext(
 }
 
 FunctionContext::~FunctionContext() {
-  irGen_->currentIRScope_ = oldIRScope_;
-  irGen_->currentIRScopeDesc_ = oldIRScopeDesc_;
   irGen_->functionContext_ = oldContext_;
   irGen_->Builder.setCurrentSourceLevelScope(irGen_->currentIRScopeDesc_);
 }
 
 Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
   return anonymousIDs_.next(hint);
+}
+
+//===----------------------------------------------------------------------===//
+// EnterBlockScope
+EnterBlockScope::EnterBlockScope(FunctionContext *currentContext)
+    : currentContext_(currentContext),
+      oldIRScopeDesc_(currentContext->irGen_->currentIRScopeDesc_),
+      oldIRScope_(currentContext->irGen_->currentIRScope_),
+      oldBlockScope_(currentContext->blockScope),
+      blockScope_(currentContext->irGen_->nameTable_) {
+  currentContext->blockScope = &blockScope_;
+}
+
+EnterBlockScope::~EnterBlockScope() {
+  ESTreeIRGen *irgen = currentContext_->irGen_;
+  currentContext_->blockScope = oldBlockScope_;
+  irgen->currentIRScope_ = oldIRScope_;
+  irgen->currentIRScopeDesc_ = oldIRScopeDesc_;
+  irgen->Builder.setCurrentSourceLevelScope(irgen->currentIRScopeDesc_);
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,7 +163,9 @@ Value *ESTreeIRGen::genFunctionExpression(
     // Insert the synthesized variable into the name table, so it can be
     // looked up internally as well.
     nameTable_.insertIntoScope(
-        &curFunction()->scope, tempClosureVar->getName(), tempClosureVar);
+        curFunction()->functionScope,
+        tempClosureVar->getName(),
+        tempClosureVar);
 
     // Alias the lexical name to the synthesized variable.
     originalNameIden = getNameFieldFromID(FE->_id);
@@ -494,11 +513,11 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   if (!curFunction()->getSemInfo()->containsArrowFunctions)
     return;
 
-  auto *scope = curFunction()->function->getFunctionScopeDesc();
-
   // "this".
   curFunction()->capturedThis = Builder.createVariable(
-      scope, Variable::DeclKind::Var, genAnonymousLabelName("this"));
+      currentIRScopeDesc_,
+      Variable::DeclKind::Var,
+      genAnonymousLabelName("this"));
   emitStore(
       Builder.getFunction()->getThisParameter(),
       curFunction()->capturedThis,
@@ -506,14 +525,18 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 
   // "new.target".
   curFunction()->capturedNewTarget = Builder.createVariable(
-      scope, Variable::DeclKind::Var, genAnonymousLabelName("new.target"));
+      currentIRScopeDesc_,
+      Variable::DeclKind::Var,
+      genAnonymousLabelName("new.target"));
   emitStore(
       Builder.createGetNewTargetInst(), curFunction()->capturedNewTarget, true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
     curFunction()->capturedArguments = Builder.createVariable(
-        scope, Variable::DeclKind::Var, genAnonymousLabelName("arguments"));
+        currentIRScopeDesc_,
+        Variable::DeclKind::Var,
+        genAnonymousLabelName("arguments"));
     emitStore(
         curFunction()->createArgumentsInst,
         curFunction()->capturedArguments,

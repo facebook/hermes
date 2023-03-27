@@ -28,6 +28,7 @@ namespace irgen {
 
 // Forward declarations
 class SurroundingTry;
+class FunctionContext;
 class ESTreeIRGen;
 
 using VarDecl = sem::FunctionInfo::VarDecl;
@@ -49,12 +50,32 @@ inline Identifier getNameFieldFromID(const ESTree::Node *ID) {
 /// \returns true if \p node is known to be a constant expression.
 bool isConstantExpr(ESTree::Node *node);
 
-//===----------------------------------------------------------------------===//
-// FunctionContext
-
 /// Scoped hash table to represent the JS scope.
 using NameTableTy = hermes::ScopedHashTable<Identifier, Value *>;
 using NameTableScopeTy = hermes::ScopedHashTableScope<Identifier, Value *>;
+
+//===----------------------------------------------------------------------===//
+// EnterBlockScope
+
+/// Enters a new block scope in the current function. Should be constructed on
+/// the stack.
+class EnterBlockScope {
+  friend class FunctionContext;
+
+ public:
+  explicit EnterBlockScope(FunctionContext *currentContext);
+  ~EnterBlockScope();
+
+ private:
+  FunctionContext *const currentContext_;
+  ScopeDesc *const oldIRScopeDesc_;
+  ScopeCreationInst *const oldIRScope_;
+  NameTableScopeTy *const oldBlockScope_;
+  NameTableScopeTy blockScope_;
+};
+
+//===----------------------------------------------------------------------===//
+// FunctionContext
 
 /// Holds the target basic block for a break and continue label.
 /// It has a 1-to-1 correspondence to SemInfoFunction::GotoLabel.
@@ -74,6 +95,8 @@ struct GotoLabel {
 /// on the stack. Upon destruction it automatically restores the previous
 /// function context.
 class FunctionContext {
+  friend class EnterBlockScope;
+
   /// Pointer to the "outer" object this is associated with.
   ESTreeIRGen *const irGen_;
 
@@ -82,12 +105,6 @@ class FunctionContext {
 
   /// The old value which we save and will restore on destruction.
   FunctionContext *oldContext_;
-
-  /// The previous currentIRScopeDesc value.
-  ScopeDesc *oldIRScopeDesc_;
-
-  /// The previous currentIRScope value.
-  CreateScopeInst *oldIRScope_;
 
   /// As we descend into a new function, we save the state of the builder
   /// here. It is automatically restored once we are done with the function.
@@ -105,7 +122,10 @@ class FunctionContext {
   SurroundingTry *surroundingTry = nullptr;
 
   /// A new variable scope that is used throughout the body of the function.
-  NameTableScopeTy scope;
+  NameTableScopeTy *functionScope;
+
+  /// The current local "scope" for block-scoped declarations.
+  NameTableScopeTy *blockScope;
 
   /// Stack Register that will hold the return value of the global scope.
   AllocStackInst *globalReturnRegister{nullptr};
@@ -132,6 +152,10 @@ class FunctionContext {
   /// Optionally captured value of the eagerly created Arguments object. Used
   /// when arrow functions need to access it.
   Variable *capturedArguments{};
+
+  /// "Enters" the function scope. Must be the last member as it manipulates
+  /// this object's state.
+  EnterBlockScope enterFunctionScope;
 
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
@@ -322,6 +346,7 @@ class LReference {
 
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
+  friend class EnterBlockScope;
   friend class FunctionContext;
   friend class LReference;
 
@@ -365,7 +390,7 @@ class ESTreeIRGen {
   ScopeDesc *currentIRScopeDesc_{};
 
   /// The current scope object available for IR generation.
-  CreateScopeInst *currentIRScope_{};
+  ScopeCreationInst *currentIRScope_{};
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.

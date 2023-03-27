@@ -484,7 +484,9 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
 
   // Create a property if global scope, variable otherwise.
   Value *res;
+  NameTableScopeTy *nameTableScope;
   if (inFunc->isGlobalScope() && declKind == VarDecl::Kind::Var) {
+    nameTableScope = topLevelContext->functionScope;
     res = Builder.createGlobalObjectProperty(name, true);
   } else {
     if (!Mod->getContext().getCodeGenerationSettings().enableTDZ) {
@@ -492,12 +494,13 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
       declKind = Variable::DeclKind::Var;
     }
 
+    nameTableScope = curFunction()->blockScope;
     res =
         Builder.createVariable(inFunc->getFunctionScopeDesc(), declKind, name);
   }
 
   // Register the variable in the scoped hash table.
-  nameTable_.insert(name, res);
+  nameTable_.insertIntoScope(nameTableScope, name, res);
   return {res, true};
 }
 
@@ -513,7 +516,7 @@ GlobalObjectProperty *ESTreeIRGen::declareAmbientGlobalProperty(
                    << name.getUnderlyingPointer() << "\n");
 
   prop = Builder.createGlobalObjectProperty(name, false);
-  nameTable_.insertIntoScope(&topLevelContext->scope, name, prop);
+  nameTable_.insertIntoScope(topLevelContext->functionScope, name, prop);
   return prop;
 }
 
