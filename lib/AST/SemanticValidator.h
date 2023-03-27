@@ -11,6 +11,7 @@
 #include "hermes/AST/SemValidate.h"
 
 #include "hermes/AST/RecursiveVisitor.h"
+#include "llvh/ADT/MapVector.h"
 
 namespace hermes {
 namespace sem {
@@ -348,7 +349,13 @@ class BlockContext {
   /// var-declared names that are also block-scoped names. See
   /// * ES2023 14.2.1 SS: Early Erros
   /// * ES2023 15.2.1 SS: Early Erros
-  void ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody) const;
+  void ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody);
+
+ private:
+  /// Stops hoisting any functions named \p id. This is used to implement
+  /// * ES2023 B.3.2.1 Changes to FunctionDeclarationInstantiation
+  /// * ES2023 B.3.2.2 Changes to GlobalDeclarationInstantiation
+  void stopHoisting(IdentifierNode *id);
 };
 
 //===----------------------------------------------------------------------===//
@@ -357,6 +364,8 @@ class BlockContext {
 /// Holds all per-function state, specifically label tables. Should always be
 /// constructed on the stack.
 class FunctionContext {
+  friend class BlockContext;
+
   SemanticValidator *validator_;
   FunctionContext *oldContextValue_;
 
@@ -423,9 +432,33 @@ class FunctionContext {
     return semInfo->allocateLabel();
   }
 
+  /// Adds a new function declaration \p funDecl to the scopedClosures, while
+  /// also adding it to hoistingCandidates_ (the set of all functions that are
+  /// candidates to be hoisted).
+  void addHoistingCandidate(FunctionDeclarationNode *funDecl);
+
  private:
   // The block context for the function level scope.
   BlockContext functionScope_;
+
+  using HoistingCandidateList = llvh::SmallVector<FunctionDeclarationNode *, 4>;
+
+  /// The set of hoisting candidates. Use a MapVector for deterministic
+  /// compilation.
+  llvh::MapVector<const UniqueString *, HoistingCandidateList>
+      hoistingCandidates_;
+
+  /// \return Whether to perform function hoisting as described in ES2023
+  /// B.3.2.1.
+  bool functionHoistingEnabled() const {
+    return !strictMode && validator_->blockScopingEnabled();
+  }
+
+  /// Finalizes function hoisting by effectively hoisting all candidates in
+  /// hoistingCandidates_ to scopedClosures. This method is supposed to be
+  /// invoked in the functionScope_ member once all processing for this function
+  /// is done.
+  void finalizeHoisting();
 };
 
 } // namespace sem

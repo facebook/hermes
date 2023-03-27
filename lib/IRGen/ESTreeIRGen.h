@@ -797,9 +797,14 @@ class ESTreeIRGen {
       InitES5CaptureState doInitES5CaptureState,
       DoEmitParameters doEmitParameters);
 
-  /// Creates a new binding \p id of kind \p kind in \p function.
-  void
-  createNewBinding(Function *function, VarDecl::Kind kind, ESTree::Node *id);
+  /// Creates a new binding \p id of kind \p kind in \p function. \p
+  /// needsInitializer indicates whether newly created bindings should be
+  /// default-initialized.
+  void createNewBinding(
+      Function *function,
+      VarDecl::Kind kind,
+      ESTree::Node *id,
+      bool needsInitializer);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.

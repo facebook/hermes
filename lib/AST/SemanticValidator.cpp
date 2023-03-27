@@ -157,7 +157,7 @@ void SemanticValidator::visit(IdentifierNode *identifier) {
 
 /// Process a function declaration by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionDeclarationNode *funcDecl) {
-  curFunction()->scopedClosures->push_back(funcDecl);
+  curFunction()->addHoistingCandidate(funcDecl);
   visitFunction(funcDecl, funcDecl->_id, funcDecl->_params, funcDecl->_body);
 }
 
@@ -1146,8 +1146,21 @@ BlockContext::~BlockContext() {
   curFunction_->scopedClosures = previousScopedClosures_;
 }
 
-void BlockContext::ensureScopedNamesAreUnique(
-    IsFunctionBody isFunctionBody) const {
+void BlockContext::stopHoisting(IdentifierNode *id) {
+  // The hoisting candidates are stored in a map of name to list of all known
+  // functions with that name. Therefore, if name is in hoistingCandidates_,
+  // clearing the list is all that's needed to stop function hoisting. Note
+  // that the code __clears__ the list instead of removing it from the map, thus
+  // preserving any memory allocated by the list (so, in case the same
+  // identifier appears again the compiler won't incur in (possibly) heap
+  // allocating memory).
+  auto it = curFunction_->hoistingCandidates_.find(id->_name);
+  if (it != curFunction_->hoistingCandidates_.end()) {
+    curFunction_->hoistingCandidates_.erase(it);
+  }
+}
+
+void BlockContext::ensureScopedNamesAreUnique(IsFunctionBody isFunctionBody) {
   if (!validator_->blockScopingEnabled()) {
     return;
   }
@@ -1224,6 +1237,12 @@ void BlockContext::ensureScopedNamesAreUnique(
   // Nothing special for const/let declarations -- thus, just iterate over them,
   // and complain about duplicates.
   for (const FunctionInfo::VarDecl &scopedDecl : *curFunction_->scopedDecls) {
+    // According to ES2023 B.3.2.1 and ES2023 B.3.2.2 functions should not be
+    // hoisted if doing so would cause early errors. Therefore, any functions
+    // that share its ID with scopedDecl cannot possibly be hoisted past this
+    // scope.
+    stopHoisting(scopedDecl.identifier);
+
     auto res = lexicallyDeclaredNames.insert(
         std::make_pair(scopedDecl.identifier->_name, scopedDecl.identifier));
     if (!res.second) {
@@ -1275,6 +1294,80 @@ FunctionContext::FunctionContext(
 FunctionContext::~FunctionContext() {
   functionScope_.ensureScopedNamesAreUnique(BlockContext::IsFunctionBody::Yes);
   validator_->funcCtx_ = oldContextValue_;
+  finalizeHoisting();
+}
+
+void FunctionContext::addHoistingCandidate(FunctionDeclarationNode *funDecl) {
+  auto *funDeclId = llvh::cast<IdentifierNode>(funDecl->_id);
+
+  if (functionHoistingEnabled()) {
+    hoistingCandidates_[funDeclId->_name].emplace_back(funDecl);
+  }
+
+  scopedClosures->emplace_back(funDecl);
+}
+
+void FunctionContext::finalizeHoisting() {
+  assert(
+      (functionHoistingEnabled() || hoistingCandidates_.size() == 0) &&
+      "should not have hoisting candidates in strict mode.");
+
+  if (node && !ESTree::isStrict(node->strictness)) {
+    // Hoisting only happens in non-strict mode per ES2023 B.3.2.1 and
+    // ES2023 B.3.2.2;
+    for (const auto &[name, nodes] : hoistingCandidates_) {
+      assert(
+          !nodes.empty() && "empty vectors should be removed by stopHoisting");
+
+      // Add a new var declaration to this function's varDecls. Only one
+      // declaration per identifier is needed regardless of how many
+      // functions with that id are hoisted.
+      FunctionDeclarationNode *first = nodes[0];
+      varDecls->emplace_back(FunctionInfo::VarDecl::withoutInitializer(
+          FunctionInfo::VarDecl::Kind::Var,
+          cast<ESTree::IdentifierNode>(first->_id)));
+
+      // Now mark all functions as hoisted, which prevents creation of the
+      // binding identifier below.
+      for (FunctionDeclarationNode *fdn : nodes) {
+        fdn->getSemInfo()->hoisted = true;
+      }
+    }
+  }
+
+  // Now add a scoped var decl (in the proper scope) for all functions that
+  // weren't hoisted.
+  assert(
+      (validator_->astContext_.getCodeGenerationSettings().enableBlockScoping ||
+       semInfo->closures.size() <= 1) &&
+      "All closures should be added to the same container when block scoping "
+      "is disabled");
+  for (auto &[containingNode, closures] : semInfo->closures) {
+    if (closures->empty()) {
+      continue;
+    }
+
+    // For nested functions at the top level of an enclosing function,
+    // the nested function is added to the enclosing function's
+    // var list.  For nested functions in blocks in an enclosing
+    // function, the nested function is added to the scope's
+    // list.  For functions in the global scope, the function
+    // is added to the global scope var list.  For functions
+    // in a scope nested in the global scope, the function is added
+    // to the scope's list.
+    FunctionInfo::BlockDecls *decls =
+        (containingNode == body && functionHoistingEnabled())
+        ? &semInfo->varScoped
+        : semInfo->lexicallyScoped[containingNode].get();
+
+    for (auto it = closures->begin(), end = closures->end(); it < end; ++it) {
+      if (!(*it)->getSemInfo()->hoisted) {
+        decls->emplace_back(FunctionInfo::VarDecl::withoutInitializer(
+            FunctionInfo::VarDecl::Kind::Var,
+            cast<ESTree::IdentifierNode>((*it)->_id)));
+      }
+    }
+  }
 }
 } // namespace sem
 } // namespace hermes

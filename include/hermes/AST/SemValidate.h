@@ -26,6 +26,24 @@ class FunctionInfo {
 
     Kind kind;
     ESTree::IdentifierNode *identifier;
+
+    /// If false, this VarDecl does not need a default undefined/empty
+    /// initialization. These are useful for VarDecls for functions.
+    bool needsInitializer;
+
+    /// Constructs a VarDecl with the given kind \p k and name \p id. The
+    /// created VarDecl needsInitializer.
+    VarDecl(Kind k, ESTree::IdentifierNode *id)
+        : kind(k), identifier(id), needsInitializer(true) {}
+
+    /// Named-constructor for creating VarDecls that don't require initializers.
+    static VarDecl withoutInitializer(
+        Kind k,
+        ESTree::IdentifierNode *identifier) {
+      VarDecl v{k, identifier};
+      v.needsInitializer = false;
+      return v;
+    }
   };
 
   using BlockDecls = llvh::SmallVector<VarDecl, 4>;
@@ -68,6 +86,9 @@ class FunctionInfo {
   /// Number of labels allocated so far. We use this counter to assign
   /// consecutive index values to labels.
   unsigned labelCount = 0;
+
+  /// Indicates whether this function has been hoisted.
+  bool hoisted{};
 
   /// Allocate a new label and return its index.
   unsigned allocateLabel() {

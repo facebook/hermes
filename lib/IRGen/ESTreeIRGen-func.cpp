@@ -536,21 +536,13 @@ void ESTreeIRGen::emitFunctionPrologue(
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
   for (const sem::FunctionInfo::VarDecl &decl : semInfo->varScoped) {
-    createNewBinding(newFunc, decl.kind, decl.identifier);
+    createNewBinding(
+        newFunc, decl.kind, decl.identifier, decl.needsInitializer);
   }
   for (const auto &it : semInfo->lexicallyScoped) {
-    assert(
-        (it.second->empty() ||
-         Mod->getContext().getCodeGenerationSettings().enableBlockScoping) &&
-        "lexically-scoped declarations should be empty when block scoping is disabled.");
     for (const sem::FunctionInfo::VarDecl &decl : *it.second) {
-      createNewBinding(newFunc, decl.kind, decl.identifier);
-    }
-  }
-  for (const auto &elem : semInfo->closures) {
-    for (ESTree::FunctionDeclarationNode *fd : *elem.second) {
-      declareVariableOrGlobalProperty(
-          newFunc, VarDecl::Kind::Var, getNameFieldFromID(fd->_id));
+      createNewBinding(
+          newFunc, decl.kind, decl.identifier, decl.needsInitializer);
     }
   }
 
@@ -572,12 +564,13 @@ void ESTreeIRGen::emitFunctionPrologue(
 void ESTreeIRGen::createNewBinding(
     Function *function,
     VarDecl::Kind kind,
-    ESTree::Node *id) {
+    ESTree::Node *id,
+    bool needsInitializer) {
   auto res =
       declareVariableOrGlobalProperty(function, kind, getNameFieldFromID(id));
   // If this is not a frame variable or it was already declared, skip.
   auto *var = llvh::dyn_cast<Variable>(res.first);
-  if (!var || !res.second)
+  if (!needsInitializer || !var || !res.second)
     return;
 
   // Otherwise, initialize it to undefined or empty, depending on TDZ.
