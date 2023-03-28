@@ -246,6 +246,8 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
   // actual Instruction type
   Assert(&Inst.getContext() == Ctx, "Instruction has wrong context");
 
+  bool const acceptsEmptyType = Inst.acceptsEmptyType();
+
   // Verify all operands are valid
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
@@ -273,6 +275,10 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
               llvh::isa<HBCGetArgumentsLengthInst>(Inst) ||
               llvh::isa<HBCReifyArgumentsInst>(Inst),
           "Stack variable can only be accessed in certain instructions.");
+    }
+
+    if (Operand->getType().canBeEmpty()) {
+      Assert(acceptsEmptyType, "Instruction does not accept empty type");
     }
   }
 

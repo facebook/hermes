@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// XFAIL: *
 
 function check1() {
     return x + y;

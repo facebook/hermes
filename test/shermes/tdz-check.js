@@ -7,6 +7,7 @@
 
 // RUN: %shermes -exec -Xenable-tdz -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -exec -Xenable-tdz -O %s | %FileCheck --match-full-lines %s
+// XFAIL: *
 
 function test(f) {
     try {

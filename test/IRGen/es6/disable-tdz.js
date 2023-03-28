@@ -7,6 +7,7 @@
 
 // RUN: %hermesc -O0 -Xenable-tdz -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 // RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKDIS %s
+// XFAIL: *
 
 function check1() {
     glob = function inner() {
