@@ -6,11 +6,11 @@
  */
 
 #define DEBUG_TYPE "tdzdedup"
-#include "hermes/Optimizer/Scalar/TDZDedup.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -199,13 +199,18 @@ bool TDZDedupContext::processNode(StackNode *SN) {
 
 } // end anonymous namespace
 
-bool TDZDedup::runOnFunction(Function *F) {
-  DominanceInfo DT{F};
-  TDZDedupContext CCtx{F, DT};
-  return CCtx.run();
-}
-
 Pass *createTDZDedup() {
+  class TDZDedup : public FunctionPass {
+   public:
+    explicit TDZDedup() : FunctionPass("TDZDedup") {}
+    ~TDZDedup() override = default;
+
+    bool runOnFunction(Function *F) override {
+      DominanceInfo DT{F};
+      TDZDedupContext CCtx{F, DT};
+      return CCtx.run();
+    }
+  };
   return new TDZDedup();
 }
 
