@@ -20,9 +20,6 @@
 #include "llvh/ADT/STLExtras.h"
 #include "llvh/Support/RecyclingAllocator.h"
 
-STATISTIC(NumTDZFrameDedup, "Number of TDZ frame checks eliminated");
-STATISTIC(NumTDZStackDedup, "Number of TDZ stack checks eliminated");
-STATISTIC(NumTDZOtherDedup, "Number of TDZ other checks eliminated");
 STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
 namespace hermes {
@@ -53,7 +50,9 @@ class StackNode : public DomTreeDFS::StackNode<TDZDedupContext> {
 class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
  public:
   TDZDedupContext(Function *F, DominanceInfo &DT)
-      : DomTreeDFS::Visitor<TDZDedupContext, StackNode>(DT), F_(F) {}
+      : DomTreeDFS::Visitor<TDZDedupContext, StackNode>(DT),
+        F_(F),
+        builder_(F) {}
 
   bool run();
 
@@ -63,6 +62,7 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
   friend StackNode;
 
   Function *const F_;
+  IRBuilder builder_;
 
   /// All TDZ state variables are collected here.
   llvh::DenseSet<Value *> tdzState_{};
@@ -174,23 +174,24 @@ bool TDZDedupContext::processNode(StackNode *SN) {
 
     // The TDZ state is known to be true, so we can eliminate the check
     // instruction.
-    TIE->replaceAllUsesWith(TIE->getCheckedValue());
     destroyer.add(TIE);
     changed = true;
     ++NumTDZDedup;
 
-    // Attempt to destroy the load too, to save work in other passes.
-    if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(TIE->getCheckedValue())) {
-      ++NumTDZFrameDedup;
-      if (LFI->hasOneUser())
-        destroyer.add(LFI);
-    } else if (
-        auto *LSI = llvh::dyn_cast<LoadStackInst>(TIE->getCheckedValue())) {
-      ++NumTDZStackDedup;
-      if (LSI->hasOneUser())
-        destroyer.add(LSI);
+    // If ThrowIfEmpty has no users, we will attempt to destroy the load too, to
+    // save work in other passes.
+    if (!TIE->hasUsers()) {
+      if (TIE->getCheckedValue()->hasOneUser() &&
+          (llvh::isa<LoadFrameInst>(TIE->getCheckedValue()) ||
+           llvh::isa<LoadStackInst>(TIE->getCheckedValue()))) {
+        destroyer.add(llvh::cast<Instruction>(TIE->getCheckedValue()));
+      }
     } else {
-      ++NumTDZOtherDedup;
+      builder_.setInsertionPoint(TIE);
+      builder_.setLocation(TIE->getLocation());
+      auto *cast = builder_.createUnionNarrowTrustedInst(
+          TIE->getCheckedValue(), TIE->getType());
+      TIE->replaceAllUsesWith(cast);
     }
   }
 

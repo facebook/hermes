@@ -7,7 +7,6 @@
 
 // RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 // RUN: %hermesc -Xenable-tdz -custom-opt=typeinference -custom-opt=tdzdedup -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKOPT %s
-// XFAIL: *
 
 function check_after_store(p) {
     function inner1() {
@@ -182,15 +181,16 @@ function check_after_check() {
 // CHKOPT-NEXT:  %4 = CondBranchInst %3: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
 // CHKOPT-NEXT:  %5 = LoadFrameInst (:empty|undefined|number) [x@check_after_store]: empty|undefined|number
-// CHKOPT-NEXT:  %6 = ReturnInst %5: empty|undefined|number
+// CHKOPT-NEXT:  %6 = UnionNarrowTrustedInst (:undefined|number) %5: empty|undefined|number
+// CHKOPT-NEXT:  %7 = ReturnInst %6: undefined|number
 // CHKOPT-NEXT:%BB2:
-// CHKOPT-NEXT:  %7 = BranchInst %BB3
+// CHKOPT-NEXT:  %8 = BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  %8 = ReturnInst 0: number
+// CHKOPT-NEXT:  %9 = ReturnInst 0: number
 // CHKOPT-NEXT:%BB4:
-// CHKOPT-NEXT:  %9 = BranchInst %BB3
+// CHKOPT-NEXT:  %10 = BranchInst %BB3
 // CHKOPT-NEXT:%BB5:
-// CHKOPT-NEXT:  %10 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %11 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner2(p: any): any
@@ -206,14 +206,16 @@ function check_after_check() {
 // CHKOPT-NEXT:  %7 = CondBranchInst %6: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
 // CHKOPT-NEXT:  %8 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %9 = UnaryIncInst (:number|bigint) %8: any|empty
-// CHKOPT-NEXT:  %10 = StoreFrameInst %9: number|bigint, [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %11 = BranchInst %BB3
-// CHKOPT-NEXT:%BB2:
+// CHKOPT-NEXT:  %9 = UnionNarrowTrustedInst (:any) %8: any|empty
+// CHKOPT-NEXT:  %10 = UnaryIncInst (:number|bigint) %9: any
+// CHKOPT-NEXT:  %11 = StoreFrameInst %10: number|bigint, [x@check_after_check]: any|empty
 // CHKOPT-NEXT:  %12 = BranchInst %BB3
+// CHKOPT-NEXT:%BB2:
+// CHKOPT-NEXT:  %13 = BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  %13 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
-// CHKOPT-NEXT:  %14 = ReturnInst %13: any|empty
+// CHKOPT-NEXT:  %14 = LoadFrameInst (:any|empty) [x@check_after_check]: any|empty
+// CHKOPT-NEXT:  %15 = UnionNarrowTrustedInst (:any) %14: any|empty
+// CHKOPT-NEXT:  %16 = ReturnInst %15: any
 // CHKOPT-NEXT:%BB4:
-// CHKOPT-NEXT:  %15 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %17 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end
