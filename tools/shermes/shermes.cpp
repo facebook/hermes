@@ -11,6 +11,7 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
@@ -103,6 +104,12 @@ cl::opt<OptLevel> OptimizationLevel(
         clEnumValN(OptLevel::Og, "Og", "Optimizations suitable for debugging"),
         clEnumValN(OptLevel::Os, "Os", "Optimize for size"),
         clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
+    cl::cat(CompilerCategory));
+
+static cl::list<std::string> CustomOptimize(
+    "custom-opt",
+    cl::desc("Custom optimzations"),
+    cl::Hidden,
     cl::cat(CompilerCategory));
 
 cl::opt<bool> EnableAsserts(
@@ -697,17 +704,25 @@ bool compileFromCommandLineOptions() {
     llvh::errs() << "Emitted " << N << " errors. exiting.\n";
     return false;
   }
-  switch (cli::OptimizationLevel) {
-    case OptLevel::O0:
-      runNoOptimizationPasses(M);
-      break;
-    case OptLevel::Og:
-      runDebugOptimizationPasses(M);
-      break;
-    case OptLevel::Os:
-    case OptLevel::OMax:
-      runFullOptimizationPasses(M);
-      break;
+  if (!cli::CustomOptimize.empty()) {
+    if (!runCustomOptimizationPasses(M, cli::CustomOptimize)) {
+      llvh::errs() << "Invalid custom optimizations selected.\n\n"
+                   << PassManager::getCustomPassText();
+      return false;
+    }
+  } else {
+    switch (cli::OptimizationLevel) {
+      case OptLevel::O0:
+        runNoOptimizationPasses(M);
+        break;
+      case OptLevel::Og:
+        runDebugOptimizationPasses(M);
+        break;
+      case OptLevel::Os:
+      case OptLevel::OMax:
+        runFullOptimizationPasses(M);
+        break;
+    }
   }
 
   // Bail out if there were any errors during optimization.
