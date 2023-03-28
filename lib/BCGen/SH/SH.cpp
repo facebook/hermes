@@ -1654,6 +1654,7 @@ class InstrGen {
 void lowerModuleIR(Module *M, bool optimize) {
   PassManager PM;
   PM.addPass(createLIRPeephole());
+  PM.addPass(sh::createLowerNanBoxedUnionNarrowTrusted());
   // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
   // it introduces calls to HermesInternal.
   PM.addPass(new LowerExponentiationOperator());

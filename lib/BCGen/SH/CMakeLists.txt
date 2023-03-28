@@ -7,6 +7,7 @@ add_hermes_library(hermesSHBackend
   LoweringPasses.h
   LowerCalls.cpp
   RecreateCheapValues.cpp
+  LowerNanBoxedUnionNarrowT.cpp
   SH.cpp
   SHRegAlloc.cpp SHRegAlloc.h
   LINK_OBJLIBS

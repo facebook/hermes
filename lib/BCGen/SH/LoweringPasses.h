@@ -13,6 +13,12 @@
 
 namespace hermes::sh {
 
+/// When operating on Nan-boxed values, UnionNarrowTrusted doesn't change the
+/// data representation, in simply acts as an assertion of the input type.
+/// This pass replaces UnionNarrowTrusted with a simple copy of the input and
+/// narrows input's type to the result type.
+Pass *createLowerNanBoxedUnionNarrowTrusted();
+
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
 Pass *createLowerCalls(SHRegisterAllocator &RA);
