@@ -7,8 +7,7 @@
 
 #include "hermes/BCGen/SH/SH.h"
 
-#include "LowerCalls.h"
-#include "RecreateCheapValues.h"
+#include "LoweringPasses.h"
 #include "SHRegAlloc.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
@@ -1686,10 +1685,10 @@ void lowerAllocatedFunctionIR(
     bool optimize) {
   PassManager PM;
   PM.addPass(new LowerStoreInstrs(RA));
-  PM.addPass(new sh::LowerCalls(RA));
+  PM.addPass(sh::createLowerCalls(RA));
   if (optimize) {
     PM.addPass(new MovElimination(RA));
-    PM.addPass(new sh::RecreateCheapValues(RA));
+    PM.addPass(sh::createRecreateCheapValues(RA));
   }
   PM.run(F);
 }

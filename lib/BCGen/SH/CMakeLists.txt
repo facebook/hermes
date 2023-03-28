@@ -4,8 +4,9 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesSHBackend
-  LowerCalls.h
-  RecreateCheapValues.h
+  LoweringPasses.h
+  LowerCalls.cpp
+  RecreateCheapValues.cpp
   SH.cpp
   SHRegAlloc.cpp SHRegAlloc.h
   LINK_OBJLIBS
