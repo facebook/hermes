@@ -568,6 +568,16 @@ OptValue<Value *> simplifyThrowIfEmpty(ThrowIfEmptyInst *TIE) {
   return nullptr;
 }
 
+/// Try to simplify UnionNarrowTrustedInst
+/// \returns one of:
+///   - nullptr if the instruction cannot be simplified.
+///   - a new value to replace the original one
+OptValue<Value *> simplifyUnionNarrowTrusted(UnionNarrowTrustedInst *UNT) {
+  if (UNT->getSingleOperand()->getType().isSubsetOf(UNT->getType()))
+    return UNT->getSingleOperand();
+  return nullptr;
+}
+
 /// Try to simplify the instruction \p I.
 /// \returns one of:
 ///   - nullptr if the instruction cannot be simplified.
@@ -604,6 +614,8 @@ OptValue<Value *> simplifyInstruction(Instruction *I) {
       return simplifyCoerceThisNS(cast<CoerceThisNSInst>(I));
     case ValueKind::ThrowIfEmptyInstKind:
       return simplifyThrowIfEmpty(cast<ThrowIfEmptyInst>(I));
+    case ValueKind::UnionNarrowTrustedInstKind:
+      return simplifyUnionNarrowTrusted(cast<UnionNarrowTrustedInst>(I));
 
     default:
       // TODO: handle other kinds of instructions.

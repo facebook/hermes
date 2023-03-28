@@ -853,3 +853,13 @@ Example | StoreParent %storedValue (:object), %object (:object)
 Arguments | %object is an instance of a typed class, %storedValue is stored as the parent
 Semantics | Store the parent without any checks.
 Effects | May write memory.
+
+### UnionNarrowTrusted
+
+UnionNarrowTrusted | _
+--- |-----------------------------------------------|
+Description | Narrow a union type when the compiler has proven that the operand is more specific.
+Example | UnionNarrowTrusted (:number), %operand (:number &vert; empty)
+Arguments | %operand is the input value
+Semantics | Narrow the type, but doesn't change the value.
+Effects | None

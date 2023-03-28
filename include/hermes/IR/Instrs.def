@@ -235,6 +235,8 @@ DEF_VALUE(PrStoreInst, Instruction)
 DEF_VALUE(LoadParentInst, Instruction)
 DEF_VALUE(StoreParentInst, Instruction)
 
+DEF_VALUE(UnionNarrowTrustedInst, Instruction)
+
 #undef INCLUDE_HBC_BACKEND
 
 // Don't undef these if this file is being included in ValueKinds.def, since

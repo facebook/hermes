@@ -999,6 +999,18 @@ class TypeInferenceImpl {
   Type inferStoreParentInst(StoreParentInst *inst) {
     return Type::createNoType();
   }
+  Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
+    auto res = Type::intersectTy(
+        inst->getSavedResultType(), inst->getSingleOperand()->getType());
+
+    // It may be possible that the input value would be proven to always be
+    // empty and this code is unreachable. Similarly to ThrowIfEmpty, in that
+    // case we simply return something to avoid breaking invariants.
+    if (LLVM_UNLIKELY(res.isNoType())) {
+      return inst->getSavedResultType();
+    }
+    return res;
+  }
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.

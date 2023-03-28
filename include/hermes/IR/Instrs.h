@@ -4334,6 +4334,55 @@ class StoreParentInst : public Instruction {
   }
 };
 
+class UnionNarrowTrustedInst : public SingleOperandInst {
+  UnionNarrowTrustedInst(const UnionNarrowTrustedInst &) = delete;
+  void operator=(const UnionNarrowTrustedInst &) = delete;
+
+  /// The original result type of the instruction, when it was created.
+  /// This is used to intersect with the type of the operand during type
+  /// inference, and also to avoid corner cases where the type of the operand is
+  /// narrowed so that the intersection is empty.
+  /// Also see the comment in ThrowIfEmptyInst.
+  Type savedResultType_;
+
+ public:
+  explicit UnionNarrowTrustedInst(Value *src, Type type)
+      : SingleOperandInst(ValueKind::UnionNarrowTrustedInstKind, src),
+        savedResultType_(type) {
+    setType(type);
+  }
+  explicit UnionNarrowTrustedInst(
+      const UnionNarrowTrustedInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands),
+        savedResultType_(src->savedResultType_) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::UnionNarrowTrustedInstKind;
+  }
+
+  /// \return the original result type that was set before TypeInference.
+  Type getSavedResultType() const {
+    return savedResultType_;
+  }
+};
+
 } // end namespace hermes
 
 #endif

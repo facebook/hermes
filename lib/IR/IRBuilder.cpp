@@ -1079,6 +1079,14 @@ StoreParentInst *IRBuilder::createStoreParentInst(
   return inst;
 }
 
+UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
+    Value *value,
+    Type type) {
+  auto *inst = new UnionNarrowTrustedInst(value, type);
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

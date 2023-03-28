@@ -1637,6 +1637,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
+  void generateUnionNarrowTrustedInst(UnionNarrowTrustedInst &inst) {
+    hermes_fatal("UnionNarrowTrusted should have been lowered.");
+  }
 };
 
 /// Converts Function \p F into valid C code and outputs it through \p OS.
