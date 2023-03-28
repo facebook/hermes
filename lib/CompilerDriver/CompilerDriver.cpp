@@ -1766,6 +1766,11 @@ CompileResult generateBytecodeForSerialization(
       return InvalidFlags;
     }
     sh::generateSH(&M, OS, genOptions);
+
+    if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
+      llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
+      return BackendError;
+    }
   } else {
     llvm_unreachable("Invalid bytecode kind");
   }
