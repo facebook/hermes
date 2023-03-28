@@ -1934,12 +1934,10 @@ CompileResult processSourceFiles(
 
   // In dbg builds, verify the module before we emit bytecode.
   if (cl::VerifyIR) {
-    bool failedVerification = verifyModule(M, &llvh::errs());
-    if (failedVerification) {
-      M.dump();
+    if (!verifyModule(M, &llvh::errs())) {
+      M.dump(llvh::errs());
       return VerificationFailed;
     }
-    assert(!failedVerification && "Module verification failed!");
   }
 
   if (cl::DumpTarget == DumpIR) {

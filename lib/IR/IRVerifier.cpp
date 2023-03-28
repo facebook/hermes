@@ -895,8 +895,8 @@ bool hermes::verifyModule(
   raw_null_ostream NullStr;
   NullStr.SetUnbuffered();
   Verifier V(OS ? *OS : NullStr, mode);
-  return !V.verify(M);
+  return V.verify(M);
 #else
-  return false;
+  return true;
 #endif
 }

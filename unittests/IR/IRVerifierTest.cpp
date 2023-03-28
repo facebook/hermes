@@ -50,14 +50,14 @@ TEST(IRVerifierTest, BasicBlockTest) {
   Builder.createReturnInst(Arg2);
 
   // So far so good, this will pass
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
   auto Bad = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Bad);
   Builder.createReturnInst(Arg2);
 
   // A dead basic block was added, and hence will fail to verify
-  EXPECT_TRUE(verifyModule(M, &errs(), VerificationMode::IR_OPTIMIZED));
+  EXPECT_FALSE(verifyModule(M, &errs(), VerificationMode::IR_OPTIMIZED));
 }
 
 TEST(IRVerifierTest, ReturnInstTest) {
@@ -75,12 +75,12 @@ TEST(IRVerifierTest, ReturnInstTest) {
   Return->setType(Type::createNumber());
 
   // Everything should pass so far
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
   Return->setType(Type::createNumber());
   Builder.createReturnInst(Arg1);
   // This will also fail as there are now multiple return instrs in the BB
-  EXPECT_TRUE(verifyModule(M));
+  EXPECT_FALSE(verifyModule(M));
 }
 
 TEST(IRVerifierTest, BranchInstTest) {
@@ -100,12 +100,12 @@ TEST(IRVerifierTest, BranchInstTest) {
   Builder.createBranchInst(BB1);
 
   // Everything should pass
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
   Builder.createBranchInst(BB2);
 
   // This will fail as there are now multple branch instrs in the same BB
-  EXPECT_TRUE(verifyModule(M));
+  EXPECT_FALSE(verifyModule(M));
 }
 
 TEST(IRVerifierTest, DominanceTest) {
@@ -125,7 +125,7 @@ TEST(IRVerifierTest, DominanceTest) {
 
   // This tries to verify that if an instruction A is an operand of another
   // instruction B, A should dominate B.
-  EXPECT_FALSE(verifyModule(M, &errs()));
+  EXPECT_TRUE(verifyModule(M, &errs()));
 }
 
 #endif // HERMES_SLOW_DEBUG
