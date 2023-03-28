@@ -21,7 +21,9 @@ enum class VerificationMode {
   /// Validate that the IR is valid.
   IR_VALID,
   /// Validate that the IR optimized and ready for bytecode generation.
-  IR_OPTIMIZED
+  IR_OPTIMIZED,
+  /// Validate lowered IR.
+  IR_LOWERED,
 };
 
 /// \brief Check a module for errors.

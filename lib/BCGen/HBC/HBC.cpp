@@ -103,7 +103,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   M->setLowered(true);
 
   if (options.verifyIR &&
-      !verifyModule(*M, &llvh::errs(), VerificationMode::IR_VALID)) {
+      !verifyModule(*M, &llvh::errs(), VerificationMode::IR_LOWERED)) {
     M->getContext().getSourceErrorManager().error(
         SMLoc{}, "Lowered IR verification failed");
     M->dump(llvh::errs());
