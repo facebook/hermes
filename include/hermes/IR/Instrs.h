@@ -462,6 +462,10 @@ class AllocStackInst : public Instruction {
     return true;
   }
 
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
   }
@@ -495,6 +499,10 @@ class LoadStackInst : public SingleOperandInst {
   }
 
   static bool hasOutput() {
+    return true;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
     return true;
   }
 
@@ -540,6 +548,10 @@ class StoreStackInst : public Instruction {
     return false;
   }
 
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
   SideEffectKind getSideEffect() {
     return SideEffectKind::MayWrite;
   }
@@ -573,6 +585,10 @@ class LoadFrameInst : public SingleOperandInst {
   }
 
   static bool hasOutput() {
+    return true;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
     return true;
   }
 
@@ -616,6 +632,10 @@ class StoreFrameInst : public Instruction {
 
   static bool hasOutput() {
     return false;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
   }
 
   SideEffectKind getSideEffect() {
@@ -2620,6 +2640,9 @@ class MovInst : public SingleOperandInst {
   static bool hasOutput() {
     return true;
   }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -2821,6 +2844,10 @@ class ThrowIfEmptyInst : public Instruction {
   }
 
   static bool hasOutput() {
+    return true;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
     return true;
   }
 

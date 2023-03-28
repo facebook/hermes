@@ -1125,6 +1125,16 @@ class Instruction
   /// \return whether this instruction has an output value.
   bool hasOutput();
 
+  /// Returns true if any of the operands can have an "empty" type.
+  bool acceptsEmptyType() const;
+
+  /// Returns true if any of the operands can have an "empty" type. The default
+  /// implementation returns false. This method has to be overridden by a few
+  /// instructions that can handle an empty type (ThrowIfEmpty, Mov, etc).
+  bool acceptsEmptyTypeImpl() const {
+    return false;
+  }
+
   void setLocation(SMLoc loc) {
     location_ = loc;
   }

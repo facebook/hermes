@@ -522,6 +522,23 @@ WordBitSet<> Instruction::getChangedOperands() {
   }
 }
 
+bool Instruction::acceptsEmptyType() const {
+  switch (getKind()) {
+    default:
+      llvm_unreachable("Invalid kind");
+
+#define DEF_VALUE(XX, PARENT)                      \
+  case ValueKind::XX##Kind:                        \
+    return cast<XX>(this)->acceptsEmptyTypeImpl(); \
+    break;
+#define DEF_TAG(XX, PARENT)                            \
+  case ValueKind::XX##Kind:                            \
+    return cast<PARENT>(this)->acceptsEmptyTypeImpl(); \
+    break;
+#include "hermes/IR/Instrs.def"
+  }
+}
+
 Variable::Variable(VariableScope *scope, Identifier txt)
     : Value(ValueKind::VariableKind), text(txt), parent(scope) {
   scope->addVariable(this);
