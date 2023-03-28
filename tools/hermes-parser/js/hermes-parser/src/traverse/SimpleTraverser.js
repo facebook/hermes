@@ -21,7 +21,7 @@ export type TraverserOptions = $ReadOnly<{
   enter: TraverserCallback,
   /** The callback function which is called on leaving each node. */
   leave: TraverserCallback,
-  /** The set of visitor keys to use for traversal. Defaults to the `hermes-eslint` visitor keys */
+  /** The set of visitor keys to use for traversal. Defaults to the Flow ESTree visitor keys */
   visitorKeys?: ?VisitorKeysType,
 }>;
 

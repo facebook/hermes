@@ -35,7 +35,7 @@ export type TransformOptions = $ReadOnly<{
   /** The callback function which is called on entering each node. */
   transform: TransformCallback,
 
-  /** The set of visitor keys to use for traversal. Defaults to the `hermes-eslint` visitor keys */
+  /** The set of visitor keys to use for traversal. Defaults to the Flow ESTree visitor keys */
   visitorKeys?: ?VisitorKeysType,
 }>;
 
