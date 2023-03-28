@@ -2808,13 +2808,14 @@ class ThrowIfEmptyInst : public Instruction {
   /// will never execute. Handling this "unreachable" type everywhere would
   /// require a lot of complexity.
   /// Instead, when we get to that point, we simply return the recorded type.
-  Type savedResultType_ = Type::createAnyType();
+  Type savedResultType_;
 
  public:
   enum { CheckedValueIdx };
 
   explicit ThrowIfEmptyInst(Value *checkedValue)
-      : Instruction(ValueKind::ThrowIfEmptyInstKind) {
+      : Instruction(ValueKind::ThrowIfEmptyInstKind),
+        savedResultType_(Type::createAnyType()) {
     pushOperand(checkedValue);
 
     // Calculate the correct result type, to preserve invariants for
@@ -2825,7 +2826,7 @@ class ThrowIfEmptyInst : public Instruction {
   explicit ThrowIfEmptyInst(
       const ThrowIfEmptyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : Instruction(src, operands), savedResultType_(src->savedResultType_) {}
 
   /// For use only by TypeInference. Returns the result type that was recorded
   /// before type inference. Please see doc for \c savedResultType_.
