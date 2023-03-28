@@ -895,8 +895,9 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
           thr->updateSavedResultType();
           res = thr;
         } else {
-          res = Builder.createLoadFrameInst(var);
-          // TODO: cast the empty type away.
+          res = Builder.createUnionNarrowTrustedInst(
+              Builder.createLoadFrameInst(var),
+              Type::subtractTy(var->getType(), Type::createEmpty()));
         }
       } else {
         res = Builder.createThrowIfEmptyInst(Builder.createLoadFrameInst(var));

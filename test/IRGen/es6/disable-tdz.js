@@ -7,7 +7,6 @@
 
 // RUN: %hermesc -O0 -Xenable-tdz -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 // RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines --check-prefix=CHKDIS %s
-// XFAIL: *
 
 function check1() {
     glob = function inner() {
@@ -50,11 +49,13 @@ function check1() {
 // CHECK-NEXT:  %9 = StoreFrameInst 10: number, [x]: any|empty
 // CHECK-NEXT:  %10 = StoreFrameInst 1: number, [y]: any|empty
 // CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %12 = LoadFrameInst (:any|empty) [y]: any|empty
-// CHECK-NEXT:  %13 = BinaryAddInst (:any) %11: any|empty, %12: any|empty
-// CHECK-NEXT:  %14 = ReturnInst %13: any
+// CHECK-NEXT:  %12 = UnionNarrowTrustedInst (:any) %11: any|empty
+// CHECK-NEXT:  %13 = LoadFrameInst (:any|empty) [y]: any|empty
+// CHECK-NEXT:  %14 = UnionNarrowTrustedInst (:any) %13: any|empty
+// CHECK-NEXT:  %15 = BinaryAddInst (:any) %12: any, %14: any
+// CHECK-NEXT:  %16 = ReturnInst %15: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %15 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %17 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner(): any

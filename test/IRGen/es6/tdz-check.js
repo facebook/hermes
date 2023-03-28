@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
-// XFAIL: *
+// RUN: %hermesc -Xenable-tdz -custom-opt=simplestackpromotion -dump-ir %s > /dev/null
 
 function check1() {
     return x + y;
@@ -83,11 +83,12 @@ function check4() {
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [b]: any
 // CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [a]: any|empty
 // CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) [a]: any|empty
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [b]: any
-// CHECK-NEXT:  %9 = BinaryAddInst (:any) %7: any|empty, %8: any
-// CHECK-NEXT:  %10 = ReturnInst %9: any
+// CHECK-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) [b]: any
+// CHECK-NEXT:  %10 = BinaryAddInst (:any) %8: any, %9: any
+// CHECK-NEXT:  %11 = ReturnInst %10: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check3(): any
@@ -100,9 +101,10 @@ function check4() {
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any|empty
 // CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %7 = ReturnInst %6: any|empty
+// CHECK-NEXT:  %7 = UnionNarrowTrustedInst (:any) %6: any|empty
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check4(): any
@@ -113,9 +115,10 @@ function check4() {
 // CHECK-NEXT:  %2 = StoreFrameInst 10: number, [x]: any|empty
 // CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any|empty
 // CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %5 = ReturnInst %4: any|empty
+// CHECK-NEXT:  %5 = UnionNarrowTrustedInst (:any) %4: any|empty
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check3_inner(): any
