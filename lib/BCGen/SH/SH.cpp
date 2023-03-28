@@ -1642,6 +1642,57 @@ class InstrGen {
   }
 };
 
+/// Lower module IR to LIR, so it is suitable for register allocation.
+void lowerModuleIR(Module *M, bool optimize) {
+  PassManager PM;
+  PM.addPass(createLIRPeephole());
+  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
+  // it introduces calls to HermesInternal.
+  PM.addPass(new LowerExponentiationOperator());
+  // LowerBuiltinCalls needs to run before the rest of the lowering.
+  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(new LowerNumericProperties());
+  PM.addPass(new LowerAllocObjectLiteral());
+  PM.addPass(new hbc::LowerArgumentsArray());
+  PM.addPass(new LimitAllocArray(UINT16_MAX));
+  PM.addPass(new hbc::DedupReifyArguments());
+  // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
+  PM.addPass(new SwitchLowering());
+  PM.addPass(new hbc::LoadConstants(true));
+  PM.addPass(new hbc::LowerLoadStoreFrameInst());
+  if (optimize) {
+    PM.addTypeInference();
+    // Lowers AllocObjects and its sequential literal properties into a single
+    // Reduce comparison and conditional jump to single comparison jump
+    PM.addPass(new LowerCondBranch());
+    // Move loads to child blocks if possible.
+    PM.addCodeMotion();
+    // Eliminate common HBCLoadConstInsts.
+    // TODO(T140823187): Run before CodeMotion too.
+    // Avoid pushing HBCLoadConstInsts down into individual blocks,
+    // preventing their elimination.
+    PM.addCSE();
+    // Drop unused LoadParamInsts.
+    PM.addDCE();
+  }
+  PM.run(M);
+}
+
+/// Perform final lowering of a register-allocated function's IR.
+void lowerAllocatedFunctionIR(
+    Function *F,
+    sh::SHRegisterAllocator &RA,
+    bool optimize) {
+  PassManager PM;
+  PM.addPass(new LowerStoreInstrs(RA));
+  PM.addPass(new sh::LowerCalls(RA));
+  if (optimize) {
+    PM.addPass(new MovElimination(RA));
+    PM.addPass(new sh::RecreateCheapValues(RA));
+  }
+  PM.run(F);
+}
+
 /// Converts Function \p F into valid C code and outputs it through \p OS.
 void generateFunction(
     Function &F,
@@ -1655,7 +1706,6 @@ void generateFunction(
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 
   sh::SHRegisterAllocator RA(&F);
-
   RA.allocate(order);
 
   if (options.format == DumpRA) {
@@ -1663,20 +1713,12 @@ void generateFunction(
     return;
   }
 
-  PassManager PM;
-  PM.addPass(new LowerStoreInstrs(RA));
-  PM.addPass(new sh::LowerCalls(RA));
-  if (options.optimizationEnabled) {
-    PM.addPass(new MovElimination(RA));
-    PM.addPass(new sh::RecreateCheapValues(RA));
-  }
-  PM.run(&F);
+  lowerAllocatedFunctionIR(&F, RA, options.optimizationEnabled);
 
   if (options.format == DumpLRA) {
     RA.dump();
     return;
   }
-
   if (options.format == DumpPostRA) {
     F.dump();
     return;
@@ -1776,38 +1818,7 @@ void generateModule(
     Module *M,
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
-  PassManager PM;
-  PM.addPass(createLIRPeephole());
-  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
-  // it introduces calls to HermesInternal.
-  PM.addPass(new LowerExponentiationOperator());
-  // LowerBuiltinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
-  PM.addPass(new LowerNumericProperties());
-  PM.addPass(new LowerAllocObjectLiteral());
-  PM.addPass(new hbc::LowerArgumentsArray());
-  PM.addPass(new LimitAllocArray(UINT16_MAX));
-  PM.addPass(new hbc::DedupReifyArguments());
-  // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
-  PM.addPass(new SwitchLowering());
-  PM.addPass(new hbc::LoadConstants(true));
-  PM.addPass(new hbc::LowerLoadStoreFrameInst());
-  if (options.optimizationEnabled) {
-    PM.addTypeInference();
-    // Lowers AllocObjects and its sequential literal properties into a single
-    // Reduce comparison and conditional jump to single comparison jump
-    PM.addPass(new LowerCondBranch());
-    // Move loads to child blocks if possible.
-    PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
-    // TODO(T140823187): Run before CodeMotion too.
-    // Avoid pushing HBCLoadConstInsts down into individual blocks,
-    // preventing their elimination.
-    PM.addCSE();
-    // Drop unused LoadParamInsts.
-    PM.addDCE();
-  }
-  PM.run(M);
+  lowerModuleIR(M, options.optimizationEnabled);
 
   if (options.format == DumpLIR) {
     M->dump();
