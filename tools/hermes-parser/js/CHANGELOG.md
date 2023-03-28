@@ -1,5 +1,18 @@
 ## Unreleased
 
+## 0.10.1
+
+### `hermes-parser`
+
+- Remove unlisted dependency on the `hermes-eslint` package as this caused module not found errors if you only installed the `hermes-parser` package.
+
+### `flow-api-translator`
+
+- Support global React type annotations, e.g. `React$Node`.
+- Support `export default` of global type annotations.
+- Fix issue with older version of prettier incorrectly printing TS value import statements.
+- Add `hermes-eslint` as explict dependency.
+
 ## 0.10.0
 
 ### `hermes-parser`
