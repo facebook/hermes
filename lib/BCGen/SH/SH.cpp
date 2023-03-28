@@ -18,6 +18,7 @@
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/BCGen/MovElimination.h"
 #include "hermes/IR/IR.h"
+#include "hermes/IR/IRVerifier.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/HashString.h"
@@ -1819,6 +1820,15 @@ void generateModule(
     llvh::raw_ostream &OS,
     const BytecodeGenerationOptions &options) {
   lowerModuleIR(M, options.optimizationEnabled);
+
+  if (options.verifyIR) {
+    if (!verifyModule(*M, &llvh::errs(), VerificationMode::IR_LOWERED)) {
+      M->getContext().getSourceErrorManager().error(
+          SMLoc{}, "Lowered IR verification failed");
+      M->dump(llvh::errs());
+      return;
+    }
+  }
 
   if (options.format == DumpLIR) {
     M->dump();
