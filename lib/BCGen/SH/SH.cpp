@@ -1640,6 +1640,14 @@ class InstrGen {
   void generateUnionNarrowTrustedInst(UnionNarrowTrustedInst &inst) {
     hermes_fatal("UnionNarrowTrusted should have been lowered.");
   }
+  void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
+    os_.indent(2);
+    os_ << "__builtin_unreachable();\n";
+    os_.indent(2);
+    // Initialize the register with whatever.
+    generateRegister(inst);
+    os_ << " = _sh_ljs_double(0);\n";
+  }
 };
 
 /// Lower module IR to LIR, so it is suitable for register allocation.

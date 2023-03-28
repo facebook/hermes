@@ -616,6 +616,8 @@ class IRBuilder {
 
   UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
 
+  LIRDeadValueInst *createLIRDeadValueInst(Type type);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

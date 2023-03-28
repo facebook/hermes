@@ -1087,6 +1087,12 @@ UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
   return inst;
 }
 
+LIRDeadValueInst *IRBuilder::createLIRDeadValueInst(Type type) {
+  auto *inst = new LIRDeadValueInst(type);
+  insert(inst);
+  return inst;
+}
+
 inline void IRBuilder::justInsert(Instruction *Inst) {
   assert(!Inst->getParent() && "Instr that's already inserted elsewhere");
   Inst->setParent(Block);

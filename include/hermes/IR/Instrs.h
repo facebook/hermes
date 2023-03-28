@@ -4383,6 +4383,45 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   }
 };
 
+class LIRDeadValueInst : public Instruction {
+  LIRDeadValueInst(const LIRDeadValueInst &) = delete;
+  void operator=(const LIRDeadValueInst &) = delete;
+
+  /// This type is returned during type inference.
+  Type savedResultType_;
+
+ public:
+  explicit LIRDeadValueInst(Type type)
+      : Instruction(ValueKind::LIRDeadValueInstKind), savedResultType_(type) {
+    setType(type);
+  }
+  explicit LIRDeadValueInst(
+      const LIRDeadValueInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands), savedResultType_(src->savedResultType_) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LIRDeadValueInstKind;
+  }
+
+  /// \return the original result type that was set.
+  Type getSavedResultType() const {
+    return savedResultType_;
+  }
+};
+
 } // end namespace hermes
 
 #endif

@@ -863,3 +863,13 @@ Example | UnionNarrowTrusted (:number), %operand (:number &vert; empty)
 Arguments | %operand is the input value
 Semantics | Narrow the type, but doesn't change the value.
 Effects | None
+
+### LIRDeadValue
+
+LIRDeadValue | _
+--- |-----------------------------------------------|
+Description | Create a "dead value" of the specified type. This instruction is created during lowering in code that will never execute, but is needed to satisfy the type constraints of downstream instruction that will also never execute.
+Example | LIRDeadValue (:number)
+Arguments | None
+Semantics | Create a value of the specified type.
+Effects | None

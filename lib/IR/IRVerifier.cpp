@@ -882,6 +882,7 @@ void Verifier::visitStoreParentInst(const StoreParentInst &Inst) {}
 
 void Verifier::visitUnionNarrowTrustedInst(const UnionNarrowTrustedInst &Inst) {
 }
+void Verifier::visitLIRDeadValueInst(const LIRDeadValueInst &Inst) {}
 
 } // namespace
 

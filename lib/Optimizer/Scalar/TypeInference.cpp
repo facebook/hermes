@@ -1011,6 +1011,9 @@ class TypeInferenceImpl {
     }
     return res;
   }
+  Type inferLIRDeadValueInst(LIRDeadValueInst *inst) {
+    return inst->getSavedResultType();
+  }
 
   /// If all call sites of this Function are known, propagate
   /// information from actuals to formals.

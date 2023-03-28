@@ -236,6 +236,7 @@ DEF_VALUE(LoadParentInst, Instruction)
 DEF_VALUE(StoreParentInst, Instruction)
 
 DEF_VALUE(UnionNarrowTrustedInst, Instruction)
+DEF_VALUE(LIRDeadValueInst, Instruction)
 
 #undef INCLUDE_HBC_BACKEND
 
