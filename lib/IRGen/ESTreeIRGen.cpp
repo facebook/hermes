@@ -944,9 +944,10 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
 
       // If this is a TDZ variable, record that it has been initialized.
       if (var->getObeysTDZ()) {
-        auto [_, inserted] = curFunction()->initializedTDZVars.insert(var);
-        assert(inserted && "variable cannot be decl-inited more than once");
-        (void)inserted;
+        curFunction()->initializedTDZVars.insert(var);
+        // Note that a variable can be initialized more than once, for example
+        // when a "var" declaration is shadowed by a catch variable or a
+        // parameter.
       }
     } else {
       if (var->getObeysTDZ()) {
