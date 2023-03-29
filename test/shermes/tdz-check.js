@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec -Xenable-tdz -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -exec -Xenable-tdz -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec --test262 -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec --test262 -O %s | %FileCheck --match-full-lines %s
 
 function test(f) {
     try {

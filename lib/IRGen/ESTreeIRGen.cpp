@@ -888,6 +888,21 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
       if (var->getParent()->getFunction() == curFunction()->function) {
         // If not initialized, throw.
         if (curFunction()->initializedTDZVars.count(var) == 0) {
+          // Report an error or warning using the builder's location.
+          assert(
+              Builder.getLocation().isValid() &&
+              "emitLoad() with invalid source location");
+          if (Builder.getLocation().isValid()) {
+            auto &sm = Mod->getContext().getSourceErrorManager();
+            sm.message(
+                Mod->getContext().getCodeGenerationSettings().test262
+                    ? SourceErrorManager::DK_Warning
+                    : SourceErrorManager::DK_Error,
+                Builder.getLocation(),
+                "TDZ violation: reading from uninitialized variable '" +
+                    var->getName().str() + "");
+          }
+
           auto *thr = Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
           // Pretend that the instruction, which always throws, returns a
           // value with the correct type.
@@ -939,6 +954,21 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
         // variable's function, since we know whether it has been initialized.
         if (var->getParent()->getFunction() == curFunction()->function) {
           if (curFunction()->initializedTDZVars.count(var) == 0) {
+            // Report an error or warning using the builder's location.
+            assert(
+                Builder.getLocation().isValid() &&
+                "emitStore() with invalid source location");
+            if (Builder.getLocation().isValid()) {
+              auto &sm = Mod->getContext().getSourceErrorManager();
+              sm.message(
+                  Mod->getContext().getCodeGenerationSettings().test262
+                      ? SourceErrorManager::DK_Warning
+                      : SourceErrorManager::DK_Error,
+                  Builder.getLocation(),
+                  "TDZ violation: writing to uninitialized variable '" +
+                      var->getName().str() + "");
+            }
+
             auto thr =
                 Builder.createThrowIfEmptyInst(Builder.getLiteralEmpty());
             thr->setType(Type::createUndefined());

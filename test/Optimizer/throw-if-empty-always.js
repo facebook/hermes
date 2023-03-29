@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -dump-ir -Xenable-tdz %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %shermes -O -dump-ir --test262 %s | %FileCheckOrRegen %s --match-full-lines
 
 // Ensure that ThrowIfEmpty which always throws still has a valid return type.
 

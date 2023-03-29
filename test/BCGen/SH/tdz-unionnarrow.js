@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -custom-opt=tdzdedup -dump-ir -Xenable-tdz %s | %FileCheckOrRegen --check-prefix=CHKIR --match-full-lines %s
-// RUN: %shermes -custom-opt=tdzdedup -dump-lir -Xenable-tdz %s | %FileCheckOrRegen --check-prefix=CHKLIR --match-full-lines %s
+// RUN: %shermes -custom-opt=tdzdedup -dump-ir --test262 %s | %FileCheckOrRegen --check-prefix=CHKIR --match-full-lines %s
+// RUN: %shermes -custom-opt=tdzdedup -dump-lir --test262 %s | %FileCheckOrRegen --check-prefix=CHKLIR --match-full-lines %s
 
 // Verify that LIRDeadValueInst is emitted after TDZDedup has eliminated a ThrowIfEmpty
 function f1() {

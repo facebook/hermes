@@ -5,8 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermesc -Xenable-tdz -custom-opt=simplestackpromotion -dump-ir %s > /dev/null
+// RUN: %shermes --test262 -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes --test262 -custom-opt=simplestackpromotion -dump-ir %s > /dev/null
+
+// Note that we are passing --test262 to both enable TDZ and to delay TDZ errors
+// until runtime.
 
 function check1() {
     return x + y;

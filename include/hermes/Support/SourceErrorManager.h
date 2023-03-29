@@ -463,8 +463,16 @@ class SourceErrorManager {
       SMRange sm,
       const Twine &msg,
       Subsystem subsystem);
-  void message(DiagKind dk, SMRange sm, const Twine &msg, Subsystem subsystem);
-  void message(DiagKind dk, SMLoc loc, const Twine &msg, Subsystem subsystem);
+  void message(
+      DiagKind dk,
+      SMRange sm,
+      const Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified);
+  void message(
+      DiagKind dk,
+      SMLoc loc,
+      const Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified);
 
   void error(
       SMLoc loc,
