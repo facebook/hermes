@@ -253,13 +253,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     Handle<JSObject> from,
     Handle<JSObject> excludedItems) {
   // 5. Let keys be ? from.[[OwnPropertyKeys]]().
-  auto cr = JSObject::getOwnPropertyKeys(
-      from,
-      runtime,
-      OwnKeysFlags()
-          .plusIncludeSymbols()
-          .plusIncludeNonSymbols()
-          .plusIncludeNonEnumerable());
+  auto cr = JSObject::getOwnPropertyKeys(from, runtime, OwnKeys::AllKeys());
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

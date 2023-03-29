@@ -202,13 +202,7 @@ reflectOwnKeys(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("target is not an object");
   }
 
-  return getOwnPropertyKeysAsStrings(
-      target,
-      runtime,
-      OwnKeysFlags()
-          .plusIncludeSymbols()
-          .plusIncludeNonSymbols()
-          .plusIncludeNonEnumerable());
+  return getOwnPropertyKeysAsStrings(target, runtime, OwnKeys::AllKeys());
 }
 
 CallResult<HermesValue>

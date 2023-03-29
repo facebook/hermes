@@ -56,24 +56,24 @@ functionCall(flagsA.plusFlag2().minusFlag1().plusFlag3());
 #define HERMES_VM_TYPESAFEFLAGS_H
 
 #define _HERMES_VM__DECL_FLAG(name) bool f##name##_ : 1;
-#define _HERMES_VM__IMPL_FLAG(name) \
-  Self plus##name() const {         \
-    auto r(*this);                  \
-    r.f##name##_ = true;            \
-    return r;                       \
-  }                                 \
-  Self minus##name() const {        \
-    auto r(*this);                  \
-    r.f##name##_ = false;           \
-    return r;                       \
-  }                                 \
-  Self set##name(bool v) const {    \
-    auto r(*this);                  \
-    r.f##name##_ = v;               \
-    return r;                       \
-  }                                 \
-  bool get##name() const {          \
-    return f##name##_;              \
+#define _HERMES_VM__IMPL_FLAG(name)        \
+  constexpr Self plus##name() const {      \
+    auto r(*this);                         \
+    r.f##name##_ = true;                   \
+    return r;                              \
+  }                                        \
+  constexpr Self minus##name() const {     \
+    auto r(*this);                         \
+    r.f##name##_ = false;                  \
+    return r;                              \
+  }                                        \
+  constexpr Self set##name(bool v) const { \
+    auto r(*this);                         \
+    r.f##name##_ = v;                      \
+    return r;                              \
+  }                                        \
+  constexpr bool get##name() const {       \
+    return f##name##_;                     \
   }
 
 #define HERMES_VM__DECLARE_FLAGS_CLASS(ClassName, listMacro) \

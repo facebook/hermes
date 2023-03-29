@@ -172,7 +172,8 @@ static_assert(
 
 HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 
-/// \name OwnKeysFlags
+namespace OwnKeys {
+/// \name OwnKeys::Flags
 /// @{
 /// Flags used when performing getOwnPropertyKeys operations.
 ///
@@ -185,11 +186,18 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 /// implementation, these may actually be numbers or other non-String primitive
 /// types.
 ///
-/// \name IncludeNonEnumerable
-/// Normally only enumerable keys are included in the result.  If this is set,
-/// include non-enumerable keys, too.  The keys included will only be of the
+/// \name IncludeEnumerable
+/// Include enumerable keys in the result. The keys included will only be of the
 /// types specified by the above flags.
+//
+/// \name IncludeNonEnumerable
+/// Include non-enumerable keys in the result. The keys included will only be of
+/// the types specified by the above flags.
 ///
+/// Either or both of IncludeEnumerable and IncludeNonEnumerable may be
+/// specified.  If neither is specified, this may cause an assertion
+/// failure if assertions are enabled.
+//
 /// Either or both of IncludeSymbols and IncludeNonSymbols may be
 /// specified.  If neither is specified, this may cause an assertion
 /// failure if assertions are enabled.
@@ -197,9 +205,26 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 #define HERMES_VM__LIST_OwnKeysFlags(FLAG) \
   FLAG(IncludeSymbols)                     \
   FLAG(IncludeNonSymbols)                  \
+  FLAG(IncludeEnumerable)                  \
   FLAG(IncludeNonEnumerable)
 
-HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
+HERMES_VM__DECLARE_FLAGS_CLASS(Flags, HERMES_VM__LIST_OwnKeysFlags);
+
+// Almost all use cases for getting keys needs the enumerable properties. So, we
+// make the default Flags value include enumberable properties.
+constexpr Flags Default() {
+  return Flags().plusIncludeEnumerable();
+}
+// \return Flags that has all fields set on. This means all keys will be
+// included.
+constexpr Flags AllKeys() {
+  return Flags()
+      .plusIncludeSymbols()
+      .plusIncludeNonSymbols()
+      .plusIncludeEnumerable()
+      .plusIncludeNonEnumerable();
+}
+} // namespace OwnKeys
 
 // Any method that could potentially invoke the garbage collector, directly or
 // in-directly, cannot use a direct 'self' pointer and must instead use
@@ -554,7 +579,7 @@ class JSObject : public GCCell {
   static CallResult<Handle<JSArray>> getOwnPropertyKeys(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
-      OwnKeysFlags okFlags);
+      OwnKeys::Flags okFlags);
 
   /// Return a list of property names belonging to this object. Indexed property
   /// names will be represented as numbers for efficiency. The order of
@@ -570,7 +595,7 @@ class JSObject : public GCCell {
     return getOwnPropertyKeys(
         selfHandle,
         runtime,
-        OwnKeysFlags().plusIncludeNonSymbols().setIncludeNonEnumerable(
+        OwnKeys::Default().plusIncludeNonSymbols().setIncludeNonEnumerable(
             !onlyEnumerable));
   }
 
@@ -583,7 +608,7 @@ class JSObject : public GCCell {
     return getOwnPropertyKeys(
         selfHandle,
         runtime,
-        OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
+        OwnKeys::Default().plusIncludeSymbols().plusIncludeNonEnumerable());
   }
 
   /// Load a value from the direct property storage space by \p index.

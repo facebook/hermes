@@ -350,10 +350,13 @@ CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
 CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
-    OwnKeysFlags okFlags) {
+    OwnKeys::Flags okFlags) {
   assert(
       (okFlags.getIncludeNonSymbols() || okFlags.getIncludeSymbols()) &&
       "Can't exclude symbols and strings");
+  assert(
+      (okFlags.getIncludeEnumerable() || okFlags.getIncludeNonEnumerable()) &&
+      "Can't exclude enumerable and non-enumerable");
   if (LLVM_UNLIKELY(
           selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
     if (selfHandle->flags_.proxyObject) {
@@ -405,8 +408,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
   // Iterate the named properties excluding those which use Symbols.
   if (okFlags.getIncludeNonSymbols()) {
-    // Get host object property names
-    if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+    // Get host object property names. These are always considered enumerable,
+    // so skip if enumerable props were not asked for.
+    if (LLVM_UNLIKELY(
+            selfHandle->flags_.hostObject && okFlags.getIncludeEnumerable())) {
       assert(
           range.first == range.second &&
           "Host objects cannot own indexed range");
@@ -428,8 +433,11 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       if (!res)
         continue;
 
-      // If specified, check whether it is enumerable.
+      // Skip non-enumerable properties if not asked for.
       if (!okFlags.getIncludeNonEnumerable() && !res->enumerable)
+        continue;
+      // Skip enumerable properties if not asked for.
+      if (!okFlags.getIncludeEnumerable() && res->enumerable)
         continue;
 
       tmpHandle = HermesValue::encodeDoubleValue(i);
@@ -454,9 +462,14 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
             return;
           }
 
-          // If specified, check whether it is enumerable.
+          // Skip non-enumerable properties if not asked for.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
+              return;
+          }
+          // Skip enumerable properties if not asked for.
+          if (!okFlags.getIncludeEnumerable()) {
+            if (desc.flags.enumerable)
               return;
           }
 
@@ -524,9 +537,14 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
           if (!isSymbolPrimitive(id)) {
             return;
           }
-          // If specified, check whether it is enumerable.
+          // Skip non-enumerable properties if not asked for.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
+              return;
+          }
+          // Skip enumerable properties if not asked for.
+          if (!okFlags.getIncludeEnumerable()) {
+            if (desc.flags.enumerable)
               return;
           }
           idHandle = id;
