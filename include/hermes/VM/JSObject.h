@@ -599,6 +599,18 @@ class JSObject : public GCCell {
             !onlyEnumerable));
   }
 
+  /// Same as getOwnPropertyNames, however, *only* include non-enumerable
+  /// properties, and skip enumerable properties.
+  /// \returns a JSArray containing the names.
+  static CallResult<Handle<JSArray>> getOwnNonEnumerablePropertyNames(
+      Handle<JSObject> selfHandle,
+      Runtime &runtime) {
+    return getOwnPropertyKeys(
+        selfHandle,
+        runtime,
+        OwnKeys::Flags().plusIncludeNonSymbols().plusIncludeNonEnumerable());
+  }
+
   /// Return a list of property symbols keys belonging to this object.
   /// The order of properties follows ES2015 - insertion order.
   /// \returns a JSArray containing the symbols.

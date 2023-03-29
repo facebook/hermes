@@ -3042,6 +3042,15 @@ CallResult<uint32_t> appendAllPropertyNames(
   // strings (SymbolIDs) or index names.
   llvh::SmallSet<SymbolID::RawType, 4> dedupNames;
   llvh::SmallSet<double, 4> dedupIdxNames;
+  // For the SymbolIDs we collect for the non enumerable properties, they are
+  // not stored in the resulting BigStorage. Therefore it's not safe to store
+  // the raw types in the SmallSet. We put them in this ArrayStorage to make the
+  // gc aware we are still holding reference to them.
+  CallResult<HermesValue> keepaliveRes = ArrayStorage::create(runtime, 0, 0);
+  // We can use keepaliveRes without checking its ExecutionResult since it will
+  // never fail.
+  MutableHandle<ArrayStorage> keepalive =
+      runtime.makeMutableHandle(vmcast<ArrayStorage>(*keepaliveRes));
   // Add the current value of prop and/or propIdHandle to correct set(s).
   auto addToDedup = [&dedupIdxNames, &dedupNames, &runtime](
                         Handle<> prop, Handle<SymbolID> propIdHandle) {
@@ -3131,6 +3140,44 @@ CallResult<uint32_t> appendAllPropertyNames(
         }
         addToDedup(prop, propIdHandle);
         ++size;
+      }
+    }
+    // Now we must handle non-enumerable property shadowing. Get all the
+    // non-enumerable properties in this object, and add them to the sets we are
+    // maintaining. Therefore, if a parent object later on has a property with
+    // the same name as an non-enumerable property defined in the child object,
+    // the child object will shadow the parent's enumerable property.
+    // We don't support property shadowing with proxy objects.
+    if (LLVM_LIKELY(!head->isProxyObject())) {
+      auto nonEnumerablePropsRes =
+          JSObject::getOwnNonEnumerablePropertyNames(head, runtime);
+      if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto nonEnumerableProps = *nonEnumerablePropsRes;
+      auto flushTo = gcScope.createMarker();
+      if (ArrayStorage::ensureCapacity(
+              keepalive,
+              runtime,
+              keepalive->size() + nonEnumerableProps->getEndIndex()) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      for (unsigned i = 0, e = nonEnumerableProps->getEndIndex(); i < e; ++i) {
+        gcScope.flushToMarker(flushTo);
+        prop = nonEnumerableProps->at(runtime, i).unboxToHV(runtime);
+        if (prop->isString()) {
+          CallResult<Handle<SymbolID>> symRes =
+              runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
+                  runtime,
+                  runtime.makeHandle<StringPrimitive>(prop->getString()));
+          if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          propIdHandle = *symRes;
+          ArrayStorage::push_back(keepalive, runtime, propIdHandle);
+        }
+        addToDedup(prop, propIdHandle);
       }
     }
     // Continue to follow the prototype chain.

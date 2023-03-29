@@ -127,3 +127,23 @@ for (var prop in child) {
 //CHECK: dup
 //CHECK: b
 //CHECK: a
+
+// Check that non-enumerable child properties shadow parent 
+// enumerable properties of the same name.
+var parent = {hide: "value", propA: 5};
+var child = Object.create(parent);
+Object.defineProperty(child, 'hide', {enumerable: false});
+child.propB = 5;
+for (var prop in child) {
+  print(prop);
+}
+//CHECK: propB
+//CHECK: propA
+var grandchild = Object.create(child);
+grandchild.propC = 10;
+for (var prop in grandchild) {
+  print(prop);
+}
+//CHECK: propC
+//CHECK: propB
+//CHECK: propA
