@@ -24,7 +24,7 @@ var simpleAsyncFE = async function () {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 94
+// CHECK-NEXT:  Bytecode version number: 95
 // CHECK-NEXT:  Source hash: {{.*}}
 // CHECK-NEXT:  Function count: 10
 // CHECK-NEXT:  String count: 11

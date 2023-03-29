@@ -787,7 +787,9 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
         call->getSourceRange(), "Extra eval() arguments are ignored");
   }
 
-  return Builder.createDirectEvalInst(args[0]);
+  bool isStrict = Builder.getInsertionBlock()->getParent()->isStrictMode();
+  return Builder.createDirectEvalInst(
+      args[0], Builder.getLiteralBool(isStrict));
 }
 
 /// Convert a property key node to its JavaScript string representation.

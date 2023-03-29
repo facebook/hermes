@@ -440,7 +440,7 @@ class IRBuilder {
       Value *value,
       UnaryOperatorInst::OpKind opKind);
 
-  DirectEvalInst *createDirectEvalInst(Value *operand);
+  DirectEvalInst *createDirectEvalInst(Value *operand, LiteralBool *isStrict);
 
   SwitchInst *createSwitchInst(
       Value *input,

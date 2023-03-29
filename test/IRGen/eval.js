@@ -42,7 +42,7 @@ function baz() {
 // CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = DirectEvalInst "1 + 1" : string
+// CHECK-NEXT:  %1 = DirectEvalInst "1 + 1" : string, false : boolean
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
@@ -55,7 +55,7 @@ function baz() {
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "Math" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "foo" : string
 // CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
-// CHECK-NEXT:  %4 = DirectEvalInst "2 + 2" : string
+// CHECK-NEXT:  %4 = DirectEvalInst "2 + 2" : string, false : boolean
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined

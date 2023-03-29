@@ -2822,17 +2822,23 @@ class SaveAndYieldInst : public TerminatorInst {
   }
 };
 
-class DirectEvalInst : public SingleOperandInst {
+class DirectEvalInst : public Instruction {
   DirectEvalInst(const DirectEvalInst &) = delete;
   void operator=(const DirectEvalInst &) = delete;
 
  public:
-  explicit DirectEvalInst(Value *value)
-      : SingleOperandInst(ValueKind::DirectEvalInstKind, value) {}
+  enum { CodeStringIdx, IsStrictIdx };
+
+  explicit DirectEvalInst(Value *codeString, LiteralBool *isStrict)
+      : Instruction(ValueKind::DirectEvalInstKind) {
+    setType(Type::createAnyType());
+    pushOperand(codeString);
+    pushOperand(isStrict);
+  }
   explicit DirectEvalInst(
       const DirectEvalInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
@@ -2840,6 +2846,14 @@ class DirectEvalInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
+  }
+
+  Value *getCodeString() const {
+    return getOperand(CodeStringIdx);
+  }
+
+  bool getIsStrict() const {
+    return cast<LiteralBool>(getOperand(IsStrictIdx))->getValue();
   }
 
   static bool classof(const Value *V) {

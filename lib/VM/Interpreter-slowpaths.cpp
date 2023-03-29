@@ -37,6 +37,7 @@ ExecutionStatus Interpreter::caseDirectEval(
     const Inst *ip) {
   auto *result = &O1REG(DirectEval);
   auto *input = &O2REG(DirectEval);
+  bool isStrict = ip->iDirectEval.op3;
 
   GCScopeMarkerRAII gcMarker{runtime};
 
@@ -82,7 +83,11 @@ ExecutionStatus Interpreter::caseDirectEval(
   scopeChain.scopes.emplace_back();
 
   auto cr = vm::directEval(
-      runtime, Handle<StringPrimitive>::vmcast(input), scopeChain, false);
+      runtime,
+      Handle<StringPrimitive>::vmcast(input),
+      scopeChain,
+      isStrict,
+      false);
   if (cr == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 

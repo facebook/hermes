@@ -1168,6 +1168,7 @@ HermesValue Debugger::evalInFrame(
         Handle<Environment>::vmcast(runtime_, env),
         chain,
         Handle<>(&frameInfo->frame->getThisArgRef()),
+        false,
         singleFunction);
   }
 

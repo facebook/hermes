@@ -208,6 +208,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       opIndex == ThrowIfHasRestrictedGlobalPropertyInst::PropertyIdx) {
     return true;
   }
+  // DirectEvalInst's isStrict is a boolean constant.
+  if (llvh::isa<DirectEvalInst>(Inst) &&
+      opIndex == DirectEvalInst::IsStrictIdx) {
+    return true;
+  }
 
   return false;
 }

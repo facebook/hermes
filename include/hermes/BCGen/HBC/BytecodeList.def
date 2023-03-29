@@ -522,7 +522,8 @@ DEFINE_OPCODE_1(Catch, Reg8)
 /// ES6 18.2.1.1 PerformEval(Arg2, evalRealm, strictCaller=true, direct=true)
 /// Arg1 is the destination of the return value.
 /// Arg2 is the value to eval.
-DEFINE_OPCODE_2(DirectEval, Reg8, Reg8)
+/// Arg3 is a boolean which is true if the eval should be performed in strict mode.
+DEFINE_OPCODE_3(DirectEval, Reg8, Reg8, UInt8)
 
 /// Throw an exception.
 /// throw Arg1;

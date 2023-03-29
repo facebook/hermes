@@ -118,7 +118,7 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 94
+// BCGEN-NEXT:  Bytecode version number: 95
 // BCGEN-NEXT:  Source hash: {{.*}}
 // BCGEN-NEXT:  Function count: 2
 // BCGEN-NEXT:  String count: 24

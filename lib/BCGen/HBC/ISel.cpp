@@ -325,8 +325,9 @@ void HBCISel::generateSingleOperandInst(
 
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
-  auto src = encodeValue(Inst->getSingleOperand());
-  BCFGen_->emitDirectEval(dst, src);
+  auto src = encodeValue(Inst->getCodeString());
+  auto isStrict = Inst->getIsStrict();
+  BCFGen_->emitDirectEval(dst, src, isStrict);
 }
 
 void HBCISel::generateAddEmptyStringInst(

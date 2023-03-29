@@ -819,8 +819,10 @@ SwitchImmInst *IRBuilder::createSwitchImmInst(
   return inst;
 }
 
-DirectEvalInst *IRBuilder::createDirectEvalInst(Value *operand) {
-  auto *inst = new DirectEvalInst(operand);
+DirectEvalInst *IRBuilder::createDirectEvalInst(
+    Value *operand,
+    LiteralBool *isStrict) {
+  auto *inst = new DirectEvalInst(operand, isStrict);
   insert(inst);
   return inst;
 }
