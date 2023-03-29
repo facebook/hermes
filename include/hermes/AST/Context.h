@@ -25,6 +25,8 @@ class EmitWasmIntrinsicsContext;
 #endif // HERMES_RUN_WASM
 
 struct CodeGenerationSettings {
+  /// Increase compliance with test262 by moving some checks to runtime.
+  bool test262{false};
   /// Whether we should emit TDZ checks.
   bool enableTDZ{false};
   /// Dump registers assigned to instruction operands.
