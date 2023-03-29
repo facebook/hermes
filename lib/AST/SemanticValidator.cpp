@@ -347,7 +347,34 @@ void SemanticValidator::visit(RegExpLiteralNode *regexp) {
   visitESTreeChildren(*this, regexp);
 }
 
+void SemanticValidator::validateCatchClause(const Node *catchClause) {
+  // The catch clause is optional, so bail early if it doesn't exist.
+  if (!catchClause) {
+    return;
+  }
+  auto *castedCatch = llvh::dyn_cast<ESTree::CatchClauseNode>(catchClause);
+  if (!castedCatch) {
+    return;
+  }
+  // Bail early if there is no identifier in the parameter of the catch.
+  if (!castedCatch->_param ||
+      !llvh::isa<ESTree::IdentifierNode>(castedCatch->_param)) {
+    return;
+  }
+  auto *idNode = cast<ESTree::IdentifierNode>(castedCatch->_param);
+  if (!isValidDeclarationName(idNode)) {
+    sm_.error(
+        idNode->getSourceRange(),
+        "cannot bind to " + idNode->_name->str() +
+            " in the catch clause in strict mode");
+  }
+}
+
 void SemanticValidator::visit(TryStatementNode *tryStatement) {
+  if (curFunction()->strictMode) {
+    validateCatchClause(tryStatement->_handler);
+  }
+  // The catch parameter cannot bind to 'eval' or 'arguments' in strict mode.
   // A try statement with both catch and finally handlers is technically
   // two nested try statements. Transform:
   //

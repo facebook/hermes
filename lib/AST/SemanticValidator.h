@@ -277,6 +277,10 @@ class SemanticValidator {
       FunctionInfo::BlockDecls *varIdents,
       FunctionInfo::BlockDecls *scopedIdents);
 
+  /// Ensure that the catch clause of a try statement does not bind any
+  /// identifiers to 'eval' or 'arguments'. Should only be used in strict mode.
+  void validateCatchClause(const Node *catchClause);
+
   /// Ensure that the specified node is a valid target for an assignment, in
   /// other words it is an l-value, a Pattern (checked recursively) or an Empty
   /// (used by elision).
