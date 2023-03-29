@@ -291,7 +291,7 @@ mapPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.size");
   }
-  return HermesValue::encodeNumberValue(JSMap::getSize(self, runtime));
+  return HermesValue::encodeUntrustedNumberValue(JSMap::getSize(self, runtime));
 }
 
 CallResult<HermesValue>

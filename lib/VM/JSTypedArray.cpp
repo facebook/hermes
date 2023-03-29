@@ -363,7 +363,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocateSpecies(
   auto callRes = Callable::executeConstruct1(
       *possibleCons,
       runtime,
-      runtime.makeHandle(HermesValue::encodeNumberValue(length)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

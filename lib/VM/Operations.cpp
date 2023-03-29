@@ -547,7 +547,7 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
       // Already have a number, just return it.
       return value;
   }
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeUntrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
@@ -577,7 +577,7 @@ CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
   } else if (len > maxLength) {
     len = maxLength;
   }
-  return HermesValue::encodeDoubleValue(len);
+  return HermesValue::encodeUntrustedNumberValue(len);
 }
 
 CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
@@ -598,7 +598,7 @@ CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
 
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
-      ? runtime.makeHandle(HermesValue::encodeDoubleValue(0))
+      ? runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(0))
       : valueHandle;
   auto res = toIntegerOrInfinity(runtime, value);
   if (res == ExecutionStatus::EXCEPTION) {
@@ -609,7 +609,7 @@ CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
     return runtime.raiseRangeError("A negative value cannot be an index");
   }
   auto integerIndexHandle =
-      runtime.makeHandle(HermesValue::encodeDoubleValue(integerIndex));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(integerIndex));
   res = toLength(runtime, integerIndexHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -638,7 +638,7 @@ CallResult<HermesValue> toIntegerOrInfinity(
     result = std::trunc(num);
   }
 
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 /// Conversion of HermesValues to integers.
@@ -652,7 +652,7 @@ static inline CallResult<HermesValue> toInt(
   }
   double num = res->getNumber();
   T result = static_cast<T>(hermes::truncateToInt32(num));
-  return HermesValue::encodeNumberValue(result);
+  return HermesValue::encodeUntrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toInt8(Runtime &runtime, Handle<> valueHandle) {
@@ -709,7 +709,8 @@ CallResult<HermesValue> toUInt8Clamp(Runtime &runtime, Handle<> valueHandle) {
     // 2. ReturnIfAbrupt(number)
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeNumberValue(toUInt8Clamp(res->getNumber()));
+  return HermesValue::encodeUntrustedNumberValue(
+      toUInt8Clamp(res->getNumber()));
 }
 
 CallResult<HermesValue> toUInt16(Runtime &runtime, Handle<> valueHandle) {
@@ -1115,7 +1116,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return y->getBigInt()->compare(static_cast<int32_t>(x->getBool())) == 0;
       }
       CASE_S_M(Bool, Object) {
-        x = HermesValue::encodeDoubleValue(x->getBool());
+        x = HermesValue::encodeUntrustedNumberValue(x->getBool());
         break;
       }
       // 9. If Type(y) is Boolean, return the result of the comparison x == !
@@ -1131,7 +1132,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return x->getBigInt()->compare(static_cast<int32_t>(y->getBool())) == 0;
       }
       CASE_M_S(Object, Bool) {
-        y = HermesValue::encodeDoubleValue(y->getBool());
+        y = HermesValue::encodeUntrustedNumberValue(y->getBool());
         break;
       }
       // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y)
@@ -1260,7 +1261,7 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       return ExecutionStatus::EXCEPTION;
     }
     const double yNum = res->getNumber();
-    return HermesValue::encodeDoubleValue(xNum + yNum);
+    return HermesValue::encodeUntrustedNumberValue(xNum + yNum);
   }
 
   // yPrim is a primitive; therefore it is already a BigInt, or it will never be

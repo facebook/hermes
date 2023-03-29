@@ -128,7 +128,7 @@ CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
 
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeUntrustedNumberValue(
       sign * parseIntWithRadix(strView.slice(begin, realEnd), radix));
 }
 
@@ -177,21 +177,21 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::Infinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::PositiveInfinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::NegativeInfinity)),
           str16))) {
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeUntrustedNumberValue(
         -std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
@@ -233,7 +233,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
   }
   // Now we know the prefix untill endPtr is a valid int.
   *endPtr = '\0';
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeUntrustedNumberValue(
       ::hermes_g_strtod(str8.data(), &endPtr));
 }
 
@@ -311,7 +311,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime,
       Predefined::getSymbolID(Predefined::Infinity),
       constantDPF,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
           std::numeric_limits<double>::infinity()))));
 
   // 15.1.1.2 undefined.

@@ -137,10 +137,10 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
   static SmallHermesValueAdaptor
   encodeNumberValue(double d, GC &, PointerBase &) {
-    return SmallHermesValueAdaptor{HermesValue::encodeNumberValue(d)};
+    return SmallHermesValueAdaptor{HermesValue::encodeUntrustedNumberValue(d)};
   }
   static SmallHermesValueAdaptor encodeNumberValue(double d, Runtime &) {
-    return SmallHermesValueAdaptor{HermesValue::encodeNumberValue(d)};
+    return SmallHermesValueAdaptor{HermesValue::encodeUntrustedNumberValue(d)};
   }
   static SmallHermesValueAdaptor encodeObjectValue(GCCell *ptr, PointerBase &) {
     return SmallHermesValueAdaptor{HermesValue::encodeObjectValue(ptr)};

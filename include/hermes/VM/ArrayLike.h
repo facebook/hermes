@@ -47,7 +47,7 @@ ExecutionStatus createListFromArrayLike_RJS(
     const ElementCB &elementCB) {
   GCScope gcScope(runtime);
   Handle<ArrayImpl> elemArray = Handle<ArrayImpl>::dyn_vmcast(arrayLikeHandle);
-  MutableHandle<> iHandle{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> iHandle{runtime, HermesValue::encodeTrustedNumberValue(0)};
   auto marker = gcScope.createMarker();
   if (LLVM_LIKELY(elemArray)) {
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
@@ -67,7 +67,7 @@ ExecutionStatus createListFromArrayLike_RJS(
       }
       // Slow path fallback: the actual getComputed on this,
       // because the real value could be up the prototype chain.
-      iHandle = HermesValue::encodeNumberValue(elemIdx);
+      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -83,7 +83,7 @@ ExecutionStatus createListFromArrayLike_RJS(
     // Not an array. Use this slow path.
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
       gcScope.flushToMarker(marker);
-      iHandle = HermesValue::encodeNumberValue(elemIdx);
+      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {

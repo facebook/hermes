@@ -1413,7 +1413,7 @@ regExpPrototypeSymbolSearch(void *, Runtime &runtime, NativeArgs args) {
   }
   // 13. If result is null, return –1.
   if (result->isNull()) {
-    return HermesValue::encodeNumberValue(-1);
+    return HermesValue::encodeUntrustedNumberValue(-1);
   }
   // 14. Return Get(result, "index").
   auto resultObj = Handle<JSObject>::dyn_vmcast(result);
@@ -1655,7 +1655,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       GCScopeMarkerRAII marker2{runtime};
       // i. Let capN be Get(result, ToString(n)).
       // ii. ReturnIfAbrupt(capN).
-      nHandle = HermesValue::encodeNumberValue(n);
+      nHandle = HermesValue::encodeUntrustedNumberValue(n);
       propRes = JSObject::getComputed_RJS(result, runtime, nHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1725,7 +1725,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
         }
         // iii. Append position and S.
         newFrame->getArgRef(argIdx++) =
-            HermesValue::encodeNumberValue(position);
+            HermesValue::encodeUntrustedNumberValue(position);
         newFrame->getArgRef(argIdx++) = S.getHermesValue();
         // iv. If namedCaptures is not undefined, then
         if (hasNamedCaptures) {

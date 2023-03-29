@@ -140,7 +140,7 @@ setTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   uint32_t taskId = consoleHost->queueTask(
       PseudoHandle<Callable>::vmcast(createPseudoHandle(*boundFunction)));
-  return HermesValue::encodeNumberValue(taskId);
+  return HermesValue::encodeTrustedNumberValue(taskId);
 }
 
 static vm::CallResult<vm::HermesValue>

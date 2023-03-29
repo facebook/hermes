@@ -293,8 +293,8 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
       returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
       break;
     case JSONTokenKind::Number:
-      returnValue =
-          HermesValue::encodeDoubleValue(lexer_.getCurToken()->getNumber());
+      returnValue = HermesValue::encodeUntrustedNumberValue(
+          lexer_.getCurToken()->getNumber());
       break;
     case JSONTokenKind::LBrace: {
       auto parRes = parseObject();
@@ -359,7 +359,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
         return ExecutionStatus::EXCEPTION;
       }
 
-      indexValue = HermesValue::encodeDoubleValue(index);
+      indexValue = HermesValue::encodeUntrustedNumberValue(index);
       (void)JSObject::defineOwnComputedPrimitive(
           array,
           runtime_,
@@ -504,7 +504,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
 
     GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
-      tmpHandle = HermesValue::encodeDoubleValue(index);
+      tmpHandle = HermesValue::encodeUntrustedNumberValue(index);
       // Note that deleting elements doesn't affect array length.
       if (LLVM_UNLIKELY(
               filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
@@ -636,7 +636,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     gcScope.flushToMarker(marker);
 
     // Get the property value.
-    tmpHandle_ = HermesValue::encodeDoubleValue(i);
+    tmpHandle_ = HermesValue::encodeUntrustedNumberValue(i);
     auto propRes =
         JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -954,7 +954,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
         stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
     // Flush just before the recursion in case any handles were created.
     marker.flush();
-    auto status = operationStr(HermesValue::encodeDoubleValue(index));
+    auto status = operationStr(HermesValue::encodeUntrustedNumberValue(index));
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

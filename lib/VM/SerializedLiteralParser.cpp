@@ -61,13 +61,13 @@ HermesValue SerializedLiteralParser::get(Runtime &) {
       double val = llvh::support::endian::read<double, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
       currIdx_ += 8;
-      return HermesValue::encodeNumberValue(val);
+      return HermesValue::encodeUntrustedNumberValue(val);
     }
     case SLG::IntegerTag: {
       int32_t val = llvh::support::endian::read<int32_t, 1>(
           buffer_.data() + currIdx_, llvh::support::endianness::little);
       currIdx_ += 4;
-      return HermesValue::encodeNumberValue(val);
+      return HermesValue::encodeUntrustedNumberValue(val);
     }
     case SLG::NullTag:
       return HermesValue::encodeNullValue();

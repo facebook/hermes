@@ -247,7 +247,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
     if (runtime.symbolEqualsToStringPrim(
             Predefined::getSymbolID(Predefined::length), *strPrim)) {
       return createPseudoHandle(
-          HermesValue::encodeDoubleValue(frame.getArgCount()));
+          HermesValue::encodeUntrustedNumberValue(frame.getArgCount()));
     }
   }
 
@@ -286,8 +286,8 @@ inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
     Handle<> base,
     SymbolID id) {
   if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
-    return createPseudoHandle(
-        HermesValue::encodeNumberValue(base->getString()->getStringLength()));
+    return createPseudoHandle(HermesValue::encodeUntrustedNumberValue(
+        base->getString()->getStringLength()));
   }
   return createPseudoHandle(HermesValue::encodeEmptyValue());
 }
@@ -585,8 +585,8 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       if (key.isSymbol()) {
         stringIdResult = ID(key.getSymbol().unsafeGetIndex());
       } else {
-        auto keyHandle =
-            runtime.makeHandle(HermesValue::encodeDoubleValue(key.getNumber()));
+        auto keyHandle = runtime.makeHandle(
+            HermesValue::encodeUntrustedNumberValue(key.getNumber()));
         auto idRes = valueToSymbolID(runtime, keyHandle);
         assert(
             idRes != ExecutionStatus::EXCEPTION &&
@@ -1162,7 +1162,7 @@ tailCall:
     if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
       /* Fast-path. */                                                   \
       CASE(name##N) {                                                    \
-        O1REG(name) = HermesValue::encodeDoubleValue(                    \
+        O1REG(name) = HermesValue::encodeTrustedNumberValue(             \
             do##name(O2REG(name).getNumber(), O3REG(name).getNumber())); \
         ip = NEXTINST(name);                                             \
         DISPATCH;                                                        \
@@ -1182,8 +1182,8 @@ tailCall:
 #define INCDECOP(name)                                                        \
   CASE(name) {                                                                \
     if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
-      O1REG(name) =                                                           \
-          HermesValue::encodeDoubleValue(do##name(O2REG(name).getNumber()));  \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(                    \
+          do##name(O2REG(name).getNumber()));                                 \
       ip = NEXTINST(name);                                                    \
       DISPATCH;                                                               \
     }                                                                         \
@@ -1209,7 +1209,8 @@ tailCall:
             O3REG(name).isNumber())) { /* Fast-path. */                        \
       auto lnum = hermes::truncateToInt32(O2REG(name).getNumber());            \
       uint32_t rnum = hermes::truncateToInt32(O3REG(name).getNumber()) & 0x1f; \
-      O1REG(name) = HermesValue::encodeDoubleValue(do##name(lnum, rnum));      \
+      O1REG(name) =                                                            \
+          HermesValue::encodeTrustedNumberValue(do##name(lnum, rnum));         \
       ip = NEXTINST(name);                                                     \
       DISPATCH;                                                                \
     }                                                                          \
@@ -1232,7 +1233,7 @@ tailCall:
   CASE(name) {                                                           \
     if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
       /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeDoubleValue(do##name(             \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(do##name(      \
           hermes::truncateToInt32(O2REG(name).getNumber()),              \
           hermes::truncateToInt32(O3REG(name).getNumber())));            \
       ip = NEXTINST(name);                                               \
@@ -2544,7 +2545,7 @@ tailCall:
         idVal = ip->iPutOwnByIndex.op3;
       }
     putOwnByIndex : {
-      tmpHandle = HermesValue::encodeDoubleValue(idVal);
+      tmpHandle = HermesValue::encodeUntrustedNumberValue(idVal);
       CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
           Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
           runtime,
@@ -2600,7 +2601,8 @@ tailCall:
               tmpHandle = status->getHermesValue();
             }
             O1REG(GetNextPName) = tmpHandle.get();
-            O4REG(GetNextPName) = HermesValue::encodeNumberValue(idx + 1);
+            O4REG(GetNextPName) =
+                HermesValue::encodeUntrustedNumberValue(idx + 1);
           } else {
             O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
           }
@@ -2732,7 +2734,7 @@ tailCall:
                 O2REG(Add).isNumber() &&
                 O3REG(Add).isNumber())) { /* Fast-path. */
           CASE(AddN) {
-            O1REG(Add) = HermesValue::encodeDoubleValue(
+            O1REG(Add) = HermesValue::encodeTrustedNumberValue(
                 O2REG(Add).getNumber() + O3REG(Add).getNumber());
             ip = NEXTINST(Add);
             DISPATCH;
@@ -2752,7 +2754,7 @@ tailCall:
 
       CASE(BitNot) {
         if (LLVM_LIKELY(O2REG(BitNot).isNumber())) { /* Fast-path. */
-          O1REG(BitNot) = HermesValue::encodeDoubleValue(
+          O1REG(BitNot) = HermesValue::encodeUntrustedNumberValue(
               ~hermes::truncateToInt32(O2REG(BitNot).getNumber()));
           ip = NEXTINST(BitNot);
           DISPATCH;
@@ -2771,7 +2773,7 @@ tailCall:
         // If the arguments object hasn't been created yet.
         if (O2REG(GetArgumentsLength).isUndefined()) {
           O1REG(GetArgumentsLength) =
-              HermesValue::encodeNumberValue(FRAME.getArgCount());
+              HermesValue::encodeUntrustedNumberValue(FRAME.getArgCount());
           ip = NEXTINST(GetArgumentsLength);
           DISPATCH;
         }
@@ -3031,8 +3033,8 @@ tailCall:
       }
       CASE(Negate) {
         if (LLVM_LIKELY(O2REG(Negate).isNumber())) {
-          O1REG(Negate) =
-              HermesValue::encodeDoubleValue(-O2REG(Negate).getNumber());
+          O1REG(Negate) = HermesValue::encodeUntrustedNumberValue(
+              -O2REG(Negate).getNumber());
           ip = NEXTINST(Negate);
           DISPATCH;
         }
@@ -3052,7 +3054,7 @@ tailCall:
       CASE(Mod) {
         if (LLVM_LIKELY(O2REG(Mod).isNumber() && O3REG(Mod).isNumber())) {
           /* Fast-path. */
-          O1REG(Mod) = HermesValue::encodeDoubleValue(
+          O1REG(Mod) = HermesValue::encodeUntrustedNumberValue(
               doMod(O2REG(Mod).getNumber(), O3REG(Mod).getNumber()));
           ip = NEXTINST(Mod);
           DISPATCH;
@@ -3291,12 +3293,13 @@ tailCall:
       }
       LOAD_CONST(
           LoadConstUInt8,
-          HermesValue::encodeDoubleValue(ip->iLoadConstUInt8.op2));
+          HermesValue::encodeTrustedNumberValue(ip->iLoadConstUInt8.op2));
       LOAD_CONST(
-          LoadConstInt, HermesValue::encodeDoubleValue(ip->iLoadConstInt.op2));
+          LoadConstInt,
+          HermesValue::encodeTrustedNumberValue(ip->iLoadConstInt.op2));
       LOAD_CONST(
           LoadConstDouble,
-          HermesValue::encodeDoubleValue(ip->iLoadConstDouble.op2));
+          HermesValue::encodeUntrustedNumberValue(ip->iLoadConstDouble.op2));
       LOAD_CONST_CAPTURE_IP(
           LoadConstString,
           HermesValue::encodeStringValue(
@@ -3314,7 +3317,7 @@ tailCall:
       LOAD_CONST(LoadConstNull, HermesValue::encodeNullValue());
       LOAD_CONST(LoadConstTrue, HermesValue::encodeBoolValue(true));
       LOAD_CONST(LoadConstFalse, HermesValue::encodeBoolValue(false));
-      LOAD_CONST(LoadConstZero, HermesValue::encodeDoubleValue(0));
+      LOAD_CONST(LoadConstZero, HermesValue::encodeTrustedNumberValue(0));
       CASE(LoadConstBigInt) {
         idVal = ip->iLoadConstBigInt.op2;
         nextIP = NEXTINST(LoadConstBigInt);
@@ -3426,13 +3429,13 @@ tailCall:
 #ifdef HERMES_RUN_WASM
       // Asm.js/Wasm Intrinsics
       CASE(Add32) {
-        O1REG(Add32) = HermesValue::encodeDoubleValue((
+        O1REG(Add32) = HermesValue::encodeUntrustedNumberValue((
             int32_t)(int64_t)(O2REG(Add32).getNumber() + O3REG(Add32).getNumber()));
         ip = NEXTINST(Add32);
         DISPATCH;
       }
       CASE(Sub32) {
-        O1REG(Sub32) = HermesValue::encodeDoubleValue((
+        O1REG(Sub32) = HermesValue::encodeUntrustedNumberValue((
             int32_t)(int64_t)(O2REG(Sub32).getNumber() - O3REG(Sub32).getNumber()));
         ip = NEXTINST(Sub32);
         DISPATCH;
@@ -3442,21 +3445,23 @@ tailCall:
         // regardless of signedness.
         const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Mul32).getNumber());
         const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Mul32).getNumber());
-        O1REG(Mul32) = HermesValue::encodeDoubleValue((int32_t)(arg0 * arg1));
+        O1REG(Mul32) =
+            HermesValue::encodeUntrustedNumberValue((int32_t)(arg0 * arg1));
         ip = NEXTINST(Mul32);
         DISPATCH;
       }
       CASE(Divi32) {
         const int32_t arg0 = (int32_t)(O2REG(Divi32).getNumber());
         const int32_t arg1 = (int32_t)(O3REG(Divi32).getNumber());
-        O1REG(Divi32) = HermesValue::encodeDoubleValue(arg0 / arg1);
+        O1REG(Divi32) = HermesValue::encodeUntrustedNumberValue(arg0 / arg1);
         ip = NEXTINST(Divi32);
         DISPATCH;
       }
       CASE(Divu32) {
         const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Divu32).getNumber());
         const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Divu32).getNumber());
-        O1REG(Divu32) = HermesValue::encodeDoubleValue((int32_t)(arg0 / arg1));
+        O1REG(Divu32) =
+            HermesValue::encodeUntrustedNumberValue((int32_t)(arg0 / arg1));
         ip = NEXTINST(Divu32);
         DISPATCH;
       }
@@ -3465,7 +3470,7 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi8));
         int8_t *basePtr = reinterpret_cast<int8_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi8).getNumber());
-        O1REG(Loadi8) = HermesValue::encodeNumberValue(basePtr[addr]);
+        O1REG(Loadi8) = HermesValue::encodeUntrustedNumberValue(basePtr[addr]);
         ip = NEXTINST(Loadi8);
         DISPATCH;
       }
@@ -3473,7 +3478,7 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu8));
         uint8_t *basePtr = reinterpret_cast<uint8_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu8).getNumber());
-        O1REG(Loadu8) = HermesValue::encodeNumberValue(basePtr[addr]);
+        O1REG(Loadu8) = HermesValue::encodeUntrustedNumberValue(basePtr[addr]);
         ip = NEXTINST(Loadu8);
         DISPATCH;
       }
@@ -3481,7 +3486,8 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi16));
         int16_t *basePtr = reinterpret_cast<int16_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi16).getNumber());
-        O1REG(Loadi16) = HermesValue::encodeNumberValue(basePtr[addr >> 1]);
+        O1REG(Loadi16) =
+            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 1]);
         ip = NEXTINST(Loadi16);
         DISPATCH;
       }
@@ -3489,7 +3495,8 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu16));
         uint16_t *basePtr = reinterpret_cast<uint16_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu16).getNumber());
-        O1REG(Loadu16) = HermesValue::encodeNumberValue(basePtr[addr >> 1]);
+        O1REG(Loadu16) =
+            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 1]);
         ip = NEXTINST(Loadu16);
         DISPATCH;
       }
@@ -3497,7 +3504,8 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi32));
         int32_t *basePtr = reinterpret_cast<int32_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi32).getNumber());
-        O1REG(Loadi32) = HermesValue::encodeNumberValue(basePtr[addr >> 2]);
+        O1REG(Loadi32) =
+            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 2]);
         ip = NEXTINST(Loadi32);
         DISPATCH;
       }
@@ -3505,8 +3513,8 @@ tailCall:
         auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu32));
         uint32_t *basePtr = reinterpret_cast<uint32_t *>(mem->begin(runtime));
         const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu32).getNumber());
-        O1REG(Loadu32) =
-            HermesValue::encodeNumberValue((int32_t)(basePtr[addr >> 2]));
+        O1REG(Loadu32) = HermesValue::encodeUntrustedNumberValue(
+            (int32_t)(basePtr[addr >> 2]));
         ip = NEXTINST(Loadu32);
         DISPATCH;
       }

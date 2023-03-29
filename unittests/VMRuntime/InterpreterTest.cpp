@@ -278,7 +278,7 @@ L2:
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(newFrame.overflowed());
-    newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
+    newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(5);
     status = runtime.interpretFunction(codeBlock);
   }
   auto frames = runtime.getStackFrames();
@@ -371,7 +371,7 @@ L1:
           HermesValue::encodeUndefinedValue(),
           HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
-      newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
+      newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(2);
       status = runtime.interpretFunction(codeBlock);
     }
     auto frames = runtime.getStackFrames();
@@ -392,7 +392,7 @@ L1:
           HermesValue::encodeUndefinedValue(),
           HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
-      newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
+      newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(5);
       status = runtime.interpretFunction(codeBlock);
     }
     auto frames = runtime.getStackFrames();
