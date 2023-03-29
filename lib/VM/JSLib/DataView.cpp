@@ -59,7 +59,7 @@ dataViewPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
 namespace {
 template <typename T>
 CallResult<HermesValue> dataViewPrototypeGetEncoder(Runtime &, T value) {
-  return SafeNumericEncoder<T>::encode(value);
+  return HermesValue::encodeUntrustedNumberValue(value);
 }
 
 CallResult<HermesValue> dataViewPrototypeGetEncoder(

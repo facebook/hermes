@@ -450,7 +450,7 @@ uint64_t JSTypedArray<uint64_t, CellKind::BigUint64ArrayKind>::toDestType(
 template <typename T>
 struct _getOwnRetEncoder {
   static HermesValue encodeMayAlloc(Runtime &, T element) {
-    return SafeNumericEncoder<T>::encode(element);
+    return HermesValue::encodeUntrustedNumberValue(element);
   }
 };
 
