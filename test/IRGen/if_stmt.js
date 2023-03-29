@@ -33,9 +33,10 @@ function main(boop) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %boop: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [boop]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [foo]: any
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [foo]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [foo]: any
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): any

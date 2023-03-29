@@ -97,23 +97,24 @@ function func4() {
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
 // CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
-// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow1]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %innerFunction(): any
-// CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [innerFunction]: any
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %9 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
-// CHECK-NEXT:  %10 = BinaryStrictlyNotEqualInst (:any) %9: undefined|closure, undefined: undefined
-// CHECK-NEXT:  %11 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, %10: any
-// CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %innerArrow1(): any
-// CHECK-NEXT:  %13 = StoreFrameInst %12: closure, [innerArrow1]: any
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) [innerFunction]: any
-// CHECK-NEXT:  %15 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:  %16 = StoreOwnPropertyInst %14: any, %15: object, 0: number, true: boolean
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) [innerArrow1]: any
-// CHECK-NEXT:  %18 = StoreOwnPropertyInst %17: any, %15: object, 1: number, true: boolean
-// CHECK-NEXT:  %19 = ReturnInst %15: object
+// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerFunction]: any
+// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [innerArrow1]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %innerFunction(): any
+// CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [innerFunction]: any
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %10 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
+// CHECK-NEXT:  %11 = BinaryStrictlyNotEqualInst (:any) %10: undefined|closure, undefined: undefined
+// CHECK-NEXT:  %12 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %11: any
+// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %innerArrow1(): any
+// CHECK-NEXT:  %14 = StoreFrameInst %13: closure, [innerArrow1]: any
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) [innerFunction]: any
+// CHECK-NEXT:  %16 = AllocArrayInst (:object) 2: number
+// CHECK-NEXT:  %17 = StoreOwnPropertyInst %15: any, %16: object, 0: number, true: boolean
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) [innerArrow1]: any
+// CHECK-NEXT:  %19 = StoreOwnPropertyInst %18: any, %16: object, 1: number, true: boolean
+// CHECK-NEXT:  %20 = ReturnInst %16: object
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %20 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %21 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function func4(): any

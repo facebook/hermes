@@ -37,10 +37,11 @@ function main() {
 // CHECK:function main(): any
 // CHECK-NEXT:frame = [foo: any, capture_me: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [capture_me]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [foo]: any
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [foo]: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [capture_me]: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [foo]: any
+// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any

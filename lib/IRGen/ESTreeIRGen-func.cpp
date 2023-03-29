@@ -542,7 +542,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
         }
-        init = decl->kind == sema::Decl::Kind::Var;
+        init = decl->kind == sema::Decl::Kind::Var ||
+            decl->kind == sema::Decl::Kind::ScopedFunction;
         break;
 
       case sema::Decl::Kind::Parameter:

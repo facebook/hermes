@@ -98,16 +98,17 @@ function check4() {
 // CHECK-NEXT:frame = [x: any|empty, check3_inner: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %check3_inner(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [check3_inner]: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [check3_inner]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any|empty
-// CHECK-NEXT:  %6 = LoadFrameInst (:any|empty) [x]: any|empty
-// CHECK-NEXT:  %7 = UnionNarrowTrustedInst (:any) %6: any|empty
-// CHECK-NEXT:  %8 = ReturnInst %7: any
+// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [check3_inner]: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %check3_inner(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [check3_inner]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [check3_inner]: any
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %6 = StoreFrameInst %5: any, [x]: any|empty
+// CHECK-NEXT:  %7 = LoadFrameInst (:any|empty) [x]: any|empty
+// CHECK-NEXT:  %8 = UnionNarrowTrustedInst (:any) %7: any|empty
+// CHECK-NEXT:  %9 = ReturnInst %8: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check4(): any

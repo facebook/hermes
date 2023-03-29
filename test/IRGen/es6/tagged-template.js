@@ -186,15 +186,16 @@ function helloWorld() {
 // CHECK:function callExpr(): any
 // CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %func(): any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [func]: any
-// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [func]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, %2: any
-// CHECK-NEXT:  %6 = ReturnInst %5: any
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [func]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %func(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [func]: any
+// CHECK-NEXT:  %3 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) [func]: any
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %3: any
+// CHECK-NEXT:  %7 = ReturnInst %6: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function dup2(): any

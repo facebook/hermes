@@ -66,12 +66,13 @@ function outer2() {
 // CHECK-NEXT:  %2 = StoreFrameInst %1: object, [?anon_0_this]: any
 // CHECK-NEXT:  %3 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
 // CHECK-NEXT:  %4 = StoreFrameInst %3: undefined|closure, [?anon_1_new.target]: undefined|closure
-// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [innerArrow4]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %inner3(): any
-// CHECK-NEXT:  %7 = StoreFrameInst %6: closure, [inner3]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %innerArrow4(): any
-// CHECK-NEXT:  %9 = StoreFrameInst %8: closure, [innerArrow4]: any
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [inner3]: any
+// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [innerArrow4]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %inner3(): any
+// CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [inner3]: any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %innerArrow4(): any
+// CHECK-NEXT:  %10 = StoreFrameInst %9: closure, [innerArrow4]: any
+// CHECK-NEXT:  %11 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow innerArrow1(): any

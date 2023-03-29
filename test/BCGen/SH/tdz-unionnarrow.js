@@ -58,10 +58,11 @@ function f2() {
 // CHKIR-NEXT:frame = [x: any|empty, inner: any]
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
-// CHKIR-NEXT:  %1 = CreateFunctionInst (:closure) %inner(): any
-// CHKIR-NEXT:  %2 = StoreFrameInst %1: closure, [inner]: any
-// CHKIR-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any|empty
-// CHKIR-NEXT:  %4 = ReturnInst undefined: undefined
+// CHKIR-NEXT:  %1 = StoreFrameInst undefined: undefined, [inner]: any
+// CHKIR-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
+// CHKIR-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
+// CHKIR-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any|empty
+// CHKIR-NEXT:  %5 = ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
 // CHKIR:function inner(): any
@@ -118,11 +119,12 @@ function f2() {
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:empty) empty: empty
 // CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: any|empty
-// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:closure) %inner(): any, %0: environment
-// CHKLIR-NEXT:  %4 = HBCStoreToEnvironmentInst %0: environment, %3: closure, [inner]: any
-// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0: environment, %5: undefined, [x]: any|empty
-// CHKLIR-NEXT:  %7 = ReturnInst %5: undefined
+// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %4 = HBCStoreToEnvironmentInst %0: environment, %3: undefined, [inner]: any
+// CHKLIR-NEXT:  %5 = HBCCreateFunctionInst (:closure) %inner(): any, %0: environment
+// CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0: environment, %5: closure, [inner]: any
+// CHKLIR-NEXT:  %7 = HBCStoreToEnvironmentInst %0: environment, %3: undefined, [x]: any|empty
+// CHKLIR-NEXT:  %8 = ReturnInst %3: undefined
 // CHKLIR-NEXT:function_end
 
 // CHKLIR:function inner(): any

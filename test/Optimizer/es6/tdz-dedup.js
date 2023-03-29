@@ -52,27 +52,29 @@ function check_after_check() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHECK-NEXT:  %2 = StoreFrameInst empty: empty, [x]: any|empty
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %inner1(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [inner1]: any
-// CHECK-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: any|empty
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
-// CHECK-NEXT:  %7 = ReturnInst %6: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [inner1]: any
+// CHECK-NEXT:  %3 = StoreFrameInst empty: empty, [x]: any|empty
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %inner1(): any
+// CHECK-NEXT:  %5 = StoreFrameInst %4: closure, [inner1]: any
+// CHECK-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: any|empty
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check(): any
 // CHECK-NEXT:frame = [inner2: any, x: any|empty]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %inner2(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [inner2]: any
-// CHECK-NEXT:  %3 = StoreFrameInst 0: number, [x]: any|empty
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
-// CHECK-NEXT:  %5 = ReturnInst %4: any
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [inner2]: any
+// CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [x]: any|empty
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %inner2(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [inner2]: any
+// CHECK-NEXT:  %4 = StoreFrameInst 0: number, [x]: any|empty
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function inner1(): any
@@ -144,31 +146,33 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_store(p: any): any
-// CHKOPT-NEXT:frame = [p: any, inner1: closure, x: empty|undefined|number]
+// CHKOPT-NEXT:frame = [p: any, inner1: undefined|closure, x: empty|undefined|number]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHKOPT-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHKOPT-NEXT:  %2 = StoreFrameInst empty: empty, [x]: empty|undefined|number
-// CHKOPT-NEXT:  %3 = CreateFunctionInst (:closure) %inner1(): undefined|number
-// CHKOPT-NEXT:  %4 = StoreFrameInst %3: closure, [inner1]: closure
-// CHKOPT-NEXT:  %5 = StoreFrameInst undefined: undefined, [x]: empty|undefined|number
-// CHKOPT-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
-// CHKOPT-NEXT:  %7 = ReturnInst %6: any
+// CHKOPT-NEXT:  %2 = StoreFrameInst undefined: undefined, [inner1]: undefined|closure
+// CHKOPT-NEXT:  %3 = StoreFrameInst empty: empty, [x]: empty|undefined|number
+// CHKOPT-NEXT:  %4 = CreateFunctionInst (:closure) %inner1(): undefined|number
+// CHKOPT-NEXT:  %5 = StoreFrameInst %4: closure, [inner1]: undefined|closure
+// CHKOPT-NEXT:  %6 = StoreFrameInst undefined: undefined, [x]: empty|undefined|number
+// CHKOPT-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
+// CHKOPT-NEXT:  %8 = ReturnInst %7: any
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %8 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %9 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check(): any
-// CHKOPT-NEXT:frame = [inner2: closure, x: any|empty]
+// CHKOPT-NEXT:frame = [inner2: undefined|closure, x: any|empty]
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
-// CHKOPT-NEXT:  %1 = CreateFunctionInst (:closure) %inner2(): any
-// CHKOPT-NEXT:  %2 = StoreFrameInst %1: closure, [inner2]: closure
-// CHKOPT-NEXT:  %3 = StoreFrameInst 0: number, [x]: any|empty
-// CHKOPT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
-// CHKOPT-NEXT:  %5 = ReturnInst %4: any
+// CHKOPT-NEXT:  %0 = StoreFrameInst undefined: undefined, [inner2]: undefined|closure
+// CHKOPT-NEXT:  %1 = StoreFrameInst empty: empty, [x]: any|empty
+// CHKOPT-NEXT:  %2 = CreateFunctionInst (:closure) %inner2(): any
+// CHKOPT-NEXT:  %3 = StoreFrameInst %2: closure, [inner2]: undefined|closure
+// CHKOPT-NEXT:  %4 = StoreFrameInst 0: number, [x]: any|empty
+// CHKOPT-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
+// CHKOPT-NEXT:  %6 = ReturnInst %5: any
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  %6 = ReturnInst undefined: undefined
+// CHKOPT-NEXT:  %7 = ReturnInst undefined: undefined
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner1(): undefined|number

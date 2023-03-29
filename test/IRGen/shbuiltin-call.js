@@ -33,11 +33,12 @@ $SHBuiltin.call(foo, 11, 12, 13);
 // CHECK:function ""(): any
 // CHECK-NEXT:frame = [foo: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [foo]: any
-// CHECK-NEXT:  %2 = LoadFrameInst (:any) [foo]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, 11: number, 12: number, 13: number
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [foo]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [foo]: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) [foo]: any
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, 11: number, 12: number, 13: number
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any, y: any): any

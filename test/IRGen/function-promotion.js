@@ -40,19 +40,21 @@ function foo() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [y]: any
-// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [x]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %x(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [x#1]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %y(): any
-// CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [y]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %z(): any
-// CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [z]: any
-// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) [x]: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [y]: any
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) [z]: any
-// CHECK-NEXT:  %13 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %10: any, %11: any, %12: any
-// CHECK-NEXT:  %14 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [z]: any
+// CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x#1]: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %x(): any
+// CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [x#1]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %y(): any
+// CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [y]: any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %z(): any
+// CHECK-NEXT:  %10 = StoreFrameInst %9: closure, [z]: any
+// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) [y]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) [z]: any
+// CHECK-NEXT:  %15 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %12: any, %13: any, %14: any
+// CHECK-NEXT:  %16 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function x(): any
