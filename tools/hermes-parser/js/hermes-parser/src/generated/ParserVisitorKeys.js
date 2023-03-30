@@ -361,6 +361,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   JSXOpeningElement: {
     name: 'Node',
     attributes: 'NodeList',
+    typeArguments: 'Node',
   },
   JSXOpeningFragment: {},
   JSXSpreadAttribute: {

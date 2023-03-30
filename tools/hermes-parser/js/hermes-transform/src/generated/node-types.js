@@ -653,6 +653,7 @@ export type JSXOpeningElementProps = {
     MaybeDetachedNode<JSXOpeningElementType['attributes'][number]>,
   >,
   +selfClosing: JSXOpeningElementType['selfClosing'],
+  +typeArguments?: ?MaybeDetachedNode<JSXOpeningElementType['typeArguments']>,
 };
 
 export type JSXOpeningFragmentProps = {};
@@ -2230,6 +2231,8 @@ export function JSXOpeningElement(props: {
     // $FlowFixMe[incompatible-call],
     attributes: props.attributes.map(n => asDetachedNode(n)),
     selfClosing: props.selfClosing,
+    // $FlowFixMe[incompatible-call],
+    typeArguments: asDetachedNode(props.typeArguments),
   });
   setParentPointersInDirectChildren(node);
   return node;

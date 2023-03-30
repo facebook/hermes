@@ -806,8 +806,10 @@ function deserializeJSXOpeningElement() {
     name: this.deserializeNode(),
     attributes: this.deserializeNodeList(),
     selfClosing: this.deserializeBoolean(),
+    typeArguments: this.deserializeNode(),
   };
 }
+
 function deserializeJSXClosingElement() {
   return {
     type: 'JSXClosingElement',
@@ -1858,6 +1860,7 @@ module.exports = [
   deserializeJSXExpressionContainer,
   deserializeJSXSpreadChild,
   deserializeJSXOpeningElement,
+
   deserializeJSXClosingElement,
   deserializeJSXAttribute,
   deserializeJSXSpreadAttribute,

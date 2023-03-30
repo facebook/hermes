@@ -595,6 +595,8 @@ class Referencer extends Visitor {
         break;
     }
 
+    this.visitType(node.typeArguments);
+
     for (const attr of node.attributes) {
       this.visit(attr);
     }
