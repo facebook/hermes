@@ -1146,6 +1146,7 @@ function deserializeDeclareVariable() {
     type: 'DeclareVariable',
     loc: this.addEmptyLoc(),
     id: this.deserializeNode(),
+    kind: this.deserializeString(),
   };
 }
 function deserializeDeclareExportDeclaration() {

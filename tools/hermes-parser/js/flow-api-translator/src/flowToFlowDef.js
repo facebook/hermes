@@ -826,6 +826,7 @@ function convertVariableDeclaration(
         }),
         optional: false,
       }),
+      kind: stmt.kind,
     }),
     annotDeps,
   ];

@@ -1,16 +1,11 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`flowDefToTSDef export/declare/named/single/variable 1`] = `
-"/**
+/**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- *
- * @format
+ * @flow strict-local
+ * TODO: re-enable Prettier once it has been updated to understand this syntax
  */
 
-export declare var foo: string;
-"
-`;
+declare export let foo: string;

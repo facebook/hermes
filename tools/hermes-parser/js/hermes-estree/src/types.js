@@ -1555,6 +1555,7 @@ export interface DeclareClass extends BaseNode {
 export interface DeclareVariable extends BaseNode {
   +type: 'DeclareVariable';
   +id: Identifier;
+  +kind: 'var' | 'let' | 'const';
 }
 
 export interface DeclareFunction extends BaseNode {
