@@ -53,7 +53,7 @@ function StrictHasParamExprs() {
 // Auto-generated content below. Please do not modify manually.
 
 // BS:Bytecode File Information:
-// BS-NEXT:  Bytecode version number: 95
+// BS-NEXT:  Bytecode version number: {{.*}}
 // BS-NEXT:  Source hash: {{.*}}
 // BS-NEXT:  Function count: 13
 // BS-NEXT:  String count: 11
@@ -444,7 +444,7 @@ function StrictHasParamExprs() {
 // BS-NEXT:  0x00d8  end of debug string table
 
 // NOBS:Bytecode File Information:
-// NOBS-NEXT:  Bytecode version number: 95
+// NOBS-NEXT:  Bytecode version number: {{.*}}
 // NOBS-NEXT:  Source hash: {{.*}}
 // NOBS-NEXT:  Function count: 13
 // NOBS-NEXT:  String count: 11

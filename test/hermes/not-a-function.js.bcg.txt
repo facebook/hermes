@@ -8,7 +8,7 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHK-BCG:Bytecode File Information:
-// CHK-BCG-NEXT:  Bytecode version number: 95
+// CHK-BCG-NEXT:  Bytecode version number: {{.*}}
 // CHK-BCG-NEXT:  Source hash: {{.*}}
 // CHK-BCG-NEXT:  Function count: 18
 // CHK-BCG-NEXT:  String count: 19

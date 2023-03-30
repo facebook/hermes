@@ -37,7 +37,7 @@ function foo() {
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 95
+// CHKBC-NEXT:  Bytecode version number: {{.*}}
 // CHKBC-NEXT:  Source hash: {{.*}}
 // CHKBC-NEXT:  Function count: 2
 // CHKBC-NEXT:  String count: 3
