@@ -17,3 +17,5 @@ type U2 = string | A2 | A1;
 
 let a3 : U1[] = [];
 let a4 : U2[] = [];
+
+let a5: number[] = ([]: (number|number)[]);

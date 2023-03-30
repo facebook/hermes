@@ -157,8 +157,7 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
   bool hasMixed_ = false;
 
  public:
-  /// Initialize an empty (freshly created) instance.
-  void init(llvh::ArrayRef<Type *> types);
+  explicit UnionType(llvh::SmallVector<Type *, 4> &&types);
 
   /// Return the members of the union.
   llvh::ArrayRef<Type *> getTypes() const {
@@ -180,6 +179,11 @@ class UnionType : public SingleType<TypeKind::Union, Type> {
   int _compareImpl(const UnionType *other) const;
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const;
+
+  /// Canonicalize the given \p types, by collapsing nested unions, removing
+  /// duplicates, and deterministically sorting types.
+  static llvh::SmallVector<Type *, 4> canonicalizeTypes(
+      llvh::ArrayRef<Type *> types);
 };
 
 class ArrayType : public SingleType<TypeKind::Array, Type> {
@@ -498,14 +502,12 @@ class FlowContext {
   /// Get a singleton type by index.
   Type *getSingletonType(TypeKind kind) const;
 
-  /// Create an initialized union.
-  UnionType *createPopulatedUnion(llvh::ArrayRef<Type *> types);
+  /// Canonicalize the given \p types, and create a union from them if more than
+  /// one type remains. Otherwise, just return the single type.
+  Type *maybeCreateUnion(llvh::ArrayRef<Type *> types);
   /// Create an initialized "maybe" type (void | null | type).
   UnionType *createPopulatedNullable(Type *type);
 
-  UnionType *createUnion() {
-    return &allocUnion_.emplace_back();
-  }
   ArrayType *createArray() {
     return &allocArray_.emplace_back();
   }
@@ -521,6 +523,12 @@ class FlowContext {
   }
 
  private:
+  /// Allocate a union from the given \p types. The types may not contain
+  /// duplicates or other unions.
+  UnionType *createUnion(llvh::SmallVector<Type *, 4> &&types) {
+    return &allocUnion_.emplace_back(std::move(types));
+  }
+
   /// Types associated with declarations.
   llvh::DenseMap<const sema::Decl *, Type *> declTypes_{};
 

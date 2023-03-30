@@ -126,45 +126,49 @@ unsigned Type::hash() const {
   return hashValue_ = hv;
 }
 
-void UnionType::init(llvh::ArrayRef<Type *> types) {
-  assert(types_.empty() && "Union already initialized");
-
-  types_.reserve(types.size());
-
-  auto addType = [this](Type *t) {
+UnionType::UnionType(llvh::SmallVector<Type *, 4> &&types)
+    : types_(std::move(types)) {
+  assert(types_.size() > 1 && " Single element unions are unsupported");
+  for (auto *t : types_) {
     assert(
         !llvh::isa<UnionType>(t) && "nested union should have been flattened");
-    types_.push_back(t);
     if (t->getKind() == TypeKind::Any)
       hasAny_ = true;
     else if (t->getKind() == TypeKind::Mixed)
       hasMixed_ = true;
-  };
+  }
+}
 
-  // Copy the union types to the types_, but flatten nested unions. Note that
+llvh::SmallVector<Type *, 4> UnionType::canonicalizeTypes(
+    llvh::ArrayRef<Type *> types) {
+  llvh::SmallVector<Type *, 4> canonicalized;
+
+  // Copy the union types to canonicalized, but flatten nested unions. Note that
   // there can't be more than one level.
   for (Type *elemType : types) {
     if (auto *unionType = llvh::dyn_cast<UnionType>(elemType)) {
       for (Type *nestedElem : unionType->types_) {
-        addType(nestedElem);
+        canonicalized.push_back(nestedElem);
       }
     } else {
-      addType(elemType);
+      canonicalized.push_back(elemType);
     }
   }
 
   // Sort for predictable order.
-  std::sort(types_.begin(), types_.end(), [](Type *a, Type *b) {
+  std::sort(canonicalized.begin(), canonicalized.end(), [](Type *a, Type *b) {
     return a->compare(b) < 0;
   });
 
   // Remove identical union arms.
-  types_.erase(
+  canonicalized.erase(
       std::unique(
-          types_.begin(),
-          types_.end(),
+          canonicalized.begin(),
+          canonicalized.end(),
           [](Type *a, Type *b) { return a->equals(b); }),
-      types_.end());
+      canonicalized.end());
+
+  return canonicalized;
 }
 
 int UnionType::_compareImpl(const UnionType *other) const {
@@ -329,14 +333,20 @@ Type *FlowContext::getSingletonType(TypeKind kind) const {
   }
 }
 
-UnionType *FlowContext::createPopulatedUnion(llvh::ArrayRef<Type *> types) {
-  UnionType *res = createUnion();
-  res->init(types);
-  return res;
+Type *FlowContext::maybeCreateUnion(llvh::ArrayRef<Type *> types) {
+  assert(!types.empty() && "types must not be empty");
+  auto canonicalized = UnionType::canonicalizeTypes(types);
+
+  // The types collapsed to a single type, so return that.
+  if (canonicalized.size() == 1)
+    return canonicalized.front();
+
+  return createUnion(std::move(canonicalized));
 }
 
 UnionType *FlowContext::createPopulatedNullable(Type *type) {
-  return createPopulatedUnion({getVoid(), getNull(), type});
+  // We know that there are at least 2 types, so it will be a union.
+  return llvh::cast<UnionType>(maybeCreateUnion({getVoid(), getNull(), type}));
 }
 
 } // namespace flow

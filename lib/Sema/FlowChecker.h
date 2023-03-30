@@ -240,7 +240,7 @@ class FlowChecker {
       Type *fwdType,
       llvh::SmallVectorImpl<ForwardDecl> *forwardDecls);
 
-  UnionType *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
+  Type *parseUnionTypeAnnotation(ESTree::UnionTypeAnnotationNode *node);
   UnionType *parseNullableTypeAnnotation(
       ESTree::NullableTypeAnnotationNode *node);
   ArrayType *parseArrayTypeAnnotation(

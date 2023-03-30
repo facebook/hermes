@@ -623,7 +623,7 @@ class FlowChecker::ExprVisitor {
       // any becomes (number|bigint).
       llvh::SmallVector<Type *, 2> types{
           outer_.flowContext_.getNumber(), outer_.flowContext_.getBigInt()};
-      outer_.setNodeType(node, outer_.flowContext_.createPopulatedUnion(types));
+      outer_.setNodeType(node, outer_.flowContext_.maybeCreateUnion(types));
       return;
     }
     outer_.sm_.error(
@@ -1355,7 +1355,7 @@ class FlowChecker::DeclareScopeTypes {
       llvh::SmallVector<Type *, 4> types{};
       for (ESTree::Node &node : uta->_types)
         types.push_back(resolveTypeAnnotation(&node, visited, depth));
-      return outer.flowContext_.createPopulatedUnion(types);
+      return outer.flowContext_.maybeCreateUnion(types);
     }
 
     /// A nullable annotation is a simple case of a union.
@@ -1659,12 +1659,12 @@ Type *FlowChecker::parseTypeAnnotation(
   }
 }
 
-UnionType *FlowChecker::parseUnionTypeAnnotation(
+Type *FlowChecker::parseUnionTypeAnnotation(
     ESTree::UnionTypeAnnotationNode *node) {
   llvh::SmallVector<Type *, 4> types{};
   for (auto &n : node->_types)
     types.push_back(parseTypeAnnotation(&n, nullptr, nullptr));
-  return flowContext_.createPopulatedUnion(types);
+  return flowContext_.maybeCreateUnion(types);
 }
 
 UnionType *FlowChecker::parseNullableTypeAnnotation(
