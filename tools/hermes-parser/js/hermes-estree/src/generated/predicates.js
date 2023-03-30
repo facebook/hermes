@@ -137,6 +137,10 @@ export function isDeclaredPredicate(node: ESNode | Token): boolean %checks {
   return node.type === 'DeclaredPredicate';
 }
 
+export function isDeclareEnum(node: ESNode | Token): boolean %checks {
+  return node.type === 'DeclareEnum';
+}
+
 export function isDeclareExportAllDeclaration(
   node: ESNode | Token,
 ): boolean %checks {

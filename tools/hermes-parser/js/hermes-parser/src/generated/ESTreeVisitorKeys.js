@@ -79,6 +79,7 @@ module.exports = {
     'body',
   ],
   DeclaredPredicate: ['value'],
+  DeclareEnum: ['id', 'body'],
   DeclareExportAllDeclaration: ['source'],
   DeclareExportDeclaration: ['declaration', 'specifiers', 'source'],
   DeclareFunction: ['id', 'predicate'],

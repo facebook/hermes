@@ -10,14 +10,14 @@
 
 'use strict';
 
-import type {EnumDeclaration, Identifier} from 'hermes-estree';
+import type {EnumDeclaration, Identifier, DeclareEnum} from 'hermes-estree';
 
 import {DefinitionType} from './DefinitionType';
 import {DefinitionBase} from './DefinitionBase';
 
 class EnumDefinition extends DefinitionBase<
   typeof DefinitionType.Enum,
-  EnumDeclaration,
+  DeclareEnum | EnumDeclaration,
   null,
   Identifier,
 > {

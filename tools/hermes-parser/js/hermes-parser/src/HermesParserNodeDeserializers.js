@@ -1149,6 +1149,14 @@ function deserializeDeclareVariable() {
     kind: this.deserializeString(),
   };
 }
+function deserializeDeclareEnum() {
+  return {
+    type: 'DeclareEnum',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    body: this.deserializeNode(),
+  };
+}
 function deserializeDeclareExportDeclaration() {
   return {
     type: 'DeclareExportDeclaration',
@@ -1899,6 +1907,7 @@ module.exports = [
   deserializeDeclareClass,
   deserializeDeclareFunction,
   deserializeDeclareVariable,
+  deserializeDeclareEnum,
   deserializeDeclareExportDeclaration,
   deserializeDeclareExportAllDeclaration,
   deserializeDeclareModule,

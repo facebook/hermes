@@ -48,6 +48,7 @@ import type {
   DebuggerStatement as DebuggerStatementType,
   DeclareClass as DeclareClassType,
   DeclaredPredicate as DeclaredPredicateType,
+  DeclareEnum as DeclareEnumType,
   DeclareExportAllDeclaration as DeclareExportAllDeclarationType,
   DeclareInterface as DeclareInterfaceType,
   DeclareModule as DeclareModuleType,
@@ -311,6 +312,11 @@ export type DeclareClassProps = {
 
 export type DeclaredPredicateProps = {
   +value: MaybeDetachedNode<DeclaredPredicateType['value']>,
+};
+
+export type DeclareEnumProps = {
+  +id: MaybeDetachedNode<DeclareEnumType['id']>,
+  +body: MaybeDetachedNode<DeclareEnumType['body']>,
 };
 
 export type DeclareExportAllDeclarationProps = {
@@ -1360,6 +1366,21 @@ export function DeclaredPredicate(props: {
     type: 'DeclaredPredicate',
     // $FlowFixMe[incompatible-call],
     value: asDetachedNode(props.value),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareEnum(props: {
+  ...$ReadOnly<DeclareEnumProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareEnumType> {
+  const node = detachedProps<DeclareEnumType>(props.parent, {
+    type: 'DeclareEnum',
+    // $FlowFixMe[incompatible-call],
+    id: asDetachedNode(props.id),
+    // $FlowFixMe[incompatible-call],
+    body: asDetachedNode(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;

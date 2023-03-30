@@ -127,6 +127,10 @@ export const HERMES_AST_VISITOR_KEYS = {
   DeclaredPredicate: {
     value: 'Node',
   },
+  DeclareEnum: {
+    id: 'Node',
+    body: 'Node',
+  },
   DeclareExportAllDeclaration: {
     source: 'Node',
   },
