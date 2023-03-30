@@ -1785,13 +1785,16 @@ SKIP_LIST = [
     "flow/class_properties/migrated_0003.js",
     "flow/class_properties/migrated_0008.js",
     "flow/class_properties/migrated_0026.js",
+    "flow/enums/declare-enum-option-off.js",
     "flow/nullish_coalescing/missing-plugin.js",
     "flow/optional_chaining/missing-plugin.js",
     "flow/typeapp_call/disabled_ambiguous_call.js",
     "flow/typeapp_call/disabled_ambiguous_new.js",
     "flow/typeapp_call/function_call_optional.js",
     "flow/typeapp_call/method_call_optional2.js",
+    "flow/types/declare_module_with_exports/enums-off.js",
     # Semantic validation
+    "flow/async_await/await_id_in_async_param_default.js",
     "flow/ES6/super-property/super-call-in-static-constructor.js",
     "flow/class_properties/super-call-in-arrow.js",
     "flow/enums/enum-duplicate-member-name.js",
@@ -1803,6 +1806,7 @@ SKIP_LIST = [
     "flow/uninitialized_const_bindings_invalid/migrated_0000.js",
     "flow/this_param/class_constructor.js",
     # Reserved type names
+    "flow/types/aliases/invalid_keyword_symbol.js",
     "flow/types/aliases/reserved_type.js",
     "flow/types/annotations/static_is_reserved_param.js",
     "flow/types/annotations/static_is_reserved_type.js",
@@ -1820,6 +1824,7 @@ SKIP_LIST = [
     "flow/types/invalid_keywords/migrated_0001.js",
     "flow/types/opaque_aliases/invalid/reserved_type.js",
     "flow/types/opaque_aliases/valid/reserved_value.js",
+    "flow/types/reserved/function.js",
     # Potentially invalid JSX that is inconsistent across implementations.
     "flow/JSX/invalid_unpaired_gt.js",
     "flow/JSX/invalid_unpaired_rcurly.js",
@@ -1964,8 +1969,17 @@ PERMANENT_SKIP_LIST = [
     "flow/decorators/",
     "flow/types/annotations_in_comments/",
     "flow/types/annotations_in_comments_invalid/",
+    "flow/types/conditional_types/",
+    "flow/ES6/template-literals/comments_in_interpolation.js",
+    "flow/ES6/template-literals/comments_in_interpolation_multiline.js",
+    # Flow TS syntax, unsupported so far.
+    "flow/ts_syntax/",
+    # More escaped identifiers
+    "flow/for_of_loops/for_async_of_escaped.js",
     # Flow bug
     "flow/JSX_invalid/migrated_0000.js",
+    # Flow has a very different way of representing namespace exports.
+    "flow/ES6/modules/migrated_0008.js",
 ]
 
 HANDLESAN_SKIP_LIST = [
