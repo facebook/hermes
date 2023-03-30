@@ -1103,6 +1103,7 @@ export type TypeAnnotationType =
   | ExistsTypeAnnotation
   | GenericTypeAnnotation
   | QualifiedTypeIdentifier
+  | QualifiedTypeofIdentifier
   | TypeofTypeAnnotation
   | TupleTypeAnnotation
   | InterfaceTypeAnnotation
@@ -1218,9 +1219,14 @@ export interface QualifiedTypeIdentifier extends BaseNode {
   +id: Identifier;
   +qualification: QualifiedTypeIdentifier | Identifier;
 }
+export interface QualifiedTypeofIdentifier extends BaseNode {
+  +type: 'QualifiedTypeofIdentifier';
+  +id: Identifier;
+  +qualification: QualifiedTypeofIdentifier | Identifier;
+}
 export interface TypeofTypeAnnotation extends BaseNode {
   +type: 'TypeofTypeAnnotation';
-  +argument: TypeAnnotationType;
+  +argument: QualifiedTypeofIdentifier | Identifier;
 }
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';

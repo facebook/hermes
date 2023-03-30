@@ -200,6 +200,7 @@ module.exports = {
     'tsModifiers',
   ],
   QualifiedTypeIdentifier: ['qualification', 'id'],
+  QualifiedTypeofIdentifier: ['qualification', 'id'],
   RestElement: ['argument'],
   ReturnStatement: ['argument'],
   SequenceExpression: ['expressions'],

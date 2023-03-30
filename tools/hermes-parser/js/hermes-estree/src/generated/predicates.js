@@ -529,6 +529,12 @@ export function isQualifiedTypeIdentifier(
   return node.type === 'QualifiedTypeIdentifier';
 }
 
+export function isQualifiedTypeofIdentifier(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'QualifiedTypeofIdentifier';
+}
+
 export function isRestElement(node: ESNode | Token): boolean %checks {
   return node.type === 'RestElement';
 }

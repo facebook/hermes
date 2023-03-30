@@ -229,6 +229,7 @@ export default ({
   ObjectTypeSpreadProperty: ['Flow', 'UserWhitespacable'],
   OpaqueType: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   QualifiedTypeIdentifier: ['Flow'],
+  QualifiedTypeofIdentifier: ['Flow'],
   StringLiteralTypeAnnotation: ['Flow', 'FlowType'],
   StringTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   SymbolTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],

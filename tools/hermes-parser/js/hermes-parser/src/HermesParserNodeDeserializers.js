@@ -976,6 +976,14 @@ function deserializeTypeofTypeAnnotation() {
     argument: this.deserializeNode(),
   };
 }
+function deserializeQualifiedTypeofIdentifier() {
+  return {
+    type: 'QualifiedTypeofIdentifier',
+    loc: this.addEmptyLoc(),
+    qualification: this.deserializeNode(),
+    id: this.deserializeNode(),
+  };
+}
 function deserializeTupleTypeAnnotation() {
   return {
     type: 'TupleTypeAnnotation',
@@ -1852,6 +1860,7 @@ module.exports = [
   deserializeNullableTypeAnnotation,
   deserializeQualifiedTypeIdentifier,
   deserializeTypeofTypeAnnotation,
+  deserializeQualifiedTypeofIdentifier,
   deserializeTupleTypeAnnotation,
   deserializeArrayTypeAnnotation,
   deserializeUnionTypeAnnotation,

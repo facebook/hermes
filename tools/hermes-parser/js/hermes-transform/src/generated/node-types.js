@@ -132,6 +132,7 @@ import type {
   Property as PropertyType,
   PropertyDefinition as PropertyDefinitionType,
   QualifiedTypeIdentifier as QualifiedTypeIdentifierType,
+  QualifiedTypeofIdentifier as QualifiedTypeofIdentifierType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -815,6 +816,13 @@ export type QualifiedTypeIdentifierProps = {
     QualifiedTypeIdentifierType['qualification'],
   >,
   +id: MaybeDetachedNode<QualifiedTypeIdentifierType['id']>,
+};
+
+export type QualifiedTypeofIdentifierProps = {
+  +qualification: MaybeDetachedNode<
+    QualifiedTypeofIdentifierType['qualification'],
+  >,
+  +id: MaybeDetachedNode<QualifiedTypeofIdentifierType['id']>,
 };
 
 export type RestElementProps = {
@@ -2601,6 +2609,21 @@ export function QualifiedTypeIdentifier(props: {
 }): DetachedNode<QualifiedTypeIdentifierType> {
   const node = detachedProps<QualifiedTypeIdentifierType>(props.parent, {
     type: 'QualifiedTypeIdentifier',
+    // $FlowFixMe[incompatible-call],
+    qualification: asDetachedNode(props.qualification),
+    // $FlowFixMe[incompatible-call],
+    id: asDetachedNode(props.id),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function QualifiedTypeofIdentifier(props: {
+  ...$ReadOnly<QualifiedTypeofIdentifierProps>,
+  +parent?: ESNode,
+}): DetachedNode<QualifiedTypeofIdentifierType> {
+  const node = detachedProps<QualifiedTypeofIdentifierType>(props.parent, {
+    type: 'QualifiedTypeofIdentifier',
     // $FlowFixMe[incompatible-call],
     qualification: asDetachedNode(props.qualification),
     // $FlowFixMe[incompatible-call],
