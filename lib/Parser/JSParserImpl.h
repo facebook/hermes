@@ -1107,6 +1107,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePrefixTypeAnnotationFlow();
   Optional<ESTree::Node *> parsePostfixTypeAnnotationFlow();
   Optional<ESTree::Node *> parsePrimaryTypeAnnotationFlow();
+  Optional<ESTree::Node *> parseTypeofTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTupleTypeAnnotationFlow();
   Optional<ESTree::Node *> parseFunctionTypeAnnotationFlow();
   Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParamsFlow(
