@@ -16,13 +16,31 @@ function foo(p) {
     function x() {}
     function y() {}
     function z() {}
+    {
+      function a() {}
+    }
+    try { throw null } catch {
+      {
+        function b() {}
+      }
+    }
+    try {
+      throw null;
+    } catch (c) {
+        {
+          function c() { return 123; }
+        }
+    }
   }
   // p is not promoted.
   // x is not promoted.
   // y is promoted.
   // z is promoted.
-  print(typeof p, typeof x, typeof y, typeof z);
+  // a is promoted.
+  // b is promoted.
+  // c is promoted.
+  print(typeof p, typeof x, typeof y, typeof z, typeof a, typeof b, typeof c);
 }
 
 foo();
-// CHECK: undefined number function function
+// CHECK: undefined number function function function function function

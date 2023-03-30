@@ -41,21 +41,27 @@ class ScopedFunctionPromoter {
 
   void visit(SwitchStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
   void visit(BlockStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
   void visit(ForStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
   void visit(ForInStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
   void visit(ForOfStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
   void visit(WithStatementNode *node) {
     visitScope(node);
+    visitESTreeChildren(*this, node);
   }
 
   /// Needed by RecursiveVisitorDispatch. Optionally can protect against too
