@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-ir %s -fno-inline | %FileCheckOrRegen %s
+// RUN: %hermesc -dump-ir %s -fno-inline | %FileCheckOrRegen --match-full-lines %s
 
 "use strict";
 
@@ -72,7 +72,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %2 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function "use_this 1#"(k: number): undefined
+// CHECK:function "use_this 1#"(k: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object

@@ -40,17 +40,13 @@ function outer() {
 // CHECK-NEXT:  %3 = ReturnInst %2: closure
 // CHECK-NEXT:function_end
 
-// CHECK:function Point(x: any, y: any, z: any): undefined
+// CHECK:function Point(x: any, y: any, z: any): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %this: object
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %4 = StorePropertyStrictInst %1: any, %0: object, "x": string
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %2: any, %0: object, "y": string
-// CHECK-NEXT:  %6 = StorePropertyStrictInst %3: any, %0: object, "z": string
-// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "x": string
+// CHECK-NEXT:  %1 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "y": string
+// CHECK-NEXT:  %2 = StorePropertyStrictInst undefined: undefined, undefined: undefined, "z": string
+// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function makePoint(x: any, y: any, z: any): object
@@ -62,6 +58,8 @@ function outer() {
 // CHECK-NEXT:  %3 = LoadFrameInst (:closure) [Point@outer]: closure
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: closure, "prototype": string
 // CHECK-NEXT:  %5 = CreateThisInst (:object) %4: any, %3: closure
-// CHECK-NEXT:  %6 = ConstructInst (:undefined) %3: closure, %Point(): undefined, empty: any, %5: object, %0: any, %1: any, %2: any
-// CHECK-NEXT:  %7 = ReturnInst %5: object
+// CHECK-NEXT:  %6 = StorePropertyStrictInst %0: any, %5: object, "x": string
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %1: any, %5: object, "y": string
+// CHECK-NEXT:  %8 = StorePropertyStrictInst %2: any, %5: object, "z": string
+// CHECK-NEXT:  %9 = ReturnInst %5: object
 // CHECK-NEXT:function_end

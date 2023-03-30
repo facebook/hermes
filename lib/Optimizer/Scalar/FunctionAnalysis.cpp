@@ -80,7 +80,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         for (Instruction *loadUser : load->getUsers()) {
           // Construction setup instructions can't leak the closure on their
           // own, but don't contribute to the call graph.
-          if (isConstructionSetup(createUser, create)) {
+          if (isConstructionSetup(loadUser, load)) {
             continue;
           }
           auto *call = llvh::dyn_cast<BaseCallInst>(loadUser);
