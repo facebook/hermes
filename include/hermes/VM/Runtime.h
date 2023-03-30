@@ -455,7 +455,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// \return the next unique object ID.
   ObjectID generateNextObjectID() {
-    return ++nextObjectID_;
+    return llvh::hash_value(++nextObjectID_);
   }
 
   /// Compute a hash value of a given HermesValue that is guaranteed to
