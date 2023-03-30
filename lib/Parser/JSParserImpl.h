@@ -555,8 +555,9 @@ class JSParserImpl {
         return false;
       TokenKind next = *optNext;
       return next == TokenKind::identifier || next == TokenKind::rw_interface ||
-          next == TokenKind::rw_var || next == TokenKind::rw_function ||
-          next == TokenKind::rw_class || next == TokenKind::rw_export;
+          next == TokenKind::rw_var || next == TokenKind::rw_const ||
+          next == TokenKind::rw_function || next == TokenKind::rw_class ||
+          next == TokenKind::rw_export;
     }
 #endif
     return false;

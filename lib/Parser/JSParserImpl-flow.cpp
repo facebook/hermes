@@ -92,7 +92,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   if (check(moduleIdent_)) {
     return parseDeclareModuleFlow(start);
   }
-  if (checkAndEat(TokenKind::rw_var)) {
+  if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
+    ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
+    advance();
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent) {
       errorExpected(
@@ -102,12 +104,17 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
           start);
       return None;
     }
+    if (!(*optIdent)->_typeAnnotation) {
+      error(
+          (*optIdent)->getSourceRange(),
+          "expected type annotation on declared var");
+    }
     if (!eatSemi())
       return None;
     return setLocation(
         start,
         getPrevTokenEndLoc(),
-        new (context_) ESTree::DeclareVariableNode(*optIdent));
+        new (context_) ESTree::DeclareVariableNode(*optIdent, kind));
   }
 
   if (!check(TokenKind::rw_export)) {
@@ -765,7 +772,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             *optClass, {}, nullptr, false));
   }
 
-  if (check(TokenKind::rw_var)) {
+  if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
+    ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
     SMLoc varStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optIdent = parseBindingIdentifier(Param{});
     if (!optIdent) {
@@ -775,6 +783,11 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
           "start of declaration",
           start);
       return None;
+    }
+    if (!(*optIdent)->_typeAnnotation) {
+      error(
+          (*optIdent)->getSourceRange(),
+          "expected type annotation on declared var");
     }
     if (!eatSemi())
       return None;
@@ -787,7 +800,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
             setLocation(
                 varStart,
                 end,
-                new (context_) ESTree::DeclareVariableNode(*optIdent)),
+                new (context_) ESTree::DeclareVariableNode(*optIdent, kind)),
             {},
             nullptr,
             false));
