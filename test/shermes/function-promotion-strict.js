@@ -8,18 +8,19 @@
 // RUN: %shermes -O0 -exec %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -O -exec %s | %FileCheck --match-full-lines %s
 
-function foo() {
+function foo(p) {
   'use strict';
   let x = 1;
   var y = 2;
   {
+    function p() {}
     function x() {}
     function y() {}
     function z() {}
   }
   // Nothing is promoted.
-  print(typeof x, typeof y, typeof z);
+  print(typeof p, typeof x, typeof y, typeof z);
 }
 
 foo();
-// CHECK: number number undefined
+// CHECK: undefined number number undefined

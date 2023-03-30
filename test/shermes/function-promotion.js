@@ -8,19 +8,21 @@
 // RUN: %shermes -O0 -exec %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -O -exec %s | %FileCheck --match-full-lines %s
 
-function foo() {
+function foo(p) {
   let x = 1;
   var y = 2;
   {
+    function p() {}
     function x() {}
     function y() {}
     function z() {}
   }
+  // p is not promoted.
   // x is not promoted.
   // y is promoted.
   // z is promoted.
-  print(typeof x, typeof y, typeof z);
+  print(typeof p, typeof x, typeof y, typeof z);
 }
 
 foo();
-// CHECK: number function function
+// CHECK: undefined number function function

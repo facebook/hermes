@@ -6,9 +6,6 @@
  */
 
 // RUN: %shermes -Xenable-tdz -exec %s | %FileCheck --match-full-lines %s
-// XFAIL: *
-
-// This test is failing (T149327657), so disabled for now.
 
 function foo(f = 123) {
     print(typeof f);

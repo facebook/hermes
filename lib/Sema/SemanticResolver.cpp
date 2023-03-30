@@ -1375,12 +1375,13 @@ void SemanticResolver::validateAndDeclareIdentifier(
     if (Decl::isKindVarLike(prevKind) && Decl::isKindVarLike(kind)) {
       decl = prevName.decl;
     }
-    // Var, ScopedFunc -> if non-strict or same scope, then use prev,
+    // Var, ScopedFunc -> if non-param non-strict or same scope, then use prev,
     //                    else declare new
     else if (
         Decl::isKindVarLike(prevKind) &&
         Decl::isKindVarLikeOrScopedFunction(kind)) {
-      if (sameScope || !curFunctionInfo()->strict)
+      if (sameScope ||
+          (prevKind != Decl::Kind::Parameter && !curFunctionInfo()->strict))
         decl = prevName.decl;
       else
         decl = nullptr;

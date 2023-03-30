@@ -69,6 +69,12 @@ class ScopedFunctionPromoter {
   /// Visit any statement starting a scope.
   void visitScope(Node *node);
 
+  /// Add the formal parameters of \p func to the binding table if they have
+  /// names we care about, because they must also prevent function promotion.
+  /// ES2022 B.3.2.1 29.a.ii
+  /// Needed to check "parameterNames does not contain F".
+  void processParameters(FunctionLikeNode *funcNode);
+
   /// Process the declarations in a scope.
   /// This is the core of the algorithm, it updates the binding tables, etc.
   void processDeclarations(Node *scope);
@@ -112,6 +118,7 @@ void ScopedFunctionPromoter::run(FunctionLikeNode *funcNode) {
     funcDecls_.insert(funcDecl);
   }
 
+  processParameters(funcNode);
   processDeclarations(funcNode);
   if (auto *programNode = llvh::dyn_cast<ProgramNode>(funcNode)) {
     visitESTreeChildren(*this, programNode);
@@ -123,6 +130,19 @@ void ScopedFunctionPromoter::run(FunctionLikeNode *funcNode) {
 void ScopedFunctionPromoter::visitScope(Node *node) {
   BindingTableScopeTy bindingScope{bindingTable_};
   processDeclarations(node);
+}
+
+void ScopedFunctionPromoter::processParameters(FunctionLikeNode *funcNode) {
+  for (Decl *decl : funcNode->getSemInfo()->getFunctionScope()->decls) {
+    if (decl->kind == Decl::Kind::Parameter) {
+      UniqueString *name = decl->name.getUnderlyingPointer();
+      if (funcNames_.count(name)) {
+        // Found a parameter with a name we care about, add it to the binding
+        // table.
+        bindingTable_.insert(name, true);
+      }
+    }
+  }
 }
 
 void ScopedFunctionPromoter::processDeclarations(Node *scope) {
