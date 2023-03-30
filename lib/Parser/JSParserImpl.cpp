@@ -822,8 +822,10 @@ bool JSParserImpl::parseStatementListItem(
     // 'import' can indicate an import declaration, but it's also possible a
     // Statement begins with a call to `import()`, so do a lookahead to see if
     // the next token is '('.
+    // It can also be import.meta, so check for '.'.
     auto optNext = lexer_.lookahead1(None);
-    if (optNext.hasValue() && *optNext == TokenKind::l_paren) {
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::l_paren || *optNext == TokenKind::period)) {
       auto stmt = parseStatement(param.get(ParamReturn));
       if (!stmt)
         return false;
