@@ -1780,6 +1780,7 @@ SKIP_LIST = [
     # Destructuring identifier validation
     "flow/ES6/binding-pattern/object-pattern/yield-prop-alias-assignment-strict.js",
     # flow compiler "options" which disable features
+    "flow/JSX/jsx_type_args_types_disabled.js",
     "flow/async_arrow_functions/with_type_parameters_types_disabled.js",
     "flow/class_properties/migrated_0003.js",
     "flow/class_properties/migrated_0008.js",
