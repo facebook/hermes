@@ -739,6 +739,16 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     TupleTypeAnnotation, Base,
     NodeList, types, false)
+ESTREE_NODE_2_ARGS(
+    TupleTypeSpreadElement, Base,
+    NodePtr, label, true,
+    NodePtr, typeAnnotation, false)
+ESTREE_NODE_4_ARGS(
+    TupleTypeLabeledElement, Base,
+    NodePtr, label, false,
+    NodePtr, elementType, false,
+    NodeBoolean, optional, false,
+    NodePtr, variance, true)
 ESTREE_NODE_1_ARGS(
     ArrayTypeAnnotation, Base,
     NodePtr, elementType, false)

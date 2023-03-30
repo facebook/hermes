@@ -1109,6 +1109,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePrimaryTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTypeofTypeAnnotationFlow();
   Optional<ESTree::Node *> parseTupleTypeAnnotationFlow();
+  Optional<ESTree::Node *> parseTupleElementFlow();
   Optional<ESTree::Node *> parseFunctionTypeAnnotationFlow();
   Optional<ESTree::Node *> parseFunctionTypeAnnotationWithParamsFlow(
       SMLoc start,

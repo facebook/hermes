@@ -1315,7 +1315,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   ESTree::NodeList types{};
 
   while (!check(TokenKind::r_square)) {
-    auto optType = parseTypeAnnotationFlow();
+    auto optType = parseTupleElementFlow();
     if (!optType)
       return None;
     types.push_back(**optType);
@@ -1335,6 +1335,100 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
       start,
       advance(JSLexer::GrammarContext::Type).End,
       new (context_) ESTree::TupleTypeAnnotationNode(std::move(types)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
+  SMLoc startLoc = tok_->getStartLoc();
+
+  ESTree::Node *label = nullptr;
+  ESTree::Node *elementType = nullptr;
+  ESTree::Node *variance = nullptr;
+
+  // ...Identifier : Type
+  // ...Type
+  // ^
+  if (checkAndEat(TokenKind::dotdotdot, JSLexer::GrammarContext::Type)) {
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    if (checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+      auto optLabel = reparseTypeAnnotationAsIdentifierFlow(*optType);
+      if (!optLabel)
+        return None;
+      label = *optLabel;
+      auto optType = parseTypeAnnotationFlow();
+      if (!optType)
+        return None;
+      elementType = *optType;
+      return setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::TupleTypeSpreadElementNode(label, elementType));
+    }
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TupleTypeSpreadElementNode(label, *optType));
+  }
+
+  /// +Identifier : Type
+  /// -Identifier : Type
+  /// ^
+  if (check(TokenKind::plus, TokenKind::minus)) {
+    variance = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::VarianceNode(
+            check(TokenKind::plus) ? plusIdent_ : minusIdent_));
+    advance(JSLexer::GrammarContext::Type);
+  }
+
+  /// Identifier [?] : Type
+  /// Type
+  /// ^
+  auto optType = parseTypeAnnotationFlow();
+  if (!optType)
+    return None;
+
+  /// Identifier [?] : Type
+  ///             ^
+  if (check(TokenKind::colon, TokenKind::question)) {
+    bool optional =
+        checkAndEat(TokenKind::question, JSLexer::GrammarContext::Type);
+
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::GrammarContext::Type,
+            "in labeled tuple type element",
+            "location of tuple",
+            startLoc))
+      return None;
+
+    auto optLabel = reparseTypeAnnotationAsIdentifierFlow(*optType);
+    if (!optLabel)
+      return None;
+    label = *optLabel;
+    auto optType = parseTypeAnnotationFlow();
+    if (!optType)
+      return None;
+    elementType = *optType;
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::TupleTypeLabeledElementNode(
+            label, elementType, optional, variance));
+  }
+
+  if (variance) {
+    error(
+        variance->getSourceRange(),
+        "Variance can only be used with labeled tuple elements");
+  }
+
+  return *optType;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseFunctionTypeAnnotationFlow() {
