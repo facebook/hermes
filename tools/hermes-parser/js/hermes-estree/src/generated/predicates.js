@@ -611,6 +611,18 @@ export function isTupleTypeAnnotation(node: ESNode | Token): boolean %checks {
   return node.type === 'TupleTypeAnnotation';
 }
 
+export function isTupleTypeLabeledElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeLabeledElement';
+}
+
+export function isTupleTypeSpreadElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeSpreadElement';
+}
+
 export function isTypeAlias(node: ESNode | Token): boolean %checks {
   return node.type === 'TypeAlias';
 }

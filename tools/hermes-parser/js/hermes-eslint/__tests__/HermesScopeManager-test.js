@@ -2030,3 +2030,68 @@ describe('Imports', () => {
     );
   });
 });
+
+describe('TupleTypeAnnotation', () => {
+  describe('references types', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  describe('TupleTypeLabeledElement', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [a: T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  describe('TupleTypeSpreadElement with Label', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [...a: T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});

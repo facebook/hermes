@@ -515,6 +515,15 @@ export const HERMES_AST_VISITOR_KEYS = {
   TupleTypeAnnotation: {
     types: 'NodeList',
   },
+  TupleTypeLabeledElement: {
+    label: 'Node',
+    elementType: 'Node',
+    variance: 'Node',
+  },
+  TupleTypeSpreadElement: {
+    label: 'Node',
+    typeAnnotation: 'Node',
+  },
   TypeAlias: {
     id: 'Node',
     typeParameters: 'Node',

@@ -150,6 +150,8 @@ import type {
   ThrowStatement as ThrowStatementType,
   TryStatement as TryStatementType,
   TupleTypeAnnotation as TupleTypeAnnotationType,
+  TupleTypeLabeledElement as TupleTypeLabeledElementType,
+  TupleTypeSpreadElement as TupleTypeSpreadElementType,
   TypeAlias as TypeAliasType,
   TypeAnnotation as TypeAnnotationType,
   TypeCastExpression as TypeCastExpressionType,
@@ -899,6 +901,20 @@ export type TryStatementProps = {
 export type TupleTypeAnnotationProps = {
   +types: $ReadOnlyArray<
     MaybeDetachedNode<TupleTypeAnnotationType['types'][number]>,
+  >,
+};
+
+export type TupleTypeLabeledElementProps = {
+  +label: MaybeDetachedNode<TupleTypeLabeledElementType['label']>,
+  +elementType: MaybeDetachedNode<TupleTypeLabeledElementType['elementType']>,
+  +optional: TupleTypeLabeledElementType['optional'],
+  +variance?: ?MaybeDetachedNode<TupleTypeLabeledElementType['variance']>,
+};
+
+export type TupleTypeSpreadElementProps = {
+  +label?: ?MaybeDetachedNode<TupleTypeSpreadElementType['label']>,
+  +typeAnnotation: MaybeDetachedNode<
+    TupleTypeSpreadElementType['typeAnnotation'],
   >,
 };
 
@@ -2846,6 +2862,39 @@ export function TupleTypeAnnotation(props: {
     type: 'TupleTypeAnnotation',
     // $FlowFixMe[incompatible-call],
     types: props.types.map(n => asDetachedNode(n)),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeLabeledElement(props: {
+  ...$ReadOnly<TupleTypeLabeledElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeLabeledElementType> {
+  const node = detachedProps<TupleTypeLabeledElementType>(props.parent, {
+    type: 'TupleTypeLabeledElement',
+    // $FlowFixMe[incompatible-call],
+    label: asDetachedNode(props.label),
+    // $FlowFixMe[incompatible-call],
+    elementType: asDetachedNode(props.elementType),
+    optional: props.optional,
+    // $FlowFixMe[incompatible-call],
+    variance: asDetachedNode(props.variance),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeSpreadElement(props: {
+  ...$ReadOnly<TupleTypeSpreadElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeSpreadElementType> {
+  const node = detachedProps<TupleTypeSpreadElementType>(props.parent, {
+    type: 'TupleTypeSpreadElement',
+    // $FlowFixMe[incompatible-call],
+    label: asDetachedNode(props.label),
+    // $FlowFixMe[incompatible-call],
+    typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;

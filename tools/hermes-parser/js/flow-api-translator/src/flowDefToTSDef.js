@@ -2458,6 +2458,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           return transform.ThisTypeAnnotation(node);
         case 'TupleTypeAnnotation':
           return transform.TupleTypeAnnotation(node);
+        case 'TupleTypeLabeledElement':
+        case 'TupleTypeSpreadElement':
+          throw unsupportedTranslationError(node, node.type);
         case 'TypeofTypeAnnotation':
           return transform.TypeofTypeAnnotation(node);
         case 'UnionTypeAnnotation':

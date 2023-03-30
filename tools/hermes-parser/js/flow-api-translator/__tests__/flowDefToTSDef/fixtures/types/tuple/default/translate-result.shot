@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`flowDefToTSDef types/tuple 1`] = `
+exports[`flowDefToTSDef types/tuple/default 1`] = `
 "/**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *

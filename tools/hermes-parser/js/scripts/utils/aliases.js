@@ -235,6 +235,8 @@ export default ({
   SymbolTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   ThisTypeAnnotation: ['Flow', 'FlowType', 'FlowBaseAnnotation'],
   TupleTypeAnnotation: ['Flow', 'FlowType'],
+  TupleTypeSpreadElement: ['Flow', 'FlowType'],
+  TupleTypeLabeledElement: ['Flow', 'FlowType'],
   TypeofTypeAnnotation: ['Flow', 'FlowType'],
   TypeAlias: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   TypeAnnotation: ['Flow'],
