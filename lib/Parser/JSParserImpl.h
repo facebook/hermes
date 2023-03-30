@@ -557,7 +557,7 @@ class JSParserImpl {
       return next == TokenKind::identifier || next == TokenKind::rw_interface ||
           next == TokenKind::rw_var || next == TokenKind::rw_const ||
           next == TokenKind::rw_function || next == TokenKind::rw_class ||
-          next == TokenKind::rw_export;
+          next == TokenKind::rw_export || next == TokenKind::rw_enum;
     }
 #endif
     return false;
@@ -1237,7 +1237,8 @@ class JSParserImpl {
     }
   }
 
-  Optional<ESTree::Node *> parseEnumDeclarationFlow();
+  /// \param declare whether this is 'declare enum'
+  Optional<ESTree::Node *> parseEnumDeclarationFlow(SMLoc start, bool declare);
   Optional<ESTree::Node *> parseEnumBodyFlow(
       OptValue<EnumKind> optKind,
       Optional<SMLoc> explicitTypeStart);

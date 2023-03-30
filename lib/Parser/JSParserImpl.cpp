@@ -6573,7 +6573,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclarationFlow();
+      auto optEnum =
+          parseEnumDeclarationFlow(tok_->getStartLoc(), /* declare */ false);
       if (!optEnum) {
         return None;
       }

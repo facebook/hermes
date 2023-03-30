@@ -23,7 +23,7 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   SMLoc start = tok_->getStartLoc();
 
   if (check(TokenKind::rw_enum)) {
-    auto optEnum = parseEnumDeclarationFlow();
+    auto optEnum = parseEnumDeclarationFlow(start, /* declare */ false);
     if (!optEnum)
       return None;
     return *optEnum;
@@ -88,6 +88,9 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(
   }
   if (check(TokenKind::rw_function)) {
     return parseDeclareFunctionFlow(start);
+  }
+  if (check(TokenKind::rw_enum)) {
+    return parseEnumDeclarationFlow(start, /* declare */ true);
   }
   if (check(moduleIdent_)) {
     return parseDeclareModuleFlow(start);
@@ -770,6 +773,17 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(
         *optClass,
         new (context_) ESTree::DeclareExportDeclarationNode(
             *optClass, {}, nullptr, false));
+  }
+
+  if (check(TokenKind::rw_enum)) {
+    auto optEnum = parseEnumDeclarationFlow(start, /* declare */ true);
+    if (!optEnum)
+      return None;
+    return setLocation(
+        start,
+        *optEnum,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optEnum, {}, nullptr, false));
   }
 
   if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
@@ -2583,9 +2597,11 @@ JSParserImpl::reparseTypeAnnotationAsIdentifierFlow(
       new (context_) ESTree::IdentifierNode(id, nullptr, false));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
+Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow(
+    SMLoc start,
+    bool declare) {
   assert(check(TokenKind::rw_enum));
-  SMLoc start = advance().Start;
+  advance();
 
   if (!check(TokenKind::identifier)) {
     errorExpected(
@@ -2629,6 +2645,9 @@ Optional<ESTree::Node *> JSParserImpl::parseEnumDeclarationFlow() {
   if (!optBody)
     return None;
 
+  if (declare)
+    return setLocation(
+        start, *optBody, new (context_) ESTree::DeclareEnumNode(id, *optBody));
   return setLocation(
       start,
       *optBody,

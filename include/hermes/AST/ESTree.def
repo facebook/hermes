@@ -829,6 +829,10 @@ ESTREE_NODE_2_ARGS(
     DeclareVariable, Base,
     NodePtr, id, false,
     NodeLabel, kind, false)
+ESTREE_NODE_2_ARGS(
+    DeclareEnum, Base,
+    NodePtr, id, false,
+    NodePtr, body, false)
 ESTREE_NODE_4_ARGS(
     DeclareExportDeclaration, Base,
     NodePtr, declaration, true,
