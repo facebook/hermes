@@ -188,8 +188,9 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
             fromLast = reinterpret_cast<uintptr_t>(last);
   uintptr_t toFirst = reinterpret_cast<uintptr_t>(result),
             toLast = toFirst + fromFirst - fromLast;
+  assert(fromFirst <= fromLast && "Source range is reversed.");
   assert(
-      (toLast < fromFirst || fromLast < toFirst) &&
+      (toLast <= fromFirst || fromLast <= toFirst) &&
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
