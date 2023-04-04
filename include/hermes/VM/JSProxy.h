@@ -173,7 +173,7 @@ class JSProxy : public JSObject {
   static CallResult<PseudoHandle<JSArray>> ownPropertyKeys(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
-      OwnKeys::Flags okFlags);
+      OwnKeysFlags okFlags);
 
  public:
   JSProxy(Runtime &runtime, Handle<JSObject> parent, Handle<HiddenClass> clazz)

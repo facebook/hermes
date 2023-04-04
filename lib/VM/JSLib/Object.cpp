@@ -394,8 +394,13 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
   Handle<JSObject> obj = runtime.makeHandle<JSObject>(objRes.getValue());
 
   // 2. Let ownKeys be ? obj.[[OwnPropertyKeys]]().
-  auto ownKeysRes =
-      JSObject::getOwnPropertyKeys(obj, runtime, OwnKeys::AllKeys());
+  auto ownKeysRes = JSObject::getOwnPropertyKeys(
+      obj,
+      runtime,
+      OwnKeysFlags()
+          .plusIncludeNonSymbols()
+          .plusIncludeSymbols()
+          .plusIncludeNonEnumerable());
   if (LLVM_UNLIKELY(ownKeysRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -444,7 +449,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue> getOwnPropertyKeysAsStrings(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
-    OwnKeys::Flags okFlags) {
+    OwnKeysFlags okFlags) {
   auto cr = JSObject::getOwnPropertyKeys(selfHandle, runtime, okFlags);
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -482,7 +487,7 @@ objectGetOwnPropertyNames(void *, Runtime &runtime, NativeArgs args) {
   auto cr = getOwnPropertyKeysAsStrings(
       objHandle,
       runtime,
-      OwnKeys::Default().plusIncludeNonSymbols().plusIncludeNonEnumerable());
+      OwnKeysFlags().plusIncludeNonSymbols().plusIncludeNonEnumerable());
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -573,7 +578,9 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
   auto cr = JSObject::getOwnPropertyKeys(
       propsHandle,
       runtime,
-      OwnKeys::AllKeys()
+      OwnKeysFlags()
+          .plusIncludeSymbols()
+          .plusIncludeNonSymbols()
           // setIncludeNonEnumerable for proxies is necessary to get the right
           // traps in the right order.  The non-enumerable props will be
           // filtered out below.
@@ -793,7 +800,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   auto namesRes = getOwnPropertyKeysAsStrings(
       objHandle,
       runtime,
-      OwnKeys::Default().plusIncludeNonSymbols().setIncludeNonEnumerable(
+      OwnKeysFlags().plusIncludeNonSymbols().setIncludeNonEnumerable(
           objHandle->isProxyObject()));
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1031,8 +1038,10 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
     auto cr = JSObject::getOwnPropertyKeys(
         fromHandle,
         runtime,
-        OwnKeys::AllKeys().setIncludeNonEnumerable(
-            fromHandle->isProxyObject()));
+        OwnKeysFlags()
+            .plusIncludeSymbols()
+            .plusIncludeNonSymbols()
+            .setIncludeNonEnumerable(fromHandle->isProxyObject()));
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       // 5.c.ii. ReturnIfAbrupt(keys).
       return ExecutionStatus::EXCEPTION;

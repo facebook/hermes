@@ -1265,10 +1265,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
     Handle<JSObject> selfHandle,
     Handle<JSArray> keys,
     Runtime &runtime,
-    OwnKeys::Flags okFlags) {
-  assert(
-      okFlags.getIncludeEnumerable() &&
-      "For now, proxy does not support excluding enumerable keys");
+    OwnKeysFlags okFlags) {
   assert(
       (okFlags.getIncludeNonSymbols() || okFlags.getIncludeSymbols()) &&
       "Can't exclude symbols and strings");
@@ -1345,7 +1342,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
 CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
-    OwnKeys::Flags okFlags) {
+    OwnKeysFlags okFlags) {
   GCScope gcScope{runtime};
   ScopedNativeDepthTracker depthTracker(runtime);
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -1364,7 +1361,13 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     CallResult<Handle<JSArray>> targetRes =
         // Include everything here, so that filterKeys has a chance to
         // make observable trap calls.
-        JSObject::getOwnPropertyKeys(target, runtime, OwnKeys::AllKeys());
+        JSObject::getOwnPropertyKeys(
+            target,
+            runtime,
+            OwnKeysFlags()
+                .plusIncludeSymbols()
+                .plusIncludeNonSymbols()
+                .plusIncludeNonEnumerable());
     if (targetRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1445,8 +1448,13 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     return ExecutionStatus::EXCEPTION;
   }
   // 11. Let targetKeys be ? target.[[OwnPropertyKeys]]().
-  CallResult<Handle<JSArray>> targetKeysRes =
-      JSObject::getOwnPropertyKeys(target, runtime, OwnKeys::AllKeys());
+  CallResult<Handle<JSArray>> targetKeysRes = JSObject::getOwnPropertyKeys(
+      target,
+      runtime,
+      OwnKeysFlags()
+          .plusIncludeSymbols()
+          .plusIncludeNonSymbols()
+          .plusIncludeNonEnumerable());
   if (targetKeysRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
