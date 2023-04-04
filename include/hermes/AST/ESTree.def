@@ -1110,10 +1110,10 @@ ESTREE_NODE_1_ARGS(
     NodePtr, exprName, false)
 ESTREE_NODE_4_ARGS(
     TSConditionalType, Base,
-    NodePtr, extendsType, false,
     NodePtr, checkType, false,
+    NodePtr, extendsType, false,
     NodePtr, trueType, false,
-    NodePtr, falseTYpe, false)
+    NodePtr, falseType, false)
 
 ESTREE_NODE_1_ARGS(
     TSTypeLiteral, Base,
