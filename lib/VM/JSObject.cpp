@@ -135,8 +135,9 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime &runtime) {
   if (LLVM_LIKELY(self->flags_.objectID))
     return self->flags_.objectID;
 
-  // Object ID does not yet exist, get next unique global ID..
-  self->flags_.objectID = runtime.generateNextObjectID();
+  // Object ID does not yet exist, get next global ID.
+  // Use JenkinsHash to avoid IDs being completely sequential.
+  self->flags_.objectID = hermes::jenkinsHashUint32(++runtime.objectIDCounter);
   // Make sure it is not zero.
   if (LLVM_UNLIKELY(!self->flags_.objectID))
     --self->flags_.objectID;

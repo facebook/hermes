@@ -453,11 +453,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return returnThisCodeBlock_;
   }
 
-  /// \return the next unique object ID.
-  ObjectID generateNextObjectID() {
-    return ++nextObjectID_;
-  }
-
   /// Compute a hash value of a given HermesValue that is guaranteed to
   /// be stable with a moving GC. It however does not guarantee to be
   /// a perfect hash for strings.
@@ -771,6 +766,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   JSObject *functionPrototypeRawPtr{};
 
   RegExpMatch regExpLastMatch{};
+
+  /// A global counter that increments, used to provide unique object IDs.
+  /// Each successive value is hashed by JSObject before being stored as the ID.
+  uint32_t objectIDCounter{0};
 
   /// Whether to allow eval and Function ctor.
   const bool enableEval : 1;
@@ -1172,9 +1171,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       RootAcceptor::Section::NumSections)] = {};
   /// The duration of the all root makring is accumulated here.
   double totalMarkRootsTime_ = 0.0;
-
-  /// A global counter that increments and provide unique object IDs.
-  ObjectID nextObjectID_{0};
 
   /// The identifier table.
   IdentifierTable identifierTable_{};

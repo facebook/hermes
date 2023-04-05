@@ -41,6 +41,13 @@ constexpr JenkinsHash updateJenkinsHash(JenkinsHash hash, CharT c) {
   return jenkinsMix2(jenkinsMix1(jenkinsAdd(hash, c)));
 }
 
+constexpr JenkinsHash jenkinsHashUint32(uint32_t x) {
+  JenkinsHash hash = 0;
+  hash = updateJenkinsHash(hash, (char16_t)(x & 0xffff));
+  hash = updateJenkinsHash(hash, (char16_t)(x >> 16));
+  return hash;
+}
+
 } // namespace hermes
 
 #endif

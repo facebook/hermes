@@ -1821,8 +1821,7 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
     case HermesValue::Tag::Object: {
       // For objects, because pointers can move, we need a unique ID
       // that does not change for each object.
-      auto id = JSObject::getObjectID(vmcast<JSObject>(*value), *this);
-      return llvh::hash_value(id);
+      return JSObject::getObjectID(vmcast<JSObject>(*value), *this);
     }
     case HermesValue::Tag::BigInt: {
       // For bigints, we hash the string content.
