@@ -29,6 +29,25 @@ class StringView;
 /// use of strings should not need to worry about the precise type of
 /// StringPrimitive, and use it directly in favor of the exact subclass.
 class StringPrimitive : public VariableSizeRuntimeCell {
+ protected:
+  // Fields:
+
+  /// Length of the string in 16-bit characters. The highest bit is set to 1
+  /// if the string has been uniqued.
+  uint32_t lengthAndUniquedFlag_;
+
+  // Constants:
+
+  /// Flag set in the \c lengthAndUniquedFlag_ field to indicate that this
+  /// string was "uniqued", that is, inserted into the identifier hash table and
+  /// the associated SymbolID was stored in the string.
+  /// Not all StringPrimitive subclasses support this and it usually happens on
+  /// construction.
+  /// This flag is automatically cleared by the identifier table when the
+  /// associated SymbolID is garbage collected.
+  static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
+
+ private:
   friend class detail::IdentifierHashTable;
   friend class IdentifierTable;
   friend class StringBuilder;
@@ -76,19 +95,6 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   }
 
  protected:
-  /// Flag set in the \c length field to indicate that this string was
-  /// "uniqued", that is, inserted into the identifier hash table and the
-  /// associated SymbolID was stored in the string.
-  /// Not all StringPrimitive subclasses support this and it usually happens on
-  /// construction.
-  /// This flag is automatically cleared by the identifier table when the
-  /// associated SymbolID is garbage collected.
-  static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
-
-  /// Length of the string in 16-bit characters. The highest bit is set to 1
-  /// if the string has been uniqued.
-  uint32_t lengthAndUniquedFlag_;
-
   /// Super constructor to set the length properly.
   explicit StringPrimitive(uint32_t length) : lengthAndUniquedFlag_(length) {}
 
