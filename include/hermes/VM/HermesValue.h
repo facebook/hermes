@@ -353,6 +353,26 @@ class HermesValue {
     return encodeDoubleValue((double)num);
   }
 
+  /// Encode a numeric value into the best possible representation based on the
+  /// static type of the parameter. Right now we only have one representation
+  /// (double), but that could change in the future. It cannot be guaranteed
+  /// that the NaN bits are all zeroes.
+  inline static HermesValue encodeUntrustedNumberValue(double num) {
+    return encodeUntrustedDoubleValue(num);
+  }
+
+  /// Encode a numeric value into the best possible representation based on the
+  /// static type of the parameter. Right now we only have one representation
+  /// (double), but that could change in the future. It cannot be guaranteed
+  /// that the NaN bits are all zeroes.
+  template <typename T>
+  inline static
+      typename std::enable_if<std::is_integral<T>::value, HermesValue>::type
+      encodeUntrustedNumberValue(T num) {
+    assert((double)num == num && "value not representable as double");
+    return encodeUntrustedDoubleValue((double)num);
+  }
+
   static HermesValue encodeNaNValue() {
     return HermesValue(
         llvh::DoubleToBits(std::numeric_limits<double>::quiet_NaN()));

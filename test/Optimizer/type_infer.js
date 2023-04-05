@@ -92,7 +92,7 @@ function test_unary(x) {
 // CHECK-NEXT:  %18 = AllocObjectInst 0 : number, empty
 // CHECK-NEXT:  %19 = AllocObjectInst 0 : number, empty
 // CHECK-NEXT:  %20 = BinaryOperatorInst '+', %18 : object, %19 : object
-// CHECK-NEXT:  %21 = CallInst %x, undefined : undefined, %20 : string|number
+// CHECK-NEXT:  %21 = CallInst %x, undefined : undefined, %20 : string|number|bigint
 // CHECK-NEXT:  %22 = CallInst %x, undefined : undefined, NaN : number
 // CHECK-NEXT:  %23 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
