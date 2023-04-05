@@ -44,3 +44,39 @@ function foo() {
 Motivation: similar to assigning to `arguments`, this is a very rare case, with no uses that we are aware of.
 
 This is "implementable", but with very low priority.
+
+## Full Scoped Function Promotion Semantics in Loose Mode
+
+Static Hermes implements most of the scoped function promotion semantics in loose mode, but some corner cases are not spec compliant yet.
+
+Case 1:
+```javascript
+function g() {
+    {
+        function f() { return 1; }
+        {
+            var f;
+        }
+    }
+}
+```
+
+Shermes accepts this, aliasing `var f` to `function f()`. Spec compliance requires an error.
+
+Case 2:
+```javascript
+function g() {
+    {
+        function f() { return 1; }
+        {
+            function f() { return 2; }
+        }
+    }
+    print(f());
+}
+g();
+```
+
+Apparently the spec requires this example to print "1", because the second `f()` shouldn't be promoted to function scope. Shermes prints "2". In our (quick and incomplete) tests, other major engines also print "2".
+
+Motivation: these are very rare cases. Loose mode itself is rare. While we intend to address them, the priority is low.
