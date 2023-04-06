@@ -84,6 +84,13 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
+      // UnionNarrowTrustedInst is a cast, the result is the same as its input.
+      // That means we can add it to the worklist to follow it.
+      if (llvh::isa<UnionNarrowTrustedInst>(closureUser)) {
+        worklist.push_back(closureUser);
+        continue;
+      }
+
       // Closure is stored to a variable, look at corresponding loads
       // to find callsites.
       if (auto *store = llvh::dyn_cast<StoreFrameInst>(closureUser)) {
