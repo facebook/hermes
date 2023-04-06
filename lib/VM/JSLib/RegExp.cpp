@@ -461,6 +461,65 @@ static void createGroupsObject(
   JSObject::setNamedSlotValueUnsafe(matchObj.get(), runtime, groupsDesc, shv);
 }
 
+static void createIndicesArray(
+    Runtime &runtime,
+    Handle<JSArray> matchObj,
+    Handle<JSObject> mappingObj,
+    Handle<JSArray> indices) {
+  // If there are no capture groups, then set groups to undefined.
+  if (!mappingObj) {
+    auto executionStatus = JSObject::defineNewOwnProperty(
+        indices,
+        runtime,
+        Predefined::getSymbolID(Predefined::groups),
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        Runtime::getUndefinedValue());
+    assert(
+        executionStatus != ExecutionStatus::EXCEPTION &&
+        "failed to define .groups property inside indices array.");
+  } else {
+    // Create groups object and set its prototype to null.
+    auto clazzHandle = runtime.makeHandle(mappingObj->getClass(runtime));
+    auto groupsObjRes = JSObject::create(
+        runtime, Runtime::makeNullHandle<JSObject>(), clazzHandle);
+    auto groupsObj = runtime.makeHandle(groupsObjRes.get());
+
+    // For each capture group, add it to groups object with its corresponding
+    // indices.
+    HiddenClass::forEachProperty(
+        clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
+          auto groupIdx =
+              JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
+                  .getNumber(runtime);
+
+          JSObject::setNamedSlotValueUnsafe(
+              *groupsObj, runtime, desc.slot, indices->at(runtime, groupIdx));
+        });
+
+    // Add groups object to indices array.
+    auto executionStatus = JSObject::defineNewOwnProperty(
+        indices,
+        runtime,
+        Predefined::getSymbolID(Predefined::groups),
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        groupsObj);
+    assert(
+        executionStatus != ExecutionStatus::EXCEPTION &&
+        "failed to define .groups property inside indices array.");
+  }
+
+  // Add indices array to result.
+  auto executionStatus = JSObject::defineNewOwnProperty(
+      matchObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::indices),
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      indices);
+  assert(
+      executionStatus != ExecutionStatus::EXCEPTION &&
+      "failed to define .indices property inside result.");
+}
+
 // ES6 21.2.5.2.2
 CallResult<Handle<JSArray>> directRegExpExec(
     Handle<JSRegExp> regexp,
@@ -600,11 +659,11 @@ CallResult<Handle<JSArray>> directRegExpExec(
   JSObject::setNamedSlotValueUnsafe(*A, runtime, inputDesc, inputSHV);
 
   // Create indices array.
-  auto indices = JSArray::create(runtime, match.size(), match.size());
-  if (LLVM_UNLIKELY(indices == ExecutionStatus::EXCEPTION)) {
+  auto indicesRes = JSArray::create(runtime, match.size(), match.size());
+  if (LLVM_UNLIKELY(indicesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> indicesArray = runtime.makeHandle<JSArray>(*indices);
+  Handle<JSArray> indices = runtime.makeHandle<JSArray>(*indicesRes);
 
   // Set capture groups (including the initial full match)
   size_t idx = 0;
@@ -628,44 +687,38 @@ CallResult<Handle<JSArray>> directRegExpExec(
           A, runtime, idx, runtime.makeHandle<StringPrimitive>(*strRes));
     }
 
-    // Add the indices for the current capture group in the indicesArray.
+    // Add the indices for the current capture group in the indices array.
     if (hasIndices) {
-      auto subarrayRes = JSArray::create(runtime, 2, 2);
-      if (LLVM_UNLIKELY(subarrayRes == ExecutionStatus::EXCEPTION)) {
+      auto indicesItemArrayRes = JSArray::create(runtime, 2, 2);
+      if (LLVM_UNLIKELY(indicesItemArrayRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> subarray = runtime.makeHandle<JSArray>(*subarrayRes);
+      Handle<JSArray> indicesItemArray =
+          runtime.makeHandle<JSArray>(*indicesItemArrayRes);
 
       JSArray::setElementAt(
-          subarray,
+          indicesItemArray,
           runtime,
           0,
           runtime.makeHandle(
               HermesValue::encodeNumberValue(mg ? mg->location : 0)));
       JSArray::setElementAt(
-          subarray,
+          indicesItemArray,
           runtime,
           1,
           runtime.makeHandle(HermesValue::encodeNumberValue(
               mg ? mg->location + mg->length : 0)));
 
-      JSArray::setElementAt(indicesArray, runtime, idx, subarray);
+      JSArray::setElementAt(indices, runtime, idx, indicesItemArray);
     }
 
     idx++;
   }
 
-  // Add indices property to result.
+  // Create indices array and add to result.
   if (hasIndices) {
-    if (LLVM_UNLIKELY(
-            JSObject::defineNewOwnProperty(
-                A,
-                runtime,
-                Predefined::getSymbolID(Predefined::indices),
-                PropertyFlags::defaultNewNamedPropertyFlags(),
-                indicesArray) == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    createIndicesArray(
+        runtime, A, regexp->getGroupNameMappings(runtime), indices);
   }
 
   createGroupsObject(runtime, A, regexp->getGroupNameMappings(runtime));
