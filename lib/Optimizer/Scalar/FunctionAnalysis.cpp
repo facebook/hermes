@@ -12,6 +12,7 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
+#include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/Support/Debug.h"
 
 namespace hermes {
@@ -39,72 +40,81 @@ void registerCallsite(BaseCallInst *call, BaseCreateCallableInst *callee) {
 /// calls that load \p create via a variable which is stored to once.
 void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
-  for (Instruction *createUser : create->getUsers()) {
-    // Closure is used as the callee operand.
-    if (auto *call = llvh::dyn_cast<BaseCallInst>(createUser)) {
-      if (!isDirectCallee(create, call)) {
-        // F potentially escapes.
-        F->getAttributes()._allCallsitesKnownInStrictMode = false;
-      }
-      if (call->getCallee() == create) {
-        registerCallsite(call, create);
-      }
+
+  // List of instructions whose result we know is the same closure created by
+  // \p create.
+  // Initially populated with \p create itself, it also can contain
+  // LoadFrameInst, casts, etc.
+  // The users of the elements of this list can then be iterated to find calls,
+  // ways for the closure to escape, and anything else we want to analyze.
+  // When the list is empty, we're done analyzing \p create.
+  llvh::SmallVector<Instruction *, 2> worklist{};
+
+  // Use a set to avoid revisiting the same Instruction.
+  // For example, if the same function is stored to two vars we need
+  // to avoid going back and forth between the corresponding loads.
+  llvh::SmallPtrSet<Instruction *, 2> visited{};
+
+  worklist.push_back(create);
+  while (!worklist.empty()) {
+    // Instruction whose result is known to be the closure.
+    Instruction *closureInst = worklist.pop_back_val();
+
+    if (!visited.insert(closureInst).second) {
+      // Already visited.
       continue;
     }
 
-    // Construction setup instructions can't leak the closure on their own,
-    // but don't contribute to the call graph.
-    if (isConstructionSetup(createUser, create)) {
-      continue;
-    }
-
-    // Closure is stored to a variable, look at corresponding loads
-    // to find callsites.
-    if (auto *store = llvh::dyn_cast<StoreFrameInst>(createUser)) {
-      Variable *var = store->getVariable();
-      if (!isStoreOnceVariable(var)) {
-        // Multiple stores to the variable, give up.
-        F->getAttributes()._allCallsitesKnownInStrictMode = false;
+    for (Instruction *closureUser : closureInst->getUsers()) {
+      // Closure is used as the callee operand.
+      if (auto *call = llvh::dyn_cast<BaseCallInst>(closureUser)) {
+        if (!isDirectCallee(closureInst, call)) {
+          // F potentially escapes.
+          F->getAttributes()._allCallsitesKnownInStrictMode = false;
+        }
+        if (call->getCallee() == closureInst) {
+          registerCallsite(call, create);
+        }
         continue;
       }
-      for (Instruction *varUser : var->getUsers()) {
-        auto *load = llvh::dyn_cast<LoadFrameInst>(varUser);
-        if (!load) {
-          // Skip all stores, because they'll all be storing the same closure.
-          assert(
-              llvh::isa<StoreFrameInst>(varUser) &&
-              "only Store and Load can use variables");
+
+      // Construction setup instructions can't leak the closure on their own,
+      // but don't contribute to the call graph.
+      if (isConstructionSetup(closureUser, closureInst)) {
+        continue;
+      }
+
+      // Closure is stored to a variable, look at corresponding loads
+      // to find callsites.
+      if (auto *store = llvh::dyn_cast<StoreFrameInst>(closureUser)) {
+        Variable *var = store->getVariable();
+        if (!isStoreOnceVariable(var)) {
+          // Multiple stores to the variable, give up.
+          F->getAttributes()._allCallsitesKnownInStrictMode = false;
           continue;
         }
-        // Find any calls using the load.
-        for (Instruction *loadUser : load->getUsers()) {
-          // Construction setup instructions can't leak the closure on their
-          // own, but don't contribute to the call graph.
-          if (isConstructionSetup(loadUser, load)) {
+        for (Instruction *varUser : var->getUsers()) {
+          auto *load = llvh::dyn_cast<LoadFrameInst>(varUser);
+          if (!load) {
+            // Skip all stores, because they'll all be storing the same
+            // closure.
+            assert(
+                llvh::isa<StoreFrameInst>(varUser) &&
+                "only Store and Load can use variables");
             continue;
           }
-          auto *call = llvh::dyn_cast<BaseCallInst>(loadUser);
-          if (!call) {
-            // Unknown instruction using the load, skip over the instruction
-            // because it's not a call, but it could lead to an unknown call.
-            F->getAttributes()._allCallsitesKnownInStrictMode = false;
-            continue;
-          }
-          // Check if F potentially escapes via arguments to the call.
-          if (!isDirectCallee(load, call)) {
-            F->getAttributes()._allCallsitesKnownInStrictMode = false;
-          }
-          // Make sure the function is actually used as the callee operand.
-          if (call->getCallee() == load) {
-            registerCallsite(call, create);
-          }
+          worklist.push_back(load);
         }
+        continue;
       }
-      continue;
-    }
 
-    // Unknown user, F could escape somewhere.
-    F->getAttributes()._allCallsitesKnownInStrictMode = false;
+      // Unknown user, F could escape somewhere.
+      LLVM_DEBUG(
+          llvh::dbgs() << "Unknown user of function '"
+                       << F->getInternalNameStr()
+                       << "': " << closureUser->getKindStr() << '\n');
+      F->getAttributes()._allCallsitesKnownInStrictMode = false;
+    }
   }
 }
 
