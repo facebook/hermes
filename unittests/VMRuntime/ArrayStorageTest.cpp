@@ -133,9 +133,16 @@ using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
 // The following test allocates gigantic arrays on non-NCGen GCs.
 TEST_F(ArrayStorageBigHeapTest, AllocMaxSizeArray) {
   // Should succeed, allocations up to maxElements are allowed.
-  auto res = ArrayStorage::create(runtime, ArrayStorage::maxElements());
+  auto res = ArrayStorage::create(
+      runtime, ArrayStorage::maxElements(), ArrayStorage::maxElements());
   EXPECT_EQ(res, ExecutionStatus::RETURNED)
       << "Allocating a max size array failed";
+
+  // Try to push an additional element, which should fail.
+  auto h = runtime.makeMutableHandle(vmcast<ArrayStorage>(*res));
+  auto res2 = ArrayStorage::push_back(h, runtime, runtime.getUndefinedValue());
+  EXPECT_EQ(res2, ExecutionStatus::EXCEPTION)
+      << "Array cannot grow beyond max size";
 }
 #endif
 

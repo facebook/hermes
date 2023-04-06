@@ -296,10 +296,13 @@ class ArrayStorageBase final
   /// to be copied is
   ///   length = min(size - fromFirst, toLast - toFirst).
   /// "length" number of elements are copied from "fromFirst" to "toFirst".
+  /// \p minCapacity must be larger than \p toLast, and it is guaranteed that
+  /// the array will have a capacity of at least \p minCapacity after this
+  /// operation.
   static ExecutionStatus reallocateToLarger(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
-      size_type capacity,
+      size_type minCapacity,
       size_type fromFirst,
       size_type toFirst,
       size_type toLast);

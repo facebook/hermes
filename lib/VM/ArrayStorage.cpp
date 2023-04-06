@@ -62,17 +62,19 @@ template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
     MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime &runtime,
-    size_type capacity,
+    size_type minCapacity,
     size_type fromFirst,
     size_type toFirst,
     size_type toLast) {
-  assert(capacity <= maxElements() && "capacity overflows 32-bit storage");
+  assert(minCapacity >= toLast && "Last element outside capacity.");
 
-  assert(
-      capacity > selfHandle->capacity() &&
-      "reallocateToLarger must be called with a larger capacity");
+  static_assert(
+      maxElements() <= std::numeric_limits<size_type>::max() / 2,
+      "Multiplying capacity may overflow.");
+  size_type newCapacity = std::max(
+      std::min(selfHandle->capacity() * 2, maxElements()), minCapacity);
 
-  auto arrRes = create(runtime, capacity);
+  auto arrRes = create(runtime, newCapacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -154,7 +156,6 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
     size_type fromFirst,
     size_type toFirst,
     size_type toLast) {
-  assert(toLast <= maxElements() && "size overflows 32-bit storage");
   assert(toFirst <= toLast && "First must be before last");
   assert(fromFirst <= selfHandle->size() && "fromFirst must be before size");
 
@@ -206,15 +207,13 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
     return ExecutionStatus::RETURNED;
   }
 
-  // Calculate the new capacity.
-  size_type capacity = selfHandle->capacity();
-  if (capacity < maxElements() / 2)
-    capacity = std::max(capacity * 2, toLast);
-  else
-    capacity = maxElements();
-
   return reallocateToLarger(
-      selfHandle, runtime, capacity, fromFirst, toFirst, toLast);
+      selfHandle,
+      runtime,
+      /* minCapacity */ toLast,
+      fromFirst,
+      toFirst,
+      toLast);
 }
 
 template <typename HVType>
