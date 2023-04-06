@@ -14,15 +14,27 @@ function load_only_capture(leak, foreach, n) {
     return i;
 }
 
+function load_dedup(foo){
+    var x = foo();
+    function bar(){
+        foo(x);
+        return x;
+    }
+    return bar;
+}
+
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "load_only_capture": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %load_only_capture(): number
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "load_only_capture": string
-// CHECK-NEXT:  %3 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %1 = DeclareGlobalVarInst "load_dedup": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %load_only_capture(): number
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "load_only_capture": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %load_dedup(): closure
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "load_dedup": string
+// CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function load_only_capture(leak: any, foreach: any, n: any): number
@@ -46,9 +58,31 @@ function load_only_capture(leak, foreach, n) {
 // CHECK-NEXT:  %13 = ReturnInst %12: number
 // CHECK-NEXT:function_end
 
+// CHECK:function load_dedup(foo: any): closure
+// CHECK-NEXT:frame = [foo: any, x: any]
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %foo: any
+// CHECK-NEXT:  %1 = StoreFrameInst %0: any, [foo]: any
+// CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [x]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %bar(): any
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %5 = StoreFrameInst %4: any, [x]: any
+// CHECK-NEXT:  %6 = ReturnInst %3: closure
+// CHECK-NEXT:function_end
+
 // CHECK:arrow ""(): number
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:number) [i@load_only_capture]: number
 // CHECK-NEXT:  %1 = ReturnInst %0: number
+// CHECK-NEXT:function_end
+
+// CHECK:function bar(): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@load_dedup]: any
+// CHECK-NEXT:  %1 = LoadFrameInst (:any) [x@load_dedup]: any
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) [x@load_dedup]: any
+// CHECK-NEXT:  %4 = ReturnInst %3: any
 // CHECK-NEXT:function_end
