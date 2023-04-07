@@ -633,11 +633,13 @@ ESTREE_NODE_1_ARGS(
     JSXSpreadChild, Base,
     NodePtr, expression, false)
 
-ESTREE_NODE_3_ARGS(
+ESTREE_NODE_4_ARGS(
     JSXOpeningElement, Base,
     NodePtr, name, false,
     NodeList, attributes, false,
-    NodeBoolean, selfClosing, false)
+    NodeBoolean, selfClosing, false,
+    NodePtr, typeArguments, true)
+ESTREE_IGNORE_IF_EMPTY(JSXOpeningElement, typeArguments)
 ESTREE_NODE_1_ARGS(
     JSXClosingElement, Base,
     NodePtr, name, false)
