@@ -107,7 +107,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
     // No variable found, it must be global. Using the `React` variable is enough in this case.
     if (variableDef == null) {
-      return VALID_REACT_IMPORTS.has(id.name);
+      return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
     }
 
     const def = variableDef.defs[0];
@@ -1548,15 +1548,38 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
       // React special conversion:
       if (isReactImport(baseId)) {
+        const reactId = {
+          type: 'Identifier',
+          name: `React`,
+        };
+
         switch (fullTypeName) {
+          case 'React$Context':
+          case 'React.Context':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: reactId,
+                right: {
+                  type: 'Identifier',
+                  name: `Context`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
           // React.Node -> React.ReactNode
+          case 'React$Node':
           case 'React.Node': {
             assertHasExactlyNTypeParameters(0);
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: reactId,
                 right: {
                   type: 'Identifier',
                   name: `ReactNode`,
@@ -1566,12 +1589,13 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             };
           }
           // React.Element<typeof Component> -> React.ReactElement<typeof Component>
+          case 'React$Element':
           case 'React.Element': {
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: reactId,
                 right: {
                   type: 'Identifier',
                   name: `ReactElement`,
@@ -1583,7 +1607,43 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               },
             };
           }
+          // React.ElementRef<typeof Component> -> React.ElementRef<typeof Component>
+          // React$ElementRef<typeof Component> -> React.ElementRef<typeof Component>
+          case 'React$ElementRef':
+          case 'React.ElementRef':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: reactId,
+                right: {
+                  type: 'Identifier',
+                  name: `ElementRef`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          // React$Fragment -> React.Fragment
+          // React.Fragment -> React.Fragment
+          case 'React$FragmentType':
+          case 'React.Fragment':
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: reactId,
+                right: {
+                  type: 'Identifier',
+                  name: `Fragment`,
+                },
+              },
+            };
           // React.MixedElement -> JSX.Element
+          case 'React$MixedElement':
           case 'React.MixedElement': {
             assertHasExactlyNTypeParameters(0);
             return {
@@ -1602,9 +1662,15 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               typeParameters: undefined,
             };
           }
-          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config>
+          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
           // React.AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
-          case 'React.AbstractComponent': {
+          // React$AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
+          // React.ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
+          // React$ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
+          case 'React.AbstractComponent':
+          case 'React$AbstractComponent':
+          case 'React.ComponentType':
+          case 'React$ComponentType': {
             const typeParameters = node.typeParameters;
             if (typeParameters == null || typeParameters.params.length === 0) {
               throw translationError(
@@ -1621,38 +1687,42 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             }
 
             let newTypeParam = transform.TypeAnnotationType(params[0]);
-            if (params[1] != null) {
-              newTypeParam = {
-                type: 'TSIntersectionType',
-                types: [
-                  newTypeParam,
-                  {
-                    type: 'TSTypeReference',
-                    typeName: {
-                      type: 'TSQualifiedName',
-                      left: {
-                        type: 'Identifier',
-                        name: 'React',
-                      },
-                      right: {
-                        type: 'Identifier',
-                        name: 'RefAttributes',
-                      },
+            newTypeParam = {
+              type: 'TSIntersectionType',
+              types: [
+                newTypeParam,
+                {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'TSQualifiedName',
+                    left: {
+                      type: 'Identifier',
+                      name: 'React',
                     },
-                    typeParameters: {
-                      type: 'TSTypeParameterInstantiation',
-                      params: [transform.TypeAnnotationType(params[1])],
+                    right: {
+                      type: 'Identifier',
+                      name: 'RefAttributes',
                     },
                   },
-                ],
-              };
-            }
+                  typeParameters: {
+                    type: 'TSTypeParameterInstantiation',
+                    params: [
+                      params[1]
+                        ? transform.TypeAnnotationType(params[1])
+                        : {
+                            type: 'TSUnknownKeyword',
+                          },
+                    ],
+                  },
+                },
+              ],
+            };
 
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: reactId,
                 right: {
                   type: 'Identifier',
                   name: `ForwardRefExoticComponent`,
@@ -1664,6 +1734,8 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               },
             };
           }
+          default:
+            throw unsupportedTranslationError(node, fullTypeName);
         }
       }
 
