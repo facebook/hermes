@@ -1068,7 +1068,7 @@ export interface ExportDefaultDeclaration extends BaseNode {
 
 export interface ExportAllDeclaration extends BaseNode {
   +type: 'ExportAllDeclaration';
-  +source: Literal;
+  +source: StringLiteral;
   +exportKind: 'value' | 'type';
   +exported?: Identifier | null;
 }

@@ -12,6 +12,7 @@ import flowToFlowDef from '../src/flowToFlowDef';
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 import {parse, print} from 'hermes-transform';
+import {trimToBeCode} from './utils/inlineCodeHelpers';
 
 function translate(code: string): string {
   const {ast, scopeManager} = parse(code);
@@ -21,44 +22,6 @@ function translate(code: string): string {
   });
 
   return print(flowDefAst, mutatedCode, prettierConfig);
-}
-
-/**
- * Align code based on the shortest whitespace offset
- */
-function trimToBeCode(toBeCode: string): string {
-  const trimmedToBeCode = toBeCode.trim();
-  const trimmedToBeCodeLines = trimmedToBeCode.split('\n');
-  if (trimmedToBeCodeLines.length === 1) {
-    return trimmedToBeCode + '\n';
-  }
-
-  let minSpaces = Infinity;
-  const lines: Array<[number, string]> = [];
-  for (let i = 1; i < trimmedToBeCodeLines.length; i++) {
-    const line = trimmedToBeCodeLines[i];
-    if (line === '') {
-      lines.push([0, '']);
-      continue;
-    }
-    const lineLeftTrimmed = line.trimLeft();
-    const offset = line.length - lineLeftTrimmed.length;
-    lines.push([offset, lineLeftTrimmed]);
-    minSpaces = Math.min(minSpaces, offset);
-  }
-  if (minSpaces === 0) {
-    return trimmedToBeCode + '\n';
-  }
-
-  let rebuiltStr = trimmedToBeCodeLines[0] + '\n';
-  for (const [offset, line] of lines) {
-    if (line === '') {
-      rebuiltStr += '\n';
-      continue;
-    }
-    rebuiltStr += ' '.repeat(offset - minSpaces) + line + '\n';
-  }
-  return rebuiltStr;
 }
 
 function expectTranslate(expectCode: string, toBeCode: string): void {

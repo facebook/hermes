@@ -10,11 +10,14 @@
 
 'use strict';
 
+import type {MapperOptions} from './flowImportTo';
+
 import {parse, print} from 'hermes-transform';
 import {visitorKeys as tsVisitorKeys} from '@typescript-eslint/visitor-keys';
 import flowToFlowDef from './flowToFlowDef';
 import {flowDefToTSDef} from './flowDefToTSDef';
 import {flowToJS} from './flowToJS';
+import {flowImportTo} from './flowImportTo';
 
 export function translateFlowToFlowDef(
   code: string,
@@ -63,6 +66,18 @@ export function translateFlowToJS(
   const {ast, scopeManager} = parse(code);
 
   const jsAST = flowToJS(ast, code, scopeManager);
+
+  return print(jsAST, code, prettierOptions);
+}
+
+export function translateFlowImportsTo(
+  code: string,
+  prettierOptions: {...} = {},
+  opts: MapperOptions,
+): string {
+  const {ast, scopeManager} = parse(code);
+
+  const jsAST = flowImportTo(ast, code, scopeManager, opts);
 
   return print(jsAST, code, prettierOptions);
 }
