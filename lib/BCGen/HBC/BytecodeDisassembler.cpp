@@ -739,8 +739,6 @@ void PrettyDisassembleVisitor::beforeStart(
     const uint8_t *bytecodeStart) {
   bytecodeStart_ = bytecodeStart;
   funcVirtualOffset_ = bcProvider_->getVirtualOffsetForFunction(funcId);
-  // Print source line for the function.
-  printSourceLineForOffset(0);
 }
 
 void PrettyDisassembleVisitor::preVisitInstruction(
@@ -753,10 +751,10 @@ void PrettyDisassembleVisitor::preVisitInstruction(
   uint32_t offset = ip - bytecodeStart_;
   if (label != jumpTargets_.end()) {
     os_ << "L" << label->second << ":\n";
-    printSourceLineForOffset(offset);
-    // Use the overrided indention for next line's output.
-    os_ << llvh::left_justify("", getIndentation());
   }
+  printSourceLineForOffset(offset);
+  // Use the overrided indention for next line's output.
+  os_ << llvh::left_justify("", getIndentation());
   uint32_t globalVirtualOffset = funcVirtualOffset_ + offset;
   if ((options_ & DisassemblyOptions::IncludeVirtualOffsets) ==
       DisassemblyOptions::IncludeVirtualOffsets) {
@@ -832,7 +830,7 @@ void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
       os_ << formatString(
-                 "%s[%d:%d]",
+                 "; %s:%d:%d",
                  fileNameStr.c_str(),
                  sourceLocOpt.getValue().line,
                  sourceLocOpt.getValue().column)
