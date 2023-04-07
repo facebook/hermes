@@ -9,6 +9,7 @@
 #define HERMES_ADT_MANAGEDCHUNKEDLIST_H
 
 #include "hermes/ADT/ExponentialMovingAverage.h"
+#include "hermes/Support/SlowAssert.h"
 #include "llvh/Support/Compiler.h"
 
 #include <cmath>
@@ -90,6 +91,7 @@ class ManagedChunkedList {
     freeList_ = freeList_->getNextFree();
     assert(element.isFree() && "Premature element reuse");
     element.emplace(std::forward<Args>(args)...);
+    HERMES_SLOW_ASSERT(checkWellFormed());
     return element;
   }
 
@@ -124,19 +126,44 @@ class ManagedChunkedList {
   // Perform a garbage collection, building a free list of all free elements,
   // and potentially deleting excess empty chunks.
   void collect() {
+    HERMES_SLOW_ASSERT(checkWellFormed());
+
     freeList_ = nullptr;
     size_t occupiedElementCount = 0;
 
-    for (Chunk *chunk = chunks_; chunk; chunk = chunk->nextChunk) {
+    // Delete chunks based on the target number of chunks from the previous
+    // collection. This can make deletion lag by one collection cycle, but
+    // simplifies the collection logic by allowing chunks to be deleted as they
+    // are encountered, before knowing the number of surviving values.
+    size_t targetChunkCount = ceil(targetChunkCount_);
+    Chunk **chunkListEndLoc = &chunks_;
+    for (Chunk *chunk = chunks_; chunk;) {
+      size_t chunkOccupiedElementCount = 0;
+      Element *newFreeList = freeList_;
+
       // Rebuild free list and count elements.
       for (Element &element : chunk->elements) {
         if (element.isFree()) {
-          element.setNextFree(freeList_);
-          freeList_ = &element;
+          element.setNextFree(newFreeList);
+          newFreeList = &element;
         } else {
-          occupiedElementCount++;
+          chunkOccupiedElementCount++;
         }
       }
+
+      Chunk *nextChunk = chunk->nextChunk;
+      if (chunkOccupiedElementCount == 0 && chunkCount_ > targetChunkCount) {
+        // This chunk is empty, and there are more chunks than desired;
+        // remove the chunk.
+        *chunkListEndLoc = nextChunk;
+        chunkCount_--;
+        delete chunk;
+      } else {
+        freeList_ = newFreeList;
+        occupiedElementCount += chunkOccupiedElementCount;
+        chunkListEndLoc = &chunk->nextChunk;
+      }
+      chunk = nextChunk;
     }
 
     // Schedule the next collection at a multiple of the the number of suviving
@@ -144,6 +171,8 @@ class ManagedChunkedList {
     // avoid drastic jumps.
     targetChunkCount_.update(
         occupiedElementCount / occupancyRatio_ / kElementsPerChunk);
+
+    HERMES_SLOW_ASSERT(checkWellFormed());
   }
 
  private:
@@ -178,6 +207,27 @@ class ManagedChunkedList {
     freeList_ = next;
 
     chunkCount_++;
+
+    HERMES_SLOW_ASSERT(checkWellFormed());
+  }
+
+  bool checkWellFormed() {
+    for (Element *freeElement = freeList_; freeElement;
+         freeElement = freeElement->getNextFree()) {
+      if (!freeElement->isFree()) {
+        return false;
+      }
+    }
+
+    size_t chunkCount = 0;
+    for (Chunk *chunk = chunks_; chunk; chunk = chunk->nextChunk) {
+      chunkCount++;
+    }
+    if (chunkCount != chunkCount_) {
+      return false;
+    }
+
+    return true;
   }
 
   Chunk *chunks_ = nullptr;
