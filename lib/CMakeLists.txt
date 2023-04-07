@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesOptimizer
+  Optimizer/PassManager/PassManager.cpp
   Optimizer/PassManager/Pipeline.cpp
   Optimizer/Scalar/SimplifyCFG.cpp
   Optimizer/Scalar/CSE.cpp

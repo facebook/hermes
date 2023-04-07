@@ -9,14 +9,11 @@
 #define HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H
 
 #include "hermes/Optimizer/PassManager/Pass.h"
-#include "hermes/Support/Statistic.h"
-#include "hermes/Support/Timer.h"
 
 #include "llvh/ADT/StringRef.h"
-#include "llvh/ADT/StringSwitch.h"
-#include "llvh/Support/Debug.h"
 
-#define DEBUG_TYPE "passmanager"
+#include <memory>
+#include <vector>
 
 namespace hermes {
 
@@ -25,20 +22,15 @@ namespace hermes {
 /// the order of the passes, the order of the functions to be processed and the
 /// invalidation of analysis.
 class PassManager {
-  std::vector<Pass *> pipeline;
+  std::vector<std::unique_ptr<Pass>> pipeline_;
 
  public:
-  ~PassManager() {
-    for (auto *p : pipeline) {
-      delete p;
-    }
-  }
+  ~PassManager();
 
 /// Add a pass by appending its name.
 #define PASS(ID, NAME, DESCRIPTION) \
   void add##ID() {                  \
-    Pass *P = hermes::create##ID(); \
-    pipeline.push_back(P);          \
+    addPass(hermes::create##ID());  \
   }
 #include "Passes.def"
 
@@ -61,111 +53,11 @@ class PassManager {
   }
 
   /// Add a pass by reference.
-  void addPass(Pass *P) {
-    pipeline.push_back(P);
-  }
+  void addPass(Pass *P);
 
-  void run(Function *F) {
-    if (F->isLazy())
-      return;
+  void run(Function *F);
 
-    // Optionally dump the IR after every pass if the flag is set.
-    Pass *lastPass = nullptr;
-    auto dumpLastPass = [&lastPass, F](Pass *newPass) {
-      if (!F->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-        return;
-
-      if (!lastPass) {
-        llvh::dbgs() << "*** INITIAL STATE\n\n";
-      } else {
-        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-      }
-
-      F->dump(llvh::dbgs());
-      lastPass = newPass;
-    };
-
-    // For each pass:
-    for (auto *P : pipeline) {
-      dumpLastPass(P);
-
-      auto *FP = llvh::dyn_cast<FunctionPass>(P);
-      assert(FP && "Invalid pass kind");
-      LLVM_DEBUG(llvh::dbgs() << "Running the pass " << FP->getName() << "\n");
-      LLVM_DEBUG(
-          llvh::dbgs() << "Optimizing the function " << F->getInternalNameStr()
-                       << "\n");
-      FP->runOnFunction(F);
-    }
-    dumpLastPass(nullptr);
-  }
-
-  void run(Module *M) {
-    llvh::SmallVector<Timer, 32> timers;
-    std::unique_ptr<TimerGroup> timerGroup{nullptr};
-    if (AreStatisticsEnabled()) {
-      timerGroup.reset(new TimerGroup("", "PassManager Timers"));
-    }
-
-    // Optionally dump the IR after every pass if the flag is set.
-    Pass *lastPass = nullptr;
-    auto dumpLastPass = [&lastPass, M](Pass *newPass) {
-      if (!M->getContext().getCodeGenerationSettings().dumpIRBetweenPasses)
-        return;
-
-      if (!lastPass) {
-        llvh::dbgs() << "*** INITIAL STATE\n\n";
-      } else {
-        llvh::dbgs() << "\n*** AFTER " << lastPass->getName() << "\n\n";
-      }
-
-      M->dump(llvh::dbgs());
-      lastPass = newPass;
-    };
-
-    // For each pass:
-    for (auto *P : pipeline) {
-      dumpLastPass(P);
-
-      TimeRegion timeRegion(
-          timerGroup ? timers.emplace_back("", P->getName(), *timerGroup),
-          &timers.back()
-                     : nullptr);
-
-      /// Handle function passes:
-      if (auto *FP = llvh::dyn_cast<FunctionPass>(P)) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Running the function pass " << FP->getName()
-                         << "\n");
-
-        for (auto &I : *M) {
-          Function *F = &I;
-          if (F->isLazy())
-            continue;
-          LLVM_DEBUG(
-              llvh::dbgs() << "Optimizing the function "
-                           << F->getInternalNameStr() << "\n");
-          FP->runOnFunction(F);
-        }
-
-        // Move to the next pass.
-        continue;
-      }
-
-      /// Handle module passes:
-      if (auto *MP = llvh::dyn_cast<ModulePass>(P)) {
-        LLVM_DEBUG(
-            llvh::dbgs() << "Running the module pass " << MP->getName()
-                         << "\n");
-        MP->runOnModule(M);
-        // Move to the next pass.
-        continue;
-      }
-
-      llvm_unreachable("Unknown pass kind");
-    }
-    dumpLastPass(nullptr);
-  }
+  void run(Module *M);
 };
 } // namespace hermes
 #undef DEBUG_TYPE
