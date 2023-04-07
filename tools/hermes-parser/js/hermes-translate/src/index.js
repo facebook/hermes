@@ -14,6 +14,7 @@ import {parse, print} from 'hermes-transform';
 import {visitorKeys as tsVisitorKeys} from '@typescript-eslint/visitor-keys';
 import flowToFlowDef from './flowToFlowDef';
 import {flowDefToTSDef} from './flowDefToTSDef';
+import {flowToJS} from './flowToJS';
 
 export function translateFlowToFlowDef(
   code: string,
@@ -53,4 +54,15 @@ export function translateFlowDefToTSDef(
     },
     tsVisitorKeys,
   );
+}
+
+export function translateFlowToJS(
+  code: string,
+  prettierOptions: {...} = {},
+): string {
+  const {ast, scopeManager} = parse(code);
+
+  const jsAST = flowToJS(ast, code, scopeManager);
+
+  return print(jsAST, code, prettierOptions);
 }
