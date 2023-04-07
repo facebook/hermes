@@ -183,9 +183,6 @@ SamplingProfilerPosix::~SamplingProfilerPosix() {
   // TODO(T125910634): re-introduce the requirement for destroying the sampling
   // profiler on the same thread in which it was created.
   Sampler::get()->unregisterRuntime(this);
-#if defined(HERMESVM_ENABLE_LOOM_APPLE)
-  fbloom_profilo_api()->fbloom_notify_profiler_destroy();
-#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
 std::atomic<SamplerPosix *> SamplerPosix::instance_{nullptr};
