@@ -1011,7 +1011,7 @@ class HermesRuntimeTestSmallHeap : public HermesRuntimeTestBase {
                 .build()) {}
 };
 
-TEST_F(HermesRuntimeTestSmallHeap, OOMExceptionTest) {
+TEST_F(HermesRuntimeTestSmallHeap, HostFunctionPropagatesOOMExceptionTest) {
   auto func = Function::createFromHostFunction(
       *rt,
       PropNameID::forAscii(*rt, ""),
@@ -1033,6 +1033,20 @@ TEST_F(HermesRuntimeTestSmallHeap, OOMExceptionTest) {
 })
 )#");
   EXPECT_THROW(func.call(*rt, makeOOM), ::hermes::vm::JSOutOfMemoryError);
+}
+
+TEST_F(HermesRuntimeTestSmallHeap, CreateJSErrorPropagatesOOMExceptionTest) {
+  eval(R"#(
+globalThis.Error = function (){
+  var outer = [];
+  while(true){
+    var inner = [];
+    for (var i = 0; i < 10000; i++) inner.push({});
+    outer.push(inner);
+  }
+};
+)#");
+  EXPECT_THROW(throw JSError(*rt, "Foo"), ::hermes::vm::JSOutOfMemoryError);
 }
 #endif
 
