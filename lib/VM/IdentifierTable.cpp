@@ -87,9 +87,10 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
   auto handle = runtime.makeHandle(std::move(str));
   // Force the string primitive to flatten if it's a rope.
   handle = StringPrimitive::ensureFlat(runtime, handle);
+  uint32_t hash = handle->getOrComputeHash();
   auto cr = handle->isASCII()
-      ? getOrCreateIdentifier(runtime, handle->castToASCIIRef(), handle)
-      : getOrCreateIdentifier(runtime, handle->castToUTF16Ref(), handle);
+      ? getOrCreateIdentifier(runtime, handle->castToASCIIRef(), handle, hash)
+      : getOrCreateIdentifier(runtime, handle->castToUTF16Ref(), handle, hash);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return runtime.makeHandle(*cr);
@@ -353,6 +354,8 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  (*cr)->setHash(hash);
 
   // Allocate the id after we have performed memory allocations because a GC
   // would have freed id.

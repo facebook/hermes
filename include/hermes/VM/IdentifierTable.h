@@ -436,14 +436,6 @@ class IdentifierTable {
       llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle,
       uint32_t hash);
-  template <typename T>
-  CallResult<SymbolID> getOrCreateIdentifier(
-      Runtime &runtime,
-      llvh::ArrayRef<T> str,
-      Handle<StringPrimitive> primHandle) {
-    return getOrCreateIdentifier(
-        runtime, str, primHandle, hermes::hashString(str));
-  }
 
   /// Internal implementation of registerLazyIdentifier().
   template <typename T>
