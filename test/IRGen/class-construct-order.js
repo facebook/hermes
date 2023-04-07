@@ -46,18 +46,17 @@ return foo;
 // CHECK:function main(): any
 // CHECK-NEXT:frame = [foo: any, C: any]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [foo]: any
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [foo]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %C(): any
-// CHECK-NEXT:  %5 = StoreFrameInst %4: closure, [C]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: closure, "prototype": string
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [foo]: any
-// CHECK-NEXT:  %9 = ReturnInst %8: any
+// CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [C]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [foo]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %C(): any
+// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [C]: any
+// CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %6 = StorePropertyStrictInst %5: object, %3: closure, "prototype": string
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) [foo]: any
+// CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: any): any

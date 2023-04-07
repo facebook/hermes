@@ -99,15 +99,14 @@ function bar() {
 // CHECK-NEXT:frame = [inner: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateArgumentsInst (:object)
-// CHECK-NEXT:  %1 = StoreFrameInst undefined: undefined, [inner]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, 0: number
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) [inner]: any
-// CHECK-NEXT:  %7 = ReturnInst %6: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %inner(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [inner]: any
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, 0: number
+// CHECK-NEXT:  %4 = StorePropertyStrictInst %3: any, globalObject: object, "dummy": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) [inner]: any
+// CHECK-NEXT:  %6 = ReturnInst %5: any
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %7 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow arrow1(): any

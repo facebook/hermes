@@ -542,8 +542,18 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
         }
+        // Var declarations must be initialized to undefined at the beginning
+        // of the scope.
+        //
+        // Loose mode scoped function decls also need to be initialized. In
+        // strict mode, the scoped function is declared and created in the
+        // same scope, so there is no need to initialize before that. In loose
+        // mode however, the declaration may be promoted to function scope while
+        // the function creation happens later in the scope. The variable needs
+        // to be initialized meanwhile.
         init = decl->kind == sema::Decl::Kind::Var ||
-            decl->kind == sema::Decl::Kind::ScopedFunction;
+            (decl->kind == sema::Decl::Kind::ScopedFunction &&
+             !curFunction()->function->isStrictMode());
         break;
 
       case sema::Decl::Kind::Parameter:
