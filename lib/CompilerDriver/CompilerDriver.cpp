@@ -2094,6 +2094,9 @@ void printHermesVersion(
 #ifdef HERMES_ENABLE_DEBUGGER
       << "    Debugger\n"
 #endif
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+      << "    Contiguous Heap\n"
+#endif
       << "    Zip file input\n";
   }
 }

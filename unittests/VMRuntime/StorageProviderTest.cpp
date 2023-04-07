@@ -38,10 +38,30 @@ llvh::ErrorOr<void *> NullStorageProvider::newStorageImpl(const char *) {
   return make_error_code(OOMError::TestVMLimitReached);
 }
 
+enum StorageProviderType {
+  MmapProvider,
+  ContiguousVAProvider,
+};
+
+static std::unique_ptr<StorageProvider> GetStorageProvider(
+    StorageProviderType type) {
+  switch (type) {
+    case MmapProvider:
+      return StorageProvider::mmapProvider();
+    case ContiguousVAProvider:
+      return StorageProvider::contiguousVAProvider(AlignedStorage::size());
+    default:
+      return nullptr;
+  }
+}
+
+class StorageProviderTest
+    : public ::testing::TestWithParam<StorageProviderType> {};
+
 void NullStorageProvider::deleteStorageImpl(void *) {}
 
-TEST(StorageProviderTest, StorageProviderSucceededAllocsLogCount) {
-  auto provider{StorageProvider::mmapProvider()};
+TEST_P(StorageProviderTest, StorageProviderSucceededAllocsLogCount) {
+  auto provider{GetStorageProvider(GetParam())};
 
   ASSERT_EQ(0, provider->numSucceededAllocs());
   ASSERT_EQ(0, provider->numFailedAllocs());
@@ -259,20 +279,20 @@ TEST(StorageProviderTest, FailsDueToLimitLowerThanMin) {
   ASSERT_FALSE(result);
 }
 
-TEST(StorageProviderTest, VirtualMemoryFreed) {
+TEST_P(StorageProviderTest, VirtualMemoryFreed) {
   SetVALimit limit{10 * MB};
 
   for (size_t i = 0; i < 20; i++) {
-    std::shared_ptr<StorageProvider> sp = StorageProvider::mmapProvider();
-    StorageGuard sg{sp, *sp->newStorage()};
-  }
-  for (size_t i = 0; i < 20; i++) {
-    std::shared_ptr<StorageProvider> sp =
-        StorageProvider::contiguousVAProvider(AlignedStorage::size());
+    std::shared_ptr<StorageProvider> sp = GetStorageProvider(GetParam());
     StorageGuard sg{sp, *sp->newStorage()};
   }
 }
 
 #endif
+
+INSTANTIATE_TEST_CASE_P(
+    StorageProviderTests,
+    StorageProviderTest,
+    ::testing::Values(MmapProvider, ContiguousVAProvider));
 
 } // namespace
