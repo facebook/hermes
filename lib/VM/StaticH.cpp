@@ -432,22 +432,18 @@ extern "C" void _sh_ljs_create_environment(
       ? HermesValue::encodeObjectValueUnsafe(parentEnv).getRaw()
       : HermesValue::encodeNullValue().getRaw();
 
-  CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
   {
     GCScopeMarkerRAII marker{runtime};
-    res = Environment::create(
+    HermesValue res = Environment::create(
         runtime,
         _sh_ljs_is_null(*result) ? runtime.makeNullHandle<Environment>()
                                  : Handle<Environment>::vmcast(toPHV(result)),
         size);
-  }
-  if (res == ExecutionStatus::EXCEPTION) {
-    _sh_throw_current(shr);
+    result->raw = res.getRaw();
   }
   //#ifdef HERMES_ENABLE_DEBUGGER
   //  framePtr.getDebugEnvironmentRef() = *res;
   //#endif
-  result->raw = res->getRaw();
 }
 
 extern "C" SHLegacyValue
