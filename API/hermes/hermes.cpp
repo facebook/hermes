@@ -9,6 +9,7 @@
 
 #include "llvh/Support/Compiler.h"
 
+#include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
@@ -201,15 +202,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
         [this](vm::GC *, vm::RootAcceptor &acceptor) {
-          for (auto &val : hermesValues_)
-            if (val.get() > 0)
-              acceptor.accept(const_cast<vm::PinnedHermesValue &>(val.phv));
+          hermesValues_.forEach([&acceptor](HermesPointerValue &element) {
+            acceptor.accept(element.value());
+          });
         });
     runtime_.addCustomWeakRootsFunction(
         [this](vm::GC *, vm::WeakRootAcceptor &acceptor) {
-          for (auto &val : weakHermesValues_)
-            if (val.get() > 0)
-              acceptor.acceptWeak(val.wr);
+          weakHermesValues_.forEach([&acceptor](WeakRefPointerValue &element) {
+            acceptor.acceptWeak(element.value());
+          });
         });
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     runtime_.addCustomSnapshotFunction(
@@ -220,7 +221,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               "ManagedValues",
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::JSIHermesValueList),
-              hermesValues_.size() * sizeof(HermesPointerValue),
+              hermesValues_.capacity() * sizeof(HermesPointerValue),
               0);
           snap.beginNode();
           snap.endNode(
@@ -229,7 +230,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
               vm::GCBase::IDTracker::reserved(
                   vm::GCBase::IDTracker::ReservedObjectID::
                       JSIWeakHermesValueList),
-              weakHermesValues_.size() * sizeof(WeakRefPointerValue),
+              weakHermesValues_.capacity() * sizeof(WeakRefPointerValue),
               0);
         },
         [](vm::HeapSnapshot &snap) {
@@ -260,87 +261,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // This should only be called once by the factory.
   void setDebugger(std::unique_ptr<debugger::Debugger> d) {
     debugger_ = std::move(d);
-  }
-
-  struct CountedPointerValue : PointerValue {
-    CountedPointerValue() : refCount(1) {}
-
-    void invalidate() override {
-#ifdef ASSERT_ON_DANGLING_VM_REFS
-      assert(
-          ((1 << 31) & refCount) == 0 &&
-          "This PointerValue was left dangling after the Runtime was destroyed.");
-#endif
-      dec();
-    }
-
-    void inc() {
-      // It is always safe to use relaxed operations for incrementing the
-      // reference count, because the only operation that may occur concurrently
-      // with it is decrementing the reference count, and we do not need to
-      // enforce any ordering between the two.
-      auto oldCount = refCount.fetch_add(1, std::memory_order_relaxed);
-      assert(oldCount && "Cannot resurrect a pointer");
-      assert(oldCount + 1 != 0 && "Ref count overflow");
-      (void)oldCount;
-    }
-
-    void dec() {
-      // It is safe to use relaxed operations here because decrementing the
-      // reference count is the only access that may be performed without proper
-      // synchronisation. As a result, the only ordering we need to enforce when
-      // decrementing is that the vtable pointer used to call \c invalidate is
-      // loaded from before the decrement, in case the decrement ends up causing
-      // this value to be freed. We get this ordering from the fact that the
-      // vtable read and the reference count update form a load-store control
-      // dependency, which preserves their ordering on any reasonable hardware.
-      auto oldCount = refCount.fetch_sub(1, std::memory_order_relaxed);
-      assert(oldCount > 0 && "Ref count underflow");
-      (void)oldCount;
-    }
-
-    uint32_t get() const {
-      return refCount.load(std::memory_order_relaxed);
-    }
-
-#ifdef ASSERT_ON_DANGLING_VM_REFS
-    void markDangling() {
-      // Mark this PointerValue as dangling by setting the top bit AND the
-      // second-top bit. The top bit is used to determine if the pointer is
-      // dangling. Setting the second-top bit ensures that accidental
-      // over-calling the dec() function doesn't clear the top bit without
-      // complicating the implementation of dec().
-      refCount |= 0b11 << 30;
-    }
-#endif
-
-   private:
-    std::atomic<uint32_t> refCount;
-  };
-
-  struct HermesPointerValue final : CountedPointerValue {
-    HermesPointerValue(vm::HermesValue hv) : phv(hv) {}
-
-    // This should only ever be modified by the GC.  We const_cast the
-    // reference before passing it to the GC.
-    const vm::PinnedHermesValue phv;
-  };
-
-  struct WeakRefPointerValue final : CountedPointerValue {
-    WeakRefPointerValue(vm::WeakRoot<vm::JSObject> _wr) : wr(_wr) {}
-
-    vm::WeakRoot<vm::JSObject> wr;
-  };
-
-  HermesPointerValue *clone(const Runtime::PointerValue *pv) {
-    if (!pv) {
-      return nullptr;
-    }
-    // These are only ever allocated by us, so we can remove their constness
-    auto result = static_cast<HermesPointerValue *>(
-        const_cast<Runtime::PointerValue *>(pv));
-    result->inc();
-    return result;
   }
 
   template <typename T>
@@ -556,14 +476,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
         dynamic_cast<const HermesPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a HermesPointerValue");
     return static_cast<const HermesPointerValue *>(getPointerValue(pointer))
-        ->phv;
+        ->value();
   }
 
   static const ::hermes::vm::PinnedHermesValue &phv(const jsi::Value &value) {
     assert(
         dynamic_cast<const HermesPointerValue *>(getPointerValue(value)) &&
         "Pointer does not contain a HermesPointerValue");
-    return static_cast<const HermesPointerValue *>(getPointerValue(value))->phv;
+    return static_cast<const HermesPointerValue *>(getPointerValue(value))
+        ->value();
   }
 
   static ::hermes::vm::Handle<::hermes::vm::HermesValue> stringHandle(
@@ -590,7 +511,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
     assert(
         dynamic_cast<WeakRefPointerValue *>(getPointerValue(pointer)) &&
         "Pointer does not contain a WeakRefPointerValue");
-    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))->wr;
+    return static_cast<WeakRefPointerValue *>(getPointerValue(pointer))
+        ->value();
   }
 
   // These helpers use public (mostly) interfaces on the runtime and
@@ -968,51 +890,113 @@ class HermesRuntimeImpl final : public HermesRuntime,
     HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
+  // A ManagedChunkedList element that indicates whether it's occupied based on
+  // a refcount.
   template <typename T>
-  class ManagedValues {
-   public:
-    using iterator = typename std::list<T>::iterator;
+  struct ManagedValue : PointerValue {
+    ManagedValue() : refCount_(0) {}
 
+    // Determine whether the element is occupied by inspecting the refcount.
+    bool isFree() const {
+      return refCount_.load(std::memory_order_relaxed) == 0;
+    }
+
+    // Store a value and start the refcount at 1. After invocation, this
+    // instance is occupied with a value, and the "nextFree" methods should
+    // not be used until the value is released.
     template <typename... Args>
-    T &add(Args &&...args) {
-      // If the size has hit the target size, collect unused values.
-      if (LLVM_UNLIKELY(size() >= targetSize_))
-        collect();
-      values_.emplace_front(std::forward<Args>(args)...);
-      return values_.front();
+    void emplace(Args &&...args) {
+      assert(isFree() && "Emplacing already occupied value");
+      refCount_.store(1, std::memory_order_relaxed);
+      new (&value_) T(std::forward<Args>(args)...);
     }
 
-    iterator begin() {
-      return values_.begin();
-    }
-    iterator end() {
-      return values_.end();
-    }
-    iterator erase(iterator it) {
-      return values_.erase(it);
-    }
-    iterator eraseIfExpired(iterator it) {
-      auto next = std::next(it);
-      if (it->get() == 0) {
-        // TSAN will complain here because the value is being freed without any
-        // explicit synchronisation with a background thread that may have just
-        // updated the reference count (and read the vtable in the process).
-        // However, this can be safely ignored because the check above creates a
-        // load-store control dependency, and the free below therefore cannot be
-        // reordered before the check on the reference count.
-        TsanIgnoreWritesBegin();
-        values_.erase(it);
-        TsanIgnoreWritesEnd();
-      }
-      return next;
+    // Get the next free element. Must not be called when this instance is
+    // occupied with a value.
+    ManagedValue<T> *getNextFree() {
+      assert(isFree() && "Free pointer unusuable while occupied");
+      return nextFree_;
     }
 
-    size_t size() const {
-      return values_.size();
+    // Set the next free element. Must not be called when this instance is
+    // occupied with a value.
+    void setNextFree(ManagedValue<T> *nextFree) {
+      assert(isFree() && "Free pointer unusuable while occupied");
+      nextFree_ = nextFree;
     }
 
+    T &value() {
+      assert(!isFree() && "Value not present");
+      return value_;
+    }
+
+    const T &value() const {
+      assert(!isFree() && "Value not present");
+      return value_;
+    }
+
+    void invalidate() override {
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+      assert(
+          ((1 << 31) & refCount_) == 0 &&
+          "This PointerValue was left dangling after the Runtime was destroyed.");
+#endif
+      dec();
+    }
+
+    void inc() {
+      // It is always safe to use relaxed operations for incrementing the
+      // reference count, because the only operation that may occur concurrently
+      // with it is decrementing the reference count, and we do not need to
+      // enforce any ordering between the two.
+      auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
+      assert(oldCount && "Cannot resurrect a pointer");
+      assert(oldCount + 1 != 0 && "Ref count overflow");
+      (void)oldCount;
+    }
+
+    void dec() {
+      // It is safe to use relaxed operations here because decrementing the
+      // reference count is the only access that may be performed without proper
+      // synchronisation. As a result, the only ordering we need to enforce when
+      // decrementing is that the vtable pointer used to call \c invalidate is
+      // loaded from before the decrement, in case the decrement ends up causing
+      // this value to be freed. We get this ordering from the fact that the
+      // vtable read and the reference count update form a load-store control
+      // dependency, which preserves their ordering on any reasonable hardware.
+      auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+      assert(oldCount > 0 && "Ref count underflow");
+      (void)oldCount;
+    }
+
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+    void markDangling() {
+      // Mark this PointerValue as dangling by setting the top bit AND the
+      // second-top bit. The top bit is used to determine if the pointer is
+      // dangling. Setting the second-top bit ensures that accidental
+      // over-calling the dec() function doesn't clear the top bit without
+      // complicating the implementation of dec().
+      refCount_ |= 0b11 << 30;
+    }
+#endif
+
+   private:
+    std::atomic<uint32_t> refCount_;
+    union {
+      T value_;
+      ManagedValue<T> *nextFree_;
+    };
+  };
+
+  template <typename T>
+  class ManagedValues : public ::hermes::ManagedChunkedList<ManagedValue<T>> {
+    static constexpr double kSizingWeight_ = 0.5;
+
+   public:
     explicit ManagedValues(double occupancyRatio)
-        : occupancyRatio_{occupancyRatio} {}
+        : ::hermes::ManagedChunkedList<ManagedValue<T>>(
+              occupancyRatio,
+              kSizingWeight_) {}
 
 #ifdef ASSERT_ON_DANGLING_VM_REFS
     // If we have active HermesValuePointers when deconstructing, these will
@@ -1023,27 +1007,34 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // deferring the assert it's a bit easier to see what's holding the pointers
     // for too long.
     ~ManagedValues() {
-      collect();
-      if (!values_.empty()) {
-        for (auto &val : values_)
-          val.markDangling();
+      ::hermes::ManagedChunkedList<ManagedValue<T>>::collect();
+      bool empty = true;
+      ::hermes::ManagedChunkedList<ManagedValue<T>>::forEach(
+          [&empty](ManagedValue<T> &element) {
+            element.markDangling();
+            empty = false;
+          });
+      if (!empty) {
         // This is the deliberate memory leak described above.
-        new std::list<T>(std::move(values_));
+        new ::hermes::ManagedChunkedList(std::move(*this));
       }
     }
 #endif
-
-   private:
-    void collect() {
-      for (auto it = values_.begin(), e = values_.end(); it != e;)
-        it = eraseIfExpired(it);
-      targetSize_ = size() / occupancyRatio_;
-    }
-
-    double occupancyRatio_;
-    size_t targetSize_ = 0;
-    std::list<T> values_;
   };
+
+  using HermesPointerValue = ManagedValue<vm::PinnedHermesValue>;
+  using WeakRefPointerValue = ManagedValue<vm::WeakRoot<vm::JSObject>>;
+
+  HermesPointerValue *clone(const Runtime::PointerValue *pv) {
+    if (!pv) {
+      return nullptr;
+    }
+    // These are only ever allocated by us, so we can remove their constness
+    auto result = static_cast<HermesPointerValue *>(
+        const_cast<Runtime::PointerValue *>(pv));
+    result->inc();
+    return result;
+  }
 
  protected:
   /// Helper function that is parameterized over the type of context being
@@ -1055,8 +1046,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       unsigned int paramCount);
 
  public:
-  ManagedValues<HermesPointerValue> hermesValues_;
-  ManagedValues<WeakRefPointerValue> weakHermesValues_;
+  ManagedValues<vm::PinnedHermesValue> hermesValues_;
+  ManagedValues<vm::WeakRoot<vm::JSObject>> weakHermesValues_;
   std::shared_ptr<::hermes::vm::Runtime> rt_;
   ::hermes::vm::Runtime &runtime_;
   friend class debugger::Debugger;
@@ -1426,8 +1417,8 @@ jsi::Value HermesRuntime::evaluateSHUnit(SHUnit *shUnit) {
   }
 }
 
-size_t HermesRuntime::rootsListLength() const {
-  return impl(this)->hermesValues_.size();
+size_t HermesRuntime::rootsListLengthForTests() const {
+  return impl(this)->hermesValues_.sizeForTests();
 }
 
 namespace {
