@@ -159,7 +159,7 @@ module.exports = {
   JSXIdentifier: [],
   JSXMemberExpression: ['object', 'property'],
   JSXNamespacedName: ['namespace', 'name'],
-  JSXOpeningElement: ['name', 'attributes'],
+  JSXOpeningElement: ['name', 'attributes', 'typeArguments'],
   JSXOpeningFragment: [],
   JSXSpreadAttribute: ['argument'],
   JSXSpreadChild: ['expression'],

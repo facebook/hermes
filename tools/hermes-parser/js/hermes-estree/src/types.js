@@ -1756,6 +1756,7 @@ export interface JSXOpeningElement extends BaseNode {
   +selfClosing: boolean;
   +name: JSXTagNameExpression;
   +attributes: $ReadOnlyArray<JSXAttribute | JSXSpreadAttribute>;
+  +typeArguments?: TypeParameterInstantiation | null;
 
   +parent: JSXElement;
 }
