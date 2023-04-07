@@ -1269,8 +1269,8 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
 
   return BigIntPrimitive::add(
       runtime,
-      runtime.makeHandle(resX->getBigInt()),
-      runtime.makeHandle(resY->getBigInt()));
+      runtime.makeHandle(xPrim->getBigInt()),
+      runtime.makeHandle(yPrim->getBigInt()));
 }
 
 static const size_t MIN_RADIX = 2;
