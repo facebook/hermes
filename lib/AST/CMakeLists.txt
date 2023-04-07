@@ -9,5 +9,6 @@ add_hermes_library(hermesAST
     ESTreeJSONDumper.cpp
     CommonJS.cpp
     LINK_OBJLIBS
+    hermesRegex
     hermesSupport
 )

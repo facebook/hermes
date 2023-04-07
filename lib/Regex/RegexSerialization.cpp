@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Regex/Regex.h"
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/Algorithms.h"

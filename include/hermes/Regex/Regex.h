@@ -18,13 +18,12 @@
 #ifndef HERMES_REGEX_COMPILER_H
 #define HERMES_REGEX_COMPILER_H
 
-#include "hermes/Support/Algorithms.h"
-#include "hermes/Support/Compiler.h"
-#include "hermes/Support/RegExpSupport.h"
-
 #include "hermes/Regex/RegexBytecode.h"
 #include "hermes/Regex/RegexNode.h"
+#include "hermes/Regex/RegexSupport.h"
 #include "hermes/Regex/RegexTypes.h"
+#include "hermes/Support/Algorithms.h"
+#include "hermes/Support/Compiler.h"
 
 #include <deque>
 #include <string>

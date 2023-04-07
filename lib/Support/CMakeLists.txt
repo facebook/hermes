@@ -5,7 +5,6 @@
 
 set(LINK_OBJLIBS
     dtoa
-    hermesRegex
     hermesPlatformUnicode
     LLVHSupport)
 
@@ -27,7 +26,6 @@ add_hermes_library(hermesSupport
         OSCompatWindows.cpp
         PageAccessTrackerPosix.cpp
         PerfSection.cpp
-        RegExpSerialization.cpp
         SemaphorePosix.cpp
         SHA1.cpp
         SNPrintfBuf.cpp

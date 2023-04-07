@@ -6,7 +6,7 @@
  */
 
 #include "ESTreeIRGen.h"
-#include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/UTF8.h"
 
 #include "llvh/ADT/ScopeExit.h"
