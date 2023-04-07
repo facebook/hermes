@@ -1,8 +1,0 @@
-#!/bin/bash
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
-node \
-  --max-old-space-size=4096 \
-  "$SCRIPT_DIR/../dist/translateCLI.js" \
-  $*;
