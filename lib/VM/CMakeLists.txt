@@ -58,6 +58,7 @@ set(source_files
   Profiler/InlineCacheProfiler.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
+  Profiler/SamplingProfilerWindows.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp

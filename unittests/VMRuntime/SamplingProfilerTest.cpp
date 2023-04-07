@@ -28,13 +28,13 @@ std::shared_ptr<Runtime> makeRuntime(bool withEnableSampleProfiling) {
 
 TEST(SamplingProfilerTest, Invariants) {
   // No sample profiler registration by default
-  EXPECT_EQ(Runtime::create(RuntimeConfig{})->samplingProfiler, nullptr);
+  EXPECT_TRUE(Runtime::create(RuntimeConfig{})->samplingProfiler == nullptr);
 
-  EXPECT_EQ(
-      makeRuntime(withSamplingProfilerDisabled)->samplingProfiler, nullptr);
+  EXPECT_TRUE(
+      makeRuntime(withSamplingProfilerDisabled)->samplingProfiler == nullptr);
 
   auto rt = makeRuntime(withSamplingProfilerEnabled);
-  ASSERT_NE(rt->samplingProfiler, nullptr);
+  ASSERT_FALSE(rt->samplingProfiler == nullptr);
 
   // The sample profiler belongs to this thread.
   EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
