@@ -1648,10 +1648,10 @@ function deserializeTSConditionalType() {
   return {
     type: 'TSConditionalType',
     loc: this.addEmptyLoc(),
-    extendsType: this.deserializeNode(),
     checkType: this.deserializeNode(),
+    extendsType: this.deserializeNode(),
     trueType: this.deserializeNode(),
-    falseTYpe: this.deserializeNode(),
+    falseType: this.deserializeNode(),
   };
 }
 function deserializeTSTypeLiteral() {
