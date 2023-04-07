@@ -1844,9 +1844,8 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
     }
     case HermesValue::Tag::Str: {
       // For strings, we hash the string content.
-      auto strView = StringPrimitive::createStringView(
-          *this, Handle<StringPrimitive>::vmcast(value));
-      return llvh::hash_combine_range(strView.begin(), strView.end());
+      auto strHandle = Handle<StringPrimitive>::vmcast(value);
+      return strHandle->getOrComputeHash();
     }
     default:
       assert(!value->isPointer() && "Unhandled pointer type");
