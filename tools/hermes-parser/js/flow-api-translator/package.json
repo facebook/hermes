@@ -1,5 +1,5 @@
 {
-  "name": "hermes-translate",
+  "name": "flow-api-translator",
   "version": "0.9.0",
   "description": "",
   "main": "dist/index.js",
