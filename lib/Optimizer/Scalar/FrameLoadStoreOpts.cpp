@@ -47,10 +47,15 @@ class CapturedVariables {
   llvh::DenseSet<Variable *> stores;
 };
 
-/// Add the variables that the function \p F is capturing into \p cv.
-/// Notice that the function F may have sub-closures that capture variables.
-/// This method does a recursive scan and collects all captured variables.
-void collectCapturedVariables(CapturedVariables &cv, Function *F) {
+/// Add the variables owned by \p src that the function \p F is capturing into
+/// \p cv. Notice that the function F may have sub-closures that capture
+/// variables. This method does a recursive scan and collects all captured
+/// variables.
+void collectCapturedVariables(
+    CapturedVariables &cv,
+    Function *F,
+    Function *src) {
+  assert(F != src && "Cannot collect captured variables from src itself.");
   // For all instructions in the function:
   for (auto &BB : *F) {
     for (auto &instIter : BB) {
@@ -59,20 +64,20 @@ void collectCapturedVariables(CapturedVariables &cv, Function *F) {
       // Recursively check capturing functions by inspecting the created
       // closure.
       if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-        collectCapturedVariables(cv, CF->getFunctionCode());
+        collectCapturedVariables(cv, CF->getFunctionCode(), src);
         continue;
       }
 
       if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
         Variable *V = LF->getLoadVariable();
-        if (V->getParent()->getFunction() != F) {
+        if (V->getParent()->getFunction() == src) {
           cv.loads.insert(V);
         }
       }
 
       if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
         auto *V = SF->getVariable();
-        if (V->getParent()->getFunction() != F) {
+        if (V->getParent()->getFunction() == src) {
           cv.stores.insert(V);
         }
       }
@@ -163,7 +168,7 @@ bool eliminateLoads(BasicBlock *BB) {
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
       if (entryCV) {
-        collectCapturedVariables(*entryCV, CF->getFunctionCode());
+        collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
       }
     }
 
@@ -270,7 +275,7 @@ bool eliminateStores(BasicBlock *BB) {
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
       if (entryCV) {
-        collectCapturedVariables(*entryCV, CF->getFunctionCode());
+        collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
       }
     }
   }
