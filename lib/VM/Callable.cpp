@@ -80,7 +80,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
 
     // According to ES12 26.7.4, AsyncFunction instances do not have a
     // 'prototype' property, hence we need to set an null handle here.
-    auto prototypeObjectHandle = vmisa<JSAsyncFunction>(*jsFun)
+    // Functions that cannot be used with `new` should also not define a
+    // 'prototype' property, such as arrow functions per 15.3.4, except for
+    // generator functions.
+    auto prototypeObjectHandle =
+        codeBlock->getHeaderFlags().isCallProhibited(/* construct */ true) &&
+            !vmisa<JSGeneratorFunction>(*jsFun)
         ? Runtime::makeNullHandle<JSObject>()
         : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
