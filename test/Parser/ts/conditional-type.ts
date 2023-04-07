@@ -21,7 +21,7 @@ type T = A extends B ? C : D;
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "typeAnnotation": {
 // CHECK-NEXT:         "type": "TSConditionalType",
-// CHECK-NEXT:         "extendsType": {
+// CHECK-NEXT:         "checkType": {
 // CHECK-NEXT:           "type": "TSTypeReference",
 // CHECK-NEXT:           "typeName": {
 // CHECK-NEXT:             "type": "Identifier",
@@ -29,7 +29,7 @@ type T = A extends B ? C : D;
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "checkType": {
+// CHECK-NEXT:         "extendsType": {
 // CHECK-NEXT:           "type": "TSTypeReference",
 // CHECK-NEXT:           "typeName": {
 // CHECK-NEXT:             "type": "Identifier",
@@ -45,7 +45,7 @@ type T = A extends B ? C : D;
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "falseTYpe": {
+// CHECK-NEXT:         "falseType": {
 // CHECK-NEXT:           "type": "TSTypeReference",
 // CHECK-NEXT:           "typeName": {
 // CHECK-NEXT:             "type": "Identifier",
