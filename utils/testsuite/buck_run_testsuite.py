@@ -30,7 +30,7 @@ def main():
             ("hermes", "hermes"),
             ("hermesc", "hermesc"),
             (args.hvm_filename, args.hvm_filename),
-            ("icudt_dir/stubdata/icudt55l.dat", "icudt55l.dat"),
+            ("icudt_dir/stubdata/" + icudt_filename, icudt_filename),
         ]
         for rsc, out_name in resources:
             with open(os.path.join(binary_dir, out_name), "w+b") as f:
