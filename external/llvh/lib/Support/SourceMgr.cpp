@@ -126,7 +126,7 @@ std::pair<StringRef, unsigned> SourceMgr::SrcBuffer::getLineNumber(
       EOL != Offsets->end() ? BufStart + *EOL + 1 : Buffer->getBufferEnd();
 
   // Lines count from 1, so add 1 to the distance from the 0th line.
-  return {StringRef(LineStart, LineEnd - LineStart), (1 + (EOL - Offsets->begin()))};
+  return {StringRef(LineStart, LineEnd - LineStart), static_cast<unsigned>((1 + (EOL - Offsets->begin())))};
 }
 
 template<typename T>
@@ -219,7 +219,7 @@ std::pair<unsigned, unsigned>
 SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   auto LineRefAndNo = FindLine(Loc, BufferID);
   return std::make_pair(LineRefAndNo.second,
-                        Loc.getPointer() - LineRefAndNo.first.data() + 1);
+                        static_cast<unsigned>(Loc.getPointer() - LineRefAndNo.first.data() + 1));
 }
 
 void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
@@ -285,8 +285,8 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 
       // Translate from SMLoc ranges to column ranges.
       // FIXME: Handle multibyte characters.
-      ColRanges.push_back(std::make_pair(R.Start.getPointer()-LineStart,
-                                         R.End.getPointer()-LineStart));
+      ColRanges.push_back(std::make_pair(static_cast<unsigned>(R.Start.getPointer()-LineStart),
+                                         static_cast<unsigned>(R.End.getPointer()-LineStart)));
     }
 
     LineAndCol = getLineAndColumn(Loc, CurBuf);

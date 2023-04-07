@@ -102,7 +102,7 @@ void Value::removeUse(Use U) {
   // If we've changed the location of a use in the use list then we need to
   // update the operand in the user.
   if (U.second != Users.size()) {
-    Use oldUse = {this, Users.size()};
+    Use oldUse = {this, static_cast<unsigned>(Users.size())};
     auto &operands = Users[U.second]->Operands;
     for (int i = 0, e = operands.size(); i < e; i++) {
       if (operands[i] == oldUse) {
@@ -116,7 +116,7 @@ void Value::removeUse(Use U) {
 
 Value::Use Value::addUser(Instruction *Inst) {
   Users.push_back(Inst);
-  return {this, Users.size() - 1};
+  return {this, static_cast<unsigned>(Users.size() - 1)};
 }
 
 void Value::replaceAllUsesWith(Value *Other) {

@@ -28,6 +28,15 @@ class StringPrimitive;
 class GCCell;
 class Runtime;
 
+/// SmallHermesValue is the HermesValue encoding used on the heap when we want
+/// to potentially benefit from a 32-bit representation (depending on native
+/// pointer size and HERMESVM_COMPRESSED_POINTERS). A 32-bit representation
+/// inherently requires boxing doubles, since they can't fit in 32 bits.
+///
+/// Additionally, for testing, we can force boxing of doubles even in a 64-bit
+/// representation.
+
+#ifndef HERMESVM_BOXED_DOUBLES
 /// An adaptor class that provides the API of a SmallHermesValue is internally
 /// just a HermesValue.
 class SmallHermesValueAdaptor : protected HermesValue {
@@ -164,6 +173,9 @@ class SmallHermesValueAdaptor : protected HermesValue {
     return SmallHermesValueAdaptor{HermesValue::encodeEmptyValue()};
   }
 };
+using SmallHermesValue = SmallHermesValueAdaptor;
+
+#else // #ifndef HERMESVM_BOXED_DOUBLES
 
 /// A compressed HermesValue that is always equal to the size of a
 /// CompressedPointer. It uses the least significant bits (guaranteed to be zero
@@ -469,21 +481,9 @@ class HermesValue32 {
     raw_ = other.raw_;
   }
 };
+using SmallHermesValue = HermesValue32;
 
-/// SmallHermesValue is the HermesValue encoding used on the heap when we want
-/// to potentially benefit from a 32-bit representation (depending on native
-/// pointer size and HERMESVM_COMPRESSED_POINTERS). A 32-bit representation
-/// inherently requires boxing doubles, since they can't fit in 32 bits.
-///
-/// Additionally, for testing, we can force boxing of doubles even in a 64-bit
-/// representation.
-using SmallHermesValue =
-#ifdef HERMESVM_BOXED_DOUBLES
-    HermesValue32
-#else
-    SmallHermesValueAdaptor
-#endif
-    ;
+#endif // #ifndef HERMESVM_BOXED_DOUBLES
 
 static_assert(
     std::is_trivial<SmallHermesValue>::value,
