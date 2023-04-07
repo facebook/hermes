@@ -19,6 +19,7 @@
 #include "llvh/Support/Compiler.h"
 
 #include "ChromeTraceSerializer.h"
+#include "GlobalProfiler.h"
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -32,46 +33,6 @@
 
 namespace hermes {
 namespace vm {
-
-/// Name of the semaphore.
-const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
-
-std::atomic<SamplingProfiler::GlobalProfiler *>
-    SamplingProfiler::GlobalProfiler::instance_{nullptr};
-
-std::atomic<SamplingProfiler *>
-    SamplingProfiler::GlobalProfiler::profilerForSig_{nullptr};
-
-void SamplingProfiler::GlobalProfiler::registerRuntime(
-    SamplingProfiler *profiler) {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  profilers_.insert(profiler);
-
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
-  assert(
-      threadLocalProfilerForLoom_.get() == nullptr &&
-      "multiple hermes runtime in the same thread");
-  threadLocalProfilerForLoom_.set(profiler);
-#endif
-}
-
-void SamplingProfiler::GlobalProfiler::unregisterRuntime(
-    SamplingProfiler *profiler) {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  bool succeed = profilers_.erase(profiler);
-  // TODO: should we allow recursive style
-  // register/register -> unregister/unregister call?
-  assert(succeed && "How can runtime not registered yet?");
-  (void)succeed;
-
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
-  // TODO(T125910634): re-introduce the requirement for unregistering the
-  // runtime in the same thread it was registered.
-  threadLocalProfilerForLoom_.set(nullptr);
-#endif
-}
 
 void SamplingProfiler::registerDomain(Domain *domain) {
   // If domain is not already registered, add it to the list.
@@ -108,193 +69,6 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
 
   for (NativeFunction *&fn : nativeFunctions_) {
     acceptor.acceptPtr(fn);
-  }
-}
-
-int SamplingProfiler::GlobalProfiler::invokeSignalAction(void (*handler)(int)) {
-  struct sigaction actions;
-  memset(&actions, 0, sizeof(actions));
-  sigemptyset(&actions.sa_mask);
-  // Allows interrupted IO primitives to restart.
-  actions.sa_flags = SA_RESTART;
-  actions.sa_handler = handler;
-  return sigaction(SIGPROF, &actions, nullptr);
-}
-
-bool SamplingProfiler::GlobalProfiler::registerSignalHandlers() {
-  if (isSigHandlerRegistered_) {
-    return true;
-  }
-  if (invokeSignalAction(profilingSignalHandler) != 0) {
-    perror("signal handler registration failed");
-    return false;
-  }
-  isSigHandlerRegistered_ = true;
-  return true;
-}
-
-bool SamplingProfiler::GlobalProfiler::unregisterSignalHandler() {
-  if (!isSigHandlerRegistered_) {
-    return true;
-  }
-  // Restore to default.
-  if (invokeSignalAction(SIG_DFL) != 0) {
-    perror("signal handler unregistration failed");
-    return false;
-  }
-  isSigHandlerRegistered_ = false;
-  return true;
-}
-
-void SamplingProfiler::GlobalProfiler::profilingSignalHandler(int signo) {
-  // Ensure that writes made on the timer thread before setting the current
-  // profiler are correctly acquired.
-  SamplingProfiler *localProfiler;
-  while (!(localProfiler = profilerForSig_.load(std::memory_order_acquire))) {
-  }
-
-  assert(
-      localProfiler->suspendCount_ == 0 &&
-      "Shouldn't interrupt the VM thread when the sampling profiler is "
-      "suspended.");
-
-  // Avoid spoiling errno in a signal handler by storing the old version and
-  // re-assigning it.
-  auto oldErrno = errno;
-
-  auto profilerInstance = instance_.load();
-  assert(
-      profilerInstance != nullptr &&
-      "Why is GlobalProfiler::instance_ not initialized yet?");
-
-  // Sampling stack will touch GC objects(like closure) so only do so if heap
-  // is valid.
-  auto &curThreadRuntime = localProfiler->runtime_;
-  assert(
-      !curThreadRuntime.getHeap().inGC() &&
-      "sampling profiler should be suspended before GC");
-  (void)curThreadRuntime;
-  profilerInstance->sampledStackDepth_ = localProfiler->walkRuntimeStack(
-      profilerInstance->sampleStorage_, InLoom::No);
-  // Ensure that writes made in the handler are visible to the timer thread.
-  profilerForSig_.store(nullptr);
-
-  if (!instance_.load()->samplingDoneSem_.notifyOne()) {
-    errno = oldErrno;
-    abort(); // Something is wrong.
-  }
-  errno = oldErrno;
-}
-
-bool SamplingProfiler::GlobalProfiler::sampleStacks() {
-  for (SamplingProfiler *localProfiler : profilers_) {
-    std::lock_guard<std::mutex> lk(localProfiler->runtimeDataLock_);
-    if (!sampleStack(localProfiler)) {
-      return false;
-    }
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-    if (localProfiler->shouldPushDataToLoom()) {
-      localProfiler->pushLastSampledStackToLoom();
-    }
-#endif
-  }
-  return true;
-}
-
-bool SamplingProfiler::GlobalProfiler::sampleStack(
-    SamplingProfiler *localProfiler) {
-  auto targetThreadId = localProfiler->currentThread_;
-  if (localProfiler->suspendCount_ > 0) {
-    // Sampling profiler is suspended. Copy pre-captured stack instead without
-    // interrupting the VM thread.
-    if (localProfiler->preSuspendStackDepth_ > 0) {
-      sampleStorage_ = localProfiler->preSuspendStackStorage_;
-      sampledStackDepth_ = localProfiler->preSuspendStackDepth_;
-    } else {
-      // This suspension didn't record a stack trace. For example, a GC (like
-      // mallocGC) did not record JS stack.
-      // TODO: fix this for all cases.
-      sampledStackDepth_ = 0;
-    }
-  } else {
-    // Ensure there are no allocations in the signal handler by keeping ample
-    // reserved space.
-    localProfiler->domains_.reserve(
-        localProfiler->domains_.size() + kMaxStackDepth);
-    size_t domainCapacityBefore = localProfiler->domains_.capacity();
-    (void)domainCapacityBefore;
-
-    // Ditto for native functions.
-    localProfiler->nativeFunctions_.reserve(
-        localProfiler->nativeFunctions_.size() + kMaxStackDepth);
-    size_t nativeFunctionsCapacityBefore =
-        localProfiler->nativeFunctions_.capacity();
-    (void)nativeFunctionsCapacityBefore;
-
-    // Guarantee that the runtime thread will not proceed until it has
-    // acquired the updates to domains_.
-    profilerForSig_.store(localProfiler, std::memory_order_release);
-
-    // Signal target runtime thread to sample stack.
-    pthread_kill(targetThreadId, SIGPROF);
-
-    // Threading: samplingDoneSem_ will synchronise this thread with the
-    // signal handler, so that we only have one active signal at a time.
-    if (!samplingDoneSem_.wait()) {
-      return false;
-    }
-
-    // Guarantee that this thread will observe all changes made to data
-    // structures in the signal handler.
-    while (profilerForSig_.load(std::memory_order_acquire) != nullptr) {
-    }
-
-    assert(
-        localProfiler->domains_.capacity() == domainCapacityBefore &&
-        "Must not dynamically allocate in signal handler");
-
-    assert(
-        localProfiler->nativeFunctions_.capacity() ==
-            nativeFunctionsCapacityBefore &&
-        "Must not dynamically allocate in signal handler");
-  }
-
-  assert(
-      sampledStackDepth_ <= sampleStorage_.stack.size() &&
-      "How can we sample more frames than storage?");
-  localProfiler->sampledStacks_.emplace_back(
-      sampleStorage_.tid,
-      sampleStorage_.timeStamp,
-      sampleStorage_.stack.begin(),
-      sampleStorage_.stack.begin() + sampledStackDepth_);
-  return true;
-}
-
-void SamplingProfiler::GlobalProfiler::timerLoop() {
-  oscompat::set_thread_name("hermes-sampling-profiler");
-
-  constexpr double kMeanMilliseconds = 10;
-  constexpr double kStdDevMilliseconds = 5;
-  std::random_device rd{};
-  std::mt19937 gen{rd()};
-  // The amount of time that is spent sleeping comes from a normal distribution,
-  // to avoid the case where the timer thread samples a stack at a predictable
-  // period.
-  std::normal_distribution<> distribution{
-      kMeanMilliseconds, kStdDevMilliseconds};
-  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
-
-  while (enabled_) {
-    if (!sampleStacks()) {
-      return;
-    }
-
-    const uint64_t millis = round(std::fabs(distribution(gen)));
-    // TODO: make sampling rate configurable.
-    enabledCondVar_.wait_for(
-        uniqueLock, std::chrono::milliseconds(millis), [this]() {
-          return !enabled_;
-        });
   }
 }
 
@@ -353,27 +127,6 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   sampleStorage.tid = oscompat::thread_id();
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
   return count;
-}
-
-/*static*/ SamplingProfiler::GlobalProfiler *
-SamplingProfiler::GlobalProfiler::get() {
-  // We intentionally leak this memory to avoid a case where instance is
-  // accessed after it is destroyed during shutdown.
-  static GlobalProfiler *instance = new GlobalProfiler{};
-  return instance;
-}
-
-SamplingProfiler::GlobalProfiler::GlobalProfiler() {
-  instance_.store(this);
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  profilo_api()->register_external_tracer_callback(
-      TRACER_TYPE_JAVASCRIPT, collectStackForLoom);
-#endif
-}
-
-bool SamplingProfiler::GlobalProfiler::enabled() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  return enabled_;
 }
 
 #if (defined(__ANDROID__) || defined(__APPLE__)) && \
@@ -577,51 +330,8 @@ bool SamplingProfiler::enable() {
   return GlobalProfiler::get()->enable();
 }
 
-bool SamplingProfiler::GlobalProfiler::enable() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
-  if (enabled_) {
-    return true;
-  }
-  if (!samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
-    return false;
-  }
-  if (!registerSignalHandlers()) {
-    return false;
-  }
-  enabled_ = true;
-  // Start timer thread.
-  timerThread_ = std::thread(&GlobalProfiler::timerLoop, this);
-  return true;
-}
-
 bool SamplingProfiler::disable() {
   return GlobalProfiler::get()->disable();
-}
-
-bool SamplingProfiler::GlobalProfiler::disable() {
-  {
-    std::lock_guard<std::mutex> lockGuard(profilerLock_);
-    if (!enabled_) {
-      // Already disabled.
-      return true;
-    }
-    if (!samplingDoneSem_.close()) {
-      return false;
-    }
-    // Unregister handlers before shutdown.
-    if (!unregisterSignalHandler()) {
-      return false;
-    }
-    // Telling timer thread to exit.
-    enabled_ = false;
-  }
-  // Notify the timer thread that it has been disabled.
-  enabledCondVar_.notify_all();
-  // Wait for timer thread to exit. This avoids the timer thread reading from
-  // memory that is freed after a main thread exits. This is outside the lock
-  // on profilerLock_ since the timer thread needs to acquire that lock.
-  timerThread_.join();
-  return true;
 }
 
 void SamplingProfiler::clear() {
