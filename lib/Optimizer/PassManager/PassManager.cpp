@@ -122,3 +122,5 @@ void PassManager::run(Module *M) {
   dumpLastPass(nullptr);
 }
 } // namespace hermes
+
+#undef DEBUG_TYPE
