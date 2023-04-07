@@ -247,7 +247,7 @@ void ESTreeIRGen::genVariableDeclarator(
     if (llvh::isa<ESTree::IdentifierNode>(declarator->_id))
       nameHint = getNameFieldFromID(declarator->_id);
     lref.emitStore(genExpression(declarator->_init, nameHint));
-  } else if (kind == identLet_.getUnderlyingPointer()) {
+  } else if (kind == kw_.identLet) {
     // "let" declarations without an initializer must be set to undefined.
     lref.emitStore(Builder.getLiteralUndefined());
   }
@@ -336,7 +336,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   if (loop->_init) {
     if (auto *VD =
             llvh::dyn_cast<ESTree::VariableDeclarationNode>(loop->_init)) {
-      if (VD->_kind != identVar_.getUnderlyingPointer()) {
+      if (VD->_kind != kw_.identVar) {
         genScopedForLoop(loop);
         return;
       }

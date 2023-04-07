@@ -212,7 +212,7 @@ void ESTreeIRGen::genExpressionBranch(
     case ESTree::NodeKind::UnaryExpression: {
       auto *e = cast<ESTree::UnaryExpressionNode>(expr);
       // Handle `!expr`
-      if (e->_operator == identBang_.getUnderlyingPointer()) {
+      if (e->_operator == kw_.identBang) {
         // Do not propagate onNullish here because !expr cannot be nullish.
         return genExpressionBranch(e->_argument, onFalse, onTrue, nullptr);
       }
@@ -374,7 +374,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Check for a direct call to eval().
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
-    if (Identifier::getFromPointer(identNode->_name) == identEval_)
+    if (identNode->_name == kw_.identEval)
       return genCallEvalExpr(call);
   }
 
@@ -1530,10 +1530,10 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
 }
 
 Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
-  auto oper = Identifier::getFromPointer(U->_operator);
+  UniqueString *oper = U->_operator;
 
   // Handle the delete unary expression. https://es5.github.io/#x11.4.1
-  if (oper == identDelete_) {
+  if (oper == kw_.identDelete) {
     if (auto *memberExpr =
             llvh::dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
       LLVM_DEBUG(llvh::dbgs() << "IRGen delete member expression.\n");
@@ -1582,7 +1582,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   }
 
   // Need to handle the special case of "typeof <undefined variable>".
-  if (oper == identTypeof_) {
+  if (oper == kw_.identTypeof) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       Value *argument = genIdentifierExpression(id, true);
       return Builder.createUnaryOperatorInst(
@@ -1595,11 +1595,11 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   auto *cookie = instrumentIR_.preUnaryExpression(U, argument);
 
   Value *result;
-  if (oper == identPlus_) {
+  if (oper == kw_.identPlus) {
     result = Builder.createAsNumberInst(argument);
   } else {
     result = Builder.createUnaryOperatorInst(
-        argument, UnaryOperatorInst::parseOperator(oper.str()));
+        argument, UnaryOperatorInst::parseOperator(oper->str()));
   }
   return instrumentIR_.postUnaryExpression(U, cookie, result, argument);
 }

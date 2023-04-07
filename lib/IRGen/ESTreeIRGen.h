@@ -418,29 +418,8 @@ class ESTreeIRGen {
   /// compiler non-recursive.
   std::deque<std::function<void()>> compilationQueue_{};
 
-  /// Identifier representing the string "eval".
-  const Identifier identEval_;
-
-  /// Identifier representing the string "var".
-  const Identifier identVar_;
-
-  /// Identifier representing the string "let".
-  const Identifier identLet_;
-
   /// Identifier representing the string "?default".
   const Identifier identDefaultExport_;
-
-  /// Identifier representing the string "delete".
-  const Identifier identDelete_;
-
-  /// Identifier representing the string "typeof".
-  const Identifier identTypeof_;
-
-  /// Identifier representing the string "!".
-  const Identifier identBang_;
-
-  /// Identifier representing the string "+".
-  const Identifier identPlus_;
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.

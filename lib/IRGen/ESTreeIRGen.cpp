@@ -115,14 +115,7 @@ ESTreeIRGen::ESTreeIRGen(
       Root(root),
       Builder(Mod),
       instrumentIR_(M, Builder),
-      identEval_(Builder.createIdentifier("eval")),
-      identVar_(Builder.createIdentifier("var")),
-      identLet_(Builder.createIdentifier("let")),
-      identDefaultExport_(Builder.createIdentifier("?default")),
-      identDelete_(Builder.createIdentifier("delete")),
-      identTypeof_(Builder.createIdentifier("typeof")),
-      identBang_(Builder.createIdentifier("!")),
-      identPlus_(Builder.createIdentifier("+")) {}
+      identDefaultExport_(Builder.createIdentifier("?default")) {}
 
 void ESTreeIRGen::doIt() {
   LLVM_DEBUG(llvh::dbgs() << "Processing top level program.\n");
