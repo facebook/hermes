@@ -75,11 +75,11 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       override;
 
   void setPropertyValue(
-      jsi::Object &obj,
+      const jsi::Object &obj,
       const jsi::String &name,
       const jsi::Value &value) override;
   void setPropertyValue(
-      jsi::Object &obj,
+      const jsi::Object &obj,
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
 
@@ -87,7 +87,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::WeakObject createWeakObject(const jsi::Object &o) override;
 
-  jsi::Value lockWeakObject(jsi::WeakObject &wo) override;
+  jsi::Value lockWeakObject(const jsi::WeakObject &wo) override;
 
   jsi::Array createArray(size_t length) override;
   jsi::ArrayBuffer createArrayBuffer(
@@ -100,8 +100,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::Value getValueAtIndex(const jsi::Array &arr, size_t i) override;
 
-  void setValueAtIndexImpl(jsi::Array &arr, size_t i, const jsi::Value &value)
-      override;
+  void setValueAtIndexImpl(
+      const jsi::Array &arr,
+      size_t i,
+      const jsi::Value &value) override;
 
   jsi::Function createFunctionFromHostFunction(
       const jsi::PropNameID &name,
