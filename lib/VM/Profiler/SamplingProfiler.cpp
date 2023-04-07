@@ -18,7 +18,7 @@
 #include "llvh/Support/Compiler.h"
 
 #include "ChromeTraceSerializer.h"
-#include "GlobalProfiler.h"
+#include "SamplingProfilerSampler.h"
 
 #include <fcntl.h>
 #include <cassert>
@@ -128,11 +128,11 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 
 SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
-  GlobalProfiler::get()->registerRuntime(this);
+  sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
-  auto globalProfiler = GlobalProfiler::get();
+  auto globalProfiler = sampling_profiler::Sampler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
   if (!globalProfiler->profilers_.empty()) {
     auto *localProfiler = *globalProfiler->profilers_.begin();
@@ -180,7 +180,7 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
 }
 
 void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
-  auto globalProfiler = GlobalProfiler::get();
+  auto globalProfiler = sampling_profiler::Sampler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
   if (!globalProfiler->profilers_.empty()) {
     auto *localProfiler = *globalProfiler->profilers_.begin();
@@ -208,11 +208,11 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
 }
 
 bool SamplingProfiler::enable() {
-  return GlobalProfiler::get()->enable();
+  return sampling_profiler::Sampler::get()->enable();
 }
 
 bool SamplingProfiler::disable() {
-  return GlobalProfiler::get()->disable();
+  return sampling_profiler::Sampler::get()->disable();
 }
 
 void SamplingProfiler::clear() {
@@ -234,7 +234,8 @@ void SamplingProfiler::suspend(std::string_view extraInfo) {
   }
 
   // Only record the stack trace for the first suspend() call.
-  if (LLVM_UNLIKELY(GlobalProfiler::get()->enabled() && suspendCount_ == 1)) {
+  if (LLVM_UNLIKELY(
+          sampling_profiler::Sampler::get()->enabled() && suspendCount_ == 1)) {
     recordPreSuspendStack(extraInfo);
   }
 }
