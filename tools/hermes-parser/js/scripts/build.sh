@@ -41,7 +41,7 @@ yarn babel-node "$THIS_DIR/genESTreeJSON.js" "$INCLUDE_PATH"
 # Generate source code, written into package src directories
 yarn babel-node "$THIS_DIR/genNodeDeserializers.js" "$INCLUDE_PATH"
 yarn babel-node "$THIS_DIR/genParserVisitorKeys.js"
-yarn babel-node "$THIS_DIR/genESLintVisitorKeys.js"
+yarn babel-node "$THIS_DIR/genESTreeVisitorKeys.js"
 yarn babel-node "$THIS_DIR/genPredicateFunctions.js"
 yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
 

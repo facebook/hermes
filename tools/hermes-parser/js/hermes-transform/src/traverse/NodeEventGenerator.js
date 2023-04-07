@@ -14,7 +14,7 @@ import type {ESNode} from 'hermes-estree';
 import type {ESQueryOptions, Selector} from './esquery';
 import type {SafeEmitter} from './SafeEmitter';
 
-import {VisitorKeys} from 'hermes-eslint';
+import {FlowVisitorKeys} from 'hermes-parser';
 import * as esquery from './esquery';
 
 type ParsedSelector = $ReadOnly<{
@@ -33,7 +33,7 @@ type ParsedSelector = $ReadOnly<{
 }>;
 
 const ESQUERY_OPTIONS: ESQueryOptions = Object.freeze({
-  visitorKeys: VisitorKeys,
+  visitorKeys: FlowVisitorKeys,
   fallback: (node: ESNode) => {
     throw new Error(`No visitor keys found for node type "${node.type}".`);
   },
@@ -74,7 +74,7 @@ function intersection<T>(...arrays: Array<Array<T>>): Array<T> {
 function getPossibleTypes(parsedSelector: Selector): ?Array<ESNode['type']> {
   switch (parsedSelector.type) {
     case 'identifier':
-      if (!(parsedSelector.value in VisitorKeys)) {
+      if (!(parsedSelector.value in FlowVisitorKeys)) {
         throw new Error(`Unexpected selector ${parsedSelector.value}`);
       }
       // $FlowExpectedError[incompatible-return]

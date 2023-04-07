@@ -12,7 +12,7 @@
 
 import type {Program} from 'hermes-estree';
 
-import visitorKeys from '../HermesESLintVisitorKeys';
+import {FlowVisitorKeys} from 'hermes-parser';
 import {Referencer} from './referencer';
 import {ScopeManager} from './ScopeManager';
 
@@ -131,7 +131,7 @@ function analyze(
   });
   const referencer = new Referencer(
     {
-      childVisitorKeys: visitorKeys,
+      childVisitorKeys: FlowVisitorKeys,
       fbtSupport: providedOptions?.fbt ?? DEFAULT_OPTIONS.fbt,
       jsxPragma: getJsxPragma(ast, providedOptions),
       jsxFragmentName: getJsxFragmentPragma(ast, providedOptions),
