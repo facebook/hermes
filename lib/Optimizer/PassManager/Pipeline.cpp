@@ -51,6 +51,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
 
   PM.addSimplifyCFG();
   PM.addSimpleStackPromotion();
+  PM.addFrameLoadStoreOpts();
   PM.addMem2Reg();
   PM.addSimpleStackPromotion();
   PM.addFunctionAnalysis();
@@ -64,6 +65,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE
   // to ensure unused functions aren't capturing vars.
   PM.addSimpleStackPromotion();
+  PM.addFrameLoadStoreOpts();
   PM.addMem2Reg();
 
 #ifdef HERMES_RUN_WASM
@@ -83,6 +85,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addFuncSigOpts();
   PM.addDCE();
   PM.addSimplifyCFG();
+  PM.addFrameLoadStoreOpts();
   PM.addMem2Reg();
   PM.addAuditor();
 
