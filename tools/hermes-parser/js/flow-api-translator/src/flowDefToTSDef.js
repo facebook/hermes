@@ -173,7 +173,20 @@ const getTransforms = (
   })();
 
   function isReactImport(id: FlowESTree.Identifier): boolean {
-    let currentScope = scopeManager.acquire(id);
+    let currentScope = (() => {
+      let scope = null;
+      let node: FlowESTree.ESNode = id;
+      while (!scope && node) {
+        scope = scopeManager.acquire(node, true);
+        node = node.parent;
+      }
+
+      return scope;
+    })();
+
+    if (currentScope == null) {
+      throw new Error('unable to resolve scope');
+    }
 
     const variableDef = (() => {
       while (currentScope != null) {
