@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/tuple/labels/variance 1`] = `
+[ExpectedTranslationError: 
+> 11 |  type T = [+a: string];
+     |            ^^^^^^^^^^ Unsupported feature: Translating "TupleTypeLabeledElement" is currently not supported.]
+`;

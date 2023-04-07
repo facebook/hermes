@@ -989,6 +989,24 @@ function deserializeTupleTypeAnnotation() {
     types: this.deserializeNodeList(),
   };
 }
+function deserializeTupleTypeSpreadElement() {
+  return {
+    type: 'TupleTypeSpreadElement',
+    loc: this.addEmptyLoc(),
+    label: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+  };
+}
+function deserializeTupleTypeLabeledElement() {
+  return {
+    type: 'TupleTypeLabeledElement',
+    loc: this.addEmptyLoc(),
+    label: this.deserializeNode(),
+    elementType: this.deserializeNode(),
+    optional: this.deserializeBoolean(),
+    variance: this.deserializeNode(),
+  };
+}
 function deserializeArrayTypeAnnotation() {
   return {
     type: 'ArrayTypeAnnotation',
@@ -1852,6 +1870,8 @@ module.exports = [
   deserializeTypeofTypeAnnotation,
   deserializeQualifiedTypeofIdentifier,
   deserializeTupleTypeAnnotation,
+  deserializeTupleTypeSpreadElement,
+  deserializeTupleTypeLabeledElement,
   deserializeArrayTypeAnnotation,
   deserializeUnionTypeAnnotation,
   deserializeIntersectionTypeAnnotation,

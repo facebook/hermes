@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/tuple/spread/default 1`] = `
+[ExpectedTranslationError: 
+> 10 |  type T = [...A];
+     |            ^^^^ Unsupported feature: Translating "TupleTypeSpreadElement" is currently not supported.]
+`;

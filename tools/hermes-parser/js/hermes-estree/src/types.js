@@ -1106,6 +1106,8 @@ export type TypeAnnotationType =
   | QualifiedTypeofIdentifier
   | TypeofTypeAnnotation
   | TupleTypeAnnotation
+  | TupleTypeSpreadElement
+  | TupleTypeLabeledElement
   | InterfaceTypeAnnotation
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
@@ -1231,6 +1233,18 @@ export interface TypeofTypeAnnotation extends BaseNode {
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';
   +types: $ReadOnlyArray<TypeAnnotationType>;
+}
+export interface TupleTypeSpreadElement extends BaseNode {
+  +type: 'TupleTypeSpreadElement';
+  +label?: Identifier | null;
+  +typeAnnotation: TypeAnnotationType;
+}
+export interface TupleTypeLabeledElement extends BaseNode {
+  +type: 'TupleTypeLabeledElement';
+  +label: Identifier;
+  +elementType: TypeAnnotationType;
+  +optional: boolean;
+  +variance: Variance | null;
 }
 
 // type T = { [[foo]]: number };
