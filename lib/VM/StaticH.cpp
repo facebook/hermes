@@ -1104,10 +1104,7 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
 
     auto res =
         PropertyAccessor::create(runtime, getterCallable, setterCallable);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-
-    auto accessor = runtime.makeHandle<PropertyAccessor>(*res);
+    auto accessor = runtime.makeHandle<PropertyAccessor>(res);
 
     return JSObject::defineOwnComputed(
                Handle<JSObject>::vmcast(toPHV(target)),

@@ -51,7 +51,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
 static inline Handle<PropertyAccessor> createPropertyAccessor(
     Runtime &runtime,
     RuntimeModule *runtimeModule) {
-  return runtime.makeHandle<PropertyAccessor>(*PropertyAccessor::create(
+  return runtime.makeHandle<PropertyAccessor>(PropertyAccessor::create(
       runtime,
       makeSimpleJSFunction(runtime, runtimeModule),
       makeSimpleJSFunction(runtime, runtimeModule)));

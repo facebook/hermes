@@ -35,7 +35,7 @@ class PropertyAccessor final : public GCCell {
   GCPointer<Callable> getter{};
   GCPointer<Callable> setter{};
 
-  static CallResult<HermesValue>
+  static HermesValue
   create(Runtime &runtime, Handle<Callable> getter, Handle<Callable> setter);
 };
 

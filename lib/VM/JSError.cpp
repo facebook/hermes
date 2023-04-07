@@ -240,12 +240,8 @@ ExecutionStatus JSError::setupStack(
         1,
         Runtime::makeNullHandle<JSObject>());
 
-    auto crtRes = PropertyAccessor::create(runtime, getter, setter);
-    if (crtRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    runtime.jsErrorStackAccessor = *crtRes;
+    runtime.jsErrorStackAccessor =
+        PropertyAccessor::create(runtime, getter, setter);
   }
 
   auto accessor =
