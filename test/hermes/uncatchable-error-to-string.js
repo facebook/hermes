@@ -11,12 +11,10 @@
 print('Start');
 // CHECK-LABEL: Start
 
-// Overwrite all type errors to quit upon calling toString.
-// Note that it's very important not to overwrite Error.prototype.toString,
+// Overwrite all type errors to quit upon getting name.
+// Note that it's very important not to overwrite Error.name,
 // since QuitError's prototype is Error.
-TypeError.prototype.toString = function() {
-  quit();
-};
+Object.defineProperty(TypeError.prototype, "name", {get: quit});
 
 // QuitError should be uncatchable, and should not be removed by native code.
 // In this case, JS.stack is native code.
