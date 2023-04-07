@@ -336,7 +336,9 @@ ExecutionStatus Debugger::debuggerLoop(
   MutableHandle<> evalResult{runtime_};
   // Keep the evalResult alive, even if all other handles are flushed.
   static constexpr unsigned KEEP_HANDLES = 1;
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   SuspendSamplingProfilerRAII ssp{runtime_, "debugger"};
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
   while (true) {
     GCScopeMarkerRAII marker{runtime_};
     auto command = getNextCommand(

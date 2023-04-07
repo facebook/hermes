@@ -319,9 +319,11 @@ bool executeHBCBytecodeImpl(
     return true;
   }
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling) {
     vm::SamplingProfiler::enable();
   }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   llvh::StringRef sourceURL{};
   if (filename)
@@ -332,10 +334,12 @@ bool executeHBCBytecodeImpl(
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling) {
     vm::SamplingProfiler::disable();
     vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
   }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;
 

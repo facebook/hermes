@@ -8,6 +8,9 @@
 #ifndef HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
 #define HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
 
+#include "hermes/VM/Profiler/SamplingProfilerDefs.h"
+
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 // TODO: Remove dependency on SamplingProfilerPosix from ChromeTraceSerializer.
 // A new header may need to be introduced for data entities. It may make sense
 // to share the data entity across different SamplingProfiler implementations.
@@ -239,5 +242,7 @@ void serializeAsProfilerProfile(
 
 } // namespace vm
 } // namespace hermes
+
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #endif // HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H

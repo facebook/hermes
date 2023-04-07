@@ -7,7 +7,7 @@
 
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#ifdef HERMESVM_SAMPLING_PROFILER_POSIX
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #include "hermes/VM/Runtime.h"
 
@@ -69,4 +69,4 @@ TEST(SamplingProfilerPosixTest, MultipleProfilers) {
 
 } // namespace
 
-#endif // HERMESVM_SAMPLING_PROFILER_POSIX
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE

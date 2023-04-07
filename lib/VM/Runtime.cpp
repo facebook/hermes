@@ -385,14 +385,19 @@ Runtime::Runtime(
   // Populate JS builtins returned from internal bytecode to the builtins table.
   initJSBuiltins(builtins_, jsBuiltinsObj);
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (runtimeConfig.getEnableSampleProfiling())
     samplingProfiler = std::make_unique<SamplingProfiler>(*this);
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   LLVM_DEBUG(llvh::dbgs() << "Runtime initialized\n");
 }
 
 Runtime::~Runtime() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   samplingProfiler.reset();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
+
   getHeap().finalizeAll();
   // Now that all objects are finalized, there shouldn't be any native memory
   // keys left in the ID tracker for memory profiling. Assert that the only IDs
@@ -607,7 +612,7 @@ void Runtime::markRoots(
     symbolRegistry_.markRoots(acceptor);
     acceptor.endRootSection();
   }
-
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SamplingProfiler);
     acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
@@ -616,6 +621,7 @@ void Runtime::markRoots(
     }
     acceptor.endRootSection();
   }
+#endif
 
   {
     MarkRootsPhaseTimer timer(
@@ -671,11 +677,13 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
 
 void Runtime::markRootsForCompleteMarking(
     RootAndSlotAcceptorWithNames &acceptor) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SamplingProfiler);
   acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
   if (samplingProfiler) {
     samplingProfiler->markRootsForCompleteMarking(acceptor);
   }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
   acceptor.endRootSection();
 }
 
@@ -2026,6 +2034,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (samplingProfiler) {
     switch (kind) {
       case GCEventKind::CollectionStart:
@@ -2038,6 +2047,7 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
         llvm_unreachable("unknown GCEventKind");
     }
   }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (gcEventCallback_) {
     gcEventCallback_(kind, extraInfo.c_str());
   }

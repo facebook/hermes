@@ -153,6 +153,12 @@ class InstallHermesFatalErrorHandler {
   }
 };
 
+#if !HERMESVM_SAMPLING_PROFILER_AVAILABLE
+void throwHermesNotCompiledWithSamplingProfilerSupport() {
+  throw std::logic_error(
+      "Hermes was not compiled with SamplingProfiler support");
+}
+#endif // !HERMESVM_SAMPLING_PROFILER_AVAILABLE
 } // namespace
 
 class HermesRuntimeImpl final : public HermesRuntime,
@@ -1112,34 +1118,55 @@ std::pair<const uint8_t *, size_t> HermesRuntime::getBytecodeEpilogue(
 }
 
 void HermesRuntime::enableSamplingProfiler() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   ::hermes::vm::SamplingProfiler::enable();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::disableSamplingProfiler() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   ::hermes::vm::SamplingProfiler::disable();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   std::error_code ec;
   llvh::raw_fd_ostream os(fileName.c_str(), ec, llvh::sys::fs::F_Text);
   if (ec) {
     throw std::system_error(ec);
   }
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+#else
+  throw std::logic_error(
+      "Hermes was not compiled with SamplingProfilerSupport");
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   llvh::raw_os_ostream os(stream);
   ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   vm::SamplingProfiler *sp = impl(this)->runtime_.samplingProfiler.get();
   if (!sp) {
     throw jsi::JSINativeException("Runtime not registered for profiling");
   }
   llvh::raw_os_ostream os(stream);
   sp->serializeInDevToolsFormat(os);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
@@ -1332,6 +1359,7 @@ void HermesRuntime::debugJavaScript(
 #endif
 
 void HermesRuntime::registerForProfiling() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   vm::Runtime &runtime = impl(this)->runtime_;
   if (runtime.samplingProfiler) {
     ::hermes::hermes_fatal(
@@ -1339,14 +1367,21 @@ void HermesRuntime::registerForProfiling() {
   }
   runtime.samplingProfiler =
       std::make_unique<::hermes::vm::SamplingProfiler>(runtime);
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::unregisterForProfiling() {
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (!impl(this)->runtime_.samplingProfiler) {
     ::hermes::hermes_fatal(
         "unregistering HermesVM not registered for profiling is not allowed");
   }
   impl(this)->runtime_.samplingProfiler.reset();
+#else
+  throwHermesNotCompiledWithSamplingProfilerSupport();
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
 void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
