@@ -12,7 +12,7 @@ import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
-import {insertInArray} from './utils/arrayUtils';
+import {astArrayMutationHelpers} from 'hermes-parser';
 import {getStatementParent} from './utils/getStatementParent';
 import {isValidModuleDeclarationParent} from './utils/isValidModuleDeclarationParent';
 import {InvalidInsertionError} from '../Errors';
@@ -73,7 +73,7 @@ export function performInsertStatementMutation(
     } = insertionParent.parent;
     switch (mutation.side) {
       case 'before': {
-        parent[insertionParent.key] = insertInArray(
+        parent[insertionParent.key] = astArrayMutationHelpers.insertInArray(
           parent[insertionParent.key],
           insertionParent.targetIndex,
           mutation.nodesToInsert,
@@ -82,7 +82,7 @@ export function performInsertStatementMutation(
       }
 
       case 'after': {
-        parent[insertionParent.key] = insertInArray(
+        parent[insertionParent.key] = astArrayMutationHelpers.insertInArray(
           parent[insertionParent.key],
           insertionParent.targetIndex + 1,
           mutation.nodesToInsert,

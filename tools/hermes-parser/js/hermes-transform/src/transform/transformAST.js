@@ -13,6 +13,7 @@
 import type {ESNode, Program} from 'hermes-estree';
 import type {TransformVisitor} from './transform';
 import type {RemoveCommentMutation} from './mutations/RemoveComment';
+import type {ParseResult} from './parse';
 
 import {updateAllParentPointers} from '../detachedNode';
 import {traverseWithContext} from '../traverse/traverse';
@@ -26,7 +27,6 @@ import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
-import type {ParseResult} from './parse';
 
 export type TransformASTResult = {
   ast: Program,

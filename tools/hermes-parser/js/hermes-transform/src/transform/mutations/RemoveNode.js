@@ -30,7 +30,7 @@ import type {
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
-import {removeFromArray} from './utils/arrayUtils';
+import {astArrayMutationHelpers} from 'hermes-parser';
 import {InvalidRemovalError} from '../Errors';
 
 export type RemoveNodeMutation = $ReadOnly<{
@@ -281,7 +281,7 @@ export function performRemoveNodeMutation(
   const parent: interface {
     [string]: $ReadOnlyArray<DetachedNode<RemoveNodeMutation['node']>>,
   } = removalParent.parent;
-  parent[removalParent.key] = removeFromArray(
+  parent[removalParent.key] = astArrayMutationHelpers.removeFromArray(
     parent[removalParent.key],
     removalParent.targetIndex,
   );

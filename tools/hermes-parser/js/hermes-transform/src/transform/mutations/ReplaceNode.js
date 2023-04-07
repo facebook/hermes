@@ -12,8 +12,7 @@ import type {ESNode} from 'hermes-estree';
 import type {MutationContext} from '../MutationContext';
 import type {DetachedNode} from '../../detachedNode';
 
-import {getVisitorKeys, isNode} from 'hermes-parser';
-import {replaceInArray} from './utils/arrayUtils';
+import {getVisitorKeys, isNode, astArrayMutationHelpers} from 'hermes-parser';
 import {moveCommentsToNewNode} from '../comments/comments';
 import {InvalidReplacementError} from '../Errors';
 import {getOriginalNode} from '../../detachedNode';
@@ -56,7 +55,7 @@ export function performReplaceNodeMutation(
     const parent: interface {
       [string]: $ReadOnlyArray<DetachedNode<ESNode>>,
     } = replacementParent.parent;
-    parent[replacementParent.key] = replaceInArray(
+    parent[replacementParent.key] = astArrayMutationHelpers.replaceInArray(
       parent[replacementParent.key],
       replacementParent.targetIndex,
       [mutation.nodeToReplaceWith],
