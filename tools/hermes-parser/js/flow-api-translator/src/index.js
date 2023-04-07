@@ -46,12 +46,14 @@ export function translateFlowDefToTSDef(
   prettierOptions: {...} = {},
 ): string {
   const {ast, scopeManager} = parse(code);
-  const tsAST = flowDefToTSDef(code, ast, scopeManager);
+  const [tsAST, mutatedCode] = flowDefToTSDef(code, ast, scopeManager, {
+    recoverFromErrors: true,
+  });
 
   return print(
     // $FlowExpectedError[incompatible-call] - this is fine as we're providing the visitor keys
     tsAST,
-    code,
+    mutatedCode,
     {
       ...prettierOptions,
     },

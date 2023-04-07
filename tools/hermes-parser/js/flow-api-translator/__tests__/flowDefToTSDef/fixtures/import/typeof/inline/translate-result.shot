@@ -1,7 +1,21 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`flowDefToTSDef import/typeof/inline 1`] = `
-[ExpectedTranslationError: 
-> 11 | import {typeof Value} from 'module';
-     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "typeof imports" is currently not supported.]
+"/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ *
+ * @format
+ */
+
+import {Value} from 'module';
+/**
+ * > 11 | import {typeof Value} from 'module';
+ *      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "typeof imports" is currently not supported.
+ **/
+type Value = any;
+"
 `;
