@@ -25,7 +25,7 @@ enums=true
 inference_mode=constrain_writes
 
 [version]
-^0.195.2
+^0.196.0
 
 [lints]
 untyped-type-import=error
