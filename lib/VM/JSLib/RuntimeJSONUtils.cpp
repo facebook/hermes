@@ -400,59 +400,60 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (lexer_.getCurToken()->getKind() != JSONTokenKind::RBrace) {
-    MutableHandle<StringPrimitive> key{runtime_};
-    GCScope gcScope{runtime_};
-    auto marker = gcScope.createMarker();
-    for (;;) {
-      gcScope.flushToMarker(marker);
-
-      if (LLVM_UNLIKELY(
-              lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
-        return lexer_.error("Expect a string key in JSON object");
-      }
-      key = lexer_.getCurToken()->getString().get();
-
-      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      if (lexer_.getCurToken()->getKind() != JSONTokenKind::Colon) {
-        return lexer_.error("Expect ':' after the key in JSON object");
-      }
-
-      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      auto parRes = parseValue();
-      if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      (void)JSObject::defineOwnComputedPrimitive(
-          object,
-          runtime_,
-          key,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          runtime_.makeHandle(*parRes));
-
-      if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
-        if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        continue;
-      } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
-        break;
-      } else {
-        return lexer_.error("Expect '}'");
-      }
-    }
-    assert(
-        lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
-        "Unexpected stop for object parse");
+  if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
+    return object.getHermesValue();
   }
 
+  MutableHandle<StringPrimitive> key{runtime_};
+  GCScope gcScope{runtime_};
+  auto marker = gcScope.createMarker();
+  for (;;) {
+    gcScope.flushToMarker(marker);
+
+    if (LLVM_UNLIKELY(
+            lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
+      return lexer_.error("Expect a string key in JSON object");
+    }
+    key = lexer_.getCurToken()->getString().get();
+
+    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (lexer_.getCurToken()->getKind() != JSONTokenKind::Colon) {
+      return lexer_.error("Expect ':' after the key in JSON object");
+    }
+
+    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto parRes = parseValue();
+    if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    (void)JSObject::defineOwnComputedPrimitive(
+        object,
+        runtime_,
+        key,
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        runtime_.makeHandle(*parRes));
+
+    if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
+      if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      continue;
+    } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
+      break;
+    } else {
+      return lexer_.error("Expect '}'");
+    }
+  }
+  assert(
+      lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
+      "Unexpected stop for object parse");
   return object.getHermesValue();
 }
 
