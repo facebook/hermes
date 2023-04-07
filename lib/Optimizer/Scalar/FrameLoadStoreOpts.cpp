@@ -170,24 +170,21 @@ bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
   // Map from a Variable to the last store to it that we have not found to be
   // observable yet. If an entry exists when a subsequent store is
   // encountered, the entry's store is not observable and may be eliminated.
-  llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
+  llvh::DenseMap<Variable *, StoreFrameInst *> prevStores;
 
   // Deletes instructions when we leave the function.
   IRBuilder::InstructionDestroyer destroyer;
 
   bool changed = false;
 
-  for (auto &it : *BB) {
-    Instruction *II = &it;
-
+  for (Instruction &I : *BB) {
     // Try to delete the previous store based on the current store.
-    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-      auto *V = SF->getVariable();
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&I)) {
+      auto [it, inserted] = prevStores.try_emplace(SF->getVariable(), SF);
 
-      auto [it, first] = prevStoreFrame.try_emplace(V, SF);
-
-      if (!first) {
-        // Found store-after-store. Mark the previous store for deletion.
+      if (!inserted) {
+        // There is a previous store, delete it and make this the previous
+        // store.
         destroyer.add(it->second);
         changed = true;
         it->second = SF;
@@ -197,16 +194,23 @@ bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
 
     // If we are reading from the variable, the last known store cannot be
     // eliminated.
-    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-      auto *V = LF->getLoadVariable();
-      prevStoreFrame.erase(V);
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
+      prevStores.erase(LF->getLoadVariable());
+      continue;
+    }
+
+    // Collect the captured variables of newly created closures if we're in
+    // the entry block.
+    if (auto *CLCI = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
+      if (entryCV)
+        collectCapturedVariables(*entryCV, CLCI->getFunctionCode(), F);
       continue;
     }
 
     // Invalidate the store frame storage if the instruction may execute
     // capturing loads that observe this store.
-    if (II->mayExecute()) {
-      for (auto it = prevStoreFrame.begin(); it != prevStoreFrame.end(); it++) {
+    if (I.mayExecute()) {
+      for (auto it = prevStores.begin(); it != prevStores.end(); it++) {
         // Use incremental capture information in the entry block for owned
         // variables, and global information for everything else.
         bool ownedVar = it->first->getParent()->getFunction() == F;
@@ -214,21 +218,11 @@ bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
 
         // If there are any captured loads of the variable, the previous
         // store is observable, and cannot be eliminated.
-        if (cv.loads.count(it->first)) {
-          prevStoreFrame.erase(it);
-        }
-      }
-    }
-
-    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-      // Collect the captured variables of newly created closures if we're in
-      // the entry block.
-      if (entryCV) {
-        collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
+        if (cv.loads.count(it->first))
+          prevStores.erase(it);
       }
     }
   }
-
   return changed;
 }
 
