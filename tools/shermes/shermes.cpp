@@ -21,6 +21,7 @@
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/InitLLVM.h"
 #include "llvh/Support/MemoryBuffer.h"
@@ -477,8 +478,12 @@ std::shared_ptr<Context> createContext() {
 
   auto context = std::make_shared<Context>(codeGenOpts, optimizationOpts);
 
-  // Default is non-strict mode.
-  context->setStrictMode(cli::StrictMode);
+  // Typed mode forces strict mode.
+  if (cli::Typed && !cli::StrictMode && cli::StrictMode.getNumOccurrences()) {
+    llvh::errs() << "error: types are incompatible with loose mode\n";
+    return nullptr;
+  }
+  context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::EnableEval);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
@@ -549,6 +554,16 @@ ESTree::NodePtr parseJS(
     bool wrapCJSModule = false) {
   assert(fileBuf && "Need a file to compile");
   assert(context && "Need a context to compile using");
+
+  // Save the previous stictness and force strict mode if we are parsing a typed
+  // file.
+  auto onExit = llvh::make_scope_exit(
+      [&context, saveStrictness = context->isStrictMode()]() {
+        context->setStrictMode(saveStrictness);
+      });
+  if (flowContext)
+    context->setStrictMode(true);
+
   // This value will be set to true if the parser detected the 'use static
   // builtin' directive in the source.
   bool useStaticBuiltinDetected = false;

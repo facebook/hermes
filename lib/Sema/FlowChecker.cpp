@@ -32,6 +32,15 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
   if (sm_.getErrorCount())
     return false;
 
+  assert(
+      astContext_.isStrictMode() && semContext_.getGlobalFunction()->strict &&
+      "Types can only be used in strict mode");
+  // Defensive programming.
+  if (!semContext_.getGlobalFunction()->strict) {
+    sm_.error(rootNode->getStartLoc(), "ft: strict mode required");
+    return false;
+  }
+
   FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
   ScopeRAII scope(*this);
   resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope());
@@ -1138,6 +1147,7 @@ void FlowChecker::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::Node *body,
     ESTree::NodeList &params) {
+  assert(node->getSemInfo()->strict && "Types can only be used in strict mode");
   ScopeRAII scope(*this);
 
   for (auto &param : params) {
