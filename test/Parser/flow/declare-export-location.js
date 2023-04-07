@@ -19,11 +19,7 @@ declare export * from 'other'
 
 declare export * from 'other';
 
-declare export var x
-
 declare export var x: any
-
-declare export var x;
 
 declare export default function foo(): any;
 
@@ -58,7 +54,6 @@ declare export default class C {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportDeclaration",
 // CHECK-NEXT:       "declaration": {
@@ -88,7 +83,6 @@ declare export default class C {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportAllDeclaration",
 // CHECK-NEXT:       "source": {
@@ -116,7 +110,6 @@ declare export default class C {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportAllDeclaration",
 // CHECK-NEXT:       "source": {
@@ -144,51 +137,6 @@ declare export default class C {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "DeclareExportDeclaration",
-// CHECK-NEXT:       "declaration": {
-// CHECK-NEXT:         "type": "DeclareVariable",
-// CHECK-NEXT:         "id": {
-// CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "x",
-// CHECK-NEXT:           "loc": {
-// CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 22,
-// CHECK-NEXT:               "column": 20
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 22,
-// CHECK-NEXT:               "column": 21
-// CHECK-NEXT:             }
-// CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "loc": {
-// CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 22,
-// CHECK-NEXT:             "column": 16
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 22,
-// CHECK-NEXT:             "column": 21
-// CHECK-NEXT:           }
-// CHECK-NEXT:         }
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "specifiers": [],
-// CHECK-NEXT:       "source": null,
-// CHECK-NEXT:       "default": false,
-// CHECK-NEXT:       "loc": {
-// CHECK-NEXT:         "start": {
-// CHECK-NEXT:           "line": 22,
-// CHECK-NEXT:           "column": 1
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 22,
-// CHECK-NEXT:           "column": 21
-// CHECK-NEXT:         }
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportDeclaration",
 // CHECK-NEXT:       "declaration": {
@@ -202,44 +150,45 @@ declare export default class C {}
 // CHECK-NEXT:               "type": "AnyTypeAnnotation",
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 24,
+// CHECK-NEXT:                   "line": 22,
 // CHECK-NEXT:                   "column": 23
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 24,
+// CHECK-NEXT:                   "line": 22,
 // CHECK-NEXT:                   "column": 26
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "line": 22,
 // CHECK-NEXT:                 "column": 21
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 24,
+// CHECK-NEXT:                 "line": 22,
 // CHECK-NEXT:                 "column": 26
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 20
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 24,
+// CHECK-NEXT:               "line": 22,
 // CHECK-NEXT:               "column": 26
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
+// CHECK-NEXT:         "kind": "var",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 24,
+// CHECK-NEXT:             "line": 22,
 // CHECK-NEXT:             "column": 16
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 24,
+// CHECK-NEXT:             "line": 22,
 // CHECK-NEXT:             "column": 26
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
@@ -249,60 +198,15 @@ declare export default class C {}
 // CHECK-NEXT:       "default": false,
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
-// CHECK-NEXT:           "line": 24,
+// CHECK-NEXT:           "line": 22,
 // CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 24,
+// CHECK-NEXT:           "line": 22,
 // CHECK-NEXT:           "column": 26
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
-// CHECK-NEXT:     {
-// CHECK-NEXT:       "type": "DeclareExportDeclaration",
-// CHECK-NEXT:       "declaration": {
-// CHECK-NEXT:         "type": "DeclareVariable",
-// CHECK-NEXT:         "id": {
-// CHECK-NEXT:           "type": "Identifier",
-// CHECK-NEXT:           "name": "x",
-// CHECK-NEXT:           "loc": {
-// CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 26,
-// CHECK-NEXT:               "column": 20
-// CHECK-NEXT:             },
-// CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 26,
-// CHECK-NEXT:               "column": 21
-// CHECK-NEXT:             }
-// CHECK-NEXT:           }
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "loc": {
-// CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 26,
-// CHECK-NEXT:             "column": 16
-// CHECK-NEXT:           },
-// CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 26,
-// CHECK-NEXT:             "column": 22
-// CHECK-NEXT:           }
-// CHECK-NEXT:         }
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "specifiers": [],
-// CHECK-NEXT:       "source": null,
-// CHECK-NEXT:       "default": false,
-// CHECK-NEXT:       "loc": {
-// CHECK-NEXT:         "start": {
-// CHECK-NEXT:           "line": 26,
-// CHECK-NEXT:           "column": 1
-// CHECK-NEXT:         },
-// CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 26,
-// CHECK-NEXT:           "column": 22
-// CHECK-NEXT:         }
-// CHECK-NEXT:       }
-// CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportDeclaration",
 // CHECK-NEXT:       "declaration": {
@@ -320,11 +224,11 @@ declare export default class C {}
 // CHECK-NEXT:                 "type": "AnyTypeAnnotation",
 // CHECK-NEXT:                 "loc": {
 // CHECK-NEXT:                   "start": {
-// CHECK-NEXT:                     "line": 28,
+// CHECK-NEXT:                     "line": 24,
 // CHECK-NEXT:                     "column": 40
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
-// CHECK-NEXT:                     "line": 28,
+// CHECK-NEXT:                     "line": 24,
 // CHECK-NEXT:                     "column": 43
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
@@ -333,33 +237,33 @@ declare export default class C {}
 // CHECK-NEXT:               "typeParameters": null,
 // CHECK-NEXT:               "loc": {
 // CHECK-NEXT:                 "start": {
-// CHECK-NEXT:                   "line": 28,
+// CHECK-NEXT:                   "line": 24,
 // CHECK-NEXT:                   "column": 36
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                   "line": 28,
+// CHECK-NEXT:                   "line": 24,
 // CHECK-NEXT:                   "column": 43
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "loc": {
 // CHECK-NEXT:               "start": {
-// CHECK-NEXT:                 "line": 28,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 36
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                 "line": 28,
+// CHECK-NEXT:                 "line": 24,
 // CHECK-NEXT:                 "column": 43
 // CHECK-NEXT:               }
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 28,
+// CHECK-NEXT:               "line": 24,
 // CHECK-NEXT:               "column": 33
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 28,
+// CHECK-NEXT:               "line": 24,
 // CHECK-NEXT:               "column": 43
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
@@ -367,11 +271,11 @@ declare export default class C {}
 // CHECK-NEXT:         "predicate": null,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 28,
+// CHECK-NEXT:             "line": 24,
 // CHECK-NEXT:             "column": 24
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 28,
+// CHECK-NEXT:             "line": 24,
 // CHECK-NEXT:             "column": 44
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
@@ -381,16 +285,15 @@ declare export default class C {}
 // CHECK-NEXT:       "default": true,
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
-// CHECK-NEXT:           "line": 28,
+// CHECK-NEXT:           "line": 24,
 // CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 28,
+// CHECK-NEXT:           "line": 24,
 // CHECK-NEXT:           "column": 44
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareExportDeclaration",
 // CHECK-NEXT:       "declaration": {
@@ -400,11 +303,11 @@ declare export default class C {}
 // CHECK-NEXT:           "name": "C",
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 30,
+// CHECK-NEXT:               "line": 26,
 // CHECK-NEXT:               "column": 30
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 30,
+// CHECK-NEXT:               "line": 26,
 // CHECK-NEXT:               "column": 31
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
@@ -423,22 +326,22 @@ declare export default class C {}
 // CHECK-NEXT:           "exact": false,
 // CHECK-NEXT:           "loc": {
 // CHECK-NEXT:             "start": {
-// CHECK-NEXT:               "line": 30,
+// CHECK-NEXT:               "line": 26,
 // CHECK-NEXT:               "column": 32
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:               "line": 30,
+// CHECK-NEXT:               "line": 26,
 // CHECK-NEXT:               "column": 34
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
-// CHECK-NEXT:             "line": 30,
+// CHECK-NEXT:             "line": 26,
 // CHECK-NEXT:             "column": 24
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "line": 30,
+// CHECK-NEXT:             "line": 26,
 // CHECK-NEXT:             "column": 34
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
@@ -448,16 +351,15 @@ declare export default class C {}
 // CHECK-NEXT:       "default": true,
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
-// CHECK-NEXT:           "line": 30,
+// CHECK-NEXT:           "line": 26,
 // CHECK-NEXT:           "column": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:           "line": 30,
+// CHECK-NEXT:           "line": 26,
 // CHECK-NEXT:           "column": 34
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
-
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "loc": {
 // CHECK-NEXT:     "start": {
@@ -465,7 +367,7 @@ declare export default class C {}
 // CHECK-NEXT:       "column": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:       "line": 30,
+// CHECK-NEXT:       "line": 26,
 // CHECK-NEXT:       "column": 34
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }

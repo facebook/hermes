@@ -825,9 +825,10 @@ ESTREE_NODE_2_ARGS(
     DeclareFunction, Base,
     NodePtr, id, false,
     NodePtr, predicate, true)
-ESTREE_NODE_1_ARGS(
+ESTREE_NODE_2_ARGS(
     DeclareVariable, Base,
-    NodePtr, id, false)
+    NodePtr, id, false,
+    NodeLabel, kind, false)
 ESTREE_NODE_4_ARGS(
     DeclareExportDeclaration, Base,
     NodePtr, declaration, true,

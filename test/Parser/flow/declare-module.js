@@ -158,7 +158,8 @@ declare module Mod {
 // CHECK-NEXT:                     "type": "NumberTypeAnnotation"
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 }
-// CHECK-NEXT:               }
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "var"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "specifiers": [],
 // CHECK-NEXT:             "source": null,
