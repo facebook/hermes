@@ -1387,6 +1387,12 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// The purpose of these games is to catch if the interpreter ever makes a JS
   /// call without setting the IP.
   llvh::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+
+  /// The number of alive/active NoRJSScopes. If nonzero, then no JS execution
+  /// is allowed
+  uint32_t noRJSLevel_{0};
+
+  friend class NoRJSScope;
 #endif
 
  public:
@@ -1747,6 +1753,7 @@ class NoAllocScope {
   NoAllocScope() = delete;
 };
 using NoHandleScope = NoAllocScope;
+using NoRJSScope = NoAllocScope;
 
 #else
 
@@ -1815,6 +1822,14 @@ class NoAllocScope : public BaseNoScope {
  public:
   explicit NoAllocScope(Runtime &runtime) : NoAllocScope(runtime.getHeap()) {}
   explicit NoAllocScope(GC &gc) : BaseNoScope(&gc.noAllocLevel_) {}
+  using BaseNoScope::BaseNoScope;
+  using BaseNoScope::operator=;
+};
+
+/// RAII class to temporarily disallow reentering JS execution.
+class NoRJSScope : public BaseNoScope {
+ public:
+  explicit NoRJSScope(Runtime &runtime) : BaseNoScope(&runtime.noRJSLevel_) {}
   using BaseNoScope::BaseNoScope;
   using BaseNoScope::operator=;
 };

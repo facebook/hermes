@@ -832,6 +832,9 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
+  // Make sure we are not re-entering JS execution from a context that doesn't
+  // allow reentrancy
+  assert(this->noRJSLevel_ == 0 && "No JS execution allowed right now.");
   return interpretFunctionImpl(newCodeBlock);
 }
 
