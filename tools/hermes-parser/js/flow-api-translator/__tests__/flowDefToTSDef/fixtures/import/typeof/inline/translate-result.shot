@@ -11,11 +11,11 @@ exports[`flowDefToTSDef import/typeof/inline 1`] = `
  * @format
  */
 
-import {Value} from 'module';
-/**
- * > 11 | import {typeof Value} from 'module';
- *      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unsupported feature: Translating "typeof imports" is currently not supported.
- **/
-type Value = any;
+import {
+  type Value as $$IMPORT_TYPEOF_1$$,
+  type Value2 as $$IMPORT_TYPEOF_2$$,
+} from 'module';
+type Value = typeof $$IMPORT_TYPEOF_1$$;
+type Value2 = typeof $$IMPORT_TYPEOF_2$$;
 "
 `;

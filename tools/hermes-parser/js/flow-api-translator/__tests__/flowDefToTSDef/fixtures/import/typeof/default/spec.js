@@ -9,3 +9,4 @@
  */
 
 import typeof Thing from 'module';
+import typeof Thing2 from 'module2';

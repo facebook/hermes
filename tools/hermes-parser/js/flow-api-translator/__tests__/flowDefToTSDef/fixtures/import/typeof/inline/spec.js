@@ -8,4 +8,4 @@
  * @format
  */
 
-import {typeof Value} from 'module';
+import {typeof Value, typeof Value2} from 'module';

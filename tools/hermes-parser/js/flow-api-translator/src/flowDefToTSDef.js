@@ -543,6 +543,11 @@ const getTransforms = (
     ];
   }
 
+  const getPlaceholderNameForTypeofImport: () => string = (() => {
+    let typeof_import_count = 0;
+    return () => `$$IMPORT_TYPEOF_${++typeof_import_count}$$`;
+  })();
+
   const transform = {
     AnyTypeAnnotation(
       _node: FlowESTree.AnyTypeAnnotation,
@@ -1940,66 +1945,57 @@ const getTransforms = (
     ImportDeclaration(
       node: FlowESTree.ImportDeclaration,
     ): Array<DeclarationOrUnsupported<TSESTree.ImportDeclaration>> {
-      if (node.importKind === 'typeof') {
-        /*
-        TODO - this is a complicated change to support because TS
-      does not have typeof imports.
-        Making it a `type` import would change the meaning!
-        The only way to truly support this is to prefix all **usages** with `typeof T`.
-        eg:
-
-        ```
-        import typeof Foo from 'Foo';
-        type T = Foo;
-        ```
-
-        would become:
-
-        ```
-        import type Foo from 'Foo';
-        type T = typeof Foo;
-        ```
-
-        This seems simple, but will actually be super complicated for us to do with
-        our current translation architecture
-        */
-        return node.specifiers.map(spec =>
-          unsupportedDeclaration(node, 'typeof imports', spec.local),
-        );
-      }
       const importKind = node.importKind;
 
       const specifiers = [];
       const unsupportedSpecifiers = [];
-
       node.specifiers.forEach(spec => {
+        let id = (() => {
+          if (node.importKind === 'typeof' || spec.importKind === 'typeof') {
+            const id = {
+              type: 'Identifier',
+              name: getPlaceholderNameForTypeofImport(),
+            };
+
+            unsupportedSpecifiers.push({
+              type: 'TSTypeAliasDeclaration',
+              id: transform.Identifier(spec.local, false),
+              typeAnnotation: {
+                type: 'TSTypeQuery',
+                exprName: id,
+              },
+            });
+
+            return id;
+          }
+
+          return transform.Identifier(spec.local, false);
+        })();
+
         switch (spec.type) {
           case 'ImportDefaultSpecifier':
             specifiers.push({
               type: 'ImportDefaultSpecifier',
-              local: transform.Identifier(spec.local, false),
+              local: id,
             });
             return;
 
           case 'ImportNamespaceSpecifier':
             specifiers.push({
               type: 'ImportNamespaceSpecifier',
-              local: transform.Identifier(spec.local, false),
+              local: id,
             });
             return;
 
           case 'ImportSpecifier':
-            if (spec.importKind === 'typeof') {
-              // see above
-              unsupportedSpecifiers.push(
-                unsupportedDeclaration(node, 'typeof imports', spec.local),
-              );
-            }
             specifiers.push({
               type: 'ImportSpecifier',
-              importKind: spec.importKind === 'type' ? 'type' : null,
+              importKind:
+                spec.importKind === 'typeof' || spec.importKind === 'type'
+                  ? 'type'
+                  : null,
               imported: transform.Identifier(spec.imported, false),
-              local: transform.Identifier(spec.local, false),
+              local: id,
             });
             return;
         }
@@ -2010,7 +2006,8 @@ const getTransforms = (
             {
               type: 'ImportDeclaration',
               assertions: node.assertions.map(transform.ImportAttribute),
-              importKind: importKind ?? 'value',
+              importKind:
+                importKind === 'typeof' ? 'type' : importKind ?? 'value',
               source: transform.StringLiteral(node.source),
               specifiers,
             },
