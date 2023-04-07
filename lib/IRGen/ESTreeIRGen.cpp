@@ -772,15 +772,17 @@ void ESTreeIRGen::emitDestructuringObject(
         !propNode->_computed) {
       Identifier key = getNameFieldFromID(propNode->_key);
       excludedItems.push_back(Builder.getLiteralString(key));
-      auto *loadedValue = Builder.createLoadPropertyInst(source, key);
-      createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
+      LReference lref = createLRef(valueNode, declInit);
+      Value *propLoad = Builder.createLoadPropertyInst(source, key);
+      Value *optInit = emitOptionalInitialization(propLoad, init, nameHint);
+      lref.emitStore(optInit);
     } else {
       Value *key = genExpression(propNode->_key);
       excludedItems.push_back(key);
-      auto *loadedValue = Builder.createLoadPropertyInst(source, key);
-      createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
+      LReference lref = createLRef(valueNode, declInit);
+      Value *propLoad = Builder.createLoadPropertyInst(source, key);
+      Value *optInit = emitOptionalInitialization(propLoad, init, nameHint);
+      lref.emitStore(optInit);
     }
   }
 }
