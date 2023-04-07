@@ -138,6 +138,318 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     return false;
   }
 
+  function EnumImpl(
+    node: FlowESTree.EnumDeclaration | FlowESTree.DeclareEnum,
+  ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
+    const body = node.body;
+    if (body.type === 'EnumSymbolBody') {
+      /*
+      There's unfortunately no way for us to support this in a clean way.
+      We can get really close using this code:
+      ```
+      declare namespace SymbolEnum {
+          export const member1: unique symbol;
+          export type member1 = typeof member1;
+
+          export const member2: unique symbol;
+          export type member2 = typeof member2;
+      }
+      type SymbolEnum = typeof SymbolEnum[keyof typeof SymbolEnum];
+      ```
+
+      However as explained in https://github.com/microsoft/TypeScript/issues/43657:
+      "A unique symbol type is never transferred from one declaration to another through inference."
+      This intended behaviour in TS means that the usage of the fake-enum would look like this:
+      ```
+      const value: SymbolEnum.member1 = SymbolEnum.member1;
+      //           ^^^^^^^^^^^^^^^^^^ required to force TS to retain the information
+      ```
+      Which is really clunky and shitty. It definitely works, but ofc it's not good.
+      We can go with this design if users are okay with it!
+
+      Considering how rarely used symbol enums are ATM, let's just put a pin in it for now.
+      */
+      throw unsupportedTranslationError(node, 'symbol enums');
+    }
+    if (body.type === 'EnumBooleanBody') {
+      /*
+      TODO - TS enums only allow strings or numbers as their values - not booleans.
+      This means we need a non-ts-enum representation of the enum.
+      We can support boolean enums using a construct like this:
+      ```ts
+      declare namespace BooleanEnum {
+          export const member1: true;
+          export type member1 = typeof member1;
+
+          export const member2: false;
+          export type member2 = typeof member1;
+      }
+      declare type BooleanEnum = boolean;
+      ```
+
+      But it's pretty clunky and ugly.
+      Considering how rarely used boolean enums are ATM, let's just put a pin in it for now.
+      */
+      throw unsupportedTranslationError(node, 'boolean enums');
+    }
+
+    const members: Array<TSESTree.TSEnumMemberNonComputedName> = [];
+    for (const member of body.members) {
+      switch (member.type) {
+        case 'EnumDefaultedMember': {
+          if (body.type === 'EnumNumberBody') {
+            // this should be impossible!
+            throw unexpectedTranslationError(
+              member,
+              'Unexpected defaulted number enum member',
+            );
+          }
+          members.push({
+            type: 'TSEnumMember',
+            computed: false,
+            id: transform.Identifier(member.id, false),
+            initializer: ({
+              type: 'Literal',
+              raw: `"${member.id.name}"`,
+              value: member.id.name,
+            }: TSESTree.StringLiteral),
+          });
+          break;
+        }
+
+        case 'EnumNumberMember':
+        case 'EnumStringMember':
+          members.push({
+            type: 'TSEnumMember',
+            computed: false,
+            id: transform.Identifier(member.id, false),
+            initializer:
+              member.init.literalType === 'string'
+                ? transform.StringLiteral(member.init)
+                : transform.NumericLiteral(member.init),
+          });
+      }
+    }
+
+    const bodyRepresentationType =
+      body.type === 'EnumNumberBody'
+        ? {type: 'TSNumberKeyword'}
+        : {type: 'TSStringKeyword'};
+
+    const enumName = transform.Identifier(node.id, false);
+    return [
+      {
+        type: 'TSEnumDeclaration',
+        const: false,
+        declare: true,
+        id: enumName,
+        members,
+      },
+      // flow also exports `.cast`, `.isValid`, `.members` and `.getName` for enums
+      // we can use declaration merging to declare these functions on the enum:
+      /*
+      declare enum Foo {
+        A = 1,
+        B = 2,
+      }
+      declare namespace Foo {
+        export function cast(value: number | null | undefined): Foo;
+        export function isValid(value: number | null | undefined): value is Foo;
+        export function members(): IterableIterator<Foo>;
+        export function getName(value: Foo): string;
+      }
+      */
+      {
+        type: 'TSModuleDeclaration',
+        declare: true,
+        id: enumName,
+        body: {
+          type: 'TSModuleBlock',
+          body: [
+            // export function cast(value: number | null | undefined): Foo
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'cast',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSUnionType',
+                        types: [
+                          bodyRepresentationType,
+                          {
+                            type: 'TSNullKeyword',
+                          },
+                          {
+                            type: 'TSUndefinedKeyword',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypeReference',
+                    typeName: enumName,
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function isValid(value: number | null | undefined): value is Foo;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'isValid',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSUnionType',
+                        types: [
+                          bodyRepresentationType,
+                          {
+                            type: 'TSNullKeyword',
+                          },
+                          {
+                            type: 'TSUndefinedKeyword',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypePredicate',
+                    asserts: false,
+                    parameterName: {
+                      type: 'Identifier',
+                      name: 'value',
+                    },
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSTypeReference',
+                        typeName: enumName,
+                      },
+                    },
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function members(): IterableIterator<Foo>;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'members',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypeReference',
+                    typeName: {
+                      type: 'Identifier',
+                      name: 'IterableIterator',
+                    },
+                    typeParameters: {
+                      type: 'TSTypeParameterInstantiation',
+                      params: [
+                        {
+                          type: 'TSTypeReference',
+                          typeName: enumName,
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function getName(value: Foo): string;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'getName',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSTypeReference',
+                        typeName: enumName,
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSStringKeyword',
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+          ],
+        },
+      },
+    ];
+  }
+
   const transform = {
     AnyTypeAnnotation(
       _node: FlowESTree.AnyTypeAnnotation,
@@ -406,6 +718,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       node: FlowESTree.DeclareExportDeclaration,
     ):
       | TSESTree.ExportNamedDeclaration
+      | Array<TSESTree.ExportNamedDeclaration>
       | TSESTree.ExportDefaultDeclaration
       | [
           (
@@ -580,45 +893,72 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             }: TSESTree.ExportNamedDeclarationWithoutSourceWithMultiple);
           }
 
-          const {declaration, exportKind} = (() => {
+          const declarations = (() => {
             switch (node.declaration.type) {
               case 'DeclareClass':
-                return {
-                  declaration: transform.DeclareClass(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareClass(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
               case 'DeclareFunction':
-                return {
-                  declaration: transform.DeclareFunction(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareFunction(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
               case 'DeclareInterface':
-                return {
-                  declaration: transform.DeclareInterface(node.declaration),
-                  exportKind: 'type',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareInterface(node.declaration),
+                    exportKind: 'type',
+                  },
+                ];
               case 'DeclareOpaqueType':
-                return {
-                  declaration: transform.DeclareOpaqueType(node.declaration),
-                  exportKind: 'type',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareOpaqueType(node.declaration),
+                    exportKind: 'type',
+                  },
+                ];
               case 'DeclareVariable':
-                return {
-                  declaration: transform.DeclareVariable(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareVariable(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
+              case 'DeclareEnum': {
+                const [enumDeclaration, moduleDeclaration] =
+                  transform.DeclareEnum(node.declaration);
+                return [
+                  {
+                    declaration: enumDeclaration,
+                    exportKind: 'type',
+                  },
+                  {
+                    declaration: moduleDeclaration,
+                    exportKind: 'type',
+                  },
+                ];
+              }
             }
           })();
 
-          return ({
-            type: 'ExportNamedDeclaration',
-            // flow does not currently support assertions
-            assertions: [],
-            declaration,
-            exportKind,
-            source: null,
-            specifiers: [],
-          }: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle);
+          return declarations.map(
+            ({declaration, exportKind}) =>
+              ({
+                type: 'ExportNamedDeclaration',
+                // flow does not currently support assertions
+                assertions: [],
+                declaration,
+                exportKind,
+                source: null,
+                specifiers: [],
+              }: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle),
+          );
         } else {
           return ({
             type: 'ExportNamedDeclaration',
@@ -738,6 +1078,11 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         kind: node.kind,
       };
     },
+    DeclareEnum(
+      node: FlowESTree.DeclareEnum,
+    ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
+      return EnumImpl(node);
+    },
     EmptyTypeAnnotation(
       node: FlowESTree.EmptyTypeAnnotation,
     ): TSESTree.TypeNode {
@@ -750,313 +1095,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     EnumDeclaration(
       node: FlowESTree.EnumDeclaration,
     ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
-      const body = node.body;
-      if (body.type === 'EnumSymbolBody') {
-        /*
-        There's unfortunately no way for us to support this in a clean way.
-        We can get really close using this code:
-        ```
-        declare namespace SymbolEnum {
-            export const member1: unique symbol;
-            export type member1 = typeof member1;
-
-            export const member2: unique symbol;
-            export type member2 = typeof member2;
-        }
-        type SymbolEnum = typeof SymbolEnum[keyof typeof SymbolEnum];
-        ```
-
-        However as explained in https://github.com/microsoft/TypeScript/issues/43657:
-        "A unique symbol type is never transferred from one declaration to another through inference."
-        This intended behaviour in TS means that the usage of the fake-enum would look like this:
-        ```
-        const value: SymbolEnum.member1 = SymbolEnum.member1;
-        //           ^^^^^^^^^^^^^^^^^^ required to force TS to retain the information
-        ```
-        Which is really clunky and shitty. It definitely works, but ofc it's not good.
-        We can go with this design if users are okay with it!
-
-        Considering how rarely used symbol enums are ATM, let's just put a pin in it for now.
-        */
-        throw unsupportedTranslationError(node, 'symbol enums');
-      }
-      if (body.type === 'EnumBooleanBody') {
-        /*
-        TODO - TS enums only allow strings or numbers as their values - not booleans.
-        This means we need a non-ts-enum representation of the enum.
-        We can support boolean enums using a construct like this:
-        ```ts
-        declare namespace BooleanEnum {
-            export const member1: true;
-            export type member1 = typeof member1;
-
-            export const member2: false;
-            export type member2 = typeof member1;
-        }
-        declare type BooleanEnum = boolean;
-        ```
-
-        But it's pretty clunky and ugly.
-        Considering how rarely used boolean enums are ATM, let's just put a pin in it for now.
-        */
-        throw unsupportedTranslationError(node, 'boolean enums');
-      }
-
-      const members: Array<TSESTree.TSEnumMemberNonComputedName> = [];
-      for (const member of body.members) {
-        switch (member.type) {
-          case 'EnumDefaultedMember': {
-            if (body.type === 'EnumNumberBody') {
-              // this should be impossible!
-              throw unexpectedTranslationError(
-                member,
-                'Unexpected defaulted number enum member',
-              );
-            }
-            members.push({
-              type: 'TSEnumMember',
-              computed: false,
-              id: transform.Identifier(member.id, false),
-              initializer: ({
-                type: 'Literal',
-                raw: `"${member.id.name}"`,
-                value: member.id.name,
-              }: TSESTree.StringLiteral),
-            });
-            break;
-          }
-
-          case 'EnumNumberMember':
-          case 'EnumStringMember':
-            members.push({
-              type: 'TSEnumMember',
-              computed: false,
-              id: transform.Identifier(member.id, false),
-              initializer:
-                member.init.literalType === 'string'
-                  ? transform.StringLiteral(member.init)
-                  : transform.NumericLiteral(member.init),
-            });
-        }
-      }
-
-      const bodyRepresentationType =
-        body.type === 'EnumNumberBody'
-          ? {type: 'TSNumberKeyword'}
-          : {type: 'TSStringKeyword'};
-
-      const enumName = transform.Identifier(node.id, false);
-      return [
-        {
-          type: 'TSEnumDeclaration',
-          const: false,
-          declare: true,
-          id: enumName,
-          members,
-        },
-        // flow also exports `.cast`, `.isValid`, `.members` and `.getName` for enums
-        // we can use declaration merging to declare these functions on the enum:
-        /*
-        declare enum Foo {
-          A = 1,
-          B = 2,
-        }
-        declare namespace Foo {
-          export function cast(value: number | null | undefined): Foo;
-          export function isValid(value: number | null | undefined): value is Foo;
-          export function members(): IterableIterator<Foo>;
-          export function getName(value: Foo): string;
-        }
-        */
-        {
-          type: 'TSModuleDeclaration',
-          declare: true,
-          id: enumName,
-          body: {
-            type: 'TSModuleBlock',
-            body: [
-              // export function cast(value: number | null | undefined): Foo
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'cast',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSUnionType',
-                          types: [
-                            bodyRepresentationType,
-                            {
-                              type: 'TSNullKeyword',
-                            },
-                            {
-                              type: 'TSUndefinedKeyword',
-                            },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypeReference',
-                      typeName: enumName,
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function isValid(value: number | null | undefined): value is Foo;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'isValid',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSUnionType',
-                          types: [
-                            bodyRepresentationType,
-                            {
-                              type: 'TSNullKeyword',
-                            },
-                            {
-                              type: 'TSUndefinedKeyword',
-                            },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypePredicate',
-                      asserts: false,
-                      parameterName: {
-                        type: 'Identifier',
-                        name: 'value',
-                      },
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSTypeReference',
-                          typeName: enumName,
-                        },
-                      },
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function members(): IterableIterator<Foo>;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'members',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypeReference',
-                      typeName: {
-                        type: 'Identifier',
-                        name: 'IterableIterator',
-                      },
-                      typeParameters: {
-                        type: 'TSTypeParameterInstantiation',
-                        params: [
-                          {
-                            type: 'TSTypeReference',
-                            typeName: enumName,
-                          },
-                        ],
-                      },
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function getName(value: Foo): string;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'getName',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSTypeReference',
-                          typeName: enumName,
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSStringKeyword',
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-            ],
-          },
-        },
-      ];
+      return EnumImpl(node);
     },
     DeclareModuleExports(
       node: FlowESTree.DeclareModuleExports,

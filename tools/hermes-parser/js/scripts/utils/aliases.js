@@ -194,6 +194,7 @@ export default ({
   DeclareTypeAlias: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   DeclareOpaqueType: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   DeclareVariable: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
+  DeclareEnum: ['Flow', 'FlowDeclaration', 'Statement', 'Declaration'],
   DeclareExportDeclaration: [
     'Flow',
     'FlowDeclaration',

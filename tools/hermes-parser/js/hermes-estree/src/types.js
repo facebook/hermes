@@ -231,6 +231,7 @@ export type Statement =
   | DebuggerStatement
   | DeclareClass
   | DeclareVariable
+  | DeclareEnum
   | DeclareFunction
   | DeclareInterface
   | DeclareModule
@@ -1532,6 +1533,7 @@ export interface EnumDefaultedMember extends BaseNode {
 export type DeclaredNode =
   | DeclareClass
   | DeclareVariable
+  | DeclareEnum
   | DeclareFunction
   | DeclareModule
   | DeclareInterface
@@ -1556,6 +1558,12 @@ export interface DeclareVariable extends BaseNode {
   +type: 'DeclareVariable';
   +id: Identifier;
   +kind: 'var' | 'let' | 'const';
+}
+
+export interface DeclareEnum extends BaseNode {
+  +type: 'DeclareEnum';
+  +id: Identifier;
+  +body: EnumNumberBody | EnumStringBody | EnumBooleanBody | EnumSymbolBody;
 }
 
 export interface DeclareFunction extends BaseNode {
@@ -1618,7 +1626,8 @@ export interface DeclareExportDeclarationNamedWithDeclaration
     | DeclareFunction
     | DeclareInterface
     | DeclareOpaqueType
-    | DeclareVariable;
+    | DeclareVariable
+    | DeclareEnum;
   +default: false;
   +source: null;
   // default cannot have specifiers and a declaration

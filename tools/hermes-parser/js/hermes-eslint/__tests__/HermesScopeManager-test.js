@@ -177,6 +177,40 @@ describe('Enums', () => {
       name: 'E',
     });
   });
+
+  test('Declaration', () => {
+    const {scopeManager} = parseForESLint(`
+      declare enum E {}
+      E;
+    `);
+
+    // Verify there is a module scope, variable, and reference
+    expect(scopeManager.scopes).toHaveLength(2);
+
+    const scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual(ScopeType.Module);
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.references).toHaveLength(1);
+
+    const variable = scope.variables[0];
+    const reference = scope.references[0];
+    expect(variable.name).toEqual('E');
+
+    // Verify that reference is resolved
+    expect(variable.references).toHaveLength(1);
+    expect(variable.references[0]).toBe(reference);
+    expect(reference.resolved).toBe(variable);
+    expect(reference.isValueReference).toBe(true);
+
+    // Verify there is one Enum definition
+    expect(variable.defs).toHaveLength(1);
+    expect(variable.defs[0].type).toEqual(DefinitionType.Enum);
+    expect(variable.defs[0].node.type).toEqual('DeclareEnum');
+    expect(variable.defs[0].name).toMatchObject({
+      type: 'Identifier',
+      name: 'E',
+    });
+  });
 });
 
 describe('QualifiedTypeIdentifier', () => {
