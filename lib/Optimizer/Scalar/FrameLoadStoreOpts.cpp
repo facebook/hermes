@@ -170,15 +170,12 @@ bool eliminateLoads(BasicBlock *BB) {
       if (entryCV) {
         collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
       }
+      continue;
     }
 
-    // We know StoreStack cannot write to variables.
-    if (llvh::isa<StoreStackInst>(II))
-      continue;
-
-    // Invalidate the variable storage if we can't be sure that the instruction
-    // is side-effect free and can't touch our variables.
-    if (II->mayWriteMemory()) {
+    // Invalidate the variable storage if the instruction may execute capturing
+    // stores that write the variable.
+    if (II->mayExecute()) {
       // limit the size of knownFrameValues in case a function is large, as
       // large functions slow down considerably here
       if (entryCV && knownFrameValues.size() < kFrameSizeThreshold) {
@@ -246,13 +243,9 @@ bool eliminateStores(BasicBlock *BB) {
       continue;
     }
 
-    // We know stack operations cannot read variables.
-    if (llvh::isa<StoreStackInst>(II) || llvh::isa<LoadStackInst>(II))
-      continue;
-
-    // Invalidate the store frame storage if we can't be sure that the
-    // instruction is side-effect free and can't touch our variables.
-    if (II->mayReadMemory()) {
+    // Invalidate the store frame storage if the instruction may execute
+    // capturing loads that observe this store.
+    if (II->mayExecute()) {
       // In no-capture mode the local variables are preserved because they have
       // not been captured. This means that we only need to invalidate the
       // variables that don't belong to this function.
