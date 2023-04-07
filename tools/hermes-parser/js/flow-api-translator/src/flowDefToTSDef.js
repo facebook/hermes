@@ -1780,7 +1780,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               }
               return {
                 type: 'ImportSpecifier',
-                importKind: spec.importKind ?? 'value',
+                importKind: spec.importKind === 'type' ? 'type' : null,
                 imported: transform.Identifier(spec.imported, false),
                 local: transform.Identifier(spec.local, false),
               };
