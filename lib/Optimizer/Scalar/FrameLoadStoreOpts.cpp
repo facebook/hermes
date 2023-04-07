@@ -199,11 +199,101 @@ bool eliminateLoads(BasicBlock *BB) {
   return changed;
 }
 
+bool eliminateStores(BasicBlock *BB) {
+  // Check if this block is the entry block.
+  Function *F = BB->getParent();
+  bool isEntryBlock = (BB == &*F->begin());
+
+  // A list of un-clobbered frame stored values in flight.
+  llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
+
+  // Deletes instructions when we leave the function.
+  IRBuilder::InstructionDestroyer destroyer;
+
+  // A list of variables that are known to be captured.
+  llvh::DenseSet<Variable *> capturedVariables;
+
+  // In the entry block we can keep track of which variables have been captured
+  // by inspecting the closures that we generate.
+  bool usePreciseCaptureAnalysis = isEntryBlock;
+
+  bool changed = false;
+
+  for (auto &it : *BB) {
+    Instruction *II = &it;
+
+    // Try to delete the previous store based on the current store.
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
+      auto *V = SF->getVariable();
+      auto entry = prevStoreFrame.find(V);
+
+      if (entry != prevStoreFrame.end()) {
+        // Found store-after-store. Mark the previous store for deletion.
+        if (entry->second) {
+          destroyer.add(entry->second);
+          changed = true;
+        }
+
+        entry->second = SF;
+        continue;
+      }
+
+      prevStoreFrame[V] = SF;
+      continue;
+    }
+
+    // Invalidate the frame store storage.
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
+      auto *V = LF->getLoadVariable();
+      prevStoreFrame[V] = nullptr;
+      continue;
+    }
+
+    // We know stack operations cannot read variables.
+    if (llvh::isa<StoreStackInst>(II) || llvh::isa<LoadStackInst>(II))
+      continue;
+
+    // Invalidate the store frame storage if we can't be sure that the
+    // instruction is side-effect free and can't touch our variables.
+    if (II->mayReadMemory()) {
+      // In no-capture mode the local variables are preserved because they have
+      // not been captured. This means that we only need to invalidate the
+      // variables that don't belong to this function.
+      // limit the size of knownFrameValues in case a function is large, as
+      // large functions slow down considerably here
+      if (usePreciseCaptureAnalysis &&
+          prevStoreFrame.size() < kFrameSizeThreshold) {
+        // Erase all non-local variables.
+        for (auto &I : prevStoreFrame) {
+          if (I.first->getParent()->getFunction() != F ||
+              capturedVariables.count(I.first)) {
+            I.second = nullptr;
+          }
+        }
+      } else {
+        // Invalidate all variables.
+        prevStoreFrame.clear();
+      }
+    }
+
+    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
+      // Collect the captured variables.
+      if (usePreciseCaptureAnalysis) {
+        collectCapturedVariables(
+            capturedVariables, capturedVariables, CF->getFunctionCode());
+      }
+    }
+  }
+
+  return changed;
+}
+
 bool runFrameLoadStoreOpts(Module *M) {
   bool changed = false;
   for (auto &F : *M) {
     for (auto &BB : F) {
       changed |= eliminateLoads(&BB);
+      changed |= eliminateStores(&BB);
     }
   }
   return changed;
