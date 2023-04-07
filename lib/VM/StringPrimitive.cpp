@@ -372,6 +372,11 @@ void StringPrimitive::appendUTF16String(char16_t *ptr) const {
   }
 }
 
+uint32_t StringPrimitive::computeHash() const {
+  return isASCII() ? hermes::hashString(castToASCIIRef())
+                   : hermes::hashString(castToUTF16Ref());
+}
+
 StringView StringPrimitive::createStringViewMustBeFlat(
     Handle<StringPrimitive> self) {
   return StringView(self);

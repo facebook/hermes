@@ -32,13 +32,18 @@ class StringPrimitive : public VariableSizeRuntimeCell {
  protected:
   // Fields:
 
-  /// Length of the string in 16-bit characters. The highest bit is set to 1
-  /// if the string has been uniqued.
-  uint32_t lengthAndUniquedFlag_;
+  /// Length of the string in 16-bit characters.
+  /// The highest bit is set to 1 if the string has been uniqued.
+  /// The second highest bit is set to 1 if the hash has been cached.
+  uint32_t lengthAndFlags_;
+
+  /// Cached hashString hash of the whole StringPrimitive.
+  /// Only valid if the LENGTH_FLAG_HASH bit in lengthAndFlags_ is set.
+  uint32_t hash_;
 
   // Constants:
 
-  /// Flag set in the \c lengthAndUniquedFlag_ field to indicate that this
+  /// Flag set in the \c lengthAndFlags_ field to indicate that this
   /// string was "uniqued", that is, inserted into the identifier hash table and
   /// the associated SymbolID was stored in the string.
   /// Not all StringPrimitive subclasses support this and it usually happens on
@@ -46,6 +51,14 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// This flag is automatically cleared by the identifier table when the
   /// associated SymbolID is garbage collected.
   static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
+
+  /// Flag set in the \c lengthAndFlags_ field to indicate that this string's
+  /// hash has been cached in the hash_ field.
+  static constexpr uint32_t LENGTH_FLAG_HASH = uint32_t(1) << 30;
+
+  /// Bits used for the length in \c lengthAndFlags_.
+  static constexpr uint32_t LENGTH_MASK =
+      ~(LENGTH_FLAG_UNIQUED | LENGTH_FLAG_HASH);
 
  private:
   friend class detail::IdentifierHashTable;
@@ -101,7 +114,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
  protected:
   /// Super constructor to set the length properly.
-  explicit StringPrimitive(uint32_t length) : lengthAndUniquedFlag_(length) {}
+  explicit StringPrimitive(uint32_t length) : lengthAndFlags_(length) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
@@ -225,12 +238,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the length of string in 16-bit characters.
   uint32_t getStringLength() const {
-    return lengthAndUniquedFlag_ & ~LENGTH_FLAG_UNIQUED;
+    return lengthAndFlags_ & LENGTH_MASK;
   }
 
   /// \return whether the string is uniqued.
   bool isUniqued() const {
-    return (lengthAndUniquedFlag_ & LENGTH_FLAG_UNIQUED) != 0;
+    return (lengthAndFlags_ & LENGTH_FLAG_UNIQUED) != 0;
   }
 
   /// Compare a part of this string to \p other for equality.
@@ -250,6 +263,26 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Lexicographically compare the two strings.
   /// \return -1 if `this` is smaller, 0 if equal, +1 if `this` is greater.
   int compare(const StringPrimitive *other) const;
+
+  /// \return the JenkinsHash hash of this string.
+  /// If it's not cached already, compute it and cache it.
+  uint32_t getOrComputeHash() {
+    if ((lengthAndFlags_ & LENGTH_FLAG_HASH) == 0)
+      setHash(computeHash());
+    return hash_;
+  }
+
+  /// When the hash is known by the user, allow the user to set it.
+  /// Doesn't allow the user to specify a different hash.
+  /// This simply can be used to avoid recomputing it in certain cases.
+  /// \param hash must be the correct hash which would have been computed by
+  ///   getOrComputeHash().
+  void setHash(uint32_t hash) {
+    assert((lengthAndFlags_ & LENGTH_FLAG_HASH) == 0 && "hash set twice");
+    assert(hash == computeHash() && "incorrect hash provided");
+    hash_ = hash;
+    lengthAndFlags_ |= LENGTH_FLAG_HASH;
+  }
 
   /// Concatenate two StringPrimitives at \p xHandle and \p yHandle.
   /// \return pointer to a new StringPrimitive, representing the concatenation.
@@ -351,6 +384,9 @@ class StringPrimitive : public VariableSizeRuntimeCell {
     return castToASCIIRef(0, getStringLength());
   }
 
+  /// \return the JenkinsHash of this string.
+  uint32_t computeHash() const;
+
   /// In cases when we know the String cannot be a rope (e.g. as Identifier),
   /// it is safe to call this function which guarantees to not trigger gc.
   static StringView createStringViewMustBeFlat(Handle<StringPrimitive> self);
@@ -371,7 +407,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Mark this string as not uniqued. This is used by IdentifierTable when
   /// the associated SymbolID is garbage collected.
   void clearUniquedBit() {
-    lengthAndUniquedFlag_ &= ~LENGTH_FLAG_UNIQUED;
+    lengthAndFlags_ &= ~LENGTH_FLAG_UNIQUED;
   }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -906,6 +942,9 @@ StringPrimitive::create(Runtime &runtime, uint32_t length, bool asciiNotUTF16) {
   static_assert(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
+  static_assert(
+      MAX_STRING_LENGTH <= LENGTH_MASK,
+      "Highest bits of length are reserved for flags");
   if (LLVM_LIKELY(!isExternalLength(length))) {
     if (asciiNotUTF16) {
       return DynamicASCIIStringPrimitive::create(runtime, length);
@@ -1001,7 +1040,7 @@ inline void StringPrimitive::convertToUniqued(hermes::vm::SymbolID uniqueID) {
   assert(
       uniqueID.isValid() && uniqueID.isUniqued() &&
       "uniqueID SymbolID is not valid and uniqued");
-  this->lengthAndUniquedFlag_ |= LENGTH_FLAG_UNIQUED;
+  this->lengthAndFlags_ |= LENGTH_FLAG_UNIQUED;
   vmcast<SymbolStringPrimitive>(this)->updateUniqueID(uniqueID);
 }
 
