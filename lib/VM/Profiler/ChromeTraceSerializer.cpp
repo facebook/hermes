@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
+#include "ChromeTraceSerializer.h"
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 

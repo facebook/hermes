@@ -52,10 +52,10 @@ set(source_files
   Runtime.cpp Runtime-profilers.cpp
   RuntimeFlags.cpp
   RuntimeModule.cpp
-  Profiler/ChromeTraceSerializerPosix.cpp
+  Profiler/ChromeTraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerPosix.cpp
+  Profiler/SamplingProfiler.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp

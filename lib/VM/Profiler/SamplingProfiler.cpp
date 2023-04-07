@@ -12,12 +12,13 @@
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
-#include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
 #include "llvh/Support/Compiler.h"
+
+#include "ChromeTraceSerializer.h"
 
 #include <fcntl.h>
 #include <pthread.h>
