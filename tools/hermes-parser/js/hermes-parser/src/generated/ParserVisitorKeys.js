@@ -462,6 +462,10 @@ export const HERMES_AST_VISITOR_KEYS = {
     qualification: 'Node',
     id: 'Node',
   },
+  QualifiedTypeofIdentifier: {
+    qualification: 'Node',
+    id: 'Node',
+  },
   RegExpLiteral: {},
   RestElement: {
     argument: 'Node',

@@ -194,6 +194,7 @@ module.exports = {
   Property: ['key', 'value'],
   PropertyDefinition: ['key', 'value', 'variance', 'typeAnnotation'],
   QualifiedTypeIdentifier: ['qualification', 'id'],
+  QualifiedTypeofIdentifier: ['qualification', 'id'],
   RestElement: ['argument'],
   ReturnStatement: ['argument'],
   SequenceExpression: ['expressions'],

@@ -2322,6 +2322,20 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         right: transform.Identifier(node.id, false),
       };
     },
+    QualifiedTypeofIdentifier(
+      node: FlowESTree.QualifiedTypeofIdentifier,
+    ): TSESTree.TSQualifiedName {
+      const qual = node.qualification;
+
+      return {
+        type: 'TSQualifiedName',
+        left:
+          qual.type === 'Identifier'
+            ? transform.Identifier(qual, false)
+            : transform.QualifiedTypeofIdentifier(qual),
+        right: transform.Identifier(node.id, false),
+      };
+    },
     RegExpLiteral(node: FlowESTree.RegExpLiteral): TSESTree.RegExpLiteral {
       return {
         type: 'Literal',
@@ -2457,19 +2471,20 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     TypeofTypeAnnotation(
       node: FlowESTree.TypeofTypeAnnotation,
     ): TSESTree.TSTypeQuery {
-      const argument = transform.TypeAnnotationType(node.argument);
-      if (argument.type !== 'TSTypeReference') {
-        throw unexpectedTranslationError(
-          node,
-          `Expected to find a type reference as the argument to the TypeofTypeAnnotation, but got ${node.argument.type}`,
-        );
+      switch (node.argument.type) {
+        case 'Identifier':
+          return {
+            type: 'TSTypeQuery',
+            exprName: transform.Identifier(node.argument),
+            typeParameters: undefined,
+          };
+        case 'QualifiedTypeofIdentifier':
+          return {
+            type: 'TSTypeQuery',
+            exprName: transform.QualifiedTypeofIdentifier(node.argument),
+            typeParameters: undefined,
+          };
       }
-
-      return {
-        type: 'TSTypeQuery',
-        exprName: argument.typeName,
-        typeParameters: argument.typeParameters,
-      };
     },
     TypeParameter(node: FlowESTree.TypeParameter): TSESTree.TSTypeParameter {
       /*
