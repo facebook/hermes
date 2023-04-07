@@ -37,8 +37,6 @@ using llvh::SmallPtrSet;
 using llvh::SmallVector;
 using llvh::SmallVectorImpl;
 
-static const int kFrameSizeThreshold = 128;
-
 STATISTIC(NumPhi, "Number of Phi inserted");
 STATISTIC(NumAlloc, "Number of AllocStack removed");
 
@@ -48,44 +46,6 @@ STATISTIC(NumSOL, "Number of store only locations");
 
 using BlockSet = llvh::DenseSet<BasicBlock *>;
 using BlockToInstMap = llvh::DenseMap<BasicBlock *, Instruction *>;
-
-/// Add the variables that the function \p F is capturing into \p capturedVars.
-/// Notice that the function F may have sub-closures that capture variables.
-/// This method does a recursive scan and collects all captured variables.
-static void collectCapturedVariables(
-    llvh::DenseSet<Variable *> &capturedLoads,
-    llvh::DenseSet<Variable *> &capturedStores,
-    Function *F) {
-  // For all instructions in the function:
-  for (auto blockIter = F->begin(), e = F->end(); blockIter != e; ++blockIter) {
-    BasicBlock *BB = &*blockIter;
-    for (auto &instIter : *BB) {
-      Instruction *II = &instIter;
-
-      // Recursively check capturing functions by inspecting the created
-      // closure.
-      if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-        collectCapturedVariables(
-            capturedLoads, capturedStores, CF->getFunctionCode());
-        continue;
-      }
-
-      if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-        Variable *V = LF->getLoadVariable();
-        if (V->getParent()->getFunction() != F) {
-          capturedLoads.insert(V);
-        }
-      }
-
-      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-        auto *V = SF->getVariable();
-        if (V->getParent()->getFunction() != F) {
-          capturedStores.insert(V);
-        }
-      }
-    }
-  }
-}
 
 static bool promoteLoads(BasicBlock *BB) {
   // Uncaptured AllocStack instructions don't alias with other memory locations
@@ -150,51 +110,16 @@ static bool promoteLoads(BasicBlock *BB) {
 static bool eliminateStores(
     BasicBlock *BB,
     llvh::ArrayRef<AllocStackInst *> unsafeAllocas) {
-  // Check if this block is the entry block.
-  Function *F = BB->getParent();
-  bool isEntryBlock = (BB == &*F->begin());
-
-  // A list of un-clobbered frame stored values in flight.
-  llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
-
   // A list of un-clobbered stack store instructions.
   llvh::DenseMap<AllocStackInst *, StoreStackInst *> prevStoreStack;
 
   // Deletes instructions when we leave the function.
   IRBuilder::InstructionDestroyer destroyer;
 
-  // A list of variables that are known to be captured.
-  llvh::DenseSet<Variable *> capturedVariables;
-
-  // In the entry block we can keep track of which variables have been captured
-  // by inspecting the closures that we generate.
-  bool usePreciseCaptureAnalysis = isEntryBlock;
-
   bool changed = false;
 
   for (auto &it : *BB) {
     Instruction *II = &it;
-
-    // Try to delete the previous store based on the current store.
-    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-      auto *V = SF->getVariable();
-      auto entry = prevStoreFrame.find(V);
-
-      if (entry != prevStoreFrame.end()) {
-        // Found store-after-store. Mark the previous store for deletion.
-        if (entry->second) {
-          destroyer.add(entry->second);
-          ++NumStore;
-          changed = true;
-        }
-
-        entry->second = SF;
-        continue;
-      }
-
-      prevStoreFrame[V] = SF;
-      continue;
-    }
 
     // Try to delete the previous store based on the current store.
     if (auto *SS = llvh::dyn_cast<StoreStackInst>(II)) {
@@ -217,13 +142,6 @@ static bool eliminateStores(
       continue;
     }
 
-    // Invalidate the frame store storage.
-    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-      auto *V = LF->getLoadVariable();
-      prevStoreFrame[V] = nullptr;
-      continue;
-    }
-
     // Invalidate the stack store storage.
     if (auto *LS = llvh::dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *AS = LS->getPtr();
@@ -234,37 +152,6 @@ static bool eliminateStores(
     if (II->mayExecute()) {
       for (auto *A : unsafeAllocas) {
         prevStoreStack[A] = nullptr;
-      }
-    }
-
-    // Invalidate the store frame storage if we can't be sure that the
-    // instruction is side-effect free and can't touch our variables.
-    if (II->mayReadMemory()) {
-      // In no-capture mode the local variables are preserved because they have
-      // not been captured. This means that we only need to invalidate the
-      // variables that don't belong to this function.
-      // limit the size of knownFrameValues in case a function is large, as
-      // large functions slow down considerably here
-      if (usePreciseCaptureAnalysis &&
-          prevStoreFrame.size() < kFrameSizeThreshold) {
-        // Erase all non-local variables.
-        for (auto &I : prevStoreFrame) {
-          if (I.first->getParent()->getFunction() != F ||
-              capturedVariables.count(I.first)) {
-            I.second = nullptr;
-          }
-        }
-      } else {
-        // Invalidate all variables.
-        prevStoreFrame.clear();
-      }
-    }
-
-    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-      // Collect the captured variables.
-      if (usePreciseCaptureAnalysis) {
-        collectCapturedVariables(
-            capturedVariables, capturedVariables, CF->getFunctionCode());
       }
     }
   }
