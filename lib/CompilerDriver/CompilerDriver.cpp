@@ -1758,8 +1758,11 @@ CompileResult generateBytecodeForSerialization(
     }
 
     if (cl::DumpTarget == DumpBytecode) {
-      disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
-          std::move(bytecodeModule)));
+      std::unique_ptr<hbc::BCProviderFromSrc> provider =
+          hbc::BCProviderFromSrc::createBCProviderFromSrc(
+              std::move(bytecodeModule));
+      provider->setSourceHash(sourceHash);
+      disassembleBytecode(std::move(provider));
     }
   } else if (cl::BytecodeFormat == cl::BytecodeFormatKind::SH) {
     if (sourceMapGenOrNull) {
