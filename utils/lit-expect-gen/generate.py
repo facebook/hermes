@@ -115,6 +115,14 @@ class CompilerOutput:
             )
             self.lines.append(source_hash_wildcard)
             return
+        bc_version_regex = r"(^\s*Bytecode version number:) (\d+)$"
+        bc_match = re.search(bc_version_regex, line)
+        if bc_match is not None:
+            source_hash_wildcard = (
+                f"// {self.check_prefix}-NEXT:" + bc_match.group(1) + " {{.*}}"
+            )
+            self.lines.append(source_hash_wildcard)
+            return
 
         if self.emit_check_next:
             self.lines.append(f"// {self.check_prefix}-NEXT:")
