@@ -14,30 +14,29 @@
 
 #include "llvh/Support/Debug.h"
 
+/// This pass tries to deduplicate loads and delete unobservable stores to frame
+/// variables.
+///
+/// For loads, the key idea is that if there are no instructions that may write
+/// a variable between two loads or a store and a load to it, the second load
+/// may be eliminated.
+/// For stores, the idea is that if there are no instructions that may read a
+/// variable between two stores, then the first store is redundant.
+///
+/// In both cases, the analysis is refined to allow instructions with
+/// side-effects in the middle, by checking whether a variable has capturing
+/// loads/stores that may manipulate it from such an instruction. For example,
+/// this means that we can deduplicate loads across a function call, as long as
+/// we know that there are no capturing stores.
+///
+/// This analysis is further refined in the entry basic block of a function. We
+/// know that none of the variables owned by the function are captured at the
+/// start of it, so as we iterate through the entry block, we incrementally
+/// build information about which variables are captured. This allows us to
+/// optimise variables before the closure that captures them is created.
+
 namespace hermes {
 namespace {
-
-/// \returns the single initializer if the variable \p V is initializes once
-/// (in the lexical scope that it belongs to).
-static bool getSingleInitializer(Variable *V) {
-  StoreFrameInst *singleStore = nullptr;
-
-  for (auto *U : V->getUsers()) {
-    if (auto *S = llvh::dyn_cast<StoreFrameInst>(U)) {
-      // This is not the first store.
-      if (singleStore)
-        return false;
-
-      // Initialization happens not in the lexical scope.
-      if (S->getParent()->getParent() != V->getParent()->getFunction())
-        return false;
-
-      singleStore = S;
-    }
-  }
-
-  return singleStore;
-}
 
 class CapturedVariables {
  public:
@@ -83,7 +82,11 @@ void collectCapturedVariables(
   }
 }
 
-bool eliminateLoads(BasicBlock *BB) {
+/// Attempts to replace loads from the frame in \p BB with values from a
+/// previous load or store to the same variable. Uses capture information from
+/// \p globalCV to determine whether intervening operations may store to the
+/// variable and prevent forwarding.
+bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
   Function *F = BB->getParent();
 
   // In the entry block, we can perform more precise analysis by tracking
@@ -100,10 +103,6 @@ bool eliminateLoads(BasicBlock *BB) {
   // load. If no entry exists, the value is unknown and must be loaded from the
   // frame.
   llvh::DenseMap<Variable *, Value *> knownFrameValues;
-
-  /// A list of variables that are known to stay constant during the lifetime
-  /// of the current function.
-  llvh::DenseMap<Variable *, Value *> constFrameValues;
 
   IRBuilder::InstructionDestroyer destroyer;
 
@@ -123,26 +122,6 @@ bool eliminateLoads(BasicBlock *BB) {
     if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
       Variable *dest = LF->getLoadVariable();
 
-      // If this variable is known to be constant during the lifetime of the
-      // function then use a previous load.
-      auto constEntry = constFrameValues.find(dest);
-      if (constEntry != constFrameValues.end() &&
-          dest->getParent()->getFunction() != LF->getParent()->getParent()) {
-        // Replace all uses of the load with the recently stored value.
-        LF->replaceAllUsesWith(constEntry->second);
-
-        // We have no use of this load now. Remove it.
-        destroyer.add(LF);
-        changed = true;
-        continue;
-      }
-
-      // The first time we load from a constant variable we need to save the
-      // content we are loading.
-      if (getSingleInitializer(dest)) {
-        constFrameValues[dest] = LF;
-      }
-
       // Check if we already have a known value for the load. If we do, use it,
       // otherwise, populate it.
       auto [it, first] = knownFrameValues.try_emplace(dest, LF);
@@ -158,6 +137,8 @@ bool eliminateLoads(BasicBlock *BB) {
       continue;
     }
 
+    // Collect the captured variables of newly created closures if we're in
+    // the entry block.
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
       if (entryCV) {
@@ -169,18 +150,17 @@ bool eliminateLoads(BasicBlock *BB) {
     // Invalidate the variable storage if the instruction may execute capturing
     // stores that write the variable.
     if (II->mayExecute()) {
-      if (entryCV) {
-        for (auto it = knownFrameValues.begin(); it != knownFrameValues.end();
-             it++) {
-          bool ownedVar = it->first->getParent()->getFunction() == F;
+      for (auto it = knownFrameValues.begin(); it != knownFrameValues.end();
+           it++) {
+        // Use incremental capture information in the entry block for owned
+        // variables, and global information for everything else.
+        bool ownedVar = it->first->getParent()->getFunction() == F;
+        const auto &cv = entryCV && ownedVar ? *entryCV : globalCV;
 
-          // If there are any captured stores of the variable, the value may be
-          // updated, so preceding stores cannot be propagated.
-          if (!ownedVar || entryCV->stores.count(it->first))
-            knownFrameValues.erase(it);
-        }
-      } else {
-        knownFrameValues.clear();
+        // If there are any captured stores of the variable, the value may be
+        // updated, so preceding stores cannot be propagated.
+        if (cv.stores.count(it->first))
+          knownFrameValues.erase(it);
       }
     }
   }
@@ -265,10 +245,28 @@ bool eliminateStores(BasicBlock *BB) {
 }
 
 bool runFrameLoadStoreOpts(Module *M) {
+  CapturedVariables cv;
+  // Collect information about all capturing loads and stores for every
+  // variable in the module.
+  for (Function &F : *M) {
+    for (Variable *V : F.getFunctionScope()->getVariables()) {
+      for (Instruction *I : V->getUsers()) {
+        if (I->getParent()->getParent() != &F) {
+          if (llvh::isa<LoadFrameInst>(I)) {
+            cv.loads.insert(V);
+          } else {
+            assert(llvh::isa<StoreFrameInst>(I) && "No other valid user");
+            cv.stores.insert(V);
+          }
+        }
+      }
+    }
+  }
+
   bool changed = false;
   for (auto &F : *M) {
     for (auto &BB : F) {
-      changed |= eliminateLoads(&BB);
+      changed |= eliminateLoads(&BB, cv);
       changed |= eliminateStores(&BB);
     }
   }
