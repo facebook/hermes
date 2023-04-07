@@ -2166,7 +2166,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   //    in 15.2.4
   //
   // Note that 13.2.2.1-4 are also handled by the call to newObject.
-  auto thisRes = vm::Callable::createThisForConstruct(funcHandle, runtime_);
+  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime_);
   // We need to capture this in case the ctor doesn't return an object,
   // we need to return this object.
   auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));
