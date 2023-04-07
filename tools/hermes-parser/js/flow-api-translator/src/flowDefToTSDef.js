@@ -1890,11 +1890,10 @@ const getTransforms = (
               );
             }
 
-            let newTypeParam = transform.TypeAnnotationType(params[0]);
-            newTypeParam = {
+            let newTypeParam = {
               type: 'TSIntersectionType',
               types: [
-                newTypeParam,
+                transform.TypeAnnotationType(params[0]),
                 {
                   type: 'TSTypeReference',
                   typeName: {
