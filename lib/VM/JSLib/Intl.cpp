@@ -1274,7 +1274,9 @@ intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
           numberFormatHandle->getDecoration());
   assert(numberFormat && "Intl.NumberFormat platform part is nullptr");
 
-  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
+  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
+  // Hermes' Intl doesn't. Thus use toNumber.
+  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1334,7 +1336,9 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
+  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
+  // Hermes' Intl doesn't. Thus use toNumber.
+  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
