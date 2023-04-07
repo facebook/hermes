@@ -5,11 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// The only user of Semaphore.h is SamplingProfiler, which is stubbed out
-// in Windows. As a result, it is unnecessary to implement Semaphore on Windows.
 #ifndef _WINDOWS
 
 #include "hermes/Support/Semaphore.h"
+
+#include "hermes/Support/OSCompat.h"
+
+#include "llvh/ADT/SmallVector.h"
+#include "llvh/Support/raw_ostream.h"
 
 #include <cstdio>
 #include <string>
@@ -24,16 +27,31 @@ sem_t *Semaphore::getSemaphorePtr() {
 #endif
 }
 
-bool Semaphore::open(const char *semaphoreName) {
+bool Semaphore::open(const char *semaphorePrefix) {
 #ifdef __APPLE__
-  // Create named semaphore with read/write.
-  semPtr_ = sem_open(semaphoreName, O_CREAT, S_IRUSR | S_IWUSR, /*value*/ 0);
+  // Generate a unique name for the semaphore by postfixing semaphorePrefix with
+  // the thread ID. This ensures that no other semaphore will be created with
+  // the same name, avoiding unintentional sharing.
+  llvh::SmallVector<char, 64> semaphoreName;
+  llvh::raw_svector_ostream OS(semaphoreName);
+
+  // oscompat::thread_id returns the OS level thread ID, and is thus system
+  // unique.
+  OS << semaphorePrefix << oscompat::thread_id();
+
+  // Create a named semaphore with read/write. Use O_EXCL as an extra protection
+  // layer -- sem_open will fail if semaphoreName is not unique.
+  semPtr_ = sem_open(
+      semaphoreName.data(), O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, /*value*/ 0);
   if (semPtr_ == SEM_FAILED) {
     perror("sem_open");
     return false;
   }
   assert(semPtr_ != nullptr && "sem_open should have succeeded");
-  if (sem_unlink(semaphoreName) != 0) {
+
+  // Now unlink the semaphore from its temporary name. This ensures that no
+  // other Semaphore will share the underlying OS object.
+  if (sem_unlink(semaphoreName.data()) != 0) {
     perror("sem_unlink");
     return false;
   }

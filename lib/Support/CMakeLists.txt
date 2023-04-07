@@ -28,7 +28,7 @@ add_hermes_library(hermesSupport
         PageAccessTrackerPosix.cpp
         PerfSection.cpp
         RegExpSerialization.cpp
-        Semaphore.cpp
+        SemaphorePosix.cpp
         SHA1.cpp
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
