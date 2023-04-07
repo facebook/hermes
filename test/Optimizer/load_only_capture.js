@@ -83,6 +83,5 @@ function load_dedup(foo){
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@load_dedup]: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [x@load_dedup]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [x@load_dedup]: any
-// CHECK-NEXT:  %4 = ReturnInst %3: any
+// CHECK-NEXT:  %3 = ReturnInst %1: any
 // CHECK-NEXT:function_end

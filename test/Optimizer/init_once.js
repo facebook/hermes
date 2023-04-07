@@ -51,15 +51,10 @@ function main(p) {
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [p@main]: any
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) [k@main]: any
 // CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) [p@main]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) [p@main]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) [p@main]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %9 = LoadFrameInst (:any) [p@main]: any
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %11 = LoadFrameInst (:any) [p@main]: any
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, %1: any
-// CHECK-NEXT:  %13 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %5 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %7 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: any
+// CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
