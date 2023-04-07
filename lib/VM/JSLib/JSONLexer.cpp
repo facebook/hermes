@@ -138,6 +138,7 @@ ExecutionStatus JSONLexer::scanString() {
   auto ensureCaptureClosed =
       llvh::make_scope_exit([this] { curCharPtr_.cancelCapture(); });
   bool allAscii = true;
+  hermes::JenkinsHash hash = hermes::JenkinsHashInit;
 
   while (curCharPtr_.hasChar()) {
     if (*curCharPtr_ == '"') {
@@ -146,9 +147,10 @@ ExecutionStatus JSONLexer::scanString() {
           hasEscape ? tmpStorage.arrayRef() : curCharPtr_.endCapture();
       ++curCharPtr_;
       // If the string exists in the identifier table, use that one.
-      if (auto existing =
-              runtime_.getIdentifierTable().getExistingStringPrimitiveOrNull(
-                  runtime_, strRef)) {
+      if (StringPrimitive *existing =
+              runtime_.getIdentifierTable()
+                  .getExistingStringPrimitiveOrNullWithHash(
+                      runtime_, strRef, hash)) {
         token_.setString(runtime_.makeHandle<StringPrimitive>(existing));
         return ExecutionStatus::RETURNED;
       }
@@ -212,10 +214,13 @@ ExecutionStatus JSONLexer::scanString() {
           return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
       }
       allAscii &= isASCII(tmpStorage.back());
+      hash = hermes::updateJenkinsHash(hash, tmpStorage.back());
     } else {
+      auto cur = *curCharPtr_;
       if (hasEscape)
-        tmpStorage.push_back(*curCharPtr_);
-      allAscii &= isASCII(*curCharPtr_);
+        tmpStorage.push_back(cur);
+      allAscii &= isASCII(cur);
+      hash = hermes::updateJenkinsHash(hash, cur);
       ++curCharPtr_;
     }
   }
