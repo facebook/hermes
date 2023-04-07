@@ -125,6 +125,18 @@ gc();
 print(m.get(a));
 // CHECK-NEXT: 10
 
+print('preserveType');
+// CHECK-LABEL: preserveType
+const map = new WeakMap();
+const key = {};
+const value = "asd";
+map.set(key, value);
+// Ensure the value types are preserved across a GC.
+gc();
+print(typeof map.get(key))
+// CHECK-NEXT: string
+
+
 // Ensure some reuse occurred.
 print(HermesInternal.getWeakSize(m) < 10000);
 // CHECK-NEXT: true

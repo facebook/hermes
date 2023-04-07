@@ -423,8 +423,7 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
         if (valHeader->isMarked()) {
 #ifdef HERMESVM_SANITIZE_HANDLES
           valRef.setInGC(
-              HermesValue::encodeObjectValue(
-                  valHeader->getForwardingPointer()->data()),
+              valRef.updatePointer(valHeader->getForwardingPointer()->data()),
               *this);
 #endif
           return false;
