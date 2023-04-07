@@ -186,6 +186,9 @@ uint64_t current_private_dirty();
 /// process has made so far, or return false if unsupported.
 bool num_context_switches(long &voluntary, long &involuntary);
 
+/// \return OS process id of the current process.
+uint64_t process_id();
+
 /// \return OS thread id of current thread.
 uint64_t thread_id();
 
