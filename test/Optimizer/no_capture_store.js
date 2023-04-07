@@ -20,12 +20,16 @@ function main(p) {
 }
 
 // Make sure that we are not eliminating the "store-42" in test2, because the
-// call to o() may clobber it.
+// call to o() may observe it.
 function outer() {
     var envVar;
 
     function setValue(v) {
         envVar = v;
+    }
+
+    function getValue() {
+      return envVar;
     }
 
     function test1() {
@@ -39,7 +43,7 @@ function outer() {
       envVar = 87;
     }
 
-    return [setValue, test1, test2, envVar]
+    return [getValue, setValue, test1, test2, envVar]
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -86,15 +90,17 @@ function outer() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [envVar]: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %setValue(): undefined
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %test1(): undefined
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %test2(): undefined
-// CHECK-NEXT:  %4 = AllocArrayInst (:object) 4: number
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst %1: closure, %4: object, 0: number, true: boolean
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2: closure, %4: object, 1: number, true: boolean
-// CHECK-NEXT:  %7 = StoreOwnPropertyInst %3: closure, %4: object, 2: number, true: boolean
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) [envVar]: any
-// CHECK-NEXT:  %9 = StoreOwnPropertyInst %8: any, %4: object, 3: number, true: boolean
-// CHECK-NEXT:  %10 = ReturnInst %4: object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %getValue(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %test1(): undefined
+// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test2(): undefined
+// CHECK-NEXT:  %5 = AllocArrayInst (:object) 5: number
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2: closure, %5: object, 0: number, true: boolean
+// CHECK-NEXT:  %7 = StoreOwnPropertyInst %1: closure, %5: object, 1: number, true: boolean
+// CHECK-NEXT:  %8 = StoreOwnPropertyInst %3: closure, %5: object, 2: number, true: boolean
+// CHECK-NEXT:  %9 = StoreOwnPropertyInst %4: closure, %5: object, 3: number, true: boolean
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) [envVar]: any
+// CHECK-NEXT:  %11 = StoreOwnPropertyInst %10: any, %5: object, 4: number, true: boolean
+// CHECK-NEXT:  %12 = ReturnInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): string|number|bigint
@@ -114,6 +120,13 @@ function outer() {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %v: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [envVar@outer]: any
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function getValue(): any
+// CHECK-NEXT:frame = []
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadFrameInst (:any) [envVar@outer]: any
+// CHECK-NEXT:  %1 = ReturnInst %0: any
 // CHECK-NEXT:function_end
 
 // CHECK:function test1(): undefined
