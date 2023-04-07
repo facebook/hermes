@@ -2212,14 +2212,6 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
       value = *curValueOrAccessor;
     }
 
-    // Update dpFlags to match the existing property flags.
-    dpFlags.setEnumerable = 1;
-    dpFlags.setWritable = 1;
-    dpFlags.setConfigurable = 1;
-    dpFlags.enumerable = updateStatus->second.enumerable;
-    dpFlags.writable = updateStatus->second.writable;
-    dpFlags.configurable = updateStatus->second.configurable;
-
     // Delete the existing indexed property.
     if (!deleteOwnIndexed(selfHandle, runtime, *arrayIndex)) {
       if (opFlags.getThrowOnError()) {
@@ -2229,9 +2221,15 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
       return false;
     }
 
-    // Add the new named property.
+    // Add the new named property. Call addOwnPropertyImpl directly, since the
+    // property must be added.
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
-    return addOwnProperty(selfHandle, runtime, id, dpFlags, value, opFlags);
+    if (LLVM_UNLIKELY(
+            addOwnPropertyImpl(
+                selfHandle, runtime, id, updateStatus->second, value) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return true;
   }
 
   /// Can we add new properties?

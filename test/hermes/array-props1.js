@@ -48,3 +48,9 @@ try {
 }
 //CHECK-NEXT: caught exception
 //CHECK-NEXT: 2 1,prop1 prop1 undefined
+
+// Make sure that preventing extensions does not prevent configuring an indexed property.
+var noExArr = Object.preventExtensions([42]);
+Object.defineProperty(noExArr, "0", {enumerable: false})
+print(JSON.stringify(Object.getOwnPropertyDescriptor(noExArr, "0")));
+//CHECK-NEXT: {"value":42,"writable":true,"enumerable":false,"configurable":true}
