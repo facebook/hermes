@@ -812,7 +812,7 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
     if (!arr->attached(runtime)) {                                         \
       return runtime.raiseTypeError("Underlying ArrayBuffer detached");    \
     }                                                                      \
-    return HermesValue::encodeNumberValue(arr->at(runtime, k));            \
+    return HermesValue::encodeUntrustedNumberValue(arr->at(runtime, k));   \
   }
   switch (O->getKind()) {
 #include "hermes/VM/TypedArrays.def"
