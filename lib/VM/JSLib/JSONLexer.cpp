@@ -70,7 +70,7 @@ ExecutionStatus JSONLexer::advance() {
       return scanString();
 
     default:
-      return errorWithChar(u"Unexpected token: ", *curCharPtr_);
+      return errorWithChar(u"Unexpected character: ", *curCharPtr_);
   }
 }
 
@@ -111,7 +111,7 @@ ExecutionStatus JSONLexer::scanNumber() {
   assert(len > 0 && "scanNumber must be called on a number-looking char");
   if (str8[0] == '0' && len > 1 && str8[1] >= '0' && str8[1] <= '9') {
     // The integer part cannot start with 0, unless it's 0.
-    return errorWithChar(u"Unexpected token in number: ", str8[1]);
+    return errorWithChar(u"Unexpected character in number: ", str8[1]);
   }
 
   str8.push_back('\0');
@@ -119,7 +119,7 @@ ExecutionStatus JSONLexer::scanNumber() {
   char *endPtr;
   double value = ::hermes_g_strtod(str8.data(), &endPtr);
   if (endPtr != str8.data() + len) {
-    return errorWithChar(u"Unexpected token in number: ", *endPtr);
+    return errorWithChar(u"Unexpected character in number: ", *endPtr);
   }
   token_.setNumber(value);
   return ExecutionStatus::RETURNED;
@@ -230,7 +230,7 @@ ExecutionStatus JSONLexer::scanString() {
 ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
   while (*word && curCharPtr_.hasChar()) {
     if (*curCharPtr_ != *word) {
-      return errorWithChar(u"Unexpected token: ", *curCharPtr_);
+      return errorWithChar(u"Unexpected character: ", *curCharPtr_);
     }
     ++curCharPtr_;
     ++word;
