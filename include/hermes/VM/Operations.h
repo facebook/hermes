@@ -319,6 +319,12 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
     llvh::Optional<Handle<>> value = llvh::None);
 
 /// ES6.0 7.4.5
+/// \return ? Get(iterResult, "value").
+CallResult<PseudoHandle<HermesValue>> iteratorValue(
+    Runtime &runtime,
+    Handle<JSObject> iterResult);
+
+/// ES2023 7.4.6
 /// \return a null pointer instead of the boolean false.
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
@@ -329,6 +335,12 @@ CallResult<Handle<JSObject>> iteratorStep(
 /// not thrown.
 ExecutionStatus
 iteratorClose(Runtime &runtime, Handle<JSObject> iterator, Handle<> completion);
+
+/// This function combines ES2023 7.4.12 IterableToList and 7.3.18
+/// CreateArrayFromList into one API.
+CallResult<Handle<JSArray>> iterableToArray(
+    Runtime &runtime,
+    Handle<HermesValue> items);
 
 /// Some types of errors are considered "uncatchable" by the VM.
 /// If any native code wants to catch an error, it needs to check that the value

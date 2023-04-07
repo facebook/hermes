@@ -1516,6 +1516,13 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
   return PseudoHandle<JSObject>::vmcast(std::move(*resultRes));
 }
 
+CallResult<PseudoHandle<HermesValue>> iteratorValue(
+    Runtime &runtime,
+    Handle<JSObject> iterResult) {
+  return JSObject::getNamed_RJS(
+      iterResult, runtime, Predefined::getSymbolID(Predefined::value));
+}
+
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
     const IteratorRecord &iteratorRecord) {
@@ -1599,6 +1606,55 @@ ExecutionStatus iteratorClose(
     return runtime.raiseTypeError("iterator.return() did not return an object");
   }
   return ExecutionStatus::RETURNED;
+}
+
+CallResult<Handle<JSArray>> iterableToArray(
+    Runtime &runtime,
+    Handle<HermesValue> items) {
+  // IterableToList: 2a. Let iteratorRecord be ? GetIterator(items, sync).
+  CallResult<IteratorRecord> iteratorRecordRes = getIterator(runtime, items);
+  if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  IteratorRecord iteratorRecord = *iteratorRecordRes;
+
+  // CreateArrayFromList: 1. Let array be ! ArrayCreate(0).
+  auto arrRes = JSArray::create(runtime, 0, 0);
+  assert(arrRes != ExecutionStatus::EXCEPTION && "could not create array");
+  Handle<JSArray> array = *arrRes;
+  // CreateArrayFromList: 2. Let n be 0.
+  size_t n = 0;
+
+  for (;;) {
+    // IterableToList: 5.a. Set next to ? IteratorStep(iteratorRecord).
+    CallResult<Handle<JSObject>> nextRes =
+        iteratorStep(runtime, iteratorRecord);
+    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*nextRes) {
+      break;
+    }
+    // 5.b.i. Let nextValue be ? IteratorValue(next).
+    CallResult<PseudoHandle<HermesValue>> nextValueRes =
+        iteratorValue(runtime, *nextRes);
+    if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // CreateArrayFromList: 3.a Perform ! CreateDataPropertyOrThrow(array, !
+    // ToString(𝔽(n)), e).
+    JSArray::setElementAt(
+        array, runtime, n, runtime.makeHandle(std::move(*nextValueRes)));
+    // CreateArrayFromList: 3.b Set n to n + 1.
+    n++;
+  }
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(array, runtime, n) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 4. Return array.
+  return array;
 }
 
 bool isUncatchableError(HermesValue value) {
