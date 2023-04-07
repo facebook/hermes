@@ -37,7 +37,7 @@ export const asDetachedNode: {
     node: MaybeDetachedNode<T>,
     config?: {useDeepClone: boolean},
   ): DetachedNode<T>,
-  <T: ESNode>(
+  <T: ?ESNode>(
     node: ?MaybeDetachedNode<T>,
     config?: {useDeepClone: boolean},
   ): ?DetachedNode<T>,

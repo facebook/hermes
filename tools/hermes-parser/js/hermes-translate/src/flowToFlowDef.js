@@ -16,6 +16,8 @@ import type {
   ClassBody,
   ClassDeclaration,
   ClassMember,
+  ClassPropertyNameComputed,
+  ClassPropertyNameNonComputed,
   DeclareClass,
   DeclareFunction,
   DeclareOpaqueType,
@@ -23,22 +25,26 @@ import type {
   ESNode,
   ExportDefaultDeclaration,
   ExportNamedDeclaration,
+  ExportSpecifier,
   Expression,
   FunctionDeclaration,
   FunctionParameter,
   FunctionTypeAnnotation,
   FunctionTypeParam,
+  Identifier,
   ImportDeclaration,
   InterfaceDeclaration,
   InterfaceExtends,
   Literal,
   ModuleDeclaration,
+  NumericLiteral,
   ObjectExpression,
   ObjectTypeAnnotation,
   ObjectTypeProperty,
   OpaqueType,
   Program,
   Statement,
+  StringLiteral,
   TypeAlias,
   TypeAnnotation,
   TypeAnnotationType,
@@ -479,7 +485,10 @@ function convertObjectExpression(
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
             t.ObjectTypeMethodSignature({
-              key: asDetachedNode(prop.key),
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                Identifier | NumericLiteral | StringLiteral | Expression,
+              >(prop.key),
               value: resultExpr,
             }),
             deps,
@@ -502,7 +511,10 @@ function convertObjectExpression(
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
             t.ObjectTypeAccessorSignature({
-              key: asDetachedNode(prop.key),
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                Identifier | NumericLiteral | StringLiteral | Expression,
+              >(prop.key),
               kind,
               value: resultExpr,
             }),
@@ -517,7 +529,10 @@ function convertObjectExpression(
 
         return [
           t.ObjectTypePropertySignature({
-            key: asDetachedNode(prop.key),
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              Identifier | NumericLiteral | StringLiteral | Expression,
+            >(prop.key),
             value: resultExpr,
             optional: false,
             variance: null,
@@ -741,7 +756,9 @@ function convertExportNamedDeclaration(
     return convertExportDeclaration(decl, {default: false}, context);
   }
 
-  const resultSpecfiers = stmt.specifiers.map(spec => asDetachedNode(spec));
+  const resultSpecfiers = stmt.specifiers.map(spec =>
+    asDetachedNode<ExportSpecifier>(spec),
+  );
   const specifiersDeps: Array<Dep> =
     stmt.source != null
       ? []
@@ -872,7 +889,8 @@ function convertClassDeclaration(
   }
   return [
     t.DeclareClass({
-      id: asDetachedNode(class_.id),
+      // $FlowFixMe[incompatible-call]
+      id: asDetachedNode<Identifier | null>(class_.id),
       typeParameters: resultTypeParams,
       implements: class_.implements.map(impl => asDetachedNode(impl)),
       extends: resultSuperClass == null ? [] : [resultSuperClass],
@@ -961,7 +979,10 @@ function convertClassMember(
 
       return [
         t.ObjectTypePropertySignature({
-          key: asDetachedNode(member.key),
+          // $FlowFixMe[incompatible-call]
+          key: asDetachedNode<
+            ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+          >(member.key),
           value: resultTypeAnnotation,
           optional: member.optional,
           static: member.static,
@@ -993,7 +1014,10 @@ function convertClassMember(
         const kind = member.kind;
         return [
           t.ObjectTypeAccessorSignature({
-            key: asDetachedNode(member.key),
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+            >(member.key),
             value: resultValue,
             static: member.static,
             kind,
@@ -1004,7 +1028,10 @@ function convertClassMember(
 
       return [
         t.ObjectTypeMethodSignature({
-          key: asDetachedNode(member.key),
+          // $FlowFixMe[incompatible-call]
+          key: asDetachedNode<
+            ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+          >(member.key),
           value: resultValue,
           static: member.static,
         }),

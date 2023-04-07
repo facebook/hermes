@@ -9,6 +9,8 @@
  */
 
 import type {
+  ForInStatement,
+  ForOfStatement,
   ModuleDeclaration,
   Statement,
   StatementParentArray,
@@ -92,10 +94,11 @@ export function getStatementParent(
 
       case 'ForInStatement':
       case 'ForOfStatement': {
-        assertValidStatementLocation(
-          // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
+        assertValidStatementLocation<ForInStatement | ForOfStatement>(
           parent,
+          // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
           'left',
+          // $FlowExpectedError[prop-missing] - flow does not track properties from parent interface
           'right',
         );
         return {type: 'single', parent, key: 'body'};
