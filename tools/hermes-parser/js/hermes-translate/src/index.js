@@ -70,6 +70,7 @@ export function translateFlowToJS(
   return print(jsAST, code, prettierOptions);
 }
 
+export type {MapperOptions as FlowImportsMapperOptions};
 export function translateFlowImportsTo(
   code: string,
   prettierOptions: {...} = {},

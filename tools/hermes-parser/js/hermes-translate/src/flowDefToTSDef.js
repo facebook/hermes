@@ -19,6 +19,7 @@ import {
   translationError as translationErrorBase,
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
+import {removeAtFlowFromDocblock} from './utils/DocblockUtils';
 
 const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
@@ -36,7 +37,8 @@ export function flowDefToTSDef(
     type: 'Program',
     body: tsBody,
     sourceType: ast.sourceType,
-    docblock: ast.docblock,
+    docblock:
+      ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
 
   const transform = getTransforms(originalCode, scopeManager);
