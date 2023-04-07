@@ -732,6 +732,10 @@ ESTREE_NODE_2_ARGS(
 ESTREE_NODE_1_ARGS(
     TypeofTypeAnnotation, Base,
     NodePtr, argument, false)
+ESTREE_NODE_2_ARGS(
+    QualifiedTypeofIdentifier, Base,
+    NodePtr, qualification, false,
+    NodePtr, id, false)
 ESTREE_NODE_1_ARGS(
     TupleTypeAnnotation, Base,
     NodeList, types, false)

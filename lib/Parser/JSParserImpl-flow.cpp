@@ -1086,16 +1086,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
           new (context_) ESTree::InterfaceTypeAnnotationNode(
               std::move(extends), *optBody));
     }
-    case TokenKind::rw_typeof: {
-      advance(JSLexer::GrammarContext::Type);
-      auto optPrimary = parsePrimaryTypeAnnotationFlow();
-      if (!optPrimary)
-        return None;
-      return setLocation(
-          start,
-          getPrevTokenEndLoc(),
-          new (context_) ESTree::TypeofTypeAnnotationNode(*optPrimary));
-    }
+    case TokenKind::rw_typeof:
+      return parseTypeofTypeAnnotationFlow();
 
     case TokenKind::l_square:
       return parseTupleTypeAnnotationFlow();
@@ -1258,6 +1250,62 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
       error(tok_->getStartLoc(), "unexpected token in type annotation");
       return None;
   }
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseTypeofTypeAnnotationFlow() {
+  assert(check(TokenKind::rw_typeof));
+  SMLoc startLoc = advance().Start;
+  uint32_t parenCount = 0;
+
+  while (checkAndEat(TokenKind::l_paren))
+    ++parenCount;
+
+  if (!need(TokenKind::identifier, "in typeof type", "start of type", startLoc))
+    return None;
+
+  ESTree::Node *ident = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance();
+
+  while (checkAndEat(TokenKind::period)) {
+    if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+      errorExpected(
+          TokenKind::identifier,
+          "in qualified typeof type",
+          "start of type",
+          startLoc);
+      return None;
+    }
+    ESTree::Node *next = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
+    advance();
+    ident = setLocation(
+        ident,
+        next,
+        new (context_) ESTree::QualifiedTypeofIdentifierNode(ident, next));
+  }
+
+  for (; parenCount > 0; --parenCount) {
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::GrammarContext::Type,
+            "in typeof type",
+            "start of type",
+            startLoc))
+      return None;
+    ident->incParens();
+  }
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::TypeofTypeAnnotationNode(ident));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
