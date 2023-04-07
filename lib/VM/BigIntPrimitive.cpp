@@ -312,5 +312,16 @@ CallResult<HermesValue> BigIntPrimitive::dec(
   return unaryOp(runtime, decAdapter, src, numDigits);
 }
 
+CallResult<double> BigIntPrimitive::toDouble(Runtime &runtime) const {
+  double val;
+  ExecutionStatus res = raiseOnError(
+      runtime, bigint::toDouble(val, this->getImmutableRefUnsafe()));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return val;
+}
+
 } // namespace vm
 } // namespace hermes

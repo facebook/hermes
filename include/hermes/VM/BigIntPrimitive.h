@@ -294,9 +294,7 @@ class BigIntPrimitive final
   }
 
   /// \return R(Z(*this))
-  double toDouble() const {
-    return bigint::toDouble(this->getImmutableRefUnsafe());
-  }
+  CallResult<double> toDouble(Runtime &runtime) const;
 
  private:
   static ExecutionStatus raiseOnError(

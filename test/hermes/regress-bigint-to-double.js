@@ -10,4 +10,4 @@
 
 // TODO: fix BigInt to number conversion (it should never result in NaN).
 print(Number(0xffffffffffffffffffffffffffffffffn));
-// CHECK: NaN
+// CHECK: 3.402823669209385e+38
