@@ -13,7 +13,7 @@
 export type {TraversalContextBase, Visitor} from './traverse/traverse';
 export type {TransformVisitor} from './transform/transform';
 export type {TransformContext} from './transform/TransformContext';
-export type {DetachedNode} from './detachedNode';
+export type {DetachedNode, MaybeDetachedNode} from './detachedNode';
 
 export {SimpleTraverser} from 'hermes-parser';
 export {traverse, traverseWithContext} from './traverse/traverse';
