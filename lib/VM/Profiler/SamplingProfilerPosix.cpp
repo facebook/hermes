@@ -22,11 +22,39 @@
 
 #include "ChromeTraceSerializer.h"
 
-#if !defined(__APPLE__)
+#ifdef HERMES_FACEBOOK_BUILD
+
+// Deciding if LOOM is supported by the target platform or not. From this point
+// on, the code should use
+//
+// HERMESVM_ENABLE_LOOM (for generic loom code)
+//
+// or
+//
+// HERMESVM_ENABLE_LOOM_<<platform>> (for platform-specific loom code)
+//
+// when dealing with Loom.
+
+#if defined(__APPLE__)
+#define HERMESVM_ENABLE_LOOM
+#define HERMESVM_ENABLE_LOOM_APPLE
+
+#elif defined(__ANDROID__)
+#define HERMESVM_ENABLE_LOOM
+#define HERMESVM_ENABLE_LOOM_ANDROID
+
+#else
+// Loom is not supported.
+
+#endif // defined(__ANDROID__)
+
+#endif // defined(HERMES_FACEBOOK_BUILD)
+
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
 // Prevent "The deprecated ucontext routines require _XOPEN_SOURCE to be
 // defined" error on mac.
 #include <ucontext.h>
-#endif // !defined(__APPLE__)
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -38,13 +66,13 @@
 #include <random>
 #include <thread>
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
 #include <profilo/ExternalApi.h>
-#endif // defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#elif defined(HERMESVM_ENABLE_LOOM_APPLE)
 #include <FBLoom/ExternalApi/ExternalApi.h>
-#endif // defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 
 namespace hermes {
 namespace vm {
@@ -63,34 +91,41 @@ struct SamplingProfilerPosix : SamplingProfiler {
   /// thread.
   pthread_t currentThread_;
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  bool loomDataPushEnabled_{false};
-  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
-#endif
-
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   /// Registered loom callback for collecting stack frames.
   static StackCollectionRetcode collectStackForLoom(
       ucontext_t *ucontext,
       int64_t *frames,
       uint16_t *depth,
       uint16_t max_depth);
-#endif
 
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
+#elif defined(HERMESVM_ENABLE_LOOM_APPLE)
+  /// Loom in Apple platforms is a "push" interface -- meaning the client code
+  /// (in this case, the sampling profiler) will invoke an API when a new stack
+  /// trace is available. This member controls whether Loom is enabled for the
+  /// current this SamplingProfilerPosix.
+  bool loomDataPushEnabled_{false};
+
+  /// Previous timestamp when a push to loom occurred. The Loom API does not
+  /// rate limit its callers, and thus care must be taken to not overload it.
+  std::chrono::time_point<std::chrono::system_clock> previousPushTs;
+
+  /// \return true if a new stack trace should be pushed to Loom.
+  bool shouldPushDataToLoom() const;
+
+  /// Converts the last sampled stack trace and push it to loom.
+  void pushLastSampledStackToLoom();
+
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
+
+#if defined(HERMESVM_ENABLE_LOOM)
   // Common code that is shared by the collectStackForLoom(), for both the
   // Android and Apple versions.
   void collectStackForLoomCommon(
       const StackFrame &frame,
       int64_t *frames,
       uint32_t index);
-#endif
-
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-  bool shouldPushDataToLoom() const;
-  void pushLastSampledStackToLoom();
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM)
 };
 
 struct GlobalProfilerPosix : GlobalProfiler {
@@ -106,11 +141,11 @@ struct GlobalProfilerPosix : GlobalProfiler {
   /// SamplingProfiler to be used during the stack walk.
   static std::atomic<SamplingProfiler *> profilerForSig_;
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   /// Per-thread profiler instance for loom profiling.
   /// Limitations: No recursive runtimes in one thread.
   ThreadLocal<SamplingProfilerPosix> threadLocalProfilerForLoom_;
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 
   /// Whether signal handler is registered or not. Protected by profilerLock_.
   bool isSigHandlerRegistered_{false};
@@ -132,7 +167,7 @@ struct GlobalProfilerPosix : GlobalProfiler {
 
 SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
     : SamplingProfiler(rt), currentThread_{pthread_self()} {
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_APPLE)
   // TODO(xidachen): do a refactor to use the enum in ExternalTracer.h
   const int32_t tracerTypeJavascript = 1;
   fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
@@ -140,16 +175,16 @@ SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
   fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
       tracerTypeJavascript, disable);
   loomDataPushEnabled_ = true;
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
 SamplingProfilerPosix::~SamplingProfilerPosix() {
   // TODO(T125910634): re-introduce the requirement for destroying the sampling
   // profiler on the same thread in which it was created.
   GlobalProfiler::get()->unregisterRuntime(this);
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_APPLE)
   fbloom_profilo_api()->fbloom_notify_profiler_destroy();
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
 std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
@@ -243,10 +278,10 @@ GlobalProfilerPosix::~GlobalProfilerPosix() = default;
 
 GlobalProfilerPosix::GlobalProfilerPosix() {
   instance_.store(this);
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   profilo_api()->register_external_tracer_callback(
       TRACER_TYPE_JAVASCRIPT, SamplingProfilerPosix::collectStackForLoom);
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
 bool GlobalProfiler::platformEnable() {
@@ -275,32 +310,32 @@ bool GlobalProfiler::platformDisable() {
 }
 
 void GlobalProfiler::platformRegisterRuntime(SamplingProfiler *profiler) {
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   auto *self = static_cast<GlobalProfilerPosix *>(this);
   assert(
       self->threadLocalProfilerForLoom_.get() == nullptr &&
       "multiple hermes runtime in the same thread");
   self->threadLocalProfilerForLoom_.set(
       static_cast<SamplingProfilerPosix *>(profiler));
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
 void GlobalProfiler::platformUnregisterRuntime(SamplingProfiler *profiler) {
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
   auto *self = static_cast<GlobalProfilerPosix *>(this);
   // TODO(T125910634): re-introduce the requirement for unregistering the
   // runtime in the same thread it was registered.
   self->threadLocalProfilerForLoom_.set(nullptr);
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 }
 
 void GlobalProfiler::platformPostSampleStack(SamplingProfiler *localProfiler) {
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_APPLE)
   auto *posixProfiler = static_cast<SamplingProfilerPosix *>(localProfiler);
   if (posixProfiler->shouldPushDataToLoom()) {
     posixProfiler->pushLastSampledStackToLoom();
   }
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 }
 
 bool GlobalProfiler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
@@ -327,8 +362,7 @@ bool GlobalProfiler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   return true;
 }
 
-#if (defined(__ANDROID__) || defined(__APPLE__)) && \
-    defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM)
 void SamplingProfilerPosix::collectStackForLoomCommon(
     const StackFrame &frame,
     int64_t *frames,
@@ -351,27 +385,30 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
 
     case StackFrame::FrameKind::NativeFunction:
     case StackFrame::FrameKind::FinalizableNativeFunction: {
-#if defined(__ANDROID__)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
       NativeFunctionPtr nativeFrame = frame.nativeFunctionPtrForLoom;
-#else
+#elif defined(HERMESVM_ENABLE_LOOM_APPLE)
       NativeFunctionPtr nativeFrame = getNativeFunctionPtr(frame);
-#endif
+#else // defined(HERMESVM_ENABLE_LOOM_APPLE)
+      // Intentionally left empty to catch cases where HERMESVM_ENABLE_LOOM is
+      // defined but the underlying platform is not handled.
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
       frames[(index)] = ((uint64_t)nativeFrame | kNativeFrameMask);
       break;
     }
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_APPLE)
     case StackFrame::FrameKind::SuspendFrame:
       break;
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 
     default:
       llvm_unreachable("Loom: unknown frame kind");
   }
 }
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM)
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_ANDROID)
 /*static*/ StackCollectionRetcode SamplingProfilerPosix::collectStackForLoom(
     ucontext_t *ucontext,
     int64_t *frames,
@@ -423,9 +460,9 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
   }
   return StackCollectionRetcode::SUCCESS;
 }
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_ANDROID)
 
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
+#if defined(HERMESVM_ENABLE_LOOM_APPLE)
 bool SamplingProfilerPosix::shouldPushDataToLoom() const {
   auto now = std::chrono::system_clock::now();
   constexpr auto kLoomDelay = std::chrono::milliseconds(50);
@@ -456,7 +493,7 @@ void SamplingProfilerPosix::pushLastSampledStackToLoom() {
   previousPushTs = std::chrono::system_clock::now();
   clear();
 }
-#endif
+#endif // defined(HERMESVM_ENABLE_LOOM_APPLE)
 } // namespace vm
 } // namespace hermes
 
