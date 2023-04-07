@@ -39,7 +39,7 @@ function main()  {
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#1#2(p1 : number)#3 : string
+// CHECK:function foo#1#2(p1)#3 : string
 // CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
