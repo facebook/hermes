@@ -249,6 +249,97 @@ TEST_F(HiddenClassTest, SmokeTest) {
   }
 }
 
+TEST_F(HiddenClassTest, AccessorsTest) {
+  GCScope gcScope{runtime, "HiddenClassTest.SmokeTest", 48};
+  runtime.collect("test");
+  auto aSym = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"a"));
+  auto bSym = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"b"));
+  auto cSym = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"c"));
+  auto dSym = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"d"));
+  auto defaultFlags = PropertyFlags::defaultNewNamedPropertyFlags();
+  auto accessorFlags = PropertyFlags::defaultNewNamedPropertyFlags();
+  accessorFlags.accessor = true;
+
+  // We will simulate and verify the following property operations, starting
+  // from the same root.
+  /// x.a, x.b, x.c accessor, x.d
+  /// y.a accessor, y.b, delete y.a, y.c
+
+  MutableHandle<HiddenClass> x{runtime};
+  MutableHandle<HiddenClass> y{runtime};
+
+  auto rootCls = runtime.makeHandle<HiddenClass>(
+      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+
+  ASSERT_FALSE(rootCls->getMayHaveAccessor());
+
+  // x = {}
+  x = *rootCls;
+  {
+    // x.a
+    auto addRes = HiddenClass::addProperty(x, runtime, *aSym, defaultFlags);
+    x = *addRes->first;
+    ASSERT_FALSE(x->getMayHaveAccessor());
+  }
+  {
+    // x.b
+    auto addRes = HiddenClass::addProperty(x, runtime, *bSym, defaultFlags);
+    x = *addRes->first;
+    ASSERT_FALSE(x->getMayHaveAccessor());
+  }
+  {
+    // x.c accessor
+    auto addRes = HiddenClass::addProperty(x, runtime, *cSym, accessorFlags);
+    x = *addRes->first;
+    ASSERT_TRUE(x->getMayHaveAccessor());
+  }
+  {
+    // x.d
+    auto addRes = HiddenClass::addProperty(x, runtime, *dSym, defaultFlags);
+    x = *addRes->first;
+    // Since there may be an accessor in the chain, we must still return
+    // true.
+    ASSERT_TRUE(x->getMayHaveAccessor());
+  }
+
+  // y = {}
+  y = *rootCls;
+  {
+    // y.a
+    auto addRes = HiddenClass::addProperty(y, runtime, *aSym, accessorFlags);
+    y = *addRes->first;
+    ASSERT_TRUE(y->getMayHaveAccessor());
+  }
+  {
+    // y.b
+    auto addRes = HiddenClass::addProperty(y, runtime, *bSym, defaultFlags);
+    y = *addRes->first;
+    ASSERT_TRUE(y->getMayHaveAccessor());
+  }
+  {
+    // delete y.a
+    NamedPropertyDescriptor desc;
+    auto found =
+        HiddenClass::findProperty(y, runtime, *aSym, accessorFlags, desc);
+    ASSERT_TRUE(found);
+    ASSERT_EQ(0u, desc.slot);
+    y = HiddenClass::deleteProperty(y, runtime, *found);
+    ASSERT_TRUE(y->getMayHaveAccessor());
+  }
+  {
+    // y.d
+    auto addRes = HiddenClass::addProperty(y, runtime, *cSym, defaultFlags);
+    y = *addRes->first;
+    // Since there may still be an accessor in the chain, we must still return
+    // true.
+    ASSERT_TRUE(y->getMayHaveAccessor());
+  }
+}
+
 TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   GCScope gcScope{
       runtime, "HiddenClassTest.UpdatePropertyFlagsWithoutTransitionsTest", 48};
