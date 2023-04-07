@@ -493,6 +493,30 @@ JSON.stringify(JSON.parse(out).callstack.map(x => x.SourceLocation));
   EXPECT_EQ(callstack, expected);
 }
 
+TEST_F(HermesRuntimeTest, SpreadHostObjectWithOwnProperties) {
+  class HostObjectWithPropertyNames : public HostObject {
+    std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
+      return PropNameID::names(rt, "prop1", "1", "2", "prop2", "3");
+    }
+    Value get(Runtime &runtime, const PropNameID &name) override {
+      return Value();
+    }
+  };
+
+  Object ho = Object::createFromHostObject(
+      *rt, std::make_shared<HostObjectWithPropertyNames>());
+  rt->global().setProperty(*rt, "ho", ho);
+
+  auto res = eval(R"###(
+var spreaded = {...ho};
+var props = Object.getOwnPropertyNames(spreaded);
+props.toString();
+)###")
+                 .getString(*rt)
+                 .utf8(*rt);
+  EXPECT_EQ(res, "1,2,3,prop1,prop2");
+}
+
 TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
   class HostObjectWithPropertyNames : public HostObject {
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
