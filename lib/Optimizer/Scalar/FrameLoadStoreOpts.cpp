@@ -55,28 +55,24 @@ void collectCapturedVariables(
   assert(F != src && "Cannot collect captured variables from src itself.");
   // For all instructions in the function:
   for (auto &BB : *F) {
-    for (auto &instIter : BB) {
-      Instruction *II = &instIter;
-
+    for (auto &I : BB) {
       // Recursively check capturing functions by inspecting the created
       // closure.
-      if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
+      if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
         collectCapturedVariables(cv, CF->getFunctionCode(), src);
         continue;
       }
 
-      if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-        Variable *V = LF->getLoadVariable();
-        if (V->getParent()->getFunction() == src) {
-          cv.loads.insert(V);
-        }
+      if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
+        if (LF->getLoadVariable()->getParent()->getFunction() == src)
+          cv.loads.insert(LF->getLoadVariable());
+        continue;
       }
 
-      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-        auto *V = SF->getVariable();
-        if (V->getParent()->getFunction() == src) {
-          cv.stores.insert(V);
-        }
+      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&I)) {
+        if (SF->getVariable()->getParent()->getFunction() == src)
+          cv.stores.insert(SF->getVariable());
+        continue;
       }
     }
   }
@@ -102,29 +98,23 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
   // Map from a Variable to its current known value that can be forwarded to a
   // load. If no entry exists, the value is unknown and must be loaded from the
   // frame.
-  llvh::DenseMap<Variable *, Value *> knownFrameValues;
-
+  llvh::DenseMap<Variable *, Value *> knownValues;
   IRBuilder::InstructionDestroyer destroyer;
 
   bool changed = false;
 
-  for (auto &it : *BB) {
-    Instruction *II = &it;
-    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-      Variable *var = SF->getVariable();
-
+  for (Instruction &I : *BB) {
+    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(&I)) {
       // Record the value stored to the frame:
-      knownFrameValues[var] = SF->getValue();
+      knownValues[SF->getVariable()] = SF->getValue();
       continue;
     }
 
     // Try to replace the LoadFrame with a recently saved value.
-    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-      Variable *dest = LF->getLoadVariable();
-
+    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(&I)) {
       // Check if we already have a known value for the load. If we do, use it,
       // otherwise, populate it.
-      auto [it, first] = knownFrameValues.try_emplace(dest, LF);
+      auto [it, first] = knownValues.try_emplace(LF->getLoadVariable(), LF);
       if (first)
         continue;
 
@@ -139,19 +129,16 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
 
     // Collect the captured variables of newly created closures if we're in
     // the entry block.
-    if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-      // Collect the captured variables.
-      if (entryCV) {
-        collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
-      }
+    if (auto *CLCI = llvh::dyn_cast<BaseCreateLexicalChildInst>(&I)) {
+      if (entryCV)
+        collectCapturedVariables(*entryCV, CLCI->getFunctionCode(), F);
       continue;
     }
 
     // Invalidate the variable storage if the instruction may execute capturing
     // stores that write the variable.
-    if (II->mayExecute()) {
-      for (auto it = knownFrameValues.begin(); it != knownFrameValues.end();
-           it++) {
+    if (I.mayExecute()) {
+      for (auto it = knownValues.begin(); it != knownValues.end(); it++) {
         // Use incremental capture information in the entry block for owned
         // variables, and global information for everything else.
         bool ownedVar = it->first->getParent()->getFunction() == F;
@@ -160,7 +147,7 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
         // If there are any captured stores of the variable, the value may be
         // updated, so preceding stores cannot be propagated.
         if (cv.stores.count(it->first))
-          knownFrameValues.erase(it);
+          knownValues.erase(it);
       }
     }
   }
