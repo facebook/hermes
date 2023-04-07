@@ -735,7 +735,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             init: null,
           },
         ],
-        kind: 'var',
+        kind: node.kind,
       };
     },
     EmptyTypeAnnotation(

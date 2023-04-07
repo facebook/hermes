@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`flowDefToTSDef variable 1`] = `
+exports[`flowDefToTSDef export/declare/named/single/variable/var 1`] = `
 "/**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -8,11 +8,9 @@ exports[`flowDefToTSDef variable 1`] = `
  * LICENSE file in the root directory of this source tree.
  *
  *
- * TODO: re-enable Prettier once it has been updated to understand this syntax
+ * @format
  */
 
-declare var foo: string;
-declare const foo: string;
-declare let foo: string;
+export declare var foo: string;
 "
 `;

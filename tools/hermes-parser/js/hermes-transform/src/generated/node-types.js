@@ -353,6 +353,7 @@ export type DeclareTypeAliasProps = {
 
 export type DeclareVariableProps = {
   +id: MaybeDetachedNode<DeclareVariableType['id']>,
+  +kind: DeclareVariableType['kind'],
 };
 
 export type DoWhileStatementProps = {
@@ -1468,6 +1469,7 @@ export function DeclareVariable(props: {
     type: 'DeclareVariable',
     // $FlowFixMe[incompatible-call],
     id: asDetachedNode(props.id),
+    kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
   return node;

@@ -982,18 +982,48 @@ describe('Declare statements', () => {
   });
 
   describe('DeclareVariable', () => {
-    verifyHasScopes(`declare var Foo: typeof Foo;`, [
-      {
-        type: ScopeType.Module,
-        variables: [
-          {
-            name: 'Foo',
-            type: DefinitionType.Variable,
-            referenceCount: 1,
-          },
-        ],
-      },
-    ]);
+    describe('var', () => {
+      verifyHasScopes(`declare var Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
+    describe('let', () => {
+      verifyHasScopes(`declare let Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
+    describe('const', () => {
+      verifyHasScopes(`declare const Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
   });
 
   describe('DeclareFunction', () => {
