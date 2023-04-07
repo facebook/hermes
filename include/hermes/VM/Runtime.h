@@ -638,6 +638,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   uint32_t getCurrentFrameOffset() const;
 #endif
 
+  /// Flag the interpreter that an error with the specified \p msg must be
+  /// thrown when execution resumes.
+  /// \return ExecutionResult::EXCEPTION
+  LLVM_NODISCARD ExecutionStatus raiseError(const TwineChar16 &msg);
+
   /// Flag the interpreter that a type error with the specified message must be
   /// thrown when execution resumes.
   /// If the message is not a string, it is converted using toString().

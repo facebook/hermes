@@ -1295,6 +1295,11 @@ static ExecutionStatus raisePlaceholder(
   return raisePlaceholder(runtime, prototype, str);
 }
 
+ExecutionStatus Runtime::raiseError(const TwineChar16 &msg) {
+  return raisePlaceholder(
+      *this, Handle<JSObject>::vmcast(&ErrorPrototype), msg);
+}
+
 ExecutionStatus Runtime::raiseTypeError(Handle<> message) {
   // Since this happens unexpectedly and rarely, don't rely on the parent
   // GCScope.
