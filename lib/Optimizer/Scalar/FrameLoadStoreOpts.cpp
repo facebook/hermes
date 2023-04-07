@@ -168,7 +168,11 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
   return changed;
 }
 
-bool eliminateStores(BasicBlock *BB) {
+/// Attempts to remove redundant stores to the frame in \p BB when we can
+/// determine they cannot be observed. Uses capture information from \p globalCV
+/// to determine whether intervening operations may load from the variable and
+/// observe the value of stores.
+bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
   Function *F = BB->getParent();
 
   // See comment in eliminateLoads above.
@@ -215,26 +219,23 @@ bool eliminateStores(BasicBlock *BB) {
     // Invalidate the store frame storage if the instruction may execute
     // capturing loads that observe this store.
     if (II->mayExecute()) {
-      // In no-capture mode the local variables are preserved because they have
-      // not been captured. This means that we only need to invalidate the
-      // variables that don't belong to this function.
-      if (entryCV) {
-        // Erase all non-local variables.
-        for (auto it = prevStoreFrame.begin(); it != prevStoreFrame.end();
-             it++) {
-          bool ownedVar = it->first->getParent()->getFunction() == F;
-          if (!ownedVar || entryCV->loads.count(it->first)) {
-            prevStoreFrame.erase(it);
-          }
+      for (auto it = prevStoreFrame.begin(); it != prevStoreFrame.end(); it++) {
+        // Use incremental capture information in the entry block for owned
+        // variables, and global information for everything else.
+        bool ownedVar = it->first->getParent()->getFunction() == F;
+        const auto &cv = entryCV && ownedVar ? *entryCV : globalCV;
+
+        // If there are any captured loads of the variable, the previous
+        // store is observable, and cannot be eliminated.
+        if (cv.loads.count(it->first)) {
+          prevStoreFrame.erase(it);
         }
-      } else {
-        // Invalidate all variables.
-        prevStoreFrame.clear();
       }
     }
 
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-      // Collect the captured variables.
+      // Collect the captured variables of newly created closures if we're in
+      // the entry block.
       if (entryCV) {
         collectCapturedVariables(*entryCV, CF->getFunctionCode(), F);
       }
@@ -267,7 +268,7 @@ bool runFrameLoadStoreOpts(Module *M) {
   for (auto &F : *M) {
     for (auto &BB : F) {
       changed |= eliminateLoads(&BB, cv);
-      changed |= eliminateStores(&BB);
+      changed |= eliminateStores(&BB, cv);
     }
   }
   return changed;
