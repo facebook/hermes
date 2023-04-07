@@ -514,7 +514,7 @@ void BytecodeVisitor::visitInstructionsInBody(
 
 class BytecodeHasher : public BytecodeVisitor {
  protected:
-  uint32_t hash_{0};
+  JenkinsHash hash_{JenkinsHashInit};
   bool useStrings_;
   bool useIntConstants_;
   uint8_t opcode_{0xff};
