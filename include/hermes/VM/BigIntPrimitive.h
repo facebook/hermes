@@ -153,7 +153,8 @@ class BigIntPrimitive final
   }
 
   /// \return This bigint converted to a string in \p radix.
-  CallResult<HermesValue> toString(Runtime &runtime, uint8_t radix) const;
+  static CallResult<HermesValue>
+  toString(Runtime &runtime, PseudoHandle<BigIntPrimitive> self, uint8_t radix);
 
   /// \return \p src % (2n ** \p n), sign extended; \p n-th bit is the sign bit.
   static CallResult<HermesValue>

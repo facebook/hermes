@@ -1710,8 +1710,9 @@ jsi::String HermesRuntimeImpl::bigintToString(
   }
 
   vm::GCScope gcScope(runtime_);
-  vm::CallResult<vm::HermesValue> toStringRes =
-      phv(bigint).getBigInt()->toString(runtime_, radix);
+  vm::CallResult<vm::HermesValue> toStringRes = vm::BigIntPrimitive::toString(
+      runtime_, vm::createPseudoHandle(phv(bigint).getBigInt()), radix);
+
   checkStatus(toStringRes.getStatus());
   return add<jsi::String>(*toStringRes);
 }

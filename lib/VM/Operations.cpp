@@ -348,8 +348,8 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2: {
       const uint8_t kDefaultRadix = 10;
-      auto res =
-          vmcast<BigIntPrimitive>(value)->toString(runtime, kDefaultRadix);
+      auto res = BigIntPrimitive::toString(
+          runtime, Handle<BigIntPrimitive>::vmcast(valueHandle), kDefaultRadix);
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
