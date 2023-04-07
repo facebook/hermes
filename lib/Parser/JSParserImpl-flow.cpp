@@ -173,7 +173,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     right = *optRight;
   }
 
-  eatSemi(true);
+  if (!eatSemi())
+    return None;
 
   if (kind == TypeAliasKind::DeclareOpaque) {
     return setLocation(
