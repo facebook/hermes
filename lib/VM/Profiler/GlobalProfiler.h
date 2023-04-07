@@ -12,9 +12,6 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-#include "hermes/Support/Semaphore.h"
-#include "hermes/Support/ThreadLocal.h"
-
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -23,16 +20,46 @@
 namespace hermes {
 namespace vm {
 
+/// GlobalProfiler manages the SamplingProfiler's sampling thread, and abstracts
+/// away platform-specific code for suspending the VM thread and performing the
+/// JS stack walk.
+///
+/// Each suported platform (e.g., Posix), must have its own "flavor" of the
+/// GlobalProfiler (e.g., GlobalProfilerPosix) which must implement the
+/// GlobalProfiler::platform<<*>> methods.
+///
+/// Usually, the platform-agnostic GlobalProfiler invokes the platform-specific
+/// ones. For example, GlobalProfiler::enable() performs some checks, then call
+/// GlobalProfiler::platformEnable() for completing the initialization.
+///
+/// Sampling happens on a separate thread whose lifetime is managed by the
+/// GlobalProfiler's platform-specific code. The sampling thread runs the
+/// GlobalProfiler::timerLoop function, which will periodically traverse the
+/// list of registered runtimes, and perform the stack walk, which is
+/// accomplished as follows.
+///
+/// GlobalProfiler::timerLoop invokes GlobalProfiler::sampleStacks, which will
+/// invoke GlobalProfiler::sampleStack for each registered runtime.
+///
+/// GlobalProfiler::sampleStack invoke the platform-specific
+/// GlobalProfiler::suspendVMAndWalkStack method. This hook should be
+/// implemented on every supported platform, and it is responsible for
+/// suspending VM execution. With the stopped VM, the platform-specific code
+/// calls back into platform-agnostic code (GlobalProfiler::walkRuntimeStack) so
+/// stack walking can continue.
+///
+/// When GlobalProfiler::walkRuntimeStack runs the VM is suspended, but this
+/// suspension can happen when the VM is in the middle of, e.g., memory
+/// allocation, or while it is holding some lock. Thus,
+/// GlobalProfiler::walkRuntimeStack should not acquire locks, or even allocate
+/// memory. It should perform stack walking quickly and expeditiously. All
+/// buffers used for stack walking are pre-allocated before calling into this
+/// function.
+///
+/// Finally, when GlobalProfiler::walkRuntimeStack returns to
+/// GlobalProfiler::suspendVMAndWalkStack, VM execution should be resumed.
 struct GlobalProfiler {
-  /// Pointing to the singleton SamplingProfiler instance.
-  /// We need this field because accessing local static variable from
-  /// signal handler is unsafe.
-  static std::atomic<GlobalProfiler *> instance_;
-
-  /// Used to synchronise data writes between the timer thread and the signal
-  /// handler in the runtime thread. Also used to send the target
-  /// SamplingProfiler to be used during the stack walk.
-  static std::atomic<SamplingProfiler *> profilerForSig_;
+  virtual ~GlobalProfiler();
 
   /// Lock for profiler operations and access to member fields.
   std::mutex profilerLock_;
@@ -41,19 +68,8 @@ struct GlobalProfiler {
   /// registered.
   std::unordered_set<SamplingProfiler *> profilers_;
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  /// Per-thread profiler instance for loom profiling.
-  /// Limitations: No recursive runtimes in one thread.
-  ThreadLocal<SamplingProfiler> threadLocalProfilerForLoom_;
-#endif
-
   /// Whether profiler is enabled or not. Protected by profilerLock_.
   bool enabled_{false};
-  /// Whether signal handler is registered or not. Protected by profilerLock_.
-  bool isSigHandlerRegistered_{false};
-
-  /// Semaphore to indicate all signal handlers have finished the sampling.
-  Semaphore samplingDoneSem_;
 
   /// Threading: load/store of sampledStackDepth_ and sampleStorage_
   /// are protected by samplingDoneSem_.
@@ -74,25 +90,9 @@ struct GlobalProfiler {
   /// member variable.
   std::condition_variable enabledCondVar_;
 
-  /// invoke sigaction() posix API to register \p handler.
-  /// \return what sigaction() returns: 0 to indicate success.
-  static int invokeSignalAction(void (*handler)(int));
-
-  /// Register sampling signal handler if not done yet.
-  /// \return true to indicate success.
-  bool registerSignalHandlers();
-
-  /// Unregister sampling signal handler.
-  bool unregisterSignalHandler();
-
-  /// Signal handler to walk the stack frames.
-  static void profilingSignalHandler(int signo);
-
   /// Main routine to take a sample of runtime stack.
   /// \return false for failure which timer loop thread should stop.
   bool sampleStacks();
-  /// Sample stack for a profiler.
-  bool sampleStack(SamplingProfiler *localProfiler);
 
   /// Timer loop thread main routine.
   void timerLoop();
@@ -105,7 +105,8 @@ struct GlobalProfiler {
   bool enabled();
 
   /// Register the \p profiler associated with an active runtime.
-  /// Should only be called from the thread running hermes runtime.
+  /// Should only be called from the thread running the hermes runtime
+  /// associated with \p profiler.
   void registerRuntime(SamplingProfiler *profiler);
 
   /// Unregister the active runtime and current thread associated with
@@ -115,8 +116,47 @@ struct GlobalProfiler {
   /// \return the singleton profiler instance.
   static GlobalProfiler *get();
 
+ protected:
+  GlobalProfiler() = default;
+
+  void walkRuntimeStack(SamplingProfiler *profiler);
+
  private:
-  GlobalProfiler();
+  /// Sample stack for a profiler.
+  bool sampleStack(SamplingProfiler *localProfiler);
+
+  // Platform-specific hooks.
+
+  /// Platform-specific hook invoked while enabling the sampling profiler. This
+  /// hook is invoked prior to creating the sampling thread, and with
+  /// this->profilerLock_ lock held. It must \return true if the sampling
+  /// profiler can be enabled, and false otherwise.
+  bool platformEnable();
+
+  /// Platform-specific hook invoked while disabling the sampling profiler.
+  /// This hook is invoked prior to terminating the sampling thread, and with
+  /// this->profilerLock_ lock held. It must \return true if the sampling
+  /// profiler can be disabled, and false otherwise.
+  bool platformDisable();
+
+  /// Platform-specific hook invoked after \p profiler is registered for
+  /// sampling profiling. It is invoked with this->profilerLock_ lock held.
+  void platformRegisterRuntime(SamplingProfiler *profiler);
+
+  /// Platform-specific hook invoked after \p profiler is removed from the list
+  /// of known profilers -- i.e., profiling should stop on \p profiler. It is
+  /// invoked with this->profilerLock_ lock held.
+  void platformUnregisterRuntime(SamplingProfiler *profiler);
+
+  /// Platform-specific hook invoked after sampleStack() collects the current
+  /// stack of \p localProfiler. This is invoked with the
+  /// \p localProfiler->runtimeDataLock_ lock held outside of the VM thread.
+  void platformPostSampleStack(SamplingProfiler *localProfiler);
+
+  /// Platform-specific hook invoked to suspend the VM thread and perform stack
+  /// sampling. Note that this method is invoked with both this->profilerLock_
+  /// and \p profiler->runtimeDataLock_ locks held.
+  bool platformSuspendVMAndWalkStack(SamplingProfiler *profiler);
 };
 } // namespace vm
 } // namespace hermes

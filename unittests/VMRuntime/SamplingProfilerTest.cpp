@@ -16,10 +16,6 @@
 namespace {
 using namespace hermes::vm;
 
-static pthread_t owningThread(const SamplingProfiler &sp) {
-  return sp.getCurrentThread();
-}
-
 static constexpr bool withSamplingProfilerEnabled = true;
 static constexpr bool withSamplingProfilerDisabled = false;
 
@@ -41,7 +37,7 @@ TEST(SamplingProfilerTest, Invariants) {
   ASSERT_NE(rt->samplingProfiler, nullptr);
 
   // The sample profiler belongs to this thread.
-  EXPECT_EQ(owningThread(*rt->samplingProfiler), pthread_self());
+  EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
 }
 
 #ifndef __APPLE__
@@ -50,20 +46,20 @@ TEST(SamplingProfilerTest, MultipleRuntimes) {
   auto rt1 = makeRuntime(withSamplingProfilerEnabled);
   auto rt2 = makeRuntime(withSamplingProfilerEnabled);
 
-  EXPECT_EQ(owningThread(*rt0->samplingProfiler), pthread_self());
-  EXPECT_EQ(owningThread(*rt1->samplingProfiler), pthread_self());
-  EXPECT_EQ(owningThread(*rt2->samplingProfiler), pthread_self());
+  EXPECT_TRUE(rt0->samplingProfiler->belongsToCurrentThread());
+  EXPECT_TRUE(rt1->samplingProfiler->belongsToCurrentThread());
+  EXPECT_TRUE(rt2->samplingProfiler->belongsToCurrentThread());
 }
 
 TEST(SamplingProfilerTest, MultipleProfilers) {
   auto rt = makeRuntime(withSamplingProfilerEnabled);
-  auto sp0 = std::make_unique<SamplingProfiler>(*rt);
-  auto sp1 = std::make_unique<SamplingProfiler>(*rt);
-  auto sp2 = std::make_unique<SamplingProfiler>(*rt);
-  EXPECT_EQ(owningThread(*rt->samplingProfiler), pthread_self());
-  EXPECT_EQ(owningThread(*sp0), pthread_self());
-  EXPECT_EQ(owningThread(*sp1), pthread_self());
-  EXPECT_EQ(owningThread(*sp2), pthread_self());
+  auto sp0 = SamplingProfiler::create(*rt);
+  auto sp1 = SamplingProfiler::create(*rt);
+  auto sp2 = SamplingProfiler::create(*rt);
+  EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+  EXPECT_TRUE(sp0->belongsToCurrentThread());
+  EXPECT_TRUE(sp1->belongsToCurrentThread());
+  EXPECT_TRUE(sp2->belongsToCurrentThread());
 }
 #endif
 

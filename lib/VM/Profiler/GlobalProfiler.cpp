@@ -9,7 +9,6 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-#include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/Runtime.h"
@@ -21,8 +20,6 @@
 #include "ChromeTraceSerializer.h"
 
 #include <fcntl.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -33,19 +30,12 @@
 namespace hermes {
 namespace vm {
 
-/// Name of the semaphore.
-const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
+GlobalProfiler::~GlobalProfiler() = default;
 
 void GlobalProfiler::registerRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
-
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  assert(
-      threadLocalProfilerForLoom_.get() == nullptr &&
-      "multiple hermes runtime in the same thread");
-  threadLocalProfilerForLoom_.set(profiler);
-#endif
+  platformRegisterRuntime(profiler);
 }
 
 void GlobalProfiler::unregisterRuntime(SamplingProfiler *profiler) {
@@ -55,12 +45,7 @@ void GlobalProfiler::unregisterRuntime(SamplingProfiler *profiler) {
   // register/register -> unregister/unregister call?
   assert(succeed && "How can runtime not registered yet?");
   (void)succeed;
-
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  // TODO(T125910634): re-introduce the requirement for unregistering the
-  // runtime in the same thread it was registered.
-  threadLocalProfilerForLoom_.set(nullptr);
-#endif
+  platformUnregisterRuntime(profiler);
 }
 
 bool GlobalProfiler::sampleStacks() {
@@ -69,17 +54,12 @@ bool GlobalProfiler::sampleStacks() {
     if (!sampleStack(localProfiler)) {
       return false;
     }
-#if defined(__APPLE__) && defined(HERMES_FACEBOOK_BUILD)
-    if (localProfiler->shouldPushDataToLoom()) {
-      localProfiler->pushLastSampledStackToLoom();
-    }
-#endif
+    platformPostSampleStack(localProfiler);
   }
   return true;
 }
 
 bool GlobalProfiler::sampleStack(SamplingProfiler *localProfiler) {
-  auto targetThreadId = localProfiler->currentThread_;
   if (localProfiler->suspendCount_ > 0) {
     // Sampling profiler is suspended. Copy pre-captured stack instead without
     // interrupting the VM thread.
@@ -108,22 +88,8 @@ bool GlobalProfiler::sampleStack(SamplingProfiler *localProfiler) {
         localProfiler->nativeFunctions_.capacity();
     (void)nativeFunctionsCapacityBefore;
 
-    // Guarantee that the runtime thread will not proceed until it has
-    // acquired the updates to domains_.
-    profilerForSig_.store(localProfiler, std::memory_order_release);
-
-    // Signal target runtime thread to sample stack.
-    pthread_kill(targetThreadId, SIGPROF);
-
-    // Threading: samplingDoneSem_ will synchronise this thread with the
-    // signal handler, so that we only have one active signal at a time.
-    if (!samplingDoneSem_.wait()) {
+    if (!platformSuspendVMAndWalkStack(localProfiler)) {
       return false;
-    }
-
-    // Guarantee that this thread will observe all changes made to data
-    // structures in the signal handler.
-    while (profilerForSig_.load(std::memory_order_acquire) != nullptr) {
     }
 
     assert(
@@ -145,6 +111,23 @@ bool GlobalProfiler::sampleStack(SamplingProfiler *localProfiler) {
       sampleStorage_.stack.begin(),
       sampleStorage_.stack.begin() + sampledStackDepth_);
   return true;
+}
+
+void GlobalProfiler::walkRuntimeStack(SamplingProfiler *profiler) {
+  assert(
+      profiler->suspendCount_ == 0 &&
+      "Shouldn't interrupt the VM thread when the sampling profiler is "
+      "suspended.");
+
+  // Sampling stack will touch GC objects(like closure) so only do so if heap
+  // is valid.
+  auto &curThreadRuntime = profiler->runtime_;
+  assert(
+      !curThreadRuntime.getHeap().inGC() &&
+      "sampling profiler should be suspended before GC");
+  (void)curThreadRuntime;
+  sampledStackDepth_ =
+      profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
 }
 
 void GlobalProfiler::timerLoop() {
@@ -175,14 +158,6 @@ void GlobalProfiler::timerLoop() {
   }
 }
 
-GlobalProfiler::GlobalProfiler() {
-  instance_.store(this);
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-  profilo_api()->register_external_tracer_callback(
-      TRACER_TYPE_JAVASCRIPT, SamplingProfiler::collectStackForLoom);
-#endif
-}
-
 bool GlobalProfiler::enabled() {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   return enabled_;
@@ -193,10 +168,7 @@ bool GlobalProfiler::enable() {
   if (enabled_) {
     return true;
   }
-  if (!samplingDoneSem_.open(kSamplingDoneSemaphoreName)) {
-    return false;
-  }
-  if (!registerSignalHandlers()) {
+  if (!platformEnable()) {
     return false;
   }
   enabled_ = true;
@@ -212,11 +184,7 @@ bool GlobalProfiler::disable() {
       // Already disabled.
       return true;
     }
-    if (!samplingDoneSem_.close()) {
-      return false;
-    }
-    // Unregister handlers before shutdown.
-    if (!unregisterSignalHandler()) {
+    if (!platformDisable()) {
       return false;
     }
     // Telling timer thread to exit.
