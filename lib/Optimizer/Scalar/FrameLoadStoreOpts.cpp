@@ -41,38 +41,39 @@ static bool getSingleInitializer(Variable *V) {
   return singleStore;
 }
 
-/// Add the variables that the function \p F is capturing into \p capturedVars.
+class CapturedVariables {
+ public:
+  llvh::DenseSet<Variable *> loads;
+  llvh::DenseSet<Variable *> stores;
+};
+
+/// Add the variables that the function \p F is capturing into \p cv.
 /// Notice that the function F may have sub-closures that capture variables.
 /// This method does a recursive scan and collects all captured variables.
-void collectCapturedVariables(
-    llvh::DenseSet<Variable *> &capturedLoads,
-    llvh::DenseSet<Variable *> &capturedStores,
-    Function *F) {
+void collectCapturedVariables(CapturedVariables &cv, Function *F) {
   // For all instructions in the function:
-  for (auto blockIter = F->begin(), e = F->end(); blockIter != e; ++blockIter) {
-    BasicBlock *BB = &*blockIter;
-    for (auto &instIter : *BB) {
+  for (auto &BB : *F) {
+    for (auto &instIter : BB) {
       Instruction *II = &instIter;
 
       // Recursively check capturing functions by inspecting the created
       // closure.
       if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
-        collectCapturedVariables(
-            capturedLoads, capturedStores, CF->getFunctionCode());
+        collectCapturedVariables(cv, CF->getFunctionCode());
         continue;
       }
 
       if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
         Variable *V = LF->getLoadVariable();
         if (V->getParent()->getFunction() != F) {
-          capturedLoads.insert(V);
+          cv.loads.insert(V);
         }
       }
 
       if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
         auto *V = SF->getVariable();
         if (V->getParent()->getFunction() != F) {
-          capturedStores.insert(V);
+          cv.stores.insert(V);
         }
       }
     }
@@ -80,9 +81,17 @@ void collectCapturedVariables(
 }
 
 bool eliminateLoads(BasicBlock *BB) {
-  // Check if this block is the entry block.
   Function *F = BB->getParent();
-  bool isEntryBlock = (BB == &*F->begin());
+
+  // In the entry block, we can perform more precise analysis by tracking
+  // exactly when variables owned by F are actually captured. Create an empty
+  // CapturedVariables that will be incrementally updated as we progress through
+  // the entry block. This is set to None in all subsequent blocks.
+  // TODO: Factor out analysis of owned variables, and analyse them across the
+  // entire function.
+  llvh::Optional<CapturedVariables> entryCV;
+  if (BB == &*F->begin())
+    entryCV.emplace();
 
   // A list of un-clobbered variable stored values in flight.
   // All of these values are known to be valid for replacement at the current
@@ -92,15 +101,6 @@ bool eliminateLoads(BasicBlock *BB) {
   /// A list of variables that are known to stay constant during the lifetime
   /// of the current function.
   llvh::DenseMap<Variable *, Value *> constFrameValues;
-
-  // A list of captured variables that are accessed by loads.
-  llvh::DenseSet<Variable *> capturedVariableLoads;
-  // A list of captured variables that are accessed by stores.
-  llvh::DenseSet<Variable *> capturedVariableStores;
-
-  // In the entry block we can keep track of which variables have been captured
-  // by inspecting the closures that we generate.
-  bool usePreciseCaptureAnalysis = isEntryBlock;
 
   IRBuilder::InstructionDestroyer destroyer;
 
@@ -162,11 +162,8 @@ bool eliminateLoads(BasicBlock *BB) {
 
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
-      if (usePreciseCaptureAnalysis) {
-        collectCapturedVariables(
-            capturedVariableLoads,
-            capturedVariableStores,
-            CF->getFunctionCode());
+      if (entryCV) {
+        collectCapturedVariables(*entryCV, CF->getFunctionCode());
       }
     }
 
@@ -179,14 +176,13 @@ bool eliminateLoads(BasicBlock *BB) {
     if (II->mayWriteMemory()) {
       // limit the size of knownFrameValues in case a function is large, as
       // large functions slow down considerably here
-      if (usePreciseCaptureAnalysis &&
-          knownFrameValues.size() < kFrameSizeThreshold) {
+      if (entryCV && knownFrameValues.size() < kFrameSizeThreshold) {
         // Erase all non-local variables.
         for (auto &I : knownFrameValues) {
           // We don't care about variables that are captured as "load variables"
           // because loading the variable does not invalidate the loaded value.
           if (I.first->getParent()->getFunction() != F ||
-              capturedVariableStores.count(I.first)) {
+              entryCV->stores.count(I.first)) {
             I.second = nullptr;
           }
         }
@@ -200,22 +196,18 @@ bool eliminateLoads(BasicBlock *BB) {
 }
 
 bool eliminateStores(BasicBlock *BB) {
-  // Check if this block is the entry block.
   Function *F = BB->getParent();
-  bool isEntryBlock = (BB == &*F->begin());
+
+  // See comment in eliminateLoads above.
+  llvh::Optional<CapturedVariables> entryCV;
+  if (BB == &*F->begin())
+    entryCV.emplace();
 
   // A list of un-clobbered frame stored values in flight.
   llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
 
   // Deletes instructions when we leave the function.
   IRBuilder::InstructionDestroyer destroyer;
-
-  // A list of variables that are known to be captured.
-  llvh::DenseSet<Variable *> capturedVariables;
-
-  // In the entry block we can keep track of which variables have been captured
-  // by inspecting the closures that we generate.
-  bool usePreciseCaptureAnalysis = isEntryBlock;
 
   bool changed = false;
 
@@ -261,12 +253,11 @@ bool eliminateStores(BasicBlock *BB) {
       // variables that don't belong to this function.
       // limit the size of knownFrameValues in case a function is large, as
       // large functions slow down considerably here
-      if (usePreciseCaptureAnalysis &&
-          prevStoreFrame.size() < kFrameSizeThreshold) {
+      if (entryCV && prevStoreFrame.size() < kFrameSizeThreshold) {
         // Erase all non-local variables.
         for (auto &I : prevStoreFrame) {
           if (I.first->getParent()->getFunction() != F ||
-              capturedVariables.count(I.first)) {
+              entryCV->loads.count(I.first)) {
             I.second = nullptr;
           }
         }
@@ -278,9 +269,8 @@ bool eliminateStores(BasicBlock *BB) {
 
     if (auto *CF = llvh::dyn_cast<BaseCreateLexicalChildInst>(II)) {
       // Collect the captured variables.
-      if (usePreciseCaptureAnalysis) {
-        collectCapturedVariables(
-            capturedVariables, capturedVariables, CF->getFunctionCode());
+      if (entryCV) {
+        collectCapturedVariables(*entryCV, CF->getFunctionCode());
       }
     }
   }
