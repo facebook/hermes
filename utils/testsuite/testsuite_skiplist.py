@@ -2097,7 +2097,6 @@ UNSUPPORTED_FEATURES = [
     "ShadowRealm",
     "tail-call-optimization",
     "Temporal",
-    "well-formed-json-stringify",
     "u180e",
     # Static Hermes does not support generators yet.
     "async-functions",
