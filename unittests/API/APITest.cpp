@@ -351,19 +351,23 @@ TEST(HermesRuntimeDeathTest, ValueTest) {
 
 TEST_F(HermesRuntimeTest, DontGrowWhenMoveObjectOutOfValue) {
   Value val = Object(*rt);
+  // Keep the object alive during measurement.
+  std::unique_ptr<Object> obj;
   auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    Object obj = std::move(val).getObject(*rt);
-    (void)obj;
+    obj = std::make_unique<Object>(std::move(val).getObject(*rt));
   });
   EXPECT_EQ(rootsDelta, 0);
 }
 
 TEST_F(HermesRuntimeTest, DontGrowWhenCloneObject) {
   Value val = Object(*rt);
+  constexpr int kCloneCount = 1000;
+  // Keep the objects alive during measurement.
+  std::vector<Object> objects;
+  objects.reserve(kCloneCount);
   auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    for (int i = 0; i < 1000; i++) {
-      Object obj = val.getObject(*rt);
-      (void)obj;
+    for (size_t i = 0; i < kCloneCount; i++) {
+      objects.push_back(val.getObject(*rt));
     }
   });
   EXPECT_EQ(rootsDelta, 0);
