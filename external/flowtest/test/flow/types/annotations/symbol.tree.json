@@ -23,7 +23,8 @@
           }
         },
         "optional":false
-      }
+      },
+      "kind":"var"
     }
   ],
   "comments":[]
