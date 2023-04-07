@@ -24,6 +24,8 @@ const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
+const VALID_REACT_IMPORTS = new Set(['React', 'react']);
+
 export function flowDefToTSDef(
   originalCode: string,
   ast: FlowESTree.Program,
@@ -86,6 +88,53 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     }
     return globalScope;
   })();
+
+  function isReactImport(id: FlowESTree.Identifier): boolean {
+    let currentScope = scopeManager.acquire(id);
+
+    const variableDef = (() => {
+      while (currentScope != null) {
+        for (const variable of currentScope.variables) {
+          if (variable.defs.length && variable.name === id.name) {
+            return variable;
+          }
+        }
+        currentScope = currentScope.upper;
+      }
+    })();
+
+    // No variable found, it must be global. Using the `React` variable is enough in this case.
+    if (variableDef == null) {
+      return VALID_REACT_IMPORTS.has(id.name);
+    }
+
+    const def = variableDef.defs[0];
+    // Detect:
+    switch (def.type) {
+      // import React from 'react';
+      // import * as React from 'react';
+      case 'ImportBinding': {
+        if (
+          def.node.type === 'ImportDefaultSpecifier' ||
+          def.node.type === 'ImportNamespaceSpecifier'
+        ) {
+          return VALID_REACT_IMPORTS.has(def.parent.source);
+        }
+        return false;
+      }
+
+      // Globals
+      case 'ImplicitGlobalVariable': {
+        return VALID_REACT_IMPORTS.has(id.name);
+      }
+
+      // TODO Handle:
+      // const React = require('react');
+      // const Something = React;
+    }
+
+    return false;
+  }
 
   const transform = {
     AnyTypeAnnotation(
@@ -2060,12 +2109,46 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     QualifiedTypeIdentifier(
       node: FlowESTree.QualifiedTypeIdentifier,
     ): TSESTree.TSQualifiedName {
+      const qual = node.qualification;
+
+      // React special conversion:
+      if (qual.type === 'Identifier' && isReactImport(qual)) {
+        switch (node.id.name) {
+          // React.Something -> React.ReactSomething
+          case 'Element':
+          case 'Node': {
+            return {
+              type: 'TSQualifiedName',
+              left: transform.Identifier(qual, false),
+              right: {
+                type: 'Identifier',
+                name: `React${node.id.name}`,
+              },
+            };
+          }
+          // React.MixedElement -> JSX.Element
+          case 'MixedElement': {
+            return {
+              type: 'TSQualifiedName',
+              left: {
+                type: 'Identifier',
+                name: 'JSX',
+              },
+              right: {
+                type: 'Identifier',
+                name: 'Element',
+              },
+            };
+          }
+        }
+      }
+
       return {
         type: 'TSQualifiedName',
         left:
-          node.qualification.type === 'Identifier'
-            ? transform.Identifier(node.qualification, false)
-            : transform.QualifiedTypeIdentifier(node.qualification),
+          qual.type === 'Identifier'
+            ? transform.Identifier(qual, false)
+            : transform.QualifiedTypeIdentifier(qual),
         right: transform.Identifier(node.id, false),
       };
     },
