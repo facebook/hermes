@@ -606,22 +606,6 @@ struct GCHermesValueUtil {
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv);
 
-/// SafeNumericEncoder can encode any numeric type into a numeric HermesValue,
-/// as well as safely encoding any possible untrusted floating-point values.
-template <typename T, bool b = std::is_floating_point<T>::value>
-struct SafeNumericEncoder {
-  static HermesValue encode(T val) {
-    return HermesValue::encodeUntrustedNumberValue(val);
-  }
-};
-
-template <typename T>
-struct SafeNumericEncoder<T, true> {
-  static HermesValue encode(T val) {
-    return HermesValue::encodeUntrustedNumberValue(val);
-  }
-};
-
 } // end namespace vm
 } // end namespace hermes
 
