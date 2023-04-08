@@ -152,7 +152,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   // Length is the number of formal arguments.
   // 10.2.9 SetFunctionLength is performed during 10.2.3 OrdinaryFunctionCreate.
   auto lengthHandle =
-      runtime.makeHandle(HermesValue::encodeDoubleValue(paramCount));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(paramCount));
   DEFINE_PROP(selfHandle, P::length, lengthHandle);
 
   // Define the name.
@@ -568,7 +568,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   pf.configurable = 1;
 
   // Length is the number of formal arguments.
-  auto length = runtime.makeHandle(HermesValue::encodeNumberValue(
+  auto length = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(
       argCount >= *targetLength ? 0.0 : *targetLength - argCount));
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(

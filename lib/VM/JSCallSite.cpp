@@ -125,11 +125,11 @@ CallResult<HermesValue> JSCallSite::getLineNumber(
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
     if (location) {
-      return HermesValue::encodeNumberValue(location->line);
+      return HermesValue::encodeTrustedNumberValue(location->line);
     } else {
       // Add 1 to the CJSModuleOffset to account for 1-based indexing of
       // symbolication tools.
-      return HermesValue::encodeNumberValue(
+      return HermesValue::encodeTrustedNumberValue(
           sti->codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() +
           1);
     }
@@ -145,7 +145,7 @@ CallResult<HermesValue> JSCallSite::getColumnNumber(
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
     if (location) {
-      return HermesValue::encodeNumberValue(location->column);
+      return HermesValue::encodeTrustedNumberValue(location->column);
     }
   }
   return HermesValue::encodeNullValue();
@@ -156,7 +156,7 @@ CallResult<HermesValue> JSCallSite::getBytecodeAddress(
     Handle<JSCallSite> selfHandle) {
   const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
   if (sti->codeBlock) {
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         sti->bytecodeOffset + sti->codeBlock->getVirtualOffset());
   }
   return HermesValue::encodeNullValue();

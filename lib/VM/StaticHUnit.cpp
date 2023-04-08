@@ -306,7 +306,7 @@ extern "C" SHLegacyValue _sh_get_template_object(
     auto marker = gcScope.createMarker();
     for (uint32_t i = 0; i < count; ++i) {
       gcScope.flushToMarker(marker);
-      idx = HermesValue::encodeNumberValue(i);
+      idx = HermesValue::encodeTrustedNumberValue(i);
 
       const SHLegacyValue *rawLegacyValue = va_arg(args, const SHLegacyValue *);
       Handle<> value{toPHV(rawLegacyValue)};
@@ -329,7 +329,7 @@ extern "C" SHLegacyValue _sh_get_template_object(
     if (!dup) {
       for (uint32_t i = 0; i < count; ++i) {
         gcScope.flushToMarker(marker);
-        idx = HermesValue::encodeNumberValue(i);
+        idx = HermesValue::encodeTrustedNumberValue(i);
 
         const SHLegacyValue *cookedLegacyValue =
             va_arg(args, const SHLegacyValue *);

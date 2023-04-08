@@ -291,7 +291,7 @@ setPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.size");
   }
-  return HermesValue::encodeNumberValue(JSSet::getSize(self, runtime));
+  return HermesValue::encodeTrustedNumberValue(JSSet::getSize(self, runtime));
 }
 
 CallResult<HermesValue>

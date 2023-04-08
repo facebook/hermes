@@ -476,7 +476,7 @@ dateParse_RJS(void *, Runtime &runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeDoubleValue(
+  return HermesValue::encodeTrustedNumberValue(
       parseDate(StringPrimitive::createStringView(
           runtime, runtime.makeHandle(std::move(*res)))));
 }
@@ -493,7 +493,7 @@ CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     double y = res->getNumber();
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         timeClip(makeDate(makeDay(y, 0, 1), makeTime(0, 0, 0, 0))));
   }
   CallResult<double> cr{0};
@@ -501,11 +501,11 @@ CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeDoubleValue(timeClip(*cr));
+  return HermesValue::encodeTrustedNumberValue(timeClip(*cr));
 }
 
 CallResult<HermesValue> dateNow(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeDoubleValue(curTime());
+  return HermesValue::encodeTrustedNumberValue(curTime());
 }
 
 CallResult<HermesValue>
@@ -601,7 +601,7 @@ datePrototypeGetTime(void *, Runtime &runtime, NativeArgs args) {
         "Date.prototype.getTime() called on non-Date object");
   }
 
-  return HermesValue::encodeDoubleValue(date->getPrimitiveValue());
+  return HermesValue::encodeTrustedNumberValue(date->getPrimitiveValue());
 }
 
 CallResult<HermesValue>
@@ -679,7 +679,7 @@ datePrototypeGetterHelper(void *ctx, Runtime &runtime, NativeArgs args) {
       result = (utc - t) / MS_PER_MINUTE;
       break;
   }
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 /// Set the [[PrimitiveValue]] to the given time.
@@ -696,7 +696,7 @@ datePrototypeSetTime_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   }
   double t = timeClip(res->getNumber());
   self->setPrimitiveValue(t);
-  return HermesValue::encodeDoubleValue(t);
+  return HermesValue::encodeTrustedNumberValue(t);
 }
 
 /// Set the milliseconds as provided and return the new time value.
@@ -721,7 +721,7 @@ datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
       day(t), makeTime(hourFromTime(t), minFromTime(t), secFromTime(t), ms));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes 2 arguments: seconds, milliseconds.
@@ -758,7 +758,7 @@ datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
       makeDate(day(t), makeTime(hourFromTime(t), minFromTime(t), s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes 3 arguments: minutes, seconds, milliseconds.
@@ -804,7 +804,7 @@ datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double date = makeDate(day(t), makeTime(hourFromTime(t), m, s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes 4 arguments: hours, minutes, seconds, milliseconds.
@@ -860,7 +860,7 @@ datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double date = makeDate(day(t), makeTime(h, m, s, milli));
   double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Set the date of the month and return the new time.
@@ -885,7 +885,7 @@ datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
       makeDay(yearFromTime(t), monthFromTime(t), dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes 2 arguments: month and date.
@@ -920,7 +920,7 @@ datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes 3 arguments: full year, month and date.
@@ -968,7 +968,7 @@ datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
   double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
   self->setPrimitiveValue(utcT);
-  return HermesValue::encodeDoubleValue(utcT);
+  return HermesValue::encodeTrustedNumberValue(utcT);
 }
 
 /// Takes one argument: the partial (or full) year.
@@ -1001,7 +1001,7 @@ datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
       makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));
   double d = timeClip(date);
   self->setPrimitiveValue(d);
-  return HermesValue::encodeDoubleValue(d);
+  return HermesValue::encodeTrustedNumberValue(d);
 }
 
 CallResult<HermesValue>

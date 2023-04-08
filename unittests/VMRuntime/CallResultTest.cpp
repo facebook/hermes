@@ -157,7 +157,7 @@ TEST(CallResultTest, HermesValueTest) {
   EXPECT_EQ(ExecutionStatus::EXCEPTION, cr1.getStatus());
   EXPECT_EQ(ExecutionStatus::EXCEPTION, cr1);
 
-  auto cr2 = returnSuccess(HermesValue::encodeNumberValue(3.14));
+  auto cr2 = returnSuccess(HermesValue::encodeTrustedNumberValue(3.14));
   EXPECT_EQ(ExecutionStatus::RETURNED, cr2.getStatus());
   EXPECT_EQ(ExecutionStatus::RETURNED, cr2);
   EXPECT_TRUE(cr2.getValue().isNumber());

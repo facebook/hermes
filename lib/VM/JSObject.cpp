@@ -429,7 +429,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       if (!okFlags.getIncludeNonEnumerable() && !res->enumerable)
         continue;
 
-      tmpHandle = HermesValue::encodeDoubleValue(i);
+      tmpHandle = HermesValue::encodeTrustedNumberValue(i);
       JSArray::setElementAt(array, runtime, index++, tmpHandle);
       marker.flush();
     }
@@ -578,16 +578,16 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       uint32_t b;
 
       if (indexNamesLast && (b = indexNames[indexNamesLast - 1]) > a) {
-        tmpHandle = HermesValue::encodeDoubleValue(b);
+        tmpHandle = HermesValue::encodeTrustedNumberValue(b);
         --indexNamesLast;
       } else {
-        tmpHandle = HermesValue::encodeDoubleValue(a);
+        tmpHandle = HermesValue::encodeTrustedNumberValue(a);
         --numIndexed;
       }
     } else {
       assert(indexNamesLast && "prematurely ran out of source values");
       tmpHandle =
-          HermesValue::encodeDoubleValue(indexNames[indexNamesLast - 1]);
+          HermesValue::encodeTrustedNumberValue(indexNames[indexNamesLast - 1]);
       --indexNamesLast;
     }
 
@@ -1091,7 +1091,8 @@ CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
       return getComputed_RJS(
           selfHandle,
           runtime,
-          runtime.makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)));
+          runtime.makeHandle(
+              HermesValue::encodeTrustedNumberValue(*nameAsIndex)));
     }
     // Here we have indexed properties but the symbol was not index-like.
     // Fall through to getNamed().
@@ -1509,7 +1510,8 @@ CallResult<bool> JSObject::putNamedOrIndexed(
       return putComputed_RJS(
           selfHandle,
           runtime,
-          runtime.makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)),
+          runtime.makeHandle(
+              HermesValue::encodeTrustedNumberValue(*nameAsIndex)),
           valueHandle,
           opFlags);
     }
@@ -1786,7 +1788,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
               runtime,
               Predefined::getSymbolID(Predefined::length),
               runtime.makeHandle(
-                  HermesValue::encodeNumberValue(*arrayIndex + 1)),
+                  HermesValue::encodeTrustedNumberValue(*arrayIndex + 1)),
               opFlags);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return ExecutionStatus::EXCEPTION;

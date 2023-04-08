@@ -202,7 +202,7 @@ extern "C" SHLegacyValue _sh_ljs_get_arguments_length(
   StackFramePtr framePtr(toPHV(frame));
   // If the arguments object hasn't been created yet, use the fast path.
   if (toPHV(lazyReg)->isUndefined())
-    return HermesValue::encodeNumberValue(framePtr.getArgCount());
+    return HermesValue::encodeTrustedNumberValue(framePtr.getArgCount());
 
   CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
   {
@@ -1015,7 +1015,7 @@ extern "C" void _sh_ljs_put_own_by_index(
   CallResult<bool> cr{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    Handle<> indexHandle{runtime, HermesValue::encodeDoubleValue(key)};
+    Handle<> indexHandle{runtime, HermesValue::encodeTrustedNumberValue(key)};
     cr = JSObject::defineOwnComputedPrimitive(
         Handle<JSObject>::vmcast(toPHV(target)),
         runtime,
@@ -1411,8 +1411,8 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
         stringIdResult = SymbolID::unsafeCreate(
             unit->symbols[key.getSymbol().unsafeGetIndex()]);
       } else {
-        auto keyHandle =
-            runtime.makeHandle(HermesValue::encodeDoubleValue(key.getNumber()));
+        auto keyHandle = runtime.makeHandle(
+            HermesValue::encodeTrustedNumberValue(key.getNumber()));
         auto idRes = valueToSymbolID(runtime, keyHandle);
         assert(
             idRes != ExecutionStatus::EXCEPTION &&
@@ -1557,8 +1557,8 @@ extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
       return ExecutionStatus::EXCEPTION;
     }
     auto arr = *cr;
-    *index = HermesValue::encodeNumberValue(beginIndex);
-    *size = HermesValue::encodeNumberValue(endIndex);
+    *index = HermesValue::encodeTrustedNumberValue(beginIndex);
+    *size = HermesValue::encodeTrustedNumberValue(endIndex);
     return arr.getHermesValue();
   }();
 
@@ -1610,7 +1610,7 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
             "toString on number cannot fail");
         tmpHandle = status->getHermesValue();
       }
-      *indexVal = HermesValue::encodeNumberValue(idx + 1);
+      *indexVal = HermesValue::encodeTrustedNumberValue(idx + 1);
       return tmpHandle.get();
     } else {
       return HermesValue::encodeUndefinedValue();

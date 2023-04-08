@@ -544,7 +544,7 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
       // Already have a number, just return it.
       return value;
   }
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
@@ -574,7 +574,7 @@ CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
   } else if (len > maxLength) {
     len = maxLength;
   }
-  return HermesValue::encodeDoubleValue(len);
+  return HermesValue::encodeTrustedNumberValue(len);
 }
 
 CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
@@ -595,7 +595,7 @@ CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
 
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
-      ? runtime.makeHandle(HermesValue::encodeDoubleValue(0))
+      ? runtime.makeHandle(HermesValue::encodeTrustedNumberValue(0))
       : valueHandle;
   auto res = toIntegerOrInfinity(runtime, value);
   if (res == ExecutionStatus::EXCEPTION) {
@@ -606,7 +606,7 @@ CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
     return runtime.raiseRangeError("A negative value cannot be an index");
   }
   auto integerIndexHandle =
-      runtime.makeHandle(HermesValue::encodeDoubleValue(integerIndex));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(integerIndex));
   res = toLength(runtime, integerIndexHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -635,7 +635,7 @@ CallResult<HermesValue> toIntegerOrInfinity(
     result = std::trunc(num);
   }
 
-  return HermesValue::encodeDoubleValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 /// Conversion of HermesValues to integers.
@@ -649,7 +649,7 @@ static inline CallResult<HermesValue> toInt(
   }
   double num = res->getNumber();
   T result = static_cast<T>(hermes::truncateToInt32(num));
-  return HermesValue::encodeNumberValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toInt8(Runtime &runtime, Handle<> valueHandle) {
@@ -706,7 +706,7 @@ CallResult<HermesValue> toUInt8Clamp(Runtime &runtime, Handle<> valueHandle) {
     // 2. ReturnIfAbrupt(number)
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeNumberValue(toUInt8Clamp(res->getNumber()));
+  return HermesValue::encodeTrustedNumberValue(toUInt8Clamp(res->getNumber()));
 }
 
 CallResult<HermesValue> toUInt16(Runtime &runtime, Handle<> valueHandle) {
@@ -1112,7 +1112,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return y->getBigInt()->compare(static_cast<int32_t>(x->getBool())) == 0;
       }
       CASE_S_M(Bool, Object) {
-        x = HermesValue::encodeDoubleValue(x->getBool());
+        x = HermesValue::encodeTrustedNumberValue(x->getBool());
         break;
       }
       // 9. If Type(y) is Boolean, return the result of the comparison x == !
@@ -1128,7 +1128,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return x->getBigInt()->compare(static_cast<int32_t>(y->getBool())) == 0;
       }
       CASE_M_S(Object, Bool) {
-        y = HermesValue::encodeDoubleValue(y->getBool());
+        y = HermesValue::encodeTrustedNumberValue(y->getBool());
         break;
       }
       // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y)
@@ -1257,7 +1257,7 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       return ExecutionStatus::EXCEPTION;
     }
     const double yNum = res->getNumber();
-    return HermesValue::encodeDoubleValue(xNum + yNum);
+    return HermesValue::encodeTrustedNumberValue(xNum + yNum);
   }
 
   // yPrim is a primitive; therefore it is already a BigInt, or it will never be
@@ -2467,7 +2467,8 @@ extern "C" SHLegacyValue _sh_ljs_add_rjs(
   auto *pa = toPHV(a);
   auto *pb = toPHV(b);
   if (LLVM_LIKELY(pa->isNumber() && pb->isNumber()))
-    return HermesValue::encodeDoubleValue(pa->getNumber() + pb->getNumber());
+    return HermesValue::encodeTrustedNumberValue(
+        pa->getNumber() + pb->getNumber());
   Runtime &runtime = getRuntime(shr);
   CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
   {
@@ -2568,7 +2569,7 @@ binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
   // Fast path, both arguments are numbers.
   if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeTrustedNumberValue(
         Oper(lhs->getNumber(), rhs->getNumber()));
 
   auto res = [&]() -> CallResult<HermesValue> {
@@ -2587,7 +2588,7 @@ binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
       auto rNumRes = toNumber_RJS(runtime, rhs);
       if (LLVM_UNLIKELY(rNumRes == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      return HermesValue::encodeDoubleValue(
+      return HermesValue::encodeTrustedNumberValue(
           Oper(lNumRes->getDouble(), rNumRes->getDouble()));
     }
     // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
@@ -2604,7 +2605,7 @@ template <auto Oper, auto BigIntOper>
 SHLegacyValue incDecOperImpl(SHRuntime *shr, const SHLegacyValue *n) {
   Handle<> nHandle{toPHV(n)};
   if (LLVM_LIKELY(nHandle->isNumber()))
-    return HermesValue::encodeDoubleValue(Oper(nHandle->getNumber()));
+    return HermesValue::encodeTrustedNumberValue(Oper(nHandle->getNumber()));
 
   auto res = [&]() -> CallResult<HermesValue> {
     Runtime &runtime = getRuntime(shr);
@@ -2620,7 +2621,7 @@ SHLegacyValue incDecOperImpl(SHRuntime *shr, const SHLegacyValue *n) {
       auto numRes = toNumber_RJS(runtime, runtime.makeHandle(*primRes));
       if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      return HermesValue::encodeNumberValue(Oper(numRes->getNumber()));
+      return HermesValue::encodeTrustedNumberValue(Oper(numRes->getNumber()));
     }
 
     return BigIntOper(runtime, runtime.makeHandle(primRes->getBigInt()));
@@ -2636,7 +2637,7 @@ bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
   // Fast path, both arguments are numbers.
   if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
-    return HermesValue::encodeDoubleValue(Oper(
+    return HermesValue::encodeTrustedNumberValue(Oper(
         hermes::truncateToInt32(lhs->getNumber()),
         hermes::truncateToInt32(rhs->getNumber())));
   auto res = [&]() -> CallResult<HermesValue> {
@@ -2655,7 +2656,7 @@ bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
       auto rIntRes = toInt32_RJS(runtime, std::move(rhs));
       if (LLVM_UNLIKELY(rIntRes == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      return HermesValue::encodeNumberValue(Oper(
+      return HermesValue::encodeTrustedNumberValue(Oper(
           lIntRes->getNumberAs<int32_t>(), rIntRes->getNumberAs<int32_t>()));
     }
     // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
@@ -2676,7 +2677,7 @@ shiftOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber())) {
     auto lnum = hermes::truncateToInt32(lhs->getNumber());
     uint32_t rnum = hermes::truncateToInt32(rhs->getNumber()) & 0x1f;
-    return HermesValue::encodeDoubleValue(Oper(lnum, rnum));
+    return HermesValue::encodeTrustedNumberValue(Oper(lnum, rnum));
   }
   auto res = [&]() -> CallResult<HermesValue> {
     Runtime &runtime = getRuntime(shr);
@@ -2697,7 +2698,7 @@ shiftOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
         return ExecutionStatus::EXCEPTION;
       auto lnum = hermes::truncateToInt32(lIntRes->getNumber());
       auto rnum = static_cast<uint32_t>(rIntRes->getNumber()) & 0x1f;
-      return HermesValue::encodeDoubleValue((*Oper)(lnum, rnum));
+      return HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
     }
     // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
     // BigInt operation.
@@ -2804,7 +2805,7 @@ extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
   Handle<> nHandle{toPHV(n)};
   // Fast path, nHandle is a number.
   if (nHandle->isNumber())
-    return HermesValue::encodeDoubleValue(
+    return HermesValue::encodeTrustedNumberValue(
         ~hermes::truncateToInt32(nHandle->getNumber()));
   Runtime &runtime = getRuntime(shr);
   auto res = [&]() -> CallResult<HermesValue> {
@@ -2815,7 +2816,7 @@ extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
     // Test for BigInt since it is cheaper than testing for number. If it is a
     // number, truncate it and perform bitwise not.
     if (LLVM_LIKELY(!numRes->isBigInt()))
-      return HermesValue::encodeDoubleValue(
+      return HermesValue::encodeTrustedNumberValue(
           ~hermes::truncateToInt32(numRes->getNumber()));
 
     // The result is a BigInt, perform a BigInt bitwise not.
@@ -2832,7 +2833,7 @@ extern "C" SHLegacyValue _sh_ljs_minus_rjs(
     const SHLegacyValue *n) {
   // Fast path, n is a number.
   if (LLVM_LIKELY(toPHV(n)->isNumber()))
-    return HermesValue::encodeDoubleValue(-toPHV(n)->getNumber());
+    return HermesValue::encodeTrustedNumberValue(-toPHV(n)->getNumber());
   auto res = [shr, n]() -> CallResult<HermesValue> {
     Runtime &runtime = getRuntime(shr);
     GCScopeMarkerRAII marker{runtime};
@@ -2844,7 +2845,7 @@ extern "C" SHLegacyValue _sh_ljs_minus_rjs(
     // Test for BigInt since it is cheaper than testing for number. If it is a
     // number, negate it.
     if (LLVM_LIKELY(!numRes->isBigInt()))
-      return HermesValue::encodeDoubleValue(-numRes->getNumber());
+      return HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
 
     // The result is a BigInt, perform a BigInt unary minus.
     auto bigint = runtime.makeHandle(numRes->getBigInt());
@@ -2950,7 +2951,7 @@ extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
         PseudoHandle<> slotValue = std::move(*slotValueRes);
         if (LLVM_LIKELY(
                 slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw()))
-          return HermesValue::encodeNumberValue(0);
+          return HermesValue::encodeTrustedNumberValue(0);
       }
     }
 
@@ -3001,7 +3002,7 @@ extern "C" SHLegacyValue _sh_ljs_iterator_next_rjs(
         // storage would be deleted and at() would return empty in that case.
         SmallHermesValue value = arr->at(runtime, i);
         if (LLVM_LIKELY(!value.isEmpty())) {
-          *iteratorOrIdx = HermesValue::encodeNumberValue(i + 1);
+          *iteratorOrIdx = HermesValue::encodeTrustedNumberValue(i + 1);
           return value.unboxToHV(runtime);
         }
       }
@@ -3011,7 +3012,7 @@ extern "C" SHLegacyValue _sh_ljs_iterator_next_rjs(
           JSObject::getComputed_RJS(arr, runtime, iteratorOrIdxHandle);
       if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
-      *iteratorOrIdx = HermesValue::encodeNumberValue(i + 1);
+      *iteratorOrIdx = HermesValue::encodeTrustedNumberValue(i + 1);
       return valueRes->get();
     }
     if (LLVM_UNLIKELY(iteratorOrIdxHandle->isUndefined())) {

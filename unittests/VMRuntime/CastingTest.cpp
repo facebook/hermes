@@ -23,7 +23,7 @@ TEST(CastingTest, SmokeTest) {
   const int TAG1 = 1234;
   const SymbolID TAG2 = SymbolID::unsafeCreate(4567);
 
-  const auto HVTAG1 = HermesValue::encodeNumberValue(1234);
+  const auto HVTAG1 = HermesValue::encodeTrustedNumberValue(1234);
   // Using a Symbol here gives us a completely different internal representation
   // than the HV (even when HV32 is disabled), and works around the fact that
   // SmallHermesValue does not support DummyRuntime.

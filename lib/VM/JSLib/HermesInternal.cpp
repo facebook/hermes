@@ -87,12 +87,12 @@ hermesInternalGetEpilogues(void *, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime &runtime, NativeArgs args) {
   if (auto M = args.dyncastArg<JSWeakMap>(0)) {
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         JSWeakMap::debugFreeSlotsAndGetSize(runtime, *M));
   }
 
   if (auto S = args.dyncastArg<JSWeakSet>(0)) {
-    return HermesValue::encodeNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         JSWeakSet::debugFreeSlotsAndGetSize(runtime, *S));
   }
 
@@ -193,7 +193,7 @@ CallResult<HermesValue> statsTableValueToHermesValue(
     Runtime &runtime,
     const MockedEnvironment::StatsTableValue &val) {
   if (val.isNum()) {
-    return HermesValue::encodeDoubleValue(val.num());
+    return HermesValue::encodeTrustedNumberValue(val.num());
   }
 
   auto strRes =
@@ -266,7 +266,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
           GCScopeMarkerRAII marker{gcScope};
 
           return addToResultHandle(
-              key, HermesValue::encodeDoubleValue(val), val);
+              key, HermesValue::encodeTrustedNumberValue(val), val);
         });
   } else {
     /// Adds a property named \p key to resultHandle if it is present in
@@ -362,7 +362,8 @@ hermesInternalGetRuntimeProperties(void *, Runtime &runtime, NativeArgs args) {
   }
 #endif
 
-  tmpHandle = HermesValue::encodeDoubleValue(::hermes::hbc::BYTECODE_VERSION);
+  tmpHandle =
+      HermesValue::encodeTrustedNumberValue(::hermes::hbc::BYTECODE_VERSION);
   if (LLVM_UNLIKELY(
           addProperty(tmpHandle, "Bytecode Version") ==
           ExecutionStatus::EXCEPTION)) {
@@ -376,7 +377,8 @@ hermesInternalGetRuntimeProperties(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  tmpHandle = HermesValue::encodeNumberValue(runtime.getVMExperimentFlags());
+  tmpHandle =
+      HermesValue::encodeTrustedNumberValue(runtime.getVMExperimentFlags());
   if (LLVM_UNLIKELY(
           addProperty(tmpHandle, "VM Experiments") ==
           ExecutionStatus::EXCEPTION)) {
@@ -626,7 +628,7 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
     OptValue<hbc::DebugSourceLocation> location =
         codeBlock->getSourceLocation();
     if (location) {
-      tmpHandle = HermesValue::encodeNumberValue(location->line);
+      tmpHandle = HermesValue::encodeTrustedNumberValue(location->line);
       res = JSObject::defineOwnProperty(
           resultHandle,
           runtime,
@@ -636,7 +638,7 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set lineNumber");
       (void)res;
 
-      tmpHandle = HermesValue::encodeNumberValue(location->column);
+      tmpHandle = HermesValue::encodeTrustedNumberValue(location->column);
       res = JSObject::defineOwnProperty(
           resultHandle,
           runtime,
@@ -646,7 +648,7 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set columnNumber");
       (void)res;
     } else {
-      tmpHandle = HermesValue::encodeNumberValue(
+      tmpHandle = HermesValue::encodeTrustedNumberValue(
           codeBlock->getRuntimeModule()->getBytecode()->getSegmentID());
       res = JSObject::defineOwnProperty(
           resultHandle,
@@ -657,7 +659,8 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set segmentID");
       (void)res;
 
-      tmpHandle = HermesValue::encodeNumberValue(codeBlock->getVirtualOffset());
+      tmpHandle =
+          HermesValue::encodeTrustedNumberValue(codeBlock->getVirtualOffset());
       res = JSObject::defineOwnProperty(
           resultHandle,
           runtime,

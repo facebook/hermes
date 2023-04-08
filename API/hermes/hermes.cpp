@@ -514,7 +514,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isBool()) {
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
-      return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
+      return vm::HermesValue::encodeUntrustedNumberValue(value.getNumber());
     } else if (
         value.isSymbol() || value.isBigInt() || value.isString() ||
         value.isObject()) {
@@ -533,7 +533,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
-          vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
+          vm::HermesValue::encodeUntrustedNumberValue(value.getNumber()));
     } else if (
         value.isSymbol() || value.isBigInt() || value.isString() ||
         value.isObject()) {
@@ -2039,7 +2039,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   auto res = vm::JSObject::getComputed_RJS(
       arrayHandle(arr),
       runtime_,
-      runtime_.makeHandle(vm::HermesValue::encodeNumberValue(i)));
+      runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)));
   checkStatus(res.getStatus());
 
   return valueFromHermesValue(res->get());

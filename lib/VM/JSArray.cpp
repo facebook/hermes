@@ -264,7 +264,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     // In this case, we should just treat the index access as
     // a property access.
     auto vr = valueToSymbolID(
-        runtime, runtime.makeHandle(HermesValue::encodeNumberValue(index)));
+        runtime,
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)));
     assert(
         vr != ExecutionStatus::EXCEPTION &&
         "valueToIdentifier() failed for uint32_t value");
@@ -432,7 +433,7 @@ CallResult<Handle<Arguments>> Arguments::create(
   DEFINE_PROP(
       selfHandle,
       P::length,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(length)));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(length)));
 
   DEFINE_PROP(
       selfHandle, P::SymbolIterator, Handle<>(&runtime.arrayPrototypeValues));
@@ -832,7 +833,8 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   // index+1.
   ++self->nextIndex_;
 
-  auto indexHandle = runtime.makeHandle(HermesValue::encodeNumberValue(index));
+  auto indexHandle =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index));
 
   if (self->iterationKind_ == IterationKind::Key) {
     // 12. If itemKind is "key", return CreateIterResultObject(index, false).

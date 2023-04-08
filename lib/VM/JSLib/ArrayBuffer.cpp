@@ -128,7 +128,7 @@ arrayBufferPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "byteLength called on a non ArrayBuffer object");
   }
-  return HermesValue::encodeNumberValue(self->size());
+  return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
 CallResult<HermesValue>

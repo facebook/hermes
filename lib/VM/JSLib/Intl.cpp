@@ -96,7 +96,7 @@ CallResult<HermesValue> optionsToJS(
     if (kv.second.isBool()) {
       value = HermesValue::encodeBoolValue(kv.second.getBool());
     } else if (kv.second.isNumber()) {
-      value = HermesValue::encodeNumberValue(kv.second.getNumber());
+      value = HermesValue::encodeTrustedNumberValue(kv.second.getNumber());
     } else {
       assert(kv.second.isString() && "Option is neither bool nor string");
       CallResult<HermesValue> strRes = StringPrimitive::createEfficient(
@@ -449,7 +449,7 @@ CallResult<HermesValue> intlServiceConstructor(
   std::unique_ptr<T> native = std::move(*nativeRes);
 
   auto typeHandle = runtime.makeHandle(
-      HermesValue::encodeNumberValue((uint32_t)T::getNativeType()));
+      HermesValue::encodeTrustedNumberValue((uint32_t)T::getNativeType()));
   auto setType = [&](Handle<DecoratedObject> obj) {
     auto res = JSObject::defineNewOwnProperty(
         obj,
@@ -718,7 +718,7 @@ intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(yRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeNumberValue(collator->compare(*xRes, *yRes));
+  return HermesValue::encodeTrustedNumberValue(collator->compare(*xRes, *yRes));
 }
 
 CallResult<HermesValue>
@@ -1539,7 +1539,7 @@ intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeTrustedNumberValue(
       (*collatorRes)->compare(*thisRes, *thatRes));
 }
 

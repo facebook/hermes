@@ -209,7 +209,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
       return ExecutionStatus::EXCEPTION;
     }
     auto idx = parsedMappings[identifier];
-    numberHandle.set(HermesValue::encodeNumberValue(idx));
+    numberHandle.set(HermesValue::encodeTrustedNumberValue(idx));
     auto res = JSObject::defineNewOwnProperty(
         obj,
         runtime,
