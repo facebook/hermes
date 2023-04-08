@@ -60,10 +60,11 @@ class TypeInferenceImpl {
   bool runOnModule(Module *M);
 };
 
-/// \return if the given \p type is a BigInt|Object, which used to determine if
-/// unary/binary operations may have a BigInt result.
+/// \return if the given \p type is a BigInt|ObjectOrSubtype, which used to
+/// determine if unary/binary operations may have a BigInt result. Objects (and
+/// its subtypes) may have a valueOf method that returns a BigInt.
 static bool isBigIntOrObject(Type type) {
-  return type.canBeBigInt() || type.canBeObject();
+  return type.canBeBigInt() || type.canBeObjectSubtype();
 }
 
 static bool inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
