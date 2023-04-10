@@ -817,6 +817,21 @@ class CallInst : public Instruction {
 
   LiteralString *textifiedCallee;
 
+ protected:
+  explicit CallInst(
+      ValueKind kind,
+      LiteralString *textifiedCallee,
+      Value *callee,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : Instruction(kind), textifiedCallee(textifiedCallee) {
+    pushOperand(callee);
+    pushOperand(thisValue);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
+  }
+
  public:
   /// Constant used to indicate that a CallInst does not have a textified
   /// callee.
@@ -857,18 +872,17 @@ class CallInst : public Instruction {
   }
 
   explicit CallInst(
-      ValueKind kind,
       LiteralString *textifiedCallee,
       Value *callee,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : Instruction(kind), textifiedCallee(textifiedCallee) {
-    pushOperand(callee);
-    pushOperand(thisValue);
-    for (const auto &arg : args) {
-      pushOperand(arg);
-    }
-  }
+      : CallInst(
+            ValueKind::CallInstKind,
+            textifiedCallee,
+            callee,
+            thisValue,
+            args) {}
+
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), textifiedCallee(src->textifiedCallee) {}
 
@@ -903,13 +917,13 @@ class ConstructInst : public CallInst {
 
   explicit ConstructInst(
       Value *constructor,
-      LiteralUndefined *undefined,
+      LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::ConstructInstKind,
             kNoTextifiedCallee,
             constructor,
-            undefined,
+            thisValue,
             args) {
     setType(Type::createObject());
   }

@@ -408,8 +408,7 @@ CallInst *IRBuilder::createCallInst(
     Value *callee,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(
-      ValueKind::CallInstKind, textifiedCallee, callee, thisValue, args);
+  auto CI = new CallInst(textifiedCallee, callee, thisValue, args);
   insert(CI);
   return CI;
 }
