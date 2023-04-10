@@ -142,6 +142,11 @@ _sh_init_with_error(int argc, char **argv, char **errorMessage);
 /// Destroy a runtime instance created by \c _sh_init();
 SHERMES_EXPORT void _sh_done(SHRuntime *shr);
 
+/// Check on the native stack and throw a stack overflow error if it overflows.
+/// When compiled without HERMES_CHECK_NATIVE_STACK, does nothing.
+/// TODO: Inline the fast path to allow for faster execution.
+SHERMES_EXPORT void _sh_check_native_stack_overflow(SHRuntime *shr);
+
 /// Register, initialize and execute a main function of the specified unit.
 /// The unit is de-initialized when the runtime is destroyed.
 /// Execution of the unit initialization code might throw a JS exception.

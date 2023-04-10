@@ -379,6 +379,13 @@ CLFlag UseUnsafeIntrinsics(
     "Recognize and lower Asm.js/Wasm unsafe compiler intrinsics.",
     CompilerCategory);
 
+CLFlag CheckNativeStack(
+    'f',
+    "check-native-stack",
+    true,
+    "Emit stack overflow checks for native stack",
+    CompilerCategory);
+
 } // namespace cli
 
 namespace {
@@ -535,6 +542,9 @@ std::shared_ptr<Context> createContext() {
   //   context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   // }
   // context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
+
+  context->setEmitCheckNativeStack(cli::CheckNativeStack);
+
   return context;
 }
 

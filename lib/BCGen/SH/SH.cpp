@@ -1789,8 +1789,18 @@ void generateFunction(
     }
   }
 
-  OS << "  } locals;\n"
-     << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head, "
+  OS << "  } locals;\n";
+
+  // Emit the stack check if necessary.
+  if (F.getParent()->getContext().getEmitCheckNativeStack()) {
+    // This call contains the fast path out of line for now,
+    // but _sh_check_native_stack_overflow can be updated to contain inline
+    // code and avoid the function call in the future, when SHRuntime
+    // has better visibility into the fields of vm::Runtime.
+    OS << "  _sh_check_native_stack_overflow(shr);\n";
+  }
+
+  OS << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head, "
      << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
      << ");\n"
      << "  locals.head.count =" << localsSize << ";\n";
