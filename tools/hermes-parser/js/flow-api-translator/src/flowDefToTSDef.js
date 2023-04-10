@@ -1830,6 +1830,24 @@ const getTransforms = (
                 },
               },
             };
+          // React.ElementType -> React.ElementType
+          // React$ElementType -> React.ElementType
+          case 'React$ElementType':
+          case 'React.ElementType': {
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: `ElementType`,
+                },
+              },
+              typeParameters: undefined,
+            };
+          }
           // React.Node -> React.ReactNode
           case 'React$Node':
           case 'React.Node': {
