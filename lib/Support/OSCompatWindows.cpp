@@ -395,6 +395,11 @@ uint64_t global_thread_id() {
   return GetCurrentThreadId();
 }
 
+std::pair<const void *, size_t> thread_stack_bounds(unsigned) {
+  // Native stack checking unsupported on Windows.
+  return {nullptr, 0};
+}
+
 void set_thread_name(const char *name) {
   // Set the thread name for TSAN. It doesn't share the same name mapping as the
   // OS does. This macro expands to nothing if TSAN isn't on.
