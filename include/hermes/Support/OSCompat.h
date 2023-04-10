@@ -189,8 +189,10 @@ bool num_context_switches(long &voluntary, long &involuntary);
 /// \return OS process id of the current process.
 uint64_t process_id();
 
-/// \return OS thread id of current thread.
-uint64_t thread_id();
+/// \return the OS thread id of current thread, uniquely identifying the thread
+///   in the system among all processes. This does \b NOT correspond to
+///   \c pthread_self().
+uint64_t global_thread_id();
 
 /// Set the thread name for the current thread. This can be viewed in various
 /// debuggers and profilers.

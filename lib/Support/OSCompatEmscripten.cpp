@@ -227,7 +227,7 @@ bool num_context_switches(long &voluntary, long &involuntary) {
   return false;
 }
 
-uint64_t thread_id() {
+uint64_t global_thread_id() {
   return 0;
 }
 

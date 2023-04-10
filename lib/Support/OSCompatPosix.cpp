@@ -580,10 +580,10 @@ uint64_t process_id() {
   return getpid();
 }
 
-// Platform-specific implementations of thread_id
+// Platform-specific implementations of global_thread_id
 #if defined(__APPLE__) && defined(__MACH__)
 
-uint64_t thread_id() {
+uint64_t global_thread_id() {
   uint64_t tid = 0;
   auto ret = pthread_threadid_np(nullptr, &tid);
   assert(ret == 0 && "pthread_threadid_np shouldn't fail for current thread");
@@ -593,13 +593,13 @@ uint64_t thread_id() {
 
 #elif defined(__ANDROID__)
 
-uint64_t thread_id() {
+uint64_t global_thread_id() {
   return gettid();
 }
 
 #elif defined(__linux__)
 
-uint64_t thread_id() {
+uint64_t global_thread_id() {
   return syscall(__NR_gettid);
 }
 
