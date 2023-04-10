@@ -70,7 +70,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupComputed#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [func#2], %0
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 2 : number, %3
 // CHECK-NEXT:  %5 = StoreOwnPropertyInst null : null, %4 : object, "__proto__" : string, true : boolean
 // CHECK-NEXT:  %6 = StoreOwnPropertyInst 42 : number, %4 : object, "a" : string, true : boolean
@@ -85,7 +85,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupMethod1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#3], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [func#3], %0
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 2 : number, %3
 // CHECK-NEXT:  %5 = CreateFunctionInst %__proto__#1#3()#4, %0
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5 : closure, %4 : object, "__proto__" : string, true : boolean
@@ -118,8 +118,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %3 = CreateFunctionInst %"__proto__ 1#"#1#5()#6, %0
 // CHECK-NEXT:  %4 = StoreNewOwnPropertyInst %3 : closure, %2 : object, "__proto__" : string, true : boolean
 // CHECK-NEXT:  %5 = LoadFrameInst [func#5], %0
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
-// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %6
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %2 : object, %6
 // CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 42 : number, %2 : object, "a" : string, true : boolean
 // CHECK-NEXT:  %9 = ReturnInst %2 : object
 // CHECK-NEXT:%BB1:
@@ -146,7 +146,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupAccessor1#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#7], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [func#7], %0
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 1 : number, %3
 // CHECK-NEXT:  %5 = CreateFunctionInst %"get __proto__"#1#7()#8, %0
 // CHECK-NEXT:  %6 = StoreGetterSetterInst %5 : closure, undefined : undefined, %4 : object, "__proto__" : string, true : boolean
@@ -170,7 +170,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoDupAccessor2#0#1()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#9], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [func#9], %0
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 1 : number, %3
 // CHECK-NEXT:  %5 = CreateFunctionInst %"set __proto__"#1#9()#10, %0
 // CHECK-NEXT:  %6 = StoreGetterSetterInst undefined : undefined, %5 : closure, %4 : object, "__proto__" : string, true : boolean
@@ -199,8 +199,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = CreateFunctionInst %"set __proto__ 1#"#1#11()#13, %0
 // CHECK-NEXT:  %5 = StoreGetterSetterInst %3 : closure, %4 : closure, %2 : object, "__proto__" : string, true : boolean
 // CHECK-NEXT:  %6 = LoadFrameInst [func#11], %0
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %7
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %2 : object, %7
 // CHECK-NEXT:  %9 = ReturnInst %2 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined

@@ -56,7 +56,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_newline#0#1()#2}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, "A string with a newline\\n" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "A string with a newline\\n" : string
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -65,7 +65,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_quote#0#1()#3}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, "A string with a newline\\\"" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "A string with a newline\\\"" : string
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -74,7 +74,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_slash#0#1()#4}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, "A string with a newline\\\\" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "A string with a newline\\\\" : string
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -83,7 +83,7 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_hex#0#1()#5}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, "A string with a hex: \\x03" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "A string with a hex: \\x03" : string
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -92,6 +92,6 @@ function test_hex_printable() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_hex_printable#0#1()#6}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, "A string with a hex printable: a" : string
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, "A string with a hex printable: a" : string
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

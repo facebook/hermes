@@ -822,10 +822,12 @@ class CallInst : public Instruction {
       ValueKind kind,
       LiteralString *textifiedCallee,
       Value *callee,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : Instruction(kind), textifiedCallee(textifiedCallee) {
     pushOperand(callee);
+    pushOperand(newTarget);
     pushOperand(thisValue);
     for (const auto &arg : args) {
       pushOperand(arg);
@@ -837,7 +839,7 @@ class CallInst : public Instruction {
   /// callee.
   static constexpr LiteralString *kNoTextifiedCallee = nullptr;
 
-  enum { CalleeIdx, ThisIdx };
+  enum { CalleeIdx, NewTargetIdx, ThisIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
@@ -853,6 +855,9 @@ class CallInst : public Instruction {
   }
   Value *getCallee() const {
     return getOperand(CalleeIdx);
+  }
+  Value *getNewTarget() const {
+    return getOperand(NewTargetIdx);
   }
   /// Get argument 0, the value for 'this'.
   Value *getThis() const {
@@ -874,12 +879,14 @@ class CallInst : public Instruction {
   explicit CallInst(
       LiteralString *textifiedCallee,
       Value *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::CallInstKind,
             textifiedCallee,
             callee,
+            newTarget,
             thisValue,
             args) {}
 
@@ -917,12 +924,14 @@ class ConstructInst : public CallInst {
 
   explicit ConstructInst(
       Value *constructor,
+      Value *newTarget,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::ConstructInstKind,
             kNoTextifiedCallee,
             constructor,
+            newTarget,
             thisValue,
             args) {
     setType(Type::createObject());
@@ -953,12 +962,14 @@ class CallBuiltinInst : public CallInst {
  public:
   explicit CallBuiltinInst(
       LiteralNumber *callee,
+      LiteralUndefined *newTarget,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::CallBuiltinInstKind,
             kNoTextifiedCallee,
             callee,
+            newTarget,
             thisValue,
             args) {
     assert(
@@ -1089,12 +1100,14 @@ class HBCCallNInst : public CallInst {
   explicit HBCCallNInst(
       LiteralString *functionName,
       Value *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCCallNInstKind,
             functionName,
             callee,
+            newTarget,
             thisValue,
             args) {
     // +1 for 'this'.
@@ -3206,13 +3219,15 @@ class HBCConstructInst : public CallInst {
 
  public:
   explicit HBCConstructInst(
-      Value *callee,
+      Value *constructor,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCConstructInstKind,
             kNoTextifiedCallee,
-            callee,
+            constructor,
+            newTarget,
             thisValue,
             args) {}
   explicit HBCConstructInst(
@@ -3277,12 +3292,14 @@ class HBCCallDirectInst : public CallInst {
   explicit HBCCallDirectInst(
       LiteralString *textifiedCallee,
       Function *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCCallDirectInstKind,
             textifiedCallee,
             callee,
+            newTarget,
             thisValue,
             args) {
     assert(

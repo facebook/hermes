@@ -96,7 +96,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "sink" : string
 // CHECK-NEXT:  %5 = LoadFrameInst [i#3], %0
-// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, %5
+// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, undefined : undefined, %5
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
@@ -242,29 +242,29 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %5 = StoreFrameInst %e, [e#8], %0
 // CHECK-NEXT:  %6 = StoreFrameInst %f, [f#8], %0
 // CHECK-NEXT:  %7 = LoadFrameInst [a#8], %0
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = BranchInst %BB1
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %10 = LoadFrameInst [d#8], %0
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %12 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %14 = LoadFrameInst [b#8], %0
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %16 = CondBranchInst %15, %BB2, %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %17 = LoadFrameInst [b#8], %0
-// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined
+// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %19 = CondBranchInst %18, %BB2, %BB3
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %20 = LoadFrameInst [c#8], %0
-// CHECK-NEXT:  %21 = CallInst %20, undefined : undefined
+// CHECK-NEXT:  %21 = CallInst %20, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %22 = BranchInst %BB4
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %23 = LoadFrameInst [e#8], %0
-// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined
+// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %25 = BranchInst %BB5
 // CHECK-NEXT:function_end
 

@@ -29,7 +29,7 @@ function f1(a, ...b) {}
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
-// CHECK-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = StoreFrameInst %2, [b#2], %0
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

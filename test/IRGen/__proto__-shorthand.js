@@ -99,7 +99,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %5 = LoadFrameInst [__proto__#4], %0
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
 // CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %4 : object, %7 : object
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %4 : object, %7 : object
 // CHECK-NEXT:  %9 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined

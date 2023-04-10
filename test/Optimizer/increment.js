@@ -30,7 +30,7 @@ foo()
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : number, %0
 // CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 

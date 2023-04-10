@@ -32,11 +32,11 @@ function g12(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{g12#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = BinaryOperatorInst '>', %z, 0 : number
 // CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined

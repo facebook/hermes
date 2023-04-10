@@ -188,7 +188,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg2 @6 [2...12) 	%6 = PhiInst %4 : number, %BB0, %10 : number|bigint, %BB1
 // CHECK-NEXT:  $Reg4 @7 [8...9) 	%7 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// CHECK-NEXT:  $Reg4 @8 [empty]	%8 = HBCCallNInst %7, %3 : undefined, %6 : number|bigint
+// CHECK-NEXT:  $Reg4 @8 [empty]	%8 = HBCCallNInst %7, undefined : undefined, %3 : undefined, %6 : number|bigint
 // CHECK-NEXT:  $Reg2 @9 [10...11) 	%9 = UnaryOperatorInst '++', %6 : number|bigint
 // CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = MovInst %9 : number|bigint
 // CHECK-NEXT:  $Reg1 @11 [empty]	%11 = CompareBranchInst '<', %10 : number|bigint, %0, %BB1, %BB2
@@ -211,7 +211,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @9 [10...13) 	%9 = BinaryOperatorInst '*', %6 : number, %8 : number
 // CHECK-NEXT:  $Reg3 @10 [empty]	%10 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg3 @11 [empty]	%11 = HBCCallNInst %0, %1 : undefined, %9 : number
+// CHECK-NEXT:  $Reg3 @11 [empty]	%11 = HBCCallNInst %0, undefined : undefined, %1 : undefined, %9 : number
 // CHECK-NEXT:  $Reg0 @12 [empty]	%12 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -230,11 +230,11 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg4 @9 [empty]	%9 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg4 @10 [11...12) 	%10 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-// CHECK-NEXT:  $Reg4 @11 [empty]	%11 = HBCCallNInst %10, %1 : undefined, %6 : number
+// CHECK-NEXT:  $Reg4 @11 [empty]	%11 = HBCCallNInst %10, undefined : undefined, %1 : undefined, %6 : number
 // CHECK-NEXT:  $Reg4 @12 [empty]	%12 = CondBranchInst %8 : number, %BB2, %BB1
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg4 @13 [14...15) 	%13 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-// CHECK-NEXT:  $Reg4 @14 [empty]	%14 = HBCCallNInst %13, %1 : undefined, %6 : number
+// CHECK-NEXT:  $Reg4 @14 [empty]	%14 = HBCCallNInst %13, undefined : undefined, %1 : undefined, %6 : number
 // CHECK-NEXT:  $Reg0 @15 [empty]	%15 = BranchInst %BB1
 // CHECK-NEXT:function_end
 
@@ -256,7 +256,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg0 @13 [empty]	%10 = ReturnInst %0
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  $Reg4 @10 [11...12) 	%11 = TryLoadGlobalPropertyInst %1 : object, "print" : string
-// CHECK-NEXT:  $Reg4 @11 [empty]	%12 = HBCCallNInst %11, %2 : undefined, %7 : number
+// CHECK-NEXT:  $Reg4 @11 [empty]	%12 = HBCCallNInst %11, undefined : undefined, %2 : undefined, %7 : number
 // CHECK-NEXT:  $Reg1 @12 [empty]	%13 = BranchInst %BB1
 // CHECK-NEXT:function_end
 

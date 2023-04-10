@@ -52,7 +52,7 @@ function simple_test1() {
 // CHECK-NEXT:  %7 = LoadFrameInst [str#2], %0
 // CHECK-NEXT:  %8 = LoadPropertyInst %7, "replace" : string
 // CHECK-NEXT:  %9 = LoadFrameInst [re#2], %0
-// CHECK-NEXT:  %10 = CallInst %8, %7, %9, "$2, $1" : string
+// CHECK-NEXT:  %10 = CallInst %8, undefined : undefined, %7, %9, "$2, $1" : string
 // CHECK-NEXT:  %11 = StoreFrameInst %10, [newstr#2], %0
 // CHECK-NEXT:  %12 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

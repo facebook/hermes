@@ -52,16 +52,16 @@ function main(p) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar#1#2()#3}
 // CHECK-NEXT:  %1 = LoadFrameInst [p#2@main], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [k#2@main], %0
-// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, %2
+// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %4 = LoadFrameInst [p#2@main], %0
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, %2
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %6 = LoadFrameInst [p#2@main], %0
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, %2
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %8 = LoadFrameInst [p#2@main], %0
-// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined, %2
+// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %10 = LoadFrameInst [p#2@main], %0
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, %2
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %12 = LoadFrameInst [p#2@main], %0
-// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined, %2
+// CHECK-NEXT:  %13 = CallInst %12, undefined : undefined, undefined : undefined, %2
 // CHECK-NEXT:  %14 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

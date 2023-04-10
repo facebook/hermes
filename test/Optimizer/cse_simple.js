@@ -110,7 +110,7 @@ function cse_unary(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cse_this_instr#0#1()#5}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, %this, %this, %this, %this
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, %this, %this, %this, %this
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

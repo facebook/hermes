@@ -91,7 +91,7 @@ function delete_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{delete_expr#0#1()#6}
 // CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst true : boolean
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined

@@ -101,11 +101,11 @@ function test_three(x, one, two) {
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = LoadFrameInst [two#4], %0
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %8 = BranchInst %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = LoadFrameInst [one#4], %0
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %12 = PhiInst %10, %BB1, %7, %BB2

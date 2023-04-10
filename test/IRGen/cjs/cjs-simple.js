@@ -29,6 +29,6 @@ print('done');
 // CHECK-NEXT:  %2 = StoreFrameInst %require, [require#2], %0
 // CHECK-NEXT:  %3 = StoreFrameInst %module, [module#2], %0
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, "done" : string
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined, "done" : string
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

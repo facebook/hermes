@@ -66,6 +66,6 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCGetGlobalObjectInst
 // CHECK-NEXT:  $Reg1 @16 [17...19) 	%16 = LoadPropertyInst %15 : object, "foo" : string
 // CHECK-NEXT:  $Reg0 @17 [18...20) 	%17 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CallInst %16, %17 : undefined, %14 : string|number|bigint, %12 : string|number|bigint, %10 : string|number|bigint, %8 : string|number|bigint, %6 : string|number|bigint, %4 : string|number|bigint, %2 : string|number|bigint, %0
+// CHECK-NEXT:  $Reg1 @18 [empty]	%18 = CallInst %16, undefined : undefined, %17 : undefined, %14 : string|number|bigint, %12 : string|number|bigint, %10 : string|number|bigint, %8 : string|number|bigint, %6 : string|number|bigint, %4 : string|number|bigint, %2 : string|number|bigint, %0
 // CHECK-NEXT:  $Reg0 @19 [empty]	%19 = ReturnInst %17 : undefined
 // CHECK-NEXT:function_end

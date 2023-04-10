@@ -62,7 +62,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_simple_new#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [ctor#3], %0
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %3 = ConstructInst %2, undefined : undefined, "Eagle" : string, 1993 : number
+// CHECK-NEXT:  %3 = ConstructInst %2, %2, undefined : undefined, "Eagle" : string, 1993 : number
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : object, [ctor#3], %0
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
@@ -73,7 +73,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_simple_call#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [call#4], %0
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [call#4], %0
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

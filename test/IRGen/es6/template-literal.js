@@ -53,7 +53,7 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, "hello" : string, 2 : number, "world" : string
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "hello" : string, 2 : number, "world" : string
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
@@ -77,7 +77,7 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f4#0#1()#5}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, "" : string, 666 : number
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "" : string, 666 : number
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end
 
@@ -87,6 +87,6 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = CreateScopeInst %S{f5#0#1()#6}
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
 // CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, "" : string, %x
+// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "" : string, %x
 // CHKIR-NEXT:  %4 = ReturnInst %3
 // CHKIR-NEXT:function_end

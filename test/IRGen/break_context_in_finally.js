@@ -62,7 +62,7 @@ function foo() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %8 = CatchInst
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst globalObject : object, "finally1" : string
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %11 = BranchInst %BB6
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %12 = BranchInst %BB8
@@ -70,11 +70,11 @@ function foo() {
 // CHECK-NEXT:  %13 = BranchInst %BB10
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst globalObject : object, "bar2" : string
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %16 = BranchInst %BB12
 // CHECK-NEXT:%BB13:
 // CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst globalObject : object, "bar3" : string
-// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined
+// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %19 = BranchInst %BB14
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %20 = BranchInst %BB11
@@ -85,7 +85,7 @@ function foo() {
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %23 = TryEndInst
 // CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst globalObject : object, "finally1" : string
-// CHECK-NEXT:  %25 = CallInst %24, undefined : undefined
+// CHECK-NEXT:  %25 = CallInst %24, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %26 = BranchInst %BB6
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:  %27 = BranchInst %BB6
@@ -94,7 +94,7 @@ function foo() {
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:  %29 = TryEndInst
 // CHECK-NEXT:  %30 = TryLoadGlobalPropertyInst globalObject : object, "finally1" : string
-// CHECK-NEXT:  %31 = CallInst %30, undefined : undefined
+// CHECK-NEXT:  %31 = CallInst %30, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %32 = BranchInst %BB6
 // CHECK-NEXT:%BB19:
 // CHECK-NEXT:  %33 = BranchInst %BB9

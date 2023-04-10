@@ -108,7 +108,7 @@ function f9(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined
@@ -150,7 +150,7 @@ function f9(a) {
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = LoadPropertyInst %2, "b" : string
-// CHECK-NEXT:  %9 = CallInst %8, %2
+// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined, %2
 // CHECK-NEXT:  %10 = LoadPropertyInst %9, "c" : string
 // CHECK-NEXT:  %11 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
@@ -171,7 +171,7 @@ function f9(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = LoadPropertyInst %8, "b" : string
 // CHECK-NEXT:  %10 = BranchInst %BB3
 // CHECK-NEXT:%BB4:
@@ -218,7 +218,7 @@ function f9(a) {
 // CHECK-NEXT:  %9 = BinaryOperatorInst '==', %8, null : null
 // CHECK-NEXT:  %10 = CondBranchInst %9, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = CallInst %8, %2
+// CHECK-NEXT:  %11 = CallInst %8, undefined : undefined, %2
 // CHECK-NEXT:  %12 = LoadPropertyInst %11, "c" : string
 // CHECK-NEXT:  %13 = BranchInst %BB3
 // CHECK-NEXT:%BB5:
@@ -247,7 +247,7 @@ function f9(a) {
 // CHECK-NEXT:  %12 = BinaryOperatorInst '==', %11, null : null
 // CHECK-NEXT:  %13 = CondBranchInst %12, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = CallInst %11, %8
+// CHECK-NEXT:  %14 = CallInst %11, undefined : undefined, %8
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %16 = ReturnInst undefined : undefined

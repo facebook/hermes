@@ -236,12 +236,12 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined
+// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "Symbol" : string
 // CHECK-NEXT:  %9 = LoadPropertyInst %8, "iterator" : string
 // CHECK-NEXT:  %10 = LoadPropertyInst %7, %9
-// CHECK-NEXT:  %11 = CallInst %10, %7
-// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %11, "iterator is not an object" : string
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, %7
+// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %11, "iterator is not an object" : string
 // CHECK-NEXT:  %13 = LoadPropertyInst %11, "next" : string
 // CHECK-NEXT:  %14 = AllocStackInst $?anon_1_received
 // CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
@@ -252,8 +252,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %19 = ReturnInst %3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %20 = LoadStackInst %14
-// CHECK-NEXT:  %21 = CallInst %13, %11, %20
-// CHECK-NEXT:  %22 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %21, "iterator.next() did not return an object" : string
+// CHECK-NEXT:  %21 = CallInst %13, undefined : undefined, %11, %20
+// CHECK-NEXT:  %22 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %21, "iterator.next() did not return an object" : string
 // CHECK-NEXT:  %23 = StoreStackInst %21, %17
 // CHECK-NEXT:  %24 = LoadPropertyInst %21, "done" : string
 // CHECK-NEXT:  %25 = CondBranchInst %24, %BB4, %BB5
@@ -270,22 +270,22 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %33 = CondBranchInst %32, %BB9, %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %34 = CatchInst
-// CHECK-NEXT:  %35 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %11, "throw" : string
+// CHECK-NEXT:  %35 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "throw" : string
 // CHECK-NEXT:  %36 = CompareBranchInst '===', %35, undefined : undefined, %BB10, %BB11
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %37 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %37 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %38 = SaveAndYieldInst %21, %BB8
 // CHECK-NEXT:%BB9:
 // CHECK-NEXT:  %39 = StoreStackInst %30, %14
 // CHECK-NEXT:  %40 = BranchInst %BB12
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:  %41 = TryEndInst
-// CHECK-NEXT:  %42 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %11, "return" : string
+// CHECK-NEXT:  %42 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "return" : string
 // CHECK-NEXT:  %43 = CompareBranchInst '===', %42, undefined : undefined, %BB13, %BB14
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:  %44 = LoadStackInst %14
-// CHECK-NEXT:  %45 = CallInst %42, %11, %44
-// CHECK-NEXT:  %46 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %45, "iterator.return() did not return an object" : string
+// CHECK-NEXT:  %45 = CallInst %42, undefined : undefined, %11, %44
+// CHECK-NEXT:  %46 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %45, "iterator.return() did not return an object" : string
 // CHECK-NEXT:  %47 = LoadPropertyInst %45, "done" : string
 // CHECK-NEXT:  %48 = CondBranchInst %47, %BB15, %BB16
 // CHECK-NEXT:%BB13:
@@ -294,7 +294,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %50 = LoadPropertyInst %45, "value" : string
 // CHECK-NEXT:  %51 = ReturnInst %50
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %52 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %52 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %53 = SaveAndYieldInst %45, %BB8
 // CHECK-NEXT:%BB17:
 // CHECK-NEXT:  %54 = BranchInst %BB18
@@ -302,25 +302,25 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %55 = TryEndInst
 // CHECK-NEXT:  %56 = BranchInst %BB3
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %57 = CallInst %35, %11, %34
-// CHECK-NEXT:  %58 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %57, "iterator.throw() did not return an object" : string
+// CHECK-NEXT:  %57 = CallInst %35, undefined : undefined, %11, %34
+// CHECK-NEXT:  %58 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %57, "iterator.throw() did not return an object" : string
 // CHECK-NEXT:  %59 = LoadPropertyInst %57, "done" : string
 // CHECK-NEXT:  %60 = CondBranchInst %59, %BB19, %BB20
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %61 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, %11, "return" : string
+// CHECK-NEXT:  %61 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "return" : string
 // CHECK-NEXT:  %62 = CompareBranchInst '===', %61, undefined : undefined, %BB21, %BB22
 // CHECK-NEXT:%BB19:
 // CHECK-NEXT:  %63 = StoreStackInst %57, %17
 // CHECK-NEXT:  %64 = BranchInst %BB4
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %65 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined
+// CHECK-NEXT:  %65 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %66 = SaveAndYieldInst %57, %BB8
 // CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %67 = CallInst %61, %11
-// CHECK-NEXT:  %68 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %67, "iterator.return() did not return an object" : string
+// CHECK-NEXT:  %67 = CallInst %61, undefined : undefined, %11
+// CHECK-NEXT:  %68 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %67, "iterator.return() did not return an object" : string
 // CHECK-NEXT:  %69 = BranchInst %BB21
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %70 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, "yield* delegate must have a .throw() method" : string
+// CHECK-NEXT:  %70 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, undefined : undefined, "yield* delegate must have a .throw() method" : string
 // CHECK-NEXT:  %71 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -330,7 +330,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{destr#0#1()#12}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_destr#1#12()#13, %0
 // CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "next" : string
-// CHECK-NEXT:  %3 = CallInst %2, %1 : object
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object
 // CHECK-NEXT:  %4 = ReturnInst %1 : object
 // CHECK-NEXT:function_end
 
@@ -402,7 +402,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{initializer#0#1()#14}
 // CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_initializer#1#14()#15, %0
 // CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "next" : string
-// CHECK-NEXT:  %3 = CallInst %2, %1 : object
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object
 // CHECK-NEXT:  %4 = ReturnInst %1 : object
 // CHECK-NEXT:function_end
 
@@ -427,7 +427,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %12 = CondBranchInst %11, %BB6, %BB7
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined
+// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %15 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = PhiInst %x, %BB2, %14, %BB4

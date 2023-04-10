@@ -85,8 +85,8 @@ function test_async() {
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %bar#1#2()#4 : string|number|bigint, %0
 // CHECK-NEXT:  %3 = StorePropertyInst %2 : closure, %p, "p" : string
-// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, 1 : number, 2 : number
-// CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %5 = CallInst %2 : closure, undefined : undefined, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : string|number|bigint
 // CHECK-NEXT:  %7 = ReturnInst %6 : string|number
 // CHECK-NEXT:function_end
@@ -112,8 +112,8 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{return_types#0#1()#5}
 // CHECK-NEXT:  %1 = CreateFunctionInst %builder#1#5()#6 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
-// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2 : number, %3 : number
 // CHECK-NEXT:  %5 = ReturnInst %4 : number
 // CHECK-NEXT:function_end
@@ -155,7 +155,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar1#1#7()#9}
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2#7@test_unused_and_duplicate_params] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %e, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, %e, 2 : number, 1 : number, undefined : undefined, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -164,7 +164,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bar2#1#7()#10}
 // CHECK-NEXT:  %1 = LoadFrameInst [foo2#7@test_unused_and_duplicate_params] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, %e, 2 : number, 3 : number, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, %e, 2 : number, 3 : number, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -173,7 +173,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_rest_arguments#0#1()#11}
 // CHECK-NEXT:  %1 = CreateFunctionInst %baz#1#11()#12, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 100 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 100 : number
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:function_end
 
@@ -181,7 +181,7 @@ function test_async() {
 // CHECK-NEXT:S{baz#1#11()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{baz#1#11()#12}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, undefined : undefined, 0 : number
 // CHECK-NEXT:  %2 = ReturnInst %1
 // CHECK-NEXT:function_end
 
@@ -190,7 +190,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_generator#0#1()#13}
 // CHECK-NEXT:  %1 = CreateFunctionInst %gen#1#13()#14 : object, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
@@ -222,7 +222,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_async#0#1()#16}
 // CHECK-NEXT:  %1 = CreateFunctionInst %asyncFn#1#16()#17, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 1 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
 // CHECK-NEXT:  %3 = ReturnInst %2
 // CHECK-NEXT:function_end
 
@@ -233,7 +233,7 @@ function test_async() {
 // CHECK-NEXT:  %1 = CreateArgumentsInst
 // CHECK-NEXT:  %2 = CreateFunctionInst %?anon_0_asyncFn#16#17()#18 : object, %0
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst [HermesBuiltin.spawnAsync] : number
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, %2 : closure, %this, %1 : object
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, undefined : undefined, %2 : closure, %this, %1 : object
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 

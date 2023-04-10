@@ -106,9 +106,9 @@ function helloWorld() {
 // CHECK-NEXT:S{emptyString#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{emptyString#0#1()#3}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 0 : number, true : boolean, "" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 0 : number, true : boolean, "" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
@@ -118,9 +118,9 @@ function helloWorld() {
 // CHECK-NEXT:S{oneString#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{oneString#0#1()#4}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 1 : number, true : boolean, "hello" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 1 : number, true : boolean, "hello" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
@@ -130,9 +130,9 @@ function helloWorld() {
 // CHECK-NEXT:S{oneSub#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{oneSub#0#1()#5}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 2 : number, true : boolean, "" : string, "" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 2 : number, true : boolean, "" : string, "" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1, 666 : number
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 666 : number
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
@@ -142,10 +142,10 @@ function helloWorld() {
 // CHECK-NEXT:S{dup#0#1()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup#0#1()#6}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
 // CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, %1, %2
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
@@ -155,10 +155,10 @@ function helloWorld() {
 // CHECK-NEXT:S{notDup#0#1()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{notDup#0#1()#7}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 4 : number, false : boolean, "hello\\\\nworld" : string, "!!!" : string, "hello\\nworld" : string, "!!!" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 4 : number, false : boolean, "hello\\\\nworld" : string, "!!!" : string, "hello\\nworld" : string, "!!!" : string
 // CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, %1, %2
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
@@ -172,10 +172,10 @@ function helloWorld() {
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst "func" : string, %2
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : object, [obj#8], %0
-// CHECK-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
+// CHECK-NEXT:  %5 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
 // CHECK-NEXT:  %6 = LoadFrameInst [obj#8], %0
 // CHECK-NEXT:  %7 = LoadPropertyInst %6, "func" : string
-// CHECK-NEXT:  %8 = CallInst %7, %6, %5
+// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, %6, %5
 // CHECK-NEXT:  %9 = ReturnInst %8
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined
@@ -187,10 +187,10 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{callExpr#0#1()#9}
 // CHECK-NEXT:  %1 = CreateFunctionInst %func#1#9()#10, %0
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [func#9], %0
-// CHECK-NEXT:  %3 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
+// CHECK-NEXT:  %3 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
 // CHECK-NEXT:  %4 = LoadFrameInst [func#9], %0
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, %3
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined, %3
 // CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
@@ -219,10 +219,10 @@ function helloWorld() {
 // CHECK-NEXT:S{dup2#0#1()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup2#0#1()#12}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
 // CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, %1, %2
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = ReturnInst undefined : undefined
@@ -232,9 +232,9 @@ function helloWorld() {
 // CHECK-NEXT:S{dup3#0#1()#13} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{dup3#0#1()#13}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1, 7 : number
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 7 : number
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
@@ -244,9 +244,9 @@ function helloWorld() {
 // CHECK-NEXT:S{helloWorld#0#1()#14} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{helloWorld#0#1()#14}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, 6 : number, true : boolean, "hello" : string, " world!!!" : string
+// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 6 : number, true : boolean, "hello" : string, " world!!!" : string
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1, 0 : number
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 0 : number
 // CHECK-NEXT:  %4 = ReturnInst %3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined

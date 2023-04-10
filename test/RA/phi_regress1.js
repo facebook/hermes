@@ -55,13 +55,13 @@ print(glob);
 // CHKRA-NEXT:  $Reg3 @6 [7...10) 	%6 = LoadPropertyInst %2 : object, "bad" : string
 // CHKRA-NEXT:  $Reg2 @7 [8...16) 	%7 = HBCLoadConstInst undefined : undefined
 // CHKRA-NEXT:  $Reg1 @8 [9...10) 	%8 = HBCLoadConstInst "foo" : string
-// CHKRA-NEXT:  $Reg1 @9 [empty]	%9 = HBCCallNInst %6, %7 : undefined, %8 : string, %4 : null
+// CHKRA-NEXT:  $Reg1 @9 [empty]	%9 = HBCCallNInst %6, undefined : undefined, %7 : undefined, %8 : string, %4 : null
 // CHKRA-NEXT:  $Reg3 @10 [11...13) 	%10 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // CHKRA-NEXT:  $Reg1 @11 [12...13) 	%11 = HBCLoadConstInst "phi" : string
-// CHKRA-NEXT:  $Reg1 @12 [empty]	%12 = HBCCallNInst %10, %7 : undefined, %11 : string
+// CHKRA-NEXT:  $Reg1 @12 [empty]	%12 = HBCCallNInst %10, undefined : undefined, %7 : undefined, %11 : string
 // CHKRA-NEXT:  $Reg1 @13 [14...16) 	%13 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // CHKRA-NEXT:  $Reg0 @14 [15...16) 	%14 = LoadPropertyInst %2 : object, "glob" : string
-// CHKRA-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCCallNInst %13, %7 : undefined, %14
+// CHKRA-NEXT:  $Reg0 @15 [16...17) 	%15 = HBCCallNInst %13, undefined : undefined, %7 : undefined, %14
 // CHKRA-NEXT:  $Reg0 @16 [empty]	%16 = ReturnInst %15
 // CHKRA-NEXT:function_end
 

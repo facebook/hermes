@@ -328,6 +328,7 @@ class IRBuilder {
 
   ConstructInst *createConstructInst(
       Value *constructor,
+      Value *newTarget,
       ArrayRef<Value *> args);
 
   CatchInst *createCatchInst();
@@ -543,6 +544,7 @@ class IRBuilder {
 
   HBCConstructInst *createHBCConstructInst(
       Value *closure,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> arguments);
   HBCGetConstructedObjectInst *createHBCGetConstructedObjectInst(
@@ -552,6 +554,11 @@ class IRBuilder {
 
   CallBuiltinInst *createCallBuiltinInst(
       BuiltinMethod::Enum builtinIndex,
+      ArrayRef<Value *> arguments);
+
+  CallBuiltinInst *createCallBuiltinInstWithNewTarget(
+      BuiltinMethod::Enum builtinIndex,
+      Value *newTarget,
       ArrayRef<Value *> arguments);
 
   GetBuiltinClosureInst *createGetBuiltinClosureInst(

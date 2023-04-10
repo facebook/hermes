@@ -42,7 +42,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %8 = PhiInst %x, %BB0, %6 : closure, %BB2
 // CHECK-NEXT:  %9 = StoreFrameInst %8, [x#2], %0
 // CHECK-NEXT:  %10 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined
+// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %12 = ReturnInst %11
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %13 = ReturnInst undefined : undefined

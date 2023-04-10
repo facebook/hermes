@@ -35,7 +35,7 @@ function main()  {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : string, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 2 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 2 : number
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

@@ -57,7 +57,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test0#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %""#1#2()#3, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -76,7 +76,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 1#"#1#4()#5, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -96,7 +96,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %" 2#"#1#6()#7, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -105,7 +105,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 2#"#1#6()#7}
 // CHECK-NEXT:  %1 = CreateFunctionInst %" 3#"#6#7()#8, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
@@ -124,7 +124,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_hoisting_of_func_expr#0#1()#9}
 // CHECK-NEXT:  %1 = CreateFunctionInst %some_local_name#1#9()#10, %0
 // CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [?anon_0_closure#9], %0
-// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 

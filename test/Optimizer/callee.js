@@ -59,7 +59,7 @@ function load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{fuzz#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 12 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 12 : number
 // CHECK-NEXT:  %3 = ReturnInst 12 : number
 // CHECK-NEXT:function_end
 
@@ -75,7 +75,7 @@ function load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{ctor_test#0#1()#4}
 // CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5 : number, %0
-// CHECK-NEXT:  %2 = ConstructInst %1 : closure, undefined : undefined, 12 : number
+// CHECK-NEXT:  %2 = ConstructInst %1 : closure, %1 : closure, undefined : undefined, 12 : number
 // CHECK-NEXT:  %3 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
@@ -93,7 +93,7 @@ function load_store_test() {
 // CHECK-NEXT:  %1 = CreateFunctionInst %ping#1#6()#7 : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %k#1#6()#8 : number, %0
 // CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [k#6] : closure, %0
-// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 
@@ -102,7 +102,7 @@ function load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{ping#1#6()#7}
 // CHECK-NEXT:  %1 = LoadFrameInst [k#6@load_store_test] : closure, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, 123 : number
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 123 : number
 // CHECK-NEXT:  %3 = ReturnInst 123 : number
 // CHECK-NEXT:function_end
 

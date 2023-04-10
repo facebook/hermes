@@ -76,11 +76,11 @@ function test2(x,y) {
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "sink0" : string
 // CHECK-NEXT:  %4 = LoadFrameInst [x#5], %0
 // CHECK-NEXT:  %5 = LoadFrameInst [y#5], %0
-// CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, %4, %5
+// CHECK-NEXT:  %6 = CallInst %3, undefined : undefined, undefined : undefined, %4, %5
 // CHECK-NEXT:  %7 = LoadPropertyInst globalObject : object, "sink1" : string
 // CHECK-NEXT:  %8 = LoadFrameInst [x#5], %0
 // CHECK-NEXT:  %9 = LoadFrameInst [y#5], %0
-// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, %8, %9
+// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, undefined : undefined, %8, %9
 // CHECK-NEXT:  %11 = ReturnInst %10
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = ReturnInst undefined : undefined

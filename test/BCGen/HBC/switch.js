@@ -171,7 +171,7 @@ function switch_uint32(x) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 @8 [7...15) [16...17) 	%8 = PhiInst %6 : number, %BB0, %12 : number, %BB2, %14 : number, %BB3
 // CHECK-NEXT:  $Reg7 @9 [10...11) 	%9 = TryLoadGlobalPropertyInst %3 : object, "print" : string
-// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, %4 : undefined, %8 : number
+// CHECK-NEXT:  $Reg7 @10 [empty]	%10 = HBCCallNInst %9, undefined : undefined, %4 : undefined, %8 : number
 // CHECK-NEXT:  $Reg7 @11 [empty]	%11 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 @15 [16...17) 	%12 = MovInst %2 : number

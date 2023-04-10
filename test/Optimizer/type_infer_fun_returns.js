@@ -32,16 +32,16 @@ function g14(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{g14#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = BinaryOperatorInst '>', %z, %2 : number
 // CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = StoreFrameInst %1 : closure, [w#2] : closure, %0
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 // CHECK-NEXT:  %7 = LoadFrameInst [w#2] : closure, %0
-// CHECK-NEXT:  %8 = CallInst %7 : closure, undefined : undefined
+// CHECK-NEXT:  %8 = CallInst %7 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8 : boolean|number, 1 : number
-// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, %9 : number
+// CHECK-NEXT:  %10 = CallInst %6, undefined : undefined, undefined : undefined, %9 : number
 // CHECK-NEXT:  %11 = CreateFunctionInst %m#1#2()#4 : undefined, %0
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst "m" : string, %11 : closure
 // CHECK-NEXT:  %13 = ReturnInst %12 : object

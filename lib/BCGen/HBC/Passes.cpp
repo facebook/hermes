@@ -187,6 +187,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
+  /// Call's new.target must be literal if it is undefined (well, it doesn't,
+  /// but an undefined new.target won't be emitted to bytecode, hence it doesn't
+  /// need to be loaded).
+  if (llvh::isa<CallInst>(Inst) && opIndex == CallInst::NewTargetIdx)
+    return true;
+
   /// GetBuiltinClosureInst's builtin index is always literal.
   if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
@@ -627,8 +633,8 @@ bool LowerConstruction::runOnFunction(Function *F) {
         for (int i = 1, n = constructor->getNumArguments(); i < n; i++) {
           args.push_back(constructor->getArgument(i));
         }
-        auto newConstructor =
-            builder.createHBCConstructInst(closure, thisObject, args);
+        auto newConstructor = builder.createHBCConstructInst(
+            closure, constructor->getNewTarget(), thisObject, args);
         auto finalValue = builder.createHBCGetConstructedObjectInst(
             thisObject, newConstructor);
         constructor->replaceAllUsesWith(finalValue);
