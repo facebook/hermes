@@ -252,6 +252,9 @@ Runtime::Runtime(
           createRuntimeCommonStorage(runtimeConfig.getTraceEnabled())),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
+#ifdef HERMES_CHECK_NATIVE_STACK
+      nativeStackGap_(runtimeConfig.getNativeStackGap()),
+#endif
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
@@ -1925,6 +1928,19 @@ static std::string &llvmStreamableToString(const T &v) {
   strstrm << v;
   strstrm.flush();
   return buf;
+}
+
+bool Runtime::isNativeStackOverflowingSlowPath() {
+#ifdef HERMES_CHECK_NATIVE_STACK
+  auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap_);
+  nativeStackHigh_ = (const char *)highPtr;
+  nativeStackSize_ = size;
+  volatile int spCheck;
+  return LLVM_UNLIKELY(
+      (uintptr_t)nativeStackHigh_ - (uintptr_t)&spCheck > nativeStackSize_);
+#else
+  return false;
+#endif
 }
 
 /****************************************************************************

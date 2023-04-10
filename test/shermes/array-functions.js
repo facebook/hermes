@@ -1078,7 +1078,7 @@ print(arrayEquals([1,[2,[3,[4]]]].flat(2), [1,2,3,[4]]));
 print(arrayEquals([1,[2,[3,[4]]]].flat(Infinity), [1,2,3,4]));
 // CHECK-NEXT: true
 var a = [1];
-for (var i = 0; i < 1000; ++i) {
+for (var i = 0; i < 100000; ++i) {
   a = [a];
 }
 try { a.flat(Infinity); } catch(e) { print('caught', e.name) }

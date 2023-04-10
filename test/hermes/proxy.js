@@ -2113,14 +2113,14 @@ assert.equal(p.a, 1);
 
 // Do a really deep target recursion to test for stack overflow
 var p = {a:1};
-for (var i = 0; i < 10000; ++i) {
+for (var i = 0; i < 100000; ++i) {
   p = new Proxy({}, p);
 }
 checkThrows(RangeError)(_ => p.a);
 
 // Do a really deep handler recursion to test for stack overflow
 var p = {a:1};
-for (var i = 0; i < 10000; ++i) {
+for (var i = 0; i < 100000; ++i) {
   p = new Proxy(p, {});
 }
 checkThrows(RangeError)(_ => p.a);
