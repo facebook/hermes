@@ -46,13 +46,12 @@ static llvh::SmallVector<BasicBlock *, 4> orderDFS(Function *F) {
 ///   inlined.
 static bool canBeInlined(Function *F, Function *intoFunction) {
   // If it has captured variables, it can't be inlined.
+  // TODO(T149981364): evaluate removing this restriction.
   if (!F->getFunctionScopeDesc()->getVariables().empty()) {
     return false;
   }
 
-  // If it has nested scopes, it can't be inlined. This should be possible, but
-  // given that hermes doesn't currently support multi-scope functions it is
-  // impossible to test it.
+  // TODO(T149981364): evaluate removing this restriction.
   for (const ScopeDesc *inner : F->getFunctionScopeDesc()->getInnerScopes()) {
     if (inner->getFunction() == F) {
       return false;
@@ -89,6 +88,34 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
   }
 
   return true;
+}
+
+/// Clones \p currScopeDesc's contents (Variables and inner ScopeDescs) into \p
+/// newScope. \p operandMap is populated with a mapping from old
+/// scopes/variables to the new ones.
+static void cloneScopesInto(
+    Function *F,
+    ScopeDesc *currScopeDesc,
+    ScopeDesc *newScope,
+    llvh::DenseMap<Value *, Value *> &operandMap) {
+  if (currScopeDesc->getFunction() != F) {
+    // Reached a scope that doesn't belong to F. Stop cloning.
+    return;
+  }
+
+  // Clone the Variables from currScopeDesc into newScope.
+  operandMap[currScopeDesc] = newScope;
+  for (Variable *V : currScopeDesc->getVariables()) {
+    operandMap[V] = V->cloneIntoNewScope(newScope);
+  }
+
+  // Then clone currScopeDesc's inner scopes. The new scopes are inner scopes of
+  // newScope.
+  for (ScopeDesc *inner : currScopeDesc->getInnerScopes()) {
+    ScopeDesc *newInnerScope = newScope->createInnerScope();
+    newInnerScope->setFunction(newScope->getFunction());
+    cloneScopesInto(F, inner, newInnerScope, operandMap);
+  }
 }
 
 /// Inline a function into the current insertion point, which must be at the
@@ -152,6 +179,13 @@ static Value *inlineFunction(
     }
   }
 
+  // Clones F's scope into its parent.
+  cloneScopesInto(
+      F,
+      F->getFunctionScopeDesc(),
+      F->getFunctionScopeDesc()->getParent(),
+      operandMap);
+
   auto order = orderDFS(F);
 
   // Map the basic blocks.
@@ -171,28 +205,31 @@ static Value *inlineFunction(
       Value *oldOp = I->getOperand(i);
       Value *newOp = nullptr;
 
-      if (auto *sc = llvh::dyn_cast<ScopeDesc>(oldOp)) {
-        ScopeDesc *newSC = intoFunction->getFunctionScopeDesc();
-        newOp = newSC;
-
-        for (const ScopeDesc *inner : sc->getInnerScopes()) {
+      if (auto *oldV = llvh::dyn_cast<Variable>(oldOp)) {
+        // Variables can be both from the inlinee, or some other (outer)
+        // function.
+        auto newVarIt = operandMap.find(oldV);
+        if (newVarIt != operandMap.end()) {
+          // The old variable was defined in an inner scope of F; use the new
+          // Variable.
+          newOp = newVarIt->second;
+        } else {
+          // The "old" variable was not defined in F; use it instead.
           assert(
-              inner->getFunction() != F && "canBeInlined should have said no!");
-          (void)inner;
+              oldV->getParent()->getFunction() != F &&
+              "old variable in inlinee should have been cloned.");
+          newOp = oldOp;
         }
-
-        assert(
-            sc->getVariables().empty() && "canBeInlined should have said no!");
       } else if (
           llvh::isa<Instruction>(oldOp) || llvh::isa<Parameter>(oldOp) ||
-          llvh::isa<BasicBlock>(oldOp)) {
+          llvh::isa<BasicBlock>(oldOp) || llvh::isa<ScopeDesc>(oldOp)) {
         // Operands must already have been visited.
         newOp = operandMap[oldOp];
         assert(newOp && "operand not visited before instruction");
       } else if (
           llvh::isa<Label>(oldOp) || llvh::isa<Literal>(oldOp) ||
-          llvh::isa<Variable>(oldOp) || llvh::isa<EmptySentinel>(oldOp)) {
-        // Labels, literals and variables are unchanged.
+          llvh::isa<EmptySentinel>(oldOp)) {
+        // Labels, and literals are unchanged.
         newOp = oldOp;
       } else {
         llvh::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
@@ -204,39 +241,34 @@ static Value *inlineFunction(
     }
   };
 
-  CreateScopeInst *intoFunctionScopeCreation{};
+  ScopeCreationInst *inlineeParentScopeCreation{};
 
-  // Returns the instruction materializing intoFunction's scope, creating it if
-  // needed.
-  auto getIntoFunctionScopeCreation = [&]() {
-    // Simple case: this function has already been called, so just return the
-    // cached value.
-    if (intoFunctionScopeCreation) {
-      return intoFunctionScopeCreation;
-    }
-
-    // This is the first time this function is invoked, so iterate over the
-    // instructions in intoFunction trying to find its scope's creation inst.
-    for (BasicBlock &BB : *intoFunction) {
-      for (Instruction &I : BB) {
-        if (auto *csi = llvh::dyn_cast<CreateScopeInst>(&I)) {
-          assert(
-              csi->getCreatedScopeDesc() ==
-                  intoFunction->getFunctionScopeDesc() &&
-              "CreateScopeInst creating the wrong scope");
-          intoFunctionScopeCreation = csi;
-          return csi;
+  /// \returns the ScopeCreationInst that creates F's scope's parent scope. Note
+  /// that this instruction must exist -- because F's scope's parent scope is
+  /// needed in order to CreateFunction.
+  auto getInlineeParentScopeCreation = [F, &inlineeParentScopeCreation]() {
+    // Check the cached value to ensure we haven't already looked for the
+    // inlinee's parent scope creation.
+    if (!inlineeParentScopeCreation) {
+      // This is the first time this function is invoked, so iterate over the
+      // users of F's scope's parent scope to find its scope creation inst.
+      for (Instruction *user :
+           F->getFunctionScopeDesc()->getParent()->getUsers()) {
+        if (auto *SCI = llvh::dyn_cast<ScopeCreationInst>(user)) {
+          // Each ScopeDesc is created once (i.e., there should be exactly one
+          // instruction in the bytecode that creates each ScopeDesc that's
+          // created in IRGen).
+          assert(!inlineeParentScopeCreation && "scope should be created once");
+          inlineeParentScopeCreation = SCI;
         }
       }
     }
 
-    // intoFunction's didn't have its scope materialized, so add that
-    // instruction.
-    IRBuilder::SaveRestore sr{builder};
-    builder.setInsertionPoint(&*intoFunction->begin()->begin());
-    intoFunctionScopeCreation =
-        builder.createCreateScopeInst(intoFunction->getFunctionScopeDesc());
-    return intoFunctionScopeCreation;
+    // F's parent scope's creation instruction must exist (as it is necessary
+    // for creating F's closure).
+    assert(
+        inlineeParentScopeCreation && "F's scope's parent scope should exist!");
+    return inlineeParentScopeCreation;
   };
 
   // Copy all instructions to the inlined function. Phi instructions are
@@ -290,13 +322,26 @@ static Value *inlineFunction(
           cast<PhiInst>(returnValue)->addEntry(translatedOperands[0], newBB);
         }
       } else if (auto *csi = llvh::dyn_cast<CreateScopeInst>(&I)) {
+        // CreateScope needs to be handled specially -- the inlinee scope has
+        // been cloned into its parent scope; thus, CreateScopeInst need to be
+        // replaced by the ScopeCreationInst that creates the inlinee's parent
+        // scope.
+        ScopeCreationInst *inlineeParentScopeCreation =
+            getInlineeParentScopeCreation();
         assert(
-            csi->getCreatedScopeDesc() == F->getFunctionScopeDesc() &&
-            "CreateScopeInst creating the wrong scope");
-        newInst = getIntoFunctionScopeCreation();
-        // TODO: ensure newInst dominates the builder's current position.
+            inlineeParentScopeCreation->getCreatedScopeDesc() ==
+                operandMap[csi->getCreatedScopeDesc()] &&
+            "inlinee scope should have been cloned into its parent");
+        newInst = inlineeParentScopeCreation;
       } else {
         newInst = builder.cloneInst(&I, translatedOperands);
+        // Also update the source level scope, if I has one.
+        if (ScopeDesc *sourceLevelScope = I.getSourceLevelScope()) {
+          auto *translatedScope =
+              llvh::cast<ScopeDesc>(operandMap[sourceLevelScope]);
+          assert(translatedScope && "source level scope not cloned");
+          newInst->setSourceLevelScope(translatedScope);
+        }
       }
 
       operandMap[&I] = newInst;

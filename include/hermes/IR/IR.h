@@ -451,6 +451,7 @@ class Value {
   friend class Module;
   friend class IRBuilder;
   friend class ScopeDesc;
+  friend class Variable;
 
   ValueKind Kind;
 
@@ -1075,6 +1076,9 @@ class Variable : public Value {
 
   /// Return the index of this variable in the function's variable list.
   int getIndexInVariableList() const;
+
+  /// Creates and \return a copy of this Variable in \p newScope.
+  Variable *cloneIntoNewScope(ScopeDesc *newScope);
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::VariableKind;

@@ -480,6 +480,13 @@ int Variable::getIndexInVariableList() const {
   llvm_unreachable("Cannot find variable in the variable list");
 }
 
+Variable *Variable::cloneIntoNewScope(ScopeDesc *newScope) {
+  Variable *clone = new Variable(parent, declKind, text);
+  clone->strictImmutableBinding_ = strictImmutableBinding_;
+  newScope->addVariable(clone);
+  return clone;
+}
+
 Identifier Parameter::getName() const {
   return Name;
 }
