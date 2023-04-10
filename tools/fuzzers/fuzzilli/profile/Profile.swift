@@ -15,27 +15,27 @@
 import Fuzzilli
 
 struct Profile {
-    let getProcessArguments: (_: Bool) -> [String]
-    let processEnv: [String : String]
-    let maxExecsBeforeRespawn: Int
-    // Timeout is in milliseconds.
-    let timeout: Int
-    let codePrefix: String
-    let codeSuffix: String
-    let ecmaVersion: ECMAScriptVersion
+  let getProcessArguments: (_: Bool) -> [String]
+  let processEnv: [String: String]
+  let maxExecsBeforeRespawn: Int
+  // Timeout is in milliseconds.
+  let timeout: Int
+  let codePrefix: String
+  let codeSuffix: String
+  let ecmaVersion: ECMAScriptVersion
 
-    // JavaScript code snippets that cause a crash in the target engine.
-    // Used to verify that crashes can be detected.
-    let crashTests: [String]
+  // JavaScript code snippets that cause a crash in the target engine.
+  // Used to verify that crashes can be detected.
+  let crashTests: [String]
 
-    let additionalCodeGenerators: [(CodeGenerator, Int)]
-    let additionalProgramTemplates: WeightedList<ProgramTemplate>
+  let additionalCodeGenerators: [(CodeGenerator, Int)]
+  let additionalProgramTemplates: WeightedList<ProgramTemplate>
 
-    let disabledCodeGenerators: [String]
+  let disabledCodeGenerators: [String]
 
-    let additionalBuiltins: [String: JSType]
+  let additionalBuiltins: [String: JSType]
 }
 
 let profiles = [
-    "hermes": hermesProfile,
+  "hermes": hermesProfile,
 ]
