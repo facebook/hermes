@@ -97,6 +97,10 @@ bool hermes::isDirectCallee(Value *C, CallInst *CI) {
   if (CI->getCallee() != C)
     return false;
 
+  if (CI->getNewTarget() == C) {
+    return false;
+  }
+
   for (int i = 0, e = CI->getNumArguments(); i < e; i++) {
     // Check if C is captured.
     if (C == CI->getArgument(i))

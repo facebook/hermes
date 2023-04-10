@@ -24,6 +24,7 @@ function ctor_test() {
     return k
   }
 
+  // can't optimize this callsite due to foo being referenced in new.target.
   return new foo(12)
 }
 
@@ -74,16 +75,16 @@ function load_store_test() {
 // CHECK-NEXT:S{ctor_test#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{ctor_test#0#1()#4}
-// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5 : number, %0
+// CHECK-NEXT:  %1 = CreateFunctionInst %"foo 1#"#1#4()#5, %0
 // CHECK-NEXT:  %2 = ConstructInst %1 : closure, %1 : closure, undefined : undefined, 12 : number
 // CHECK-NEXT:  %3 = ReturnInst %2 : object
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"#1#4(k : number)#5 : number
+// CHECK:function "foo 1#"#1#4(k)#5
 // CHECK-NEXT:S{"foo 1#"#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 1#"#1#4()#5}
-// CHECK-NEXT:  %1 = ReturnInst 12 : number
+// CHECK-NEXT:  %1 = ReturnInst %k
 // CHECK-NEXT:function_end
 
 // CHECK:function load_store_test#0#1()#6 : number
