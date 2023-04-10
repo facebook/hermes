@@ -1758,6 +1758,45 @@ const getTransforms = (
         };
 
         switch (fullTypeName) {
+          // React.Component<A,B> -> React.Component<A,B>
+          // React$Component<A,B> -> React.Component<A,B>
+          case 'React.Component':
+          case 'React$Component': {
+            const typeParameters = node.typeParameters;
+            if (typeParameters == null || typeParameters.params.length === 0) {
+              throw translationError(
+                node,
+                `Expected at least 1 type parameter with \`${fullTypeName}\``,
+              );
+            }
+            const params = typeParameters.params;
+            if (params.length > 2) {
+              throw translationError(
+                node,
+                `Expected at no more than 2 type parameters with \`${fullTypeName}\``,
+              );
+            }
+
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'Component',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: params.map(param =>
+                  transform.TypeAnnotationType(param),
+                ),
+              },
+            };
+          }
+          // React.Context<A> -> React.Context<A>
+          // React$Context<A> -> React.Context<A>
           case 'React$Context':
           case 'React.Context':
             return {
