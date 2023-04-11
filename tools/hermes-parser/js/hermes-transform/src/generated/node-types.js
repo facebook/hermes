@@ -43,6 +43,7 @@ import type {
   ClassBody as ClassBodyType,
   ClassExpression as ClassExpressionType,
   ClassImplements as ClassImplementsType,
+  ComponentDeclaration as ComponentDeclarationType,
   ConditionalExpression as ConditionalExpressionType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
@@ -281,6 +282,18 @@ export type ClassExpressionProps = {
 export type ClassImplementsProps = {
   +id: MaybeDetachedNode<ClassImplementsType['id']>,
   +typeParameters?: ?MaybeDetachedNode<ClassImplementsType['typeParameters']>,
+};
+
+export type ComponentDeclarationProps = {
+  +id: MaybeDetachedNode<ComponentDeclarationType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<ComponentDeclarationType['params'][number]>,
+  >,
+  +body: MaybeDetachedNode<ComponentDeclarationType['body']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    ComponentDeclarationType['typeParameters'],
+  >,
+  +returnType?: ?MaybeDetachedNode<ComponentDeclarationType['returnType']>,
 };
 
 export type ConditionalExpressionProps = {
@@ -1262,6 +1275,22 @@ export function ClassImplements(props: {
     type: 'ClassImplements',
     id: asDetachedNodeForCodeGen(props.id),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentDeclaration(props: {
+  ...$ReadOnly<ComponentDeclarationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentDeclarationType> {
+  const node = detachedProps<ComponentDeclarationType>(props.parent, {
+    type: 'ComponentDeclaration',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
   });
   setParentPointersInDirectChildren(node);
   return node;

@@ -1284,11 +1284,12 @@ const getTransforms = (
 
       const [exportedDeclaration, mergedDeclaration] = (() => {
         if (node.declaration == null) {
-          return [null];
+          return [null, null];
         }
 
         switch (node.declaration.type) {
           case 'ClassDeclaration':
+          case 'ComponentDeclaration':
           case 'FunctionDeclaration':
           case 'VariableDeclaration':
             // These cases shouldn't happen in flow defs because they have their own special
