@@ -111,6 +111,9 @@ void JSParserImpl::initializeIdentifiers() {
 
   checksIdent_ = lexer_.getIdentifier("%checks");
 
+  // Flow Component syntax
+  componentIdent_ = lexer_.getIdentifier("component");
+
 #endif
 
 #if HERMES_PARSE_TS
@@ -6572,6 +6575,17 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           *optClassDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        checkComponentDeclarationFlow()) {
+      auto optComponent = parseComponentDeclarationFlow();
+      if (!optComponent) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optComponent,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
       auto optEnum =
           parseEnumDeclarationFlow(tok_->getStartLoc(), /* declare */ false);

@@ -222,6 +222,9 @@ class Context {
   /// If true, allow parsing JSX as a primary expression.
   bool parseJSX_{false};
 
+  /// If true, allow parsing component syntax when also using Flow syntax.
+  bool parseFlowComponentSyntax_{false};
+
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
@@ -391,6 +394,13 @@ class Context {
   }
   bool getParseFlowAmbiguous() const {
     return parseFlow_ == ParseFlowSetting::ALL;
+  }
+
+  void setParseFlowComponentSyntax(bool parseFlowComponentSyntax) {
+    parseFlowComponentSyntax_ = parseFlowComponentSyntax;
+  }
+  bool getParseFlowComponentSyntax() const {
+    return parseFlowComponentSyntax_;
   }
 
   void setParseTS(bool parseTS) {
