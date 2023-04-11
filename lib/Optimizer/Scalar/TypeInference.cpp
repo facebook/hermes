@@ -33,6 +33,12 @@ STATISTIC(
 
 namespace {
 
+/// \return if the given \p type is a BigInt|Object, which used to determine if
+/// unary/binary operations may have a BigInt result.
+static bool isBigIntOrObject(Type type) {
+  return type.canBeBigInt() || type.canBeObject();
+}
+
 static Type inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
   Value *op = UOI->getSingleOperand();
 
@@ -44,10 +50,11 @@ static Type inferUnaryArith(UnaryOperatorInst *UOI, Type numberResultType) {
     return Type::createBigInt();
   }
 
-  Type mayBeBigInt =
-      op->getType().canBeBigInt() ? Type::createBigInt() : Type::createNoType();
+  Type mayBeBigInt = isBigIntOrObject(op->getType()) ? Type::createBigInt()
+                                                     : Type::createNoType();
 
-  // - ?? => Number|?BigInt. BigInt is only possible if op.Type canBeBigInt.
+  // - ?? => Number|?BigInt. BigInt is only possible if op.Type is
+  // BigInt|Object.
   return Type::unionTy(numberResultType, mayBeBigInt);
 }
 
@@ -161,12 +168,12 @@ static Type inferBinaryArith(
     return Type::createBigInt();
   }
 
-  Type mayBeBigInt = LeftTy.canBeBigInt() && RightTy.canBeBigInt()
+  Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
       ? Type::createBigInt()
       : Type::createNoType();
 
-  // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands can be
-  // BigInt due to the no automatic BigInt conversion.
+  // ?? - ?? => Number|?BigInt. BigInt is only possible if both operands are
+  // BigInt|Object due to the no automatic BigInt conversion.
   return Type::unionTy(numberType, mayBeBigInt);
 }
 
@@ -248,7 +255,7 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
       // ?BigInt + ?BigInt => ?BigInt. Both operands need to "may be a BigInt"
       // for a possible BigInt result from this operator. This is true because
       // there's no automative BigInt type conversion.
-      Type mayBeBigInt = (LeftTy.canBeBigInt() && RightTy.canBeBigInt())
+      Type mayBeBigInt = (isBigIntOrObject(LeftTy) && isBigIntOrObject(RightTy))
           ? Type::createBigInt()
           : Type::createNoType();
 

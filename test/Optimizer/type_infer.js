@@ -93,8 +93,8 @@ function test_unary(x) {
 // CHECK-NEXT:  %18 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %19 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %20 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %21 = BinaryAddInst (:string|number) %19: object, %20: object
-// CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %21: string|number
+// CHECK-NEXT:  %21 = BinaryAddInst (:string|number|bigint) %19: object, %20: object
+// CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %21: string|number|bigint
 // CHECK-NEXT:  %23 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, NaN: number
 // CHECK-NEXT:  %24 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
