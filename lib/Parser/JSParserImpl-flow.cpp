@@ -190,7 +190,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
 
   ESTree::NodeList paramList;
 
-  if (!parseFormalParameters(Param{}, paramList))
+  if (!parseComponentParameters(Param{}, paramList))
     return None;
 
   ESTree::Node *returnType = nullptr;
@@ -225,6 +225,161 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow() {
       body,
       new (context_) ESTree::ComponentDeclarationNode(
           *optId, std::move(paramList), body, typeParams, returnType));
+}
+
+bool JSParserImpl::parseComponentParameters(
+    Param param,
+    ESTree::NodeList &paramList) {
+  assert(
+      check(TokenKind::l_paren) && "ComponentParameters must start with '('");
+  // (
+  SMLoc lparenLoc = advance().Start;
+
+  while (!check(TokenKind::r_paren)) {
+    if (check(TokenKind::dotdotdot)) {
+      // BindingRestElement.
+      auto optRestElem = parseBindingRestElement(param);
+      if (!optRestElem)
+        return false;
+      paramList.push_back(*optRestElem.getValue());
+      break;
+    }
+
+    // ComponentParameter.
+    auto optParam = parseComponentParameter(param);
+    if (!optParam)
+      return false;
+
+    paramList.push_back(*optParam.getValue());
+
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+
+  // )
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::AllowRegExp,
+          "at end of component parameter list",
+          "start of parameter list",
+          lparenLoc)) {
+    return false;
+  }
+
+  return true;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseComponentParameter(Param param) {
+  // ComponentParameter:
+  //   StringLiteral as BindingElement
+  //   IdentifierName
+  //   IdentifierName as BindingElement
+
+  SMLoc paramStart = tok_->getStartLoc();
+  ESTree::Node *nameElem;
+  if (check(TokenKind::string_literal)) {
+    // StringLiteral as BindingElement
+    // ^
+    nameElem = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    advance();
+
+    if (!checkAndEat(asIdent_)) {
+      error(
+          nameElem->getSourceRange(),
+          "string literal names require a local via `as`");
+      return None;
+    }
+
+    auto optBinding = parseBindingElement(Param{});
+    if (!optBinding)
+      return None;
+
+    return setLocation(
+        paramStart,
+        getPrevTokenEndLoc(),
+        new (context_)
+            ESTree::ComponentParameterNode(nameElem, *optBinding, false));
+  }
+
+  if (check(TokenKind::identifier) || tok_->isResWord()) {
+    UniqueString *id = tok_->getResWordOrIdentifier();
+    SMRange identRng = tok_->getSourceRange();
+    TokenKind identKind = tok_->getKind();
+    nameElem = setLocation(
+        identRng,
+        identRng,
+        new (context_) ESTree::IdentifierNode(id, nullptr, false));
+
+    advance();
+    if (checkAndEat(asIdent_)) {
+      // IdentifierName as BindingElement
+      //                   ^
+      auto optBinding = parseBindingElement(Param{});
+      if (!optBinding)
+        return None;
+
+      return setLocation(
+          paramStart,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::ComponentParameterNode(nameElem, *optBinding, false));
+    }
+
+    if (!validateBindingIdentifier(Param{}, identRng, id, identKind)) {
+      error(identRng, "Invalid local name for component");
+    }
+
+    ESTree::Node *type = nullptr;
+    bool optional = false;
+
+    // IdentifierName?: TypeParam
+    //               ^
+    if (check(TokenKind::question)) {
+      optional = true;
+      advance(JSLexer::GrammarContext::Type);
+    }
+
+    // IdentifierName?: TypeParam
+    //                ^
+    if (check(TokenKind::colon)) {
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+      auto optType = parseTypeAnnotation(annotStart);
+      if (!optType)
+        return None;
+      type = *optType;
+    }
+
+    auto elem = setLocation(
+        identRng,
+        identRng,
+        new (context_) ESTree::IdentifierNode(id, type, optional));
+    ESTree::Node *localElem;
+
+    // IdentifierName?: TypeParam = expr
+    //                            ^
+    if (check(TokenKind::equal)) {
+      auto optInit = parseBindingInitializer(param, elem);
+      if (!optInit)
+        return None;
+      localElem = *optInit;
+    } else {
+      localElem = elem;
+    }
+
+    return setLocation(
+        paramStart,
+        getPrevTokenEndLoc(),
+        new (context_)
+            ESTree::ComponentParameterNode(nameElem, localElem, true));
+  }
+
+  error(
+      tok_->getStartLoc(),
+      "identifier or string literal expected in component parameter name");
+  return None;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(

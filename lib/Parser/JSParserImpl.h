@@ -1084,6 +1084,12 @@ class JSParserImpl {
   bool checkComponentDeclarationFlow();
   Optional<ESTree::Node *> parseComponentDeclarationFlow();
 
+  /// Parse ComponentParameters with the leading '(' and the trailing ')'.
+  /// \pre the current token must be '('. \param[out] paramList populated
+  // with the ComponentParameters. \return true on success, false on failure.
+  bool parseComponentParameters(Param param, ESTree::NodeList &paramList);
+  Optional<ESTree::Node *> parseComponentParameter(Param param);
+
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
 
