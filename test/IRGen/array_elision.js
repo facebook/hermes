@@ -18,8 +18,8 @@ function func() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "func": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %func(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "func": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %func(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "func": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any

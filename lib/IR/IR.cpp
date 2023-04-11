@@ -157,9 +157,9 @@ ExternalScope::ExternalScope(Function *function, int32_t depth)
 static Type functionNewTargetType(Function::DefinitionKind defKind) {
   switch (defKind) {
     case Function::DefinitionKind::ES5Function:
-      return Type::unionTy(Type::createClosure(), Type::createUndefined());
+      return Type::unionTy(Type::createObject(), Type::createUndefined());
     case Function::DefinitionKind::ES6Constructor:
-      return Type::createClosure();
+      return Type::createObject();
     case Function::DefinitionKind::ES6Arrow:
       // Arrow functions never access their own new.target.
       return Type::createNoType();
@@ -899,12 +899,6 @@ void Type::print(llvh::raw_ostream &OS) const {
     return;
   }
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {
-    // Don't print the object type annotations if the type is closure or regex.
-    if (i == (unsigned)Type::TypeKind::Object &&
-        (isClosureType() || isRegExpType())) {
-      continue;
-    }
-
     if (bitmask_ & (1 << i)) {
       if (!first) {
         OS << "|";

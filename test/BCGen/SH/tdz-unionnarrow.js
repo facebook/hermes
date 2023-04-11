@@ -31,10 +31,10 @@ function f2() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = DeclareGlobalVarInst "f1": string
 // CHKIR-NEXT:  %1 = DeclareGlobalVarInst "f2": string
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:closure) %f1(): any
-// CHKIR-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "f1": string
-// CHKIR-NEXT:  %4 = CreateFunctionInst (:closure) %f2(): any
-// CHKIR-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "f2": string
+// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %f1(): any
+// CHKIR-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "f1": string
+// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %f2(): any
+// CHKIR-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "f2": string
 // CHKIR-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKIR-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHKIR-NEXT:  %8 = LoadStackInst (:any) %6: any
@@ -59,8 +59,8 @@ function f2() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
 // CHKIR-NEXT:  %1 = StoreFrameInst undefined: undefined, [inner]: any
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
-// CHKIR-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
+// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
+// CHKIR-NEXT:  %3 = StoreFrameInst %2: object, [inner]: any
 // CHKIR-NEXT:  %4 = StoreFrameInst undefined: undefined, [x]: any|empty
 // CHKIR-NEXT:  %5 = ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -84,11 +84,11 @@ function f2() {
 // CHKLIR-NEXT:  %0 = HBCCreateEnvironmentInst (:environment)
 // CHKLIR-NEXT:  %1 = DeclareGlobalVarInst "f1": string
 // CHKLIR-NEXT:  %2 = DeclareGlobalVarInst "f2": string
-// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:closure) %f1(): undefined|string|number, %0: environment
+// CHKLIR-NEXT:  %3 = HBCCreateFunctionInst (:object) %f1(): undefined|string|number, %0: environment
 // CHKLIR-NEXT:  %4 = HBCGetGlobalObjectInst (:object)
-// CHKLIR-NEXT:  %5 = StorePropertyLooseInst %3: closure, %4: object, "f1": string
-// CHKLIR-NEXT:  %6 = HBCCreateFunctionInst (:closure) %f2(): undefined, %0: environment
-// CHKLIR-NEXT:  %7 = StorePropertyLooseInst %6: closure, %4: object, "f2": string
+// CHKLIR-NEXT:  %5 = StorePropertyLooseInst %3: object, %4: object, "f1": string
+// CHKLIR-NEXT:  %6 = HBCCreateFunctionInst (:object) %f2(): undefined, %0: environment
+// CHKLIR-NEXT:  %7 = StorePropertyLooseInst %6: object, %4: object, "f2": string
 // CHKLIR-NEXT:  %8 = AllocStackInst (:undefined) $?anon_0_ret: any
 // CHKLIR-NEXT:  %9 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %10 = StoreStackInst %9: undefined, %8: undefined
@@ -121,8 +121,8 @@ function f2() {
 // CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0: environment, %1: empty, [x]: any|empty
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %4 = HBCStoreToEnvironmentInst %0: environment, %3: undefined, [inner]: any
-// CHKLIR-NEXT:  %5 = HBCCreateFunctionInst (:closure) %inner(): any, %0: environment
-// CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0: environment, %5: closure, [inner]: any
+// CHKLIR-NEXT:  %5 = HBCCreateFunctionInst (:object) %inner(): any, %0: environment
+// CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0: environment, %5: object, [inner]: any
 // CHKLIR-NEXT:  %7 = HBCStoreToEnvironmentInst %0: environment, %3: undefined, [x]: any|empty
 // CHKLIR-NEXT:  %8 = ReturnInst %3: undefined
 // CHKLIR-NEXT:function_end

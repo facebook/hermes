@@ -19,8 +19,8 @@ function foo(fn, x) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
@@ -59,8 +59,8 @@ function foo(fn, x) {
 // OPT-NEXT:frame = []
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = DeclareGlobalVarInst "foo": string
-// OPT-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): undefined
-// OPT-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
+// OPT-NEXT:  %1 = CreateFunctionInst (:object) %foo(): undefined
+// OPT-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // OPT-NEXT:  %3 = ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 

@@ -30,21 +30,21 @@ return [dotProduct, Vec2D];
 // CHECK:function global(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %""(): object
-// CHECK-NEXT:  %1 = CallInst (:object) %0: closure, %""(): object, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): object
+// CHECK-NEXT:  %1 = CallInst (:object) %0: object, %""(): object, empty: any, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %dotProduct(): number
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %Vec2D(): undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dotProduct(): number
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %Vec2D(): undefined
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %1: closure, "prototype": string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %1: object, "prototype": string
 // CHECK-NEXT:  %4 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst %0: closure, %4: object, 0: number, true: boolean
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %1: closure, %4: object, 1: number, true: boolean
+// CHECK-NEXT:  %5 = StoreOwnPropertyInst %0: object, %4: object, 0: number, true: boolean
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %1: object, %4: object, 1: number, true: boolean
 // CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:function_end
 

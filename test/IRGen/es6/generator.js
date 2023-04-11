@@ -51,22 +51,22 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:  %4 = DeclareGlobalVarInst "yieldStar": string
 // CHECK-NEXT:  %5 = DeclareGlobalVarInst "destr": string
 // CHECK-NEXT:  %6 = DeclareGlobalVarInst "initializer": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %simple(): any
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "simple": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %useResult(): any
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: closure, globalObject: object, "useResult": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %loop(): any
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "loop": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %simple(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "simple": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %useResult(): any
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: object, globalObject: object, "useResult": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %loop(): any
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: object, globalObject: object, "loop": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %14 = StoreStackInst undefined: undefined, %13: any
-// CHECK-NEXT:  %15 = CreateFunctionInst (:closure) %simple2(): any
-// CHECK-NEXT:  %16 = StorePropertyLooseInst %15: closure, globalObject: object, "simple2": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:closure) %yieldStar(): any
-// CHECK-NEXT:  %18 = StorePropertyLooseInst %17: closure, globalObject: object, "yieldStar": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:closure) %destr(): any
-// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: closure, globalObject: object, "destr": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:closure) %initializer(): any
-// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: closure, globalObject: object, "initializer": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %simple2(): any
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15: object, globalObject: object, "simple2": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %yieldStar(): any
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17: object, globalObject: object, "yieldStar": string
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %destr(): any
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: object, globalObject: object, "destr": string
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %initializer(): any
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: object, globalObject: object, "initializer": string
 // CHECK-NEXT:  %23 = LoadStackInst (:any) %13: any
 // CHECK-NEXT:  %24 = ReturnInst %23: any
 // CHECK-NEXT:function_end
@@ -245,8 +245,8 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %7 = GetBuiltinClosureInst (:closure) [globalThis.Symbol]: number
-// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: closure, "iterator": string
+// CHECK-NEXT:  %7 = GetBuiltinClosureInst (:object) [globalThis.Symbol]: number
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: object, "iterator": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %6: any, %8: any
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, %6: any
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, %10: any, "iterator is not an object": string

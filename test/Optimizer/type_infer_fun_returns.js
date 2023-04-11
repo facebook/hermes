@@ -21,28 +21,28 @@ function g14(z) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "g14": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %g14(): undefined|object
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "g14": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %g14(): undefined|object
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "g14": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function g14(z: any): undefined|object
-// CHECK-NEXT:frame = [w: closure]
+// CHECK-NEXT:frame = [w: object]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %w(): number
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [w]: closure
-// CHECK-NEXT:  %3 = CallInst (:number) %1: closure, %w(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %w(): number
+// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [w]: object
+// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %w(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %4 = BinaryGreaterThanInst (:boolean) %0: any, %3: number
 // CHECK-NEXT:  %5 = CondBranchInst %4: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %7 = LoadFrameInst (:closure) [w]: closure
-// CHECK-NEXT:  %8 = CallInst (:boolean|number) %7: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) [w]: object
+// CHECK-NEXT:  %8 = CallInst (:boolean|number) %7: object, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %9 = BinaryAddInst (:number) %8: boolean|number, 1: number
 // CHECK-NEXT:  %10 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, %9: number
-// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %m(): undefined
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "m": string, %11: closure
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %m(): undefined
+// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "m": string, %11: object
 // CHECK-NEXT:  %13 = ReturnInst %12: object
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %14 = ReturnInst undefined: undefined
@@ -59,8 +59,8 @@ function g14(z) {
 // CHECK:function m(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"w 1#"(): boolean
-// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [w@g14]: closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"w 1#"(): boolean
+// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [w@g14]: object
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

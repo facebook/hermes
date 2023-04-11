@@ -56,16 +56,16 @@ function cse_unary(a) {
 // CHECK-NEXT:  %2 = DeclareGlobalVarInst "check_operator_kind": string
 // CHECK-NEXT:  %3 = DeclareGlobalVarInst "cse_this_instr": string
 // CHECK-NEXT:  %4 = DeclareGlobalVarInst "cse_unary": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %foo(): number
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "foo": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %foo_with_cf(): number
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "foo_with_cf": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %check_operator_kind(): number
-// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: closure, globalObject: object, "check_operator_kind": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %cse_this_instr(): undefined
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "cse_this_instr": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %cse_unary(): number|bigint
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "cse_unary": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %foo(): number
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %foo_with_cf(): number
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "foo_with_cf": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %check_operator_kind(): number
+// CHECK-NEXT:  %10 = StorePropertyLooseInst %9: object, globalObject: object, "check_operator_kind": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %cse_this_instr(): undefined
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: object, globalObject: object, "cse_this_instr": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %cse_unary(): number|bigint
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: object, globalObject: object, "cse_unary": string
 // CHECK-NEXT:  %15 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

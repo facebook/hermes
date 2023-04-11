@@ -50,8 +50,6 @@ STATISTIC(TypeBool, "Number of instructions with type boolean");
 STATISTIC(TypeString, "Number of instructions with type string");
 STATISTIC(TypeNumber, "Number of instructions with type number");
 STATISTIC(TypeObject, "Number of instructions with type object");
-STATISTIC(TypeClosure, "Number of instructions with type closure");
-STATISTIC(TypeRegexp, "Number of instruction with type regexp");
 STATISTIC(TypeAny, "Number of instructions with type any");
 STATISTIC(TypeOther, "Number of instructions with type other");
 
@@ -119,10 +117,6 @@ static void auditInferredTypes(Function *F) {
         TypeNumber++;
       } else if (t.isObjectType()) {
         TypeObject++;
-      } else if (t.isClosureType()) {
-        TypeClosure++;
-      } else if (t.isRegExpType()) {
-        TypeRegexp++;
       } else if (t.isAnyOrEmptyType() || t.isAnyType()) {
         TypeAny++;
       } else {

@@ -24,16 +24,16 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %f(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %f(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %f(): undefined
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %f(): undefined, empty: any, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -41,7 +41,7 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|closure) %new.target: undefined|closure
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: undefined|closure
+// CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, %1: undefined|object
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

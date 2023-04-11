@@ -193,11 +193,6 @@ TEST(BuilderTest, TestValueTypes) {
   EXPECT_TRUE(X->getType().isPrimitive());
   EXPECT_FALSE(X->getType().isNullType());
 
-  X->setType(Type::createClosure());
-  EXPECT_FALSE(X->getType().isNumberType());
-  EXPECT_TRUE(X->getType().isClosureType());
-  EXPECT_TRUE(X->getType().isObjectType());
-
   X->setType(Type::createBoolean());
   EXPECT_TRUE(X->getType().isBooleanType());
   EXPECT_FALSE(X->getType().isNoType());
@@ -222,13 +217,9 @@ TEST(BuilderTest, Types) {
       Type::createAnyOrEmpty(),
       Type::unionTy(Type::createAnyOrEmpty(), Type::createBoolean()));
 
-  Type U = Type::unionTy(Type::createUndefined(), Type::createClosure());
-  EXPECT_FALSE(W.isObjectType());
-  EXPECT_FALSE(W.isBooleanType());
-  Type J = Type::intersectTy(U, Type::createClosure());
-  EXPECT_TRUE(J.isObjectType());
-  EXPECT_TRUE(J.isClosureType());
-  EXPECT_FALSE(J.isPrimitive());
+  Type U = Type::unionTy(Type::createUndefined(), Type::createObject());
+  EXPECT_FALSE(U.isObjectType());
+  EXPECT_FALSE(U.isBooleanType());
 
   Type R = Type::unionTy(Type::createNumber(), Type::createObject());
   EXPECT_FALSE(R.isAnyOrEmptyType());

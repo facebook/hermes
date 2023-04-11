@@ -29,12 +29,12 @@ function test_builtin(a) {
 // CHECK-NEXT:  $loc1      = DeclareGlobalVarInst "test_call": string
 // CHECK-NEXT:  $loc1      = DeclareGlobalVarInst "test_new": string
 // CHECK-NEXT:  $loc1      = DeclareGlobalVarInst "test_builtin": string
-// CHECK-NEXT:  $loc2      = HBCCreateFunctionInst (:closure) %test_call(): any, $loc0
+// CHECK-NEXT:  $loc2      = HBCCreateFunctionInst (:object) %test_call(): any, $loc0
 // CHECK-NEXT:  $loc1      = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $loc2      = StorePropertyLooseInst $loc2, $loc1, "test_call": string
-// CHECK-NEXT:  $loc2      = HBCCreateFunctionInst (:closure) %test_new(): object, $loc0
+// CHECK-NEXT:  $loc2      = HBCCreateFunctionInst (:object) %test_new(): object, $loc0
 // CHECK-NEXT:  $loc2      = StorePropertyLooseInst $loc2, $loc1, "test_new": string
-// CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:closure) %test_builtin(): number, $loc0
+// CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:object) %test_builtin(): number, $loc0
 // CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc0, $loc1, "test_builtin": string
 // CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $loc0      = ReturnInst $loc0

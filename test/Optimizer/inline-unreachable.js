@@ -35,16 +35,16 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): closure
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): object
+// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
-// CHECK:function main(): closure
+// CHECK:function main(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %retval(): undefined
-// CHECK-NEXT:  %1 = ReturnInst %0: closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %retval(): undefined
+// CHECK-NEXT:  %1 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function retval(): undefined

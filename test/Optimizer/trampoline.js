@@ -45,14 +45,14 @@ function test_merge_blocks(x, y) {
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_catch_region": string
 // CHECK-NEXT:  %2 = DeclareGlobalVarInst "test_cond_branch": string
 // CHECK-NEXT:  %3 = DeclareGlobalVarInst "test_merge_blocks": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test_one(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "test_one": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %test_catch_region(): undefined
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "test_catch_region": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %test_cond_branch(): any
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "test_cond_branch": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %test_merge_blocks(): undefined
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "test_merge_blocks": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_one(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %test_catch_region(): undefined
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: object, globalObject: object, "test_catch_region": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %test_cond_branch(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: object, globalObject: object, "test_cond_branch": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %test_merge_blocks(): undefined
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: object, globalObject: object, "test_merge_blocks": string
 // CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -32,10 +32,10 @@ function test_two(x,y,z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "test_two": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %test_one(): string
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "test_one": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test_two(): undefined
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "test_two": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %test_one(): string
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test_two(): undefined
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "test_two": string
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

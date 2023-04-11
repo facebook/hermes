@@ -37,30 +37,30 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "ctor_this_test": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "ctor_load_store_test": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %ctor_this_test(): object
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: closure, globalObject: object, "ctor_this_test": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %ctor_load_store_test(): object
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: closure, globalObject: object, "ctor_load_store_test": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %ctor_this_test(): object
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, globalObject: object, "ctor_this_test": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %ctor_load_store_test(): object
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "ctor_load_store_test": string
 // CHECK-NEXT:  %6 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %use_this(): object
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
-// CHECK-NEXT:  %3 = ConstructInst (:object) %0: closure, %use_this(): object, empty: any, %2: object, 12: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %use_this(): object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
+// CHECK-NEXT:  %3 = ConstructInst (:object) %0: object, %use_this(): object, empty: any, %2: object, 12: number
 // CHECK-NEXT:  %4 = ReturnInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_load_store_test(): object
-// CHECK-NEXT:frame = [use_this: closure]
+// CHECK-NEXT:frame = [use_this: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %"use_this 1#"(): undefined
-// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [use_this]: closure
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %construct_use_this(): object
-// CHECK-NEXT:  %3 = CallInst (:object) %2: closure, %construct_use_this(): object, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %"use_this 1#"(): undefined
+// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [use_this]: object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %construct_use_this(): object
+// CHECK-NEXT:  %3 = CallInst (:object) %2: object, %construct_use_this(): object, empty: any, undefined: undefined
 // CHECK-NEXT:  %4 = ReturnInst %3: object
 // CHECK-NEXT:function_end
 
@@ -83,9 +83,9 @@ function ctor_load_store_test() {
 // CHECK:function construct_use_this(): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:closure) [use_this@ctor_load_store_test]: closure
-// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: closure, "prototype": string
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: closure
-// CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: closure, %"use_this 1#"(): undefined, empty: any, %2: object, 12: number
+// CHECK-NEXT:  %0 = LoadFrameInst (:object) [use_this@ctor_load_store_test]: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: any, %0: object
+// CHECK-NEXT:  %3 = ConstructInst (:undefined) %0: object, %"use_this 1#"(): undefined, empty: any, %2: object, 12: number
 // CHECK-NEXT:  %4 = ReturnInst %2: object
 // CHECK-NEXT:function_end

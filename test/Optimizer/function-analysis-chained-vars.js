@@ -30,28 +30,28 @@ function main() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
-// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %2 = StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): undefined
-// CHECK-NEXT:frame = [x: closure]
+// CHECK-NEXT:frame = [x: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %foo(): closure
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %x(): number
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [x]: closure
-// CHECK-NEXT:  %3 = CallInst (:closure) %0: closure, %foo(): closure, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %foo(): object
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %x(): number
+// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [x]: object
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %foo(): object, empty: any, undefined: undefined
 // CHECK-NEXT:  %4 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo(): closure [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:frame = [y: closure]
+// CHECK:function foo(): object [allCallsitesKnownInStrictMode]
+// CHECK-NEXT:frame = [y: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %bar(): undefined
-// CHECK-NEXT:  %1 = LoadFrameInst (:closure) [x@main]: closure
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [y]: closure
-// CHECK-NEXT:  %3 = ReturnInst %0: closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) [x@main]: object
+// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [y]: object
+// CHECK-NEXT:  %3 = ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:arrow x(): number [allCallsitesKnownInStrictMode]
@@ -63,7 +63,7 @@ function main() {
 // CHECK:function bar(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadFrameInst (:closure) [y@foo]: closure
-// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %x(): number, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = LoadFrameInst (:object) [y@foo]: object
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %x(): number, empty: any, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

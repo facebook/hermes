@@ -25,8 +25,8 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %main(): undefined
-// CHECK-NEXT:  %1 = CallInst (:undefined) %0: closure, %main(): undefined, empty: any, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %main(): undefined
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %main(): undefined, empty: any, undefined: undefined
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

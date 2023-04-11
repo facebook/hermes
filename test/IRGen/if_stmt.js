@@ -20,8 +20,8 @@ function main(boop) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
@@ -34,8 +34,8 @@ function main(boop) {
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %boop: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [boop]: any
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [foo]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [foo]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [foo]: any
 // CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

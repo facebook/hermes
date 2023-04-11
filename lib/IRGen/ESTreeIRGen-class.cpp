@@ -273,11 +273,11 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
       return res;
     }
     case flow::TypeKind::Function:
-      return Type::createClosure();
+      return Type::createObject();
     case flow::TypeKind::Class:
       return Type::createObject();
     case flow::TypeKind::ClassConstructor:
-      return Type::createClosure();
+      return Type::createObject();
     case flow::TypeKind::Array:
       return Type::createObject();
   }

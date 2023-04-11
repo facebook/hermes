@@ -31,8 +31,8 @@ export default function() {
 // CHECK-NEXT:  %3 = StoreFrameInst %2: any, [require]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %module: any
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [module]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %""(): any
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, %0: any, "?default": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: object, %0: any, "?default": string
 // CHECK-NEXT:  %8 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

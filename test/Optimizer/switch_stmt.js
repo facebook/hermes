@@ -32,8 +32,8 @@ function backwards_branch() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "backwards_branch": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %backwards_branch(): undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "backwards_branch": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %backwards_branch(): undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "backwards_branch": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

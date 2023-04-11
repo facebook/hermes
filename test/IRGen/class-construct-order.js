@@ -35,9 +35,9 @@ return foo;
 // CHECK-NEXT:  %0 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %1 = StoreStackInst undefined: undefined, %0: any
 // CHECK-NEXT:  %2 = StoreStackInst "use strict": string, %0: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %main(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [main]: any
-// CHECK-NEXT:  %5 = CallInst (:any) %3: closure, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %main(): any
+// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [main]: any
+// CHECK-NEXT:  %5 = CallInst (:any) %3: object, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %6 = StoreStackInst %5: any, %0: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %0: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
@@ -47,12 +47,12 @@ return foo;
 // CHECK-NEXT:frame = [foo: any, C: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [C]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [foo]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %C(): any
-// CHECK-NEXT:  %4 = StoreFrameInst %3: closure, [C]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [foo]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %C(): any
+// CHECK-NEXT:  %4 = StoreFrameInst %3: object, [C]: any
 // CHECK-NEXT:  %5 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %6 = StorePropertyStrictInst %5: object, %3: closure, "prototype": string
+// CHECK-NEXT:  %6 = StorePropertyStrictInst %5: object, %3: object, "prototype": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) [foo]: any
 // CHECK-NEXT:  %8 = ReturnInst %7: any
 // CHECK-NEXT:%BB1:

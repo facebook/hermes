@@ -52,14 +52,14 @@ function foo4(a) {
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "foo2": string
 // CHECK-NEXT:  %2 = DeclareGlobalVarInst "foo3": string
 // CHECK-NEXT:  %3 = DeclareGlobalVarInst "foo4": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %foo1(): number
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "foo1": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:closure) %foo2(): string|number
-// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: closure, globalObject: object, "foo2": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:closure) %foo3(): any
-// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: closure, globalObject: object, "foo3": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:closure) %foo4(): any
-// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: closure, globalObject: object, "foo4": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %foo1(): number
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %foo2(): string|number
+// CHECK-NEXT:  %7 = StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %foo3(): any
+// CHECK-NEXT:  %9 = StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %foo4(): any
+// CHECK-NEXT:  %11 = StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
 // CHECK-NEXT:  %12 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -74,28 +74,28 @@ function helloWorld() {
 // CHECK-NEXT:  %8 = DeclareGlobalVarInst "dup2": string
 // CHECK-NEXT:  %9 = DeclareGlobalVarInst "dup3": string
 // CHECK-NEXT:  %10 = DeclareGlobalVarInst "helloWorld": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:closure) %dummy(): any
-// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: closure, globalObject: object, "dummy": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:closure) %emptyString(): any
-// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: closure, globalObject: object, "emptyString": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:closure) %oneString(): any
-// CHECK-NEXT:  %16 = StorePropertyLooseInst %15: closure, globalObject: object, "oneString": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:closure) %oneSub(): any
-// CHECK-NEXT:  %18 = StorePropertyLooseInst %17: closure, globalObject: object, "oneSub": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:closure) %dup(): any
-// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: closure, globalObject: object, "dup": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:closure) %notDup(): any
-// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: closure, globalObject: object, "notDup": string
-// CHECK-NEXT:  %23 = CreateFunctionInst (:closure) %memberExpr(): any
-// CHECK-NEXT:  %24 = StorePropertyLooseInst %23: closure, globalObject: object, "memberExpr": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:closure) %callExpr(): any
-// CHECK-NEXT:  %26 = StorePropertyLooseInst %25: closure, globalObject: object, "callExpr": string
-// CHECK-NEXT:  %27 = CreateFunctionInst (:closure) %dup2(): any
-// CHECK-NEXT:  %28 = StorePropertyLooseInst %27: closure, globalObject: object, "dup2": string
-// CHECK-NEXT:  %29 = CreateFunctionInst (:closure) %dup3(): any
-// CHECK-NEXT:  %30 = StorePropertyLooseInst %29: closure, globalObject: object, "dup3": string
-// CHECK-NEXT:  %31 = CreateFunctionInst (:closure) %helloWorld(): any
-// CHECK-NEXT:  %32 = StorePropertyLooseInst %31: closure, globalObject: object, "helloWorld": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %dummy(): any
+// CHECK-NEXT:  %12 = StorePropertyLooseInst %11: object, globalObject: object, "dummy": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %emptyString(): any
+// CHECK-NEXT:  %14 = StorePropertyLooseInst %13: object, globalObject: object, "emptyString": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %oneString(): any
+// CHECK-NEXT:  %16 = StorePropertyLooseInst %15: object, globalObject: object, "oneString": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %oneSub(): any
+// CHECK-NEXT:  %18 = StorePropertyLooseInst %17: object, globalObject: object, "oneSub": string
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %dup(): any
+// CHECK-NEXT:  %20 = StorePropertyLooseInst %19: object, globalObject: object, "dup": string
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %notDup(): any
+// CHECK-NEXT:  %22 = StorePropertyLooseInst %21: object, globalObject: object, "notDup": string
+// CHECK-NEXT:  %23 = CreateFunctionInst (:object) %memberExpr(): any
+// CHECK-NEXT:  %24 = StorePropertyLooseInst %23: object, globalObject: object, "memberExpr": string
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %callExpr(): any
+// CHECK-NEXT:  %26 = StorePropertyLooseInst %25: object, globalObject: object, "callExpr": string
+// CHECK-NEXT:  %27 = CreateFunctionInst (:object) %dup2(): any
+// CHECK-NEXT:  %28 = StorePropertyLooseInst %27: object, globalObject: object, "dup2": string
+// CHECK-NEXT:  %29 = CreateFunctionInst (:object) %dup3(): any
+// CHECK-NEXT:  %30 = StorePropertyLooseInst %29: object, globalObject: object, "dup3": string
+// CHECK-NEXT:  %31 = CreateFunctionInst (:object) %helloWorld(): any
+// CHECK-NEXT:  %32 = StorePropertyLooseInst %31: object, globalObject: object, "helloWorld": string
 // CHECK-NEXT:  %33 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %34 = StoreStackInst undefined: undefined, %33: any
 // CHECK-NEXT:  %35 = LoadStackInst (:any) %33: any
@@ -187,8 +187,8 @@ function helloWorld() {
 // CHECK-NEXT:frame = [func: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [func]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %func(): any
-// CHECK-NEXT:  %2 = StoreFrameInst %1: closure, [func]: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %func(): any
+// CHECK-NEXT:  %2 = StoreFrameInst %1: object, [func]: any
 // CHECK-NEXT:  %3 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) [func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined
@@ -235,8 +235,8 @@ function helloWorld() {
 // CHECK:function func(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %""(): any
-// CHECK-NEXT:  %1 = ReturnInst %0: closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %""(): any
+// CHECK-NEXT:  %1 = ReturnInst %0: object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

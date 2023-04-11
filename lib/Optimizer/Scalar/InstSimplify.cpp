@@ -126,11 +126,10 @@ Value *simplifyUnOp(UnaryOperatorInst *unary) {
       if (t.isStringType()) {
         return builder.getLiteralString("string");
       }
-      if (t.isRegExpType()) {
-        return builder.getLiteralString("object");
-      }
-      if (t.isClosureType()) {
-        return builder.getLiteralString("function");
+      if (t.isObjectType()) {
+        // Object type also includes closures.
+        // Can't know whether this is supposed to be "function" or "object".
+        break;
       }
       break;
 

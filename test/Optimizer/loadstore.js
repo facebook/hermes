@@ -37,10 +37,10 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:%BB0:
 // OPT-CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:  %1 = DeclareGlobalVarInst "test2": string
-// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
-// OPT-CHECK-NEXT:  %3 = StorePropertyStrictInst %2: closure, globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test2(): undefined
-// OPT-CHECK-NEXT:  %5 = StorePropertyStrictInst %4: closure, globalObject: object, "test2": string
+// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): any
+// OPT-CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, globalObject: object, "foo": string
+// OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): undefined
+// OPT-CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "test2": string
 // OPT-CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // OPT-CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
 // OPT-CHECK-NEXT:  %8 = ReturnInst %7: any
@@ -75,10 +75,10 @@ function test2(p1, p2) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: closure, globalObject: object, "foo": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test2(): any
-// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: closure, globalObject: object, "test2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): any
+// CHECK-NEXT:  %5 = StorePropertyStrictInst %4: object, globalObject: object, "test2": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "foo": string

@@ -19,7 +19,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $loc0      = DeclareGlobalVarInst "test_call_after_builtin": string
 // CHECK-NEXT:  $loc0      = HBCCreateEnvironmentInst (:environment)
-// CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:closure) %test_call_after_builtin(): undefined, $loc0
+// CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:object) %test_call_after_builtin(): undefined, $loc0
 // CHECK-NEXT:  $loc0      = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc1, $loc0, "test_call_after_builtin": string
 // CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined
@@ -33,7 +33,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:  $loc2      = TryLoadGlobalPropertyInst (:any) $loc0, "print": string
 // CHECK-NEXT:  $loc1      = AllocObjectInst (:object) 1: number, empty: any
 // CHECK-NEXT:  $loc0      = HBCCreateEnvironmentInst (:environment)
-// CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:closure) %valueOf(): number, $loc0
+// CHECK-NEXT:  $loc0      = HBCCreateFunctionInst (:object) %valueOf(): number, $loc0
 // CHECK-NEXT:  $loc0      = StoreNewOwnPropertyInst $loc0, $loc1, "valueOf": string, true: boolean
 // CHECK-NEXT:  $stack[0]  = HBCLoadConstInst (:number) 3: number
 // CHECK-NEXT:  $stack[4]  = ImplicitMovInst (:undefined) undefined: undefined

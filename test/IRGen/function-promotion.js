@@ -27,8 +27,8 @@ function foo() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
@@ -43,12 +43,12 @@ function foo() {
 // CHECK-NEXT:  %2 = StoreFrameInst undefined: undefined, [z]: any
 // CHECK-NEXT:  %3 = StoreFrameInst undefined: undefined, [x]: any
 // CHECK-NEXT:  %4 = StoreFrameInst undefined: undefined, [x#1]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %x(): any
-// CHECK-NEXT:  %6 = StoreFrameInst %5: closure, [x#1]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %y(): any
-// CHECK-NEXT:  %8 = StoreFrameInst %7: closure, [y]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %z(): any
-// CHECK-NEXT:  %10 = StoreFrameInst %9: closure, [z]: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %x(): any
+// CHECK-NEXT:  %6 = StoreFrameInst %5: object, [x#1]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %y(): any
+// CHECK-NEXT:  %8 = StoreFrameInst %7: object, [y]: any
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %z(): any
+// CHECK-NEXT:  %10 = StoreFrameInst %9: object, [z]: any
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) [x]: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) [y]: any

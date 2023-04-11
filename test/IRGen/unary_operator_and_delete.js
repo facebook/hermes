@@ -32,10 +32,10 @@ delete_test()
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "unary_operator_test": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "delete_test": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %unary_operator_test(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "unary_operator_test": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %delete_test(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "delete_test": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %unary_operator_test(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "unary_operator_test": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %delete_test(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "delete_test": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "unary_operator_test": string

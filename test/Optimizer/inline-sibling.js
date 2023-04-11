@@ -24,8 +24,8 @@ function outer(a, b) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %outer(): string|number
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "outer": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer(): string|number
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

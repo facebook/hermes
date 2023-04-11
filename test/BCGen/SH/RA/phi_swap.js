@@ -24,7 +24,7 @@ function foo (a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $loc0      = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  $loc0      = HBCCreateEnvironmentInst (:environment)
-// CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:closure) %foo(): any, $loc0
+// CHECK-NEXT:  $loc1      = HBCCreateFunctionInst (:object) %foo(): any, $loc0
 // CHECK-NEXT:  $loc0      = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $loc0      = StorePropertyLooseInst $loc1, $loc0, "foo": string
 // CHECK-NEXT:  $loc0      = HBCLoadConstInst (:undefined) undefined: undefined

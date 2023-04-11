@@ -25,19 +25,19 @@ new D();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): object
-// CHECK-NEXT:frame = [C: closure]
+// CHECK-NEXT:frame = [C: object]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %C(): undefined
-// CHECK-NEXT:  %1 = StoreFrameInst %0: closure, [C]: closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %C(): undefined
+// CHECK-NEXT:  %1 = StoreFrameInst %0: object, [C]: object
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: closure, "prototype": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %D(): undefined
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: closure, "prototype": string
+// CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %0: object, "prototype": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %D(): undefined
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, "prototype": string
 // CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, %5: any
-// CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: closure, "prototype": string
-// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: closure, "prototype": string
+// CHECK-NEXT:  %7 = StorePropertyStrictInst %6: object, %4: object, "prototype": string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, %8: any
-// CHECK-NEXT:  %10 = ConstructInst (:undefined) %4: closure, %D(): undefined, empty: any, %9: object
+// CHECK-NEXT:  %10 = ConstructInst (:undefined) %4: object, %D(): undefined, empty: any, %9: object
 // CHECK-NEXT:  %11 = ReturnInst %9: object
 // CHECK-NEXT:function_end
 
@@ -51,7 +51,7 @@ new D();
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %this: any
-// CHECK-NEXT:  %1 = LoadFrameInst (:closure) [C@global]: closure
-// CHECK-NEXT:  %2 = CallInst (:any) %1: closure, %C(): undefined, empty: any, %0: any
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) [C@global]: object
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %C(): undefined, empty: any, %0: any
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

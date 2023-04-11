@@ -11,8 +11,8 @@
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-//CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): undefined
-//CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
+//CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): undefined
+//CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "main": string
 //CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 //CHECK-NEXT:function_end
 //CHECK-EMPTY:

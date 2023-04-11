@@ -23,10 +23,10 @@ function bug2() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "bug1": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "bug2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %bug1(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "bug1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %bug2(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "bug2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bug1(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "bug1": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %bug2(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "bug2": string
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

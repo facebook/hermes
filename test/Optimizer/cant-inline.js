@@ -21,16 +21,16 @@ function outer1() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "outer1": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %outer1(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "outer1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %outer1(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "outer1": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function outer1(): any
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:closure) %dontInline(): any
-// CHECK-NEXT:  %1 = CallInst (:any) %0: closure, %dontInline(): any, empty: any, undefined: undefined, 1: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) %dontInline(): any
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %dontInline(): any, empty: any, undefined: undefined, 1: number
 // CHECK-NEXT:  %2 = ReturnInst %1: any
 // CHECK-NEXT:function_end
 

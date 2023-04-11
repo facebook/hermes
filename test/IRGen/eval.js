@@ -27,12 +27,12 @@ function baz() {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  %2 = DeclareGlobalVarInst "baz": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "foo": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %bar(): any
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "bar": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %baz(): any
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "baz": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %bar(): any
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "bar": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %baz(): any
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "baz": string
 // CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %10 = StoreStackInst undefined: undefined, %9: any
 // CHECK-NEXT:  %11 = LoadStackInst (:any) %9: any
@@ -43,8 +43,8 @@ function baz() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
-// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
-// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: closure, %BB1, %BB2
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
+// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = DirectEvalInst (:any) "1 + 1": string, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3
@@ -65,8 +65,8 @@ function baz() {
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
-// CHECK-NEXT:  %5 = CmpBrStrictlyEqualInst %0: any, %4: closure, %BB1, %BB2
+// CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
+// CHECK-NEXT:  %5 = CmpBrStrictlyEqualInst %0: any, %4: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = DirectEvalInst (:any) "2 + 2": string, false: boolean
 // CHECK-NEXT:  %7 = BranchInst %BB3
@@ -84,8 +84,8 @@ function baz() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
-// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:closure) [globalThis.eval]: number
-// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: closure, %BB1, %BB2
+// CHECK-NEXT:  %1 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
+// CHECK-NEXT:  %2 = CmpBrStrictlyEqualInst %0: any, %1: object, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = DirectEvalInst (:any) undefined: undefined, false: boolean
 // CHECK-NEXT:  %4 = BranchInst %BB3

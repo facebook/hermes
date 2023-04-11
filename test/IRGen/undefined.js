@@ -24,8 +24,8 @@ undefined;
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "undefined": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %foo(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "foo": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %foo(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %5 = StoreStackInst undefined: undefined, %4: any
 // CHECK-NEXT:  %6 = StorePropertyLooseInst 5: number, globalObject: object, "undefined": string

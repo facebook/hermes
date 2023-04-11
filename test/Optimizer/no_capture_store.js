@@ -54,12 +54,12 @@ function outer() {
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "main": string
 // CHECK-NEXT:  %2 = DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %bar(): undefined
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: closure, globalObject: object, "bar": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:closure) %main(): closure
-// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: closure, globalObject: object, "main": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:closure) %outer(): object
-// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: closure, globalObject: object, "outer": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %bar(): undefined
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %3: object, globalObject: object, "bar": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %main(): object
+// CHECK-NEXT:  %6 = StorePropertyLooseInst %5: object, globalObject: object, "main": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %outer(): object
+// CHECK-NEXT:  %8 = StorePropertyLooseInst %7: object, globalObject: object, "outer": string
 // CHECK-NEXT:  %9 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -69,7 +69,7 @@ function outer() {
 // CHECK-NEXT:  %0 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function main(p: any): closure
+// CHECK:function main(p: any): object
 // CHECK-NEXT:frame = [k1: any, k2: any, k3: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "bar": string
@@ -81,23 +81,23 @@ function outer() {
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined
 // CHECK-NEXT:  %8 = StoreFrameInst %7: any, [k3]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:closure) %""(): string|number|bigint
-// CHECK-NEXT:  %10 = ReturnInst %9: closure
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %""(): string|number|bigint
+// CHECK-NEXT:  %10 = ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(): object
 // CHECK-NEXT:frame = [envVar: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst undefined: undefined, [envVar]: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %setValue(): undefined
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %getValue(): any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:closure) %test1(): undefined
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %test2(): undefined
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %setValue(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %getValue(): any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %test1(): undefined
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %test2(): undefined
 // CHECK-NEXT:  %5 = AllocArrayInst (:object) 5: number
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2: closure, %5: object, 0: number, true: boolean
-// CHECK-NEXT:  %7 = StoreOwnPropertyInst %1: closure, %5: object, 1: number, true: boolean
-// CHECK-NEXT:  %8 = StoreOwnPropertyInst %3: closure, %5: object, 2: number, true: boolean
-// CHECK-NEXT:  %9 = StoreOwnPropertyInst %4: closure, %5: object, 3: number, true: boolean
+// CHECK-NEXT:  %6 = StoreOwnPropertyInst %2: object, %5: object, 0: number, true: boolean
+// CHECK-NEXT:  %7 = StoreOwnPropertyInst %1: object, %5: object, 1: number, true: boolean
+// CHECK-NEXT:  %8 = StoreOwnPropertyInst %3: object, %5: object, 2: number, true: boolean
+// CHECK-NEXT:  %9 = StoreOwnPropertyInst %4: object, %5: object, 3: number, true: boolean
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) [envVar]: any
 // CHECK-NEXT:  %11 = StoreOwnPropertyInst %10: any, %5: object, 4: number, true: boolean
 // CHECK-NEXT:  %12 = ReturnInst %5: object

@@ -28,21 +28,21 @@ function main(p) {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %main(): closure
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %main(): object
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function main(p: any): closure
+// CHECK:function main(p: any): object
 // CHECK-NEXT:frame = [p: any, k: any]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:  %1 = StoreFrameInst %0: any, [p]: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %bar(): undefined
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %bar(): undefined
 // CHECK-NEXT:  %3 = StoreFrameInst %0: any, [k]: any
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = StoreFrameInst %4: any, [p]: any
-// CHECK-NEXT:  %6 = ReturnInst %2: closure
+// CHECK-NEXT:  %6 = ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined

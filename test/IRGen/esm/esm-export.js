@@ -48,8 +48,8 @@ export * from 'foo.js';
 // CHECK-NEXT:  %9 = StoreFrameInst undefined: undefined, [z]: any
 // CHECK-NEXT:  %10 = StoreFrameInst undefined: undefined, [longVariableName]: any
 // CHECK-NEXT:  %11 = StoreFrameInst undefined: undefined, [a]: any
-// CHECK-NEXT:  %12 = CreateFunctionInst (:closure) %myFun(): any
-// CHECK-NEXT:  %13 = StoreFrameInst %12: closure, [myFun]: any
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %myFun(): any
+// CHECK-NEXT:  %13 = StoreFrameInst %12: object, [myFun]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) [myFun]: any
 // CHECK-NEXT:  %15 = StorePropertyLooseInst %14: any, %0: any, "myFun": string
 // CHECK-NEXT:  %16 = StoreFrameInst 1: number, [x]: any

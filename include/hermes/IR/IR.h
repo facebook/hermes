@@ -61,8 +61,6 @@ class Type {
     BigInt,
     Environment,
     Object,
-    Closure, // Subtype of Object.
-    RegExp, // Subtype of Object.
 
     LAST_TYPE
   };
@@ -113,9 +111,6 @@ class Type {
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
       BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean);
-
-  static constexpr uint16_t OBJECT_BITS =
-      BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
 
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
@@ -193,12 +188,6 @@ class Type {
   static constexpr Type createEnvironment() {
     return Type(BIT_TO_VAL(Environment));
   }
-  static constexpr Type createClosure() {
-    return Type(BIT_TO_VAL(Closure));
-  }
-  static constexpr Type createRegExp() {
-    return Type(BIT_TO_VAL(RegExp));
-  }
   static constexpr Type createInt32() {
     return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Int32));
   }
@@ -232,12 +221,9 @@ class Type {
   constexpr bool isStringType() const {
     return IS_VAL(String);
   }
-
-  bool isObjectType() const {
-    // One or more of OBJECT_BITS must be set, and no other bit must be set.
-    return bitmask_ && !(bitmask_ & ~OBJECT_BITS);
+  constexpr bool isObjectType() const {
+    return IS_VAL(Object);
   }
-
   constexpr bool isNumberType() const {
     return IS_VAL(Number);
   }
@@ -246,12 +232,6 @@ class Type {
   }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
-  }
-  constexpr bool isClosureType() const {
-    return IS_VAL(Closure);
-  }
-  constexpr bool isRegExpType() const {
-    return IS_VAL(RegExp);
   }
   constexpr bool isInt32Type() const {
     return IS_VAL(Number) && NUM_IS_VAL(Int32);
@@ -316,11 +296,6 @@ class Type {
     return canBeType(Type::createObject());
   }
 
-  /// \returns true if this type can represent a subtype of object.
-  constexpr bool canBeObjectSubtype() const {
-    return bitmask_ & OBJECT_BITS;
-  }
-
   /// \returns true if this type can represent a boolean value.
   constexpr bool canBeBoolean() const {
     return canBeType(Type::createBoolean());
@@ -339,16 +314,6 @@ class Type {
   /// \returns true if this type can represent a null value.
   constexpr bool canBeNull() const {
     return canBeType(Type::createNull());
-  }
-
-  /// \returns true if this type can represent a closure value.
-  constexpr bool canBeClosure() const {
-    return canBeType(Type::createClosure());
-  }
-
-  /// \returns true if this type can represent a regex value.
-  constexpr bool canBeRegex() const {
-    return canBeType(Type::createRegExp());
   }
 
   /// Return true if this type is a proper subset of \p t. A "proper subset"

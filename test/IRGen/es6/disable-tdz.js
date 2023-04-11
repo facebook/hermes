@@ -25,8 +25,8 @@ function check1() {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "check1": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %check1(): any
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "check1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %check1(): any
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "check1": string
 // CHECK-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHECK-NEXT:  %5 = LoadStackInst (:any) %3: any
@@ -38,9 +38,9 @@ function check1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = StoreFrameInst empty: empty, [x]: any|empty
 // CHECK-NEXT:  %1 = StoreFrameInst empty: empty, [y]: any|empty
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
-// CHECK-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
-// CHECK-NEXT:  %4 = StorePropertyLooseInst %2: closure, globalObject: object, "glob": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
+// CHECK-NEXT:  %3 = StoreFrameInst %2: object, [inner]: any
+// CHECK-NEXT:  %4 = StorePropertyLooseInst %2: object, globalObject: object, "glob": string
 // CHECK-NEXT:  %5 = ThrowIfEmptyInst (:any) empty: empty
 // CHECK-NEXT:  %6 = ThrowIfEmptyInst (:any) empty: empty
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any
@@ -78,8 +78,8 @@ function check1() {
 // CHKDIS-NEXT:frame = []
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = DeclareGlobalVarInst "check1": string
-// CHKDIS-NEXT:  %1 = CreateFunctionInst (:closure) %check1(): any
-// CHKDIS-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "check1": string
+// CHKDIS-NEXT:  %1 = CreateFunctionInst (:object) %check1(): any
+// CHKDIS-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "check1": string
 // CHKDIS-NEXT:  %3 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKDIS-NEXT:  %4 = StoreStackInst undefined: undefined, %3: any
 // CHKDIS-NEXT:  %5 = LoadStackInst (:any) %3: any
@@ -91,9 +91,9 @@ function check1() {
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = StoreFrameInst undefined: undefined, [x]: any
 // CHKDIS-NEXT:  %1 = StoreFrameInst undefined: undefined, [y]: any
-// CHKDIS-NEXT:  %2 = CreateFunctionInst (:closure) %inner(): any
-// CHKDIS-NEXT:  %3 = StoreFrameInst %2: closure, [inner]: any
-// CHKDIS-NEXT:  %4 = StorePropertyLooseInst %2: closure, globalObject: object, "glob": string
+// CHKDIS-NEXT:  %2 = CreateFunctionInst (:object) %inner(): any
+// CHKDIS-NEXT:  %3 = StoreFrameInst %2: object, [inner]: any
+// CHKDIS-NEXT:  %4 = StorePropertyLooseInst %2: object, globalObject: object, "glob": string
 // CHKDIS-NEXT:  %5 = LoadFrameInst (:any) [x]: any
 // CHKDIS-NEXT:  %6 = LoadFrameInst (:any) [y]: any
 // CHKDIS-NEXT:  %7 = BinaryAddInst (:any) %5: any, %6: any

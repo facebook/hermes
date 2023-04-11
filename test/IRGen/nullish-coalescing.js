@@ -26,10 +26,10 @@ function f2(a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "f2": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %f1(): any
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "f1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %f2(): any
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "f2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %f1(): any
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "f1": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %f2(): any
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "f2": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:  %7 = StoreStackInst undefined: undefined, %6: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %6: any

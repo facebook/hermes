@@ -21,8 +21,8 @@ function thisUndefined () {
 // CHECK-NEXT:frame = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "thisUndefined": string
-// CHECK-NEXT:  %1 = CreateFunctionInst (:closure) %thisUndefined(): undefined
-// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: closure, globalObject: object, "thisUndefined": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %thisUndefined(): undefined
+// CHECK-NEXT:  %2 = StorePropertyLooseInst %1: object, globalObject: object, "thisUndefined": string
 // CHECK-NEXT:  %3 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

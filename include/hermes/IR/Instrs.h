@@ -711,7 +711,7 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
       : BaseCreateLexicalChildInst(src, operands) {}
 
   static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createClosure();
+    return Type::createObject();
   }
 
   static bool classof(const Value *V) {
@@ -922,7 +922,7 @@ class GetBuiltinClosureInst : public Instruction {
       : Instruction(src, operands) {}
 
   static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createClosure();
+    return Type::createObject();
   }
 
   static bool hasOutput() {
@@ -2050,7 +2050,7 @@ class CreateRegExpInst : public Instruction {
       : Instruction(src, operands) {}
 
   static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createRegExp();
+    return Type::createObject();
   }
 
   static bool hasOutput() {

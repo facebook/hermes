@@ -34,10 +34,10 @@ function recursive_phi(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:  %1 = DeclareGlobalVarInst "recursive_phi": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:closure) %sink(): undefined
-// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: closure, globalObject: object, "sink": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:closure) %recursive_phi(): string|number
-// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: closure, globalObject: object, "recursive_phi": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %sink(): undefined
+// CHECK-NEXT:  %3 = StorePropertyLooseInst %2: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %recursive_phi(): string|number
+// CHECK-NEXT:  %5 = StorePropertyLooseInst %4: object, globalObject: object, "recursive_phi": string
 // CHECK-NEXT:  %6 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
