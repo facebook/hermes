@@ -1078,8 +1078,8 @@ class TypeInferenceImpl {
       // Narrow the type to include what we knew before the pass.
       LLVM_DEBUG(
           llvh::errs() << "Intersecting type of " << val->getKindStr()
-                       << " from " << val->getType() << " to " << intersection
-                       << '\n');
+                       << " from " << val->getType() << " with " << it->second
+                       << " to " << intersection << '\n');
       val->setType(intersection);
       return true;
     }
@@ -1128,7 +1128,8 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
     // instructions in the function.
     bool inferredRetType = inferFunctionReturnType(F);
     if (inferredRetType)
-      LLVM_DEBUG(dbgs() << "Inferred function return type\n");
+      LLVM_DEBUG(
+          dbgs() << "Inferred function return type: " << F->getType() << "\n");
     localChanged |= inferredRetType;
 
     // Infer type of F's variables.
