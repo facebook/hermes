@@ -114,6 +114,10 @@ export const HERMES_AST_VISITOR_KEYS = {
     typeParameters: 'Node',
     returnType: 'Node',
   },
+  ComponentParameter: {
+    name: 'Node',
+    local: 'Node',
+  },
   ConditionalExpression: {
     test: 'Node',
     alternate: 'Node',

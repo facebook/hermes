@@ -121,6 +121,10 @@ export function isComponentDeclaration(node: ESNode | Token): boolean %checks {
   return node.type === 'ComponentDeclaration';
 }
 
+export function isComponentParameter(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentParameter';
+}
+
 export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
 }
