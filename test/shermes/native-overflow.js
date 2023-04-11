@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %shermes -fcheck-native-stack -exec %s 2>&1) | %FileCheck --match-full-lines %s
+// Restrict the native stack to ensure it overflows before the register stack.
+// RUN: (ulimit -s 512 && ! %shermes -fcheck-native-stack -exec %s 2>&1) | %FileCheck --match-full-lines %s
 // REQUIRES: check_native_stack
 
 function foo() {
