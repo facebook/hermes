@@ -640,7 +640,7 @@ std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
 
   // origin is now the lowest addressable byte.
   unsigned adjustedSize = gap < size ? size - gap : 0;
-  return {origin + adjustedSize, adjustedSize};
+  return {(char *)origin + size, adjustedSize};
 }
 
 #endif
