@@ -689,27 +689,32 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
     // Add the indices for the current capture group in the indices array.
     if (hasIndices) {
-      auto indicesItemArrayRes = JSArray::create(runtime, 2, 2);
-      if (LLVM_UNLIKELY(indicesItemArrayRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
+      if (!mg) {
+        JSArray::setElementAt(
+            indices, runtime, idx, Runtime::getUndefinedValue());
+      } else {
+        auto indicesItemArrayRes = JSArray::create(runtime, 2, 2);
+        if (LLVM_UNLIKELY(indicesItemArrayRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        Handle<JSArray> indicesItemArray =
+            runtime.makeHandle<JSArray>(*indicesItemArrayRes);
+
+        JSArray::setElementAt(
+            indicesItemArray,
+            runtime,
+            0,
+            runtime.makeHandle(
+                HermesValue::encodeUntrustedNumberValue(mg->location)));
+        JSArray::setElementAt(
+            indicesItemArray,
+            runtime,
+            1,
+            runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
+                mg->location + mg->length)));
+
+        JSArray::setElementAt(indices, runtime, idx, indicesItemArray);
       }
-      Handle<JSArray> indicesItemArray =
-          runtime.makeHandle<JSArray>(*indicesItemArrayRes);
-
-      JSArray::setElementAt(
-          indicesItemArray,
-          runtime,
-          0,
-          runtime.makeHandle(
-              HermesValue::encodeUntrustedNumberValue(mg ? mg->location : 0)));
-      JSArray::setElementAt(
-          indicesItemArray,
-          runtime,
-          1,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
-              mg ? mg->location + mg->length : 0)));
-
-      JSArray::setElementAt(indices, runtime, idx, indicesItemArray);
     }
 
     idx++;
