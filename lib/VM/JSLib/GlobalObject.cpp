@@ -10,6 +10,7 @@
 /// Initialize the global object ES5.1 15.1
 //===----------------------------------------------------------------------===//
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSLib.h"
@@ -459,6 +460,15 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.arrayClass =
       JSArray::createClass(
           runtime, Handle<JSObject>::vmcast(&runtime.arrayPrototype))
+          .getHermesValue();
+
+  // TODO: Give FastArray its own prototype so methods like push will work.
+  runtime.fastArrayPrototype = runtime.objectPrototype;
+
+  // Declare the fast array class.
+  runtime.fastArrayClass =
+      FastArray::createClass(
+          runtime, Handle<JSObject>::vmcast(&runtime.fastArrayPrototype))
           .getHermesValue();
 
   // Declare the regexp match object class.

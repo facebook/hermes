@@ -89,6 +89,7 @@ CELL_CLASS(RequireContext, "RequireContext")
 CELL_CLASS(JSGenerator, "Generator")
 CELL_CLASS(JSProxy, "Proxy")
 CELL_CLASS(JSBigInt, "BigInt")
+CELL_CLASS(FastArray, "FastArray")
 
 CELL_KIND(BoundFunction)
 CELL_KIND(SHLegacyFunction)

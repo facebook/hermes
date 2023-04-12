@@ -16,6 +16,7 @@ set(source_files
   DictPropertyMap.cpp
   Domain.cpp
   DummyObject.cpp
+  FastArray.cpp
   GCBase.cpp
   OrderedHashMap.cpp
   HandleRootOwner.cpp
