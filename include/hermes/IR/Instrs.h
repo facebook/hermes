@@ -2018,8 +2018,8 @@ class AllocFastArrayInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffectImpl() const {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4318,8 +4318,8 @@ class FastArrayPushInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setWriteHeap().setThrow();
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -4353,8 +4353,8 @@ class FastArrayAppendInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setReadHeap().setWriteHeap().setThrow();
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
