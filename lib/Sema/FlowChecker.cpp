@@ -7,6 +7,8 @@
 
 #include "FlowChecker.h"
 
+#include "llvh/ADT/SetVector.h"
+
 #define DEBUG_TYPE "FlowChecker"
 
 namespace hermes {
@@ -590,6 +592,107 @@ class FlowChecker::ExprVisitor {
       outer_.sm_.error(
           node->getSourceRange(), "ft: cast from incompatible type");
     }
+  }
+
+  void visit(ESTree::ArrayExpressionNode *node, ESTree::Node *parent) {
+    visitESTreeChildren(*this, node);
+
+    /// Given an element in the array expression, determine its type.
+    auto getElementType = [this](const ESTree::Node *elem) -> Type * {
+      if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(elem)) {
+        // The type of a spread element depends on its argument.
+        auto *spreadTy = outer_.getNodeTypeOrAny(spread->_argument);
+        // If we are spreading an array, use the type of the array.
+        if (auto *spreadArrTy = llvh::dyn_cast<ArrayType>(spreadTy))
+          return spreadArrTy->getElement();
+        // TODO: Handle spread of non-arrays.
+        outer_.sm_.error(
+            spread->_argument->getSourceRange(),
+            "ft: spread argument must be an array");
+        return outer_.flowContext_.getAny();
+      }
+      return outer_.flowContext_.getNodeTypeOrAny(elem);
+    };
+
+    /// Try using the given element type \p elTy for this array. If any elements
+    /// are incompatible with the given type, report an error, otherwise, set
+    /// the type of the array.
+    auto tryElementType = [node, this, getElementType](Type *elTy) {
+      auto &elements = node->_elements;
+      for (auto it = elements.begin(); it != elements.end(); ++it) {
+        ESTree::Node *arg = &*it;
+        Type *argTy = getElementType(arg);
+        auto cf = canAFlowIntoB(argTy, elTy);
+        if (!cf.canFlow) {
+          outer_.sm_.error(
+              arg->getSourceRange(), "ft: incompatible element type");
+          return;
+        }
+        // Add a checked cast if needed. Skip spread elements, since we need to
+        // cast each element they produce, rather than the spread itself.
+        if (cf.needCheckedCast && !llvh::isa<ESTree::SpreadElementNode>(arg)) {
+          auto newIt =
+              elements.insert(it, *outer_.implicitCheckedCast(arg, elTy, cf));
+          elements.erase(it);
+          it = newIt;
+        }
+      }
+      auto *arrTy = outer_.flowContext_.createArray();
+      arrTy->init(elTy);
+      outer_.setNodeType(node, arrTy);
+    };
+
+    // First, try to determine the desired element type from surrounding
+    // context. For instance, this lets us determine the type of empty array
+    // literals. If the type of an element is incompatible, it is okay to fail
+    // here, since we can point to the exact element that is incompatible.
+
+    // If this array expression initializes a variable, try the type of that
+    // variable.
+    if (auto *declarator =
+            llvh::dyn_cast<ESTree::VariableDeclaratorNode>(parent)) {
+      if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(declarator->_id)) {
+        sema::Decl *decl = outer_.getDecl(id);
+        Type *declType = outer_.getDeclType(decl);
+        if (auto *arrTy = llvh::dyn_cast<ArrayType>(declType)) {
+          tryElementType(arrTy->getElement());
+          return;
+        }
+      }
+    }
+
+    // If this array expression is immediately cast to something else, try using
+    // the type we are casting to.
+    if (auto *cast = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(parent)) {
+      auto *resTy = outer_.getNodeTypeOrAny(cast);
+      if (auto *arrTy = llvh::dyn_cast<ArrayType>(resTy)) {
+        tryElementType(arrTy->getElement());
+        return;
+      }
+    }
+
+    // In principle, we could use the type of an enclosing array literal where
+    // this literal is being spread or nested. However, we leave that
+    // unsupported for now, as the enclosing literal would not have its type set
+    // at this point.
+
+    // We could not determine the type from the context, infer it from the
+    // elements.
+    Type *elTy;
+    if (node->_elements.empty()) {
+      // If there are no elements, we can't infer the type, so use 'any'.
+      elTy = outer_.flowContext_.getAny();
+    } else {
+      // Construct a union of all the element types.
+      llvh::SmallSetVector<Type *, 4> elTypes;
+      for (const auto &arg : node->_elements)
+        elTypes.insert(getElementType(&arg));
+
+      elTy = outer_.flowContext_.maybeCreateUnion(elTypes.getArrayRef());
+    }
+    auto *arrTy = outer_.flowContext_.createArray();
+    arrTy->init(elTy);
+    outer_.setNodeType(node, arrTy);
   }
 
   void visit(ESTree::NullLiteralNode *node) {
