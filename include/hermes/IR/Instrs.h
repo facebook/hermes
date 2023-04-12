@@ -4298,6 +4298,41 @@ class PrStoreInst : public Instruction {
   }
 };
 
+class FastArrayPushInst : public Instruction {
+ public:
+  enum { PushedValueIdx, ArrayIdx };
+
+  explicit FastArrayPushInst(Value *pushedValue, Value *array)
+      : Instruction(ValueKind::FastArrayPushInstKind) {
+    pushOperand(pushedValue);
+    pushOperand(array);
+  }
+  explicit FastArrayPushInst(
+      const FastArrayPushInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::FastArrayPushInstKind;
+  }
+  static bool hasOutput() {
+    return false;
+  }
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getArray() const {
+    return getOperand(ArrayIdx);
+  }
+  Value *getPushedValue() const {
+    return getOperand(PushedValueIdx);
+  }
+};
+
 class LoadParentInst : public Instruction {
   LoadParentInst(const LoadParentInst &) = delete;
   void operator=(const LoadParentInst &) = delete;

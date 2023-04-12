@@ -860,6 +860,12 @@ static inline void _sh_prstore_string(
   }
 }
 
+/// Push the given element \p pushedValue onto the given fast array \p array.
+SHERMES_EXPORT void _sh_fastarray_push(
+    SHRuntime *shr,
+    SHLegacyValue *pushedValue,
+    SHLegacyValue *array);
+
 static inline SHLegacyValue _sh_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {

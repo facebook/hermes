@@ -1786,3 +1786,15 @@ extern "C" void _sh_store_parent(
   JSObject::unsafeSetParentInternal(
       objectHandle.get(), runtime, parentHandle.get());
 }
+
+extern "C" void _sh_fastarray_push(
+    SHRuntime *shr,
+    SHLegacyValue *pushedValue,
+    SHLegacyValue *array) {
+  Runtime &runtime = getRuntime(shr);
+  auto arr = Handle<FastArray>::vmcast(toPHV(array));
+  auto val = Handle<>(toPHV(pushedValue));
+  auto res = FastArray::push(arr, runtime, val);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}

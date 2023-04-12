@@ -613,6 +613,8 @@ class IRBuilder {
       LiteralString *propName,
       bool nonPointer);
 
+  FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
+
   LoadParentInst *createLoadParentInst(Value *object);
   StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);
 

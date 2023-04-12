@@ -1654,6 +1654,14 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = _sh_ljs_double(0);\n";
   }
+  void generateFastArrayPushInst(FastArrayPushInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_fastarray_push(shr, ";
+    generateRegisterPtr(*inst.getPushedValue());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getArray());
+    os_ << ");\n";
+  }
 };
 
 /// Lower module IR to LIR, so it is suitable for register allocation.

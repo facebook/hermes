@@ -844,6 +844,16 @@ Effects | May read and write memory.
 | Semantics   | Store the property without any checking.                                                                                                                                                                                                                                                                                  |
 | Effects     | May read memory.                                                                                                                                                                                                                                                                                                          |
 
+### FastArrayPushInst
+
+FastArrayPushInst | _
+--- | --- |
+Description | Pushes an element onto a FastArray.
+Example | FastArrayPushInst %pushedValue, %array
+Arguments | %pushedValue is the value to be pushed, %array is the array we are pushing onto.
+Semantics | Push an element onto the target array, increasing its length by 1. If accommodating the additional element causes a reallocation past the maximum allowable allocation size, throw an exception.
+Effects | May write memory or throw.
+
 ### LoadParent
 
 LoadParent | _
