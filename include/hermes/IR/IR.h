@@ -1175,9 +1175,6 @@ class Instruction
   /// If 0, then there is no corresponding source statement.
   uint32_t statementIndex_{0};
 
-  /// \returns the side effect of the derived instruction.
-  SideEffect getDerivedSideEffect();
-
  protected:
   explicit Instruction(ValueKind kind) : Value(kind), Parent(nullptr) {}
 
@@ -1282,23 +1279,26 @@ class Instruction
   /// Return the name of the instruction.
   llvh::StringRef getName();
 
+  /// \returns the side effect of the instruction.
+  SideEffect getSideEffect() const;
+
   /// \returns true if the instruction has some side effect.
-  bool hasSideEffect() {
-    return getDerivedSideEffect().mayReadOrWorse();
+  bool hasSideEffect() const {
+    return getSideEffect().mayReadOrWorse();
   }
 
   /// \returns true if the instruction may read memory.
-  bool mayReadMemory() {
-    return getDerivedSideEffect().mayReadOrWorse();
+  bool mayReadMemory() const {
+    return getSideEffect().mayReadOrWorse();
   }
   /// \returns true if the instruction may write to memory.
-  bool mayWriteMemory() {
-    return getDerivedSideEffect().mayWriteOrWorse();
+  bool mayWriteMemory() const {
+    return getSideEffect().mayWriteOrWorse();
   }
   /// \returns true if the instruction may execute code by means of throwing
   /// an exception or by executing code.
-  bool mayExecute() {
-    return getDerivedSideEffect().mayExecute();
+  bool mayExecute() const {
+    return getSideEffect().mayExecute();
   }
 
   Context &getContext() const;

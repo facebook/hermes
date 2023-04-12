@@ -61,7 +61,7 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
@@ -96,7 +96,7 @@ class TerminatorInst : public Instruction {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
@@ -159,7 +159,7 @@ class BranchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -207,7 +207,7 @@ class AddEmptyStringInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -243,7 +243,7 @@ class AsNumberInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -275,7 +275,7 @@ class AsNumericInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -309,7 +309,7 @@ class AsInt32Inst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -359,7 +359,7 @@ class CondBranchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -409,7 +409,7 @@ class ReturnInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -466,7 +466,7 @@ class AllocStackInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -506,7 +506,7 @@ class LoadStackInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
@@ -552,7 +552,7 @@ class StoreStackInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
@@ -592,7 +592,7 @@ class LoadFrameInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
@@ -638,7 +638,7 @@ class StoreFrameInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
@@ -680,7 +680,7 @@ class BaseCreateLexicalChildInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -823,7 +823,7 @@ class BaseCallInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -929,7 +929,7 @@ class GetBuiltinClosureInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -991,7 +991,7 @@ class CallIntrinsicInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
       return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
@@ -1070,7 +1070,7 @@ class HBCGetGlobalObjectInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -1122,7 +1122,7 @@ class BaseStorePropertyInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -1329,7 +1329,7 @@ class BaseStoreOwnPropertyInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -1457,7 +1457,7 @@ class StoreGetterSetterInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -1500,7 +1500,7 @@ class DeletePropertyInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -1583,7 +1583,7 @@ class BaseLoadPropertyInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -1684,7 +1684,7 @@ class AllocObjectInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -1736,7 +1736,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -1796,7 +1796,7 @@ class AllocObjectLiteralInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -1867,7 +1867,7 @@ class GetTemplateObjectInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     // Reads/writes the template cache, but only allocates new objects.
     return {};
   }
@@ -1974,7 +1974,7 @@ class AllocArrayInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2010,7 +2010,7 @@ class CreateArgumentsInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2057,7 +2057,7 @@ class CreateRegExpInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2103,7 +2103,7 @@ class UnaryOperatorInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect();
+  SideEffect getSideEffectImpl() const;
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -2166,7 +2166,7 @@ class BinaryOperatorInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return getBinarySideEffect(
         getLeftHandSide()->getType(), getRightHandSide()->getType(), getKind());
   }
@@ -2198,7 +2198,7 @@ class CatchInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
         .setFirstInBlock();
   }
@@ -2231,7 +2231,7 @@ class ThrowInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -2294,7 +2294,7 @@ class SwitchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2357,7 +2357,7 @@ class GetPNamesInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -2426,7 +2426,7 @@ class GetNextPNameInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -2515,7 +2515,7 @@ class TryStartInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2552,7 +2552,7 @@ class TryEndInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
         .setFirstInBlock();
   }
@@ -2606,7 +2606,7 @@ class PhiInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect{}.setFirstInBlock();
   }
 
@@ -2646,7 +2646,7 @@ class MovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2680,7 +2680,7 @@ class ImplicitMovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2716,7 +2716,7 @@ class CoerceThisNSInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2745,7 +2745,7 @@ class DebuggerInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2780,7 +2780,7 @@ class GetNewTargetInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2854,7 +2854,7 @@ class ThrowIfEmptyInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -2888,7 +2888,7 @@ class HBCResolveEnvironment : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -2934,7 +2934,7 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
@@ -2976,7 +2976,7 @@ class HBCLoadFromEnvironmentInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
@@ -3057,7 +3057,7 @@ class SwitchImmInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3106,7 +3106,7 @@ class SaveAndYieldInst : public TerminatorInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -3157,7 +3157,7 @@ class DirectEvalInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() const {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -3193,7 +3193,7 @@ class DeclareGlobalVarInst : public SingleOperandInst {
     return false;
   }
 
-  SideEffect getSideEffect() const {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -3223,7 +3223,7 @@ class HBCCreateEnvironmentInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3257,7 +3257,7 @@ class HBCProfilePointInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3297,7 +3297,7 @@ class HBCLoadConstInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3333,7 +3333,7 @@ class LoadParamInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3365,7 +3365,7 @@ class LIRGetThisNSInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3400,7 +3400,7 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -3448,7 +3448,7 @@ class HBCGetArgumentsPropByValInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -3529,7 +3529,7 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     // This instruction could throw in theory, if there are too many arguments.
     // However, this is not a meaningful side-effect, since this instruction
     // should be freely reordered or deleted.
@@ -3611,7 +3611,7 @@ class CreateThisInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3688,7 +3688,7 @@ class GetConstructedObjectInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3754,7 +3754,7 @@ class HBCSpillMovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -3834,7 +3834,7 @@ class CompareBranchInst : public TerminatorInst {
 
   // static ValueKind kindFromBinaryOperatorValueKind
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return BinaryOperatorInst::getBinarySideEffect(
         getLeftHandSide()->getType(),
         getRightHandSide()->getType(),
@@ -3942,7 +3942,7 @@ class StartGeneratorInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
         .setFirstInBlock();
   }
@@ -3977,7 +3977,7 @@ class ResumeGeneratorInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
         .setFirstInBlock();
   }
@@ -4016,7 +4016,7 @@ class IteratorBeginInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() const {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -4055,7 +4055,7 @@ class IteratorNextInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() const {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -4099,7 +4099,7 @@ class IteratorCloseInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() const {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -4137,7 +4137,7 @@ class UnreachableInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
@@ -4179,7 +4179,7 @@ class PrLoadInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
   WordBitSet<> getChangedOperandsImpl() {
@@ -4230,7 +4230,7 @@ class PrStoreInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
   WordBitSet<> getChangedOperandsImpl() {
@@ -4284,7 +4284,7 @@ class LoadParentInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
@@ -4325,7 +4325,7 @@ class StoreParentInst : public Instruction {
     return false;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
@@ -4369,7 +4369,7 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 
@@ -4408,7 +4408,7 @@ class LIRDeadValueInst : public Instruction {
     return true;
   }
 
-  SideEffect getSideEffect() {
+  SideEffect getSideEffectImpl() const {
     return {};
   }
 

@@ -73,7 +73,7 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
   llvm_unreachable("invalid operator string");
 }
 
-SideEffect UnaryOperatorInst::getSideEffect() {
+SideEffect UnaryOperatorInst::getSideEffectImpl() const {
   if (isSideEffectFree(getSingleOperand()->getType())) {
     return {};
   }

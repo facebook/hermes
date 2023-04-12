@@ -463,16 +463,16 @@ llvh::StringRef Instruction::getName() {
   }
 }
 
-SideEffect Instruction::getDerivedSideEffect() {
+SideEffect Instruction::getSideEffect() const {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");
 #define DEF_VALUE(XX, PARENT) \
   case ValueKind::XX##Kind:   \
-    return cast<XX>(this)->getSideEffect();
+    return cast<XX>(this)->getSideEffectImpl();
 #define DEF_TAG(XX, PARENT) \
   case ValueKind::XX##Kind: \
-    return cast<PARENT>(this)->getSideEffect();
+    return cast<PARENT>(this)->getSideEffectImpl();
 #include "hermes/IR/Instrs.def"
   }
 }
