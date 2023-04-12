@@ -701,12 +701,12 @@ CallResult<Handle<JSArray>> directRegExpExec(
           runtime,
           0,
           runtime.makeHandle(
-              HermesValue::encodeNumberValue(mg ? mg->location : 0)));
+              HermesValue::encodeUntrustedNumberValue(mg ? mg->location : 0)));
       JSArray::setElementAt(
           indicesItemArray,
           runtime,
           1,
-          runtime.makeHandle(HermesValue::encodeNumberValue(
+          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
               mg ? mg->location + mg->length : 0)));
 
       JSArray::setElementAt(indices, runtime, idx, indicesItemArray);
