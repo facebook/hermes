@@ -2054,7 +2054,6 @@ UNSUPPORTED_FEATURES = [
     "import-assertions",
     "json-superset",
     "new.target",
-    "regexp-match-indices",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
     "string-trimming",
