@@ -73,21 +73,21 @@ ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
   llvm_unreachable("invalid operator string");
 }
 
-SideEffectKind UnaryOperatorInst::getSideEffect() {
+SideEffect UnaryOperatorInst::getSideEffect() {
   if (isSideEffectFree(getSingleOperand()->getType())) {
-    return SideEffectKind::None;
+    return {};
   }
 
   switch (getKind()) {
     case ValueKind::UnaryVoidInstKind: // void
     case ValueKind::UnaryTypeofInstKind: // typeof
-      return SideEffectKind::None;
+      return {};
 
     default:
       break;
   }
 
-  return SideEffectKind::Unknown;
+  return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
 }
 
 static ValueKind parseOperator_impl(
@@ -109,27 +109,27 @@ ValueKind BinaryOperatorInst::parseAssignmentOperator(llvh::StringRef op) {
   return parseOperator_impl(op, assignmentOpStringRepr);
 }
 
-SideEffectKind BinaryOperatorInst::getBinarySideEffect(
+SideEffect BinaryOperatorInst::getBinarySideEffect(
     Type leftTy,
     Type rightTy,
     ValueKind op) {
   // The 'in' and 'instanceof' operators may throw:
   if (op == ValueKind::BinaryInInstKind ||
       op == ValueKind::BinaryInstanceOfInstKind)
-    return SideEffectKind::Unknown;
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
 
   // Strict equality does not throw or have other side effects (per ES5 11.9.6).
   if (op == ValueKind::BinaryStrictlyNotEqualInstKind ||
       op == ValueKind::BinaryStrictlyEqualInstKind)
-    return SideEffectKind::None;
+    return {};
 
   // This instruction does not read/write memory if the LHS and RHS types are
   // known to be safe (number, string, null, etc).
   if (isSideEffectFree(leftTy) && isSideEffectFree(rightTy))
-    return SideEffectKind::None;
+    return {};
 
   // This binary operation may execute arbitrary code.
-  return SideEffectKind::Unknown;
+  return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
 }
 
 SwitchInst::SwitchInst(

@@ -61,7 +61,7 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
@@ -96,7 +96,7 @@ class TerminatorInst : public Instruction {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
@@ -159,8 +159,8 @@ class BranchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -207,8 +207,8 @@ class AddEmptyStringInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -243,8 +243,8 @@ class AsNumberInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -275,8 +275,8 @@ class AsNumericInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -309,8 +309,8 @@ class AsInt32Inst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -359,8 +359,8 @@ class CondBranchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -409,8 +409,8 @@ class ReturnInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -466,8 +466,8 @@ class AllocStackInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -506,8 +506,8 @@ class LoadStackInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -552,8 +552,8 @@ class StoreStackInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -592,8 +592,8 @@ class LoadFrameInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -638,8 +638,8 @@ class StoreFrameInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -680,8 +680,8 @@ class BaseCreateLexicalChildInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -823,8 +823,8 @@ class BaseCallInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -929,8 +929,8 @@ class GetBuiltinClosureInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -991,12 +991,12 @@ class CallIntrinsicInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_store8)
-      return SideEffectKind::MayWrite;
+      return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
     if (getIntrinsicsIndex() >= WasmIntrinsics::__uasm_loadi8)
-      return SideEffectKind::MayRead;
-    return SideEffectKind::None;
+      return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1070,8 +1070,8 @@ class HBCGetGlobalObjectInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1122,8 +1122,8 @@ class BaseStorePropertyInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1329,8 +1329,8 @@ class BaseStoreOwnPropertyInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1457,8 +1457,8 @@ class StoreGetterSetterInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1500,8 +1500,8 @@ class DeletePropertyInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1583,8 +1583,8 @@ class BaseLoadPropertyInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1684,8 +1684,8 @@ class AllocObjectInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1736,8 +1736,8 @@ class HBCAllocObjectFromBufferInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1796,8 +1796,8 @@ class AllocObjectLiteralInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1867,9 +1867,9 @@ class GetTemplateObjectInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     // Reads/writes the template cache, but only allocates new objects.
-    return SideEffectKind::None;
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1974,8 +1974,8 @@ class AllocArrayInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2010,8 +2010,8 @@ class CreateArgumentsInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2057,8 +2057,8 @@ class CreateRegExpInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2103,7 +2103,7 @@ class UnaryOperatorInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect();
+  SideEffect getSideEffect();
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -2166,7 +2166,7 @@ class BinaryOperatorInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     return getBinarySideEffect(
         getLeftHandSide()->getType(), getRightHandSide()->getType(), getKind());
   }
@@ -2181,7 +2181,7 @@ class BinaryOperatorInst : public Instruction {
 
   /// Calculate the side effect of a binary operator, given inferred types of
   /// its arguments.
-  static SideEffectKind
+  static SideEffect
   getBinarySideEffect(Type leftTy, Type rightTy, ValueKind op);
 };
 
@@ -2198,8 +2198,9 @@ class CatchInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
+        .setFirstInBlock();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2230,8 +2231,8 @@ class ThrowInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2293,8 +2294,8 @@ class SwitchInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2356,8 +2357,8 @@ class GetPNamesInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2425,8 +2426,8 @@ class GetNextPNameInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2514,8 +2515,8 @@ class TryStartInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2551,8 +2552,9 @@ class TryEndInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
+        .setFirstInBlock();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2604,8 +2606,8 @@ class PhiInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return SideEffect{}.setFirstInBlock();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2644,8 +2646,8 @@ class MovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2678,8 +2680,8 @@ class ImplicitMovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2714,8 +2716,8 @@ class CoerceThisNSInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2743,8 +2745,8 @@ class DebuggerInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2778,8 +2780,8 @@ class GetNewTargetInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2852,8 +2854,8 @@ class ThrowIfEmptyInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2886,8 +2888,8 @@ class HBCResolveEnvironment : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2932,8 +2934,8 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2974,8 +2976,8 @@ class HBCLoadFromEnvironmentInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3055,8 +3057,8 @@ class SwitchImmInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3104,8 +3106,8 @@ class SaveAndYieldInst : public TerminatorInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3155,8 +3157,8 @@ class DirectEvalInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() const {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() const {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3191,8 +3193,8 @@ class DeclareGlobalVarInst : public SingleOperandInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() const {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() const {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3221,8 +3223,8 @@ class HBCCreateEnvironmentInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3255,8 +3257,8 @@ class HBCProfilePointInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3295,8 +3297,8 @@ class HBCLoadConstInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3331,8 +3333,8 @@ class LoadParamInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3363,8 +3365,8 @@ class LIRGetThisNSInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3398,8 +3400,8 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3446,8 +3448,8 @@ class HBCGetArgumentsPropByValInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3527,11 +3529,11 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     // This instruction could throw in theory, if there are too many arguments.
     // However, this is not a meaningful side-effect, since this instruction
     // should be freely reordered or deleted.
-    return SideEffectKind::MayWrite;
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3609,8 +3611,8 @@ class CreateThisInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3686,8 +3688,8 @@ class GetConstructedObjectInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3752,8 +3754,8 @@ class HBCSpillMovInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3832,7 +3834,7 @@ class CompareBranchInst : public TerminatorInst {
 
   // static ValueKind kindFromBinaryOperatorValueKind
 
-  SideEffectKind getSideEffect() {
+  SideEffect getSideEffect() {
     return BinaryOperatorInst::getBinarySideEffect(
         getLeftHandSide()->getType(),
         getRightHandSide()->getType(),
@@ -3940,8 +3942,9 @@ class StartGeneratorInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
+        .setFirstInBlock();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3974,8 +3977,9 @@ class ResumeGeneratorInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown)
+        .setFirstInBlock();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4012,8 +4016,8 @@ class IteratorBeginInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() const {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() const {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4051,8 +4055,8 @@ class IteratorNextInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() const {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() const {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4095,8 +4099,8 @@ class IteratorCloseInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() const {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() const {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4133,8 +4137,8 @@ class UnreachableInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::Unknown;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4175,8 +4179,8 @@ class PrLoadInst : public Instruction {
   static bool hasOutput() {
     return true;
   }
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -4226,8 +4230,8 @@ class PrStoreInst : public Instruction {
   static bool hasOutput() {
     return false;
   }
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
   WordBitSet<> getChangedOperandsImpl() {
     return {};
@@ -4280,8 +4284,8 @@ class LoadParentInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayRead;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayRead);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4321,8 +4325,8 @@ class StoreParentInst : public Instruction {
     return false;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::MayWrite;
+  SideEffect getSideEffect() {
+    return SideEffect::fromSideEffectKind(SideEffectKind::MayWrite);
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4365,8 +4369,8 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4404,8 +4408,8 @@ class LIRDeadValueInst : public Instruction {
     return true;
   }
 
-  SideEffectKind getSideEffect() {
-    return SideEffectKind::None;
+  SideEffect getSideEffect() {
+    return {};
   }
 
   WordBitSet<> getChangedOperandsImpl() {

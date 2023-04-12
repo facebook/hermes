@@ -351,7 +351,7 @@ Value *simplifyCondBranchInst(CondBranchInst *CBI) {
   // COND_BR %0, %BB2, %BB1
   //
   if (auto *U = llvh::dyn_cast<UnaryOperatorInst>(cond)) {
-    if (U->getSideEffect() == SideEffectKind::None &&
+    if (U->getSideEffect().mayReadOrWorse() &&
         U->getKind() == ValueKind::UnaryBangInstKind) {
       // Strip the negation.
       CBI->setOperand(U->getSingleOperand(), 0);

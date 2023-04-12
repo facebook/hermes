@@ -463,7 +463,7 @@ llvh::StringRef Instruction::getName() {
   }
 }
 
-SideEffectKind Instruction::getDerivedSideEffect() {
+SideEffect Instruction::getDerivedSideEffect() {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");

@@ -1176,7 +1176,7 @@ class Instruction
   uint32_t statementIndex_{0};
 
   /// \returns the side effect of the derived instruction.
-  SideEffectKind getDerivedSideEffect();
+  SideEffect getDerivedSideEffect();
 
  protected:
   explicit Instruction(ValueKind kind) : Value(kind), Parent(nullptr) {}
@@ -1284,21 +1284,21 @@ class Instruction
 
   /// \returns true if the instruction has some side effect.
   bool hasSideEffect() {
-    return getDerivedSideEffect() != SideEffectKind::None;
+    return getDerivedSideEffect().mayReadOrWorse();
   }
 
   /// \returns true if the instruction may read memory.
   bool mayReadMemory() {
-    return getDerivedSideEffect() >= SideEffectKind::MayRead;
+    return getDerivedSideEffect().mayReadOrWorse();
   }
   /// \returns true if the instruction may write to memory.
   bool mayWriteMemory() {
-    return getDerivedSideEffect() >= SideEffectKind::MayWrite;
+    return getDerivedSideEffect().mayWriteOrWorse();
   }
   /// \returns true if the instruction may execute code by means of throwing
   /// an exception or by executing code.
   bool mayExecute() {
-    return getDerivedSideEffect() > SideEffectKind::MayWrite;
+    return getDerivedSideEffect().mayExecute();
   }
 
   Context &getContext() const;
