@@ -280,11 +280,11 @@ class SyntaxFlags {
   }
 
   /// \return a string representing the flags
-  /// The characters are returned in the order given in ES 6 21.2.5.3
-  /// (specifically global, ignoreCase, multiline, unicode, sticky)
+  /// The characters are returned in the order given in ES2022 22.2.5.4
+  /// (specifically hasIndices, global, ignoreCase, multiline, unicode, sticky)
   /// Note this may differ in order from the string passed in construction
-  llvh::SmallString<6> toString() const {
-    llvh::SmallString<6> result;
+  llvh::SmallString<7> toString() const {
+    llvh::SmallString<7> result;
     if (hasIndices)
       result.push_back('d');
     if (global)
@@ -293,12 +293,12 @@ class SyntaxFlags {
       result.push_back('i');
     if (multiline)
       result.push_back('m');
+    if (dotAll)
+      result.push_back('s');
     if (unicode)
       result.push_back('u');
     if (sticky)
       result.push_back('y');
-    if (dotAll)
-      result.push_back('s');
     return result;
   }
 

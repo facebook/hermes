@@ -2183,7 +2183,7 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
   return A.getHermesValue();
 }
 
-// ES9 21.2.5.4
+// ES2022 22.2.5.4
 // Note that we don't yet support unicode.
 CallResult<HermesValue>
 regExpFlagsGetter(void *ctx, Runtime &runtime, NativeArgs args) {
@@ -2195,7 +2195,7 @@ regExpFlagsGetter(void *ctx, Runtime &runtime, NativeArgs args) {
         "RegExp.prototype.flags getter called on non-object");
   }
 
-  llvh::SmallString<5> result;
+  llvh::SmallString<7> result;
   static const struct FlagProp {
     char flagChar;
     Predefined::Str name;
