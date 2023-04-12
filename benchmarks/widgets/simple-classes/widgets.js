@@ -59,6 +59,17 @@ function arrayPrototypeMap_VirtualEntity(arr: VirtualEntity[], cb: any): any {
   return result;
 }
 
+function arrayPrototypeMap_StringWithIndexToWidget(arr: string[], cb: any): any {
+  'inline';
+  var length: number = arr.length;
+  var result: Widget[] = Array(length);
+  for (var i: number = 0; i < length; ++i) {
+    var elem: string = arr[i];
+    result[i] = cb(elem, i);
+  }
+  return result;
+}
+
 function arrayPrototypeFilter_number(arr: number[], cb: any): number[] {
   'inline';
   var result: number[] = [];
@@ -580,7 +591,7 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-    return models.map((modelPath, index) => {
+return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath, index) => {
       const buttonSize = sizes[index];
       const widget = new ButtonAndModel(new RenderData(
         modelPath,
@@ -607,9 +618,9 @@ class TestApp extends ComposedWidget {
 // ==> test_app_data.js <==
 
 const SIZES_SMALL: number[] = [64, 8, 8, 18, 7, 24, 84, 4, 29, 58];
-const SIZES_LARGE: number[] = SIZES_SMALL.slice(0, 5).concat([
-  99, 9, 61, 27, 58, 30, 27, 95, 49, 37, 28, 87, 60, 95, 1, 58, 14, 90, 9, 57,
-]);
+const SIZES_LARGE: number[] = [
+  64, 8, 8, 18, 7, 99, 9, 61, 27, 58, 30, 27, 95, 49, 37, 28, 87, 60, 95, 1, 58, 14, 90, 9, 57,
+];
 const MODELS_SMALL: string[] = [
   'sazGTSGrfY',
   'uEQjieLDUq',
@@ -622,7 +633,12 @@ const MODELS_SMALL: string[] = [
   'NBMEpcDimq',
   'wMCIoQQbNg',
 ];
-const MODELS_LARGE: string[] = MODELS_SMALL.slice(0, 5).concat([
+const MODELS_LARGE: string[] = [
+  'sazGTSGrfY',
+  'uEQjieLDUq',
+  'jQKzwhnzYa',
+  'buIwVjnNDI',
+  'goBJPxAkFf',
   'oCtHzjLczM',
   'GJVcmhfddz',
   'nbpEAplbzQ',
@@ -643,7 +659,7 @@ const MODELS_LARGE: string[] = MODELS_SMALL.slice(0, 5).concat([
   'qOikwyZSWx',
   'KJGEPQxUKU',
   'cqrRvLCCYB',
-]);
+];
 
 // ==> index.js <==
 
