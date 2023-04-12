@@ -1759,6 +1759,33 @@ const getTransforms = (
         };
 
         switch (fullTypeName) {
+          // TODO: In flow this is `ChildrenArray<T> = T | $ReadOnlyArray<ChildrenArray<T>>`.
+          // The recursive nature of it is rarely needed, so we're simplifying this for now
+          // but omitting that aspect. Once we're able to provide utility types for our translations,
+          // we should update this.
+          // React.ChildrenArray<T> -> T | ReadonlyArray<T>
+          // React$ChildrenArray<T> -> T | ReadonlyArray<T>
+          case 'React.ChildrenArray':
+          case 'React$ChildrenArray': {
+            const [param] = assertHasExactlyNTypeParameters(1);
+            return {
+              type: 'TSUnionType',
+              types: [
+                param,
+                {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'Identifier',
+                    name: 'ReadonlyArray',
+                  },
+                  typeParameters: {
+                    type: 'TSTypeParameterInstantiation',
+                    params: [param],
+                  },
+                },
+              ],
+            };
+          }
           // React.Component<A,B> -> React.Component<A,B>
           // React$Component<A,B> -> React.Component<A,B>
           case 'React.Component':
@@ -1796,6 +1823,7 @@ const getTransforms = (
               },
             };
           }
+
           // React.Context<A> -> React.Context<A>
           // React$Context<A> -> React.Context<A>
           case 'React$Context':
