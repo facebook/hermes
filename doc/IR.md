@@ -487,6 +487,16 @@ Arguments | sizeHint tells the size of the array that the VM should allocate. It
 Semantics | The instruction creates a new JavaScript array on the heap with a hinted size and initial list of elements.
 Effects | Does not read or write to memory.
 
+### AllocFastArrayInst
+
+AllocFastArrayInst | _
+--- | --- |
+Description | Allocates a new FastArray on the heap.
+Example |  %0 = AllocFastArrayInst %capacity
+Arguments | %capacity is a hint to the VM for how large the initial capacity should be.
+Semantics | The instruction creates a new empty FastArray on the heap.
+Effects | Does not read or write to memory.
+
 ### GetTemplateObjectInst
 
 GetTemplateObjectInst | _

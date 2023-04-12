@@ -103,6 +103,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<AllocArrayInst>(Inst))
     return true;
 
+  if (llvh::isa<AllocFastArrayInst>(Inst))
+    return true;
+
   if (llvh::isa<AllocObjectInst>(Inst)) {
     // The AllocObjectInst::SizeIdx is a literal.
     if (opIndex == AllocObjectInst::SizeIdx)

@@ -612,6 +612,10 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numLiterals,
     uint32_t bufferIndex);
 
+/// \return a newly created fast array with the given \p capacity.
+SHERMES_EXPORT SHLegacyValue
+_sh_new_fastarray(SHRuntime *shr, uint32_t capacity);
+
 /// \p base[in/out] is the object to be iterated.
 /// \p index[out] is the next index in the list.
 /// \p size[out] is the size of the list.

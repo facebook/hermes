@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
@@ -1518,6 +1519,19 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   }();
 
   return arr;
+}
+
+extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
+  Runtime &runtime = getRuntime(shr);
+
+  CallResult<HermesValue> arrayRes = [&runtime, sizeHint]() {
+    GCScopeMarkerRAII marker{runtime};
+    return toCallResultHermesValue(FastArray::create(runtime, sizeHint));
+  }();
+  if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+
+  return *arrayRes;
 }
 
 extern "C" SHLegacyValue

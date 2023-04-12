@@ -407,6 +407,8 @@ class IRBuilder {
   AllocObjectLiteralInst *createAllocObjectLiteralInst(
       const AllocObjectLiteralInst::ObjectPropertyMap &propMap);
 
+  AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
+
   AllocArrayInst *createAllocArrayInst(
       LiteralNumber *sizeHint,
       AllocArrayInst::ArrayValueList val_list);

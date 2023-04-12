@@ -595,6 +595,13 @@ AllocObjectInst *IRBuilder::createAllocObjectInst(
   return AOI;
 }
 
+AllocFastArrayInst *IRBuilder::createAllocFastArrayInst(
+    LiteralNumber *sizeHint) {
+  auto A = new AllocFastArrayInst(sizeHint);
+  insert(A);
+  return A;
+}
+
 AllocArrayInst *IRBuilder::createAllocArrayInst(
     LiteralNumber *sizeHint,
     AllocArrayInst::ArrayValueList val_list) {

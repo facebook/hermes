@@ -542,6 +542,11 @@ void Verifier::visitAllocObjectInst(const hermes::AllocObjectInst &Inst) {
   // Nothing to verify at this point.
 }
 
+void Verifier::visitAllocFastArrayInst(const hermes::AllocFastArrayInst &Inst) {
+  LiteralNumber *size = Inst.getCapacity();
+  Assert(size->isUInt32Representible(), "Invalid AllocArrayInst size hint");
+}
+
 void Verifier::visitAllocArrayInst(const hermes::AllocArrayInst &Inst) {
   LiteralNumber *size = Inst.getSizeHint();
   Assert(size->isUInt32Representible(), "Invalid AllocArrayInst size hint");

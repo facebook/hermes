@@ -1988,6 +1988,49 @@ class AllocArrayInst : public Instruction {
   }
 };
 
+class AllocFastArrayInst : public Instruction {
+  AllocFastArrayInst(const AllocFastArrayInst &) = delete;
+  void operator=(const AllocFastArrayInst &) = delete;
+
+ public:
+  enum { CapacityIdx };
+
+  explicit AllocFastArrayInst(LiteralNumber *sizeHint)
+      : Instruction(ValueKind::AllocFastArrayInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(sizeHint);
+  }
+  explicit AllocFastArrayInst(
+      const AllocFastArrayInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  /// \return the capacity to allocate the array with.
+  LiteralNumber *getCapacity() const {
+    return cast<LiteralNumber>(getOperand(CapacityIdx));
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::AllocFastArrayInstKind;
+  }
+};
+
 class CreateArgumentsInst : public Instruction {
   CreateArgumentsInst(const CreateArgumentsInst &) = delete;
   void operator=(const CreateArgumentsInst &) = delete;
