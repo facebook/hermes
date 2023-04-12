@@ -866,6 +866,13 @@ SHERMES_EXPORT void _sh_fastarray_push(
     SHLegacyValue *pushedValue,
     SHLegacyValue *array);
 
+/// Append the elements from the fast array \p other onto the fast array
+/// \p array.
+SHERMES_EXPORT void _sh_fastarray_append(
+    SHRuntime *shr,
+    SHLegacyValue *other,
+    SHLegacyValue *array);
+
 static inline SHLegacyValue _sh_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {

@@ -614,6 +614,7 @@ class IRBuilder {
       bool nonPointer);
 
   FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
+  FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
 
   LoadParentInst *createLoadParentInst(Value *object);
   StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);

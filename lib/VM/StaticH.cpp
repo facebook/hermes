@@ -1798,3 +1798,28 @@ extern "C" void _sh_fastarray_push(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
 }
+
+extern "C" void _sh_fastarray_append(
+    SHRuntime *shr,
+    SHLegacyValue *other,
+    SHLegacyValue *array) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&] {
+    GCScopeMarkerRAII marker{runtime};
+    auto arr = Handle<FastArray>::vmcast(toPHV(array));
+    auto source = Handle<FastArray>::vmcast(toPHV(other));
+    MutableHandle val{runtime};
+    // TODO: Speed up append.
+    for (size_t i = 0, e = source->getLength(runtime); i < e; ++i) {
+      val = source->unsafeAt(runtime, i).unboxToHV(runtime);
+      auto res = FastArray::push(arr, runtime, val);
+      // TODO: Make append an all-or-nothing operation.
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+    }
+    return ExecutionStatus::RETURNED;
+  }();
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}

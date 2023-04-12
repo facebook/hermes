@@ -1079,6 +1079,13 @@ FastArrayPushInst *IRBuilder::createFastArrayPushInst(
   insert(I);
   return I;
 }
+FastArrayAppendInst *IRBuilder::createFastArrayAppendInst(
+    Value *other,
+    Value *array) {
+  auto *I = new FastArrayAppendInst(other, array);
+  insert(I);
+  return I;
+}
 
 LoadParentInst *IRBuilder::createLoadParentInst(Value *object) {
   auto *inst = new LoadParentInst(object);

@@ -4333,6 +4333,41 @@ class FastArrayPushInst : public Instruction {
   }
 };
 
+class FastArrayAppendInst : public Instruction {
+ public:
+  enum { OtherIdx, ArrayIdx };
+
+  explicit FastArrayAppendInst(Value *other, Value *array)
+      : Instruction(ValueKind::FastArrayAppendInstKind) {
+    pushOperand(other);
+    pushOperand(array);
+  }
+  explicit FastArrayAppendInst(
+      const FastArrayAppendInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::FastArrayAppendInstKind;
+  }
+  static bool hasOutput() {
+    return false;
+  }
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getArray() const {
+    return getOperand(ArrayIdx);
+  }
+  Value *getOther() const {
+    return getOperand(OtherIdx);
+  }
+};
+
 class LoadParentInst : public Instruction {
   LoadParentInst(const LoadParentInst &) = delete;
   void operator=(const LoadParentInst &) = delete;

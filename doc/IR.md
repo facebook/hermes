@@ -854,6 +854,16 @@ Arguments | %pushedValue is the value to be pushed, %array is the array we are p
 Semantics | Push an element onto the target array, increasing its length by 1. If accommodating the additional element causes a reallocation past the maximum allowable allocation size, throw an exception.
 Effects | May write memory or throw.
 
+### FastArrayAppendInst
+
+FastArrayAppendInst | _
+--- | --- |
+Description | Appends the elements of one FastArray to another.
+Example | FastArrayAppendInst %other, %array
+Arguments | %other is array from which elements will be copied, %array is the array onto which elements will be appended.
+Semantics | Copy the elements from %other into the end of %array, increasing its length by the number of elements in %other. If accommodating the additional elements causes a reallocation past the maximum allowable allocation size, throw an exception.
+Effects | May write memory or throw.
+
 ### LoadParent
 
 LoadParent | _

@@ -1006,6 +1006,9 @@ class TypeInferenceImpl {
   Type inferFastArrayPushInst(FastArrayPushInst *inst) {
     return Type::createNoType();
   }
+  Type inferFastArrayAppendInst(FastArrayAppendInst *inst) {
+    return Type::createNoType();
+  }
   Type inferLoadParentInst(LoadParentInst *inst) {
     return *inst->getInherentType();
   }
