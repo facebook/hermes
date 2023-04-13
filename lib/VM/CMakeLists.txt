@@ -77,7 +77,6 @@ set(source_files
   StaticH.cpp
   StaticHInit.cpp
   StaticHUnit.cpp
-  SHSerializedLiteralParser.cpp
 
   detail/IdentifierHashTable.cpp
 

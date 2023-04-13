@@ -12,7 +12,7 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PropertyAccessor.h"
-#include "hermes/VM/SHSerializedLiteralParser.h"
+#include "hermes/VM/SerializedLiteralParser.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 
@@ -1338,35 +1338,49 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
           shr, unit, numLiterals, keyBufferIndex))
     return runtime.makeHandle(vmcast<HiddenClass>((GCCell *)clazzOpt));
 
-  MutableHandle<> tmpHandleKey{runtime};
   MutableHandle<HiddenClass> clazz =
       runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
           vmcast<JSObject>(runtime.objectPrototype),
           JSObject::numOverlapSlots<JSObject>()));
 
-  GCScopeMarkerRAII marker{runtime};
-  SHSerializedLiteralParser keyGen{
-      keyBuffer.slice(keyBufferIndex), numLiterals, nullptr};
-  while (keyGen.hasNext()) {
-    auto key = keyGen.get(runtime);
-    SymbolID sym = [&] {
-      if (key.isSymbol())
-        return SymbolID::unsafeCreate(
-            unit->symbols[key.getSymbol().unsafeGetIndex()]);
+  struct {
+    void addProperty(SymbolID sym) {
+      auto addResult = HiddenClass::addProperty(
+          clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
+      clazz = addResult->first;
+      marker.flush();
+    }
 
-      assert(key.isNumber() && "Key must be symbol or number");
-      tmpHandleKey = key;
-      // Note that since this handle has been created, the associated symbol
-      // will be automatically kept alive until we flush the marker.
-      // valueToSymbolID cannot fail because the key is known to be uint32.
+    void visitStringID(StringID id) {
+      auto sym = SymbolID::unsafeCreate(unit->symbols[id]);
+      addProperty(sym);
+    }
+    void visitNumber(double d) {
+      tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
+      // Note that this handle is released in addProperty.
       Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
-      return *symHandle;
-    }();
-    auto addResult = HiddenClass::addProperty(
-        clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
-    clazz = addResult->first;
-    marker.flush();
-  }
+      addProperty(*symHandle);
+    }
+    void visitNull() {
+      llvm_unreachable("Object literal key cannot be null.");
+    }
+    void visitBool(bool) {
+      llvm_unreachable("Object literal key cannot be a bool.");
+    }
+
+    MutableHandle<HiddenClass> &clazz;
+    MutableHandle<> tmpHandleKey;
+    Runtime &runtime;
+    SHUnit *unit;
+    GCScopeMarkerRAII marker;
+  } v{clazz,
+      MutableHandle<>{runtime},
+      runtime,
+      unit,
+      GCScopeMarkerRAII{runtime}};
+
+  SerializedLiteralParser::parse(
+      keyBuffer.slice(keyBufferIndex), numLiterals, v);
 
   if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
