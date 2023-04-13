@@ -1400,61 +1400,35 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       shr, unit, numLiterals, keyBuffer, keyBufferIndex);
   Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
-  SHSerializedLiteralParser valGen{
-      valBuffer.slice(valBufferIndex), numLiterals, unit};
-
-#ifndef NDEBUG
-  SHSerializedLiteralParser keyGen{
-      keyBuffer.slice(keyBufferIndex), numLiterals, nullptr};
-#endif
-
-  uint32_t propIndex = 0;
-  // keyGen should always have the same amount of elements as valGen
-  while (valGen.hasNext()) {
-#ifndef NDEBUG
-    {
-      GCScopeMarkerRAII marker{runtime};
-      // keyGen points to an element in the key buffer, which means it will
-      // only ever generate a Number or a Symbol. This means it will never
-      // allocate memory, and it is safe to not use a Handle.
-      SymbolID stringIdResult{};
-      auto key = keyGen.get(runtime);
-      if (key.isSymbol()) {
-        stringIdResult = SymbolID::unsafeCreate(
-            unit->symbols[key.getSymbol().unsafeGetIndex()]);
-      } else {
-        auto keyHandle = runtime.makeHandle(
-            HermesValue::encodeTrustedNumberValue(key.getNumber()));
-        auto idRes = valueToSymbolID(runtime, keyHandle);
-        assert(
-            idRes != ExecutionStatus::EXCEPTION &&
-            "valueToIdentifier() failed for uint32_t value");
-        stringIdResult = **idRes;
-      }
-      NamedPropertyDescriptor desc;
-      auto pos = HiddenClass::findProperty(
-          clazz,
-          runtime,
-          stringIdResult,
-          PropertyFlags::defaultNewNamedPropertyFlags(),
-          desc);
-      assert(
-          pos &&
-          "Should find this property in cached hidden class property table.");
-      assert(
-          desc.slot == propIndex &&
-          "propIndex should be the same as recorded in hidden class table.");
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtime.getStringPrimFromSymbolID(
+              SymbolID::unsafeCreate(unit->symbols[id])),
+          runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
     }
-#endif
-    // Explicitly make sure valGen.get() is called before obj.get() so that
-    // any allocation in valGen.get() won't invalidate the raw pointer
-    // returned from obj.get().
-    HermesValue val = valGen.get(runtime);
-    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
-    // We made this object, it's not a Proxy.
-    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
-    ++propIndex;
-  }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
+    }
+    void visitNull() {
+      constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
+    }
+
+    Handle<JSObject> obj;
+    Runtime &runtime;
+    SHUnit *unit;
+    size_t i;
+  } v{obj, runtime, unit, 0};
+
+  SerializedLiteralParser::parse(
+      valBuffer.slice(valBufferIndex), numLiterals, v);
 
   return obj.getHermesValue();
 }
