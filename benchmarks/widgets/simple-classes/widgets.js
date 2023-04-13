@@ -319,9 +319,9 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach_RenderNode(oldChildren, child => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
+  arrayPrototypeForEach_RenderNode(oldChildren, (child: RenderNode) => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
 
-  arrayPrototypeForEach_RenderNode(newChildren, child => {
+  arrayPrototypeForEach_RenderNode(newChildren, (child: RenderNode) => {
     const newKey = child.key;
     const oldChild = $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
     if (oldChild !== undefined) {
@@ -363,8 +363,14 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(oldEntities, entity => entity.key);
-  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(newEntities, entity => entity.key);
+  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+    oldEntities,
+    (entity: VirtualEntity) => entity.key,
+  );
+  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+    newEntities,
+    (entity: VirtualEntity) => entity.key
+  );
 
   const createdEntities: number[] = arrayPrototypeFilter_number(newEntityIds,
     (entityId: number) => !arrayPrototypeIncludes_number(oldEntityIds, entityId),
