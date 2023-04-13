@@ -425,6 +425,10 @@ export function isJSXText(node: ESNode | Token): boolean %checks {
   return node.type === 'JSXText';
 }
 
+export function isKeyofTypeAnnotation(node: ESNode | Token): boolean %checks {
+  return node.type === 'KeyofTypeAnnotation';
+}
+
 export function isLabeledStatement(node: ESNode | Token): boolean %checks {
   return node.type === 'LabeledStatement';
 }
