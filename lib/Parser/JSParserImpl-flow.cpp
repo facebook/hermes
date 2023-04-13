@@ -1416,6 +1416,16 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::BigIntTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == keyofIdent_) {
+        advance(JSLexer::GrammarContext::Type);
+        auto optBody = parseTypeAnnotationFlow();
+        if (!optBody)
+          return None;
+        return setLocation(
+            start,
+            getPrevTokenEndLoc(),
+            new (context_) ESTree::KeyofTypeAnnotationNode(*optBody));
+      }
       if (tok_->getResWordOrIdentifier() == interfaceIdent_) {
         advance(JSLexer::GrammarContext::Type);
         ESTree::NodeList extends{};
