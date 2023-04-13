@@ -156,13 +156,15 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
 }
 
 /// Attempts to remove redundant stores to the frame in \p BB when we can
-/// determine they cannot be observed. Uses capture information from \p globalCV
-/// to determine whether intervening operations may load from the variable and
-/// observe the value of stores.
-bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
+/// determine they cannot be observed.
+bool eliminateStores(BasicBlock *BB) {
   Function *F = BB->getParent();
 
   // See comment in eliminateLoads above.
+  // Note that for store elimination, being in the entry block is also relevant
+  // because it implies that the block is not in a try, which means that stores
+  // to variables owned by the current function can be eliminated across
+  // instructions that may throw.
   llvh::Optional<CapturedVariables> entryCV;
   if (BB == &*F->begin())
     entryCV.emplace();
@@ -208,18 +210,21 @@ bool eliminateStores(BasicBlock *BB, const CapturedVariables &globalCV) {
     }
 
     // Invalidate the store frame storage if the instruction may execute
-    // capturing loads that observe this store.
-    if (I.mayExecute()) {
+    // capturing loads that observe this store, or throw an exception that
+    // allows prior stores to be observed.
+    auto sideEffect = I.getSideEffect();
+    if (sideEffect.getExecuteJS() || sideEffect.getThrow()) {
       for (auto it = prevStores.begin(); it != prevStores.end(); it++) {
-        // Use incremental capture information in the entry block for owned
-        // variables, and global information for everything else.
+        // If this variable is owned by the current function, and we are in the
+        // entry block, we know that throwing an exception will not make the
+        // store observable. So if the variable does not have any captures that
+        // load it, we know the previous store is not observable yet, and can
+        // leave it in prevStores.
         bool ownedVar = it->first->getParent()->getFunction() == F;
-        const auto &cv = entryCV && ownedVar ? *entryCV : globalCV;
+        if (entryCV && ownedVar && !entryCV->loads.count(it->first))
+          continue;
 
-        // If there are any captured loads of the variable, the previous
-        // store is observable, and cannot be eliminated.
-        if (cv.loads.count(it->first))
-          prevStores.erase(it);
+        prevStores.erase(it);
       }
     }
   }
@@ -249,7 +254,7 @@ bool runFrameLoadStoreOpts(Module *M) {
   for (auto &F : *M) {
     for (auto &BB : F) {
       changed |= eliminateLoads(&BB, cv);
-      changed |= eliminateStores(&BB, cv);
+      changed |= eliminateStores(&BB);
     }
   }
   return changed;

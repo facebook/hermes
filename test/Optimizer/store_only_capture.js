@@ -45,7 +45,8 @@ function store_dedup(foo){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadFrameInst (:any) [foo@store_dedup]: any
 // CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
-// CHECK-NEXT:  %3 = StoreFrameInst %2: any, [x@store_dedup]: any
-// CHECK-NEXT:  %4 = ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = StoreFrameInst %1: any, [x@store_dedup]: any
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined
+// CHECK-NEXT:  %4 = StoreFrameInst %3: any, [x@store_dedup]: any
+// CHECK-NEXT:  %5 = ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
