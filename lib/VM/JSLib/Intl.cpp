@@ -391,21 +391,23 @@ template <>
 ExecutionStatus checkOptions<platform_intl::DateTimeFormat>(
     Runtime &runtime,
     const platform_intl::Options &options) {
-  // https://www.ecma-international.org/wp-content/uploads/ECMA-402_9th_edition_june_2022.pdf
-  //  InitializeDateTimeFormat # 42
-  const bool hasExplicitFormatComponents = options.find(u"weekday") != options.end() ||
-      options.find(u"era") != options.end() ||
-      options.find(u"year") != options.end() ||
-      options.find(u"month") != options.end() ||
-      options.find(u"day") != options.end() ||
-      options.find(u"day") != options.end() ||
-      options.find(u"dayPeriod") != options.end() ||
-      options.find(u"hour") != options.end() ||
-      options.find(u"minute") != options.end() ||
-      options.find(u"second") != options.end() ||
-      options.find(u"fractionalSecondDigits") != options.end() ||
-      options.find(u"timeZoneName") != options.end();
-  const bool hasStyle = options.find(u"dateStyle") != options.end() || options.find(u"timeStyle") != options.end();
+  // ECMA 402 2023 11.1.2
+  const bool hasExplicitFormatComponents = options.count(u"weekday") > 0 ||
+      options.count(u"era") > 0 ||
+      options.count(u"year") > 0 ||
+      options.count(u"month") > 0 ||
+      options.count(u"day") > 0 ||
+      options.count(u"dayPeriod") > 0 ||
+      options.count(u"hour") > 0 ||
+      options.count(u"minute") > 0 ||
+      options.count(u"second") > 0 ||
+      options.count(u"fractionalSecondDigits") > 0 ||
+      options.count(u"timeZoneName") > 0;
+  const bool hasStyle = options.count(u"dateStyle") > 0 || options.count(u"timeStyle") > 0;
+
+  // 42. If dateStyle is not undefined or timeStyle is not undefined, then
+  //    a. If hasExplicitFormatComponents is true, then
+  //        i. Throw a TypeError exception.
   if ( hasStyle && hasExplicitFormatComponents) {
     return runtime.raiseTypeError(
         "{data/time}Style and explicit format components shouldn't be used together");
@@ -1400,7 +1402,7 @@ namespace {
 constexpr int kDTODate = 1 << 0;
 constexpr int kDTOTime = 1 << 1;
 
-void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
+ExecutionStatus toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
   // The behavior of format with respect to default options is to
   // check if any of a set of date and time keys are present in
   // options.  If none are, then a default set of date keys is used.
@@ -1423,15 +1425,27 @@ void toDateTimeOptions(platform_intl::Options &options, int dtoFlags) {
       }
     }
   }
-  if (!needDefaults) {
-    return;
-  }
-  for (const OptionData &pod : kDTFOptions) {
-    if ((dtoFlags & kDTODate && pod.flags & kDateDefault) ||
-        (dtoFlags & kDTOTime && pod.flags & kTimeDefault)) {
-      options.emplace(pod.name, std::u16string(u"numeric"));
+
+  const bool hasStyle = options.count(u"dateStyle") > 0 || options.count(u"timeStyle") > 0;
+  if (hasStyle)
+    needDefaults = false;
+
+  if (!(dtoFlags & kDTOTime) && options.count(u"timeStyle") > 0)
+    return ExecutionStatus::EXCEPTION;
+
+  if (!(dtoFlags & kDTODate) && options.count(u"dateStyle") > 0)
+    return ExecutionStatus::EXCEPTION;
+
+  if (needDefaults) {
+    for (const OptionData &pod : kDTFOptions) {
+      if ((dtoFlags & kDTODate && pod.flags & kDateDefault) ||
+          (dtoFlags & kDTOTime && pod.flags & kTimeDefault)) {
+        options.emplace(pod.name, std::u16string(u"numeric"));
+      }
     }
   }
+
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
@@ -1455,15 +1469,12 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
     if (LLVM_UNLIKELY(optionsRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    toDateTimeOptions(*optionsRes, dtoFlags);
 
-    if (!(dtoFlags & kDTOTime) && optionsRes->find(u"timeStyle") != optionsRes->end())
-      return runtime.raiseTypeError(
-        "timeStyle not a valid option");
 
-    if (!(dtoFlags & kDTODate) && optionsRes->find(u"dateStyle") != optionsRes->end())
+    if (LLVM_UNLIKELY(toDateTimeOptions(*optionsRes, dtoFlags) == ExecutionStatus::EXCEPTION)) {
       return runtime.raiseTypeError(
-        "dateStyle not a valid option");
+        "Invalid option");
+    }
 
     CallResult<std::unique_ptr<platform_intl::DateTimeFormat>> dtfRes =
         platform_intl::DateTimeFormat::create(
