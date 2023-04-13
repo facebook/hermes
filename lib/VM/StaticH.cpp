@@ -1478,16 +1478,35 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
     Handle<JSArray> arr = runtime.makeHandle(vmcast<JSArray>(*arrayRes));
     JSArray::setStorageEndIndex(arr, runtime, numElements);
 
-    SHSerializedLiteralParser iter{
-        arrayBuffer.slice(arrayBufferIndex), numLiterals, unit};
+    struct {
+      void visitStringID(StringID id) {
+        auto shv = SmallHermesValue::encodeStringValue(
+            runtime.getStringPrimFromSymbolID(
+                SymbolID::unsafeCreate(unit->symbols[id])),
+            runtime);
+        JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+      }
+      void visitNumber(double d) {
+        auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+        JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+      }
+      void visitNull() {
+        constexpr auto shv = SmallHermesValue::encodeNullValue();
+        JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+      }
+      void visitBool(bool b) {
+        auto shv = SmallHermesValue::encodeBoolValue(b);
+        JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+      }
 
-    JSArray::size_type i = 0;
-    while (iter.hasNext()) {
-      // NOTE: we must get the value in a separate step to guarantee ordering.
-      const auto value =
-          SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
-      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
-    }
+      Handle<JSArray> arr;
+      Runtime &runtime;
+      SHUnit *unit;
+      size_t i;
+    } v{arr, runtime, unit, 0};
+
+    SerializedLiteralParser::parse(
+        arrayBuffer.slice(arrayBufferIndex), numLiterals, v);
 
     return arr.getHermesValue();
   }();
