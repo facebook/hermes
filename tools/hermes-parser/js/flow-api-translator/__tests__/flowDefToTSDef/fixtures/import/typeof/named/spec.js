@@ -8,4 +8,4 @@
  * @format
  */
 
-import typeof {Thing} from 'module';
+import typeof {Thing, Thing2} from 'module';

@@ -8,9 +8,11 @@ exports[`flowDefToTSDef variable 1`] = `
  * LICENSE file in the root directory of this source tree.
  *
  *
- * @format
+ * TODO: re-enable Prettier once it has been updated to understand this syntax
  */
 
 declare var foo: string;
+declare const foo: string;
+declare let foo: string;
 "
 `;

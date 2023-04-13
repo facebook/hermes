@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -43,11 +43,14 @@ import type {
   ClassBody as ClassBodyType,
   ClassExpression as ClassExpressionType,
   ClassImplements as ClassImplementsType,
+  ComponentDeclaration as ComponentDeclarationType,
+  ComponentParameter as ComponentParameterType,
   ConditionalExpression as ConditionalExpressionType,
   ContinueStatement as ContinueStatementType,
   DebuggerStatement as DebuggerStatementType,
   DeclareClass as DeclareClassType,
   DeclaredPredicate as DeclaredPredicateType,
+  DeclareEnum as DeclareEnumType,
   DeclareExportAllDeclaration as DeclareExportAllDeclarationType,
   DeclareInterface as DeclareInterfaceType,
   DeclareModule as DeclareModuleType,
@@ -132,6 +135,7 @@ import type {
   Property as PropertyType,
   PropertyDefinition as PropertyDefinitionType,
   QualifiedTypeIdentifier as QualifiedTypeIdentifierType,
+  QualifiedTypeofIdentifier as QualifiedTypeofIdentifierType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -149,6 +153,8 @@ import type {
   ThrowStatement as ThrowStatementType,
   TryStatement as TryStatementType,
   TupleTypeAnnotation as TupleTypeAnnotationType,
+  TupleTypeLabeledElement as TupleTypeLabeledElementType,
+  TupleTypeSpreadElement as TupleTypeSpreadElementType,
   TypeAlias as TypeAliasType,
   TypeAnnotation as TypeAnnotationType,
   TypeCastExpression as TypeCastExpressionType,
@@ -170,7 +176,7 @@ import type {
 import type {DetachedNode, MaybeDetachedNode} from '../detachedNode';
 
 import {
-  asDetachedNode,
+  asDetachedNodeForCodeGen,
   detachedProps,
   setParentPointersInDirectChildren,
 } from '../detachedNode';
@@ -279,6 +285,24 @@ export type ClassImplementsProps = {
   +typeParameters?: ?MaybeDetachedNode<ClassImplementsType['typeParameters']>,
 };
 
+export type ComponentDeclarationProps = {
+  +id: MaybeDetachedNode<ComponentDeclarationType['id']>,
+  +params: $ReadOnlyArray<
+    MaybeDetachedNode<ComponentDeclarationType['params'][number]>,
+  >,
+  +body: MaybeDetachedNode<ComponentDeclarationType['body']>,
+  +typeParameters?: ?MaybeDetachedNode<
+    ComponentDeclarationType['typeParameters'],
+  >,
+  +returnType?: ?MaybeDetachedNode<ComponentDeclarationType['returnType']>,
+};
+
+export type ComponentParameterProps = {
+  +name: MaybeDetachedNode<ComponentParameterType['name']>,
+  +local: MaybeDetachedNode<ComponentParameterType['local']>,
+  +shorthand: ComponentParameterType['shorthand'],
+};
+
 export type ConditionalExpressionProps = {
   +test: MaybeDetachedNode<ConditionalExpressionType['test']>,
   +alternate: MaybeDetachedNode<ConditionalExpressionType['alternate']>,
@@ -308,6 +332,11 @@ export type DeclareClassProps = {
 
 export type DeclaredPredicateProps = {
   +value: MaybeDetachedNode<DeclaredPredicateType['value']>,
+};
+
+export type DeclareEnumProps = {
+  +id: MaybeDetachedNode<DeclareEnumType['id']>,
+  +body: MaybeDetachedNode<DeclareEnumType['body']>,
 };
 
 export type DeclareExportAllDeclarationProps = {
@@ -350,6 +379,7 @@ export type DeclareTypeAliasProps = {
 
 export type DeclareVariableProps = {
   +id: MaybeDetachedNode<DeclareVariableType['id']>,
+  +kind: DeclareVariableType['kind'],
 };
 
 export type DoWhileStatementProps = {
@@ -643,6 +673,7 @@ export type JSXOpeningElementProps = {
     MaybeDetachedNode<JSXOpeningElementType['attributes'][number]>,
   >,
   +selfClosing: JSXOpeningElementType['selfClosing'],
+  +typeArguments?: ?MaybeDetachedNode<JSXOpeningElementType['typeArguments']>,
 };
 
 export type JSXOpeningFragmentProps = {};
@@ -817,6 +848,13 @@ export type QualifiedTypeIdentifierProps = {
   +id: MaybeDetachedNode<QualifiedTypeIdentifierType['id']>,
 };
 
+export type QualifiedTypeofIdentifierProps = {
+  +qualification: MaybeDetachedNode<
+    QualifiedTypeofIdentifierType['qualification'],
+  >,
+  +id: MaybeDetachedNode<QualifiedTypeofIdentifierType['id']>,
+};
+
 export type RestElementProps = {
   +argument: MaybeDetachedNode<RestElementType['argument']>,
 };
@@ -891,6 +929,20 @@ export type TryStatementProps = {
 export type TupleTypeAnnotationProps = {
   +types: $ReadOnlyArray<
     MaybeDetachedNode<TupleTypeAnnotationType['types'][number]>,
+  >,
+};
+
+export type TupleTypeLabeledElementProps = {
+  +label: MaybeDetachedNode<TupleTypeLabeledElementType['label']>,
+  +elementType: MaybeDetachedNode<TupleTypeLabeledElementType['elementType']>,
+  +optional: TupleTypeLabeledElementType['optional'],
+  +variance?: ?MaybeDetachedNode<TupleTypeLabeledElementType['variance']>,
+};
+
+export type TupleTypeSpreadElementProps = {
+  +label?: ?MaybeDetachedNode<TupleTypeSpreadElementType['label']>,
+  +typeAnnotation: MaybeDetachedNode<
+    TupleTypeSpreadElementType['typeAnnotation'],
   >,
 };
 
@@ -999,8 +1051,7 @@ export function ArrayExpression(props: {
 }): DetachedNode<ArrayExpressionType> {
   const node = detachedProps<ArrayExpressionType>(props.parent, {
     type: 'ArrayExpression',
-    // $FlowFixMe[incompatible-call],
-    elements: props.elements.map(n => asDetachedNode(n)),
+    elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
     trailingComma: props.trailingComma,
   });
   setParentPointersInDirectChildren(node);
@@ -1013,10 +1064,8 @@ export function ArrayPattern(props: {
 }): DetachedNode<ArrayPatternType> {
   const node = detachedProps<ArrayPatternType>(props.parent, {
     type: 'ArrayPattern',
-    // $FlowFixMe[incompatible-call],
-    elements: props.elements.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1028,8 +1077,7 @@ export function ArrayTypeAnnotation(props: {
 }): DetachedNode<ArrayTypeAnnotationType> {
   const node = detachedProps<ArrayTypeAnnotationType>(props.parent, {
     type: 'ArrayTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    elementType: asDetachedNode(props.elementType),
+    elementType: asDetachedNodeForCodeGen(props.elementType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1042,10 +1090,8 @@ export function AssignmentExpression(props: {
   const node = detachedProps<AssignmentExpressionType>(props.parent, {
     type: 'AssignmentExpression',
     operator: props.operator,
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1057,10 +1103,8 @@ export function AssignmentPattern(props: {
 }): DetachedNode<AssignmentPatternType> {
   const node = detachedProps<AssignmentPatternType>(props.parent, {
     type: 'AssignmentPattern',
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1072,8 +1116,7 @@ export function AwaitExpression(props: {
 }): DetachedNode<AwaitExpressionType> {
   const node = detachedProps<AwaitExpressionType>(props.parent, {
     type: 'AwaitExpression',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1107,10 +1150,8 @@ export function BinaryExpression(props: {
 }): DetachedNode<BinaryExpressionType> {
   const node = detachedProps<BinaryExpressionType>(props.parent, {
     type: 'BinaryExpression',
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
   });
   setParentPointersInDirectChildren(node);
@@ -1123,8 +1164,7 @@ export function BlockStatement(props: {
 }): DetachedNode<BlockStatementType> {
   const node = detachedProps<BlockStatementType>(props.parent, {
     type: 'BlockStatement',
-    // $FlowFixMe[incompatible-call],
-    body: props.body.map(n => asDetachedNode(n)),
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1159,8 +1199,7 @@ export function BreakStatement(props: {
 }): DetachedNode<BreakStatementType> {
   const node = detachedProps<BreakStatementType>(props.parent, {
     type: 'BreakStatement',
-    // $FlowFixMe[incompatible-call],
-    label: asDetachedNode(props.label),
+    label: asDetachedNodeForCodeGen(props.label),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1172,12 +1211,9 @@ export function CallExpression(props: {
 }): DetachedNode<CallExpressionType> {
   const node = detachedProps<CallExpressionType>(props.parent, {
     type: 'CallExpression',
-    // $FlowFixMe[incompatible-call],
-    callee: asDetachedNode(props.callee),
-    // $FlowFixMe[incompatible-call],
-    typeArguments: asDetachedNode(props.typeArguments),
-    // $FlowFixMe[incompatible-call],
-    arguments: props.arguments.map(n => asDetachedNode(n)),
+    callee: asDetachedNodeForCodeGen(props.callee),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    arguments: props.arguments.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1189,10 +1225,8 @@ export function CatchClause(props: {
 }): DetachedNode<CatchClauseType> {
   const node = detachedProps<CatchClauseType>(props.parent, {
     type: 'CatchClause',
-    // $FlowFixMe[incompatible-call],
-    param: asDetachedNode(props.param),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    param: asDetachedNodeForCodeGen(props.param),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1204,8 +1238,7 @@ export function ChainExpression(props: {
 }): DetachedNode<ChainExpressionType> {
   const node = detachedProps<ChainExpressionType>(props.parent, {
     type: 'ChainExpression',
-    // $FlowFixMe[incompatible-call],
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1217,8 +1250,7 @@ export function ClassBody(props: {
 }): DetachedNode<ClassBodyType> {
   const node = detachedProps<ClassBodyType>(props.parent, {
     type: 'ClassBody',
-    // $FlowFixMe[incompatible-call],
-    body: props.body.map(n => asDetachedNode(n)),
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1230,20 +1262,13 @@ export function ClassExpression(props: {
 }): DetachedNode<ClassExpressionType> {
   const node = detachedProps<ClassExpressionType>(props.parent, {
     type: 'ClassExpression',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    superClass: asDetachedNode(props.superClass),
-    // $FlowFixMe[incompatible-call],
-    superTypeParameters: asDetachedNode(props.superTypeParameters),
-    // $FlowFixMe[incompatible-call],
-    implements: props.implements.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    decorators: props.decorators.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    superClass: asDetachedNodeForCodeGen(props.superClass),
+    superTypeParameters: asDetachedNodeForCodeGen(props.superTypeParameters),
+    implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+    decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1255,10 +1280,38 @@ export function ClassImplements(props: {
 }): DetachedNode<ClassImplementsType> {
   const node = detachedProps<ClassImplementsType>(props.parent, {
     type: 'ClassImplements',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentDeclaration(props: {
+  ...$ReadOnly<ComponentDeclarationProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentDeclarationType> {
+  const node = detachedProps<ComponentDeclarationType>(props.parent, {
+    type: 'ComponentDeclaration',
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function ComponentParameter(props: {
+  ...$ReadOnly<ComponentParameterProps>,
+  +parent?: ESNode,
+}): DetachedNode<ComponentParameterType> {
+  const node = detachedProps<ComponentParameterType>(props.parent, {
+    type: 'ComponentParameter',
+    name: asDetachedNodeForCodeGen(props.name),
+    local: asDetachedNodeForCodeGen(props.local),
+    shorthand: props.shorthand,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1270,12 +1323,9 @@ export function ConditionalExpression(props: {
 }): DetachedNode<ConditionalExpressionType> {
   const node = detachedProps<ConditionalExpressionType>(props.parent, {
     type: 'ConditionalExpression',
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
-    // $FlowFixMe[incompatible-call],
-    alternate: asDetachedNode(props.alternate),
-    // $FlowFixMe[incompatible-call],
-    consequent: asDetachedNode(props.consequent),
+    test: asDetachedNodeForCodeGen(props.test),
+    alternate: asDetachedNodeForCodeGen(props.alternate),
+    consequent: asDetachedNodeForCodeGen(props.consequent),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1287,8 +1337,7 @@ export function ContinueStatement(props: {
 }): DetachedNode<ContinueStatementType> {
   const node = detachedProps<ContinueStatementType>(props.parent, {
     type: 'ContinueStatement',
-    // $FlowFixMe[incompatible-call],
-    label: asDetachedNode(props.label),
+    label: asDetachedNodeForCodeGen(props.label),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1310,18 +1359,12 @@ export function DeclareClass(props: {
 }): DetachedNode<DeclareClassType> {
   const node = detachedProps<DeclareClassType>(props.parent, {
     type: 'DeclareClass',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    extends: props.extends.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    implements: props.implements.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    mixins: props.mixins.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+    mixins: props.mixins.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1333,8 +1376,20 @@ export function DeclaredPredicate(props: {
 }): DetachedNode<DeclaredPredicateType> {
   const node = detachedProps<DeclaredPredicateType>(props.parent, {
     type: 'DeclaredPredicate',
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    value: asDetachedNodeForCodeGen(props.value),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function DeclareEnum(props: {
+  ...$ReadOnly<DeclareEnumProps>,
+  +parent?: ESNode,
+}): DetachedNode<DeclareEnumType> {
+  const node = detachedProps<DeclareEnumType>(props.parent, {
+    type: 'DeclareEnum',
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1346,8 +1401,7 @@ export function DeclareExportAllDeclaration(props: {
 }): DetachedNode<DeclareExportAllDeclarationType> {
   const node = detachedProps<DeclareExportAllDeclarationType>(props.parent, {
     type: 'DeclareExportAllDeclaration',
-    // $FlowFixMe[incompatible-call],
-    source: asDetachedNode(props.source),
+    source: asDetachedNodeForCodeGen(props.source),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1359,14 +1413,10 @@ export function DeclareInterface(props: {
 }): DetachedNode<DeclareInterfaceType> {
   const node = detachedProps<DeclareInterfaceType>(props.parent, {
     type: 'DeclareInterface',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    extends: props.extends.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1378,10 +1428,8 @@ export function DeclareModule(props: {
 }): DetachedNode<DeclareModuleType> {
   const node = detachedProps<DeclareModuleType>(props.parent, {
     type: 'DeclareModule',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
     kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
@@ -1394,8 +1442,7 @@ export function DeclareModuleExports(props: {
 }): DetachedNode<DeclareModuleExportsType> {
   const node = detachedProps<DeclareModuleExportsType>(props.parent, {
     type: 'DeclareModuleExports',
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1407,14 +1454,10 @@ export function DeclareOpaqueType(props: {
 }): DetachedNode<DeclareOpaqueTypeType> {
   const node = detachedProps<DeclareOpaqueTypeType>(props.parent, {
     type: 'DeclareOpaqueType',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    impltype: asDetachedNode(props.impltype),
-    // $FlowFixMe[incompatible-call],
-    supertype: asDetachedNode(props.supertype),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    impltype: asDetachedNodeForCodeGen(props.impltype),
+    supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1426,12 +1469,9 @@ export function DeclareTypeAlias(props: {
 }): DetachedNode<DeclareTypeAliasType> {
   const node = detachedProps<DeclareTypeAliasType>(props.parent, {
     type: 'DeclareTypeAlias',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1443,8 +1483,8 @@ export function DeclareVariable(props: {
 }): DetachedNode<DeclareVariableType> {
   const node = detachedProps<DeclareVariableType>(props.parent, {
     type: 'DeclareVariable',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
+    id: asDetachedNodeForCodeGen(props.id),
+    kind: props.kind,
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1456,10 +1496,8 @@ export function DoWhileStatement(props: {
 }): DetachedNode<DoWhileStatementType> {
   const node = detachedProps<DoWhileStatementType>(props.parent, {
     type: 'DoWhileStatement',
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
+    body: asDetachedNodeForCodeGen(props.body),
+    test: asDetachedNodeForCodeGen(props.test),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1491,8 +1529,7 @@ export function EnumBooleanBody(props: {
 }): DetachedNode<EnumBooleanBodyType> {
   const node = detachedProps<EnumBooleanBodyType>(props.parent, {
     type: 'EnumBooleanBody',
-    // $FlowFixMe[incompatible-call],
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1506,10 +1543,8 @@ export function EnumBooleanMember(props: {
 }): DetachedNode<EnumBooleanMemberType> {
   const node = detachedProps<EnumBooleanMemberType>(props.parent, {
     type: 'EnumBooleanMember',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1521,10 +1556,8 @@ export function EnumDeclaration(props: {
 }): DetachedNode<EnumDeclarationType> {
   const node = detachedProps<EnumDeclarationType>(props.parent, {
     type: 'EnumDeclaration',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1536,8 +1569,7 @@ export function EnumDefaultedMember(props: {
 }): DetachedNode<EnumDefaultedMemberType> {
   const node = detachedProps<EnumDefaultedMemberType>(props.parent, {
     type: 'EnumDefaultedMember',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1549,8 +1581,7 @@ export function EnumNumberBody(props: {
 }): DetachedNode<EnumNumberBodyType> {
   const node = detachedProps<EnumNumberBodyType>(props.parent, {
     type: 'EnumNumberBody',
-    // $FlowFixMe[incompatible-call],
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1564,10 +1595,8 @@ export function EnumNumberMember(props: {
 }): DetachedNode<EnumNumberMemberType> {
   const node = detachedProps<EnumNumberMemberType>(props.parent, {
     type: 'EnumNumberMember',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1579,8 +1608,7 @@ export function EnumStringBody(props: {
 }): DetachedNode<EnumStringBodyType> {
   const node = detachedProps<EnumStringBodyType>(props.parent, {
     type: 'EnumStringBody',
-    // $FlowFixMe[incompatible-call],
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     explicitType: props.explicitType,
     hasUnknownMembers: props.hasUnknownMembers,
   });
@@ -1594,10 +1622,8 @@ export function EnumStringMember(props: {
 }): DetachedNode<EnumStringMemberType> {
   const node = detachedProps<EnumStringMemberType>(props.parent, {
     type: 'EnumStringMember',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    init: asDetachedNode(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1609,8 +1635,7 @@ export function EnumSymbolBody(props: {
 }): DetachedNode<EnumSymbolBodyType> {
   const node = detachedProps<EnumSymbolBodyType>(props.parent, {
     type: 'EnumSymbolBody',
-    // $FlowFixMe[incompatible-call],
-    members: props.members.map(n => asDetachedNode(n)),
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
     hasUnknownMembers: props.hasUnknownMembers,
   });
   setParentPointersInDirectChildren(node);
@@ -1633,10 +1658,8 @@ export function ExportAllDeclaration(props: {
 }): DetachedNode<ExportAllDeclarationType> {
   const node = detachedProps<ExportAllDeclarationType>(props.parent, {
     type: 'ExportAllDeclaration',
-    // $FlowFixMe[incompatible-call],
-    exported: asDetachedNode(props.exported),
-    // $FlowFixMe[incompatible-call],
-    source: asDetachedNode(props.source),
+    exported: asDetachedNodeForCodeGen(props.exported),
+    source: asDetachedNodeForCodeGen(props.source),
     exportKind: props.exportKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1649,8 +1672,7 @@ export function ExportDefaultDeclaration(props: {
 }): DetachedNode<ExportDefaultDeclarationType> {
   const node = detachedProps<ExportDefaultDeclarationType>(props.parent, {
     type: 'ExportDefaultDeclaration',
-    // $FlowFixMe[incompatible-call],
-    declaration: asDetachedNode(props.declaration),
+    declaration: asDetachedNodeForCodeGen(props.declaration),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1662,10 +1684,8 @@ export function ExportSpecifier(props: {
 }): DetachedNode<ExportSpecifierType> {
   const node = detachedProps<ExportSpecifierType>(props.parent, {
     type: 'ExportSpecifier',
-    // $FlowFixMe[incompatible-call],
-    exported: asDetachedNode(props.exported),
-    // $FlowFixMe[incompatible-call],
-    local: asDetachedNode(props.local),
+    exported: asDetachedNodeForCodeGen(props.exported),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1677,8 +1697,7 @@ export function ExpressionStatement(props: {
 }): DetachedNode<ExpressionStatementType> {
   const node = detachedProps<ExpressionStatementType>(props.parent, {
     type: 'ExpressionStatement',
-    // $FlowFixMe[incompatible-call],
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
     directive: props.directive,
   });
   setParentPointersInDirectChildren(node);
@@ -1691,12 +1710,9 @@ export function ForInStatement(props: {
 }): DetachedNode<ForInStatementType> {
   const node = detachedProps<ForInStatementType>(props.parent, {
     type: 'ForInStatement',
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1708,12 +1724,9 @@ export function ForOfStatement(props: {
 }): DetachedNode<ForOfStatementType> {
   const node = detachedProps<ForOfStatementType>(props.parent, {
     type: 'ForOfStatement',
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
+    body: asDetachedNodeForCodeGen(props.body),
     await: props.await,
   });
   setParentPointersInDirectChildren(node);
@@ -1726,14 +1739,10 @@ export function ForStatement(props: {
 }): DetachedNode<ForStatementType> {
   const node = detachedProps<ForStatementType>(props.parent, {
     type: 'ForStatement',
-    // $FlowFixMe[incompatible-call],
-    init: asDetachedNode(props.init),
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
-    // $FlowFixMe[incompatible-call],
-    update: asDetachedNode(props.update),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    init: asDetachedNodeForCodeGen(props.init),
+    test: asDetachedNodeForCodeGen(props.test),
+    update: asDetachedNodeForCodeGen(props.update),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1745,18 +1754,12 @@ export function FunctionDeclaration(props: {
 }): DetachedNode<FunctionDeclarationType> {
   const node = detachedProps<FunctionDeclarationType>(props.parent, {
     type: 'FunctionDeclaration',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    params: props.params.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    returnType: asDetachedNode(props.returnType),
-    // $FlowFixMe[incompatible-call],
-    predicate: asDetachedNode(props.predicate),
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    predicate: asDetachedNodeForCodeGen(props.predicate),
     generator: props.generator,
     async: props.async,
   });
@@ -1770,18 +1773,12 @@ export function FunctionExpression(props: {
 }): DetachedNode<FunctionExpressionType> {
   const node = detachedProps<FunctionExpressionType>(props.parent, {
     type: 'FunctionExpression',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    params: props.params.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    returnType: asDetachedNode(props.returnType),
-    // $FlowFixMe[incompatible-call],
-    predicate: asDetachedNode(props.predicate),
+    id: asDetachedNodeForCodeGen(props.id),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    predicate: asDetachedNodeForCodeGen(props.predicate),
     generator: props.generator,
     async: props.async,
   });
@@ -1795,16 +1792,11 @@ export function FunctionTypeAnnotation(props: {
 }): DetachedNode<FunctionTypeAnnotationType> {
   const node = detachedProps<FunctionTypeAnnotationType>(props.parent, {
     type: 'FunctionTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    params: props.params.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    this: asDetachedNode(props.this),
-    // $FlowFixMe[incompatible-call],
-    returnType: asDetachedNode(props.returnType),
-    // $FlowFixMe[incompatible-call],
-    rest: asDetachedNode(props.rest),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
+    this: asDetachedNodeForCodeGen(props.this),
+    returnType: asDetachedNodeForCodeGen(props.returnType),
+    rest: asDetachedNodeForCodeGen(props.rest),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1816,10 +1808,8 @@ export function FunctionTypeParam(props: {
 }): DetachedNode<FunctionTypeParamType> {
   const node = detachedProps<FunctionTypeParamType>(props.parent, {
     type: 'FunctionTypeParam',
-    // $FlowFixMe[incompatible-call],
-    name: asDetachedNode(props.name),
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    name: asDetachedNodeForCodeGen(props.name),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
     optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
@@ -1832,10 +1822,8 @@ export function GenericTypeAnnotation(props: {
 }): DetachedNode<GenericTypeAnnotationType> {
   const node = detachedProps<GenericTypeAnnotationType>(props.parent, {
     type: 'GenericTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1847,12 +1835,9 @@ export function IfStatement(props: {
 }): DetachedNode<IfStatementType> {
   const node = detachedProps<IfStatementType>(props.parent, {
     type: 'IfStatement',
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
-    // $FlowFixMe[incompatible-call],
-    consequent: asDetachedNode(props.consequent),
-    // $FlowFixMe[incompatible-call],
-    alternate: asDetachedNode(props.alternate),
+    test: asDetachedNodeForCodeGen(props.test),
+    consequent: asDetachedNodeForCodeGen(props.consequent),
+    alternate: asDetachedNodeForCodeGen(props.alternate),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1864,10 +1849,8 @@ export function ImportAttribute(props: {
 }): DetachedNode<ImportAttributeType> {
   const node = detachedProps<ImportAttributeType>(props.parent, {
     type: 'ImportAttribute',
-    // $FlowFixMe[incompatible-call],
-    key: asDetachedNode(props.key),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1879,12 +1862,9 @@ export function ImportDeclaration(props: {
 }): DetachedNode<ImportDeclarationType> {
   const node = detachedProps<ImportDeclarationType>(props.parent, {
     type: 'ImportDeclaration',
-    // $FlowFixMe[incompatible-call],
-    specifiers: props.specifiers.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    source: asDetachedNode(props.source),
-    // $FlowFixMe[incompatible-call],
-    assertions: props.assertions?.map(n => asDetachedNode(n)),
+    specifiers: props.specifiers.map(n => asDetachedNodeForCodeGen(n)),
+    source: asDetachedNodeForCodeGen(props.source),
+    assertions: props.assertions?.map(n => asDetachedNodeForCodeGen(n)),
     importKind: props.importKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1897,8 +1877,7 @@ export function ImportDefaultSpecifier(props: {
 }): DetachedNode<ImportDefaultSpecifierType> {
   const node = detachedProps<ImportDefaultSpecifierType>(props.parent, {
     type: 'ImportDefaultSpecifier',
-    // $FlowFixMe[incompatible-call],
-    local: asDetachedNode(props.local),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1910,10 +1889,8 @@ export function ImportExpression(props: {
 }): DetachedNode<ImportExpressionType> {
   const node = detachedProps<ImportExpressionType>(props.parent, {
     type: 'ImportExpression',
-    // $FlowFixMe[incompatible-call],
-    source: asDetachedNode(props.source),
-    // $FlowFixMe[incompatible-call],
-    attributes: asDetachedNode(props.attributes),
+    source: asDetachedNodeForCodeGen(props.source),
+    attributes: asDetachedNodeForCodeGen(props.attributes),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1925,8 +1902,7 @@ export function ImportNamespaceSpecifier(props: {
 }): DetachedNode<ImportNamespaceSpecifierType> {
   const node = detachedProps<ImportNamespaceSpecifierType>(props.parent, {
     type: 'ImportNamespaceSpecifier',
-    // $FlowFixMe[incompatible-call],
-    local: asDetachedNode(props.local),
+    local: asDetachedNodeForCodeGen(props.local),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1938,10 +1914,8 @@ export function ImportSpecifier(props: {
 }): DetachedNode<ImportSpecifierType> {
   const node = detachedProps<ImportSpecifierType>(props.parent, {
     type: 'ImportSpecifier',
-    // $FlowFixMe[incompatible-call],
-    imported: asDetachedNode(props.imported),
-    // $FlowFixMe[incompatible-call],
-    local: asDetachedNode(props.local),
+    imported: asDetachedNodeForCodeGen(props.imported),
+    local: asDetachedNodeForCodeGen(props.local),
     importKind: props.importKind,
   });
   setParentPointersInDirectChildren(node);
@@ -1954,10 +1928,8 @@ export function IndexedAccessType(props: {
 }): DetachedNode<IndexedAccessTypeType> {
   const node = detachedProps<IndexedAccessTypeType>(props.parent, {
     type: 'IndexedAccessType',
-    // $FlowFixMe[incompatible-call],
-    objectType: asDetachedNode(props.objectType),
-    // $FlowFixMe[incompatible-call],
-    indexType: asDetachedNode(props.indexType),
+    objectType: asDetachedNodeForCodeGen(props.objectType),
+    indexType: asDetachedNodeForCodeGen(props.indexType),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1979,14 +1951,10 @@ export function InterfaceDeclaration(props: {
 }): DetachedNode<InterfaceDeclarationType> {
   const node = detachedProps<InterfaceDeclarationType>(props.parent, {
     type: 'InterfaceDeclaration',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    extends: props.extends.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -1998,10 +1966,8 @@ export function InterfaceExtends(props: {
 }): DetachedNode<InterfaceExtendsType> {
   const node = detachedProps<InterfaceExtendsType>(props.parent, {
     type: 'InterfaceExtends',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2013,10 +1979,8 @@ export function InterfaceTypeAnnotation(props: {
 }): DetachedNode<InterfaceTypeAnnotationType> {
   const node = detachedProps<InterfaceTypeAnnotationType>(props.parent, {
     type: 'InterfaceTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    extends: props.extends.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    extends: props.extends.map(n => asDetachedNodeForCodeGen(n)),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2028,8 +1992,7 @@ export function IntersectionTypeAnnotation(props: {
 }): DetachedNode<IntersectionTypeAnnotationType> {
   const node = detachedProps<IntersectionTypeAnnotationType>(props.parent, {
     type: 'IntersectionTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2041,10 +2004,8 @@ export function JSXAttribute(props: {
 }): DetachedNode<JSXAttributeType> {
   const node = detachedProps<JSXAttributeType>(props.parent, {
     type: 'JSXAttribute',
-    // $FlowFixMe[incompatible-call],
-    name: asDetachedNode(props.name),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    name: asDetachedNodeForCodeGen(props.name),
+    value: asDetachedNodeForCodeGen(props.value),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2056,8 +2017,7 @@ export function JSXClosingElement(props: {
 }): DetachedNode<JSXClosingElementType> {
   const node = detachedProps<JSXClosingElementType>(props.parent, {
     type: 'JSXClosingElement',
-    // $FlowFixMe[incompatible-call],
-    name: asDetachedNode(props.name),
+    name: asDetachedNodeForCodeGen(props.name),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2079,12 +2039,9 @@ export function JSXElement(props: {
 }): DetachedNode<JSXElementType> {
   const node = detachedProps<JSXElementType>(props.parent, {
     type: 'JSXElement',
-    // $FlowFixMe[incompatible-call],
-    openingElement: asDetachedNode(props.openingElement),
-    // $FlowFixMe[incompatible-call],
-    children: props.children.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    closingElement: asDetachedNode(props.closingElement),
+    openingElement: asDetachedNodeForCodeGen(props.openingElement),
+    children: props.children.map(n => asDetachedNodeForCodeGen(n)),
+    closingElement: asDetachedNodeForCodeGen(props.closingElement),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2106,8 +2063,7 @@ export function JSXExpressionContainer(props: {
 }): DetachedNode<JSXExpressionContainerType> {
   const node = detachedProps<JSXExpressionContainerType>(props.parent, {
     type: 'JSXExpressionContainer',
-    // $FlowFixMe[incompatible-call],
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2119,12 +2075,9 @@ export function JSXFragment(props: {
 }): DetachedNode<JSXFragmentType> {
   const node = detachedProps<JSXFragmentType>(props.parent, {
     type: 'JSXFragment',
-    // $FlowFixMe[incompatible-call],
-    openingFragment: asDetachedNode(props.openingFragment),
-    // $FlowFixMe[incompatible-call],
-    children: props.children.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    closingFragment: asDetachedNode(props.closingFragment),
+    openingFragment: asDetachedNodeForCodeGen(props.openingFragment),
+    children: props.children.map(n => asDetachedNodeForCodeGen(n)),
+    closingFragment: asDetachedNodeForCodeGen(props.closingFragment),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2148,10 +2101,8 @@ export function JSXMemberExpression(props: {
 }): DetachedNode<JSXMemberExpressionType> {
   const node = detachedProps<JSXMemberExpressionType>(props.parent, {
     type: 'JSXMemberExpression',
-    // $FlowFixMe[incompatible-call],
-    object: asDetachedNode(props.object),
-    // $FlowFixMe[incompatible-call],
-    property: asDetachedNode(props.property),
+    object: asDetachedNodeForCodeGen(props.object),
+    property: asDetachedNodeForCodeGen(props.property),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2163,10 +2114,8 @@ export function JSXNamespacedName(props: {
 }): DetachedNode<JSXNamespacedNameType> {
   const node = detachedProps<JSXNamespacedNameType>(props.parent, {
     type: 'JSXNamespacedName',
-    // $FlowFixMe[incompatible-call],
-    namespace: asDetachedNode(props.namespace),
-    // $FlowFixMe[incompatible-call],
-    name: asDetachedNode(props.name),
+    namespace: asDetachedNodeForCodeGen(props.namespace),
+    name: asDetachedNodeForCodeGen(props.name),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2178,11 +2127,10 @@ export function JSXOpeningElement(props: {
 }): DetachedNode<JSXOpeningElementType> {
   const node = detachedProps<JSXOpeningElementType>(props.parent, {
     type: 'JSXOpeningElement',
-    // $FlowFixMe[incompatible-call],
-    name: asDetachedNode(props.name),
-    // $FlowFixMe[incompatible-call],
-    attributes: props.attributes.map(n => asDetachedNode(n)),
+    name: asDetachedNodeForCodeGen(props.name),
+    attributes: props.attributes.map(n => asDetachedNodeForCodeGen(n)),
     selfClosing: props.selfClosing,
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2204,8 +2152,7 @@ export function JSXSpreadAttribute(props: {
 }): DetachedNode<JSXSpreadAttributeType> {
   const node = detachedProps<JSXSpreadAttributeType>(props.parent, {
     type: 'JSXSpreadAttribute',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2217,8 +2164,7 @@ export function JSXSpreadChild(props: {
 }): DetachedNode<JSXSpreadChildType> {
   const node = detachedProps<JSXSpreadChildType>(props.parent, {
     type: 'JSXSpreadChild',
-    // $FlowFixMe[incompatible-call],
-    expression: asDetachedNode(props.expression),
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2243,10 +2189,8 @@ export function LabeledStatement(props: {
 }): DetachedNode<LabeledStatementType> {
   const node = detachedProps<LabeledStatementType>(props.parent, {
     type: 'LabeledStatement',
-    // $FlowFixMe[incompatible-call],
-    label: asDetachedNode(props.label),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    label: asDetachedNodeForCodeGen(props.label),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2258,10 +2202,8 @@ export function LogicalExpression(props: {
 }): DetachedNode<LogicalExpressionType> {
   const node = detachedProps<LogicalExpressionType>(props.parent, {
     type: 'LogicalExpression',
-    // $FlowFixMe[incompatible-call],
-    left: asDetachedNode(props.left),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    left: asDetachedNodeForCodeGen(props.left),
+    right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
   });
   setParentPointersInDirectChildren(node);
@@ -2274,10 +2216,8 @@ export function MemberExpression(props: {
 }): DetachedNode<MemberExpressionType> {
   const node = detachedProps<MemberExpressionType>(props.parent, {
     type: 'MemberExpression',
-    // $FlowFixMe[incompatible-call],
-    object: asDetachedNode(props.object),
-    // $FlowFixMe[incompatible-call],
-    property: asDetachedNode(props.property),
+    object: asDetachedNodeForCodeGen(props.object),
+    property: asDetachedNodeForCodeGen(props.property),
     computed: props.computed,
   });
   setParentPointersInDirectChildren(node);
@@ -2290,10 +2230,8 @@ export function MetaProperty(props: {
 }): DetachedNode<MetaPropertyType> {
   const node = detachedProps<MetaPropertyType>(props.parent, {
     type: 'MetaProperty',
-    // $FlowFixMe[incompatible-call],
-    meta: asDetachedNode(props.meta),
-    // $FlowFixMe[incompatible-call],
-    property: asDetachedNode(props.property),
+    meta: asDetachedNodeForCodeGen(props.meta),
+    property: asDetachedNodeForCodeGen(props.property),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2305,10 +2243,8 @@ export function MethodDefinition(props: {
 }): DetachedNode<MethodDefinitionType> {
   const node = detachedProps<MethodDefinitionType>(props.parent, {
     type: 'MethodDefinition',
-    // $FlowFixMe[incompatible-call],
-    key: asDetachedNode(props.key),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     kind: props.kind,
     computed: props.computed,
     static: props.static,
@@ -2333,12 +2269,9 @@ export function NewExpression(props: {
 }): DetachedNode<NewExpressionType> {
   const node = detachedProps<NewExpressionType>(props.parent, {
     type: 'NewExpression',
-    // $FlowFixMe[incompatible-call],
-    callee: asDetachedNode(props.callee),
-    // $FlowFixMe[incompatible-call],
-    typeArguments: asDetachedNode(props.typeArguments),
-    // $FlowFixMe[incompatible-call],
-    arguments: props.arguments.map(n => asDetachedNode(n)),
+    callee: asDetachedNodeForCodeGen(props.callee),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    arguments: props.arguments.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2350,8 +2283,7 @@ export function NullableTypeAnnotation(props: {
 }): DetachedNode<NullableTypeAnnotationType> {
   const node = detachedProps<NullableTypeAnnotationType>(props.parent, {
     type: 'NullableTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2396,8 +2328,7 @@ export function ObjectExpression(props: {
 }): DetachedNode<ObjectExpressionType> {
   const node = detachedProps<ObjectExpressionType>(props.parent, {
     type: 'ObjectExpression',
-    // $FlowFixMe[incompatible-call],
-    properties: props.properties.map(n => asDetachedNode(n)),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2409,10 +2340,8 @@ export function ObjectPattern(props: {
 }): DetachedNode<ObjectPatternType> {
   const node = detachedProps<ObjectPatternType>(props.parent, {
     type: 'ObjectPattern',
-    // $FlowFixMe[incompatible-call],
-    properties: props.properties.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2424,14 +2353,10 @@ export function ObjectTypeAnnotation(props: {
 }): DetachedNode<ObjectTypeAnnotationType> {
   const node = detachedProps<ObjectTypeAnnotationType>(props.parent, {
     type: 'ObjectTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    properties: props.properties.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    indexers: props.indexers.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    callProperties: props.callProperties.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    internalSlots: props.internalSlots.map(n => asDetachedNode(n)),
+    properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+    indexers: props.indexers.map(n => asDetachedNodeForCodeGen(n)),
+    callProperties: props.callProperties.map(n => asDetachedNodeForCodeGen(n)),
+    internalSlots: props.internalSlots.map(n => asDetachedNodeForCodeGen(n)),
     inexact: props.inexact,
     exact: props.exact,
   });
@@ -2445,8 +2370,7 @@ export function ObjectTypeCallProperty(props: {
 }): DetachedNode<ObjectTypeCallPropertyType> {
   const node = detachedProps<ObjectTypeCallPropertyType>(props.parent, {
     type: 'ObjectTypeCallProperty',
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    value: asDetachedNodeForCodeGen(props.value),
     static: props.static,
   });
   setParentPointersInDirectChildren(node);
@@ -2459,15 +2383,11 @@ export function ObjectTypeIndexer(props: {
 }): DetachedNode<ObjectTypeIndexerType> {
   const node = detachedProps<ObjectTypeIndexerType>(props.parent, {
     type: 'ObjectTypeIndexer',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    key: asDetachedNode(props.key),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    id: asDetachedNodeForCodeGen(props.id),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     static: props.static,
-    // $FlowFixMe[incompatible-call],
-    variance: asDetachedNode(props.variance),
+    variance: asDetachedNodeForCodeGen(props.variance),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2479,10 +2399,8 @@ export function ObjectTypeInternalSlot(props: {
 }): DetachedNode<ObjectTypeInternalSlotType> {
   const node = detachedProps<ObjectTypeInternalSlotType>(props.parent, {
     type: 'ObjectTypeInternalSlot',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    id: asDetachedNodeForCodeGen(props.id),
+    value: asDetachedNodeForCodeGen(props.value),
     optional: props.optional,
     static: props.static,
     method: props.method,
@@ -2497,8 +2415,7 @@ export function ObjectTypeSpreadProperty(props: {
 }): DetachedNode<ObjectTypeSpreadPropertyType> {
   const node = detachedProps<ObjectTypeSpreadPropertyType>(props.parent, {
     type: 'ObjectTypeSpreadProperty',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2510,14 +2427,10 @@ export function OpaqueType(props: {
 }): DetachedNode<OpaqueTypeType> {
   const node = detachedProps<OpaqueTypeType>(props.parent, {
     type: 'OpaqueType',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    impltype: asDetachedNode(props.impltype),
-    // $FlowFixMe[incompatible-call],
-    supertype: asDetachedNode(props.supertype),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    impltype: asDetachedNodeForCodeGen(props.impltype),
+    supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2529,10 +2442,8 @@ export function OptionalIndexedAccessType(props: {
 }): DetachedNode<OptionalIndexedAccessTypeType> {
   const node = detachedProps<OptionalIndexedAccessTypeType>(props.parent, {
     type: 'OptionalIndexedAccessType',
-    // $FlowFixMe[incompatible-call],
-    objectType: asDetachedNode(props.objectType),
-    // $FlowFixMe[incompatible-call],
-    indexType: asDetachedNode(props.indexType),
+    objectType: asDetachedNodeForCodeGen(props.objectType),
+    indexType: asDetachedNodeForCodeGen(props.indexType),
     optional: props.optional,
   });
   setParentPointersInDirectChildren(node);
@@ -2557,10 +2468,8 @@ export function Property(props: {
 }): DetachedNode<PropertyType> {
   const node = detachedProps<PropertyType>(props.parent, {
     type: 'Property',
-    // $FlowFixMe[incompatible-call],
-    key: asDetachedNode(props.key),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     kind: props.kind,
     computed: props.computed,
     method: props.method,
@@ -2576,20 +2485,15 @@ export function PropertyDefinition(props: {
 }): DetachedNode<PropertyDefinitionType> {
   const node = detachedProps<PropertyDefinitionType>(props.parent, {
     type: 'PropertyDefinition',
-    // $FlowFixMe[incompatible-call],
-    key: asDetachedNode(props.key),
-    // $FlowFixMe[incompatible-call],
-    value: asDetachedNode(props.value),
+    key: asDetachedNodeForCodeGen(props.key),
+    value: asDetachedNodeForCodeGen(props.value),
     computed: props.computed,
     static: props.static,
     declare: props.declare,
     optional: props.optional,
-    // $FlowFixMe[incompatible-call],
-    variance: asDetachedNode(props.variance),
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
-    // $FlowFixMe[incompatible-call],
-    tsModifiers: asDetachedNode(props.tsModifiers),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+    tsModifiers: asDetachedNodeForCodeGen(props.tsModifiers),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2601,10 +2505,21 @@ export function QualifiedTypeIdentifier(props: {
 }): DetachedNode<QualifiedTypeIdentifierType> {
   const node = detachedProps<QualifiedTypeIdentifierType>(props.parent, {
     type: 'QualifiedTypeIdentifier',
-    // $FlowFixMe[incompatible-call],
-    qualification: asDetachedNode(props.qualification),
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
+    qualification: asDetachedNodeForCodeGen(props.qualification),
+    id: asDetachedNodeForCodeGen(props.id),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function QualifiedTypeofIdentifier(props: {
+  ...$ReadOnly<QualifiedTypeofIdentifierProps>,
+  +parent?: ESNode,
+}): DetachedNode<QualifiedTypeofIdentifierType> {
+  const node = detachedProps<QualifiedTypeofIdentifierType>(props.parent, {
+    type: 'QualifiedTypeofIdentifier',
+    qualification: asDetachedNodeForCodeGen(props.qualification),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2616,8 +2531,7 @@ export function RestElement(props: {
 }): DetachedNode<RestElementType> {
   const node = detachedProps<RestElementType>(props.parent, {
     type: 'RestElement',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2629,8 +2543,7 @@ export function ReturnStatement(props: {
 }): DetachedNode<ReturnStatementType> {
   const node = detachedProps<ReturnStatementType>(props.parent, {
     type: 'ReturnStatement',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2642,8 +2555,7 @@ export function SequenceExpression(props: {
 }): DetachedNode<SequenceExpressionType> {
   const node = detachedProps<SequenceExpressionType>(props.parent, {
     type: 'SequenceExpression',
-    // $FlowFixMe[incompatible-call],
-    expressions: props.expressions.map(n => asDetachedNode(n)),
+    expressions: props.expressions.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2655,8 +2567,7 @@ export function SpreadElement(props: {
 }): DetachedNode<SpreadElementType> {
   const node = detachedProps<SpreadElementType>(props.parent, {
     type: 'SpreadElement',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2701,10 +2612,8 @@ export function SwitchCase(props: {
 }): DetachedNode<SwitchCaseType> {
   const node = detachedProps<SwitchCaseType>(props.parent, {
     type: 'SwitchCase',
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
-    // $FlowFixMe[incompatible-call],
-    consequent: props.consequent.map(n => asDetachedNode(n)),
+    test: asDetachedNodeForCodeGen(props.test),
+    consequent: props.consequent.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2716,10 +2625,8 @@ export function SwitchStatement(props: {
 }): DetachedNode<SwitchStatementType> {
   const node = detachedProps<SwitchStatementType>(props.parent, {
     type: 'SwitchStatement',
-    // $FlowFixMe[incompatible-call],
-    discriminant: asDetachedNode(props.discriminant),
-    // $FlowFixMe[incompatible-call],
-    cases: props.cases.map(n => asDetachedNode(n)),
+    discriminant: asDetachedNodeForCodeGen(props.discriminant),
+    cases: props.cases.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2741,10 +2648,8 @@ export function TaggedTemplateExpression(props: {
 }): DetachedNode<TaggedTemplateExpressionType> {
   const node = detachedProps<TaggedTemplateExpressionType>(props.parent, {
     type: 'TaggedTemplateExpression',
-    // $FlowFixMe[incompatible-call],
-    tag: asDetachedNode(props.tag),
-    // $FlowFixMe[incompatible-call],
-    quasi: asDetachedNode(props.quasi),
+    tag: asDetachedNodeForCodeGen(props.tag),
+    quasi: asDetachedNodeForCodeGen(props.quasi),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2756,10 +2661,8 @@ export function TemplateLiteral(props: {
 }): DetachedNode<TemplateLiteralType> {
   const node = detachedProps<TemplateLiteralType>(props.parent, {
     type: 'TemplateLiteral',
-    // $FlowFixMe[incompatible-call],
-    quasis: props.quasis.map(n => asDetachedNode(n)),
-    // $FlowFixMe[incompatible-call],
-    expressions: props.expressions.map(n => asDetachedNode(n)),
+    quasis: props.quasis.map(n => asDetachedNodeForCodeGen(n)),
+    expressions: props.expressions.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2791,8 +2694,7 @@ export function ThrowStatement(props: {
 }): DetachedNode<ThrowStatementType> {
   const node = detachedProps<ThrowStatementType>(props.parent, {
     type: 'ThrowStatement',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2804,12 +2706,9 @@ export function TryStatement(props: {
 }): DetachedNode<TryStatementType> {
   const node = detachedProps<TryStatementType>(props.parent, {
     type: 'TryStatement',
-    // $FlowFixMe[incompatible-call],
-    block: asDetachedNode(props.block),
-    // $FlowFixMe[incompatible-call],
-    handler: asDetachedNode(props.handler),
-    // $FlowFixMe[incompatible-call],
-    finalizer: asDetachedNode(props.finalizer),
+    block: asDetachedNodeForCodeGen(props.block),
+    handler: asDetachedNodeForCodeGen(props.handler),
+    finalizer: asDetachedNodeForCodeGen(props.finalizer),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2821,8 +2720,35 @@ export function TupleTypeAnnotation(props: {
 }): DetachedNode<TupleTypeAnnotationType> {
   const node = detachedProps<TupleTypeAnnotationType>(props.parent, {
     type: 'TupleTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeLabeledElement(props: {
+  ...$ReadOnly<TupleTypeLabeledElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeLabeledElementType> {
+  const node = detachedProps<TupleTypeLabeledElementType>(props.parent, {
+    type: 'TupleTypeLabeledElement',
+    label: asDetachedNodeForCodeGen(props.label),
+    elementType: asDetachedNodeForCodeGen(props.elementType),
+    optional: props.optional,
+    variance: asDetachedNodeForCodeGen(props.variance),
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+export function TupleTypeSpreadElement(props: {
+  ...$ReadOnly<TupleTypeSpreadElementProps>,
+  +parent?: ESNode,
+}): DetachedNode<TupleTypeSpreadElementType> {
+  const node = detachedProps<TupleTypeSpreadElementType>(props.parent, {
+    type: 'TupleTypeSpreadElement',
+    label: asDetachedNodeForCodeGen(props.label),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2834,12 +2760,9 @@ export function TypeAlias(props: {
 }): DetachedNode<TypeAliasType> {
   const node = detachedProps<TypeAliasType>(props.parent, {
     type: 'TypeAlias',
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call],
-    typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call],
-    right: asDetachedNode(props.right),
+    id: asDetachedNodeForCodeGen(props.id),
+    typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+    right: asDetachedNodeForCodeGen(props.right),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2851,8 +2774,7 @@ export function TypeAnnotation(props: {
 }): DetachedNode<TypeAnnotationType> {
   const node = detachedProps<TypeAnnotationType>(props.parent, {
     type: 'TypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2864,10 +2786,8 @@ export function TypeCastExpression(props: {
 }): DetachedNode<TypeCastExpressionType> {
   const node = detachedProps<TypeCastExpressionType>(props.parent, {
     type: 'TypeCastExpression',
-    // $FlowFixMe[incompatible-call],
-    expression: asDetachedNode(props.expression),
-    // $FlowFixMe[incompatible-call],
-    typeAnnotation: asDetachedNode(props.typeAnnotation),
+    expression: asDetachedNodeForCodeGen(props.expression),
+    typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2879,8 +2799,7 @@ export function TypeofTypeAnnotation(props: {
 }): DetachedNode<TypeofTypeAnnotationType> {
   const node = detachedProps<TypeofTypeAnnotationType>(props.parent, {
     type: 'TypeofTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2893,12 +2812,9 @@ export function TypeParameter(props: {
   const node = detachedProps<TypeParameterType>(props.parent, {
     type: 'TypeParameter',
     name: props.name,
-    // $FlowFixMe[incompatible-call],
-    bound: asDetachedNode(props.bound),
-    // $FlowFixMe[incompatible-call],
-    variance: asDetachedNode(props.variance),
-    // $FlowFixMe[incompatible-call],
-    default: asDetachedNode(props.default),
+    bound: asDetachedNodeForCodeGen(props.bound),
+    variance: asDetachedNodeForCodeGen(props.variance),
+    default: asDetachedNodeForCodeGen(props.default),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2910,8 +2826,7 @@ export function TypeParameterDeclaration(props: {
 }): DetachedNode<TypeParameterDeclarationType> {
   const node = detachedProps<TypeParameterDeclarationType>(props.parent, {
     type: 'TypeParameterDeclaration',
-    // $FlowFixMe[incompatible-call],
-    params: props.params.map(n => asDetachedNode(n)),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2923,8 +2838,7 @@ export function TypeParameterInstantiation(props: {
 }): DetachedNode<TypeParameterInstantiationType> {
   const node = detachedProps<TypeParameterInstantiationType>(props.parent, {
     type: 'TypeParameterInstantiation',
-    // $FlowFixMe[incompatible-call],
-    params: props.params.map(n => asDetachedNode(n)),
+    params: props.params.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2937,8 +2851,7 @@ export function UnaryExpression(props: {
   const node = detachedProps<UnaryExpressionType>(props.parent, {
     type: 'UnaryExpression',
     operator: props.operator,
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     prefix: props.prefix,
   });
   setParentPointersInDirectChildren(node);
@@ -2951,8 +2864,7 @@ export function UnionTypeAnnotation(props: {
 }): DetachedNode<UnionTypeAnnotationType> {
   const node = detachedProps<UnionTypeAnnotationType>(props.parent, {
     type: 'UnionTypeAnnotation',
-    // $FlowFixMe[incompatible-call],
-    types: props.types.map(n => asDetachedNode(n)),
+    types: props.types.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2965,8 +2877,7 @@ export function UpdateExpression(props: {
   const node = detachedProps<UpdateExpressionType>(props.parent, {
     type: 'UpdateExpression',
     operator: props.operator,
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     prefix: props.prefix,
   });
   setParentPointersInDirectChildren(node);
@@ -2980,8 +2891,7 @@ export function VariableDeclaration(props: {
   const node = detachedProps<VariableDeclarationType>(props.parent, {
     type: 'VariableDeclaration',
     kind: props.kind,
-    // $FlowFixMe[incompatible-call],
-    declarations: props.declarations.map(n => asDetachedNode(n)),
+    declarations: props.declarations.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -2993,10 +2903,8 @@ export function VariableDeclarator(props: {
 }): DetachedNode<VariableDeclaratorType> {
   const node = detachedProps<VariableDeclaratorType>(props.parent, {
     type: 'VariableDeclarator',
-    // $FlowFixMe[incompatible-call],
-    init: asDetachedNode(props.init),
-    // $FlowFixMe[incompatible-call],
-    id: asDetachedNode(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
+    id: asDetachedNodeForCodeGen(props.id),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -3030,10 +2938,8 @@ export function WhileStatement(props: {
 }): DetachedNode<WhileStatementType> {
   const node = detachedProps<WhileStatementType>(props.parent, {
     type: 'WhileStatement',
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call],
-    test: asDetachedNode(props.test),
+    body: asDetachedNodeForCodeGen(props.body),
+    test: asDetachedNodeForCodeGen(props.test),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -3045,10 +2951,8 @@ export function WithStatement(props: {
 }): DetachedNode<WithStatementType> {
   const node = detachedProps<WithStatementType>(props.parent, {
     type: 'WithStatement',
-    // $FlowFixMe[incompatible-call],
-    object: asDetachedNode(props.object),
-    // $FlowFixMe[incompatible-call],
-    body: asDetachedNode(props.body),
+    object: asDetachedNodeForCodeGen(props.object),
+    body: asDetachedNodeForCodeGen(props.body),
   });
   setParentPointersInDirectChildren(node);
   return node;
@@ -3060,8 +2964,7 @@ export function YieldExpression(props: {
 }): DetachedNode<YieldExpressionType> {
   const node = detachedProps<YieldExpressionType>(props.parent, {
     type: 'YieldExpression',
-    // $FlowFixMe[incompatible-call],
-    argument: asDetachedNode(props.argument),
+    argument: asDetachedNodeForCodeGen(props.argument),
     delegate: props.delegate,
   });
   setParentPointersInDirectChildren(node);

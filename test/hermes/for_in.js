@@ -114,3 +114,16 @@ for (var y in x) {
 for (var k in Number(0)) {}
 // 2. This Proxy uses the same hidden cache object internally.
 for (var k in new Proxy({},{})) {}
+
+// Check that property names are uniqued when
+// travelling through the prototype chain.
+var parent = {0:5, dup: 5, a:5, '2':5};
+var child = {__proto__: parent, 0:5, dup: 5, b:5, 2:5};
+for (var prop in child) {
+  print(prop);
+}
+//CHECK: 0
+//CHECK: 2
+//CHECK: dup
+//CHECK: b
+//CHECK: a

@@ -22,6 +22,7 @@ const hermesParse = HermesParserWASM.cwrap('hermesParse', 'number', [
   'number',
   'number',
   'number',
+  'number',
 ]);
 
 const hermesParseResult_free = HermesParserWASM.cwrap(
@@ -88,6 +89,7 @@ export function parse(source: string, options: ParserOptions): HermesNode {
       sourceAddr,
       sourceBuffer.length + 1,
       options.flow === 'detect',
+      options.enableExperimentalComponentSyntax,
       options.tokens,
       options.allowReturnOutsideFunction,
     );

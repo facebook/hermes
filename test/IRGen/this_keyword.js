@@ -20,7 +20,8 @@ function f2(){
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [f1, f2]
+// CHECK-NEXT:globals = [f1, f2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
@@ -31,14 +32,14 @@ function f2(){
 // CHECK-NEXT:function_end
 
 // CHECK:function f1#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{f1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst %this
 // CHECK-NEXT:function_end
 
 // CHECK:function f2#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{f2#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
 // CHECK-NEXT:  %1 = ReturnInst %this

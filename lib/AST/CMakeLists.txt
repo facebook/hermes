@@ -5,6 +5,7 @@
 
 add_hermes_library(hermesAST
     ASTBuilder.cpp
+    BlockScopingTransformations.cpp
     ESTree.cpp
     ESTreeJSONDumper.cpp
     SemValidate.cpp

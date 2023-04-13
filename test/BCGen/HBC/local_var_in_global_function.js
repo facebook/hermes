@@ -28,7 +28,8 @@ print(e);
 // Auto-generated content below. Please do not modify manually.
 
 // RA:function global#0()#1
-// RA-NEXT:frame = [?anon_1_e#1], globals = [inner, e]
+// RA-NEXT:globals = [inner, e]
+// RA-NEXT:S{global#0()#1} = [?anon_1_e#1]
 // RA-NEXT:%BB0:
 // RA-NEXT:  $Reg1 @0 [1...10) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // RA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCLoadConstInst "global" : string
@@ -43,11 +44,11 @@ print(e);
 // RA-NEXT:  $Reg3 @11 [12...16) 	%9 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // RA-NEXT:  $Reg1 @12 [13...15) 	%10 = TryLoadGlobalPropertyInst %2 : object, "local" : string
 // RA-NEXT:  $Reg2 @13 [14...19) 	%11 = HBCLoadConstInst undefined : undefined
-// RA-NEXT:  $Reg1 @14 [15...16) 	%12 = HBCCallNInst %10, %11 : undefined
-// RA-NEXT:  $Reg1 @15 [empty]	%13 = HBCCallNInst %9, %11 : undefined, %12
+// RA-NEXT:  $Reg1 @14 [15...16) 	%12 = HBCCallNInst %10, undefined : undefined, %11 : undefined
+// RA-NEXT:  $Reg1 @15 [empty]	%13 = HBCCallNInst %9, undefined : undefined, %11 : undefined, %12
 // RA-NEXT:  $Reg1 @16 [17...19) 	%14 = TryLoadGlobalPropertyInst %2 : object, "print" : string
 // RA-NEXT:  $Reg0 @17 [18...19) 	%15 = LoadPropertyInst %2 : object, "e" : string
-// RA-NEXT:  $Reg0 @18 [19...20) 	%16 = HBCCallNInst %14, %11 : undefined, %15
+// RA-NEXT:  $Reg0 @18 [19...20) 	%16 = HBCCallNInst %14, undefined : undefined, %11 : undefined, %15
 // RA-NEXT:  $Reg0 @19 [empty]	%17 = ReturnInst %16
 // RA-NEXT:%BB2:
 // RA-NEXT:  $Reg2 @5 [6...7) 	%18 = HBCLoadConstInst "local" : string
@@ -55,7 +56,7 @@ print(e);
 // RA-NEXT:function_end
 
 // RA:function local#0#1()#2
-// RA-NEXT:frame = []
+// RA-NEXT:S{local#0#1()#2} = []
 // RA-NEXT:%BB0:
 // RA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCResolveEnvironment %S{global#0()#1}, %S{local#0#1()#2}
 // RA-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadFromEnvironmentInst %0, [?anon_1_e#1@global]

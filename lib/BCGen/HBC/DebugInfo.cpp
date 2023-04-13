@@ -91,6 +91,12 @@ DebugScopeDescriptor::Flags::Flags(uint32_t bits) {
       mask == (1 << static_cast<uint32_t>(Bits::InnerScope)) &&
       "mask is not Bits::InnerScope");
   isInnerScope = (bits & mask) != 0;
+
+  mask <<= 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::Dynamic)) &&
+      "mask is not Bits::Dynamic");
+  isDynamic = (bits & mask) != 0;
 }
 
 uint32_t DebugScopeDescriptor::Flags::toUint32() const {
@@ -101,6 +107,12 @@ uint32_t DebugScopeDescriptor::Flags::toUint32() const {
       mask == (1 << static_cast<uint32_t>(Bits::InnerScope)) &&
       "mask is not Bits::InnerScope");
   bits |= isInnerScope ? mask : 0;
+
+  mask <<= 1;
+  assert(
+      mask == (1 << static_cast<uint32_t>(Bits::Dynamic)) &&
+      "mask is not Bits::Dynamic");
+  bits |= isDynamic ? mask : 0;
 
   return bits;
 }
@@ -395,6 +407,7 @@ void DebugInfo::disassembleScopeDescData(llvh::raw_ostream &OS) const {
     }
     OS << ", flags: ";
     OS << (flags.isInnerScope ? "Is" : "  ");
+    OS << (flags.isDynamic ? "D" : " ");
     OS << ", variable count: " << varNamesCount;
     OS << '\n';
     for (int64_t i = 0; i < varNamesCount; i++) {
@@ -587,15 +600,12 @@ uint32_t DebugInfoGenerator::appendTextifiedCalleeData(
 
 uint32_t DebugInfoGenerator::appendScopeDesc(
     OptValue<uint32_t> parentScopeOffset,
-    bool isInnerScope,
+    DebugScopeDescriptor::Flags flags,
     llvh::ArrayRef<Identifier> names) {
   assert(validData && "DebugInfoGenerator not valid");
   if (!parentScopeOffset.hasValue() && names.empty()) {
     return kMostCommonEntryOffset;
   }
-  DebugScopeDescriptor::Flags flags;
-  flags.isInnerScope = isInnerScope;
-
   const uint32_t startOffset = scopeDescData_.size();
   appendSignedLEB128(
       scopeDescData_, !parentScopeOffset.hasValue() ? -1 : *parentScopeOffset);

@@ -29,7 +29,8 @@ function check_after_check() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [check_after_store, check_after_check]
+// CHECK-NEXT:globals = [check_after_store, check_after_check]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %check_after_store#0#1()#2, %0
@@ -43,7 +44,7 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_store#0#1(p)#2
-// CHECK-NEXT:frame = [p#2, x#2]
+// CHECK-NEXT:S{check_after_store#0#1()#2} = [p#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check_after_store#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %p, [p#2], %0
@@ -66,7 +67,7 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_after_check#0#1()#3
-// CHECK-NEXT:frame = [x#3, inner#3]
+// CHECK-NEXT:S{check_after_check#0#1()#3} = [x#3, inner#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check_after_check#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst empty : empty, [x#3], %0
@@ -80,7 +81,7 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHECK:function inner#1#3(p)#4
-// CHECK-NEXT:frame = [p#4]
+// CHECK-NEXT:S{inner#1#3()#4} = [p#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{inner#1#3()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %p, [p#4], %0
@@ -111,7 +112,8 @@ function check_after_check() {
 // CHECK-NEXT:function_end
 
 // CHKOPT:function global#0()#1 : undefined
-// CHKOPT-NEXT:frame = [], globals = [check_after_store, check_after_check]
+// CHKOPT-NEXT:globals = [check_after_store, check_after_check]
+// CHKOPT-NEXT:S{global#0()#1} = []
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHKOPT-NEXT:  %1 = CreateFunctionInst %check_after_store#0#1()#2 : undefined|number, %0
@@ -125,7 +127,7 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_store#0#1(p)#2 : undefined|number
-// CHKOPT-NEXT:frame = [p#2, x#2 : empty|number]
+// CHKOPT-NEXT:S{check_after_store#0#1()#2} = [p#2, x#2 : empty|number]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = CreateScopeInst %S{check_after_store#0#1()#2}
 // CHKOPT-NEXT:  %1 = StoreFrameInst %p, [p#2], %0
@@ -147,7 +149,7 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function check_after_check#0#1()#3 : undefined|closure
-// CHKOPT-NEXT:frame = [x#3, inner#3 : closure]
+// CHKOPT-NEXT:S{check_after_check#0#1()#3} = [x#3, inner#3 : closure]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = CreateScopeInst %S{check_after_check#0#1()#3}
 // CHKOPT-NEXT:  %1 = StoreFrameInst empty : empty, [x#3], %0
@@ -161,7 +163,7 @@ function check_after_check() {
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function inner#1#3(p)#4 : undefined|null|boolean|string|number|bigint|object|closure|regexp
-// CHKOPT-NEXT:frame = [p#4]
+// CHKOPT-NEXT:S{inner#1#3()#4} = [p#4]
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = CreateScopeInst %S{inner#1#3()#4}
 // CHKOPT-NEXT:  %1 = StoreFrameInst %p, [p#4], %0

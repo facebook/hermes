@@ -21,7 +21,8 @@ var x = {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [x]
+// CHECK-NEXT:globals = [x]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -41,7 +42,7 @@ var x = {
 // CHECK-NEXT:function_end
 
 // CHECK:function "get a"#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"get a"#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"get a"#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst "a" : string
@@ -50,7 +51,7 @@ var x = {
 // CHECK-NEXT:function_end
 
 // CHECK:function "get 1"#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"get 1"#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"get 1"#0#1()#3}
 // CHECK-NEXT:  %1 = ReturnInst 21 : number
@@ -59,7 +60,7 @@ var x = {
 // CHECK-NEXT:function_end
 
 // CHECK:function "set 1"#0#1(x)#4
-// CHECK-NEXT:frame = [x#4]
+// CHECK-NEXT:S{"set 1"#0#1()#4} = [x#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"set 1"#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0

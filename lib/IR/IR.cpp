@@ -460,7 +460,11 @@ Variable::Variable(
     ScopeDesc *scope,
     DeclKind declKind,
     Identifier txt)
-    : Value(k), declKind(declKind), text(txt), parent(scope) {
+    : Value(k),
+      declKind(declKind),
+      text(txt),
+      parent(scope),
+      strictImmutableBinding_(declKind == DeclKind::Const) {
   scope->addVariable(this);
 }
 
@@ -474,6 +478,13 @@ int Variable::getIndexInVariableList() const {
     index++;
   }
   llvm_unreachable("Cannot find variable in the variable list");
+}
+
+Variable *Variable::cloneIntoNewScope(ScopeDesc *newScope) {
+  Variable *clone = new Variable(parent, declKind, text);
+  clone->strictImmutableBinding_ = strictImmutableBinding_;
+  newScope->addVariable(clone);
+  return clone;
 }
 
 Identifier Parameter::getName() const {

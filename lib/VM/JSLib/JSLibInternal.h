@@ -444,7 +444,8 @@ CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
     const ScopeChain &scopeChain,
-    bool singleFunction = false);
+    bool isStrict,
+    bool singleFunction);
 
 /// ES10 23.1.1.2 AddEntriesFromIterable
 /// Calls a callback with each pair of [key, value] from an iterable.

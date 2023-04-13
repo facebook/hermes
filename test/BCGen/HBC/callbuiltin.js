@@ -29,7 +29,8 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // Auto-generated content below. Please do not modify manually.
 
 // CHKRA:function global#0()#1
-// CHKRA-NEXT:frame = [], globals = [foo, shadows, checkNonStaticBuiltin]
+// CHKRA-NEXT:globals = [foo, shadows, checkNonStaticBuiltin]
+// CHKRA-NEXT:S{global#0()#1} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHKRA-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2, %0
@@ -45,24 +46,24 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %11 = HBCAllocObjectFromBufferInst 4 : number, "a" : string, 10 : number, "b" : string, 20 : number, "lastKey" : string, 30 : number, 5 : number, 6 : number
 // CHKRA-NEXT:  %12 = ImplicitMovInst %10 : undefined
 // CHKRA-NEXT:  %13 = ImplicitMovInst %11 : object
-// CHKRA-NEXT:  %14 = HBCCallNInst %9, %10 : undefined, %11 : object
+// CHKRA-NEXT:  %14 = HBCCallNInst %9, undefined : undefined, %10 : undefined, %11 : object
 // CHKRA-NEXT:  %15 = ImplicitMovInst %10 : undefined
 // CHKRA-NEXT:  %16 = ImplicitMovInst %14
-// CHKRA-NEXT:  %17 = HBCCallNInst %8, %10 : undefined, %14
+// CHKRA-NEXT:  %17 = HBCCallNInst %8, undefined : undefined, %10 : undefined, %14
 // CHKRA-NEXT:  %18 = ReturnInst %17
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo#0#1(x)#2
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{foo#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCLoadParamInst 1 : number
 // CHKRA-NEXT:  %1 = ImplicitMovInst undefined : undefined
-// CHKRA-NEXT:  %2 = CallBuiltinInst [Object.keys] : number, undefined : undefined, %0
+// CHKRA-NEXT:  %2 = CallBuiltinInst [Object.keys] : number, undefined : undefined, undefined : undefined, %0
 // CHKRA-NEXT:  %3 = ReturnInst %2
 // CHKRA-NEXT:function_end
 
 // CHKRA:function shadows#0#1()#2 : undefined
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{shadows#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "print" : string
@@ -72,13 +73,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %5 = HBCLoadConstInst "evil" : string
 // CHKRA-NEXT:  %6 = ImplicitMovInst %2 : object
 // CHKRA-NEXT:  %7 = ImplicitMovInst %5 : string
-// CHKRA-NEXT:  %8 = HBCCallNInst %4, %2 : object, %5 : string
+// CHKRA-NEXT:  %8 = HBCCallNInst %4, undefined : undefined, %2 : object, %5 : string
 // CHKRA-NEXT:  %9 = HBCLoadConstInst undefined : undefined
 // CHKRA-NEXT:  %10 = ReturnInst %9 : undefined
 // CHKRA-NEXT:function_end
 
 // CHKRA:function checkNonStaticBuiltin#0#1()#2 : undefined
-// CHKRA-NEXT:frame = []
+// CHKRA-NEXT:S{checkNonStaticBuiltin#0#1()#2} = []
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  %0 = HBCGetGlobalObjectInst
 // CHKRA-NEXT:  %1 = TryLoadGlobalPropertyInst %0 : object, "HermesInternal" : string
@@ -86,13 +87,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  %3 = HBCLoadConstInst "hello" : string
 // CHKRA-NEXT:  %4 = ImplicitMovInst %1
 // CHKRA-NEXT:  %5 = ImplicitMovInst %3 : string
-// CHKRA-NEXT:  %6 = HBCCallNInst %2, %1, %3 : string
+// CHKRA-NEXT:  %6 = HBCCallNInst %2, undefined : undefined, %1, %3 : string
 // CHKRA-NEXT:  %7 = HBCLoadConstInst undefined : undefined
 // CHKRA-NEXT:  %8 = ReturnInst %7 : undefined
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
-// CHKBC-NEXT:  Bytecode version number: 94
+// CHKBC-NEXT:  Bytecode version number: {{.*}}
 // CHKBC-NEXT:  Source hash: {{.*}}
 // CHKBC-NEXT:  Function count: 4
 // CHKBC-NEXT:  String count: 13
@@ -210,7 +211,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  0x007b  end of debug source table
 
 // CHKBC:Debug scope descriptor table:
-// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHKBC-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHKBC:Textified callees table:

@@ -185,6 +185,8 @@ export type ESNode =
   | TypeParameterDeclaration
   | TypeParameter
   | TypeParameterInstantiation
+  | ComponentDeclaration
+  | ComponentParameter
   | EnumDeclaration
   | EnumNumberBody
   | EnumStringBody
@@ -227,10 +229,12 @@ export type Statement =
   | BlockStatement
   | BreakStatement
   | ClassDeclaration
+  | ComponentDeclaration
   | ContinueStatement
   | DebuggerStatement
   | DeclareClass
   | DeclareVariable
+  | DeclareEnum
   | DeclareFunction
   | DeclareInterface
   | DeclareModule
@@ -375,6 +379,24 @@ export interface ForOfStatement extends BaseForXStatement {
 
 export interface DebuggerStatement extends BaseNode {
   +type: 'DebuggerStatement';
+}
+
+type ComponentParameterAndRestElement = ComponentParameter | RestElement;
+
+export interface ComponentParameter extends BaseNode {
+  +type: 'ComponentParameter';
+  +name: Identifier | StringLiteral;
+  +local: BindingName | AssignmentPattern;
+  +shorthand: boolean;
+}
+
+export interface ComponentDeclaration extends BaseNode {
+  +type: 'ComponentDeclaration';
+  +body: BlockStatement;
+  +id: Identifier;
+  +params: $ReadOnlyArray<ComponentParameterAndRestElement>;
+  +returnType: null | TypeAnnotation;
+  +typeParameters: null | TypeParameterDeclaration;
 }
 
 export interface FunctionDeclaration extends BaseFunction {
@@ -1021,7 +1043,10 @@ export interface ImportNamespaceSpecifier extends BaseNode {
   +parent: ImportDeclaration;
 }
 
-export type DefaultDeclaration = FunctionDeclaration | ClassDeclaration;
+export type DefaultDeclaration =
+  | FunctionDeclaration
+  | ClassDeclaration
+  | ComponentDeclaration;
 export type NamedDeclaration =
   | DefaultDeclaration
   | VariableDeclaration
@@ -1103,8 +1128,11 @@ export type TypeAnnotationType =
   | ExistsTypeAnnotation
   | GenericTypeAnnotation
   | QualifiedTypeIdentifier
+  | QualifiedTypeofIdentifier
   | TypeofTypeAnnotation
   | TupleTypeAnnotation
+  | TupleTypeSpreadElement
+  | TupleTypeLabeledElement
   | InterfaceTypeAnnotation
   | UnionTypeAnnotation
   | IntersectionTypeAnnotation
@@ -1218,13 +1246,30 @@ export interface QualifiedTypeIdentifier extends BaseNode {
   +id: Identifier;
   +qualification: QualifiedTypeIdentifier | Identifier;
 }
+export interface QualifiedTypeofIdentifier extends BaseNode {
+  +type: 'QualifiedTypeofIdentifier';
+  +id: Identifier;
+  +qualification: QualifiedTypeofIdentifier | Identifier;
+}
 export interface TypeofTypeAnnotation extends BaseNode {
   +type: 'TypeofTypeAnnotation';
-  +argument: TypeAnnotationType;
+  +argument: QualifiedTypeofIdentifier | Identifier;
 }
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';
   +types: $ReadOnlyArray<TypeAnnotationType>;
+}
+export interface TupleTypeSpreadElement extends BaseNode {
+  +type: 'TupleTypeSpreadElement';
+  +label?: Identifier | null;
+  +typeAnnotation: TypeAnnotationType;
+}
+export interface TupleTypeLabeledElement extends BaseNode {
+  +type: 'TupleTypeLabeledElement';
+  +label: Identifier;
+  +elementType: TypeAnnotationType;
+  +optional: boolean;
+  +variance: Variance | null;
 }
 
 // type T = { [[foo]]: number };
@@ -1512,6 +1557,7 @@ export interface EnumDefaultedMember extends BaseNode {
 export type DeclaredNode =
   | DeclareClass
   | DeclareVariable
+  | DeclareEnum
   | DeclareFunction
   | DeclareModule
   | DeclareInterface
@@ -1535,6 +1581,13 @@ export interface DeclareClass extends BaseNode {
 export interface DeclareVariable extends BaseNode {
   +type: 'DeclareVariable';
   +id: Identifier;
+  +kind: 'var' | 'let' | 'const';
+}
+
+export interface DeclareEnum extends BaseNode {
+  +type: 'DeclareEnum';
+  +id: Identifier;
+  +body: EnumNumberBody | EnumStringBody | EnumBooleanBody | EnumSymbolBody;
 }
 
 export interface DeclareFunction extends BaseNode {
@@ -1597,7 +1650,8 @@ export interface DeclareExportDeclarationNamedWithDeclaration
     | DeclareFunction
     | DeclareInterface
     | DeclareOpaqueType
-    | DeclareVariable;
+    | DeclareVariable
+    | DeclareEnum;
   +default: false;
   +source: null;
   // default cannot have specifiers and a declaration
@@ -1726,6 +1780,7 @@ export interface JSXOpeningElement extends BaseNode {
   +selfClosing: boolean;
   +name: JSXTagNameExpression;
   +attributes: $ReadOnlyArray<JSXAttribute | JSXSpreadAttribute>;
+  +typeArguments?: TypeParameterInstantiation | null;
 
   +parent: JSXElement;
 }

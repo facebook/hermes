@@ -25,7 +25,7 @@ export * from 'foo.js';
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -35,7 +35,7 @@ export * from 'foo.js';
 // CHECK-NEXT:function_end
 
 // CHECK:function cjs_module#0#1(exports, require, module)#2
-// CHECK-NEXT:frame = [exports#2, require#2, module#2, x#2, y#2, z#2, longVariableName#2, a#2, myFun#2]
+// CHECK-NEXT:S{cjs_module#0#1()#2} = [exports#2, require#2, module#2, x#2, y#2, z#2, longVariableName#2, a#2, myFun#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cjs_module#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %exports, [exports#2], %0
@@ -65,13 +65,13 @@ export * from 'foo.js';
 // CHECK-NEXT:  %25 = StorePropertyInst %24, %exports, "a" : string
 // CHECK-NEXT:  %26 = LoadFrameInst [longVariableName#2], %0
 // CHECK-NEXT:  %27 = StorePropertyInst %26, %exports, "b" : string
-// CHECK-NEXT:  %28 = CallInst %require, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:  %29 = CallBuiltinInst [HermesBuiltin.exportAll] : number, undefined : undefined, %exports, %28
+// CHECK-NEXT:  %28 = CallInst %require, undefined : undefined, undefined : undefined, "foo.js" : string
+// CHECK-NEXT:  %29 = CallBuiltinInst [HermesBuiltin.exportAll] : number, undefined : undefined, undefined : undefined, %exports, %28
 // CHECK-NEXT:  %30 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function myFun#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{myFun#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{myFun#1#2()#3}
 // CHECK-NEXT:  %1 = ReturnInst 1038 : number

@@ -66,7 +66,8 @@ function accessorObjectLiteral2(func) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simpleObjectLiteral, emitAllocObjectLiteral, nestedAllocObjectLiteral, duplicatedObjectLiteral, emptyObjectLiteral, protoObjectLiteral1, protoObjectLiteral2, computedObjectLiteral, spreadObjectLiteral, accessorObjectLiteral1, accessorObjectLiteral2]
+// CHECK-NEXT:globals = [simpleObjectLiteral, emitAllocObjectLiteral, nestedAllocObjectLiteral, duplicatedObjectLiteral, emptyObjectLiteral, protoObjectLiteral1, protoObjectLiteral2, computedObjectLiteral, spreadObjectLiteral, accessorObjectLiteral1, accessorObjectLiteral2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simpleObjectLiteral#0#1()#2, %0
@@ -98,7 +99,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simpleObjectLiteral#0#1(func)#2
-// CHECK-NEXT:frame = [func#2]
+// CHECK-NEXT:S{simpleObjectLiteral#0#1()#2} = [func#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simpleObjectLiteral#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
@@ -108,7 +109,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function emitAllocObjectLiteral#0#1(func)#3
-// CHECK-NEXT:frame = [func#3]
+// CHECK-NEXT:S{emitAllocObjectLiteral#0#1()#3} = [func#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{emitAllocObjectLiteral#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#3], %0
@@ -119,7 +120,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function nestedAllocObjectLiteral#0#1(func)#4
-// CHECK-NEXT:frame = [func#4]
+// CHECK-NEXT:S{nestedAllocObjectLiteral#0#1()#4} = [func#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{nestedAllocObjectLiteral#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#4], %0
@@ -131,7 +132,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function duplicatedObjectLiteral#0#1(func)#5
-// CHECK-NEXT:frame = [func#5]
+// CHECK-NEXT:S{duplicatedObjectLiteral#0#1()#5} = [func#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{duplicatedObjectLiteral#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#5], %0
@@ -147,7 +148,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function emptyObjectLiteral#0#1(func)#6
-// CHECK-NEXT:frame = [func#6]
+// CHECK-NEXT:S{emptyObjectLiteral#0#1()#6} = [func#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{emptyObjectLiteral#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#6], %0
@@ -158,7 +159,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral1#0#1(func)#7
-// CHECK-NEXT:frame = [func#7]
+// CHECK-NEXT:S{protoObjectLiteral1#0#1()#7} = [func#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoObjectLiteral1#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#7], %0
@@ -167,14 +168,14 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %2 : object, "b" : string, true : boolean
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 3 : number, %2 : object, "c" : string, true : boolean
 // CHECK-NEXT:  %6 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %6 : object
+// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %2 : object, %6 : object
 // CHECK-NEXT:  %8 = ReturnInst %2 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoObjectLiteral2#0#1(func)#8
-// CHECK-NEXT:frame = [func#8]
+// CHECK-NEXT:S{protoObjectLiteral2#0#1()#8} = [func#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoObjectLiteral2#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#8], %0
@@ -189,7 +190,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function computedObjectLiteral#0#1(func)#9
-// CHECK-NEXT:frame = [func#9]
+// CHECK-NEXT:S{computedObjectLiteral#0#1()#9} = [func#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{computedObjectLiteral#0#1()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#9], %0
@@ -204,7 +205,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function spreadObjectLiteral#0#1(func)#10
-// CHECK-NEXT:frame = [func#10, obj#10]
+// CHECK-NEXT:S{spreadObjectLiteral#0#1()#10} = [func#10, obj#10]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{spreadObjectLiteral#0#1()#10}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#10], %0
@@ -213,7 +214,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : object, [obj#10], %0
 // CHECK-NEXT:  %5 = AllocObjectInst 1 : number, empty
 // CHECK-NEXT:  %6 = LoadFrameInst [obj#10], %0
-// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %5 : object, %6
+// CHECK-NEXT:  %7 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, undefined : undefined, %5 : object, %6
 // CHECK-NEXT:  %8 = StoreOwnPropertyInst 42 : number, %5 : object, "c" : string, true : boolean
 // CHECK-NEXT:  %9 = ReturnInst %5 : object
 // CHECK-NEXT:%BB1:
@@ -221,7 +222,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral1#0#1(func)#11
-// CHECK-NEXT:frame = [func#11]
+// CHECK-NEXT:S{accessorObjectLiteral1#0#1()#11} = [func#11]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{accessorObjectLiteral1#0#1()#11}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#11], %0
@@ -237,7 +238,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function accessorObjectLiteral2#0#1(func)#12
-// CHECK-NEXT:frame = [func#12]
+// CHECK-NEXT:S{accessorObjectLiteral2#0#1()#12} = [func#12]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{accessorObjectLiteral2#0#1()#12}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#12], %0
@@ -253,7 +254,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "get c"#1#12()#13
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"get c"#1#12()#13} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"get c"#1#12()#13}
 // CHECK-NEXT:  %1 = ReturnInst 42 : number

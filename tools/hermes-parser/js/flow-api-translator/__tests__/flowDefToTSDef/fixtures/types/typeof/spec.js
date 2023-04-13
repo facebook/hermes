@@ -8,4 +8,8 @@
  * @format
  */
 
-type T = typeof Foo;
+type A = typeof foo.default;
+type B = typeof foo.default.b;
+type C = typeof undefined;
+type D = typeof _;
+type E = typeof type;

@@ -83,6 +83,23 @@ function bar() {
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "generator": false,
 // CHECK-NEXT:       "async": false
+// CHECK-NEXT:     },
+
+import.meta;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "MetaProperty",
+// CHECK-NEXT:         "meta": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "import"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "property": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "meta"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

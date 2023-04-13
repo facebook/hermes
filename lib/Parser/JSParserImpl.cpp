@@ -111,6 +111,9 @@ void JSParserImpl::initializeIdentifiers() {
 
   checksIdent_ = lexer_.getIdentifier("%checks");
 
+  // Flow Component syntax
+  componentIdent_ = lexer_.getIdentifier("component");
+
 #endif
 
 #if HERMES_PARSE_TS
@@ -822,8 +825,10 @@ bool JSParserImpl::parseStatementListItem(
     // 'import' can indicate an import declaration, but it's also possible a
     // Statement begins with a call to `import()`, so do a lookahead to see if
     // the next token is '('.
+    // It can also be import.meta, so check for '.'.
     auto optNext = lexer_.lookahead1(None);
-    if (optNext.hasValue() && *optNext == TokenKind::l_paren) {
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::l_paren || *optNext == TokenKind::period)) {
       auto stmt = parseStatement(param.get(ParamReturn));
       if (!stmt)
         return false;
@@ -6570,8 +6575,20 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           *optClassDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        checkComponentDeclarationFlow()) {
+      auto optComponent = parseComponentDeclarationFlow();
+      if (!optComponent) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optComponent,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
     } else if (context_.getParseFlow() && check(TokenKind::rw_enum)) {
-      auto optEnum = parseEnumDeclarationFlow();
+      auto optEnum =
+          parseEnumDeclarationFlow(tok_->getStartLoc(), /* declare */ false);
       if (!optEnum) {
         return None;
       }

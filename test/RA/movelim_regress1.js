@@ -20,7 +20,8 @@ function fib(n) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [fib]
+// CHECK-NEXT:globals = [fib]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %fib#0#1()#2 : string|number|bigint, %0
@@ -31,7 +32,7 @@ function fib(n) {
 // CHECK-NEXT:function_end
 
 // CHECK:function fib#0#1(n)#2 : string|number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{fib#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg5 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
 // CHECK-NEXT:  $Reg4 @1 [2...19) 	%1 = HBCLoadConstInst 0 : number

@@ -35,7 +35,8 @@ function protoIsDynamic(func, getParent) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [protoIsFirst, protoIsConst1, protoIsConst2, protoIsConst3, protoIsDynamic]
+// CHECK-NEXT:globals = [protoIsFirst, protoIsConst1, protoIsConst2, protoIsConst3, protoIsDynamic]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %protoIsFirst#0#1()#2, %0
@@ -55,12 +56,12 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsFirst#0#1(func)#2
-// CHECK-NEXT:frame = [func#2]
+// CHECK-NEXT:S{protoIsFirst#0#1()#2} = [func#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoIsFirst#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
 // CHECK-NEXT:  %2 = LoadFrameInst [func#2], %0
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = AllocObjectInst 2 : number, %3
 // CHECK-NEXT:  %5 = StoreNewOwnPropertyInst 2 : number, %4 : object, "a" : string, true : boolean
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 3 : number, %4 : object, "b" : string, true : boolean
@@ -70,7 +71,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst1#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{protoIsConst1#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoIsConst1#0#1()#3}
 // CHECK-NEXT:  %1 = AllocObjectInst 1 : number, null : null
@@ -81,7 +82,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst2#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{protoIsConst2#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoIsConst2#0#1()#4}
 // CHECK-NEXT:  %1 = AllocObjectInst 1 : number, 10 : number
@@ -92,7 +93,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsConst3#0#1()#5
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{protoIsConst3#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoIsConst3#0#1()#5}
 // CHECK-NEXT:  %1 = AllocObjectInst 1 : number, null : null
@@ -103,19 +104,19 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoIsDynamic#0#1(func, getParent)#6
-// CHECK-NEXT:frame = [func#6, getParent#6]
+// CHECK-NEXT:S{protoIsDynamic#0#1()#6} = [func#6, getParent#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoIsDynamic#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#6], %0
 // CHECK-NEXT:  %2 = StoreFrameInst %getParent, [getParent#6], %0
 // CHECK-NEXT:  %3 = AllocObjectInst 2 : number, empty
 // CHECK-NEXT:  %4 = LoadFrameInst [func#6], %0
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %3 : object, "a" : string, true : boolean
 // CHECK-NEXT:  %7 = StoreNewOwnPropertyInst 10 : number, %3 : object, "b" : string, true : boolean
 // CHECK-NEXT:  %8 = LoadFrameInst [getParent#6], %0
-// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined
-// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %3 : object, %9
+// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined, undefined : undefined
+// CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %3 : object, %9
 // CHECK-NEXT:  %11 = ReturnInst %3 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %12 = ReturnInst undefined : undefined

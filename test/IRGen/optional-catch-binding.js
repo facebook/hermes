@@ -18,7 +18,8 @@ function foo(f, g) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
@@ -30,7 +31,7 @@ function foo(f, g) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(f, g)#2
-// CHECK-NEXT:frame = [f#2, g#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [f#2, g#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %f, [f#2], %0
@@ -39,13 +40,13 @@ function foo(f, g) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = CatchInst
 // CHECK-NEXT:  %5 = LoadFrameInst [g#2], %0
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined
+// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %7 = ReturnInst %6
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %8 = ReturnInst undefined : undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %9 = LoadFrameInst [f#2], %0
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined
+// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %11 = BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = TryEndInst

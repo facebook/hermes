@@ -8,7 +8,7 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHK-BCG2:Bytecode File Information:
-// CHK-BCG2-NEXT:  Bytecode version number: 94
+// CHK-BCG2-NEXT:  Bytecode version number: {{.*}}
 // CHK-BCG2-NEXT:  Source hash: {{.*}}
 // CHK-BCG2-NEXT:  Function count: 18
 // CHK-BCG2-NEXT:  String count: 19
@@ -397,7 +397,7 @@
 // CHK-BCG2-NEXT:  0x039a  end of debug source table
 
 // CHK-BCG2:Debug scope descriptor table:
-// CHK-BCG2-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHK-BCG2-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHK-BCG2-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHK-BCG2:Textified callees table:

@@ -91,7 +91,7 @@ Handle<JSObject> createNumberConstructor(Runtime &runtime) {
 
   MutableHandle<> numberValueHandle{runtime};
   auto setNumberValueProperty = [&](SymbolID name, double value) {
-    numberValueHandle = HermesValue::encodeDoubleValue(value);
+    numberValueHandle = HermesValue::encodeUntrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
         cons, runtime, name, constantDPF, numberValueHandle);
     assert(
@@ -194,7 +194,7 @@ numberConstructor(void *, Runtime &runtime, NativeArgs args) {
     return args.getThisArg();
   }
 
-  return HermesValue::encodeDoubleValue(value);
+  return HermesValue::encodeUntrustedNumberValue(value);
 }
 
 CallResult<HermesValue>
@@ -281,7 +281,7 @@ numberPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Number.prototype.valueOf() can only be used on Number");
   }
-  return HermesValue::encodeNumberValue(numPtr->getPrimitiveNumber());
+  return HermesValue::encodeUntrustedNumberValue(numPtr->getPrimitiveNumber());
 }
 
 CallResult<HermesValue>
@@ -329,7 +329,8 @@ numberPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
   // Radix 10 and non-finite values simply call toString.
   auto resultRes = toString_RJS(
-      runtime, runtime.makeHandle(HermesValue::encodeNumberValue(number)));
+      runtime,
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(number)));
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -359,7 +360,8 @@ numberPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
   // Call toString, as JSC does.
   // TODO: Format string according to locale.
   auto res = toString_RJS(
-      runtime, runtime.makeHandle(HermesValue::encodeNumberValue(number)));
+      runtime,
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(number)));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -408,7 +410,8 @@ numberPrototypeToFixed(void *, Runtime &runtime, NativeArgs args) {
   if (std::abs(x) >= 1e21) {
     // toString(x) if abs(x) >= 10^21.
     auto resultRes = toString_RJS(
-        runtime, runtime.makeHandle(HermesValue::encodeDoubleValue(x)));
+        runtime,
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(x)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -633,7 +636,8 @@ numberPrototypeToPrecision(void *, Runtime &runtime, NativeArgs args) {
   }
 
   if (args.getArg(0).isUndefined()) {
-    auto xHandle = runtime.makeHandle(HermesValue::encodeDoubleValue(x));
+    auto xHandle =
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(x));
     auto resultRes = toString_RJS(runtime, xHandle);
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

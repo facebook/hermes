@@ -30,6 +30,7 @@ import type {
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
+  DeclareEnum,
   EnumDeclaration,
   ESNode,
   ExportAllDeclaration,
@@ -594,6 +595,8 @@ class Referencer extends Visitor {
         break;
     }
 
+    this.visitType(node.typeArguments);
+
     for (const attr of node.attributes) {
       this.visit(attr);
     }
@@ -753,6 +756,15 @@ class Referencer extends Visitor {
 
   DeclareVariable(node: DeclareVariable): void {
     this.visitType(node);
+  }
+
+  DeclareEnum(node: DeclareEnum): void {
+    this.currentScope().defineIdentifier(
+      node.id,
+      new EnumDefinition(node.id, node),
+    );
+
+    // Enum body cannot contain identifier references, so no need to visit body.
   }
 
   DeclareFunction(node: DeclareFunction): void {

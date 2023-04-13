@@ -25,7 +25,8 @@ function test_simple_call() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [Car, test_simple_new, test_simple_call]
+// CHECK-NEXT:globals = [Car, test_simple_new, test_simple_call]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %Car#0#1()#2, %0
@@ -41,7 +42,7 @@ function test_simple_call() {
 // CHECK-NEXT:function_end
 
 // CHECK:function Car#0#1(model, year)#2
-// CHECK-NEXT:frame = [model#2, year#2]
+// CHECK-NEXT:S{Car#0#1()#2} = [model#2, year#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{Car#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %model, [model#2], %0
@@ -56,23 +57,23 @@ function test_simple_call() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_new#0#1()#3
-// CHECK-NEXT:frame = [ctor#3]
+// CHECK-NEXT:S{test_simple_new#0#1()#3} = [ctor#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_simple_new#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [ctor#3], %0
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %3 = ConstructInst %2, undefined : undefined, "Eagle" : string, 1993 : number
+// CHECK-NEXT:  %3 = ConstructInst %2, %2, undefined : undefined, "Eagle" : string, 1993 : number
 // CHECK-NEXT:  %4 = StoreFrameInst %3 : object, [ctor#3], %0
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_simple_call#0#1()#4
-// CHECK-NEXT:frame = [call#4]
+// CHECK-NEXT:S{test_simple_call#0#1()#4} = [call#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test_simple_call#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [call#4], %0
 // CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "Car" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, 1 : number, 2 : number
+// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, 1 : number, 2 : number
 // CHECK-NEXT:  %4 = StoreFrameInst %3, [call#4], %0
 // CHECK-NEXT:  %5 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

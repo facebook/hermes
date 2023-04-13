@@ -17,7 +17,8 @@ function main(boop) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [main]
+// CHECK-NEXT:globals = [main]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2, %0
@@ -29,7 +30,7 @@ function main(boop) {
 // CHECK-NEXT:function_end
 
 // CHECK:function main#0#1(boop)#2
-// CHECK-NEXT:frame = [boop#2, foo#2]
+// CHECK-NEXT:S{main#0#1()#2} = [boop#2, foo#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %boop, [boop#2], %0
@@ -39,7 +40,7 @@ function main(boop) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = LoadFrameInst [boop#2@main], %0

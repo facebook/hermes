@@ -63,7 +63,8 @@ function expression_prop(obj) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simple_loop, different_prop, different_obj, modify_prop, modify_value, expression_prop]
+// CHECK-NEXT:globals = [simple_loop, different_prop, different_obj, modify_prop, modify_value, expression_prop]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple_loop#0#1()#2, %0
@@ -85,7 +86,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_loop#0#1(obj)#2
-// CHECK-NEXT:frame = [obj#2, ret#2, x#2]
+// CHECK-NEXT:S{simple_loop#0#1()#2} = [obj#2, ret#2, x#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_loop#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#2], %0
@@ -120,7 +121,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function different_prop#0#1(obj)#3
-// CHECK-NEXT:frame = [obj#3, ret#3, x#3, y#3]
+// CHECK-NEXT:S{different_prop#0#1()#3} = [obj#3, ret#3, x#3, y#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{different_prop#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#3], %0
@@ -158,7 +159,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function different_obj#0#1(obj)#4
-// CHECK-NEXT:frame = [obj#4, ret#4, obj1#4, x#4]
+// CHECK-NEXT:S{different_obj#0#1()#4} = [obj#4, ret#4, obj1#4, x#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{different_obj#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#4], %0
@@ -196,7 +197,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_prop#0#1(obj)#5
-// CHECK-NEXT:frame = [obj#5, ret#5, x#5]
+// CHECK-NEXT:S{modify_prop#0#1()#5} = [obj#5, ret#5, x#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{modify_prop#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#5], %0
@@ -232,7 +233,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function modify_value#0#1(obj)#6
-// CHECK-NEXT:frame = [obj#6, ret#6, x#6]
+// CHECK-NEXT:S{modify_value#0#1()#6} = [obj#6, ret#6, x#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{modify_value#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#6], %0
@@ -273,7 +274,7 @@ function expression_prop(obj) {
 // CHECK-NEXT:function_end
 
 // CHECK:function expression_prop#0#1(obj)#7
-// CHECK-NEXT:frame = [obj#7, ret#7, x#7]
+// CHECK-NEXT:S{expression_prop#0#1()#7} = [obj#7, ret#7, x#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{expression_prop#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#7], %0

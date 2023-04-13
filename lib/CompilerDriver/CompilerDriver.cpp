@@ -285,6 +285,18 @@ opt<bool> BasicBlockProfiling(
     init(false),
     desc("Enable basic block profiling (HBC only)"));
 
+opt<bool> EnableBlockScoping(
+    "block-scoping",
+    desc("Enables block scoping support."),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+static llvh::cl::alias _EnableBlockScoping(
+    "bs",
+    desc("Alias for --block-scoping"),
+    Hidden,
+    llvh::cl::aliasopt(EnableBlockScoping));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -489,6 +501,13 @@ static opt<bool> ParseFlow(
     "parse-flow",
     desc("Parse Flow"),
     init(false),
+    cat(CompilerCategory));
+
+static opt<bool> ParseFlowComponentSyntax(
+    "Xparse-component-syntax",
+    desc("Parse Component syntax"),
+    init(false),
+    Hidden,
     cat(CompilerCategory));
 #endif
 
@@ -1086,7 +1105,7 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.enableTDZ = cl::EnableTDZ;
+  codeGenOpts.enableTDZ = cl::EnableTDZ || cl::EnableBlockScoping;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
   codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
   codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
@@ -1103,6 +1122,7 @@ std::shared_ptr<Context> createContext(
     codeGenOpts.unlimitedRegisters = false;
   }
   codeGenOpts.instrumentIR = cl::InstrumentIR;
+  codeGenOpts.enableBlockScoping = cl::EnableBlockScoping;
 
   OptimizationSettings optimizationOpts;
 
@@ -1183,6 +1203,7 @@ std::shared_ptr<Context> createContext(
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }
+  context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
 #endif
 
 #if HERMES_PARSE_TS

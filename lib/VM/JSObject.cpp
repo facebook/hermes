@@ -432,7 +432,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       if (!okFlags.getIncludeNonEnumerable() && !res->enumerable)
         continue;
 
-      tmpHandle = HermesValue::encodeDoubleValue(i);
+      tmpHandle = HermesValue::encodeUntrustedNumberValue(i);
       JSArray::setElementAt(array, runtime, index++, tmpHandle);
       marker.flush();
     }
@@ -581,16 +581,16 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       uint32_t b;
 
       if (indexNamesLast && (b = indexNames[indexNamesLast - 1]) > a) {
-        tmpHandle = HermesValue::encodeDoubleValue(b);
+        tmpHandle = HermesValue::encodeTrustedNumberValue(b);
         --indexNamesLast;
       } else {
-        tmpHandle = HermesValue::encodeDoubleValue(a);
+        tmpHandle = HermesValue::encodeTrustedNumberValue(a);
         --numIndexed;
       }
     } else {
       assert(indexNamesLast && "prematurely ran out of source values");
-      tmpHandle =
-          HermesValue::encodeDoubleValue(indexNames[indexNamesLast - 1]);
+      tmpHandle = HermesValue::encodeUntrustedNumberValue(
+          indexNames[indexNamesLast - 1]);
       --indexNamesLast;
     }
 
@@ -1094,7 +1094,8 @@ CallResult<PseudoHandle<>> JSObject::getNamedOrIndexed(
       return getComputed_RJS(
           selfHandle,
           runtime,
-          runtime.makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)));
+          runtime.makeHandle(
+              HermesValue::encodeUntrustedNumberValue(*nameAsIndex)));
     }
     // Here we have indexed properties but the symbol was not index-like.
     // Fall through to getNamed().
@@ -1512,7 +1513,8 @@ CallResult<bool> JSObject::putNamedOrIndexed(
       return putComputed_RJS(
           selfHandle,
           runtime,
-          runtime.makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)),
+          runtime.makeHandle(
+              HermesValue::encodeUntrustedNumberValue(*nameAsIndex)),
           valueHandle,
           opFlags);
     }
@@ -1789,7 +1791,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
               runtime,
               Predefined::getSymbolID(Predefined::length),
               runtime.makeHandle(
-                  HermesValue::encodeNumberValue(*arrayIndex + 1)),
+                  HermesValue::encodeUntrustedNumberValue(*arrayIndex + 1)),
               opFlags);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return ExecutionStatus::EXCEPTION;
@@ -3018,8 +3020,33 @@ CallResult<uint32_t> appendAllPropertyNames(
   // before we start to look at any prototype.
   bool needDedup = false;
   MutableHandle<> prop(runtime);
+  MutableHandle<SymbolID> propIdHandle{runtime};
   MutableHandle<JSObject> head(runtime, obj.get());
-  MutableHandle<StringPrimitive> tmpVal{runtime};
+  // Keep track of the unique props we have seen so far. The props may be
+  // strings (SymbolIDs) or index names.
+  llvh::SmallSet<SymbolID::RawType, 4> dedupNames;
+  llvh::SmallSet<double, 4> dedupIdxNames;
+  // Add the current value of prop and/or propIdHandle to correct set(s).
+  auto addToDedup = [&dedupIdxNames, &dedupNames, &runtime](
+                        Handle<> prop, Handle<SymbolID> propIdHandle) {
+    if (prop->isNumber()) {
+      double d = prop->getNumber();
+      dedupIdxNames.insert(d);
+    } else {
+      SymbolID sym = propIdHandle.get();
+      dedupNames.insert(sym.unsafeGetRaw());
+      // We need to make sure that we check for duplicates across the number and
+      // string types. This is because 3 should be treated as a duplicate of
+      // '3'. Therefore, we attempt to convert this string to a number, and
+      // insert the resulting value in the duplicate set.
+      OptValue<uint32_t> strToIdx =
+          toArrayIndex(StringPrimitive::createStringView(
+              runtime, Handle<StringPrimitive>::vmcast(prop)));
+      if (strToIdx) {
+        dedupIdxNames.insert(*strToIdx);
+      }
+    }
+  }; // end of lambda expression
   while (head.get()) {
     GCScope gcScope(runtime);
 
@@ -3039,6 +3066,19 @@ CallResult<uint32_t> appendAllPropertyNames(
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
       prop = enumerableProps->at(runtime, i).unboxToHV(runtime);
+      assert(
+          (prop->isNumber() || prop->isString()) &&
+          "property name is not a string or number");
+      if (prop->isString()) {
+        CallResult<Handle<SymbolID>> symRes =
+            runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
+                runtime,
+                runtime.makeHandle<StringPrimitive>(prop->getString()));
+        if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        propIdHandle = *symRes;
+      }
       if (!needDedup) {
         // If no dedup is needed, add it directly.
         if (LLVM_UNLIKELY(
@@ -3046,36 +3086,25 @@ CallResult<uint32_t> appendAllPropertyNames(
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
+        addToDedup(prop, propIdHandle);
         ++size;
         continue;
       }
-      // Otherwise loop through all existing properties and check if we
-      // have seen it before.
-      bool dupFound = false;
+      // Otherwise check the existing sets for matches.
+      bool dupFound;
       if (prop->isNumber()) {
-        for (uint32_t j = beginIndex; j < size && !dupFound; ++j) {
-          HermesValue val = arr->at(runtime, j);
-          if (val.isNumber()) {
-            dupFound = val.getNumber() == prop->getNumber();
-          } else {
-            // val is string, prop is number.
-            tmpVal = val.getString();
-            auto valNum = toArrayIndex(
-                StringPrimitive::createStringView(runtime, tmpVal));
-            dupFound = valNum && valNum.getValue() == prop->getNumber();
-          }
-        }
+        dupFound = dedupIdxNames.count(prop->getNumber());
       } else {
-        for (uint32_t j = beginIndex; j < size && !dupFound; ++j) {
-          HermesValue val = arr->at(runtime, j);
-          if (val.isNumber()) {
-            // val is number, prop is string.
-            auto propNum = toArrayIndex(StringPrimitive::createStringView(
-                runtime, Handle<StringPrimitive>::vmcast(prop)));
-            dupFound = propNum && (propNum.getValue() == val.getNumber());
-          } else {
-            dupFound = val.getString()->equals(prop->getString());
-          }
+        dupFound = dedupNames.count(propIdHandle.get().unsafeGetRaw());
+        // If we still haven't found a duplicate and there have been previous
+        // index names, then attempt to convert this string prop to an index and
+        // check that number value for duplicates.
+        if (LLVM_UNLIKELY(!dupFound && dedupIdxNames.size())) {
+          OptValue<uint32_t> propNum =
+              toArrayIndex(StringPrimitive::createStringView(
+                  runtime, Handle<StringPrimitive>::vmcast(prop)));
+          if (LLVM_UNLIKELY(propNum))
+            dupFound = dedupIdxNames.count(*propNum);
         }
       }
       if (LLVM_LIKELY(!dupFound)) {
@@ -3084,6 +3113,7 @@ CallResult<uint32_t> appendAllPropertyNames(
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
+        addToDedup(prop, propIdHandle);
         ++size;
       }
     }

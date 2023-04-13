@@ -11,9 +11,9 @@
 // CHECK-NEXT:   "type": "Program",
 // CHECK-NEXT:   "body": [
 
-declare var x
+declare var x: any
 
-declare var x;
+declare var x: any;
 
 declare module.exports: any
 
@@ -26,6 +26,32 @@ declare interface I {}
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "x",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "AnyTypeAnnotation",
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 14,
+// CHECK-NEXT:                 "column": 16
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 14,
+// CHECK-NEXT:                 "column": 19
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "loc": {
+// CHECK-NEXT:             "start": {
+// CHECK-NEXT:               "line": 14,
+// CHECK-NEXT:               "column": 14
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:               "line": 14,
+// CHECK-NEXT:               "column": 19
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
 // CHECK-NEXT:             "line": 14,
@@ -33,10 +59,11 @@ declare interface I {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:             "line": 14,
-// CHECK-NEXT:             "column": 14
+// CHECK-NEXT:             "column": 19
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "var",
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
 // CHECK-NEXT:           "line": 14,
@@ -44,16 +71,41 @@ declare interface I {}
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:           "line": 14,
-// CHECK-NEXT:           "column": 14
+// CHECK-NEXT:           "column": 19
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareVariable",
 // CHECK-NEXT:       "id": {
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "x",
+// CHECK-NEXT:         "typeAnnotation": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "AnyTypeAnnotation",
+// CHECK-NEXT:             "loc": {
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "line": 16,
+// CHECK-NEXT:                 "column": 16
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "line": 16,
+// CHECK-NEXT:                 "column": 19
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "loc": {
+// CHECK-NEXT:             "start": {
+// CHECK-NEXT:               "line": 16,
+// CHECK-NEXT:               "column": 14
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:               "line": 16,
+// CHECK-NEXT:               "column": 19
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
 // CHECK-NEXT:             "line": 16,
@@ -61,10 +113,11 @@ declare interface I {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:             "line": 16,
-// CHECK-NEXT:             "column": 14
+// CHECK-NEXT:             "column": 19
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "var",
 // CHECK-NEXT:       "loc": {
 // CHECK-NEXT:         "start": {
 // CHECK-NEXT:           "line": 16,
@@ -72,11 +125,10 @@ declare interface I {}
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:           "line": 16,
-// CHECK-NEXT:           "column": 15
+// CHECK-NEXT:           "column": 20
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareModuleExports",
 // CHECK-NEXT:       "typeAnnotation": {
@@ -116,7 +168,6 @@ declare interface I {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareModuleExports",
 // CHECK-NEXT:       "typeAnnotation": {
@@ -156,7 +207,6 @@ declare interface I {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
-
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "DeclareInterface",
 // CHECK-NEXT:       "id": {
@@ -205,7 +255,6 @@ declare interface I {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
-
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "loc": {
 // CHECK-NEXT:     "start": {

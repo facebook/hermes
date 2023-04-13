@@ -32,6 +32,7 @@ import type {
   ObjectTypeProperty,
   OpaqueType,
   QualifiedTypeIdentifier,
+  QualifiedTypeofIdentifier,
   TypeAlias,
   TypeofTypeAnnotation,
   TypeParameter,
@@ -46,7 +47,6 @@ import {
   TypeParameterDefinition,
   VariableDefinition,
 } from '../definition';
-import type {TypeAnnotationType} from 'hermes-estree';
 
 class TypeVisitor extends Visitor {
   +_referencer: Referencer;
@@ -324,23 +324,26 @@ class TypeVisitor extends Visitor {
     this._referencer.currentScope().referenceDualValueType(currentNode);
   }
 
+  QualifiedTypeofIdentifier(node: QualifiedTypeofIdentifier): void {
+    // Only the first component of a qualified type identifier is a reference,
+    // e.g. 'Foo' in `type T = Foo.Bar.Baz`.
+    let currentNode = node.qualification;
+    while (currentNode.type !== 'Identifier') {
+      currentNode = currentNode.qualification;
+    }
+
+    this._referencer.currentScope().referenceDualValueType(currentNode);
+  }
+
   TypeAlias(node: TypeAlias): void {
     this.visitTypeAlias(node);
   }
 
   TypeofTypeAnnotation(node: TypeofTypeAnnotation): void {
     const identifier = (() => {
-      let currentNode: TypeAnnotationType | Identifier = node.argument;
+      let currentNode: QualifiedTypeofIdentifier | Identifier = node.argument;
       while (currentNode.type !== 'Identifier') {
-        switch (currentNode.type) {
-          case 'GenericTypeAnnotation':
-            currentNode = currentNode.id;
-            break;
-
-          case 'QualifiedTypeIdentifier':
-            currentNode = currentNode.qualification;
-            break;
-        }
+        currentNode = currentNode.qualification;
       }
       return currentNode;
     })();

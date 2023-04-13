@@ -51,7 +51,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
 static inline Handle<PropertyAccessor> createPropertyAccessor(
     Runtime &runtime,
     RuntimeModule *runtimeModule) {
-  return runtime.makeHandle<PropertyAccessor>(*PropertyAccessor::create(
+  return runtime.makeHandle<PropertyAccessor>(PropertyAccessor::create(
       runtime,
       makeSimpleJSFunction(runtime, runtimeModule),
       makeSimpleJSFunction(runtime, runtimeModule)));
@@ -78,7 +78,7 @@ TEST_F(ObjectModelTest, SmokeTest) {
       obj1,
       runtime,
       *prop1ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(3.14)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(3.14)));
   ASSERT_TRUE(*cr);
 
   // Get obj1.prop1.
@@ -120,13 +120,13 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
       prototypeObj,
       runtime,
       *prop1ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0))));
   // prototypeObj.prop2 = 20;
   ASSERT_TRUE(*JSObject::putNamed_RJS(
       prototypeObj,
       runtime,
       *prop2ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
 
   // Create a child object.
   auto obj = runtime.makeHandle(JSObject::create(runtime, prototypeObj));
@@ -142,7 +142,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
       obj,
       runtime,
       *prop1ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(100.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(100.0))));
 
   // Check the inherited property for the right value.
   EXPECT_CALLRESULT_DOUBLE(
@@ -188,7 +188,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0))));
     EXPECT_PROPERTY_FLAG(TRUE, obj, *prop1ID, writable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, enumerable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, configurable);
@@ -199,13 +199,13 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
     ASSERT_FALSE(*JSObject::defineOwnProperty(
         obj,
         runtime,
         *prop2ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
     EXPECT_CALLRESULT_DOUBLE(
         20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop2ID));
@@ -225,12 +225,12 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0))));
     ASSERT_TRUE(*JSObject::putNamed_RJS(
         obj,
         runtime,
         *prop1ID,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(11.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(11.0))));
     EXPECT_CALLRESULT_DOUBLE(
         11.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     dpf.setWritable = 1;
@@ -240,12 +240,12 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
     ASSERT_FALSE(*JSObject::putNamed_RJS(
         obj,
         runtime,
         *prop1ID,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(31.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(31.0))));
   }
 
   {
@@ -291,7 +291,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0))));
     EXPECT_CALLRESULT_DOUBLE(
         10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     EXPECT_PROPERTY_FLAG(TRUE, obj, *prop1ID, writable);
@@ -304,7 +304,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
     EXPECT_CALLRESULT_DOUBLE(
         20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, writable);
@@ -318,7 +318,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
     EXPECT_CALLRESULT_DOUBLE(
         20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     dpf.enumerable = 1;
@@ -329,7 +329,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         runtime,
         *prop1ID,
         dpf,
-        runtime.makeHandle(HermesValue::encodeDoubleValue(40.0))));
+        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(40.0))));
     EXPECT_CALLRESULT_DOUBLE(
         20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
@@ -371,7 +371,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
       runtime,
       *prop1ID,
       dpFlags1,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(10.0)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0)));
   ASSERT_TRUE(*cr);
 
   // Double-check the value of obj.prop1.
@@ -383,7 +383,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
       obj,
       runtime,
       *prop1ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(11.0)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(11.0)));
   ASSERT_EQ(ExecutionStatus::RETURNED, cr.getStatus());
   ASSERT_FALSE(cr.getValue());
 
@@ -394,7 +394,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   // TODO: enable this when Runtime::raiseTypeError() is implemented.
   /*  // Try to modify it with doThrow=true.
     cr = Object::putNamed_RJS(obj, runtime, prop1ID,
-    HermesValue::encodeDoubleValue(11.0), true);
+    HermesValue::encodeUntrustedNumberValue(11.0), true);
     ASSERT_EQ(ExecutionStatus::EXCEPTION, cr.getStatus());
 
     // Double-check the value of obj.prop1.
@@ -408,7 +408,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
       obj,
       runtime,
       *prop2ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
 
   // Make prop2 read-only.
   DefinePropertyFlags dpFlags2{};
@@ -431,7 +431,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
       obj,
       runtime,
       *prop2ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(21.0)));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(21.0)));
   ASSERT_EQ(ExecutionStatus::RETURNED, cr.getStatus());
   ASSERT_FALSE(cr.getValue());
 
@@ -463,7 +463,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
       obj,
       runtime,
       *prop1ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(10.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10.0))));
 
   // Validate the property slot.
   ASSERT_TRUE(JSObject::getOwnNamedDescriptor(obj, runtime, *prop1ID, desc));
@@ -481,7 +481,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
       obj,
       runtime,
       *prop2ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(20.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(20.0))));
   ASSERT_TRUE(JSObject::getOwnNamedDescriptor(obj, runtime, *prop2ID, desc));
   ASSERT_EQ(1u, desc.slot);
 
@@ -505,7 +505,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
       obj,
       runtime,
       *prop3ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(30.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(30.0))));
   ASSERT_TRUE(JSObject::getOwnNamedDescriptor(obj, runtime, *prop3ID, desc));
   ASSERT_EQ(0u, desc.slot);
 
@@ -523,7 +523,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
       obj,
       runtime,
       *prop4ID,
-      runtime.makeHandle(HermesValue::encodeDoubleValue(40.0))));
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(40.0))));
   ASSERT_TRUE(JSObject::getOwnNamedDescriptor(obj, runtime, *prop4ID, desc));
   ASSERT_EQ(1u, desc.slot);
 }
@@ -582,12 +582,15 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
   auto prop1ID = *runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
       runtime, prop1Name);
   auto prop2Name = StringPrimitive::createNoThrow(runtime, "prop2");
-  auto index5 = runtime.makeHandle(HermesValue::encodeDoubleValue(5));
-  auto index6 = runtime.makeHandle(HermesValue::encodeDoubleValue(6));
+  auto index5 = runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(5));
+  auto index6 = runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(6));
 
-  auto value10 = runtime.makeHandle(HermesValue::encodeDoubleValue(10));
-  auto value11 = runtime.makeHandle(HermesValue::encodeDoubleValue(11));
-  auto value12 = runtime.makeHandle(HermesValue::encodeDoubleValue(12));
+  auto value10 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10));
+  auto value11 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(11));
+  auto value12 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(12));
 
   Handle<JSObject> nullObj(runtime, nullptr);
 
@@ -692,9 +695,12 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
   ASSERT_EQ(indexObjRes.getStatus(), ExecutionStatus::RETURNED);
   auto indexObj = *indexObjRes;
 
-  auto value1 = runtime.makeHandle(HermesValue::encodeDoubleValue(101));
-  auto value2 = runtime.makeHandle(HermesValue::encodeDoubleValue(102));
-  auto value3 = runtime.makeHandle(HermesValue::encodeDoubleValue(103));
+  auto value1 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(101));
+  auto value2 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(102));
+  auto value3 =
+      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(103));
 
   // Initially nobody should have these properties.
   EXPECT_CALLRESULT_UNDEFINED(
@@ -754,9 +760,10 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
   // getComputed().
   auto nonIndexIDString = runtime.makeHandle(HermesValue::encodeStringValue(
       runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
-  auto indexId1Num = runtime.makeHandle(HermesValue::encodeNumberValue(2));
+  auto indexId1Num =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(2));
   auto indexId2Num =
-      runtime.makeHandle(HermesValue::encodeNumberValue(100000000));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100000000));
   EXPECT_CALLRESULT_DOUBLE(
       101, JSObject::getComputed_RJS(indexObj, runtime, nonIndexIDString));
   EXPECT_CALLRESULT_DOUBLE(
@@ -779,10 +786,12 @@ TEST_F(ObjectModelTest, HasProperty) {
       runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
   auto indexID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"5"));
-  auto indexIDNum = runtime.makeHandle(HermesValue::encodeNumberValue(5));
+  auto indexIDNum =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(5));
   auto indexID2 = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"10"));
-  auto indexID2Num = runtime.makeHandle(HermesValue::encodeNumberValue(10));
+  auto indexID2Num =
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10));
 
   auto self = *JSArray::create(runtime, 0, 0);
 
@@ -913,7 +922,7 @@ struct ObjectModelLargeHeapTest : public RuntimeTestFixtureBase {
 // This test will OOM before it throws on non-NC GCs.
 TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
   Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime));
-  MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> i{runtime, HermesValue::encodeTrustedNumberValue(0)};
   while (true) {
     GCScopeMarkerRAII marker{gcScope};
     CallResult<bool> res = JSObject::putComputed_RJS(obj, runtime, i, i);
@@ -925,7 +934,7 @@ TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
           vmcast<JSObject>(runtime.RangeErrorPrototype));
       return;
     }
-    i = HermesValue::encodeNumberValue(i->getNumber() + 1);
+    i = HermesValue::encodeTrustedNumberValue(i->getNumber() + 1);
   }
   FAIL() << "Didn't throw";
 }

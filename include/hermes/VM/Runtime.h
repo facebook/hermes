@@ -777,6 +777,8 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   const bool optimizedEval : 1;
   /// Whether to emit async break check instructions in eval().
   const bool asyncBreakCheckInEval : 1;
+  /// Whether to enable block scoping in eval().
+  const bool enableBlockScopingInEval : 1;
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.

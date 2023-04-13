@@ -21,7 +21,8 @@ function onlyDefault () {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [empty, onlyDefault]
+// CHECK-NEXT:globals = [empty, onlyDefault]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %empty#0#1()#2, %0
@@ -35,7 +36,7 @@ function onlyDefault () {
 // CHECK-NEXT:function_end
 
 // CHECK:function empty#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{empty#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{empty#0#1()#2}
 // CHECK-NEXT:  %1 = BranchInst %BB1
@@ -44,7 +45,7 @@ function onlyDefault () {
 // CHECK-NEXT:function_end
 
 // CHECK:function onlyDefault#0#1()#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{onlyDefault#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{onlyDefault#0#1()#3}
 // CHECK-NEXT:  %1 = BranchInst %BB1

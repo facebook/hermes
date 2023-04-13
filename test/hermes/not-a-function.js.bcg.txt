@@ -8,7 +8,7 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHK-BCG:Bytecode File Information:
-// CHK-BCG-NEXT:  Bytecode version number: 94
+// CHK-BCG-NEXT:  Bytecode version number: {{.*}}
 // CHK-BCG-NEXT:  Source hash: {{.*}}
 // CHK-BCG-NEXT:  Function count: 18
 // CHK-BCG-NEXT:  String count: 19
@@ -415,24 +415,24 @@
 // CHK-BCG-NEXT:  0x039a  end of debug source table
 
 // CHK-BCG:Debug scope descriptor table:
-// CHK-BCG-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0003  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0006  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0009  lexical parent: 0x0006, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x000c  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x000f  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0012  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0015  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0018  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x001b  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x001e  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0021  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0024  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0027  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x002a  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x002d  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0030  lexical parent: 0x0000, flags:   , variable count: 0
-// CHK-BCG-NEXT:  0x0033  lexical parent: 0x0000, flags:   , variable count: 0
+// CHK-BCG-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0003  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0006  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0009  lexical parent: 0x0006, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x000c  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x000f  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0012  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0015  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0018  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x001b  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x001e  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0021  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0024  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0027  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x002a  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x002d  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0030  lexical parent: 0x0000, flags:    , variable count: 0
+// CHK-BCG-NEXT:  0x0033  lexical parent: 0x0000, flags:    , variable count: 0
 // CHK-BCG-NEXT:  0x0036  end of debug scope descriptor table
 
 // CHK-BCG:Textified callees table:

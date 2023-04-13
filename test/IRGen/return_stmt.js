@@ -38,7 +38,8 @@ function test5() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [test0, test1, test2, test3, test4, test5]
+// CHECK-NEXT:globals = [test0, test1, test2, test3, test4, test5]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %test0#0#1()#2, %0
@@ -60,7 +61,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test0#0#1(x, y)#2
-// CHECK-NEXT:frame = [x#2, y#2]
+// CHECK-NEXT:S{test0#0#1()#2} = [x#2, y#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test0#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
@@ -85,7 +86,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test1#0#1(x, y)#3
-// CHECK-NEXT:frame = [x#3, y#3]
+// CHECK-NEXT:S{test1#0#1()#3} = [x#3, y#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#3], %0
@@ -104,7 +105,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test2#0#1(x, y)#4
-// CHECK-NEXT:frame = [x#4, y#4]
+// CHECK-NEXT:S{test2#0#1()#4} = [x#4, y#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test2#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
@@ -123,7 +124,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test3#0#1(x, y)#5
-// CHECK-NEXT:frame = [x#5, y#5]
+// CHECK-NEXT:S{test3#0#1()#5} = [x#5, y#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test3#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#5], %0
@@ -148,7 +149,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test4#0#1(x, y)#6
-// CHECK-NEXT:frame = [x#6, y#6]
+// CHECK-NEXT:S{test4#0#1()#6} = [x#6, y#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test4#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
@@ -173,7 +174,7 @@ function test5() {
 // CHECK-NEXT:function_end
 
 // CHECK:function test5#0#1()#7
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{test5#0#1()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{test5#0#1()#7}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined

@@ -4,18 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @flow strict
  * @format
  */
-
-/*
-This class does some very "javascripty" things in the name of
-performance which are ultimately impossible to soundly type.
-
-So instead of adding strict types and a large number of suppression
-comments, instead it is left untyped and subclasses are strictly
-typed via a separate flow declaration file.
-*/
 
 import type {HermesNode} from './HermesAST';
 import type {ParserOptions} from './ParserOptions';
@@ -107,12 +98,12 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
   }
 
   mapProgram(node: HermesNode): HermesNode {
-    node = this.mapNodeDefault(node);
+    const nodeDefault = this.mapNodeDefault(node);
     node.sourceType = this.getSourceType();
 
-    node.docblock = getModuleDocblock(node);
+    node.docblock = getModuleDocblock(nodeDefault);
 
-    return node;
+    return nodeDefault;
   }
 
   mapSimpleLiteral(node: HermesNode): HermesNode {

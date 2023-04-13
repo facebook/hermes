@@ -13,25 +13,43 @@
 import type {ObjectWithLoc} from 'hermes-estree';
 import * as FlowESTree from 'hermes-estree';
 import type {ScopeManager} from 'hermes-eslint';
-import {cloneJSDocCommentsToNewNode as cloneJSDocCommentsToNewNodeOriginal} from 'hermes-transform';
+import {
+  cloneJSDocCommentsToNewNode as cloneJSDocCommentsToNewNodeOriginal,
+  makeCommentOwnLine as makeCommentOwnLineOriginal,
+} from 'hermes-transform';
 import * as TSESTree from './utils/ts-estree-ast-types';
 import {
   translationError as translationErrorBase,
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
 import {removeAtFlowFromDocblock} from './utils/DocblockUtils';
+import type {TranslationOptions} from './utils/TranslationUtils';
+import {EOL} from 'os';
+
+type DeclarationOrUnsupported<T> = T | TSESTree.TSTypeAliasDeclaration;
 
 const cloneJSDocCommentsToNewNode =
   // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
+const makeCommentOwnLine =
+  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  (makeCommentOwnLineOriginal: (string, mixed) => string);
+
 const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
+
+function isValidReactImportOrGlobal(id: FlowESTree.Identifier): boolean {
+  return VALID_REACT_IMPORTS.has(id.name) || id.name.startsWith('React$');
+}
+
+let shouldAddReactImport;
 
 export function flowDefToTSDef(
   originalCode: string,
   ast: FlowESTree.Program,
   scopeManager: ScopeManager,
-): TSESTree.Program {
+  opts: TranslationOptions,
+): [TSESTree.Program, string] {
   const tsBody: Array<TSESTree.ProgramStatement> = [];
   const tsProgram: TSESTree.Program = {
     type: 'Program',
@@ -41,7 +59,9 @@ export function flowDefToTSDef(
       ast.docblock == null ? null : removeAtFlowFromDocblock(ast.docblock),
   };
 
-  const transform = getTransforms(originalCode, scopeManager);
+  shouldAddReactImport = false;
+
+  const [transform, code] = getTransforms(originalCode, scopeManager, opts);
 
   for (const node of ast.body) {
     if (node.type in transform) {
@@ -58,15 +78,42 @@ export function flowDefToTSDef(
       throw unexpectedTranslationErrorBase(
         node,
         `Unexpected node type ${node.type}`,
-        {code: originalCode},
+        {code},
       );
     }
   }
 
-  return tsProgram;
+  if (shouldAddReactImport) {
+    tsBody.unshift({
+      type: 'ImportDeclaration',
+      assertions: [],
+      source: {
+        type: 'Literal',
+        value: 'react',
+        raw: "'react'",
+      },
+      specifiers: [
+        {
+          type: 'ImportNamespaceSpecifier',
+          local: {
+            type: 'Identifier',
+            name: 'React',
+          },
+        },
+      ],
+      importKind: 'value',
+    });
+  }
+
+  return [tsProgram, code];
 }
 
-const getTransforms = (code: string, scopeManager: ScopeManager) => {
+const getTransforms = (
+  originalCode: string,
+  scopeManager: ScopeManager,
+  opts: TranslationOptions,
+) => {
+  let code = originalCode;
   function translationError(node: ObjectWithLoc, message: string) {
     return translationErrorBase(node, message, {code});
   }
@@ -78,6 +125,70 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       node,
       `Unsupported feature: Translating "${thing}" is currently not supported.`,
     );
+  }
+  function addErrorComment(node: TSESTree.Node, message: string): void {
+    const comment = {
+      type: 'Block',
+      value: `*${EOL} * ${message.replace(
+        new RegExp(EOL, 'g'),
+        `${EOL} * `,
+      )}${EOL}*`,
+      leading: true,
+      printed: false,
+    };
+
+    code = makeCommentOwnLine(code, comment);
+
+    // $FlowExpectedError[prop-missing]
+    // $FlowExpectedError[cannot-write]
+    node.comments ??= [];
+    // $FlowExpectedError[prop-missing]
+    // $FlowExpectedError[incompatible-cast]
+    (node.comments: Array<TSESTree.Comment>).push(comment);
+  }
+  function unsupportedAnnotation(
+    node: ObjectWithLoc,
+    thing: string,
+  ): TSESTree.TSAnyKeyword {
+    const error = unsupportedTranslationError(node, thing);
+    if (opts.recoverFromErrors) {
+      const message = error.getFramedMessage();
+      const newNode = {
+        type: 'TSAnyKeyword',
+      };
+      addErrorComment(newNode, message);
+      return newNode;
+    }
+
+    throw error;
+  }
+  function unsupportedDeclaration(
+    node: ObjectWithLoc,
+    thing: string,
+    id: FlowESTree.Identifier,
+    declare: boolean = false,
+    typeParameters: FlowESTree.TypeParameterDeclaration | null = null,
+  ): TSESTree.TSTypeAliasDeclaration {
+    const error = unsupportedTranslationError(node, thing);
+    if (opts.recoverFromErrors) {
+      const message = error.getFramedMessage();
+      const newNode = {
+        type: 'TSTypeAliasDeclaration',
+        declare,
+        id: transform.Identifier(id, false),
+        typeAnnotation: {
+          type: 'TSAnyKeyword',
+        },
+        typeParameters:
+          typeParameters == null
+            ? undefined
+            : transform.TypeParameterDeclaration(typeParameters),
+      };
+      addErrorComment(newNode, message);
+      return newNode;
+    }
+
+    throw error;
   }
 
   const topScope = (() => {
@@ -92,7 +203,20 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
   })();
 
   function isReactImport(id: FlowESTree.Identifier): boolean {
-    let currentScope = scopeManager.acquire(id);
+    let currentScope = (() => {
+      let scope = null;
+      let node: FlowESTree.ESNode = id;
+      while (!scope && node) {
+        scope = scopeManager.acquire(node, true);
+        node = node.parent;
+      }
+
+      return scope;
+    })();
+
+    if (currentScope == null) {
+      throw new Error('unable to resolve scope');
+    }
 
     const variableDef = (() => {
       while (currentScope != null) {
@@ -105,9 +229,10 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       }
     })();
 
-    // No variable found, it must be global. Using the `React` variable is enough in this case.
+    // No variable found, it is not imported.
+    // It could be a global though if isValidReactImportOrGlobal returns true.
     if (variableDef == null) {
-      return VALID_REACT_IMPORTS.has(id.name);
+      return false;
     }
 
     const def = variableDef.defs[0];
@@ -137,6 +262,335 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
     return false;
   }
+
+  function EnumImpl(
+    node: FlowESTree.EnumDeclaration | FlowESTree.DeclareEnum,
+  ): DeclarationOrUnsupported<
+    [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+  > {
+    const body = node.body;
+    if (body.type === 'EnumSymbolBody') {
+      /*
+      There's unfortunately no way for us to support this in a clean way.
+      We can get really close using this code:
+      ```
+      declare namespace SymbolEnum {
+          export const member1: unique symbol;
+          export type member1 = typeof member1;
+
+          export const member2: unique symbol;
+          export type member2 = typeof member2;
+      }
+      type SymbolEnum = typeof SymbolEnum[keyof typeof SymbolEnum];
+      ```
+
+      However as explained in https://github.com/microsoft/TypeScript/issues/43657:
+      "A unique symbol type is never transferred from one declaration to another through inference."
+      This intended behaviour in TS means that the usage of the fake-enum would look like this:
+      ```
+      const value: SymbolEnum.member1 = SymbolEnum.member1;
+      //           ^^^^^^^^^^^^^^^^^^ required to force TS to retain the information
+      ```
+      Which is really clunky and shitty. It definitely works, but ofc it's not good.
+      We can go with this design if users are okay with it!
+
+      Considering how rarely used symbol enums are ATM, let's just put a pin in it for now.
+      */
+      return unsupportedDeclaration(
+        node,
+        'symbol enums',
+        node.id,
+        FlowESTree.isDeclareEnum(node),
+      );
+    }
+    if (body.type === 'EnumBooleanBody') {
+      /*
+      TODO - TS enums only allow strings or numbers as their values - not booleans.
+      This means we need a non-ts-enum representation of the enum.
+      We can support boolean enums using a construct like this:
+      ```ts
+      declare namespace BooleanEnum {
+          export const member1: true;
+          export type member1 = typeof member1;
+
+          export const member2: false;
+          export type member2 = typeof member1;
+      }
+      declare type BooleanEnum = boolean;
+      ```
+
+      But it's pretty clunky and ugly.
+      Considering how rarely used boolean enums are ATM, let's just put a pin in it for now.
+      */
+      return unsupportedDeclaration(
+        node,
+        'boolean enums',
+        node.id,
+        FlowESTree.isDeclareEnum(node),
+      );
+    }
+
+    const members: Array<TSESTree.TSEnumMemberNonComputedName> = [];
+    for (const member of body.members) {
+      switch (member.type) {
+        case 'EnumDefaultedMember': {
+          if (body.type === 'EnumNumberBody') {
+            // this should be impossible!
+            throw unexpectedTranslationError(
+              member,
+              'Unexpected defaulted number enum member',
+            );
+          }
+          members.push({
+            type: 'TSEnumMember',
+            computed: false,
+            id: transform.Identifier(member.id, false),
+            initializer: ({
+              type: 'Literal',
+              raw: `"${member.id.name}"`,
+              value: member.id.name,
+            }: TSESTree.StringLiteral),
+          });
+          break;
+        }
+
+        case 'EnumNumberMember':
+        case 'EnumStringMember':
+          members.push({
+            type: 'TSEnumMember',
+            computed: false,
+            id: transform.Identifier(member.id, false),
+            initializer:
+              member.init.literalType === 'string'
+                ? transform.StringLiteral(member.init)
+                : transform.NumericLiteral(member.init),
+          });
+      }
+    }
+
+    const bodyRepresentationType =
+      body.type === 'EnumNumberBody'
+        ? {type: 'TSNumberKeyword'}
+        : {type: 'TSStringKeyword'};
+
+    const enumName = transform.Identifier(node.id, false);
+    return [
+      {
+        type: 'TSEnumDeclaration',
+        const: false,
+        declare: true,
+        id: enumName,
+        members,
+      },
+      // flow also exports `.cast`, `.isValid`, `.members` and `.getName` for enums
+      // we can use declaration merging to declare these functions on the enum:
+      /*
+      declare enum Foo {
+        A = 1,
+        B = 2,
+      }
+      declare namespace Foo {
+        export function cast(value: number | null | undefined): Foo;
+        export function isValid(value: number | null | undefined): value is Foo;
+        export function members(): IterableIterator<Foo>;
+        export function getName(value: Foo): string;
+      }
+      */
+      {
+        type: 'TSModuleDeclaration',
+        declare: true,
+        id: enumName,
+        body: {
+          type: 'TSModuleBlock',
+          body: [
+            // export function cast(value: number | null | undefined): Foo
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'cast',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSUnionType',
+                        types: [
+                          bodyRepresentationType,
+                          {
+                            type: 'TSNullKeyword',
+                          },
+                          {
+                            type: 'TSUndefinedKeyword',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypeReference',
+                    typeName: enumName,
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function isValid(value: number | null | undefined): value is Foo;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'isValid',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSUnionType',
+                        types: [
+                          bodyRepresentationType,
+                          {
+                            type: 'TSNullKeyword',
+                          },
+                          {
+                            type: 'TSUndefinedKeyword',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypePredicate',
+                    asserts: false,
+                    parameterName: {
+                      type: 'Identifier',
+                      name: 'value',
+                    },
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSTypeReference',
+                        typeName: enumName,
+                      },
+                    },
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function members(): IterableIterator<Foo>;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'members',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSTypeReference',
+                    typeName: {
+                      type: 'Identifier',
+                      name: 'IterableIterator',
+                    },
+                    typeParameters: {
+                      type: 'TSTypeParameterInstantiation',
+                      params: [
+                        {
+                          type: 'TSTypeReference',
+                          typeName: enumName,
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+            // export function getName(value: Foo): string;
+            {
+              type: 'ExportNamedDeclaration',
+              declaration: {
+                type: 'TSDeclareFunction',
+                id: {
+                  type: 'Identifier',
+                  name: 'getName',
+                },
+                generator: false,
+                expression: false,
+                async: false,
+                params: [
+                  {
+                    type: 'Identifier',
+                    name: 'value',
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      typeAnnotation: {
+                        type: 'TSTypeReference',
+                        typeName: enumName,
+                      },
+                    },
+                  },
+                ],
+                returnType: {
+                  type: 'TSTypeAnnotation',
+                  typeAnnotation: {
+                    type: 'TSStringKeyword',
+                  },
+                },
+              },
+              specifiers: [],
+              source: null,
+              exportKind: 'value',
+              assertions: [],
+            },
+          ],
+        },
+      },
+    ];
+  }
+
+  const getPlaceholderNameForTypeofImport: () => string = (() => {
+    let typeof_import_count = 0;
+    return () => `$$IMPORT_TYPEOF_${++typeof_import_count}$$`;
+  })();
 
   const transform = {
     AnyTypeAnnotation(
@@ -233,13 +687,16 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     DeclareClass(
       node: FlowESTree.DeclareClass,
-    ): TSESTree.ClassDeclarationWithName {
+    ): DeclarationOrUnsupported<TSESTree.ClassDeclarationWithName> {
       const classMembers: Array<TSESTree.ClassElement> = [];
       const transformedBody = transform.ObjectTypeAnnotation(node.body);
       if (transformedBody.type !== 'TSTypeLiteral') {
-        throw translationError(
+        return unsupportedDeclaration(
           node.body,
           'Spreads in declare class are not allowed',
+          node.id,
+          true,
+          node.typeParameters,
         );
       }
       for (const member of transformedBody.members) {
@@ -359,9 +816,12 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             ```
             Let's put a pin in it for now and deal with it later if the need arises.
             */
-            throw unsupportedTranslationError(
+            return unsupportedDeclaration(
               node.body.callProperties[0] ?? node.body,
               'call signatures on classes',
+              node.id,
+              true,
+              node.typeParameters,
             );
           }
 
@@ -406,12 +866,14 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       node: FlowESTree.DeclareExportDeclaration,
     ):
       | TSESTree.ExportNamedDeclaration
+      | Array<TSESTree.ExportNamedDeclaration>
       | TSESTree.ExportDefaultDeclaration
       | [
           (
             | TSESTree.VariableDeclaration
             | TSESTree.ClassDeclaration
             | TSESTree.TSDeclareFunction
+            | TSESTree.TSTypeAliasDeclaration
           ),
           TSESTree.ExportDefaultDeclaration,
         ] {
@@ -466,56 +928,51 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             // only Identifiers can be handled here.
             if (referencedId.type === 'Identifier') {
               const exportedVar = topScope.set.get(referencedId.name);
-              if (exportedVar == null || exportedVar.defs.length !== 1) {
-                throw unexpectedTranslationError(
-                  referencedId,
-                  `Unable to find exported variable ${referencedId.name}`,
-                );
-              }
+              if (exportedVar != null && exportedVar.defs.length === 1) {
+                const def = exportedVar.defs[0];
+                switch (def.type) {
+                  case 'ImportBinding': {
+                    // `import type { Wut } from 'mod'; declare export default Wut;`
+                    // `import { type Wut } from 'mod'; declare export default Wut;`
+                    // these cases should be wrapped in a variable because they're exporting a type, not a value
+                    const specifier = def.node;
+                    if (
+                      specifier.importKind === 'type' ||
+                      specifier.parent.importKind === 'type'
+                    ) {
+                      // fallthrough to the "default" handling
+                      break;
+                    }
 
-              const def = exportedVar.defs[0];
-              switch (def.type) {
-                case 'ImportBinding': {
-                  // `import type { Wut } from 'mod'; declare export default Wut;`
-                  // `import { type Wut } from 'mod'; declare export default Wut;`
-                  // these cases should be wrapped in a variable because they're exporting a type, not a value
-                  const specifier = def.node;
-                  if (
-                    specifier.importKind === 'type' ||
-                    specifier.parent.importKind === 'type'
-                  ) {
+                    // intentional fallthrough to the "value" handling
+                  }
+                  case 'ClassName':
+                  case 'Enum':
+                  case 'FunctionName':
+                  case 'ImplicitGlobalVariable':
+                  case 'Variable':
+                    // there's already a variable defined to hold the type
+                    return {
+                      type: 'ExportDefaultDeclaration',
+                      declaration: {
+                        type: 'Identifier',
+                        name: referencedId.name,
+                      },
+                      exportKind: 'value',
+                    };
+
+                  case 'CatchClause':
+                  case 'Parameter':
+                  case 'TypeParameter':
+                    throw translationError(
+                      def.node,
+                      `Unexpected variable def type: ${def.type}`,
+                    );
+
+                  case 'Type':
                     // fallthrough to the "default" handling
                     break;
-                  }
-
-                  // intentional fallthrough to the "value" handling
                 }
-                case 'ClassName':
-                case 'Enum':
-                case 'FunctionName':
-                case 'ImplicitGlobalVariable':
-                case 'Variable':
-                  // there's already a variable defined to hold the type
-                  return {
-                    type: 'ExportDefaultDeclaration',
-                    declaration: {
-                      type: 'Identifier',
-                      name: referencedId.name,
-                    },
-                    exportKind: 'value',
-                  };
-
-                case 'CatchClause':
-                case 'Parameter':
-                case 'TypeParameter':
-                  throw translationError(
-                    def.node,
-                    `Unexpected variable def type: ${def.type}`,
-                  );
-
-                case 'Type':
-                  // fallthrough to the "default" handling
-                  break;
               }
             }
 
@@ -585,45 +1042,73 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             }: TSESTree.ExportNamedDeclarationWithoutSourceWithMultiple);
           }
 
-          const {declaration, exportKind} = (() => {
+          const declarations = (() => {
             switch (node.declaration.type) {
               case 'DeclareClass':
-                return {
-                  declaration: transform.DeclareClass(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareClass(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
               case 'DeclareFunction':
-                return {
-                  declaration: transform.DeclareFunction(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareFunction(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
               case 'DeclareInterface':
-                return {
-                  declaration: transform.DeclareInterface(node.declaration),
-                  exportKind: 'type',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareInterface(node.declaration),
+                    exportKind: 'type',
+                  },
+                ];
               case 'DeclareOpaqueType':
-                return {
-                  declaration: transform.DeclareOpaqueType(node.declaration),
-                  exportKind: 'type',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareOpaqueType(node.declaration),
+                    exportKind: 'type',
+                  },
+                ];
               case 'DeclareVariable':
-                return {
-                  declaration: transform.DeclareVariable(node.declaration),
-                  exportKind: 'value',
-                };
+                return [
+                  {
+                    declaration: transform.DeclareVariable(node.declaration),
+                    exportKind: 'value',
+                  },
+                ];
+              case 'DeclareEnum': {
+                const result = transform.DeclareEnum(node.declaration);
+                return Array.isArray(result)
+                  ? [
+                      {
+                        declaration: result[0],
+                        exportKind: 'type',
+                      },
+                      {
+                        declaration: result[1],
+                        exportKind: 'type',
+                      },
+                    ]
+                  : [{declaration: result, exportKind: 'type'}];
+              }
             }
           })();
 
-          return ({
-            type: 'ExportNamedDeclaration',
-            // flow does not currently support assertions
-            assertions: [],
-            declaration,
-            exportKind,
-            source: null,
-            specifiers: [],
-          }: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle);
+          return declarations.map(
+            ({declaration, exportKind}) =>
+              ({
+                type: 'ExportNamedDeclaration',
+                // flow does not currently support assertions
+                assertions: [],
+                declaration,
+                exportKind,
+                source: null,
+                specifiers: [],
+              }: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle),
+          );
         } else {
           return ({
             type: 'ExportNamedDeclaration',
@@ -740,8 +1225,15 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             init: null,
           },
         ],
-        kind: 'var',
+        kind: node.kind,
       };
+    },
+    DeclareEnum(
+      node: FlowESTree.DeclareEnum,
+    ): DeclarationOrUnsupported<
+      [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+    > {
+      return EnumImpl(node);
     },
     EmptyTypeAnnotation(
       node: FlowESTree.EmptyTypeAnnotation,
@@ -750,318 +1242,14 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       // The closest is `never`, but `never` has a number of different semantics
       // In reality no human code should ever directly use the `empty` type in flow
       // So let's put a pin in it for now
-      throw unsupportedTranslationError(node, 'empty type');
+      return unsupportedAnnotation(node, 'empty type');
     },
     EnumDeclaration(
       node: FlowESTree.EnumDeclaration,
-    ): [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration] {
-      const body = node.body;
-      if (body.type === 'EnumSymbolBody') {
-        /*
-        There's unfortunately no way for us to support this in a clean way.
-        We can get really close using this code:
-        ```
-        declare namespace SymbolEnum {
-            export const member1: unique symbol;
-            export type member1 = typeof member1;
-
-            export const member2: unique symbol;
-            export type member2 = typeof member2;
-        }
-        type SymbolEnum = typeof SymbolEnum[keyof typeof SymbolEnum];
-        ```
-
-        However as explained in https://github.com/microsoft/TypeScript/issues/43657:
-        "A unique symbol type is never transferred from one declaration to another through inference."
-        This intended behaviour in TS means that the usage of the fake-enum would look like this:
-        ```
-        const value: SymbolEnum.member1 = SymbolEnum.member1;
-        //           ^^^^^^^^^^^^^^^^^^ required to force TS to retain the information
-        ```
-        Which is really clunky and shitty. It definitely works, but ofc it's not good.
-        We can go with this design if users are okay with it!
-
-        Considering how rarely used symbol enums are ATM, let's just put a pin in it for now.
-        */
-        throw unsupportedTranslationError(node, 'symbol enums');
-      }
-      if (body.type === 'EnumBooleanBody') {
-        /*
-        TODO - TS enums only allow strings or numbers as their values - not booleans.
-        This means we need a non-ts-enum representation of the enum.
-        We can support boolean enums using a construct like this:
-        ```ts
-        declare namespace BooleanEnum {
-            export const member1: true;
-            export type member1 = typeof member1;
-
-            export const member2: false;
-            export type member2 = typeof member1;
-        }
-        declare type BooleanEnum = boolean;
-        ```
-
-        But it's pretty clunky and ugly.
-        Considering how rarely used boolean enums are ATM, let's just put a pin in it for now.
-        */
-        throw unsupportedTranslationError(node, 'boolean enums');
-      }
-
-      const members: Array<TSESTree.TSEnumMemberNonComputedName> = [];
-      for (const member of body.members) {
-        switch (member.type) {
-          case 'EnumDefaultedMember': {
-            if (body.type === 'EnumNumberBody') {
-              // this should be impossible!
-              throw unexpectedTranslationError(
-                member,
-                'Unexpected defaulted number enum member',
-              );
-            }
-            members.push({
-              type: 'TSEnumMember',
-              computed: false,
-              id: transform.Identifier(member.id, false),
-              initializer: ({
-                type: 'Literal',
-                raw: `"${member.id.name}"`,
-                value: member.id.name,
-              }: TSESTree.StringLiteral),
-            });
-            break;
-          }
-
-          case 'EnumNumberMember':
-          case 'EnumStringMember':
-            members.push({
-              type: 'TSEnumMember',
-              computed: false,
-              id: transform.Identifier(member.id, false),
-              initializer:
-                member.init.literalType === 'string'
-                  ? transform.StringLiteral(member.init)
-                  : transform.NumericLiteral(member.init),
-            });
-        }
-      }
-
-      const bodyRepresentationType =
-        body.type === 'EnumNumberBody'
-          ? {type: 'TSNumberKeyword'}
-          : {type: 'TSStringKeyword'};
-
-      const enumName = transform.Identifier(node.id, false);
-      return [
-        {
-          type: 'TSEnumDeclaration',
-          const: false,
-          declare: true,
-          id: enumName,
-          members,
-        },
-        // flow also exports `.cast`, `.isValid`, `.members` and `.getName` for enums
-        // we can use declaration merging to declare these functions on the enum:
-        /*
-        declare enum Foo {
-          A = 1,
-          B = 2,
-        }
-        declare namespace Foo {
-          export function cast(value: number | null | undefined): Foo;
-          export function isValid(value: number | null | undefined): value is Foo;
-          export function members(): IterableIterator<Foo>;
-          export function getName(value: Foo): string;
-        }
-        */
-        {
-          type: 'TSModuleDeclaration',
-          declare: true,
-          id: enumName,
-          body: {
-            type: 'TSModuleBlock',
-            body: [
-              // export function cast(value: number | null | undefined): Foo
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'cast',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSUnionType',
-                          types: [
-                            bodyRepresentationType,
-                            {
-                              type: 'TSNullKeyword',
-                            },
-                            {
-                              type: 'TSUndefinedKeyword',
-                            },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypeReference',
-                      typeName: enumName,
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function isValid(value: number | null | undefined): value is Foo;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'isValid',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSUnionType',
-                          types: [
-                            bodyRepresentationType,
-                            {
-                              type: 'TSNullKeyword',
-                            },
-                            {
-                              type: 'TSUndefinedKeyword',
-                            },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypePredicate',
-                      asserts: false,
-                      parameterName: {
-                        type: 'Identifier',
-                        name: 'value',
-                      },
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSTypeReference',
-                          typeName: enumName,
-                        },
-                      },
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function members(): IterableIterator<Foo>;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'members',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSTypeReference',
-                      typeName: {
-                        type: 'Identifier',
-                        name: 'IterableIterator',
-                      },
-                      typeParameters: {
-                        type: 'TSTypeParameterInstantiation',
-                        params: [
-                          {
-                            type: 'TSTypeReference',
-                            typeName: enumName,
-                          },
-                        ],
-                      },
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-              // export function getName(value: Foo): string;
-              {
-                type: 'ExportNamedDeclaration',
-                declaration: {
-                  type: 'TSDeclareFunction',
-                  id: {
-                    type: 'Identifier',
-                    name: 'getName',
-                  },
-                  generator: false,
-                  expression: false,
-                  async: false,
-                  params: [
-                    {
-                      type: 'Identifier',
-                      name: 'value',
-                      typeAnnotation: {
-                        type: 'TSTypeAnnotation',
-                        typeAnnotation: {
-                          type: 'TSTypeReference',
-                          typeName: enumName,
-                        },
-                      },
-                    },
-                  ],
-                  returnType: {
-                    type: 'TSTypeAnnotation',
-                    typeAnnotation: {
-                      type: 'TSStringKeyword',
-                    },
-                  },
-                },
-                specifiers: [],
-                source: null,
-                exportKind: 'value',
-                assertions: [],
-              },
-            ],
-          },
-        },
-      ];
+    ): DeclarationOrUnsupported<
+      [TSESTree.TSEnumDeclaration, TSESTree.TSModuleDeclaration],
+    > {
+      return EnumImpl(node);
     },
     DeclareModuleExports(
       node: FlowESTree.DeclareModuleExports,
@@ -1073,7 +1261,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     ): TSESTree.TypeNode {
       // The existential type does not map to any types in TS
       // It's also super deprecated - so let's not ever worry
-      throw unsupportedTranslationError(node, 'exestential type');
+      return unsupportedAnnotation(node, 'existential type');
     },
     ExportNamedDeclaration(
       node: FlowESTree.ExportNamedDeclaration,
@@ -1096,11 +1284,12 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
       const [exportedDeclaration, mergedDeclaration] = (() => {
         if (node.declaration == null) {
-          return [null];
+          return [null, null];
         }
 
         switch (node.declaration.type) {
           case 'ClassDeclaration':
+          case 'ComponentDeclaration':
           case 'FunctionDeclaration':
           case 'VariableDeclaration':
             // These cases shouldn't happen in flow defs because they have their own special
@@ -1110,8 +1299,10 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               `Unexpected named declaration found ${node.declaration.type}`,
             );
 
-          case 'EnumDeclaration':
-            return transform.EnumDeclaration(node.declaration);
+          case 'EnumDeclaration': {
+            const result = transform.EnumDeclaration(node.declaration);
+            return Array.isArray(result) ? result : [result, null];
+          }
           case 'InterfaceDeclaration':
             return [transform.InterfaceDeclaration(node.declaration), null];
           case 'OpaqueType':
@@ -1304,7 +1495,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           type PropType = ReturnType<ExtractPropType<Obj>>; // number
           ```
           */
-          throw unsupportedTranslationError(node, fullTypeName);
+          return unsupportedAnnotation(node, fullTypeName);
         }
 
         case '$Diff':
@@ -1552,16 +1743,149 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       }
 
       // React special conversion:
-      if (isReactImport(baseId)) {
+      const validReactImportOrGlobal = isValidReactImportOrGlobal(baseId);
+      const reactImport = isReactImport(baseId);
+      if (validReactImportOrGlobal || reactImport) {
+        // Returns appropriate Identifier for `React` import.
+        // If a global is in use, set a flag to indicate that we should add the import.
+        const getReactIdentifier = () => {
+          if (!reactImport && validReactImportOrGlobal) {
+            shouldAddReactImport = true;
+          }
+          return {
+            type: 'Identifier',
+            name: `React`,
+          };
+        };
+
         switch (fullTypeName) {
+          // TODO: In flow this is `ChildrenArray<T> = T | $ReadOnlyArray<ChildrenArray<T>>`.
+          // The recursive nature of it is rarely needed, so we're simplifying this for now
+          // but omitting that aspect. Once we're able to provide utility types for our translations,
+          // we should update this.
+          // React.ChildrenArray<T> -> T | ReadonlyArray<T>
+          // React$ChildrenArray<T> -> T | ReadonlyArray<T>
+          case 'React.ChildrenArray':
+          case 'React$ChildrenArray': {
+            const [param] = assertHasExactlyNTypeParameters(1);
+            return {
+              type: 'TSUnionType',
+              types: [
+                param,
+                {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'Identifier',
+                    name: 'ReadonlyArray',
+                  },
+                  typeParameters: {
+                    type: 'TSTypeParameterInstantiation',
+                    params: [param],
+                  },
+                },
+              ],
+            };
+          }
+          // React.Component<A,B> -> React.Component<A,B>
+          // React$Component<A,B> -> React.Component<A,B>
+          case 'React.Component':
+          case 'React$Component': {
+            const typeParameters = node.typeParameters;
+            if (typeParameters == null || typeParameters.params.length === 0) {
+              throw translationError(
+                node,
+                `Expected at least 1 type parameter with \`${fullTypeName}\``,
+              );
+            }
+            const params = typeParameters.params;
+            if (params.length > 2) {
+              throw translationError(
+                node,
+                `Expected at no more than 2 type parameters with \`${fullTypeName}\``,
+              );
+            }
+
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'Component',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: params.map(param =>
+                  transform.TypeAnnotationType(param),
+                ),
+              },
+            };
+          }
+
+          // React.Context<A> -> React.Context<A>
+          // React$Context<A> -> React.Context<A>
+          case 'React$Context':
+          case 'React.Context':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: `Context`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          // React.Key -> React.Key
+          // React$Key -> React.Key
+          case 'React.Key':
+          case 'React$Key':
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: 'Key',
+                },
+              },
+            };
+          // React.ElementType -> React.ElementType
+          // React$ElementType -> React.ElementType
+          case 'React$ElementType':
+          case 'React.ElementType': {
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: `ElementType`,
+                },
+              },
+              typeParameters: undefined,
+            };
+          }
           // React.Node -> React.ReactNode
+          case 'React$Node':
           case 'React.Node': {
             assertHasExactlyNTypeParameters(0);
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ReactNode`,
@@ -1571,12 +1895,13 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
             };
           }
           // React.Element<typeof Component> -> React.ReactElement<typeof Component>
+          case 'React$Element':
           case 'React.Element': {
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ReactElement`,
@@ -1588,7 +1913,43 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               },
             };
           }
+          // React.ElementRef<typeof Component> -> React.ElementRef<typeof Component>
+          // React$ElementRef<typeof Component> -> React.ElementRef<typeof Component>
+          case 'React$ElementRef':
+          case 'React.ElementRef':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: `ElementRef`,
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: assertHasExactlyNTypeParameters(1),
+              },
+            };
+          // React$Fragment -> React.Fragment
+          // React.Fragment -> React.Fragment
+          case 'React$FragmentType':
+          case 'React.Fragment':
+            assertHasExactlyNTypeParameters(0);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: getReactIdentifier(),
+                right: {
+                  type: 'Identifier',
+                  name: `Fragment`,
+                },
+              },
+            };
           // React.MixedElement -> JSX.Element
+          case 'React$MixedElement':
           case 'React.MixedElement': {
             assertHasExactlyNTypeParameters(0);
             return {
@@ -1607,9 +1968,15 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               typeParameters: undefined,
             };
           }
-          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config>
+          // React.AbstractComponent<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
           // React.AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
-          case 'React.AbstractComponent': {
+          // React$AbstractComponent<Config, Instance> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<Instance>>
+          // React.ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
+          // React$ComponentType<Config> -> React.ForwardRefExoticComponent<Config & React.RefAttributes<unknown>>
+          case 'React.AbstractComponent':
+          case 'React$AbstractComponent':
+          case 'React.ComponentType':
+          case 'React$ComponentType': {
             const typeParameters = node.typeParameters;
             if (typeParameters == null || typeParameters.params.length === 0) {
               throw translationError(
@@ -1625,39 +1992,42 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               );
             }
 
-            let newTypeParam = transform.TypeAnnotationType(params[0]);
-            if (params[1] != null) {
-              newTypeParam = {
-                type: 'TSIntersectionType',
-                types: [
-                  newTypeParam,
-                  {
-                    type: 'TSTypeReference',
-                    typeName: {
-                      type: 'TSQualifiedName',
-                      left: {
-                        type: 'Identifier',
-                        name: 'React',
-                      },
-                      right: {
-                        type: 'Identifier',
-                        name: 'RefAttributes',
-                      },
+            let newTypeParam = {
+              type: 'TSIntersectionType',
+              types: [
+                transform.TypeAnnotationType(params[0]),
+                {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'TSQualifiedName',
+                    left: {
+                      type: 'Identifier',
+                      name: 'React',
                     },
-                    typeParameters: {
-                      type: 'TSTypeParameterInstantiation',
-                      params: [transform.TypeAnnotationType(params[1])],
+                    right: {
+                      type: 'Identifier',
+                      name: 'RefAttributes',
                     },
                   },
-                ],
-              };
-            }
+                  typeParameters: {
+                    type: 'TSTypeParameterInstantiation',
+                    params: [
+                      params[1]
+                        ? transform.TypeAnnotationType(params[1])
+                        : {
+                            type: 'TSUnknownKeyword',
+                          },
+                    ],
+                  },
+                },
+              ],
+            };
 
             return {
               type: 'TSTypeReference',
               typeName: {
                 type: 'TSQualifiedName',
-                left: transform.Identifier(baseId, false),
+                left: getReactIdentifier(),
                 right: {
                   type: 'Identifier',
                   name: `ForwardRefExoticComponent`,
@@ -1669,6 +2039,91 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
               },
             };
           }
+          // React.ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
+          // React$ElementConfig<A> ->  JSX.LibraryManagedAttributes<A, React.ComponentProps<A>>
+          case 'React.ElementConfig':
+          case 'React$ElementConfig': {
+            const [param] = assertHasExactlyNTypeParameters(1);
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'TSQualifiedName',
+                left: {
+                  type: 'Identifier',
+                  name: 'JSX',
+                },
+                right: {
+                  type: 'Identifier',
+                  name: 'LibraryManagedAttributes',
+                },
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: [
+                  param,
+                  {
+                    type: 'TSTypeReference',
+                    typeName: {
+                      type: 'TSQualifiedName',
+                      left: getReactIdentifier(),
+                      right: {
+                        type: 'Identifier',
+                        name: `ComponentProps`,
+                      },
+                    },
+                    typeParameters: {
+                      type: 'TSTypeParameterInstantiation',
+                      params: [param],
+                    },
+                  },
+                ],
+              },
+            };
+          }
+          // React.Ref<C> -> NonNullable<React.Ref<C> | string | number>
+          // React$Ref<C> -> NonNullable<React.Ref<C> | string | number>
+          case 'React.Ref':
+          case 'React$Ref':
+            return {
+              type: 'TSTypeReference',
+              typeName: {
+                type: 'Identifier',
+                name: 'NonNullable',
+              },
+              typeParameters: {
+                type: 'TSTypeParameterInstantiation',
+                params: [
+                  {
+                    type: 'TSUnionType',
+                    types: [
+                      {
+                        type: 'TSTypeReference',
+                        typeName: {
+                          type: 'TSQualifiedName',
+                          left: getReactIdentifier(),
+                          right: {
+                            type: 'Identifier',
+                            name: 'Ref',
+                          },
+                        },
+                        typeParameters: {
+                          type: 'TSTypeParameterInstantiation',
+                          params: assertHasExactlyNTypeParameters(1),
+                        },
+                      },
+                      {
+                        type: 'TSStringKeyword',
+                      },
+                      {
+                        type: 'TSNumberKeyword',
+                      },
+                    ],
+                  },
+                ],
+              },
+            };
+          default:
+            return unsupportedAnnotation(node, fullTypeName);
         }
       }
 
@@ -1726,67 +2181,77 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     ImportDeclaration(
       node: FlowESTree.ImportDeclaration,
-    ): TSESTree.ImportDeclaration {
-      if (node.importKind === 'typeof') {
-        /*
-        TODO - this is a complicated change to support because TS
-        does not have typeof imports.
-        Making it a `type` import would change the meaning!
-        The only way to truly support this is to prefix all **usages** with `typeof T`.
-        eg:
-
-        ```
-        import typeof Foo from 'Foo';
-        type T = Foo;
-        ```
-
-        would become:
-
-        ```
-        import type Foo from 'Foo';
-        type T = typeof Foo;
-        ```
-
-        This seems simple, but will actually be super complicated for us to do with
-        our current translation architecture
-        */
-        throw unsupportedTranslationError(node, 'typeof imports');
-      }
+    ): Array<DeclarationOrUnsupported<TSESTree.ImportDeclaration>> {
       const importKind = node.importKind;
 
-      return {
-        type: 'ImportDeclaration',
-        assertions: node.assertions.map(transform.ImportAttribute),
-        importKind: importKind ?? 'value',
-        source: transform.StringLiteral(node.source),
-        specifiers: node.specifiers.map(spec => {
-          switch (spec.type) {
-            case 'ImportDefaultSpecifier':
-              return {
-                type: 'ImportDefaultSpecifier',
-                local: transform.Identifier(spec.local, false),
-              };
+      const specifiers = [];
+      const unsupportedSpecifiers = [];
+      node.specifiers.forEach(spec => {
+        let id = (() => {
+          if (node.importKind === 'typeof' || spec.importKind === 'typeof') {
+            const id = {
+              type: 'Identifier',
+              name: getPlaceholderNameForTypeofImport(),
+            };
 
-            case 'ImportNamespaceSpecifier':
-              return {
-                type: 'ImportNamespaceSpecifier',
-                local: transform.Identifier(spec.local, false),
-              };
+            unsupportedSpecifiers.push({
+              type: 'TSTypeAliasDeclaration',
+              id: transform.Identifier(spec.local, false),
+              typeAnnotation: {
+                type: 'TSTypeQuery',
+                exprName: id,
+              },
+            });
 
-            case 'ImportSpecifier':
-              if (spec.importKind === 'typeof') {
-                // see above
-                throw unsupportedTranslationError(node, 'typeof imports');
-              }
-              return {
-                type: 'ImportSpecifier',
-                importKind: spec.importKind === 'type' ? 'type' : null,
-                imported: transform.Identifier(spec.imported, false),
-                local: transform.Identifier(spec.local, false),
-              };
+            return id;
           }
-        }),
-      };
+
+          return transform.Identifier(spec.local, false);
+        })();
+
+        switch (spec.type) {
+          case 'ImportDefaultSpecifier':
+            specifiers.push({
+              type: 'ImportDefaultSpecifier',
+              local: id,
+            });
+            return;
+
+          case 'ImportNamespaceSpecifier':
+            specifiers.push({
+              type: 'ImportNamespaceSpecifier',
+              local: id,
+            });
+            return;
+
+          case 'ImportSpecifier':
+            specifiers.push({
+              type: 'ImportSpecifier',
+              importKind:
+                spec.importKind === 'typeof' || spec.importKind === 'type'
+                  ? 'type'
+                  : null,
+              imported: transform.Identifier(spec.imported, false),
+              local: id,
+            });
+            return;
+        }
+      });
+
+      const out = specifiers.length
+        ? [
+            {
+              type: 'ImportDeclaration',
+              assertions: node.assertions.map(transform.ImportAttribute),
+              importKind:
+                importKind === 'typeof' ? 'type' : importKind ?? 'value',
+              source: transform.StringLiteral(node.source),
+              specifiers,
+            },
+          ]
+        : [];
+
+      return [...out, ...unsupportedSpecifiers];
     },
     InterfaceExtends(
       node: FlowESTree.InterfaceExtends,
@@ -1916,7 +2381,10 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     },
     ObjectTypeAnnotation(
       node: FlowESTree.ObjectTypeAnnotation,
-    ): TSESTree.TSTypeLiteral | TSESTree.TSIntersectionType {
+    ):
+      | TSESTree.TSTypeLiteral
+      | TSESTree.TSIntersectionType
+      | TSESTree.TSAnyKeyword {
       // we want to preserve the source order of the members
       // unfortunately flow has unordered properties storing things
       // so store all elements with their start index and sort the
@@ -1943,10 +2411,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
       They're really rarely used (if ever) - so let's just ignore them for now
       */
       if (node.internalSlots.length > 0) {
-        throw unsupportedTranslationError(
-          node.internalSlots[0],
-          'internal slots',
-        );
+        return unsupportedAnnotation(node.internalSlots[0], 'internal slots');
       }
 
       if (!node.properties.find(FlowESTree.isObjectTypeSpreadProperty)) {
@@ -2043,7 +2508,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         */
 
         if (members.length > 0) {
-          throw unsupportedTranslationError(
+          return unsupportedAnnotation(
             node,
             'object types with spreads, indexers and/or call properties at the same time',
           );
@@ -2053,7 +2518,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         for (const property of node.properties) {
           if (property.type === 'ObjectTypeSpreadProperty') {
             if (members.length > 0) {
-              throw unsupportedTranslationError(
+              return unsupportedAnnotation(
                 property,
                 'object types with spreads in the middle or at the end',
               );
@@ -2061,7 +2526,7 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
 
             const spreadType = transform.TypeAnnotationType(property.argument);
             if (spreadType.type !== 'TSTypeReference') {
-              throw unsupportedTranslationError(
+              return unsupportedAnnotation(
                 property,
                 'object types with complex spreads',
               );
@@ -2255,6 +2720,20 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
         right: transform.Identifier(node.id, false),
       };
     },
+    QualifiedTypeofIdentifier(
+      node: FlowESTree.QualifiedTypeofIdentifier,
+    ): TSESTree.TSQualifiedName {
+      const qual = node.qualification;
+
+      return {
+        type: 'TSQualifiedName',
+        left:
+          qual.type === 'Identifier'
+            ? transform.Identifier(qual, false)
+            : transform.QualifiedTypeofIdentifier(qual),
+        right: transform.Identifier(node.id, false),
+      };
+    },
     RegExpLiteral(node: FlowESTree.RegExpLiteral): TSESTree.RegExpLiteral {
       return {
         type: 'Literal',
@@ -2377,6 +2856,9 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
           return transform.ThisTypeAnnotation(node);
         case 'TupleTypeAnnotation':
           return transform.TupleTypeAnnotation(node);
+        case 'TupleTypeLabeledElement':
+        case 'TupleTypeSpreadElement':
+          return unsupportedAnnotation(node, node.type);
         case 'TypeofTypeAnnotation':
           return transform.TypeofTypeAnnotation(node);
         case 'UnionTypeAnnotation':
@@ -2390,19 +2872,20 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     TypeofTypeAnnotation(
       node: FlowESTree.TypeofTypeAnnotation,
     ): TSESTree.TSTypeQuery {
-      const argument = transform.TypeAnnotationType(node.argument);
-      if (argument.type !== 'TSTypeReference') {
-        throw unexpectedTranslationError(
-          node,
-          `Expected to find a type reference as the argument to the TypeofTypeAnnotation, but got ${node.argument.type}`,
-        );
+      switch (node.argument.type) {
+        case 'Identifier':
+          return {
+            type: 'TSTypeQuery',
+            exprName: transform.Identifier(node.argument),
+            typeParameters: undefined,
+          };
+        case 'QualifiedTypeofIdentifier':
+          return {
+            type: 'TSTypeQuery',
+            exprName: transform.QualifiedTypeofIdentifier(node.argument),
+            typeParameters: undefined,
+          };
       }
-
-      return {
-        type: 'TSTypeQuery',
-        exprName: argument.typeName,
-        typeParameters: argument.typeParameters,
-      };
     },
     TypeParameter(node: FlowESTree.TypeParameter): TSESTree.TSTypeParameter {
       /*
@@ -2496,5 +2979,5 @@ const getTransforms = (code: string, scopeManager: ScopeManager) => {
     };
   }
 
-  return transform;
+  return [transform, code];
 };

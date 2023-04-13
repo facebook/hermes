@@ -22,7 +22,7 @@ function *args() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:Bytecode File Information:
-// CHECK-NEXT:  Bytecode version number: 94
+// CHECK-NEXT:  Bytecode version number: {{.*}}
 // CHECK-NEXT:  Source hash: {{.*}}
 // CHECK-NEXT:  Function count: 5
 // CHECK-NEXT:  String count: 8
@@ -170,7 +170,7 @@ function *args() {
 // CHECK-NEXT:  0x006f  end of debug source table
 
 // CHECK:Debug scope descriptor table:
-// CHECK-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// CHECK-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // CHECK-NEXT:  0x0003  end of debug scope descriptor table
 
 // CHECK:Textified callees table:

@@ -116,7 +116,7 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
   uint32_t cookedBegin = dup ? 2 : 2 + count;
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < count; ++i) {
-    idx = HermesValue::encodeNumberValue(i);
+    idx = HermesValue::encodeUntrustedNumberValue(i);
 
     cookedValue = args.getArg(cookedBegin + i);
     auto putRes = JSObject::defineOwnComputedPrimitive(
@@ -407,7 +407,7 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
         if (!desc.flags.enumerable)
           return true;
 
-        nameHandle = HermesValue::encodeNumberValue(index);
+        nameHandle = HermesValue::encodeUntrustedNumberValue(index);
 
         if (excludedItems) {
           assert(
@@ -573,7 +573,7 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
           if (LLVM_UNLIKELY(nextValue->isEmpty())) {
             // Slow path, just run the full getComputed_RJS path.
             // Runs when there is a hole, accessor, non-regular property, etc.
-            idxHandle = HermesValue::encodeNumberValue(i);
+            idxHandle = HermesValue::encodeUntrustedNumberValue(i);
             CallResult<PseudoHandle<>> valueRes =
                 JSObject::getComputed_RJS(arr, runtime, idxHandle);
             if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
@@ -598,7 +598,7 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
           return ExecutionStatus::EXCEPTION;
         }
 
-        return HermesValue::encodeNumberValue(nextIndex);
+        return HermesValue::encodeUntrustedNumberValue(nextIndex);
       }
     }
   }
@@ -647,7 +647,8 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
     }
 
     // f. Let nextIndex be nextIndex + 1.
-    nextIndex = HermesValue::encodeNumberValue(nextIndex->getNumber() + 1);
+    nextIndex =
+        HermesValue::encodeUntrustedNumberValue(nextIndex->getNumber() + 1);
   }
 
   return nextIndex.getHermesValue();
@@ -683,7 +684,7 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 
   MutableHandle<> thisVal{runtime};
   if (isConstructor) {
-    auto thisValRes = Callable::createThisForConstruct(fn, runtime);
+    auto thisValRes = Callable::createThisForConstruct_RJS(fn, runtime);
     if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -788,7 +789,8 @@ hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeNumberValue(expOp(left, res->getNumber()));
+    return HermesValue::encodeUntrustedNumberValue(
+        expOp(left, res->getNumber()));
   }
 
   Handle<BigIntPrimitive> lhs = runtime.makeHandle(res->getBigInt());

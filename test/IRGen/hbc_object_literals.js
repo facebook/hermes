@@ -69,7 +69,8 @@ var obj4 = {
 // Auto-generated content below. Please do not modify manually.
 
 // IRGEN:function global#0()#1 : undefined
-// IRGEN-NEXT:frame = [], globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:globals = [obj1, obj2, obj3, obj4]
+// IRGEN-NEXT:S{global#0()#1} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst undefined : undefined
@@ -110,14 +111,14 @@ var obj4 = {
 // IRGEN-NEXT:function_end
 
 // IRGEN:function f#0#1()#2 : undefined
-// IRGEN-NEXT:frame = []
+// IRGEN-NEXT:S{f#0#1()#2} = []
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCLoadConstInst undefined : undefined
 // IRGEN-NEXT:  %1 = ReturnInst %0 : undefined
 // IRGEN-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
-// BCGEN-NEXT:  Bytecode version number: 94
+// BCGEN-NEXT:  Bytecode version number: {{.*}}
 // BCGEN-NEXT:  Source hash: {{.*}}
 // BCGEN-NEXT:  Function count: 2
 // BCGEN-NEXT:  String count: 24
@@ -282,7 +283,7 @@ var obj4 = {
 // BCGEN-NEXT:  0x0086  end of debug source table
 
 // BCGEN:Debug scope descriptor table:
-// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:   , variable count: 0
+// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
 // BCGEN-NEXT:  0x0003  end of debug scope descriptor table
 
 // BCGEN:Textified callees table:

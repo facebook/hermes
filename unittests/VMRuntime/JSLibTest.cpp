@@ -33,13 +33,14 @@ TEST_F(JSLibTest, globalObjectConstTest) {
   GET_GLOBAL(NaN);
   EXPECT_TRUE(isSameValue(
       propRes->get(),
-      HermesValue::encodeDoubleValue(
+      HermesValue::encodeUntrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN())));
 
   GET_GLOBAL(Infinity);
   EXPECT_TRUE(isSameValue(
       propRes->get(),
-      HermesValue::encodeDoubleValue(std::numeric_limits<double>::infinity())));
+      HermesValue::encodeUntrustedNumberValue(
+          std::numeric_limits<double>::infinity())));
 
   GET_GLOBAL(undefined);
   EXPECT_TRUE(isSameValue(propRes->get(), HermesValue::encodeUndefinedValue()));
@@ -114,7 +115,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
       toStringFn->executeCall0(
           toStringFn,
           runtime,
-          runtime.makeHandle(HermesValue::encodeDoubleValue(10))));
+          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))));
 
   // Check that toStringFn.call(toStringFn) is "[object Function]".
   EXPECT_CALLRESULT_STRING(
@@ -153,7 +154,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
           obj,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -226,7 +227,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
           obj,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -356,7 +357,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
           objProto,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   auto obj2 = createObject(runtime);
@@ -402,7 +403,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
             obj,
             runtime,
             *prop1ID,
-            runtime.makeHandle(HermesValue::encodeDoubleValue(10))) !=
+            runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
         ExecutionStatus::EXCEPTION);
 
     // Object.getOwnPropertyDescriptor(obj).
@@ -480,7 +481,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
         runtime.makeNullHandle<Environment>(),
         codeBlock));
     auto accessor = runtime.makeHandle<PropertyAccessor>(
-        *PropertyAccessor::create(runtime, getter, setter));
+        PropertyAccessor::create(runtime, getter, setter));
     ASSERT_TRUE(
         JSObject::defineOwnProperty(obj, runtime, *prop1ID, dpf, accessor) !=
         ExecutionStatus::EXCEPTION);
@@ -553,7 +554,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                     .getValue());
 
     // Add value to the PropertyDescriptor.
-    auto value = HermesValue::encodeDoubleValue(123);
+    auto value = HermesValue::encodeUntrustedNumberValue(123);
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     attributes,
                     runtime,
@@ -702,7 +703,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    auto value1 = HermesValue::encodeDoubleValue(123);
+    auto value1 = HermesValue::encodeUntrustedNumberValue(123);
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
@@ -831,7 +832,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     runtime.makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    auto value1 = HermesValue::encodeDoubleValue(123);
+    auto value1 = HermesValue::encodeUntrustedNumberValue(123);
     ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,

@@ -11,12 +11,15 @@
 #include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/SemValidate.h"
+#include "hermes/FrontEndDefs/NativeErrorTypes.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/InternalIdentifierMaker.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Debug.h"
+
+#include <optional>
 
 // Use this value to enable debug logging from the command line.
 #define DEBUG_TYPE "irgen"
@@ -28,6 +31,7 @@ namespace irgen {
 
 // Forward declarations
 class SurroundingTry;
+class FunctionContext;
 class ESTreeIRGen;
 
 using VarDecl = sem::FunctionInfo::VarDecl;
@@ -49,12 +53,32 @@ inline Identifier getNameFieldFromID(const ESTree::Node *ID) {
 /// \returns true if \p node is known to be a constant expression.
 bool isConstantExpr(ESTree::Node *node);
 
-//===----------------------------------------------------------------------===//
-// FunctionContext
-
 /// Scoped hash table to represent the JS scope.
 using NameTableTy = hermes::ScopedHashTable<Identifier, Value *>;
 using NameTableScopeTy = hermes::ScopedHashTableScope<Identifier, Value *>;
+
+//===----------------------------------------------------------------------===//
+// EnterBlockScope
+
+/// Enters a new block scope in the current function. Should be constructed on
+/// the stack.
+class EnterBlockScope {
+  friend class FunctionContext;
+
+ public:
+  explicit EnterBlockScope(FunctionContext *currentContext);
+  ~EnterBlockScope();
+
+ private:
+  FunctionContext *const currentContext_;
+  ScopeDesc *const oldIRScopeDesc_;
+  ScopeCreationInst *const oldIRScope_;
+  NameTableScopeTy *const oldBlockScope_;
+  NameTableScopeTy blockScope_;
+};
+
+//===----------------------------------------------------------------------===//
+// FunctionContext
 
 /// Holds the target basic block for a break and continue label.
 /// It has a 1-to-1 correspondence to SemInfoFunction::GotoLabel.
@@ -74,6 +98,8 @@ struct GotoLabel {
 /// on the stack. Upon destruction it automatically restores the previous
 /// function context.
 class FunctionContext {
+  friend class EnterBlockScope;
+
   /// Pointer to the "outer" object this is associated with.
   ESTreeIRGen *const irGen_;
 
@@ -83,12 +109,6 @@ class FunctionContext {
   /// The old value which we save and will restore on destruction.
   FunctionContext *oldContext_;
 
-  /// The previous currentIRScopeDesc value.
-  ScopeDesc *oldIRScopeDesc_;
-
-  /// The previous currentIRScope value.
-  CreateScopeInst *oldIRScope_;
-
   /// As we descend into a new function, we save the state of the builder
   /// here. It is automatically restored once we are done with the function.
   IRBuilder::SaveRestore builderSaveState_;
@@ -96,6 +116,10 @@ class FunctionContext {
   /// A vector of labels corresponding 1-to-1 to the labels defined in
   /// \c semInfo_.
   llvh::SmallVector<GotoLabel, 2> labels_;
+
+  /// Sets \p functionScope as the top-level scope for the function represented
+  /// by this object.
+  void setupFunctionScope(EnterBlockScope *enterBlockScope);
 
  public:
   /// This is the actual function associated with this context.
@@ -105,7 +129,10 @@ class FunctionContext {
   SurroundingTry *surroundingTry = nullptr;
 
   /// A new variable scope that is used throughout the body of the function.
-  NameTableScopeTy scope;
+  NameTableScopeTy *functionScope;
+
+  /// The current local "scope" for block-scoped declarations.
+  NameTableScopeTy *blockScope;
 
   /// Stack Register that will hold the return value of the global scope.
   AllocStackInst *globalReturnRegister{nullptr};
@@ -132,6 +159,34 @@ class FunctionContext {
   /// Optionally captured value of the eagerly created Arguments object. Used
   /// when arrow functions need to access it.
   Variable *capturedArguments{};
+
+  /// "Enters" the function scope. Must be defined after all non-EnterBlockScope
+  /// objects as it manipulates the members.
+  EnterBlockScope enterFunctionScope;
+
+  /// ES2023 10.2.11 20, 28, and 30 define separate function scopes. Not all
+  /// functions have those, so they are created when called for.
+  using SeparateFunctionScope = std::optional<EnterBlockScope>;
+
+  /// "Enters" the parameter scope. See ES2023 10.2.11.20
+  SeparateFunctionScope enterParamScope;
+
+  /// "Enters" the var declaration scope. See ES2023 10.2.11.28
+  SeparateFunctionScope enterVarScope;
+
+  /// "Enters" the new scope for top-level lexical declarations. See
+  /// ES2023 10.2.11.30
+  SeparateFunctionScope enterTopLevelLexicalDeclarationsScope;
+
+  /// "Enters" given \p optScope (a separate, optional scope in the current
+  /// function). Note that \p optScope is a pointer to a FunctionContext member
+  /// variable.
+  void enterOptionalFunctionScope(
+      SeparateFunctionScope FunctionContext::*optScope) {
+    assert(!(this->*optScope) && "can't enter scope twice.");
+    (this->*optScope).emplace(this);
+    setupFunctionScope(&*(this->*optScope));
+  }
 
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
@@ -322,6 +377,7 @@ class LReference {
 
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
+  friend class EnterBlockScope;
   friend class FunctionContext;
   friend class LReference;
 
@@ -365,7 +421,7 @@ class ESTreeIRGen {
   ScopeDesc *currentIRScopeDesc_{};
 
   /// The current scope object available for IR generation.
-  CreateScopeInst *currentIRScope_{};
+  ScopeCreationInst *currentIRScope_{};
 
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
@@ -402,6 +458,24 @@ class ESTreeIRGen {
   std::pair<Function *, Function *> doLazyFunction(
       hbc::LazyCompilationData *lazyData);
 
+  /// Emits code to raises the given native error (ES2023 20.5.5) \p id with the
+  /// given \p msg. This generated instruction sequence is immune to changes to
+  /// the global object. This is used in cases like
+  ///
+  /// \code
+  /// const c = "you";
+  /// globalThis.SyntaxError = function() {}
+  /// c = "shall not pass!"
+  /// \endcode
+  ///
+  /// where the assignment to c should raise a %SyntaxError% (i.e., the original
+  /// SyntaxError constructor), and not a SyntaxError (i.e., the current value
+  /// of the identifier SyntaxError).
+  static Instruction *genRaiseNativeError(
+      IRBuilder &builder,
+      NativeErrorTypes id,
+      llvh::StringRef msg);
+
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
   static Function *genSyntaxErrorFunction(
@@ -419,8 +493,23 @@ class ESTreeIRGen {
   /// the top-level of a program.
   void genBody(ESTree::NodeList &Body);
 
+  /// Generate code for the statement \p stmt, which is a function body.
+  void genFunctionBody(ESTree::Node *stmt);
+
+  /// Generate code for the statement \p stmt, which is a catch handler.
+  void genCatchHandler(ESTree::Node *stmt);
+
+  /// Generate code for the statement \p stmt without creating a new scope if \p
+  /// stmt is a BlockStatementNode.
+  void genScopelessBlockOrStatement(ESTree::Node *stmt);
+
+  enum class IsLoopBody { No, Yes };
+
+  /// Generates code for the block statement \p BS.
+  void genBlockStatement(ESTree::BlockStatementNode *BS, IsLoopBody isLoopBody);
+
   /// Generate code for the statement \p Stmt.
-  void genStatement(ESTree::Node *stmt);
+  void genStatement(ESTree::Node *stmt, IsLoopBody isLoopBody);
 
   /// Wrapper of genExpression. If curFunction()->globalReturnRegister is
   /// set, stores the expression value into it.
@@ -665,7 +754,7 @@ class ESTreeIRGen {
   /// \param catchParam is not null, create the required variable binding
   ///     for the catch parameter and emit the store.
   /// \return the CatchInst.
-  CatchInst *prepareCatch(ESTree::NodePtr catchParam);
+  CatchInst *prepareCatch(ESTree::CatchClauseNode *catchHandler);
 
   /// When we see a control change such as return, break, continue,
   /// we need to make sure to generate code for finally block if
@@ -765,41 +854,91 @@ class ESTreeIRGen {
       Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);
 
-  /// In the beginning of an ES5 function, initialize the special captured
-  /// variables needed by arrow functions, constructors and methods.
-  /// This is used only by \c genES5Function() and the global scope.
-  /// This is called internally by emitFunctionPrologue().
-  void initCaptureStateInES5FunctionHelper();
+  //===----------------------------------------------------------------------===//
+  // Function prologue emission
+  //
+  // Function prologue emission has 3 steps
+  //  - preamble
+  //  - es5-state capture
+  //  - top-level declarations
+  //
+  // It used to be a single function that was becoming too complex for its own
+  // good, so it has been split into the functions in this section. It is
+  // expected that all functions (including global()) need the code generated by
+  // emitFunctionPreamble(), but the other 2 steps are optional.
 
-  enum class InitES5CaptureState { No, Yes };
-
-  enum class DoEmitParameters { No, Yes };
-
-  /// Emit the function prologue for the current function, consisting of the
-  /// following things:
-  /// - a next block, so we can append instructions to it to generate the actual
-  ///   code for the function
-  /// - declare all hoisted es5 variables and global properties
-  /// - initialize all hoisted es5 variables to undefined
-  /// - declare all hoisted es5 functions and initialize them (recursively
-  ///   generating their functions)
-  /// - create "this" parameter
-  /// - create all explicit parameters and store them in variables
+  /// Emit the function preamble for the current function, consisting of:
+  ///  - the top-level CreateScopeInst creating the function's top-level scope
+  ///  - sets the current source-level scope to the function's top-level scope
+  ///  - creates the arguments array (which is removed during the epilogue if
+  ///    unused)
+  ///  - the %this parameter.
+  ///
   /// \param entry the unpopulated entry block for the function
-  /// \param doInitES5CaptureState initialize the capture state for ES5
-  ///     functions.
-  /// \param doEmitParameters run code to initialize parameters in the function.
-  ///     When "No", only set the .length of the resultant function.
-  ///     Used for the outer function of generator functions, e.g.
-  void emitFunctionPrologue(
+  void emitFunctionPreamble(BasicBlock *entry);
+
+  /// In the beginning of an ES5 function, initialize the special captured
+  /// variables needed by arrow functions, constructors and methods. Should be
+  /// called after \c emitFunctionPreamble in function that need this (i.e., all
+  /// functions but arrow function expressions).
+  void initCaptureStateInES5Function();
+
+  /// Controls whether parameters should be emitted. \c No means only the
+  /// .length property of the resulting function will be populated. \c Yes means
+  /// the parameters are emitted, as well as the code to initialize them.
+  /// \c YesMultiScopes instructs emitTopLevelDeclarations to emit separate
+  /// scopes for parameters, their initializer, and the function's top-level
+  /// declarations, as mandated by ES2023 10.2.11.
+  enum class DoEmitParameters { No, Yes, YesMultiScopes };
+
+  /// Emits top-level declarations for \p funcNode. These include:
+  ///
+  ///  - parameters (and their initialization, if they have default values)
+  ///  - var-declared variables
+  ///  - let/const-declared variables
+  ///  - imports
+  ///  - any functions defined in \p funcNode's top level scope; and
+  ///  - any hoisted functions (as per ES2023 Annex B.3.2.1 and B.3.2.2).
+  ///
+  /// \param body the AST node for the function body; or the Program node when
+  ///     generating the global function
+  void emitTopLevelDeclarations(
       ESTree::FunctionLikeNode *funcNode,
-      BasicBlock *entry,
-      InitES5CaptureState doInitES5CaptureState,
+      ESTree::Node *body,
       DoEmitParameters doEmitParameters);
+
+  //
+  //===----------------------------------------------------------------------===//
+
+  /// Creates a new binding \p id of kind \p kind in the given \p scopeDesc.
+  /// \p needsInitializer indicates whether newly created bindings should be
+  /// default-initialized.
+  void createNewBinding(
+      ScopeDesc *scopeDesc,
+      VarDecl::Kind kind,
+      ESTree::Node *id,
+      bool needsInitializer,
+      Value *init = nullptr);
+
+  /// Creates all bindings (variables and functions) for \p containingNode in
+  /// \p scopeDesc.
+  void createScopeBindings(ScopeDesc *scopeDesc, ESTree::Node *containingNode);
+
+  /// Generates all closures declares in \p containingNode in the current IR
+  /// ScopeDesc.
+  void genFunctionDeclarations(ESTree::Node *containingNode);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
-  void emitParameters(ESTree::FunctionLikeNode *funcNode);
+  /// \param hasParamExpressions indicates that \p funcNode has parameter
+  ///   experssions; if this is true, parameters are lowered to tdz locals to
+  ///   prevent using parameters before they are initialized, e.g.
+  ///   \code
+  ///   function f(a = b, b = 10) { ... }
+  ///   \endcode
+  void emitParameters(
+      ESTree::FunctionLikeNode *funcNode,
+      bool hasParamExpressions);
 
   /// Count number of expected arguments, including "this".
   /// Only parameters up to the first parameter with an initializer are counted.
@@ -832,7 +971,7 @@ class ESTreeIRGen {
   /// \return A pair. pair.first is the variable, and pair.second is set to true
   ///   if it was declared, false if it already existed.
   std::pair<Value *, bool> declareVariableOrGlobalProperty(
-      Function *inFunc,
+      ScopeDesc *inScope,
       VarDecl::Kind declKind,
       Identifier name);
 
@@ -1072,6 +1211,29 @@ class ESTreeIRGen {
         curFunction()->function->getOriginalOrInferredName().c_str());
   }
 
+  enum class AlreadyEmitted { No, Yes };
+  llvh::DenseMap<
+      ESTree::FunctionDeclarationNode *,
+      std::pair<Function *, AlreadyEmitted>>
+      functionForDecl;
+
+  /// Emits a CreateFunction instruction for \p func in the current location if
+  /// \p func hasn't been created yet (it may have been created due to function
+  /// hoisting, in which case this method won't do anything).
+  void emitCreateFunction(ESTree::FunctionDeclarationNode *func);
+
+  /// Emits CreateFunction instructions for all functions defined immediately
+  /// within \p containingNode. This implements the semantics of
+  /// ES2023 14.2.2 Runtime Semantics: Evaluation
+  ///   [...]
+  ///   Block : { StatementList }
+  ///     [...]
+  ///     3. Perform BlockDeclarationInstantiation(StatementList, blockEnv).
+  ///
+  /// Specifically, this implements 14.2.3 BlockDeclarationInstantiation,
+  /// 14.2.3.3.b.i, 14.2.3.3.b.ii, and 14.2.3.3.b.iii.
+  void hoistCreateFunctions(ESTree::Node *containingNode);
+
   /// Emit an instruction to load a value from a specified location.
   /// \param from location to load from, either a Variable or
   ///     GlobalObjectProperty.
@@ -1088,6 +1250,24 @@ class ESTreeIRGen {
   ///     check should be skipped.
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
+
+  /// Creates a new, empty declarative environment, and make it the current
+  /// environment for IRGen. Caller is supposed to have creates an appropriate
+  /// EnterBlockScope object. This implements
+  /// ES2023 9.1.2.2 NewDeclarativeEnvironment ( E ),
+  /// with E being currentIRScope_.
+  void newDeclarativeEnvironment();
+
+  /// Sets up a new scope by
+  ///
+  /// 1. Creating a new declarative environment;
+  /// 2. Creates all let/const declarations in \p containingNode;
+  /// 3. Codegens all functions definitions in \p containingNode; and
+  /// 4. Emit all CreateFunctions for function definitions in \p containingNode.
+  ///
+  /// 2. through 4. implement
+  /// ES2023 14.2.3 BlockDeclarationInstantiation ( code, env ).
+  void blockDeclarationInstantiation(ESTree::Node *containingNode);
 };
 
 template <typename EB, typename EF, typename EH>

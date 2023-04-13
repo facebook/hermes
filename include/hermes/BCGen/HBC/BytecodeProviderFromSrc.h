@@ -20,6 +20,7 @@ namespace hbc {
 struct CompileFlags {
   bool debug{false};
   bool lazy{false};
+  bool enableBlockScoping{false};
 
   /// Eagerly compile files under this number of bytes, even when lazy.
   // Lazy compilation has significant per-module overhead, and is best applied

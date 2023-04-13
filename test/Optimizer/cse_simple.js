@@ -49,7 +49,8 @@ function cse_unary(a) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [foo, foo_with_cf, check_operator_kind, cse_this_instr, cse_unary]
+// CHECK-NEXT:globals = [foo, foo_with_cf, check_operator_kind, cse_this_instr, cse_unary]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : number, %0
@@ -66,7 +67,7 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(dim)#2 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '==', %dim, %dim
@@ -77,7 +78,7 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo_with_cf#0#1(dim)#3 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo_with_cf#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo_with_cf#0#1()#3}
 // CHECK-NEXT:  %1 = BinaryOperatorInst '==', %dim, %dim
@@ -93,7 +94,7 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function check_operator_kind#0#1(i)#4 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{check_operator_kind#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{check_operator_kind#0#1()#4}
 // CHECK-NEXT:  %1 = AsInt32Inst %i
@@ -105,16 +106,16 @@ function cse_unary(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_this_instr#0#1()#5 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{cse_this_instr#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cse_this_instr#0#1()#5}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, %this, %this, %this, %this
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, %this, %this, %this, %this
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function cse_unary#0#1(a)#6 : number|bigint
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{cse_unary#0#1()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{cse_unary#0#1()#6}
 // CHECK-NEXT:  %1 = UnaryOperatorInst '++', %a

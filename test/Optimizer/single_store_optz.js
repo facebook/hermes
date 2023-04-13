@@ -18,7 +18,8 @@ function g12(z) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [g12]
+// CHECK-NEXT:globals = [g12]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %g12#0#1()#2 : undefined, %0
@@ -27,22 +28,22 @@ function g12(z) {
 // CHECK-NEXT:function_end
 
 // CHECK:function g12#0#1(z)#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{g12#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{g12#0#1()#2}
 // CHECK-NEXT:  %1 = CreateFunctionInst %w#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = BinaryOperatorInst '>', %z, 0 : number
 // CHECK-NEXT:  %4 = CondBranchInst %3 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %5 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %6 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function w#1#2()#3 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{w#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{w#1#2()#3}
 // CHECK-NEXT:  %1 = ReturnInst 1 : number

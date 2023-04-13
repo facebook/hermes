@@ -119,6 +119,9 @@ class PinnedHermesValue;
                                                                        \
   /* The flags passed from a VM experiment */                          \
   F(constexpr, uint32_t, VMExperimentFlags, 0)                         \
+                                                                       \
+  /* Whether or not block scoping is enabled */                        \
+  F(constexpr, bool, EnableBlockScoping, false)                        \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})

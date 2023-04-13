@@ -19,7 +19,8 @@ function bug2() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [bug1, bug2]
+// CHECK-NEXT:globals = [bug1, bug2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %bug1#0#1()#2 : undefined, %0
@@ -30,7 +31,7 @@ function bug2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bug1#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bug1#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bug1#0#1()#2}
 // CHECK-NEXT:  %1 = BranchInst %BB1
@@ -41,7 +42,7 @@ function bug2() {
 // CHECK-NEXT:function_end
 
 // CHECK:function bug2#0#1()#3 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{bug2#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{bug2#0#1()#3}
 // CHECK-NEXT:  %1 = BranchInst %BB1

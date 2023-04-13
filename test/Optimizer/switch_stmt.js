@@ -29,7 +29,8 @@ function backwards_branch() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [backwards_branch]
+// CHECK-NEXT:globals = [backwards_branch]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %backwards_branch#0#1()#2 : undefined, %0
@@ -38,7 +39,7 @@ function backwards_branch() {
 // CHECK-NEXT:function_end
 
 // CHECK:function backwards_branch#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{backwards_branch#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{backwards_branch#0#1()#2}
 // CHECK-NEXT:  %1 = BranchInst %BB1

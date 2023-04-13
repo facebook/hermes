@@ -96,7 +96,7 @@ CallResult<HermesValue> optionsToJS(
     if (kv.second.isBool()) {
       value = HermesValue::encodeBoolValue(kv.second.getBool());
     } else if (kv.second.isNumber()) {
-      value = HermesValue::encodeNumberValue(kv.second.getNumber());
+      value = HermesValue::encodeUntrustedNumberValue(kv.second.getNumber());
     } else {
       assert(kv.second.isString() && "Option is neither bool nor string");
       CallResult<HermesValue> strRes = StringPrimitive::createEfficient(
@@ -201,14 +201,14 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
   }
   auto localeObj = runtime.makeHandle(vmcast<JSObject>(*objRes));
 
-  CallResult<uint64_t> lengthRes = getArrayLikeLength(localeObj, runtime);
+  CallResult<uint64_t> lengthRes = getArrayLikeLength_RJS(localeObj, runtime);
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   bool isProxy = localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
-          createListFromArrayLike(
+          createListFromArrayLike_RJS(
               localeObj,
               runtime,
               *lengthRes,
@@ -477,7 +477,7 @@ CallResult<HermesValue> intlServiceConstructor(
   std::unique_ptr<T> native = std::move(*nativeRes);
 
   auto typeHandle = runtime.makeHandle(
-      HermesValue::encodeNumberValue((uint32_t)T::getNativeType()));
+      HermesValue::encodeUntrustedNumberValue((uint32_t)T::getNativeType()));
   auto setType = [&](Handle<DecoratedObject> obj) {
     auto res = JSObject::defineNewOwnProperty(
         obj,
@@ -746,7 +746,8 @@ intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(yRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeNumberValue(collator->compare(*xRes, *yRes));
+  return HermesValue::encodeUntrustedNumberValue(
+      collator->compare(*xRes, *yRes));
 }
 
 CallResult<HermesValue>
@@ -1301,7 +1302,9 @@ intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
           numberFormatHandle->getDecoration());
   assert(numberFormat && "Intl.NumberFormat platform part is nullptr");
 
-  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
+  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
+  // Hermes' Intl doesn't. Thus use toNumber.
+  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1361,7 +1364,9 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
+  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
+  // Hermes' Intl doesn't. Thus use toNumber.
+  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1575,7 +1580,7 @@ intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeNumberValue(
+  return HermesValue::encodeUntrustedNumberValue(
       (*collatorRes)->compare(*thisRes, *thatRes));
 }
 

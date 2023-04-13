@@ -73,7 +73,8 @@ function badThrow() {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [simple, control_flow, control_catch, multi, badThrow]
+// CHECK-NEXT:globals = [simple, control_flow, control_catch, multi, badThrow]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple#0#1()#2 : number, %0
@@ -90,7 +91,7 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple#0#1(x, y)#2 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{simple#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple#0#1()#2}
 // CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
@@ -102,7 +103,7 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function control_flow#0#1(x, y)#3
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{control_flow#0#1()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{control_flow#0#1()#3}
 // CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
@@ -125,7 +126,7 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function control_catch#0#1(x, y)#4 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{control_catch#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst $t
 // CHECK-NEXT:  %1 = CreateScopeInst %S{control_catch#0#1()#4}
@@ -154,7 +155,7 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function multi#0#1(x, y)#5 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{multi#0#1()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{multi#0#1()#5}
 // CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
@@ -168,7 +169,7 @@ function badThrow() {
 // CHECK-NEXT:function_end
 
 // CHECK:function badThrow#0#1()#6 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{badThrow#0#1()#6} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst $result
 // CHECK-NEXT:  %1 = CreateScopeInst %S{badThrow#0#1()#6}

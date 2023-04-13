@@ -39,7 +39,8 @@ function for_while_do_mixed_test(cond) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [simple_do_while_test, do_while_break_test, do_while_continue_test, for_while_do_mixed_test]
+// CHECK-NEXT:globals = [simple_do_while_test, do_while_break_test, do_while_continue_test, for_while_do_mixed_test]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %simple_do_while_test#0#1()#2, %0
@@ -57,7 +58,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:function_end
 
 // CHECK:function simple_do_while_test#0#1(cond)#2
-// CHECK-NEXT:frame = [cond#2]
+// CHECK-NEXT:S{simple_do_while_test#0#1()#2} = [cond#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{simple_do_while_test#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#2], %0
@@ -76,7 +77,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:function_end
 
 // CHECK:function do_while_break_test#0#1(cond)#3
-// CHECK-NEXT:frame = [cond#3]
+// CHECK-NEXT:S{do_while_break_test#0#1()#3} = [cond#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{do_while_break_test#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#3], %0
@@ -97,7 +98,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:function_end
 
 // CHECK:function do_while_continue_test#0#1(cond)#4
-// CHECK-NEXT:frame = [cond#4]
+// CHECK-NEXT:S{do_while_continue_test#0#1()#4} = [cond#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{do_while_continue_test#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#4], %0
@@ -118,7 +119,7 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:function_end
 
 // CHECK:function for_while_do_mixed_test#0#1(cond)#5
-// CHECK-NEXT:frame = [cond#5, i#5]
+// CHECK-NEXT:S{for_while_do_mixed_test#0#1()#5} = [cond#5, i#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{for_while_do_mixed_test#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %cond, [cond#5], %0

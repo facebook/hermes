@@ -26,7 +26,7 @@ const VTable DummyObject::vt{
 
 DummyObject::DummyObject(GC &gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
-  hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14), gc);
+  hvDouble.setNonPtr(HermesValue::encodeUntrustedNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
   hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue(), gc);
   hvEmpty.setNonPtr(HermesValue::encodeEmptyValue(), gc);

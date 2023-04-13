@@ -183,6 +183,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
         break;
     }
 
+    compileFlags_.enableBlockScoping = runtimeConfig.getEnableBlockScoping();
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
     compileFlags_.emitAsyncBreakCheck = defaultEmitAsyncBreakCheck_ =
         runtimeConfig.getAsyncBreakCheckInEval();
@@ -513,7 +514,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isBool()) {
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
-      return vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber());
+      return vm::HermesValue::encodeUntrustedNumberValue(value.getNumber());
     } else if (
         value.isSymbol() || value.isBigInt() || value.isString() ||
         value.isObject()) {
@@ -532,7 +533,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
-          vm::HermesValue::encodeUntrustedDoubleValue(value.getNumber()));
+          vm::HermesValue::encodeUntrustedNumberValue(value.getNumber()));
     } else if (
         value.isSymbol() || value.isBigInt() || value.isString() ||
         value.isObject()) {
@@ -2023,7 +2024,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   auto res = vm::JSObject::getComputed_RJS(
       arrayHandle(arr),
       runtime_,
-      runtime_.makeHandle(vm::HermesValue::encodeNumberValue(i)));
+      runtime_.makeHandle(vm::HermesValue::encodeUntrustedNumberValue(i)));
   checkStatus(res.getStatus());
 
   return valueFromHermesValue(res->get());
@@ -2150,7 +2151,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   //    in 15.2.4
   //
   // Note that 13.2.2.1-4 are also handled by the call to newObject.
-  auto thisRes = vm::Callable::createThisForConstruct(funcHandle, runtime_);
+  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime_);
   // We need to capture this in case the ctor doesn't return an object,
   // we need to return this object.
   auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));

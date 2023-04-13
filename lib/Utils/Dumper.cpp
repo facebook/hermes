@@ -155,10 +155,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "%";
     printFunctionName(F, PrintFunctionParams::No);
   } else if (auto S = dyn_cast<ScopeDesc>(V)) {
-    os << "%S{";
-    printFunctionName(S->getFunction(), PrintFunctionParams::No);
-    printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
-    os << "}";
+    os << "%";
+    printScopeLabel(S);
   } else if (auto VR = dyn_cast<Variable>(V)) {
     os << "[";
     printVariableName(VR);
@@ -184,18 +182,7 @@ void IRPrinter::printFunctionHeader(Function *F) {
 }
 
 void IRPrinter::printFunctionVariables(Function *F) {
-  os << "frame = [";
-  bool first = true;
-  for (auto V : F->getFunctionScopeDesc()->getVariables()) {
-    if (!first) {
-      os << ", ";
-    }
-    printVariableName(V);
-    printTypeLabel(V->getType());
-    first = false;
-  }
-  os << "]";
-
+  bool hasGlobals = false;
   if (F->isGlobalScope()) {
     auto &Ctx = F->getContext();
     bool first2 = true;
@@ -203,7 +190,8 @@ void IRPrinter::printFunctionVariables(Function *F) {
       if (!GP->isDeclared())
         continue;
       if (first2) {
-        os << ", globals = [";
+        hasGlobals = true;
+        os << "globals = [";
       } else {
         os << ", ";
       }
@@ -213,6 +201,26 @@ void IRPrinter::printFunctionVariables(Function *F) {
     if (!first2)
       os << "]";
   }
+
+  bool printNewLine = hasGlobals;
+  F->forEachScope([&](ScopeDesc *S) {
+    if (printNewLine) {
+      os << "\n";
+    }
+    printNewLine = true;
+    printScopeLabel(S);
+    os << " = [";
+    bool first = true;
+    for (auto V : S->getVariables()) {
+      if (!first) {
+        os << ", ";
+      }
+      printVariableName(V);
+      printTypeLabel(V->getType());
+      first = false;
+    }
+    os << "]";
+  });
 }
 
 void IRPrinter::printInstructionDestination(Instruction *I) {
@@ -260,9 +268,7 @@ void IRPrinter::printInstruction(Instruction *I) {
   if (codeGenOpts.dumpSourceLevelScope) {
     if (auto *originalScope = I->getSourceLevelScope()) {
       os << prefix << "scope: ";
-      printFunctionName(originalScope->getFunction(), PrintFunctionParams::No);
-      printScopeRange(
-          originalScope, originalScope->getFunction()->getFunctionScopeDesc());
+      printScopeLabel(originalScope);
       prefix = ", ";
     }
   }
@@ -301,6 +307,13 @@ void IRPrinter::printSourceLocation(SMRange rng) {
   os << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
      << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
      << ":" << end.col << ")";
+}
+
+void IRPrinter::printScopeLabel(ScopeDesc *S) {
+  os << "S{";
+  printFunctionName(S->getFunction(), PrintFunctionParams::No);
+  printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
+  os << "}";
 }
 
 void IRPrinter::printScope(ScopeDesc *S) {

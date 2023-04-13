@@ -66,6 +66,13 @@ static bool identifyCallees(CallInst *CI, llvh::DenseSet<Function *> &callees) {
 static bool identifyCallsites(
     Function *F,
     llvh::DenseSet<CallInst *> &callSites) {
+  // Non-strict functions can be aliased in multiple ways (
+  // arguments.callee, Function.prototype.caller etc). Do not try to identify
+  // the callsites for those.
+  if (!F->isStrictMode()) {
+    return false;
+  }
+
   for (auto *CU : F->getUsers()) {
     if (auto *CI = llvh::dyn_cast<CallInst>(CU)) {
       if (!isDirectCallee(F, CI))

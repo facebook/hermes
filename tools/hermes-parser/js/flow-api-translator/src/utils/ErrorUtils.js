@@ -30,6 +30,7 @@ export function flowFixMeOrError(
 
 class TranslationErrorBase extends Error {
   name: string = 'TranslationError';
+  framedMessage: string;
   constructor(
     node: ObjectWithLoc,
     message: string,
@@ -50,6 +51,12 @@ class TranslationErrorBase extends Error {
       //      | ^^^^ error]
       process.env.JEST_WORKER_ID == null ? framedMessage : `\n${framedMessage}`,
     );
+
+    this.framedMessage = framedMessage;
+  }
+
+  getFramedMessage(): string {
+    return this.framedMessage;
   }
 }
 
@@ -60,7 +67,7 @@ export function translationError(
   node: ObjectWithLoc,
   message: string,
   context: $ReadOnly<{code: string, ...}>,
-): Error {
+): ExpectedTranslationError {
   return new ExpectedTranslationError(node, message, context);
 }
 
@@ -71,7 +78,7 @@ export function unexpectedTranslationError(
   node: ObjectWithLoc,
   message: string,
   context: $ReadOnly<{code: string, ...}>,
-): Error {
+): UnexpectedTranslationError {
   return new UnexpectedTranslationError(node, message, context);
 }
 

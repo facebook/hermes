@@ -27,7 +27,8 @@ function update_variable_test3(x) { return --x; }
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [update_field_test0, update_field_test1, update_field_test2, update_field_test3, update_variable_test0, update_variable_test1, update_variable_test2, update_variable_test3]
+// CHECK-NEXT:globals = [update_field_test0, update_field_test1, update_field_test2, update_field_test3, update_variable_test0, update_variable_test1, update_variable_test2, update_variable_test3]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %update_field_test0#0#1()#2, %0
@@ -53,7 +54,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test0#0#1(o)#2
-// CHECK-NEXT:frame = [o#2]
+// CHECK-NEXT:S{update_field_test0#0#1()#2} = [o#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_field_test0#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#2], %0
@@ -68,7 +69,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test1#0#1(o)#3
-// CHECK-NEXT:frame = [o#3]
+// CHECK-NEXT:S{update_field_test1#0#1()#3} = [o#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_field_test1#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#3], %0
@@ -83,7 +84,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test2#0#1(o)#4
-// CHECK-NEXT:frame = [o#4]
+// CHECK-NEXT:S{update_field_test2#0#1()#4} = [o#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_field_test2#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#4], %0
@@ -97,7 +98,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_field_test3#0#1(o)#5
-// CHECK-NEXT:frame = [o#5]
+// CHECK-NEXT:S{update_field_test3#0#1()#5} = [o#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_field_test3#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %o, [o#5], %0
@@ -111,7 +112,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test0#0#1(x)#6
-// CHECK-NEXT:frame = [x#6]
+// CHECK-NEXT:S{update_variable_test0#0#1()#6} = [x#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_variable_test0#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
@@ -125,7 +126,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test1#0#1(x)#7
-// CHECK-NEXT:frame = [x#7]
+// CHECK-NEXT:S{update_variable_test1#0#1()#7} = [x#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_variable_test1#0#1()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#7], %0
@@ -139,7 +140,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test2#0#1(x)#8
-// CHECK-NEXT:frame = [x#8]
+// CHECK-NEXT:S{update_variable_test2#0#1()#8} = [x#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_variable_test2#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#8], %0
@@ -152,7 +153,7 @@ function update_variable_test3(x) { return --x; }
 // CHECK-NEXT:function_end
 
 // CHECK:function update_variable_test3#0#1(x)#9
-// CHECK-NEXT:frame = [x#9]
+// CHECK-NEXT:S{update_variable_test3#0#1()#9} = [x#9]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{update_variable_test3#0#1()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#9], %0

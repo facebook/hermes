@@ -157,7 +157,7 @@ TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
 
   auto marker = gcScope.createMarker();
   for (unsigned i = 0; i < maxCapacity; ++i) {
-    value.set(HermesValue::encodeNumberValue(i));
+    value.set(HermesValue::encodeTrustedNumberValue(i));
     auto symRes = valueToSymbolID(runtime, value);
     ASSERT_RETURNED(symRes);
     ASSERT_RETURNED(DictPropertyMap::add(map, runtime, **symRes, desc));
@@ -165,7 +165,7 @@ TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
     gcScope.flushToMarker(marker);
   }
 
-  value.set(HermesValue::encodeNumberValue(maxCapacity));
+  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity));
   auto symRes = valueToSymbolID(runtime, value);
   ASSERT_RETURNED(symRes);
   ASSERT_EQ(
@@ -174,7 +174,7 @@ TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
   runtime.clearThrownValue();
 
   // Try it again.
-  value.set(HermesValue::encodeNumberValue(maxCapacity + 1));
+  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity + 1));
   symRes = valueToSymbolID(runtime, value);
   ASSERT_RETURNED(symRes);
   ASSERT_EQ(

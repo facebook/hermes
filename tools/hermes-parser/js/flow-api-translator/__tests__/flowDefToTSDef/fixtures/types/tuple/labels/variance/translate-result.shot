@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`flowDefToTSDef types/tuple/labels/variance 1`] = `
+"/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ *
+ * TODO: re-enable Prettier once it has been updated to understand this syntax
+ */
+
+type T = [
+  /**
+   * > 11 |  type T = [+a: string];
+   *      |            ^^^^^^^^^^ Unsupported feature: Translating "TupleTypeLabeledElement" is currently not supported.
+   **/
+  any,
+];
+"
+`;

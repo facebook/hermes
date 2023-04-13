@@ -62,6 +62,18 @@ static llvh::cl::opt<bool> GCPrintStats(
     llvh::cl::cat(cl::GCCategory),
     llvh::cl::init(false));
 
+static llvh::cl::opt<bool> EnableBlockScoping(
+    "block-scoping",
+    llvh::cl::desc("Enables block scoping support."),
+    llvh::cl::init(false),
+    llvh::cl::Hidden,
+    llvh::cl::cat(cl::RuntimeCategory));
+static llvh::cl::alias _EnableBlockScoping(
+    "bs",
+    llvh::cl::desc("Alias for --block-scoping"),
+    llvh::cl::Hidden,
+    llvh::cl::aliasopt(EnableBlockScoping));
+
 // This is the vm driver.
 int main(int argc, char **argv) {
   // Normalize the arg vector.
@@ -118,6 +130,7 @@ int main(int argc, char **argv) {
                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                             .withName("hvm")
                             .build())
+          .withEnableBlockScoping(EnableBlockScoping)
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)
           .withIntl(cl::Intl)

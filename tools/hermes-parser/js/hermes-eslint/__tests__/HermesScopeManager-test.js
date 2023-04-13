@@ -177,6 +177,40 @@ describe('Enums', () => {
       name: 'E',
     });
   });
+
+  test('Declaration', () => {
+    const {scopeManager} = parseForESLint(`
+      declare enum E {}
+      E;
+    `);
+
+    // Verify there is a module scope, variable, and reference
+    expect(scopeManager.scopes).toHaveLength(2);
+
+    const scope = scopeManager.scopes[1];
+    expect(scope.type).toEqual(ScopeType.Module);
+    expect(scope.variables).toHaveLength(1);
+    expect(scope.references).toHaveLength(1);
+
+    const variable = scope.variables[0];
+    const reference = scope.references[0];
+    expect(variable.name).toEqual('E');
+
+    // Verify that reference is resolved
+    expect(variable.references).toHaveLength(1);
+    expect(variable.references[0]).toBe(reference);
+    expect(reference.resolved).toBe(variable);
+    expect(reference.isValueReference).toBe(true);
+
+    // Verify there is one Enum definition
+    expect(variable.defs).toHaveLength(1);
+    expect(variable.defs[0].type).toEqual(DefinitionType.Enum);
+    expect(variable.defs[0].node.type).toEqual('DeclareEnum');
+    expect(variable.defs[0].name).toMatchObject({
+      type: 'Identifier',
+      name: 'E',
+    });
+  });
 });
 
 describe('QualifiedTypeIdentifier', () => {
@@ -211,6 +245,43 @@ describe('QualifiedTypeIdentifier', () => {
     expect(variable.references).toHaveLength(1);
     expect(variable.references[0].isValueReference).toBe(true);
     expect(variable.references[0].isTypeReference).toBe(true);
+  });
+});
+
+describe('QualifiedTypeofIdentifier', () => {
+  test('References values', () => {
+    const {scopeManager} = parseForESLint(`
+      import foo from 'foo';
+      (1: typeof foo.bar);
+    `);
+
+    // Verify that scope contains single value reference to 'foo'
+    const scope = scopeManager.scopes[1];
+    expect(scope.variables).toHaveLength(1);
+
+    const variable = scope.variables[0];
+    expect(variable.name).toEqual('foo');
+    expect(variable.references).toHaveLength(1);
+    expect(variable.references[0].isValueReference).toBe(true);
+    expect(variable.references[0].isTypeReference).toBe(false);
+  });
+  test('Does not reference types', () => {
+    const {scopeManager} = parseForESLint(`
+      import type Foo from 'Foo';
+      (1: typeof Foo.bar);
+    `);
+
+    // Verify that scope contains single value reference to 'foo'
+    const scope = scopeManager.scopes[1];
+    expect(scope.variables).toHaveLength(1);
+
+    const variable = scope.variables[0];
+    expect(variable.name).toEqual('Foo');
+
+    // Because this syntax would be invalid, we do not expect
+    // a reference here. Only value references are expected
+    // as an argument for typeof.
+    expect(variable.references).toHaveLength(0);
   });
 });
 
@@ -945,18 +1016,48 @@ describe('Declare statements', () => {
   });
 
   describe('DeclareVariable', () => {
-    verifyHasScopes(`declare var Foo: typeof Foo;`, [
-      {
-        type: ScopeType.Module,
-        variables: [
-          {
-            name: 'Foo',
-            type: DefinitionType.Variable,
-            referenceCount: 1,
-          },
-        ],
-      },
-    ]);
+    describe('var', () => {
+      verifyHasScopes(`declare var Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
+    describe('let', () => {
+      verifyHasScopes(`declare let Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
+    describe('const', () => {
+      verifyHasScopes(`declare const Foo: typeof Foo;`, [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'Foo',
+              type: DefinitionType.Variable,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ]);
+    });
   });
 
   describe('DeclareFunction', () => {
@@ -1986,6 +2087,71 @@ describe('Imports', () => {
               name: 'T',
               type: DefinitionType.Type,
               referenceCount: 0,
+            },
+          ],
+        },
+      ],
+    );
+  });
+});
+
+describe('TupleTypeAnnotation', () => {
+  describe('references types', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  describe('TupleTypeLabeledElement', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [a: T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
+            },
+          ],
+        },
+      ],
+    );
+  });
+
+  describe('TupleTypeSpreadElement with Label', () => {
+    verifyHasScopes(
+      `
+      type T = string;
+      (1: [...a: T]);
+    `,
+      [
+        {
+          type: ScopeType.Module,
+          variables: [
+            {
+              name: 'T',
+              type: DefinitionType.Type,
+              referenceCount: 1,
             },
           ],
         },

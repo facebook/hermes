@@ -21,7 +21,7 @@
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
@@ -40,7 +40,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#0#1()#2
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst 42 : number
@@ -49,7 +49,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function " 1#"#0#1(val)#3
-// CHECK-NEXT:frame = [val#3]
+// CHECK-NEXT:S{" 1#"#0#1()#3} = [val#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 1#"#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %val, [val#3], %0
@@ -57,7 +57,7 @@
 // CHECK-NEXT:function_end
 
 // CHECK:function " 2#"#0#1()#4
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{" 2#"#0#1()#4} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{" 2#"#0#1()#4}
 // CHECK-NEXT:  %1 = ReturnInst 100 : number

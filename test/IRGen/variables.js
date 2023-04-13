@@ -29,7 +29,8 @@ function level0(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [same_func_name, sink, level0]
+// CHECK-NEXT:globals = [same_func_name, sink, level0]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %same_func_name#0#1()#2, %0
@@ -45,7 +46,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function same_func_name#0#1(same_param_name)#2
-// CHECK-NEXT:frame = [same_param_name#2, same_func_name#2]
+// CHECK-NEXT:S{same_func_name#0#1()#2} = [same_param_name#2, same_func_name#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{same_func_name#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#2], %0
@@ -55,7 +56,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "same_func_name 1#"#1#2(same_param_name)#3
-// CHECK-NEXT:frame = [same_param_name#3, same_func_name#3]
+// CHECK-NEXT:S{"same_func_name 1#"#1#2()#3} = [same_param_name#3, same_func_name#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"same_func_name 1#"#1#2()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#3], %0
@@ -65,7 +66,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function "same_func_name 2#"#2#3(same_param_name)#4
-// CHECK-NEXT:frame = [same_param_name#4]
+// CHECK-NEXT:S{"same_func_name 2#"#2#3()#4} = [same_param_name#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"same_func_name 2#"#2#3()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#4], %0
@@ -76,7 +77,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function sink#0#1(a, b, c)#5
-// CHECK-NEXT:frame = [a#5, b#5, c#5]
+// CHECK-NEXT:S{sink#0#1()#5} = [a#5, b#5, c#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %a, [a#5], %0
@@ -86,7 +87,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function level0#0#1(x)#6
-// CHECK-NEXT:frame = [x#6, level1#6]
+// CHECK-NEXT:S{level0#0#1()#6} = [x#6, level1#6]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{level0#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
@@ -96,7 +97,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function level1#1#6(y)#7
-// CHECK-NEXT:frame = [y#7, level2#7]
+// CHECK-NEXT:S{level1#1#6()#7} = [y#7, level2#7]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{level1#1#6()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst %y, [y#7], %0
@@ -106,7 +107,7 @@ function level0(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function level2#6#7(z)#8
-// CHECK-NEXT:frame = [z#8]
+// CHECK-NEXT:S{level2#6#7()#8} = [z#8]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{level2#6#7()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst %z, [z#8], %0
@@ -114,6 +115,6 @@ function level0(x) {
 // CHECK-NEXT:  %3 = LoadFrameInst [x#6@level0], %0
 // CHECK-NEXT:  %4 = LoadFrameInst [y#7@level1], %0
 // CHECK-NEXT:  %5 = LoadFrameInst [z#8], %0
-// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, %3, %4, %5
+// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4, %5
 // CHECK-NEXT:  %7 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end

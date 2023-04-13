@@ -75,7 +75,8 @@ function postponed_store_in_use_block(x) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:frame = [], globals = [store_x_not_captured, store_x_is_captured, load_x_not_captured, load_x_is_captured, load_x_captured_as_load, abort, foo, postponed_store_in_use_block]
+// CHECK-NEXT:globals = [store_x_not_captured, store_x_is_captured, load_x_not_captured, load_x_is_captured, load_x_captured_as_load, abort, foo, postponed_store_in_use_block]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %store_x_not_captured#0#1()#2 : number, %0
@@ -98,17 +99,17 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_not_captured#0#1()#2 : number
-// CHECK-NEXT:frame = [y#2 : number]
+// CHECK-NEXT:S{store_x_not_captured#0#1()#2} = [y#2 : number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_not_captured#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#2] : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %foo#1#2()#3 : undefined, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#1#2()#3 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{foo#1#2()#3} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#2@store_x_not_captured] : number, %0
@@ -116,19 +117,19 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function store_x_is_captured#0#1()#4 : number
-// CHECK-NEXT:frame = [y#4 : number, x#4 : number]
+// CHECK-NEXT:S{store_x_is_captured#0#1()#4} = [y#4 : number, x#4 : number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{store_x_is_captured#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#4] : number, %0
 // CHECK-NEXT:  %2 = StoreFrameInst 4 : number, [x#4] : number, %0
 // CHECK-NEXT:  %3 = CreateFunctionInst %"foo 1#"#1#4()#5 : undefined, %0
-// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = StoreFrameInst 9 : number, [x#4] : number, %0
 // CHECK-NEXT:  %6 = ReturnInst 9 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 1#"#1#4()#5 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"foo 1#"#1#4()#5} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 1#"#1#4()#5}
 // CHECK-NEXT:  %1 = LoadFrameInst [x#4@store_x_is_captured] : number, %0
@@ -137,17 +138,17 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_not_captured#0#1()#6 : number
-// CHECK-NEXT:frame = [y#6 : number]
+// CHECK-NEXT:S{load_x_not_captured#0#1()#6} = [y#6 : number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_not_captured#0#1()#6}
 // CHECK-NEXT:  %1 = StoreFrameInst 3 : number, [y#6] : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %"foo 2#"#1#6()#7 : undefined, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 2#"#1#6()#7 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"foo 2#"#1#6()#7} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 2#"#1#6()#7}
 // CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [y#6@load_x_not_captured] : number, %0
@@ -155,18 +156,18 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_is_captured#0#1()#8 : number
-// CHECK-NEXT:frame = [x#8 : number]
+// CHECK-NEXT:S{load_x_is_captured#0#1()#8} = [x#8 : number]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_is_captured#0#1()#8}
 // CHECK-NEXT:  %1 = StoreFrameInst 4 : number, [x#8] : number, %0
 // CHECK-NEXT:  %2 = CreateFunctionInst %"foo 3#"#1#8()#9 : undefined, %0
-// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined
+// CHECK-NEXT:  %3 = CallInst %2 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %4 = LoadFrameInst [x#8] : number, %0
 // CHECK-NEXT:  %5 = ReturnInst %4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 3#"#1#8()#9 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"foo 3#"#1#8()#9} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 3#"#1#8()#9}
 // CHECK-NEXT:  %1 = StoreFrameInst 12 : number, [x#8@load_x_is_captured] : number, %0
@@ -174,32 +175,32 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_captured_as_load#0#1()#10 : number
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{load_x_captured_as_load#0#1()#10} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{load_x_captured_as_load#0#1()#10}
 // CHECK-NEXT:  %1 = CreateFunctionInst %"foo 4#"#1#10()#11 : undefined, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined
+// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %3 = ReturnInst 4 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 4#"#1#10()#11 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"foo 4#"#1#10()#11} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{"foo 4#"#1#10()#11}
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, 4 : number
+// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, 4 : number
 // CHECK-NEXT:  %3 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function abort#0#1()#12 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{abort#0#1()#12} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{abort#0#1()#12}
 // CHECK-NEXT:  %1 = ThrowInst 42 : number
 // CHECK-NEXT:function_end
 
 // CHECK:function "foo 5#"#0#1(x)#13
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{"foo 5#"#0#1()#13} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst $a
 // CHECK-NEXT:  %1 = CreateScopeInst %S{"foo 5#"#0#1()#13}
@@ -219,7 +220,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %12 = BinaryOperatorInst '+', %11, 1 : number
 // CHECK-NEXT:  %13 = StoreStackInst %12 : string|number, %0
 // CHECK-NEXT:  %14 = LoadPropertyInst globalObject : object, "abort" : string
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined
+// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %16 = BinaryOperatorInst '+', %12 : string|number, 2 : number
 // CHECK-NEXT:  %17 = StoreStackInst %16 : string|number, %0
 // CHECK-NEXT:  %18 = BranchInst %BB4
@@ -229,7 +230,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function postponed_store_in_use_block#0#1(x)#14 : undefined
-// CHECK-NEXT:frame = [x#14]
+// CHECK-NEXT:S{postponed_store_in_use_block#0#1()#14} = [x#14]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{postponed_store_in_use_block#0#1()#14}
 // CHECK-NEXT:  %1 = StoreFrameInst %x, [x#14], %0
@@ -239,7 +240,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:function_end
 
 // CHECK:function ""#1#14()#15
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{""#1#14()#15} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{""#1#14()#15}
 // CHECK-NEXT:  %1 = LoadFrameInst [x#14@postponed_store_in_use_block], %0

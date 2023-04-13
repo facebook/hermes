@@ -11,12 +11,12 @@
 'use strict';
 
 import type {ESNode} from 'hermes-estree';
-import type {VisitorKeys} from '../../HermesESLintVisitorKeys';
+import type {VisitorKeysType} from 'hermes-parser';
 
-import visitorKeys from '../../HermesESLintVisitorKeys';
+import {FlowVisitorKeys} from 'hermes-parser';
 
 type VisitorOptions = $ReadOnly<{
-  childVisitorKeys?: VisitorKeys | null,
+  childVisitorKeys?: VisitorKeysType | null,
 }>;
 
 function isNode(node: mixed): boolean %checks {
@@ -28,9 +28,9 @@ type NodeChildValue = string | boolean | number | ESNode;
 type NodeChildValueOrArray = NodeChildValue | $ReadOnlyArray<NodeChildValue>;
 
 /* abstract */ class VisitorBase {
-  +_childVisitorKeys: VisitorKeys;
+  +_childVisitorKeys: VisitorKeysType;
   constructor(options: VisitorOptions) {
-    this._childVisitorKeys = options.childVisitorKeys ?? visitorKeys;
+    this._childVisitorKeys = options.childVisitorKeys ?? FlowVisitorKeys;
   }
 
   /**
@@ -102,5 +102,5 @@ type NodeChildValueOrArray = NodeChildValue | $ReadOnlyArray<NodeChildValue>;
   };
 }
 
-export type {VisitorOptions, VisitorKeys};
+export type {VisitorOptions, VisitorKeysType as VisitorKeys};
 export {VisitorBase};

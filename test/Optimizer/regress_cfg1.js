@@ -20,18 +20,19 @@ f();
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [f]
+// CHECK-NEXT:globals = [f]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %f#0#1()#2 : undefined, %0
 // CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f" : string
 // CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "f" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined
+// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
 // CHECK-NEXT:  %5 = ReturnInst %4
 // CHECK-NEXT:function_end
 
 // CHECK:function f#0#1()#2 : undefined
-// CHECK-NEXT:frame = []
+// CHECK-NEXT:S{f#0#1()#2} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{f#0#1()#2}
 // CHECK-NEXT:  %1 = ReturnInst undefined : undefined

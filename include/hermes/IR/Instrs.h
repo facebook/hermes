@@ -115,6 +115,49 @@ class ScopeCreationInst : public Instruction {
   }
 };
 
+class NestedScopeCreationInst : public ScopeCreationInst {
+  NestedScopeCreationInst(const NestedScopeCreationInst &) = delete;
+  void operator=(const NestedScopeCreationInst &) = delete;
+
+ public:
+  enum { ParentScopeIdx = ScopeCreationInst::FirstAvailableIdx };
+
+  explicit NestedScopeCreationInst(
+      ValueKind kind,
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : ScopeCreationInst(kind, scopeDesc) {
+    pushOperand<ParentScopeIdx>(parentScope);
+  }
+
+  explicit NestedScopeCreationInst(
+      const NestedScopeCreationInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : ScopeCreationInst(src, operands) {}
+
+  ScopeCreationInst *getParentScope() const {
+    return llvh::cast<ScopeCreationInst>(getOperand(ParentScopeIdx));
+  }
+
+  // Should be used late in the compilation pipeline after MovSpill runs -- the
+  // scope register may not be a fast register, and thus the cast would fail.
+  Value *getParentScopeNoCast() const {
+    return getOperand(ParentScopeIdx);
+  }
+
+  SideEffectKind getSideEffect() {
+    llvm_unreachable("NestedScopeCreationInst must be inherited.");
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    llvm_unreachable("NestedScopeCreationInst must be inherited.");
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::NestedScopeCreationInstKind);
+  }
+};
+
 /// Base class for instructions that have exactly one operand. It guarantees
 /// that only one operand is pushed and it provides getSingleOperand().
 class SingleOperandInst : public Instruction {
@@ -679,6 +722,39 @@ class CreateScopeInst : public ScopeCreationInst {
   }
 };
 
+class CreateInnerScopeInst : public NestedScopeCreationInst {
+  CreateInnerScopeInst(const CreateInnerScopeInst &) = delete;
+  void operator=(const CreateInnerScopeInst &) = delete;
+
+ public:
+  enum { ParentScopeIdx = FirstAvailableIdx };
+
+  explicit CreateInnerScopeInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : NestedScopeCreationInst(
+            ValueKind::CreateInnerScopeInstKind,
+            parentScope,
+            scopeDesc) {}
+
+  explicit CreateInnerScopeInst(
+      const CreateInnerScopeInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : NestedScopeCreationInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CreateInnerScopeInstKind);
+  }
+};
+
 class CreateFunctionInst : public Instruction {
   CreateFunctionInst(const CreateFunctionInst &) = delete;
   void operator=(const CreateFunctionInst &) = delete;
@@ -741,12 +817,29 @@ class CallInst : public Instruction {
 
   LiteralString *textifiedCallee;
 
+ protected:
+  explicit CallInst(
+      ValueKind kind,
+      LiteralString *textifiedCallee,
+      Value *callee,
+      Value *newTarget,
+      Value *thisValue,
+      ArrayRef<Value *> args)
+      : Instruction(kind), textifiedCallee(textifiedCallee) {
+    pushOperand(callee);
+    pushOperand(newTarget);
+    pushOperand(thisValue);
+    for (const auto &arg : args) {
+      pushOperand(arg);
+    }
+  }
+
  public:
   /// Constant used to indicate that a CallInst does not have a textified
   /// callee.
   static constexpr LiteralString *kNoTextifiedCallee = nullptr;
 
-  enum { CalleeIdx, ThisIdx };
+  enum { CalleeIdx, NewTargetIdx, ThisIdx };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
@@ -762,6 +855,9 @@ class CallInst : public Instruction {
   }
   Value *getCallee() const {
     return getOperand(CalleeIdx);
+  }
+  Value *getNewTarget() const {
+    return getOperand(NewTargetIdx);
   }
   /// Get argument 0, the value for 'this'.
   Value *getThis() const {
@@ -781,18 +877,19 @@ class CallInst : public Instruction {
   }
 
   explicit CallInst(
-      ValueKind kind,
       LiteralString *textifiedCallee,
       Value *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
-      : Instruction(kind), textifiedCallee(textifiedCallee) {
-    pushOperand(callee);
-    pushOperand(thisValue);
-    for (const auto &arg : args) {
-      pushOperand(arg);
-    }
-  }
+      : CallInst(
+            ValueKind::CallInstKind,
+            textifiedCallee,
+            callee,
+            newTarget,
+            thisValue,
+            args) {}
+
   explicit CallInst(const CallInst *src, llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands), textifiedCallee(src->textifiedCallee) {}
 
@@ -827,13 +924,15 @@ class ConstructInst : public CallInst {
 
   explicit ConstructInst(
       Value *constructor,
-      LiteralUndefined *undefined,
+      Value *newTarget,
+      LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::ConstructInstKind,
             kNoTextifiedCallee,
             constructor,
-            undefined,
+            newTarget,
+            thisValue,
             args) {
     setType(Type::createObject());
   }
@@ -863,12 +962,14 @@ class CallBuiltinInst : public CallInst {
  public:
   explicit CallBuiltinInst(
       LiteralNumber *callee,
+      LiteralUndefined *newTarget,
       LiteralUndefined *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::CallBuiltinInstKind,
             kNoTextifiedCallee,
             callee,
+            newTarget,
             thisValue,
             args) {
     assert(
@@ -999,12 +1100,14 @@ class HBCCallNInst : public CallInst {
   explicit HBCCallNInst(
       LiteralString *functionName,
       Value *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCCallNInstKind,
             functionName,
             callee,
+            newTarget,
             thisValue,
             args) {
     // +1 for 'this'.
@@ -2746,17 +2849,23 @@ class SaveAndYieldInst : public TerminatorInst {
   }
 };
 
-class DirectEvalInst : public SingleOperandInst {
+class DirectEvalInst : public Instruction {
   DirectEvalInst(const DirectEvalInst &) = delete;
   void operator=(const DirectEvalInst &) = delete;
 
  public:
-  explicit DirectEvalInst(Value *value)
-      : SingleOperandInst(ValueKind::DirectEvalInstKind, value) {}
+  enum { CodeStringIdx, IsStrictIdx };
+
+  explicit DirectEvalInst(Value *codeString, LiteralBool *isStrict)
+      : Instruction(ValueKind::DirectEvalInstKind) {
+    setType(Type::createAnyType());
+    pushOperand(codeString);
+    pushOperand(isStrict);
+  }
   explicit DirectEvalInst(
       const DirectEvalInst *src,
       llvh::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() const {
     return SideEffectKind::Unknown;
@@ -2764,6 +2873,14 @@ class DirectEvalInst : public SingleOperandInst {
 
   WordBitSet<> getChangedOperandsImpl() {
     return {};
+  }
+
+  Value *getCodeString() const {
+    return getOperand(CodeStringIdx);
+  }
+
+  bool getIsStrict() const {
+    return cast<LiteralBool>(getOperand(IsStrictIdx))->getValue();
   }
 
   static bool classof(const Value *V) {
@@ -2793,6 +2910,37 @@ class HBCCreateEnvironmentInst : public ScopeCreationInst {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCCreateEnvironmentInstKind);
+  }
+};
+
+class HBCCreateInnerEnvironmentInst : public NestedScopeCreationInst {
+ public:
+  HBCCreateInnerEnvironmentInst(const HBCCreateInnerEnvironmentInst &) = delete;
+  void operator=(const HBCCreateInnerEnvironmentInst &) = delete;
+
+  explicit HBCCreateInnerEnvironmentInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc)
+      : NestedScopeCreationInst(
+            ValueKind::HBCCreateInnerEnvironmentInstKind,
+            parentScope,
+            scopeDesc) {}
+
+  explicit HBCCreateInnerEnvironmentInst(
+      const HBCCreateInnerEnvironmentInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : NestedScopeCreationInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::HBCCreateInnerEnvironmentInstKind);
   }
 };
 
@@ -3071,13 +3219,15 @@ class HBCConstructInst : public CallInst {
 
  public:
   explicit HBCConstructInst(
-      Value *callee,
+      Value *constructor,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCConstructInstKind,
             kNoTextifiedCallee,
-            callee,
+            constructor,
+            newTarget,
             thisValue,
             args) {}
   explicit HBCConstructInst(
@@ -3142,12 +3292,14 @@ class HBCCallDirectInst : public CallInst {
   explicit HBCCallDirectInst(
       LiteralString *textifiedCallee,
       Function *callee,
+      LiteralUndefined *newTarget,
       Value *thisValue,
       ArrayRef<Value *> args)
       : CallInst(
             ValueKind::HBCCallDirectInstKind,
             textifiedCallee,
             callee,
+            newTarget,
             thisValue,
             args) {
     assert(

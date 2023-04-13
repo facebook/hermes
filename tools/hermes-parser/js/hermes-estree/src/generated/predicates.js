@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, $Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
 
 'use strict';
 
@@ -117,6 +117,14 @@ export function isClassImplements(node: ESNode | Token): boolean %checks {
   return node.type === 'ClassImplements';
 }
 
+export function isComponentDeclaration(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentDeclaration';
+}
+
+export function isComponentParameter(node: ESNode | Token): boolean %checks {
+  return node.type === 'ComponentParameter';
+}
+
 export function isConditionalExpression(node: ESNode | Token): boolean %checks {
   return node.type === 'ConditionalExpression';
 }
@@ -135,6 +143,10 @@ export function isDeclareClass(node: ESNode | Token): boolean %checks {
 
 export function isDeclaredPredicate(node: ESNode | Token): boolean %checks {
   return node.type === 'DeclaredPredicate';
+}
+
+export function isDeclareEnum(node: ESNode | Token): boolean %checks {
+  return node.type === 'DeclareEnum';
 }
 
 export function isDeclareExportAllDeclaration(
@@ -529,6 +541,12 @@ export function isQualifiedTypeIdentifier(
   return node.type === 'QualifiedTypeIdentifier';
 }
 
+export function isQualifiedTypeofIdentifier(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'QualifiedTypeofIdentifier';
+}
+
 export function isRestElement(node: ESNode | Token): boolean %checks {
   return node.type === 'RestElement';
 }
@@ -603,6 +621,18 @@ export function isTryStatement(node: ESNode | Token): boolean %checks {
 
 export function isTupleTypeAnnotation(node: ESNode | Token): boolean %checks {
   return node.type === 'TupleTypeAnnotation';
+}
+
+export function isTupleTypeLabeledElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeLabeledElement';
+}
+
+export function isTupleTypeSpreadElement(
+  node: ESNode | Token,
+): boolean %checks {
+  return node.type === 'TupleTypeSpreadElement';
 }
 
 export function isTypeAlias(node: ESNode | Token): boolean %checks {

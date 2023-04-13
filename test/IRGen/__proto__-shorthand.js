@@ -39,7 +39,8 @@ function protoShorthandMix2(func) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [protoShorthand, protoShorthandDup, protoShorthandMix1, protoShorthandMix2]
+// CHECK-NEXT:globals = [protoShorthand, protoShorthandDup, protoShorthandMix1, protoShorthandMix2]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
 // CHECK-NEXT:  %1 = CreateFunctionInst %protoShorthand#0#1()#2, %0
@@ -57,7 +58,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthand#0#1(func)#2
-// CHECK-NEXT:frame = [func#2, __proto__#2]
+// CHECK-NEXT:S{protoShorthand#0#1()#2} = [func#2, __proto__#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthand#0#1()#2}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
@@ -71,7 +72,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandDup#0#1(func)#3
-// CHECK-NEXT:frame = [func#3, __proto__#3]
+// CHECK-NEXT:S{protoShorthandDup#0#1()#3} = [func#3, __proto__#3]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandDup#0#1()#3}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#3], %0
@@ -88,7 +89,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix1#0#1(func)#4
-// CHECK-NEXT:frame = [func#4, __proto__#4]
+// CHECK-NEXT:S{protoShorthandMix1#0#1()#4} = [func#4, __proto__#4]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandMix1#0#1()#4}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#4], %0
@@ -98,14 +99,14 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %5 = LoadFrameInst [__proto__#4], %0
 // CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
 // CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %4 : object, %7 : object
+// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %4 : object, %7 : object
 // CHECK-NEXT:  %9 = ReturnInst %4 : object
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = ReturnInst undefined : undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function protoShorthandMix2#0#1(func)#5
-// CHECK-NEXT:frame = [func#5, __proto__#5]
+// CHECK-NEXT:S{protoShorthandMix2#0#1()#5} = [func#5, __proto__#5]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandMix2#0#1()#5}
 // CHECK-NEXT:  %1 = StoreFrameInst %func, [func#5], %0

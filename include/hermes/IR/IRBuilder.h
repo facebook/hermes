@@ -295,6 +295,10 @@ class IRBuilder {
 
   CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
 
+  CreateInnerScopeInst *createCreateInnerScopeInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc);
+
   CreateFunctionInst *createCreateFunctionInst(
       Function *code,
       ScopeCreationInst *environment);
@@ -324,6 +328,7 @@ class IRBuilder {
 
   ConstructInst *createConstructInst(
       Value *constructor,
+      Value *newTarget,
       ArrayRef<Value *> args);
 
   CatchInst *createCatchInst();
@@ -436,7 +441,7 @@ class IRBuilder {
       Value *value,
       UnaryOperatorInst::OpKind opKind);
 
-  DirectEvalInst *createDirectEvalInst(Value *operand);
+  DirectEvalInst *createDirectEvalInst(Value *operand, LiteralBool *isStrict);
 
   SwitchInst *createSwitchInst(
       Value *input,
@@ -520,6 +525,10 @@ class IRBuilder {
   HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst(
       ScopeDesc *scopeDesc);
 
+  HBCCreateInnerEnvironmentInst *createHBCCreateInnerEnvironmentInst(
+      ScopeCreationInst *parentScope,
+      ScopeDesc *scopeDesc);
+
   HBCGetThisNSInst *createHBCGetThisNSInst();
 
   HBCGetArgumentsPropByValInst *createHBCGetArgumentsPropByValInst(
@@ -535,6 +544,7 @@ class IRBuilder {
 
   HBCConstructInst *createHBCConstructInst(
       Value *closure,
+      Value *newTarget,
       Value *thisValue,
       ArrayRef<Value *> arguments);
   HBCGetConstructedObjectInst *createHBCGetConstructedObjectInst(
@@ -544,6 +554,11 @@ class IRBuilder {
 
   CallBuiltinInst *createCallBuiltinInst(
       BuiltinMethod::Enum builtinIndex,
+      ArrayRef<Value *> arguments);
+
+  CallBuiltinInst *createCallBuiltinInstWithNewTarget(
+      BuiltinMethod::Enum builtinIndex,
+      Value *newTarget,
       ArrayRef<Value *> arguments);
 
   GetBuiltinClosureInst *createGetBuiltinClosureInst(

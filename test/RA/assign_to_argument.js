@@ -14,7 +14,8 @@ function foo(a) {
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global#0()#1
-// CHECK-NEXT:frame = [], globals = [foo]
+// CHECK-NEXT:globals = [foo]
+// CHECK-NEXT:S{global#0()#1} = []
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
 // CHECK-NEXT:  $Reg1           	%1 = HBCGetGlobalObjectInst
@@ -28,7 +29,7 @@ function foo(a) {
 // CHECK-NEXT:function_end
 
 // CHECK:function foo#0#1(a)#2
-// CHECK-NEXT:frame = [a#2]
+// CHECK-NEXT:S{foo#0#1()#2} = [a#2]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0           	%0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
 // CHECK-NEXT:  $Reg1           	%1 = HBCLoadParamInst 1 : number
