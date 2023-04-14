@@ -142,14 +142,23 @@ static bool eliminateStores(
       continue;
     }
 
-    // Invalidate the stack store storage.
-    if (auto *LS = llvh::dyn_cast<LoadStackInst>(II)) {
-      AllocStackInst *AS = LS->getPtr();
-      prevStoreStack[AS] = nullptr;
-      continue;
+    auto sideEffect = II->getSideEffect();
+
+    // If this instruction can read from the stack, we should invalidate all of
+    // its stack operands.
+    if (sideEffect.getReadStack()) {
+      for (size_t i = 0, e = II->getNumOperands(); i < e; ++i)
+        if (auto *AS = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
+          prevStoreStack[AS] = nullptr;
     }
 
-    if (II->mayExecute()) {
+    // Note that we deliberately fall through to the below check since reading
+    // from the stack and throwing are not mutually exclusive.
+
+    // If this instruction may throw, we cannot coalesce stores to unsafe
+    // allocas across it, since the stored value may be observed if the thrown
+    // exception is caught.
+    if (sideEffect.getThrow()) {
       for (auto *A : unsafeAllocas) {
         prevStoreStack[A] = nullptr;
       }
