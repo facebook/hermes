@@ -19,6 +19,7 @@ import {
 } from 'hermes-transform';
 import * as TSESTree from './utils/ts-estree-ast-types';
 import {
+  buildCodeFrame,
   translationError as translationErrorBase,
   unexpectedTranslationError as unexpectedTranslationErrorBase,
 } from './utils/ErrorUtils';
@@ -120,11 +121,11 @@ const getTransforms = (
   function unexpectedTranslationError(node: ObjectWithLoc, message: string) {
     return unexpectedTranslationErrorBase(node, message, {code});
   }
-  function unsupportedTranslationError(node: ObjectWithLoc, thing: string) {
-    return translationError(
-      node,
-      `Unsupported feature: Translating "${thing}" is currently not supported.`,
-    );
+  function unsupportedFeatureMessage(thing: string) {
+    return `Unsupported feature: Translating "${thing}" is currently not supported.`;
+  }
+  function buildCodeFrameForComment(node: ObjectWithLoc, message: string) {
+    return buildCodeFrame(node, message, code, false);
   }
   function addErrorComment(node: TSESTree.Node, message: string): void {
     const comment = {
@@ -150,17 +151,17 @@ const getTransforms = (
     node: ObjectWithLoc,
     thing: string,
   ): TSESTree.TSAnyKeyword {
-    const error = unsupportedTranslationError(node, thing);
+    const message = unsupportedFeatureMessage(thing);
     if (opts.recoverFromErrors) {
-      const message = error.getFramedMessage();
+      const codeFrame = buildCodeFrameForComment(node, message);
       const newNode = {
         type: 'TSAnyKeyword',
       };
-      addErrorComment(newNode, message);
+      addErrorComment(newNode, codeFrame);
       return newNode;
     }
 
-    throw error;
+    throw translationError(node, message);
   }
   function unsupportedDeclaration(
     node: ObjectWithLoc,
@@ -169,9 +170,9 @@ const getTransforms = (
     declare: boolean = false,
     typeParameters: FlowESTree.TypeParameterDeclaration | null = null,
   ): TSESTree.TSTypeAliasDeclaration {
-    const error = unsupportedTranslationError(node, thing);
+    const message = unsupportedFeatureMessage(thing);
     if (opts.recoverFromErrors) {
-      const message = error.getFramedMessage();
+      const codeFrame = buildCodeFrameForComment(node, message);
       const newNode = {
         type: 'TSTypeAliasDeclaration',
         declare,
@@ -184,11 +185,11 @@ const getTransforms = (
             ? undefined
             : transform.TypeParameterDeclaration(typeParameters),
       };
-      addErrorComment(newNode, message);
+      addErrorComment(newNode, codeFrame);
       return newNode;
     }
 
-    throw error;
+    throw translationError(node, message);
   }
 
   const topScope = (() => {
