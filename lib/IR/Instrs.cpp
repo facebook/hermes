@@ -87,7 +87,7 @@ SideEffect UnaryOperatorInst::getSideEffectImpl() const {
       break;
   }
 
-  return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
+  return SideEffect::createExecute();
 }
 
 static ValueKind parseOperator_impl(
@@ -113,10 +113,11 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     Type leftTy,
     Type rightTy,
     ValueKind op) {
-  // The 'in' and 'instanceof' operators may throw:
+  // The 'in' and 'instanceof' operators may execute arbitrary code, or throw
+  // when given primitive types:
   if (op == ValueKind::BinaryInInstKind ||
       op == ValueKind::BinaryInstanceOfInstKind)
-    return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
+    return SideEffect::createExecute();
 
   // Strict equality does not throw or have other side effects (per ES5 11.9.6).
   if (op == ValueKind::BinaryStrictlyNotEqualInstKind ||
@@ -129,7 +130,7 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     return {};
 
   // This binary operation may execute arbitrary code.
-  return SideEffect::fromSideEffectKind(SideEffectKind::Unknown);
+  return SideEffect::createExecute();
 }
 
 SwitchInst::SwitchInst(

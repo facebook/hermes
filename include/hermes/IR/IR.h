@@ -432,36 +432,6 @@ class SideEffect {
     return createExecute();
   }
 
-  /// TODO: Migrate all instructions to explicitly construct their SideEffect,
-  /// and delete this function.
-  static SideEffect fromSideEffectKind(SideEffectKind kind) {
-    switch (kind) {
-      case SideEffectKind::None:
-        return SideEffect{};
-      case SideEffectKind::MayRead:
-        return SideEffect{}.setReadStack().setReadFrame().setReadHeap();
-      case SideEffectKind::MayWrite:
-        return SideEffect{}
-            .setReadStack()
-            .setReadFrame()
-            .setReadHeap()
-            .setWriteStack()
-            .setWriteFrame()
-            .setWriteHeap();
-      case SideEffectKind::Unknown:
-        return SideEffect{}
-            .setReadStack()
-            .setReadFrame()
-            .setReadHeap()
-            .setWriteStack()
-            .setWriteFrame()
-            .setWriteHeap()
-            .setExecuteJS()
-            .setThrow();
-    }
-    llvm_unreachable("No other SideEffectKind.");
-  }
-
   /// Helper functions to expose the SideEffectKind interface.
   /// TODO: Delete these once all instructions are migrated off SideEffectKind.
   bool mayExecute() const {
