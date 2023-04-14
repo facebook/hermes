@@ -12,6 +12,7 @@
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
@@ -1942,6 +1943,9 @@ CallResult<bool> isArray(Runtime &runtime, JSObject *obj) {
   }
   while (true) {
     if (vmisa<JSArray>(obj)) {
+      return true;
+    }
+    if (vmisa<FastArray>(obj)) {
       return true;
     }
     if (LLVM_LIKELY(!obj->isProxyObject())) {
