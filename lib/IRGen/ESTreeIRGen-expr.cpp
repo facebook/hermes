@@ -700,6 +700,14 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
               baseValue, propValue, flowTypeToIRType(arrayType->getElement())),
           baseValue};
     }
+
+    // If we are reading the length from a known FastArray, use the a
+    // specialised instruction to load it efficiently.
+    auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+    if (!mem->_computed && ident && ident->_name == kw_.identLength) {
+      return MemberExpressionResult{
+          Builder.createFastArrayLengthInst(baseValue), baseValue};
+    }
   }
 
   return MemberExpressionResult{

@@ -884,6 +884,19 @@ SHERMES_EXPORT void _sh_fastarray_append(
     SHLegacyValue *other,
     SHLegacyValue *array);
 
+static inline SHLegacyValue _sh_fastarray_length(
+    SHRuntime *shr,
+    SHLegacyValue *array) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  SHFastArray *arr = (SHFastArray *)_sh_ljs_get_pointer(*array);
+  SHArrayStorageSmall *storage =
+      (SHArrayStorageSmall *)_sh_cp_decode_non_null(shr, arr->indexedStorage);
+  return _sh_ljs_double(storage->size);
+#else
+  return ((SHFastArray *)_sh_ljs_get_pointer(*array))->length;
+#endif
+}
+
 static inline SHLegacyValue _sh_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {

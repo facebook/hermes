@@ -1105,6 +1105,12 @@ FastArrayAppendInst *IRBuilder::createFastArrayAppendInst(
   return I;
 }
 
+FastArrayLengthInst *IRBuilder::createFastArrayLengthInst(Value *array) {
+  auto *I = new FastArrayLengthInst(array);
+  insert(I);
+  return I;
+}
+
 LoadParentInst *IRBuilder::createLoadParentInst(Value *object) {
   auto *inst = new LoadParentInst(object);
   insert(inst);

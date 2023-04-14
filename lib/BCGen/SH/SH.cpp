@@ -1690,6 +1690,14 @@ class InstrGen {
     generateRegisterPtr(*inst.getArray());
     os_ << ");\n";
   }
+  void generateFastArrayLengthInst(FastArrayLengthInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    os_ << "_sh_fastarray_length(shr, ";
+    generateRegisterPtr(*inst.getArray());
+    os_ << ");\n";
+  }
 };
 
 /// Lower module IR to LIR, so it is suitable for register allocation.

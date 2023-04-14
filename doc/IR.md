@@ -864,6 +864,16 @@ Arguments | %array is the array, %index is the index to write to, %storedValue i
 Semantics | Throw if the index is not an unsigned integer within range, otherwise, store %storedValue to %array.
 Effects | May write memory or throw.
 
+### FastArrayLength
+
+FastArrayLength | _
+--- | --- |
+Description | Read the length of a FastArray
+Example | FastArrayLength (:number) %array
+Arguments | %array is the array
+Semantics | Read the length property of the array and return it.
+Effects | May read memory.
+
 ### FastArrayPushInst
 
 FastArrayPushInst | _

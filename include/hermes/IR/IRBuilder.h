@@ -620,6 +620,7 @@ class IRBuilder {
   createFastArrayStoreInst(Value *storedValue, Value *array, Value *index);
   FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
   FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
+  FastArrayLengthInst *createFastArrayLengthInst(Value *array);
 
   LoadParentInst *createLoadParentInst(Value *object);
   StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);

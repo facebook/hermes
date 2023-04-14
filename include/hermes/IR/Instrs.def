@@ -237,6 +237,7 @@ DEF_VALUE(FastArrayLoadInst, Instruction)
 DEF_VALUE(FastArrayStoreInst, Instruction)
 DEF_VALUE(FastArrayPushInst, Instruction)
 DEF_VALUE(FastArrayAppendInst, Instruction)
+DEF_VALUE(FastArrayLengthInst, Instruction)
 
 DEF_VALUE(LoadParentInst, Instruction)
 DEF_VALUE(StoreParentInst, Instruction)

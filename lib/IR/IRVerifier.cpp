@@ -897,6 +897,7 @@ void Verifier::visitFastArrayLoadInst(const FastArrayLoadInst &Inst) {}
 void Verifier::visitFastArrayStoreInst(const FastArrayStoreInst &Inst) {}
 void Verifier::visitFastArrayPushInst(const FastArrayPushInst &Inst) {}
 void Verifier::visitFastArrayAppendInst(const FastArrayAppendInst &Inst) {}
+void Verifier::visitFastArrayLengthInst(const FastArrayLengthInst &Inst) {}
 
 void Verifier::visitLoadParentInst(const LoadParentInst &Inst) {}
 void Verifier::visitStoreParentInst(const StoreParentInst &Inst) {}
