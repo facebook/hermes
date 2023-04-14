@@ -328,6 +328,10 @@ class ArrayStorageBase final
       size_type fromFirst,
       size_type toFirst,
       size_type toLast);
+
+  /// Dummy function for static asserts that may need private fields. This
+  /// function is specialised for the specific \p HVType.
+  static void staticAsserts();
 };
 
 using ArrayStorage = ArrayStorageBase<HermesValue>;

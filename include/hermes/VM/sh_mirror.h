@@ -63,4 +63,19 @@ typedef struct SHEnvironment {
   SHLegacyValue slots[0];
 } SHEnvironment;
 
+/// Struct mirroring the layout of FastArray.
+typedef struct SHFastArray {
+  SHJSObject base;
+  SHCompressedPointer indexedStorage;
+  SHGCSmallHermesValue length;
+} SHFastArray;
+
+/// Struct mirroring the layout of ArrayStorageSmall.
+typedef struct SHArrayStorageSmall {
+  SHGCCell base;
+
+  uint32_t size;
+  SHGCSmallHermesValue storage[0];
+} SHArrayStorageSmall;
+
 #endif

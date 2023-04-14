@@ -49,6 +49,16 @@ const ObjectVTable FastArray::vt{
     FastArray::_checkAllOwnIndexedImpl,
 };
 
+void FastArray::staticAsserts() {
+  // Add the size of the length property when comparing sizes.
+  static_assert(
+      sizeof(FastArray) + sizeof(GCSmallHermesValue) == sizeof(SHFastArray));
+  static_assert(
+      offsetof(FastArray, indexedStorage_) ==
+      offsetof(SHFastArray, indexedStorage));
+  llvm_unreachable("staticAsserts must never be called.");
+}
+
 Handle<HiddenClass> FastArray::createClass(
     Runtime &runtime,
     Handle<JSObject> prototypeHandle) {

@@ -177,6 +177,9 @@ class FastArray : public JSObject {
       JSObject *selfObj,
       Runtime &runtime,
       ObjectVTable::CheckAllOwnIndexedMode mode);
+
+  /// Dummy function for static asserts that may need private fields.
+  static void staticAsserts();
 };
 
 } // namespace vm

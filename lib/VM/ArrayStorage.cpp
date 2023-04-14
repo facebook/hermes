@@ -44,6 +44,18 @@ void ArrayStorageSmallBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "storage", self->data(), &self->size_, sizeof(GCSmallHermesValue));
 }
 
+template <>
+void ArrayStorageBase<HermesValue>::staticAsserts() {}
+
+template <>
+void ArrayStorageBase<SmallHermesValue>::staticAsserts() {
+  static_assert(sizeof(ArrayStorageSmall) == sizeof(SHArrayStorageSmall));
+  static_assert(
+      offsetof(ArrayStorageSmall, size_) ==
+      offsetof(SHArrayStorageSmall, size));
+  llvm_unreachable("staticAsserts must never be called.");
+}
+
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
     MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
