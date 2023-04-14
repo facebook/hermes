@@ -18,10 +18,10 @@ const mapPrototypeSet: any = Map.prototype.set;
 function arrayPrototypeMap_number(arr: number[], cb: any): any {
   'inline';
   var length: number = arr.length;
-  var result: number[] = Array(length);
+  var result: number[] = [];
   for (var i: number = 0; i < length; ++i) {
     var elem: number = arr[i];
-    result[i] = cb(elem);
+    result.push(cb(elem));
   }
   return result;
 }
@@ -29,10 +29,10 @@ function arrayPrototypeMap_number(arr: number[], cb: any): any {
 function arrayPrototypeMap_Widget(arr: Widget[], cb: any): any {
   'inline';
   var length: number = arr.length;
-  var result: Widget[] = Array(length);
+  var result: Widget[] = [];
   for (var i: number = 0; i < length; ++i) {
     var elem: Widget = arr[i];
-    result[i] = cb(elem);
+    result.push(cb(elem));
   }
   return result;
 }
@@ -40,10 +40,10 @@ function arrayPrototypeMap_Widget(arr: Widget[], cb: any): any {
 function arrayPrototypeMap_Component(arr: Component[], cb: any): any {
   'inline';
   var length: number = arr.length;
-  var result: Component[] = Array(length);
+  var result: Component[] = [];
   for (var i: number = 0; i < length; ++i) {
     var elem: Component = arr[i];
-    result[i] = cb(elem);
+    result.push(cb(elem));
   }
   return result;
 }
@@ -51,10 +51,10 @@ function arrayPrototypeMap_Component(arr: Component[], cb: any): any {
 function arrayPrototypeMap_VirtualEntity(arr: VirtualEntity[], cb: any): any {
   'inline';
   var length: number = arr.length;
-  var result: VirtualEntity[] = Array(length);
+  var result: VirtualEntity[] = [];
   for (var i: number = 0; i < length; ++i) {
     var elem: VirtualEntity = arr[i];
-    result[i] = cb(elem);
+    result.push(cb(elem));
   }
   return result;
 }
@@ -62,10 +62,10 @@ function arrayPrototypeMap_VirtualEntity(arr: VirtualEntity[], cb: any): any {
 function arrayPrototypeMap_StringWithIndexToWidget(arr: string[], cb: any): any {
   'inline';
   var length: number = arr.length;
-  var result: Widget[] = Array(length);
+  var result: Widget[] = [];
   for (var i: number = 0; i < length; ++i) {
     var elem: string = arr[i];
-    result[i] = cb(elem, i);
+    result.push(cb(elem, i));
   }
   return result;
 }
@@ -78,7 +78,7 @@ function arrayPrototypeFilter_number(arr: number[], cb: any): number[] {
   for (var i: number = 0; i < length; ++i) {
     var elem: number = arr[i];
     if (cb(elem)) {
-      result[resultlength++] = elem;
+      result.push(elem);
     }
   }
   return result;
@@ -92,7 +92,7 @@ function arrayPrototypeFilter_Component(arr: Component[], cb: any): Component[] 
   for (var i: number = 0; i < length; ++i) {
     var elem: Component = arr[i];
     if (cb(elem)) {
-      result[resultlength++] = elem;
+      result.push(elem);
     }
   }
   return result;
@@ -163,13 +163,12 @@ function arrayPrototypeConcat_VirtualEntity(
   var i: number = 0;
   var length: number = arr1.length;
   var result: VirtualEntity[] = [];
-  var resultlength: number = 0;
   for (i = 0; i < length; ++i) {
-    result[resultlength++] = arr1[i];
+    result.push(arr1[i]);
   }
   length = arr2.length;
   for (i = 0; i < length; ++i) {
-    result[resultlength++] = arr2[i];
+    result.push(arr2[i]);
   }
   return result;
 }
@@ -383,7 +382,7 @@ function diffTrees(
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
   arrayPrototypeForEach_number(createdEntities, (entityId: number) => {
-    const components = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
+    const components: Component[] = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
       (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
