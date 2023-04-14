@@ -226,6 +226,35 @@ class ArrayStorageBase final
     return val;
   }
 
+  /// Append the contents of the given ArrayStorage \p other to this
+  /// ArrayStorage, where we know that there is no need to allocate additional
+  /// capacity. This is more efficient than append, since the caller does not
+  /// need to allocate a handle for the ArrayStorage, check for exceptions, or
+  /// write back the resulting pointer in case it moves.
+  void appendWithinCapacity(Runtime &runtime, ArrayStorageBase *other) {
+    size_t sz = size(), otherSz = other->size();
+    assert(sz + otherSz <= capacity() && "Insufficient capacity");
+    auto *fromStart = other->data();
+    auto *fromEnd = fromStart + otherSz;
+    GCHVType::uninitialized_copy(
+        fromStart, fromEnd, data() + sz, runtime.getHeap());
+    size_.store(sz + otherSz, std::memory_order_release);
+  }
+
+  /// Append the contents of the given ArrayStorage \p other to this
+  /// ArrayStorage.
+  static ExecutionStatus append(
+      MutableHandle<ArrayStorageBase> &selfHandle,
+      Runtime &runtime,
+      Handle<ArrayStorageBase> other) {
+    auto *self = selfHandle.get();
+    if (LLVM_LIKELY(self->size() + other->size() < self->capacity())) {
+      self->appendWithinCapacity(runtime, *other);
+      return ExecutionStatus::RETURNED;
+    }
+    return appendSlowPath(selfHandle, runtime, other);
+  }
+
   /// Ensure that the capacity of the array is at least \p capacity,
   /// reallocating if needed.
   static ExecutionStatus ensureCapacity(
@@ -294,6 +323,14 @@ class ArrayStorageBase final
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
       Handle<> value);
+
+  /// Append the contents of the given ArrayStorage \p other to this
+  /// ArrayStorage when the capacity has been exhausted and a reallocation is
+  /// needed.
+  static ExecutionStatus appendSlowPath(
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      Runtime &runtime,
+      Handle<ArrayStorageBase> other);
 
   /// Shrinks \p self during GC compaction, so that it's capacity is equal to
   /// its size.

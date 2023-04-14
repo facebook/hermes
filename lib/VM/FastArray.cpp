@@ -124,6 +124,25 @@ FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus FastArray::appendSlow(
+    Handle<FastArray> self,
+    Runtime &runtime,
+    Handle<FastArray> other) {
+  GCScopeMarkerRAII marker{runtime};
+  auto storage =
+      runtime.makeMutableHandle(self->indexedStorage_.getNonNull(runtime));
+  auto otherStorage =
+      runtime.makeHandle(other->indexedStorage_.getNonNull(runtime));
+  if (LLVM_UNLIKELY(
+          ArrayStorageSmall::append(storage, runtime, otherStorage) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap());
+  auto newSz = SmallHermesValue::encodeNumberValue(storage->size(), runtime);
+  self->setLength(runtime, newSz);
+  return ExecutionStatus::RETURNED;
+}
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void FastArray::_snapshotAddEdgesImpl(
     GCCell *cell,

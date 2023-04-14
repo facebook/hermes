@@ -259,6 +259,19 @@ ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
 }
 
 template <typename HVType>
+ExecutionStatus ArrayStorageBase<HVType>::appendSlowPath(
+    MutableHandle<ArrayStorageBase> &selfHandle,
+    Runtime &runtime,
+    Handle<ArrayStorageBase> other) {
+  auto newSize = selfHandle->size() + other->size();
+  if (ensureCapacity(selfHandle, runtime, newSize) ==
+      ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  selfHandle->appendWithinCapacity(runtime, *other);
+  return ExecutionStatus::RETURNED;
+}
+
+template <typename HVType>
 gcheapsize_t ArrayStorageBase<HVType>::_trimSizeCallback(const GCCell *cell) {
   const auto *self = reinterpret_cast<const ArrayStorageBase<HVType> *>(cell);
   return allocationSize(self->size());

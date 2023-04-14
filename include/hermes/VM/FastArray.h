@@ -103,6 +103,21 @@ class FastArray : public JSObject {
     return pushSlow(self, runtime, val);
   }
 
+  static ExecutionStatus
+  append(Handle<FastArray> self, Runtime &runtime, Handle<FastArray> other) {
+    auto *storage = self->indexedStorage_.getNonNull(runtime);
+    auto *otherStorage = other->indexedStorage_.getNonNull(runtime);
+    size_t curSz = storage->size();
+    size_t newSz = curSz + otherStorage->size();
+    if (LLVM_LIKELY(newSz < storage->capacity())) {
+      storage->appendWithinCapacity(runtime, otherStorage);
+      auto shv = SmallHermesValue::encodeNumberValue(newSz, runtime);
+      self->setLength(runtime, shv);
+      return ExecutionStatus::RETURNED;
+    }
+    return appendSlow(self, runtime, other);
+  }
+
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
   static Handle<HiddenClass> createClass(
@@ -138,6 +153,9 @@ class FastArray : public JSObject {
 
   static ExecutionStatus
   pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val);
+
+  static ExecutionStatus
+  appendSlow(Handle<FastArray> self, Runtime &runtime, Handle<FastArray> other);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Adds the special indexed element edges from this array to its backing
