@@ -1654,6 +1654,16 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = _sh_ljs_double(0);\n";
   }
+  void generateFastArrayLoadInst(FastArrayLoadInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    os_ << "_sh_fastarray_load(shr, ";
+    generateRegisterPtr(*inst.getArray());
+    os_ << ", _sh_ljs_get_double(";
+    generateRegister(*inst.getIndex());
+    os_ << "));\n";
+  }
   void generateFastArrayPushInst(FastArrayPushInst &inst) {
     os_.indent(2);
     os_ << "_sh_fastarray_push(shr, ";

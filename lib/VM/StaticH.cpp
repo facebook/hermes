@@ -1794,6 +1794,28 @@ extern "C" void _sh_store_parent(
       objectHandle.get(), runtime, parentHandle.get());
 }
 
+/// Check that \p index is an unsigned integer smaller than \p length. If it is,
+/// return it, otherwise, throw.
+inline static uint32_t
+fastarrayBoundsCheck(SHRuntime *shr, uint32_t length, double index) {
+  uint32_t intIndex = hermes::unsafeTruncateDouble<uint32_t>(index);
+  if (LLVM_LIKELY(intIndex < length && intIndex == index))
+    return intIndex;
+
+  (void)getRuntime(shr).raiseRangeError("array load index out of range");
+  _sh_throw_current(shr);
+}
+
+extern "C" SHLegacyValue
+_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
+  Runtime &runtime = getRuntime(shr);
+  auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
+
+  uint32_t intIndex =
+      fastarrayBoundsCheck(shr, arrayHandle->getLength(runtime), index);
+  return arrayHandle->at(runtime, intIndex)->unboxToHV(runtime);
+}
+
 extern "C" void _sh_fastarray_push(
     SHRuntime *shr,
     SHLegacyValue *pushedValue,

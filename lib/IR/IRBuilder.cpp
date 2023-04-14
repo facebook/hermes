@@ -1072,6 +1072,15 @@ PrStoreInst *IRBuilder::createPrStoreInst(
   return I;
 }
 
+FastArrayLoadInst *IRBuilder::createFastArrayLoadInst(
+    Value *array,
+    Value *index,
+    Type checkedType) {
+  auto *I = new FastArrayLoadInst(array, index, checkedType);
+  insert(I);
+  return I;
+}
+
 FastArrayPushInst *IRBuilder::createFastArrayPushInst(
     Value *pushedValue,
     Value *array) {

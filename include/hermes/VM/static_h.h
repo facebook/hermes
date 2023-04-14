@@ -860,6 +860,10 @@ static inline void _sh_prstore_string(
   }
 }
 
+/// Load the element at \p index from the FastArray \p array.
+SHERMES_EXPORT SHLegacyValue
+_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index);
+
 /// Push the given element \p pushedValue onto the given fast array \p array.
 SHERMES_EXPORT void _sh_fastarray_push(
     SHRuntime *shr,

@@ -1003,6 +1003,9 @@ class TypeInferenceImpl {
   Type inferPrStoreInst(PrStoreInst *inst) {
     return Type::createNoType();
   }
+  Type inferFastArrayLoadInst(FastArrayLoadInst *inst) {
+    return inst->getCheckedType();
+  }
   Type inferFastArrayPushInst(FastArrayPushInst *inst) {
     return Type::createNoType();
   }

@@ -893,6 +893,7 @@ void Verifier::visitThrowIfEmptyInst(const ThrowIfEmptyInst &Inst) {}
 void Verifier::visitPrLoadInst(const PrLoadInst &Inst) {}
 void Verifier::visitPrStoreInst(const PrStoreInst &Inst) {}
 
+void Verifier::visitFastArrayLoadInst(const FastArrayLoadInst &Inst) {}
 void Verifier::visitFastArrayPushInst(const FastArrayPushInst &Inst) {}
 void Verifier::visitFastArrayAppendInst(const FastArrayAppendInst &Inst) {}
 

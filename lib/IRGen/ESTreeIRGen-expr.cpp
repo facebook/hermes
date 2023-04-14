@@ -687,6 +687,21 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
   }
 
+  // Check if we are loading an array element, and generate the typed IR.
+  // NOTE: This is required for correctness, since a regular property load from
+  // a FastArray will simply return undefined if it is out-of-bounds.
+  if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (mem->_computed &&
+        llvh::isa<flow::NumberType>(
+            flowContext_.getNodeTypeOrAny(mem->_property))) {
+      return MemberExpressionResult{
+          Builder.createFastArrayLoadInst(
+              baseValue, propValue, flowTypeToIRType(arrayType->getElement())),
+          baseValue};
+    }
+  }
+
   return MemberExpressionResult{
       Builder.createLoadPropertyInst(baseValue, propValue), baseValue};
 }

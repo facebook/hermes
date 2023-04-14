@@ -613,6 +613,8 @@ class IRBuilder {
       LiteralString *propName,
       bool nonPointer);
 
+  FastArrayLoadInst *
+  createFastArrayLoadInst(Value *array, Value *index, Type checkedType);
   FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
   FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
 

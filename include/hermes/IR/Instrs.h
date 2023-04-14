@@ -4295,6 +4295,51 @@ class PrStoreInst : public Instruction {
   }
 };
 
+class FastArrayLoadInst : public Instruction {
+  // TODO: remove checkedType_ when TypeInference starts preserving it.
+  /// Type provided by the type checker.
+  Type const checkedType_;
+
+ public:
+  enum { ArrayIdx, IndexIdx };
+
+  explicit FastArrayLoadInst(Value *array, Value *index, Type checkedType)
+      : Instruction(ValueKind::FastArrayLoadInstKind),
+        checkedType_(checkedType) {
+    setType(checkedType);
+    pushOperand(array);
+    pushOperand(index);
+  }
+  explicit FastArrayLoadInst(
+      const FastArrayLoadInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands), checkedType_(src->checkedType_) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::FastArrayLoadInstKind;
+  }
+  static bool hasOutput() {
+    return true;
+  }
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setReadHeap().setThrow();
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Type getCheckedType() const {
+    return checkedType_;
+  }
+
+  Value *getArray() const {
+    return getOperand(ArrayIdx);
+  }
+  Value *getIndex() const {
+    return getOperand(IndexIdx);
+  }
+};
+
 class FastArrayPushInst : public Instruction {
  public:
   enum { PushedValueIdx, ArrayIdx };

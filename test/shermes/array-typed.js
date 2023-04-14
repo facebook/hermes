@@ -23,4 +23,8 @@ for(var i = 0, e = x.length; i < e ; i++)
 // CHECK-NEXT: 2
 // CHECK-NEXT: 3
 
+try { x[3] } catch (e) { print(e.message); }
+try { x[1.2] } catch (e) { print(e.message); }
+// CHECK-NEXT: array load index out of range
+// CHECK-NEXT: array load index out of range
 })();

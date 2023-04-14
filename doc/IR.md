@@ -844,6 +844,16 @@ Effects | May read and write memory.
 | Semantics   | Store the property without any checking.                                                                                                                                                                                                                                                                                  |
 | Effects     | May read memory.                                                                                                                                                                                                                                                                                                          |
 
+### FastArrayLoad
+
+FastArrayLoad | _
+--- | --- |
+Description | Loads an element from a FastArray, validates the index.
+Example | FastArrayLoad %array (:object), %index (:number)
+Arguments | %array is the array, %index is the index to read
+Semantics | Throw if the index is not an unsigned integer within range, otherwise, load the value at %index from %array.
+Effects | May read memory or throw.
+
 ### FastArrayPushInst
 
 FastArrayPushInst | _
