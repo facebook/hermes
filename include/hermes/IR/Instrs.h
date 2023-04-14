@@ -930,7 +930,7 @@ class GetBuiltinClosureInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -1071,7 +1071,7 @@ class HBCGetGlobalObjectInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2688,7 +2688,7 @@ class MovInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2822,7 +2822,7 @@ class GetNewTargetInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -2930,7 +2930,7 @@ class HBCResolveEnvironment : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3340,7 +3340,7 @@ class HBCLoadConstInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -3731,7 +3731,7 @@ class GetConstructedObjectInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4480,7 +4480,7 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
@@ -4519,7 +4519,7 @@ class LIRDeadValueInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect{}.setIdempotent();
   }
 
   WordBitSet<> getChangedOperandsImpl() {
