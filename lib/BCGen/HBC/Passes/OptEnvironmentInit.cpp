@@ -71,7 +71,7 @@ bool OptEnvironmentInit::runOnFunction(Function *F) {
 
       // If we encounter an instruction that can execute arbitrary code,
       // stop scanning this BB.
-      if (inst->mayExecute())
+      if (inst->getSideEffect().getExecuteJS())
         break;
     }
   }

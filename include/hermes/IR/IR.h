@@ -1257,20 +1257,6 @@ class Instruction
     return getSideEffect().mayReadOrWorse();
   }
 
-  /// \returns true if the instruction may read memory.
-  bool mayReadMemory() const {
-    return getSideEffect().mayReadOrWorse();
-  }
-  /// \returns true if the instruction may write to memory.
-  bool mayWriteMemory() const {
-    return getSideEffect().mayWriteOrWorse();
-  }
-  /// \returns true if the instruction may execute code by means of throwing
-  /// an exception or by executing code.
-  bool mayExecute() const {
-    return getSideEffect().mayExecute();
-  }
-
   Context &getContext() const;
   BasicBlock *getParent() const {
     return Parent;

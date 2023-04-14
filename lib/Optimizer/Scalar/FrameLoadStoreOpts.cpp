@@ -137,7 +137,7 @@ bool eliminateLoads(BasicBlock *BB, const CapturedVariables &globalCV) {
 
     // Invalidate the variable storage if the instruction may execute capturing
     // stores that write the variable.
-    if (I.mayExecute()) {
+    if (I.getSideEffect().getExecuteJS()) {
       for (auto it = knownValues.begin(); it != knownValues.end(); it++) {
         // Use incremental capture information in the entry block for owned
         // variables, and global information for everything else.
