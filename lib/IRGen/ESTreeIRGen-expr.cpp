@@ -728,6 +728,19 @@ void ESTreeIRGen::emitMemberStore(
       return;
     }
   }
+
+  // Check if we are storing to a FastArray, and generate the specialised
+  // instruction for it.
+  if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+          flowContext_.getNodeTypeOrAny(mem->_object))) {
+    if (mem->_computed &&
+        llvh::isa<flow::NumberType>(
+            flowContext_.getNodeTypeOrAny(mem->_property))) {
+      Builder.createFastArrayStoreInst(storedValue, baseValue, propValue);
+      return;
+    }
+  }
+
   Builder.createStorePropertyInst(storedValue, baseValue, propValue);
 }
 

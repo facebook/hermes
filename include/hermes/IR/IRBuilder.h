@@ -615,6 +615,9 @@ class IRBuilder {
 
   FastArrayLoadInst *
   createFastArrayLoadInst(Value *array, Value *index, Type checkedType);
+
+  FastArrayStoreInst *
+  createFastArrayStoreInst(Value *storedValue, Value *array, Value *index);
   FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
   FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
 

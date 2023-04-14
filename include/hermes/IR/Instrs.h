@@ -4340,6 +4340,45 @@ class FastArrayLoadInst : public Instruction {
   }
 };
 
+class FastArrayStoreInst : public Instruction {
+ public:
+  enum { StoredValueIdx, ArrayIdx, IndexIdx };
+
+  explicit FastArrayStoreInst(Value *storedValue, Value *array, Value *index)
+      : Instruction(ValueKind::FastArrayStoreInstKind) {
+    pushOperand(storedValue);
+    pushOperand(array);
+    pushOperand(index);
+  }
+  explicit FastArrayStoreInst(
+      const FastArrayStoreInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::FastArrayStoreInstKind;
+  }
+  static bool hasOutput() {
+    return false;
+  }
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setWriteHeap().setThrow();
+  }
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getArray() const {
+    return getOperand(ArrayIdx);
+  }
+  Value *getIndex() const {
+    return getOperand(IndexIdx);
+  }
+};
+
 class FastArrayPushInst : public Instruction {
  public:
   enum { PushedValueIdx, ArrayIdx };

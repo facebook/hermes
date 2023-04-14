@@ -854,6 +854,16 @@ Arguments | %array is the array, %index is the index to read
 Semantics | Throw if the index is not an unsigned integer within range, otherwise, load the value at %index from %array.
 Effects | May read memory or throw.
 
+### FastArrayStore
+
+FastArrayStore
+--- | --- |
+Description | Stores an element to an array, validates the index.
+Example | FastArrayStore %storedValue, %array, %index
+Arguments | %array is the array, %index is the index to write to, %storedValue is the value to write
+Semantics | Throw if the index is not an unsigned integer within range, otherwise, store %storedValue to %array.
+Effects | May write memory or throw.
+
 ### FastArrayPushInst
 
 FastArrayPushInst | _

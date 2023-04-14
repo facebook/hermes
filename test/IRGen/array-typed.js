@@ -46,7 +46,7 @@
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
 // CHECK-NEXT:  %2 = FastArrayLoadInst (:number) %0: any, 0: number
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, %2: number
-// CHECK-NEXT:  %4 = StorePropertyStrictInst 42: number, %0: any, 3: number
+// CHECK-NEXT:  %4 = FastArrayStoreInst 42: number, %0: any, 3: number
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: any, "length": string
 // CHECK-NEXT:  %6 = BinaryLessThanInst (:boolean) 0: number, %5: any
 // CHECK-NEXT:  %7 = CondBranchInst %6: boolean, %BB1, %BB2

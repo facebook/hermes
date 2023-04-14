@@ -1816,6 +1816,20 @@ _sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   return arrayHandle->at(runtime, intIndex)->unboxToHV(runtime);
 }
 
+extern "C" void _sh_fastarray_store(
+    SHRuntime *shr,
+    const SHLegacyValue *storedValue,
+    SHLegacyValue *array,
+    double index) {
+  Runtime &runtime = getRuntime(shr);
+  auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
+
+  uint32_t intIndex =
+      fastarrayBoundsCheck(shr, arrayHandle->getLength(runtime), index);
+  auto shv = SmallHermesValue::encodeHermesValue(*toPHV(storedValue), runtime);
+  arrayHandle->unsafeSet(runtime, intIndex, shv);
+}
+
 extern "C" void _sh_fastarray_push(
     SHRuntime *shr,
     SHLegacyValue *pushedValue,

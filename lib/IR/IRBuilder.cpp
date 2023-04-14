@@ -1081,6 +1081,15 @@ FastArrayLoadInst *IRBuilder::createFastArrayLoadInst(
   return I;
 }
 
+FastArrayStoreInst *IRBuilder::createFastArrayStoreInst(
+    Value *storedValue,
+    Value *array,
+    Value *index) {
+  auto *I = new FastArrayStoreInst(storedValue, array, index);
+  insert(I);
+  return I;
+}
+
 FastArrayPushInst *IRBuilder::createFastArrayPushInst(
     Value *pushedValue,
     Value *array) {
