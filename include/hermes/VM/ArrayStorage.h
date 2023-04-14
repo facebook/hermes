@@ -175,26 +175,35 @@ class ArrayStorageBase final
     return data() + size();
   }
 
+  /// Append the given element to the end, where we know that there is no need
+  /// to allocate additional capacity. This is more efficient than push_back,
+  /// since the caller does not need to allocate a handle for the ArrayStorage,
+  /// check for exceptions, or write back the resulting pointer in case it
+  /// moves.
+  void pushWithinCapacity(Runtime &runtime, HVType value) {
+    auto sz = size();
+    assert(sz < capacity());
+    // Use the constructor of GCHermesValue to use the correct write barrier
+    // for uninitialized memory.
+    new (&data()[sz]) GCHVType(value, runtime.getHeap());
+    size_.store(sz + 1, std::memory_order_release);
+  }
+
   /// Append the given element to the end (increasing size by 1).
   static ExecutionStatus push_back(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
       Handle<> value) {
-    auto *self = selfHandle.get();
-    const auto currSz = self->size();
     // This must be done before the capacity check, because encodeHermesValue
     // may allocate, which could cause trimming of the ArrayStorage. If the
     // capacity check fails, then this work is wasted, but that's okay because
     // it's a slow path.
     auto hv = HVType::encodeHermesValue(value.get(), runtime);
-    // For SmallHermesValue, the above may allocate, so update self.
-    if (std::is_same<HVType, SmallHermesValue>::value)
-      self = selfHandle.get();
-    if (LLVM_LIKELY(currSz < self->capacity())) {
+    auto *self = selfHandle.get();
+    if (LLVM_LIKELY(self->size() < self->capacity())) {
       // Use the constructor of GCHermesValue to use the correct write barrier
       // for uninitialized memory.
-      new (&self->data()[currSz]) GCHVType(hv, runtime.getHeap());
-      self->size_.store(currSz + 1, std::memory_order_release);
+      self->pushWithinCapacity(runtime, hv);
       return ExecutionStatus::RETURNED;
     }
     return pushBackSlowPath(selfHandle, runtime, value);

@@ -87,7 +87,21 @@ class FastArray : public JSObject {
   /// Push the element \p val onto the end of the storage, and increase the
   /// length by 1.
   static ExecutionStatus
-  push(Handle<FastArray> self, Runtime &runtime, Handle<> val);
+  push(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
+    // Speculatively convert the value to a SmallHermesValue. This must be done
+    // before we check the capacity, because it can trigger a GC, which could
+    // resize the storage.
+    auto shv = SmallHermesValue::encodeHermesValue(*val, runtime);
+    auto *storage = self->indexedStorage_.getNonNull(runtime);
+    auto curSz = storage->size();
+    if (LLVM_LIKELY(storage->size() < storage->capacity())) {
+      storage->pushWithinCapacity(runtime, shv);
+      auto newSz = SmallHermesValue::encodeNumberValue(curSz + 1, runtime);
+      self->setLength(runtime, newSz);
+      return ExecutionStatus::RETURNED;
+    }
+    return pushSlow(self, runtime, val);
+  }
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.
@@ -121,6 +135,9 @@ class FastArray : public JSObject {
     // TODO: Potentially optimise this by knowing it's a SMI.
     setDirectSlotValue<lengthPropIndex()>(this, newLength, runtime.getHeap());
   }
+
+  static ExecutionStatus
+  pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Adds the special indexed element edges from this array to its backing

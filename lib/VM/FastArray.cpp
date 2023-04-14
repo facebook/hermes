@@ -109,7 +109,7 @@ CallResult<Handle<FastArray>> FastArray::create(
 }
 
 ExecutionStatus
-FastArray::push(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
+FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
   GCScopeMarkerRAII marker{runtime};
   auto storage =
       runtime.makeMutableHandle(self->indexedStorage_.getNonNull(runtime));
