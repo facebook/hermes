@@ -231,11 +231,23 @@ void Verifier::visitBasicBlock(const BasicBlock &BB) {
         "Cannot find self in the successors of a predecessor");
   }
 
+  // Indicates whether all the instructions in the block observed so far had
+  // FirstInBlock set.
+  bool visitingFirstInBlock = true;
   // Verify each instruction
   for (BasicBlock::const_iterator I = BB.begin(); I != BB.end(); I++) {
     Assert(
         I->getParent() == &BB,
         "Instruction's parent does not match basic block");
+
+    // Check that FirstInBlock instructions are not preceded by other
+    // instructions.
+    bool firstInBlock = I->getSideEffect().getFirstInBlock();
+    visitingFirstInBlock &= firstInBlock;
+    Assert(
+        visitingFirstInBlock || !firstInBlock,
+        "Unexpected FirstInBlock instruction.");
+
     // Use the instruction using the InstructionVisitor::visit();
     visit(*I);
   }
@@ -245,6 +257,8 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
   // TODO: Verify the instruction is valid, need switch/case on each
   // actual Instruction type
   Assert(&Inst.getContext() == Ctx, "Instruction has wrong context");
+
+  Assert(Inst.getSideEffect().isWellFormed(), "Ill-formed side effects");
 
   bool const acceptsEmptyType = Inst.acceptsEmptyType();
 
@@ -263,18 +277,15 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
           "Variable can only be accessed in "
           "LoadFrame/StoreFrame/HBCLoadFromEnvironmentInst/HBCStoreToEnvironmentInst Inst.");
     }
+
+    // Most instructions that accepts a stack operand must write to it. If it
+    // strictly reads from the stack variable, it should go through a
+    // LoadStackInst.
     if (llvh::isa<AllocStackInst>(Operand)) {
       Assert(
-          llvh::isa<LoadStackInst>(Inst) || llvh::isa<StoreStackInst>(Inst) ||
-              llvh::isa<GetPNamesInst>(Inst) ||
-              llvh::isa<GetNextPNameInst>(Inst) ||
-              llvh::isa<ResumeGeneratorInst>(Inst) ||
-              llvh::isa<IteratorBeginInst>(Inst) ||
-              llvh::isa<IteratorNextInst>(Inst) ||
-              llvh::isa<HBCGetArgumentsPropByValInst>(Inst) ||
-              llvh::isa<HBCGetArgumentsLengthInst>(Inst) ||
-              llvh::isa<HBCReifyArgumentsInst>(Inst),
-          "Stack variable can only be accessed in certain instructions.");
+          llvh::isa<LoadStackInst>(Inst) ||
+              Inst.getSideEffect().getWriteStack(),
+          "Must write to stack operand.");
     }
 
     if (Operand->getType().canBeEmpty()) {
