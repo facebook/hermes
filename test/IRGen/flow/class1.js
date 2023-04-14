@@ -42,9 +42,9 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %Vec2D(): undefined
 // CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
 // CHECK-NEXT:  %3 = StorePropertyStrictInst %2: object, %1: object, "prototype": string
-// CHECK-NEXT:  %4 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:  %5 = StoreOwnPropertyInst %0: object, %4: object, 0: number, true: boolean
-// CHECK-NEXT:  %6 = StoreOwnPropertyInst %1: object, %4: object, 1: number, true: boolean
+// CHECK-NEXT:  %4 = AllocFastArrayInst (:object) 2: number
+// CHECK-NEXT:  %5 = FastArrayPushInst %0: object, %4: object
+// CHECK-NEXT:  %6 = FastArrayPushInst %1: object, %4: object
 // CHECK-NEXT:  %7 = ReturnInst %4: object
 // CHECK-NEXT:function_end
 

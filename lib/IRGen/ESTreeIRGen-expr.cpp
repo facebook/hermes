@@ -365,7 +365,39 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   return allocArrayInst;
 }
 
+void ESTreeIRGen::genFastArrayPush(Value *array, ESTree::Node &arg) {
+  // Pushing a single element, just push the value.
+  if (!llvh::isa<ESTree::SpreadElementNode>(&arg)) {
+    Builder.createFastArrayPushInst(genExpression(&arg), array);
+    return;
+  }
+
+  auto *spread = llvh::cast<ESTree::SpreadElementNode>(&arg);
+  // TODO: Support spreading non-arrays.
+  assert(
+      llvh::isa<flow::ArrayType>(
+          flowContext_.getNodeTypeOrAny(spread->_argument)) &&
+      "Spread argument must be an array.");
+
+  auto *elems = genExpression(spread->_argument);
+  // Append the elements from the spread argument to the target array.
+  Builder.createFastArrayAppendInst(elems, array);
+}
+
+Value *ESTreeIRGen::genFastArrayFromElements(ESTree::NodeList &list) {
+  // Lower the array literal into creating an empty array followed by a series
+  // of push and append.
+  auto *array =
+      Builder.createAllocFastArrayInst(Builder.getLiteralNumber(list.size()));
+  for (auto &node : list)
+    genFastArrayPush(array, node);
+  return array;
+}
+
 Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
+  // If the array literal originates in typed code, produce a fast array.
+  if (llvh::isa<flow::ArrayType>(flowContext_.getNodeTypeOrAny(Expr)))
+    return genFastArrayFromElements(Expr->_elements);
   return genArrayFromElements(Expr->_elements);
 }
 
@@ -387,6 +419,21 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     if (llvh::isa<ESTree::SHBuiltinNode>(Mem->_object)) {
       return genSHBuiltin(
           call, llvh::cast<ESTree::IdentifierNode>(Mem->_property));
+    }
+
+    // Check for builtin array.
+    if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+            flowContext_.getNodeTypeOrAny(Mem->_object))) {
+      auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(Mem->_property);
+
+      // Check if we are calling push, if so, generate a series of pushes and
+      // appends.
+      if (!Mem->_computed && ident && ident->_name == kw_.identPush) {
+        auto *array = genExpression(Mem->_object);
+        for (ESTree::Node &arg : call->_arguments)
+          genFastArrayPush(array, arg);
+        return Builder.getLiteralUndefined();
+      }
     }
 
     MemberExpressionResult memResult =

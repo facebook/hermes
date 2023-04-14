@@ -559,6 +559,14 @@ class ESTreeIRGen {
       BasicBlock *onFalse,
       BasicBlock *onNullish);
 
+  /// Generate IR to push \p element onto the end of \p array. If it is a
+  /// SpreadElement, append its result to the end of the array.
+  void genFastArrayPush(Value *array, ESTree::Node &element);
+
+  /// Convert the given list of elements in \p list into an array, spreading
+  /// SpreadElements as needed.
+  Value *genFastArrayFromElements(ESTree::NodeList &list);
+
   /// Convert the \p input into an array, spreading SpreadElements
   /// using for-or iteration semantics.
   /// Allows sharing spread code between genArrayExpr and genCallExpr.
